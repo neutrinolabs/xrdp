@@ -269,77 +269,6 @@ x_server_running(int display)
 }
 
 /******************************************************************************/
-static void
-session_start_sessvc(int xpid, int wmpid, long data, char *username, int display)
-{
-    struct list *sessvc_params = (struct list *)NULL;
-    char wmpid_str[25];
-    char xpid_str[25];
-    char exe_path[262];
-    int i = 0;
-
-    /* initialize (zero out) local variables: */
-    g_memset(wmpid_str, 0, sizeof(char) * 25);
-    g_memset(xpid_str, 0, sizeof(char) * 25);
-    g_memset(exe_path, 0, sizeof(char) * 262);
-
-    /* new style waiting for clients */
-    g_sprintf(wmpid_str, "%d", wmpid);
-    g_sprintf(xpid_str, "%d",  xpid);
-    log_message(LOG_LEVEL_INFO,
-                "starting xrdp-sessvc - xpid=%s - wmpid=%s",
-                xpid_str, wmpid_str);
-
-    sessvc_params = list_create();
-    sessvc_params->auto_free = 1;
-
-    /* building parameters */
-    g_snprintf(exe_path, 261, "%s/xrdp-sessvc", XRDP_SBIN_PATH);
-
-    list_add_item(sessvc_params, (tintptr)g_strdup(exe_path));
-    list_add_item(sessvc_params, (tintptr)g_strdup(xpid_str));
-    list_add_item(sessvc_params, (tintptr)g_strdup(wmpid_str));
-    list_add_item(sessvc_params, 0); /* mandatory */
-
-    env_set_user(username,
-                 0,
-                 display,
-                 g_cfg->session_variables1,
-                 g_cfg->session_variables2);
-
-    /* executing sessvc */
-    g_execvp(exe_path, ((char **)sessvc_params->items));
-
-    /* should not get here */
-    log_message(LOG_LEVEL_ALWAYS,
-                "error starting xrdp-sessvc - pid %d - xpid=%s - wmpid=%s",
-                g_getpid(), xpid_str, wmpid_str);
-
-    /* logging parameters */
-    /* no problem calling strerror for thread safety: other threads
-       are blocked */
-    log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s",
-                g_get_errno(), g_get_strerror());
-    log_message(LOG_LEVEL_DEBUG, "execve parameter list:");
-
-    for (i = 0; i < (sessvc_params->count); i++)
-    {
-        log_message(LOG_LEVEL_DEBUG, "        argv[%d] = %s", i,
-                    (char *)list_get_item(sessvc_params, i));
-    }
-
-    list_delete(sessvc_params);
-
-    /* keep the old waitpid if some error occurs during execlp */
-    g_waitpid(wmpid);
-    g_sigterm(xpid);
-    g_sigterm(wmpid);
-    g_sleep(1000);
-    auth_end(data);
-    g_exit(0);
-}
-
-/******************************************************************************/
 /* called with the main thread
    returns boolean */
 static int
@@ -420,15 +349,48 @@ wait_for_xserver(int display)
 }
 
 /******************************************************************************/
+static int
+session_start_chansrv(char *username, int display)
+{
+    struct list *chansrv_params;
+    char exe_path[262];
+    int cspid;
+
+    cspid = g_fork();
+    if (cspid == 0)
+    {
+        chansrv_params = list_create(); 
+        chansrv_params->auto_free = 1;
+
+        /* building parameters */
+        g_snprintf(exe_path, 261, "%s/xrdp-chansrv", XRDP_SBIN_PATH);
+
+        list_add_item(chansrv_params, (intptr_t) g_strdup(exe_path));
+        list_add_item(chansrv_params, 0); /* mandatory */
+
+        env_set_user(username, 0, display,
+                     g_cfg->session_variables1,
+                     g_cfg->session_variables2);
+
+        /* executing chansrv */
+        g_execvp(exe_path, (char **) (chansrv_params->items));
+        /* failed */
+        g_exit(1);
+    }
+    return cspid;
+}
+
+/******************************************************************************/
 /* called with the main thread */
 static int
-session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
+session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
+                   struct SCP_SESSION *s)
 {
     int display = 0;
     int pid = 0;
     int wmpid = 0;
-    int pampid = 0;
     int xpid = 0;
+    int cspid = 0;
     int i = 0;
     char geometry[32];
     char depth[32];
@@ -540,100 +502,85 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         else if (wmpid == 0)
         {
             wait_for_xserver(display);
-            pampid = g_fork(); /* parent waits, todo
-                                  child becomes wm */
-            if (pampid == -1)
+            env_set_user(s->username,
+                         0,
+                         display,
+                         g_cfg->session_variables1,
+                         g_cfg->session_variables2);
+            if (x_server_running(display))
             {
-            }
-            else if (pampid == 0)
-            {
-                env_set_user(s->username,
-                             0,
-                             display,
-                             g_cfg->session_variables1,
-                             g_cfg->session_variables2);
-                if (x_server_running(display))
+                auth_set_env(data);
+                if (s->directory != 0)
                 {
-                    auth_set_env(data);
-                    if (s->directory != 0)
+                    if (s->directory[0] != 0)
                     {
-                        if (s->directory[0] != 0)
-                        {
-                            g_set_current_dir(s->directory);
-                        }
+                        g_set_current_dir(s->directory);
                     }
-                    if (s->program != 0)
-                    {
-                        if (s->program[0] != 0)
-                        {
-                            g_execlp3(s->program, s->program, 0);
-                            log_message(LOG_LEVEL_ALWAYS,
-                                        "error starting program %s for user %s - pid %d",
-                                        s->program, s->username, g_getpid());
-                        }
-                    }
-                    /* try to execute user window manager if enabled */
-                    if (g_cfg->enable_user_wm)
-                    {
-                        g_sprintf(text, "%s/%s", g_getenv("HOME"), g_cfg->user_wm);
-                        if (g_file_exist(text))
-                        {
-                            g_execlp3(text, g_cfg->user_wm, 0);
-                            log_message(LOG_LEVEL_ALWAYS, "error starting user "
-                                        "wm for user %s - pid %d", s->username, g_getpid());
-                            /* logging parameters */
-                            log_message(LOG_LEVEL_DEBUG, "errno: %d, "
-                                        "description: %s", g_get_errno(), g_get_strerror());
-                            log_message(LOG_LEVEL_DEBUG, "execlp3 parameter "
-                                        "list:");
-                            log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                                        text);
-                            log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
-                                        g_cfg->user_wm);
-                        }
-                    }
-                    /* if we're here something happened to g_execlp3
-                       so we try running the default window manager */
-                    g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
-                    g_execlp3(text, g_cfg->default_wm, 0);
-
-                    log_message(LOG_LEVEL_ALWAYS, "error starting default "
-                                 "wm for user %s - pid %d", s->username, g_getpid());
-                    /* logging parameters */
-                    log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                                "%s", g_get_errno(), g_get_strerror());
-                    log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
-                    log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                                text);
-                    log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
-                                g_cfg->default_wm);
-
-                    /* still a problem starting window manager just start xterm */
-                    g_execlp3("xterm", "xterm", 0);
-
-                    /* should not get here */
-                    log_message(LOG_LEVEL_ALWAYS, "error starting xterm "
-                                "for user %s - pid %d", s->username, g_getpid());
-                    /* logging parameters */
-                    log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                                "%s", g_get_errno(), g_get_strerror());
                 }
-                else
+                if (s->program != 0)
                 {
-                    log_message(LOG_LEVEL_ERROR, "another Xserver might "
-                                "already be active on display %d - see log", display);
+                    if (s->program[0] != 0)
+                    {
+                        g_execlp3(s->program, s->program, 0);
+                        log_message(LOG_LEVEL_ALWAYS,
+                                    "error starting program %s for user %s - pid %d",
+                                    s->program, s->username, g_getpid());
+                    }
                 }
+                /* try to execute user window manager if enabled */
+                if (g_cfg->enable_user_wm)
+                {
+                    g_sprintf(text, "%s/%s", g_getenv("HOME"), g_cfg->user_wm);
+                    if (g_file_exist(text))
+                    {
+                        g_execlp3(text, g_cfg->user_wm, 0);
+                        log_message(LOG_LEVEL_ALWAYS, "error starting user "
+                                    "wm for user %s - pid %d", s->username, g_getpid());
+                        /* logging parameters */
+                        log_message(LOG_LEVEL_DEBUG, "errno: %d, "
+                                    "description: %s", g_get_errno(), g_get_strerror());
+                        log_message(LOG_LEVEL_DEBUG, "execlp3 parameter "
+                                    "list:");
+                        log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
+                                    text);
+                        log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
+                                    g_cfg->user_wm);
+                    }
+                }
+                /* if we're here something happened to g_execlp3
+                   so we try running the default window manager */
+                g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
+                g_execlp3(text, g_cfg->default_wm, 0);
 
-                log_message(LOG_LEVEL_DEBUG, "aborting connection...");
-                g_exit(0);
+                log_message(LOG_LEVEL_ALWAYS, "error starting default "
+                             "wm for user %s - pid %d", s->username, g_getpid());
+                /* logging parameters */
+                log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                            "%s", g_get_errno(), g_get_strerror());
+                log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
+                log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
+                            text);
+                log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
+                            g_cfg->default_wm);
+
+                /* still a problem starting window manager just start xterm */
+                g_execlp3("xterm", "xterm", 0);
+
+                /* should not get here */
+                log_message(LOG_LEVEL_ALWAYS, "error starting xterm "
+                            "for user %s - pid %d", s->username, g_getpid());
+                /* logging parameters */
+                log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                            "%s", g_get_errno(), g_get_strerror());
             }
             else
             {
-                g_waitpid(pampid);
-                auth_stop_session(data);
-                g_deinit();
-                g_exit(0);
+                log_message(LOG_LEVEL_ERROR, "another Xserver might "
+                            "already be active on display %d - see log", display);
             }
+
+            log_message(LOG_LEVEL_DEBUG, "aborting connection...");
+            g_exit(0);
         }
         else
         {
@@ -828,12 +775,17 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
             else
             {
                 wait_for_xserver(display);
-                g_snprintf(text, 255, "%d", display);
-                g_setenv("XRDP_SESSVC_DISPLAY", text, 1);
-                g_snprintf(text, 255, ":%d.0", display);
-                g_setenv("DISPLAY", text, 1);
-                /* new style waiting for clients */
-                session_start_sessvc(xpid, wmpid, data, s->username, display);
+                g_sck_close(c->in_sck);
+                log_end();
+                cspid = session_start_chansrv(s->username, display);
+                g_waitpid(wmpid);
+                auth_stop_session(data);
+                auth_end(data);
+                g_sigterm(xpid);
+                g_sigterm(wmpid);
+                g_sigterm(cspid);
+                g_deinit();
+                g_exit(0);
             }
         }
     }
@@ -911,9 +863,10 @@ session_reconnect_fork(int display, char *username)
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
 int
-session_start(long data, tui8 type, struct SCP_SESSION *s)
+session_start(long data, tui8 type, struct SCP_CONNECTION *c,
+              struct SCP_SESSION *s)
 {
-    return session_start_fork(data, type, s);
+    return session_start_fork(data, type, c, s);
 }
 
 /******************************************************************************/
