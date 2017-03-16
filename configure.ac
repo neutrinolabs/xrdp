@@ -328,7 +328,6 @@ AC_CONFIG_FILES([
   sesman/chansrv/Makefile
   sesman/libscp/Makefile
   sesman/Makefile
-  sesman/sessvc/Makefile
   sesman/tools/Makefile
   vnc/Makefile
   xrdpapi/Makefile

@@ -82,5 +82,4 @@ dist_sesmansysconf_SCRIPTS = \
 SUBDIRS = \
   libscp \
   tools \
-  sessvc \
   chansrv
