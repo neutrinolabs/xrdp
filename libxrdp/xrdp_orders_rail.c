@@ -205,7 +205,7 @@ xrdp_orders_send_as_unicode(struct stream *s, const char *text)
     {
         return 1;
     }
-    str_chars = g_mbstowcs(wdst, text, sizeof(twchar) * len);
+    str_chars = g_mbstowcs(wdst, text, len);
     if (str_chars > 0)
     {
         i32 = str_chars * 2;
@@ -225,6 +225,27 @@ xrdp_orders_send_as_unicode(struct stream *s, const char *text)
 }
 
 /*****************************************************************************/
+static int
+xrdp_orders_get_unicode_bytes(const char *text)
+{
+    int num_chars;
+
+    num_chars = g_mbstowcs(0, text, 0);
+    if (num_chars < 0)
+    {
+        /* g_mbstowcs failed, we ignore that text by returning zero bytes */
+        num_chars = 0;
+    }
+    else
+    {
+        /* calculate the number of bytes of the resulting null-terminated wide-string */
+        num_chars = (num_chars + 1) * sizeof(twchar);
+    }
+
+    return num_chars;
+}
+
+/*****************************************************************************/
 /* RAIL */
 /* returns error */
 /* flags can contain WINDOW_ORDER_STATE_NEW */
@@ -236,7 +257,6 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
     int order_size;
     int order_flags;
     int field_present_flags;
-    int num_chars;
     int index;
 
     order_size = 11;
@@ -265,14 +285,7 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
     if (field_present_flags & WINDOW_ORDER_FIELD_TITLE)
     {
         /* titleInfo */
-        num_chars = g_mbstowcs(0, window_state->title_info, 0);
-        num_chars = MIN(num_chars, sizeof(twchar) * (g_strlen(window_state->title_info) + 1));
-        if (num_chars < 0)
-        {
-            /* g_mbstowcs failed, ignore text */
-            num_chars = 0;
-        }
-        order_size += 2 * num_chars + 2;
+        order_size += xrdp_orders_get_unicode_bytes(window_state->title_info);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET)
@@ -532,7 +545,6 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
     int order_size;
     int order_flags;
     int field_present_flags;
-    int num_chars;
     int use_cmap;
 
     order_size = 15;
@@ -547,37 +559,16 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
     if (field_present_flags & WINDOW_ORDER_FIELD_NOTIFY_TIP)
     {
         /* ToolTip (variable) UNICODE_STRING */
-        num_chars = g_mbstowcs(0, notify_state->tool_tip, 0);
-        num_chars = MIN(num_chars, sizeof(twchar) * (g_strlen(notify_state->tool_tip) + 1));
-        if (num_chars < 0)
-        {
-            /* g_mbstowcs failed, ignore text */
-            num_chars = 0;
-        }
-        order_size += 2 * num_chars + 2;
+        order_size += xrdp_orders_get_unicode_bytes(notify_state->tool_tip);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_NOTIFY_INFO_TIP)
     {
         /* InfoTip (variable) TS_NOTIFY_ICON_INFOTIP */
         /* UNICODE_STRING */
-        num_chars = g_mbstowcs(0, notify_state->infotip.title, 0);
-        num_chars = MIN(num_chars, sizeof(twchar) * (g_strlen(notify_state->infotip.title) + 1));
-        if (num_chars < 0)
-        {
-            /* g_mbstowcs failed, ignore text */
-            num_chars = 0;
-        }
-        order_size += 2 * num_chars + 2;
+        order_size += xrdp_orders_get_unicode_bytes(notify_state->infotip.title);
         /* UNICODE_STRING */
-        num_chars = g_mbstowcs(0, notify_state->infotip.text, 0);
-        num_chars = MIN(num_chars, sizeof(twchar) * (g_strlen(notify_state->infotip.text) + 1));
-        if (num_chars < 0)
-        {
-            /* g_mbstowcs failed, ignore text */
-            num_chars = 0;
-        }
-        order_size += 2 * num_chars + 2;
+        order_size += xrdp_orders_get_unicode_bytes(notify_state->infotip.text);
         /* Timeout (4 bytes) */
         /* InfoFlags (4 bytes) */
         order_size += 8;
