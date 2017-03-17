@@ -42,7 +42,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     int errorcode = 0;
 
     data = auth_userpass(s->username, s->password, &errorcode);
-    if (data != NULL)
+    if (data != 0)
     {
         auth_start_session(data, display); 
     }
