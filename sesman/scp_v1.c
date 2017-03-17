@@ -56,6 +56,10 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
     data = auth_userpass(s->username, s->password,NULL);
     /*LOG_DBG("user: %s\npass: %s", s->username, s->password);*/
+    if (data != NULL)
+    {
+        auth_start_session(data, display); 
+    }
 
     while ((!data) && ((retries == 0) || (current_try > 0)))
     {
@@ -201,7 +205,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
 
     /* cleanup */
-    auth_end(data);
     g_free(slist);
 }
 

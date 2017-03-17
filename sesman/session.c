@@ -497,7 +497,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                         g_getpid());
         }
 #endif
-        auth_start_session(data, display);
         wmpid = g_fork(); /* parent becomes X,
                              child forks wm, and waits, todo */
         if (wmpid == -1)
@@ -785,8 +784,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 g_waitpid(wmpid);
                 log_message(LOG_LEVEL_ALWAYS, "window manager pid(%d) did "
                             "exit, cleaning up session", wmpid);
-                auth_stop_session(data);
-                auth_end(data);
                 g_sigterm(xpid);
                 g_sigterm(wmpid);
                 g_sigterm(cspid);
@@ -917,6 +914,10 @@ session_kill(int pid)
 
         if (tmp->item->pid == pid)
         {
+
+            auth_stop_session(tmp->item->data);
+            auth_end(tmp->item->data);
+
             /* deleting the session */
             log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
             g_free(tmp->item);

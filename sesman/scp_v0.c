@@ -42,6 +42,10 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     int errorcode = 0;
 
     data = auth_userpass(s->username, s->password, &errorcode);
+    if (data != NULL)
+    {
+        auth_start_session(data, display); 
+    }
 
     if (s->type == SCP_GW_AUTHENTICATION)
     {
@@ -155,5 +159,4 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     {
         scp_v0s_deny_connection(c);
     }
-    auth_end(data);
 }
