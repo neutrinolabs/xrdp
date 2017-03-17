@@ -455,6 +455,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         return 0;
     }
 
+    auth_start_session(data, display);
     pid = g_fork(); /* parent is fork from tcp accept,
                        child forks X and wm, then becomes scp */
 
