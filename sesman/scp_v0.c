@@ -122,18 +122,18 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                 if (SCP_SESSION_TYPE_XVNC == s->type)
                 {
                     log_message( LOG_LEVEL_INFO, "starting Xvnc session...");
-                    display = session_start(data, SESMAN_SESSION_TYPE_XVNC, s);
+                    display = session_start(data, SESMAN_SESSION_TYPE_XVNC, c, s);
                 }
                 else if (SCP_SESSION_TYPE_XRDP == s->type)
                 {
                     log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
-                    display = session_start(data, SESMAN_SESSION_TYPE_XRDP, s);
+                    display = session_start(data, SESMAN_SESSION_TYPE_XRDP, c, s);
                 }
                 else if (SCP_SESSION_TYPE_XORG == s->type)
                 {
                     /* type is SCP_SESSION_TYPE_XORG */
                     log_message(LOG_LEVEL_INFO, "starting Xorg session...");
-                    display = session_start(data, SESMAN_SESSION_TYPE_XORG, s);
+                    display = session_start(data, SESMAN_SESSION_TYPE_XORG, c, s);
                 }
             }
             else
