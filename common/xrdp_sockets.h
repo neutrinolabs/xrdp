@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * default file locations for log, config, etc
+ * names of UNIX sockets for inter-process communication
  */
 
-#if !defined(FILE_LOC_H)
-#define FILE_LOC_H
+#if !defined(XRDP_SOCKETS_H)
+#define XRDP_SOCKETS_H
 
 #define XRDP_CHANSRV_STR      XRDP_SOCKET_PATH "/xrdp_chansrv_socket_%d"
 #define CHANSRV_PORT_OUT_STR  XRDP_SOCKET_PATH "/xrdp_chansrv_audio_out_socket_%d"

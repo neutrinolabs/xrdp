@@ -31,7 +31,6 @@
 #include "list.h"
 #include "file.h"
 #include "libxrdpinc.h"
-#include "file_loc.h"
 #include "xrdp_client_info.h"
 
 

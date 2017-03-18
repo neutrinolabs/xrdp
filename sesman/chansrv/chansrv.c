@@ -32,12 +32,12 @@
 #include "devredir.h"
 #include "list.h"
 #include "file.h"
-#include "file_loc.h"
 #include "log.h"
 #include "rail.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
 #include "drdynvc.h"
+#include "xrdp_sockets.h"
 
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;
