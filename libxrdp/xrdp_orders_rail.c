@@ -239,7 +239,7 @@ xrdp_orders_get_unicode_bytes(const char *text)
     else
     {
         /* calculate the number of bytes of the resulting null-terminated wide-string */
-        num_chars = (num_chars + 1) * sizeof(twchar);
+        num_chars = (num_chars + 1) * 2;
     }
 
     return num_chars;
