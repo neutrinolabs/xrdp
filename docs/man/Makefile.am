@@ -8,8 +8,7 @@ man_MANS = \
   xrdp-keygen.8 \
   xrdp-sesadmin.8 \
   xrdp-sesman.8 \
-  xrdp-sesrun.8 \
-  xrdp-sessvc.8
+  xrdp-sesrun.8
 
 EXTRA_DIST = $(man_MANS:=.in)
 
