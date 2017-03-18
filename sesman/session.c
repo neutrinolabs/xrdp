@@ -531,6 +531,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                         g_getpid());
         }
 #endif
+        auth_start_session(data, display);
         wmpid = g_fork(); /* parent becomes X,
                              child forks wm, and waits, todo */
         if (wmpid == -1)
@@ -539,7 +540,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         else if (wmpid == 0)
         {
             wait_for_xserver(display);
-            auth_start_session(data, display);
             pampid = g_fork(); /* parent waits, todo
                                   child becomes wm */
             if (pampid == -1)
