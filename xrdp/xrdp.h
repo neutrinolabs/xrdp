@@ -32,7 +32,6 @@
 #include "ssl_calls.h"
 #include "thread_calls.h"
 #include "file.h"
-#include "file_loc.h"
 #include "xrdp_client_info.h"
 #include "log.h"
 

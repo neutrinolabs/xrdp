@@ -35,6 +35,7 @@
 #endif /* USE_NOPAM */
 
 #include "xrdp_encoder.h"
+#include "xrdp_sockets.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \

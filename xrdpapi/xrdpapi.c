@@ -39,7 +39,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "file_loc.h"
+#include "xrdp_sockets.h"
 #include "xrdpapi.h"
 
 struct wts_obj

@@ -27,7 +27,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "file_loc.h"
+#include "xrdp_sockets.h"
 
 int main(int argc, char **argv)
 {

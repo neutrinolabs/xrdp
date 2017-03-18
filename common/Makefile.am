@@ -9,7 +9,8 @@ EXTRA_DIST = pixman-region.c
 include_HEADERS = \
   xrdp_client_info.h \
   xrdp_constants.h \
-  xrdp_rail.h
+  xrdp_rail.h \
+  xrdp_sockets.h
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -36,7 +37,6 @@ libcommon_la_SOURCES = \
   fifo.h \
   file.c \
   file.h \
-  file_loc.h \
   list.c \
   list.h \
   list16.c \

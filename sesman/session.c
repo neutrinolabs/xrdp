@@ -40,6 +40,7 @@
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
+#include "xrdp_sockets.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38

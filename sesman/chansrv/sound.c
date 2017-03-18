@@ -31,7 +31,7 @@
 #include "thread_calls.h"
 #include "defines.h"
 #include "fifo.h"
-#include "file_loc.h"
+#include "xrdp_sockets.h"
 #include "chansrv_common.h"
 
 #if defined(XRDP_OPUS)
