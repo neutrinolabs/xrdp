@@ -617,18 +617,18 @@ xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
 
 /*****************************************************************************
  * convert utf-16 encoded string from stream into utf-8 string.
- * note: uni_len doesn't include the null-terminator char.
+ * note: src_bytes doesn't include the null-terminator char.
  */
 static int
-unicode_utf16_in(struct stream *s, int uni_len, char *dst, int dst_len)
+unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
 {
     twchar *src;
     int num_chars;
     int i;
-    int size;
+    int bytes;
 
-    LLOGLN(10, ("unicode_utf16_in: uni_len %d, dst_len %d", uni_len, dst_len));
-    if (uni_len == 0)
+    LLOGLN(10, ("unicode_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len));
+    if (src_bytes == 0)
     {
         if (!s_check_rem(s, 2))
         {
@@ -638,9 +638,9 @@ unicode_utf16_in(struct stream *s, int uni_len, char *dst, int dst_len)
         return 0;
     }
 
-    size = uni_len + 2; /* include the null terminator */
-    src = g_new0(twchar, size);
-    for (i = 0; i < size / 2; ++i)
+    bytes = src_bytes + 2; /* include the null terminator */
+    src = g_new0(twchar, bytes);
+    for (i = 0; i < bytes / 2; ++i)
     {
         if (!s_check_rem(s, 2))
         {
