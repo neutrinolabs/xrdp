@@ -1121,6 +1121,7 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 #if defined(XRDP_ENABLE_IPV6)
         struct sockaddr_in6 sock_addr_in6;
 #endif
+        struct sockaddr_un sock_addr_un;
     } sock_info;
 
     socklen_t sock_len = sizeof(sock_info);
@@ -1138,7 +1139,9 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 
                 g_snprintf(addr, addr_bytes, "%s", inet_ntoa(sock_addr_in->sin_addr));
                 g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in->sin_port));
-
+                g_snprintf(msg, sizeof(msg),
+                           "AF_INET connection received from %s port %s",
+                           addr, port);
                 break;
             }
 
@@ -1151,24 +1154,34 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
                 inet_ntop(sock_addr_in6->sin6_family,
                           &sock_addr_in6->sin6_addr, addr, addr_bytes);
                 g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in6->sin6_port));
+                g_snprintf(msg, sizeof(msg),
+                           "AF_INET6 connection received from %s port %s",
+                           addr, port);
                 break;
             }
 
 #endif
 
             case AF_UNIX:
+            {
+                g_strncpy(addr, "", addr_bytes - 1);
+                g_strncpy(port, "", port_bytes - 1);
+                g_snprintf(msg, sizeof(msg), "AF_UNIX connection received");
+                break;
+            }
             default:
             {
                 g_strncpy(addr, "", addr_bytes - 1);
                 g_strncpy(port, "", port_bytes - 1);
+                g_snprintf(msg, sizeof(msg),
+                           "connection received, unknown socket family %d",
+                           sock_info.sock_addr.sa_family);
                 break;
             }
         }
 
 
-        g_snprintf(msg, sizeof(msg), "A connection received from: %s port %s",
-                   addr, port);
-        log_message(LOG_LEVEL_INFO, "%s", msg);
+        log_message(LOG_LEVEL_INFO, "Socket %d: %s", ret, msg);
 
     }
 
