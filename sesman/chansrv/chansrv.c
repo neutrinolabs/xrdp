@@ -1523,7 +1523,7 @@ main(int argc, char **argv)
     read_ini();
     pid = g_getpid();
 
-    log_level = get_log_level(g_getenv("CHANSRV_LOG_LEVEL"), LOG_LEVEL_ERROR);
+    log_level = get_log_level(g_getenv("CHANSRV_LOG_LEVEL"), LOG_LEVEL_INFO);
 
     /* starting logging subsystem */
     g_memset(&logconfig, 0, sizeof(struct log_config));
