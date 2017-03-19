@@ -676,4 +676,6 @@
 #define XR_RDP_SCAN_LSHIFT 42
 #define XR_RDP_SCAN_ALT    56
 
+#define INFO_CLIENT_NAME_BYTES  32
+
 #endif
