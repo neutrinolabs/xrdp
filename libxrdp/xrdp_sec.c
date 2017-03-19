@@ -615,38 +615,48 @@ xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
     self->encrypt_use_count++;
 }
 
-/*****************************************************************************/
+/*****************************************************************************
+ * convert utf-16 encoded string from stream into utf-8 string.
+ * note: uni_len doesn't include the null-terminator char.
+ */
 static int
-unicode_in(struct stream *s, int uni_len, char *dst, int dst_len)
+unicode_utf16_in(struct stream *s, int uni_len, char *dst, int dst_len)
 {
-    int dst_index;
-    int src_index;
+    twchar *src;
+    int num_chars;
+    int i;
+    int size;
 
-    dst_index = 0;
-    src_index = 0;
-
-    while (src_index < uni_len)
+    LLOGLN(10, ("unicode_utf16_in: uni_len %d, dst_len %d", uni_len, dst_len));
+    if (uni_len == 0)
     {
-        if (dst_index >= dst_len || src_index > 512)
-        {
-            break;
-        }
-
         if (!s_check_rem(s, 2))
         {
             return 1;
         }
-        in_uint8(s, dst[dst_index]);
-        in_uint8s(s, 1);
-        dst_index++;
-        src_index += 2;
+        in_uint8s(s, 2); /* null terminator */
+        return 0;
     }
 
-    if (!s_check_rem(s, 2))
+    size = uni_len + 2; /* include the null terminator */
+    src = g_new0(twchar, size);
+    for (i = 0; i < size / 2; ++i)
     {
-        return 1;
+        if (!s_check_rem(s, 2))
+        {
+            g_free(src);
+            return 1;
+        }
+        in_uint16_le(s, src[i]);
     }
-    in_uint8s(s, 2);
+    num_chars = g_wcstombs(dst, src, dst_len);
+    if (num_chars < 0)
+    {
+        g_memset(dst, '\0', dst_len);
+    }
+    LLOGLN(10, ("unicode_utf16_in: num_chars %d, dst %s", num_chars, dst));
+    g_free(src);
+
     return 0;
 }
 
@@ -782,12 +792,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-    if (unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255) != 0)
+    if (unicode_utf16_in(s, len_domain, self->rdp_layer->client_info.domain, sizeof(self->rdp_layer->client_info.domain) - 1) != 0)
     {
         return 1;
     }
     DEBUG(("domain %s", self->rdp_layer->client_info.domain));
-    if (unicode_in(s, len_user, self->rdp_layer->client_info.username, 255) != 0)
+    if (unicode_utf16_in(s, len_user, self->rdp_layer->client_info.username, sizeof(self->rdp_layer->client_info.username) - 1) != 0)
     {
         return 1;
     }
@@ -795,7 +805,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (flags & RDP_LOGON_AUTO)
     {
-        if (unicode_in(s, len_password, self->rdp_layer->client_info.password, 255) != 0)
+        if (unicode_utf16_in(s, len_password, self->rdp_layer->client_info.password, sizeof(self->rdp_layer->client_info.password) - 1) != 0)
         {
             return 1;
         }
@@ -815,12 +825,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
     }
 
-    if (unicode_in(s, len_program, self->rdp_layer->client_info.program, 255) != 0)
+    if (unicode_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program) - 1) != 0)
     {
         return 1;
     }
     DEBUG(("program %s", self->rdp_layer->client_info.program));
-    if (unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255) != 0)
+    if (unicode_utf16_in(s, len_directory, self->rdp_layer->client_info.directory, sizeof(self->rdp_layer->client_info.directory) - 1) != 0)
     {
         return 1;
     }
@@ -834,7 +844,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
         in_uint8s(s, 2);                                    /* unknown */
         in_uint16_le(s, len_ip);
-        if (unicode_in(s, len_ip - 2, tmpdata, 255) != 0)
+        if (unicode_utf16_in(s, len_ip - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
         {
             return 1;
         }
@@ -843,7 +853,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         in_uint16_le(s, len_dll);
-        if (unicode_in(s, len_dll - 2, tmpdata, 255) != 0)
+        if (unicode_utf16_in(s, len_dll - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
         {
             return 1;
         }
