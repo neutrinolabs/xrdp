@@ -148,7 +148,7 @@ struct xrdp_client_info
   int max_unacknowledged_frame_count;
 
   long ssl_protocols;
-  char tls_ciphers[64];
+  char tls_ciphers[1024];
 
   int client_os_major;
   int client_os_minor;
