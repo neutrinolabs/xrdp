@@ -42,7 +42,7 @@ void
 scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 {
     long data;
-    int display;
+    int display = 0;
     int retries;
     int current_try;
     enum SCP_SERVER_STATES_E e;
@@ -50,6 +50,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     struct session_item *sitem;
     int scount;
     SCP_SID sid;
+    bool_t do_auth_end = 1;
 
     retries = g_cfg->sec.login_retry;
     current_try = retries;
@@ -128,14 +129,20 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
             display = session_start(data, SESMAN_SESSION_TYPE_XVNC, c, s);
         }
-        else
+        else if (SCP_SESSION_TYPE_XRDP == s->type)
         {
             log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
             display = session_start(data, SESMAN_SESSION_TYPE_XRDP, c, s);
         }
-
+        else if (SCP_SESSION_TYPE_XORG == s->type)
+        {
+            log_message(LOG_LEVEL_INFO, "starting Xorg session...");
+            display = session_start(data, SESMAN_SESSION_TYPE_XORG, c, s);
+        }
+        /* if the session started up ok, auth_end will be called on
+           sig child */
+        do_auth_end = display == 0;
         e = scp_v1s_connect_new_session(c, display);
-
         switch (e)
         {
             case SCP_SERVER_STATE_OK:
@@ -201,7 +208,10 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
 
     /* cleanup */
-    auth_end(data);
+    if (do_auth_end)
+    {
+        auth_end(data);
+    }
     g_free(slist);
 }
 
