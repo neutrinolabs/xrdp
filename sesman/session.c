@@ -456,6 +456,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         return 0;
     }
 
+    auth_start_session(data, display);
     pid = g_fork(); /* parent is fork from tcp accept,
                        child forks X and wm, then becomes scp */
 
@@ -498,7 +499,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                         g_getpid());
         }
 #endif
-        auth_start_session(data, display);
         window_manager_pid = g_fork(); /* parent becomes X,
                              child forks wm, and waits, todo */
         if (window_manager_pid == -1)
@@ -787,8 +787,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 g_waitpid(window_manager_pid);
                 log_message(LOG_LEVEL_ALWAYS, "window manager (pid %d) did "
                             "exit, cleaning up session", window_manager_pid);
-                auth_stop_session(data);
-                auth_end(data);
                 g_sigterm(display_pid);
                 g_sigterm(chansrv_pid);
                 g_deinit();
@@ -918,6 +916,8 @@ session_kill(int pid)
 
         if (tmp->item->pid == pid)
         {
+            auth_stop_session(tmp->item->data);
+            auth_end(tmp->item->data);
             /* deleting the session */
             log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
             g_free(tmp->item);
