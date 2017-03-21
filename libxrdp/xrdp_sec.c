@@ -617,7 +617,7 @@ xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
 
 /*****************************************************************************/
 static int
-unicode_in(struct stream *s, int uni_len, char *dst, int dst_len)
+unicode_in(struct stream *s, int uni_len, int uni_max_bytes, char *dst, int dst_len)
 {
     int dst_index;
     int src_index;
@@ -627,7 +627,7 @@ unicode_in(struct stream *s, int uni_len, char *dst, int dst_len)
 
     while (src_index < uni_len)
     {
-        if (dst_index >= dst_len || src_index > 512)
+        if (dst_index >= dst_len || src_index > uni_max_bytes)
         {
             break;
         }
@@ -782,12 +782,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-    if (unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255) != 0)
+    if (unicode_in(s, len_domain, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.domain, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
     DEBUG(("domain %s", self->rdp_layer->client_info.domain));
-    if (unicode_in(s, len_user, self->rdp_layer->client_info.username, 255) != 0)
+    if (unicode_in(s, len_user, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.username, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
@@ -795,7 +795,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (flags & RDP_LOGON_AUTO)
     {
-        if (unicode_in(s, len_password, self->rdp_layer->client_info.password, 255) != 0)
+        if (unicode_in(s, len_password, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.password, INFO_TEXT_MAX_BYTES) != 0)
         {
             return 1;
         }
@@ -815,12 +815,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
     }
 
-    if (unicode_in(s, len_program, self->rdp_layer->client_info.program, 255) != 0)
+    if (unicode_in(s, len_program, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.program, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
     DEBUG(("program %s", self->rdp_layer->client_info.program));
-    if (unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255) != 0)
+    if (unicode_in(s, len_directory, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.directory, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
@@ -834,7 +834,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
         in_uint8s(s, 2);                                    /* unknown */
         in_uint16_le(s, len_ip);
-        if (unicode_in(s, len_ip - 2, tmpdata, 255) != 0)
+        if (unicode_in(s, len_ip - 2, INFO_TEXT_MAX_UNICODE_BYTES, tmpdata, INFO_TEXT_MAX_BYTES) != 0)
         {
             return 1;
         }
@@ -843,7 +843,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         in_uint16_le(s, len_dll);
-        if (unicode_in(s, len_dll - 2, tmpdata, 255) != 0)
+        if (unicode_in(s, len_dll - 2, INFO_TEXT_MAX_UNICODE_BYTES, tmpdata, INFO_TEXT_MAX_BYTES) != 0)
         {
             return 1;
         }
@@ -1589,6 +1589,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     int highColorDepth;
     int supportedColorDepths;
     int earlyCapabilityFlags;
+    char clientName[CS_CLIENT_NAME_BYTES] = { '\0' };
+
 
     in_uint8s(s, 4); /* version */
     in_uint16_le(s, self->rdp_layer->client_info.width);
@@ -1607,7 +1609,9 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     in_uint8s(s, 2); /* SASSequence */
     in_uint8s(s, 4); /* keyboardLayout */
     in_uint8s(s, 4); /* clientBuild */
-    in_uint8s(s, 32); /* clientName */
+    unicode_in(s, CS_CLIENT_NAME_UNICODE_BYTES - sizeof(twchar), CS_CLIENT_NAME_UNICODE_BYTES,
+               clientName, CS_CLIENT_NAME_BYTES - sizeof(char)); /* clientName, represented as 512 bytes non-null terminated unicode string */
+    log_message(LOG_LEVEL_INFO, "client computer name: %s", clientName);
     in_uint8s(s, 4); /* keyboardType */
     in_uint8s(s, 4); /* keyboardSubType */
     in_uint8s(s, 4); /* keyboardFunctionKey */
