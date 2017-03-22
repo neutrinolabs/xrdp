@@ -68,7 +68,7 @@ typedef bool pa_bool_t;
 #endif
 
 #include "module-xrdp-sink-symdef.h"
-#include "../common/file_loc.h"
+#include "../../../common/file_loc.h"
 
 PA_MODULE_AUTHOR("Jay Sorg");
 PA_MODULE_DESCRIPTION("xrdp sink");
