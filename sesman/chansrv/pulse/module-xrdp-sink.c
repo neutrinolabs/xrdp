@@ -308,7 +308,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         memset(&s, 0, sizeof(s));
         s.sun_family = AF_UNIX;
         bytes = sizeof(s.sun_path) - 1;
-        snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, u->display_num);
+        snprintf(s.sun_path, bytes, CHANSRV_PORT_OUT_STR, u->display_num);
         pa_log_debug("trying to connect to %s", s.sun_path);
         if (connect(fd, (struct sockaddr *)&s,
                     sizeof(struct sockaddr_un)) != 0) {
