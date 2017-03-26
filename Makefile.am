@@ -19,7 +19,6 @@ EXTRA_DIST = \
   install.txt \
   m4 \
   postinstall-pak \
-  readme.txt \
   tcutils \
   tests \
   vrplayer \
