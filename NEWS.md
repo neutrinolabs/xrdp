@@ -1,3 +1,26 @@
+# Release notes for xrdp v0.9.2 (2017/03/30)
+## New features
+  * RemoteFX codec support is now enabled by default.
+  * Bitmap updates support is now enabled by default.
+  * TLS ciphers suites and version is now logged.
+  * Connected computer name is now logged.
+  * Switched to Xorg (xorgxrdp) as the default backend now.
+  * Miscellaneous RemoteFX codec mode improvements.
+  * Socket directory is configurable at the compile time.
+
+## Bugfixes
+  * Parallels client for MacOS / iOS can now connect (audio redirection must be disabled on client or xrdp server though).
+  * MS RDP client for iOS can now connect using TLS security layer.
+  * MS RDP client for Android can now connect to xrdp.
+  * Large resolutions (4K) can be used with RemoteFX graphics.
+  * Multiple RemoteApps can be opened throguh NeutrinoRDP proxy.
+  * tls_ciphers in xrdp.ini is not limited to 63 chars anymore, it's variable-length.
+  * Fixed an issue where tls_ciphers were ignored and rdp security layer could be used instead.
+  * Kill disconnected sessions feature is working with Xorg (xorgxrdp) backend.
+  * Miscellaneous code cleanup and memory issues fixes.
+
+-----------------------
+
 # Release notes for xrdp v0.9.1 (2016/12/21)
 ## New features
   * New xorgxrdp backend using existing Xorg with additional modules
