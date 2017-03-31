@@ -33,6 +33,7 @@
 #include "file.h"
 #include "sesman.h"
 #include "log.h"
+#include <string.h>
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
@@ -40,15 +41,14 @@ extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 int
-config_read(struct config_sesman *cfg)
+config_read(const char *cfg_file, struct config_sesman *cfg)
 {
     int fd;
     struct list *sec;
     struct list *param_n;
     struct list *param_v;
-    char cfg_file[256];
+    char cfg_dir[256];
 
-    g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
 
     if (-1 == fd)
@@ -76,7 +76,10 @@ config_read(struct config_sesman *cfg)
     param_v->auto_free = 1;
 
     /* read global config */
-    config_read_globals(fd, cfg, param_n, param_v);
+    g_strcpy(cfg_dir, cfg_file);
+    *(strrchr(cfg_dir, '/')) = 0;  // cfg_file validated to contain '/'
+
+    config_read_globals(cfg_dir, fd, cfg, param_n, param_v);
 
     /* read Xvnc/X11rdp/Xorg parameter list */
     config_read_vnc_params(fd, cfg, param_n, param_v);
@@ -101,11 +104,10 @@ config_read(struct config_sesman *cfg)
 
 /******************************************************************************/
 int
-config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
+config_read_globals(const char *base_dir, int file, struct config_sesman *cf, struct list *param_n,
                     struct list *param_v)
 {
     int i;
-    int length;
     char *buf;
 
     list_clear(param_v);
@@ -181,13 +183,12 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         g_free(cf->default_wm);
         cf->default_wm = g_strdup("startwm.sh");
     }
-    /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+
+    /* if default_wm doesn't begin with '/', it's a relative path from base_dir */
     if (cf->default_wm[0] != '/')
     {
-        /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->default_wm) + 1; /* '/' */
-        buf = (char *)g_malloc(length, 0);
-        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
+        buf = (char *)g_malloc(g_strlen(base_dir) + 1 + g_strlen(g_cfg->default_wm) + 1, 0);
+        g_sprintf(buf, "%s/%s", base_dir, g_cfg->default_wm);
         g_free(g_cfg->default_wm);
         g_cfg->default_wm = g_strdup(buf);
         g_free(buf);
@@ -206,9 +207,8 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     if (cf->reconnect_sh[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->reconnect_sh) + 1; /* '/' */
-        buf = (char *)g_malloc(length, 0);
-        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
+        buf = (char *)g_malloc(g_strlen(base_dir) + 1 + g_strlen(g_cfg->reconnect_sh) + 1, 0);
+        g_sprintf(buf, "%s/%s", base_dir, g_cfg->reconnect_sh);
         g_free(g_cfg->reconnect_sh);
         g_cfg->reconnect_sh = g_strdup(buf);
         g_free(buf);

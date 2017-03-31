@@ -27,6 +27,13 @@ crypt_level=high
 ; openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365
 certificate=
 key_file=
+;directory with km-*.ini files; default is the directory of xrdp.ini
+#keymaps_path=
+;location of xrdp_keyboard_ini; default next to xrdp.ini
+#xrdp_keyboard_ini=
+;location of rsakeys.ini; default next to xrdp.ini
+#rsakeys_ini=
+
 ; set SSL protocols
 ; can be comma separated list of 'SSLv3', 'TLSv1', 'TLSv1.1', 'TLSv1.2', 'TLSv1.3'
 ssl_protocols=TLSv1.2, TLSv1.3
@@ -159,7 +166,7 @@ lib=libxup.@lib_extension@
 username=ask
 password=ask
 ip=127.0.0.1
-port=-1
+sesmanport=3350
 code=20
 
 [Xvnc]
@@ -168,7 +175,7 @@ lib=libvnc.@lib_extension@
 username=ask
 password=ask
 ip=127.0.0.1
-port=-1
+sesmanport=3350
 #xserverbpp=24
 #delay_ms=2000
 

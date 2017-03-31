@@ -353,13 +353,13 @@ get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         struct xrdp_keymap* keymap);
 int
-get_keymaps(int keylayout, struct xrdp_keymap* keymap);
+get_keymaps(const char *keymaps_path, int keylayout, struct xrdp_keymap* keymap);
 
 /* xrdp_login_wnd.c */
 int
 xrdp_login_wnd_create(struct xrdp_wm* self);
 int
-load_xrdp_config(struct xrdp_config *config, int bpp);
+load_xrdp_config(const char* xrdp_ini_file, struct xrdp_config *config, int bpp);
 
 /* xrdp_bitmap_compress.c */
 int

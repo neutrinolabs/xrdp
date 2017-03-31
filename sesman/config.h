@@ -197,14 +197,14 @@ struct config_sesman
   int enable_user_wm;
   /**
    * @var default_wm
-   * @brief Default window manager
+   * @brief Default window manager, absolute path
    */
   char *default_wm;
   /**
    * @var user_wm
-   * @brief Default window manager
+   * @brief Default window manager, path relative to user's home
    */
-  char user_wm[32];
+  char user_wm[256];
   /**
    * @var reconnect_sh
    * @brief Script executed when reconnected
@@ -266,7 +266,7 @@ struct config_sesman
  *
  */
 int
-config_read(struct config_sesman* cfg);
+config_read(const char *sesman_ini_file, struct config_sesman* cfg);
 
 /**
  *
@@ -279,7 +279,7 @@ config_read(struct config_sesman* cfg);
  *
  */
 int
-config_read_globals(int file, struct config_sesman* cf,
+config_read_globals(const char *base_dir, int file, struct config_sesman* cf,
                     struct list* param_n, struct list* param_v);
 
 /**

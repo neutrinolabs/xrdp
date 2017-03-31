@@ -35,6 +35,7 @@
 extern int g_sck;
 extern int g_pid;
 extern struct config_sesman *g_cfg; /* in sesman.c */
+extern char g_sesman_ini_file[]; /* in sesman.c */
 extern tbus g_term_event;
 
 /******************************************************************************/
@@ -67,7 +68,6 @@ sig_sesman_reload_cfg(int sig)
 {
     int error;
     struct config_sesman *cfg;
-    char cfg_file[256];
 
     log_message(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
 
@@ -85,7 +85,7 @@ sig_sesman_reload_cfg(int sig)
         return;
     }
 
-    if (config_read(cfg) != 0)
+    if (config_read(g_sesman_ini_file, cfg) != 0)
     {
         log_message(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
         g_free(cfg);
@@ -101,10 +101,9 @@ sig_sesman_reload_cfg(int sig)
     /* replace old config with newly read one */
     g_cfg = cfg;
 
-    g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* start again logging subsystem */
-    error = log_start(cfg_file, "xrdp-sesman");
+    error = log_start(g_sesman_ini_file, "xrdp-sesman");
 
     if (error != LOG_STARTUP_OK)
     {

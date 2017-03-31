@@ -162,15 +162,14 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
     char *val;
     struct list *names;
     struct list *values;
-    char cfg_file[256];
 
     /* default to port 3389 */
     g_strncpy(port, "3389", port_bytes - 1);
     /* Default to all */
     g_strncpy(address, "0.0.0.0", address_bytes - 1);
     /* see if port or address is in xrdp.ini file */
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    fd = g_file_open(cfg_file);
+
+    fd = g_file_open(startup_param->xrdp_ini_file);
     *mode = TRANS_MODE_TCP;
     *tcp_nodelay = 0 ;
     *tcp_keepalive = 0 ;
