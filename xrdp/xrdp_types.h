@@ -535,6 +535,7 @@ struct xrdp_startup_params
   int fork;
   int send_buffer_bytes;
   int recv_buffer_bytes;
+  char xrdp_ini_file[256];
 };
 
 /*

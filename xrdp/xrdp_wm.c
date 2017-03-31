@@ -60,7 +60,7 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->mm = xrdp_mm_create(self);
     self->default_font = xrdp_font_create(self);
     /* this will use built in keymap or load from file */
-    get_keymaps(self->session->client_info->keylayout, &(self->keymap));
+    get_keymaps(client_info->keymaps_path, self->session->client_info->keylayout, &(self->keymap));
     xrdp_wm_set_login_mode(self, 0);
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
@@ -383,7 +383,6 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     char *val;
     struct list *names;
     struct list *values;
-    char cfg_file[256];
 
     if (autorun_name != 0)
     {
@@ -402,8 +401,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     self->background = HCOLOR(self->screen->bpp, 0x000000);
 
     /* now load them from the globals in xrdp.ini if defined */
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    fd = g_file_open(cfg_file);
+    fd = g_file_open(self->pro_layer->lis_layer->startup_params->xrdp_ini_file);
 
     if (fd >= 0)
     {
@@ -494,7 +492,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", cfg_file);
+        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->pro_layer->lis_layer->startup_params->xrdp_ini_file);
     }
 
     if (self->screen->bpp == 8)
@@ -556,12 +554,11 @@ xrdp_wm_init(struct xrdp_wm *self)
     char param[256];
     char default_section_name[256];
     char section_name[256];
-    char cfg_file[256];
     char autorun_name[256];
 
     g_writeln("in xrdp_wm_init: ");
 
-    load_xrdp_config(self->xrdp_config, self->screen->bpp);
+    load_xrdp_config(self->pro_layer->lis_layer->startup_params->xrdp_ini_file, self->xrdp_config, self->screen->bpp);
 
     xrdp_wm_load_static_colors_plus(self, autorun_name);
     xrdp_wm_load_static_pointers(self);
@@ -573,8 +570,7 @@ xrdp_wm_init(struct xrdp_wm *self)
          * NOTE: this should eventually be accessed from self->xrdp_config
          */
 
-        g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-        fd = g_file_open(cfg_file); /* xrdp.ini */
+        fd = g_file_open(self->pro_layer->lis_layer->startup_params->xrdp_ini_file); /* xrdp.ini */
         if (fd != -1)
         {
             names = list_create();
@@ -714,7 +710,7 @@ xrdp_wm_init(struct xrdp_wm *self)
         }
         else
         {
-            log_message(LOG_LEVEL_ERROR,"xrdp_wm_init: Could not read xrdp.ini file %s", cfg_file);
+            log_message(LOG_LEVEL_ERROR,"xrdp_wm_init: Could not read xrdp.ini file %s", self->pro_layer->lis_layer->startup_params->xrdp_ini_file);
         }
     }
     else

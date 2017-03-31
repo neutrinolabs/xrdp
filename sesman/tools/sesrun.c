@@ -49,31 +49,34 @@ main(int argc, char **argv)
     int session_code;
     struct stream *in_s;
     struct stream *out_s;
+    char *sesman_ini_file;
     char *username;
     char *password;
     long data;
 
-    if (0 != config_read(&g_cfg))
-    {
-        g_printf("sesrun: error reading config. quitting.\n");
-        return 1;
-    }
 
     if (argc == 1)
     {
         g_printf("xrdp session starter v0.1\n");
         g_printf("\nusage:\n");
-        g_printf("sesrun <server> <username> <password> <width> <height> <bpp> <session_cod>\n");
+        g_printf("sesrun <sesman.ini> <server> <username> <password> <width> <height> <bpp> <session_cod>\n");
         g_printf("session code 0 for Xvnc, 10 for X11RDP, 20 for Xorg\n");
     }
     else if (argc == 8)
     {
+        sesman_ini_file = argv[1];
         username = argv[2];
         password = argv[3];
         width = g_atoi(argv[4]);
         height = g_atoi(argv[5]);
         bpp = g_atoi(argv[6]);
         session_code = g_atoi(argv[7]);
+
+        if (0 != config_read(sesman_ini_file, &g_cfg))
+        {
+            g_printf("sesrun: error reading config. quitting.\n");
+            return 1;
+        }
         make_stream(in_s);
         init_stream(in_s, 8192);
         make_stream(out_s);

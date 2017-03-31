@@ -64,6 +64,7 @@ struct xrdp_session
 {
     tintptr id;
     struct trans *trans;
+    const char* xrdp_ini_file;
     int (*callback)(intptr_t id, int msg, intptr_t param1, intptr_t param2,
                     intptr_t param3, intptr_t param4);
     void *rdp;
@@ -77,7 +78,7 @@ struct xrdp_session
 };
 
 struct xrdp_session *
-libxrdp_init(tbus id, struct trans *trans);
+libxrdp_init(const char *xrdp_ini_file, tbus id, struct trans *trans);
 int
 libxrdp_exit(struct xrdp_session *session);
 int

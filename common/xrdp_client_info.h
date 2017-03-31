@@ -126,8 +126,11 @@ struct xrdp_client_info
   int capture_code;
   int capture_format;
 
-  char certificate[1024];
-  char key_file[1024];
+  char certificate[256];
+  char key_file[256];
+  char rsakeys_ini_file[256];
+  char xrdp_keyboard_ini_file[256];
+  char keymaps_path[256];
 
   /* X11 keyboard layout - inferred from keyboard type/subtype */
   char model[16];

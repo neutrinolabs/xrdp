@@ -1363,7 +1363,7 @@ lib_send_client_info(struct mod *mod)
 
     g_writeln("lib_send_client_info:");
     make_stream(s);
-    init_stream(s, 8192);
+    init_stream(s, sizeof(mod->client_info) < 8192 ? 8192 : sizeof(mod->client_info));
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 104);
     g_memcpy(s->p, &(mod->client_info), sizeof(mod->client_info));

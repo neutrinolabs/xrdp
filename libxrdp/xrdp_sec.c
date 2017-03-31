@@ -237,7 +237,6 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char *item = (char *)NULL;
     char *value = (char *)NULL;
     char *q = (char *)NULL;
-    char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
     LLOGLN(0, ("xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
@@ -260,10 +259,9 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         client_info->keyboard_subtype = 1;
     }
 
-    g_snprintf(keyboard_cfg_file, 255, "%s/xrdp_keyboard.ini", XRDP_CFG_PATH);
-    LLOGLN(10, ("keyboard_cfg_file %s", keyboard_cfg_file));
+    LLOGLN(10, ("keyboard_cfg_file %s", client_info->xrdp_keyboard_ini_file));
 
-    fd = g_file_open(keyboard_cfg_file);
+    fd = g_file_open(client_info->xrdp_keyboard_ini_file);
 
     if (fd >= 0)
     {
@@ -435,7 +433,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     else
     {
         LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %s",
-               keyboard_cfg_file));
+               client_info->xrdp_keyboard_ini_file));
     }
 }
 
@@ -2249,7 +2247,6 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     int index = 0;
     char *item = NULL;
     char *value = NULL;
-    char key_file[256];
 
     DEBUG((" in xrdp_sec_incoming:"));
     iso = self->mcs_layer->iso_layer;
@@ -2293,19 +2290,17 @@ xrdp_sec_incoming(struct xrdp_sec *self)
         }
         if (self->crypt_method != CRYPT_METHOD_NONE)
         {
-            g_memset(key_file, 0, sizeof(char) * 256);
             g_random(self->server_random, 32);
             items = list_create();
             items->auto_free = 1;
             values = list_create();
             values->auto_free = 1;
-            g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
 
-            if (file_by_name_read_section(key_file, "keys", items, values) != 0)
+            if (file_by_name_read_section(self->rdp_layer->client_info.rsakeys_ini_file, "keys", items, values) != 0)
             {
                 /* this is a show stopper */
                 log_message(LOG_LEVEL_ALWAYS, "XRDP cannot read file: %s "
-                            "(check permissions)", key_file);
+                            "(check permissions)", self->rdp_layer->client_info.rsakeys_ini_file);
                 list_delete(items);
                 list_delete(values);
                 return 1;
