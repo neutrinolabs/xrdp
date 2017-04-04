@@ -132,6 +132,7 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_setenv("SHELL", pw_shell, 1);
             g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
             g_setenv("USER", username, 1);
+            g_setenv("LOGNAME", username, 1);
             g_sprintf(text, "%d", uid);
             g_setenv("UID", text, 1);
             g_setenv("HOME", pw_dir, 1);
