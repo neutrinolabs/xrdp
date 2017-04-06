@@ -1956,7 +1956,12 @@ g_file_read(int fd, char *ptr, int len)
     }
 
 #else
-    return read(fd, ptr, len);
+    int readed;
+    do
+    {
+        readed = read(fd, ptr, len);
+    } while (readed == -1 && errno == EINTR);
+    return readed;
 #endif
 }
 
@@ -1977,7 +1982,12 @@ g_file_write(int fd, const char *ptr, int len)
     }
 
 #else
-    return write(fd, ptr, len);
+    int written;
+    do
+    {
+        written = write(fd, ptr, len);
+    } while (written == -1 && errno == EINTR);
+    return written;
 #endif
 }
 
