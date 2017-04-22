@@ -419,8 +419,6 @@ g_tcp_socket(void)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
     if (rv < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
-
         switch (errno)
         {
             case EAFNOSUPPORT: /* if IPv6 not supported, retry IPv4 */
@@ -429,6 +427,7 @@ g_tcp_socket(void)
                 break;
 
             default:
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
                 return -1;
         }
     }
