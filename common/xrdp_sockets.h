@@ -21,11 +21,20 @@
 #if !defined(XRDP_SOCKETS_H)
 #define XRDP_SOCKETS_H
 
-#define XRDP_CHANSRV_STR      XRDP_SOCKET_PATH "/xrdp_chansrv_socket_%d"
-#define CHANSRV_PORT_OUT_STR  XRDP_SOCKET_PATH "/xrdp_chansrv_audio_out_socket_%d"
-#define CHANSRV_PORT_IN_STR   XRDP_SOCKET_PATH "/xrdp_chansrv_audio_in_socket_%d"
-#define CHANSRV_API_STR       XRDP_SOCKET_PATH "/xrdpapi_%d"
-#define XRDP_X11RDP_STR       XRDP_SOCKET_PATH "/xrdp_display_%d"
-#define XRDP_DISCONNECT_STR   XRDP_SOCKET_PATH "/xrdp_disconnect_display_%d"
+/* basename of socket files */
+#define XRDP_CHANSRV_BASE_STR      "xrdp_chansrv_socket_%d"
+#define CHANSRV_PORT_OUT_BASE_STR  "xrdp_chansrv_audio_out_socket_%d"
+#define CHANSRV_PORT_IN_BASE_STR   "xrdp_chansrv_audio_in_socket_%d"
+#define CHANSRV_API_BASE_STR       "xrdpapi_%d"
+#define XRDP_X11RDP_BASE_STR       "xrdp_display_%d"
+#define XRDP_DISCONNECT_BASE_STR   "xrdp_disconnect_display_%d"
+
+/* fullpath of sockets */
+#define XRDP_CHANSRV_STR      XRDP_SOCKET_PATH "/" XRDP_CHANSRV_BASE_STR
+#define CHANSRV_PORT_OUT_STR  XRDP_SOCKET_PATH "/" CHANSRV_PORT_OUT_BASE_STR
+#define CHANSRV_PORT_IN_STR   XRDP_SOCKET_PATH "/" CHANSRV_PORT_IN_BASE_STR
+#define CHANSRV_API_STR       XRDP_SOCKET_PATH "/" CHANSRV_API_BASE_STR
+#define XRDP_X11RDP_STR       XRDP_SOCKET_PATH "/" XRDP_X11RDP_BASE_STR
+#define XRDP_DISCONNECT_STR   XRDP_SOCKET_PATH "/" XRDP_DISCONNECT_BASE_STR
 
 #endif
