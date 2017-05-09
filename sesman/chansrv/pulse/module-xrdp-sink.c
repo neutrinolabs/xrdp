@@ -292,6 +292,7 @@ static int lsend(int fd, char *data, int bytes) {
 
 static int data_send(struct userdata *u, pa_memchunk *chunk) {
     char *data;
+    char *socket_dir;
     int bytes;
     int sent;
     int fd;
@@ -308,7 +309,13 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         memset(&s, 0, sizeof(s));
         s.sun_family = AF_UNIX;
         bytes = sizeof(s.sun_path) - 1;
-        snprintf(s.sun_path, bytes, CHANSRV_PORT_OUT_STR, u->display_num);
+        socket_dir = getenv("XRDP_SOCKET_PATH");
+        if (socket_dir == NULL || socket_dir[0] == '\0')
+        {
+            socket_dir = "/tmp/.xrdp";
+        }
+        snprintf(s.sun_path, bytes, "%s/" CHANSRV_PORT_OUT_BASE_STR,
+                 socket_dir, u->display_num);
         pa_log_debug("trying to connect to %s", s.sun_path);
         if (connect(fd, (struct sockaddr *)&s,
                     sizeof(struct sockaddr_un)) != 0) {
