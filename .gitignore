@@ -38,5 +38,6 @@ sesman/tools/xrdp-sesrun
 sesman/tools/xrdp-sestest
 sesman/tools/xrdp-xcon
 sesman/xrdp-sesman
+*.so
 stamp-h1
 xrdp/xrdp
