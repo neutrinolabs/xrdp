@@ -743,6 +743,10 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
                 g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
+            /* socket closed */
+            case SSL_ERROR_ZERO_RETURN:
+                return 0;
+
             default:
                 ssl_tls_print_error("SSL_read", tls->ssl, status);
                 status = -1;
@@ -791,6 +795,10 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
             case SSL_ERROR_WANT_WRITE:
                 g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
+
+            /* socket closed */
+            case SSL_ERROR_ZERO_RETURN:
+                return 0;
 
             default:
                 ssl_tls_print_error("SSL_write", tls->ssl, status);
