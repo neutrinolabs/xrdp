@@ -678,7 +678,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
         return 0;
     }
     status = SSL_shutdown(self->ssl);
-    while (status != 1)
+    if (status != 1)
     {
         status = SSL_shutdown(self->ssl);
         if (status <= 0)
