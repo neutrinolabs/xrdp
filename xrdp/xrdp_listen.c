@@ -331,7 +331,8 @@ xrdp_listen_conn_in(struct trans *self, struct trans *new_self)
 }
 
 /*****************************************************************************/
-/* wait for incoming connections */
+/* wait for incoming connections
+   passes through trans_listen_address return value */
 int
 xrdp_listen_main_loop(struct xrdp_listen *self)
 {
@@ -547,5 +548,5 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     }
 
     self->status = -1;
-    return 0;
+    return error;
 }
