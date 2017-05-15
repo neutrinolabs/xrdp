@@ -363,6 +363,7 @@ xrdp_sanity_check(void)
 int
 main(int argc, char **argv)
 {
+    int exit_status = 0;
     int test;
     char cfg_file[256];
     enum logReturns error;
@@ -620,7 +621,7 @@ main(int argc, char **argv)
     }
 
     g_listen->startup_params = startup_params;
-    xrdp_listen_main_loop(g_listen);
+    exit_status = xrdp_listen_main_loop(g_listen);
     xrdp_listen_delete(g_listen);
     tc_mutex_delete(g_sync_mutex);
     tc_mutex_delete(g_sync1_mutex);
@@ -637,5 +638,13 @@ main(int argc, char **argv)
     g_free(startup_params);
     log_end();
     g_deinit();
-    return 0;
+
+    if (exit_status == 0)
+    {
+        g_exit(0);
+    }
+    else
+    {
+        g_exit(1);
+    }
 }
