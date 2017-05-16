@@ -130,12 +130,12 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
 
 AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
-              [Use included painter library (default: yes)]),
+              [Do not use included painter library (default: no)]),
               [], [enable_painter=yes])
 AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
 
 AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
-              [Use included librfxcodec library (default: yes)]),
+              [Do not use included librfxcodec library (default: no)]),
               [], [enable_rfxcodec=yes])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 
