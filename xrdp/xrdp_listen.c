@@ -550,3 +550,54 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     self->status = -1;
     return error;
 }
+
+/*****************************************************************************/
+/* returns 0 if xrdp can listen
+   returns 1 if xrdp cannot listen */
+int
+xrdp_listen_test(void)
+{
+    int rv = 0;
+    char port[128];
+    char address[256];
+    int tcp_nodelay;
+    int tcp_keepalive;
+    struct xrdp_listen *xrdp_listen;
+    struct xrdp_startup_params *startup_params;
+
+
+    startup_params = (struct xrdp_startup_params *)
+                     g_malloc(sizeof(struct xrdp_startup_params), 1);
+    xrdp_listen = xrdp_listen_create();
+    xrdp_listen->startup_params = startup_params;
+
+
+    if (xrdp_listen_get_port_address(port, sizeof(port),
+                                     address, sizeof(address),
+                                     &tcp_nodelay, &tcp_keepalive,
+                                     xrdp_listen->startup_params) != 0)
+    {
+        log_message(LOG_LEVEL_DEBUG, "xrdp_listen_test: "
+                                     "xrdp_listen_get_port_address failed");
+        rv = 1;
+        goto done;
+    }
+
+    /* try to listen */
+    log_message(LOG_LEVEL_DEBUG, "Testing if xrdp can listen on %s port %s.",
+                                 address, port);
+    rv = trans_listen_address(xrdp_listen->listen_trans, port, address);
+    if (rv == 0)
+    {
+        /* if listen succeeded, stop listen immediately */
+        trans_delete(xrdp_listen->listen_trans);
+        xrdp_listen->listen_trans = 0;
+    }
+
+    goto done;
+
+done:
+    xrdp_listen_delete(xrdp_listen);
+    g_free(startup_params);
+    return rv;
+}
