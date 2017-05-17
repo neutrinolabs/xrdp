@@ -657,4 +657,6 @@ main(int argc, char **argv)
     {
         g_exit(1);
     }
+
+    return 0;
 }
