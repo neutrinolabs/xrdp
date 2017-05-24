@@ -79,6 +79,7 @@ endif
 
 #
 # install-data-hook for each platform
+# TODO: subst these directories as well as service files
 #
 if LINUX
 # must be tab below
