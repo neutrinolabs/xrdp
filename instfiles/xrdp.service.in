@@ -1,0 +1,16 @@
+[Unit]
+Description=xrdp daemon
+Documentation=man:xrdp(8) man:xrdp.ini(5)
+Requires=xrdp-sesman.service
+After=network.target xrdp-sesman.service
+
+[Service]
+Type=forking
+PIDFile=@localstatedir@/run/xrdp.pid
+EnvironmentFile=-@sysconfdir@/sysconfig/xrdp
+EnvironmentFile=-@sysconfdir@/default/xrdp
+ExecStart=@sbindir@/xrdp $XRDP_OPTIONS
+ExecStop=@sbindir@/xrdp $XRDP_OPTIONS --kill
+
+[Install]
+WantedBy=multi-user.target
