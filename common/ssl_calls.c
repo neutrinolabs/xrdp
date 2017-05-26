@@ -185,10 +185,10 @@ ssl_mod_exp(char* out, int out_len, char* in, int in_len,
             char* mod, int mod_len, char* exp, int exp_len)
 {
   BN_CTX* ctx;
-  BIGNUM lmod;
-  BIGNUM lexp;
-  BIGNUM lin;
-  BIGNUM lout;
+  BIGNUM *lmod;
+  BIGNUM *lexp;
+  BIGNUM *lin;
+  BIGNUM *lout;
   int rv;
   char* l_out;
   char* l_in;
@@ -206,15 +206,15 @@ ssl_mod_exp(char* out, int out_len, char* in, int in_len,
   ssl_reverse_it(l_mod, mod_len);
   ssl_reverse_it(l_exp, exp_len);
   ctx = BN_CTX_new();
-  BN_init(&lmod);
-  BN_init(&lexp);
-  BN_init(&lin);
-  BN_init(&lout);
-  BN_bin2bn((tui8*)l_mod, mod_len, &lmod);
-  BN_bin2bn((tui8*)l_exp, exp_len, &lexp);
-  BN_bin2bn((tui8*)l_in, in_len, &lin);
-  BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-  rv = BN_bn2bin(&lout, (tui8*)l_out);
+  lmod = BN_new();
+  lexp = BN_new();
+  lin = BN_new();
+  lout = BN_new();
+  BN_bin2bn((tui8*)l_mod, mod_len, lmod);
+  BN_bin2bn((tui8*)l_exp, exp_len, lexp);
+  BN_bin2bn((tui8*)l_in, in_len, lin);
+  BN_mod_exp(lout, lin, lexp, lmod, ctx);
+  rv = BN_bn2bin(lout, (tui8*)l_out);
   if (rv <= out_len)
   {
     ssl_reverse_it(l_out, rv);
@@ -224,10 +224,10 @@ ssl_mod_exp(char* out, int out_len, char* in, int in_len,
   {
     rv = 0;
   }
-  BN_free(&lin);
-  BN_free(&lout);
-  BN_free(&lexp);
-  BN_free(&lmod);
+  BN_free(lin);
+  BN_free(lout);
+  BN_free(lexp);
+  BN_free(lmod);
   BN_CTX_free(ctx);
   g_free(l_out);
   g_free(l_in);
@@ -267,25 +267,33 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
   /* srand is in stdlib.h */
   srand(g_time1());
   my_key = RSA_generate_key(key_size_in_bits, my_e, 0, 0);
+  const BIGNUM *n;
+  const BIGNUM *d;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+  RSA_get0_key(my_key, &n, NULL, &d);
+#else
+  n = my_key->n;
+  d = my_key->d;
+#endif
   error = my_key == 0;
   if (error == 0)
   {
-    len = BN_num_bytes(my_key->n);
+    len = BN_num_bytes(n);
     error = len != mod_len;
   }
   if (error == 0)
   {
-    BN_bn2bin(my_key->n, (tui8*)lmod);
+    BN_bn2bin(n, (tui8*)lmod);
     ssl_reverse_it(lmod, mod_len);
   }
   if (error == 0)
   {
-    len = BN_num_bytes(my_key->d);
+    len = BN_num_bytes(d);
     error = len != pri_len;
   }
   if (error == 0)
   {
-    BN_bn2bin(my_key->d, (tui8*)lpri);
+    BN_bn2bin(d, (tui8*)lpri);
     ssl_reverse_it(lpri, pri_len);
   }
   if (error == 0)
@@ -328,24 +336,32 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
   BN_bin2bn((tui8*)lexp, exp_len, my_e);
   my_key = RSA_new();
   error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
+  const BIGNUM *n;
+  const BIGNUM *d;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+  RSA_get0_key(my_key, &n, NULL, &d);
+#else
+  n = my_key->n;
+  d = my_key->d;
+#endif
   if (error == 0)
   {
-    len = BN_num_bytes(my_key->n);
+    len = BN_num_bytes(n);
     error = len != mod_len;
   }
   if (error == 0)
   {
-    BN_bn2bin(my_key->n, (tui8*)lmod);
+    BN_bn2bin(n, (tui8*)lmod);
     ssl_reverse_it(lmod, mod_len);
   }
   if (error == 0)
   {
-    len = BN_num_bytes(my_key->d);
+    len = BN_num_bytes(d);
     error = len != pri_len;
   }
   if (error == 0)
   {
-    BN_bn2bin(my_key->d, (tui8*)lpri);
+    BN_bn2bin(d, (tui8*)lpri);
     ssl_reverse_it(lpri, pri_len);
   }
   if (error == 0)
