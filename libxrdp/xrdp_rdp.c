@@ -272,7 +272,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
 
 	    if (!g_file_readable(client_info->certificate))
             {
-                log_message(LOG_LEVEL_ERROR, "Cannot open certificate file %s: %s",
+                log_message(LOG_LEVEL_ERROR, "Cannot read certificate file %s: %s",
                             client_info->certificate, g_get_strerror());
             }
         }
@@ -302,7 +302,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
 
 	    if (!g_file_readable(client_info->key_file))
             {
-                log_message(LOG_LEVEL_ERROR, "Cannot open private key file %s: %s",
+                log_message(LOG_LEVEL_ERROR, "Cannot read private key file %s: %s",
                             client_info->key_file, g_get_strerror());
             }
         }
