@@ -23,6 +23,10 @@ subst_verbose = $(subst_verbose_@AM_V@)
 subst_verbose_ = $(subst_verbose_@AM_DEFAULT_V@)
 subst_verbose_0 = @echo "  SUBST    $@";
 
+subst_verbose = $(subst_verbose_@AM_V@)
+subst_verbose_ = $(subst_verbose_@AM_DEFAULT_V@)
+subst_verbose_0 = @echo "  SUBST    $@";
+
 SUFFIXES = .in
 .in:
 	$(subst_verbose)$(SUBST_VARS) $< > $@
