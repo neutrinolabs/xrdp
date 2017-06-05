@@ -77,6 +77,15 @@
 #define MCS_GLOBAL_CHANNEL             1003
 #define MCS_USERCHANNEL_BASE           1001
 
+/* MCS Connection Type (MS-RDPBCGR 2.2.1.3.2) */
+#define CONNECTION_TYPE_MODEM          0x01
+#define CONNECTION_TYPE_BROADBAND_LOW  0x02
+#define CONNECTION_TYPE_SATELLITE      0x03
+#define CONNECTION_TYPE_BROADBAND_HIGH 0x04
+#define CONNECTION_TYPE_WAN            0x05
+#define CONNECTION_TYPE_LAN            0x06
+#define CONNECTION_TYPE_AUTODETECT     0x07
+
 /* RDP secure transport constants */
 #define SEC_RANDOM_SIZE                32
 #define SEC_MODULUS_SIZE               64
