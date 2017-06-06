@@ -2239,7 +2239,7 @@ int
 g_file_readable(const char *filename)
 {
 #if defined(_WIN32)
-    return 0; /* TODO: what should be done here? */
+    return _waccess(filename, 04) == 0;
 #else
     return access(filename, R_OK) == 0;
 #endif
