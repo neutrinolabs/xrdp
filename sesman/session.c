@@ -360,7 +360,7 @@ session_start_chansrv(char *username, int display)
     chansrv_pid = g_fork();
     if (chansrv_pid == 0)
     {
-        chansrv_params = list_create(); 
+        chansrv_params = list_create();
         chansrv_params->auto_free = 1;
 
         /* building parameters */
@@ -457,7 +457,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         return 0;
     }
 
-    auth_start_session(data, display);
+
     pid = g_fork(); /* parent is fork from tcp accept,
                        child forks X and wm, then becomes scp */
 
@@ -466,6 +466,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     }
     else if (pid == 0)
     {
+        auth_start_session(data, display);
         g_delete_wait_obj(g_term_event);
         g_tcp_close(g_sck);
         g_tcp_close(c->in_sck);
