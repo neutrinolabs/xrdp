@@ -32,6 +32,8 @@
 #include <openssl/hmac.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
+#include <openssl/bio.h> /* needed for base64 */
+#include <openssl/evp.h> /* needed for base64 */
 
 #include "os_calls.h"
 #include "arch.h"
@@ -922,3 +924,55 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
     return rv;
 }
 
+/*****************************************************************************/
+size_t
+base64_decoded_bytes(const char *src)
+{
+    size_t len;
+    size_t padding;
+
+    len = g_strlen(src);
+    padding = 0;
+
+    if (src[len - 1] == '=')
+    {
+        padding++;
+
+        if (src[len - 2] == '=')
+        {
+            padding++;
+        }
+    }
+
+    return len * 3 / 4 - padding;
+}
+
+/*****************************************************************************/
+char *
+base64_decode(char *dst, const char *src, size_t len)
+{
+    BIO *b64;
+    BIO *bio;
+    char *b64str;
+    size_t estimated_decoded_bytes;
+    size_t decoded_bytes;
+
+    b64str = g_strdup(src);
+    estimated_decoded_bytes = base64_decoded_bytes(b64str);
+    dst[estimated_decoded_bytes] = '\0';
+
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_new_mem_buf(b64str, len);
+    bio = BIO_push(b64, bio);
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
+    decoded_bytes = BIO_read(bio , dst, len);
+    BIO_free_all(bio);
+
+    /* if input is corrupt, return empty string */
+    if (estimated_decoded_bytes != decoded_bytes)
+    {
+    g_strncpy(dst, "", sizeof(""));
+    }
+
+    return dst;
+}
