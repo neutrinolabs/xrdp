@@ -877,7 +877,9 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
         log_message(LOG_LEVEL_DEBUG, "TLSv1.2 enabled");
         protocols &= ~SSL_OP_NO_TLSv1_2;
 #else
-        log_message(LOG_LEVEL_DEBUG, "TLSv1.2 not enabled, not available");
+        log_message(LOG_LEVEL_DEBUG,
+                    "TLSv1.2 enabled by config, "
+                    "but not supported by system OpenSSL");
         rv |= (1 << 1);
 #endif
     }
@@ -887,7 +889,9 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
         log_message(LOG_LEVEL_DEBUG, "TLSv1.1 enabled");
         protocols &= ~SSL_OP_NO_TLSv1_1;
 #else
-        log_message(LOG_LEVEL_DEBUG, "TLSv1.1 not enabled, not available");
+        log_message(LOG_LEVEL_DEBUG,
+                    "TLSv1.1 enabled by config, "
+                    "but not supported by system OpenSSL");
         rv |= (1 << 2);
 #endif
     }
@@ -897,7 +901,9 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
         log_message(LOG_LEVEL_DEBUG, "TLSv1 enabled");
         protocols &= ~SSL_OP_NO_TLSv1;
 #else
-        log_message(LOG_LEVEL_DEBUG, "TLSv1 not enabled, not available");
+        log_message(LOG_LEVEL_DEBUG,
+                    "TLSv1 enabled by config, "
+                    "but not supported by system OpenSSL");
         rv |= (1 << 3);
 #endif
     }
@@ -907,7 +913,9 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
         log_message(LOG_LEVEL_DEBUG, "SSLv3 enabled");
         protocols &= ~SSL_OP_NO_SSLv3;
 #else
-        log_message(LOG_LEVEL_DEBUG, "SSLv3 not enabled, not available");
+        log_message(LOG_LEVEL_DEBUG,
+                    "SSLv3 enabled by config, "
+                    "but not supported by system OpenSSL");
         rv |= (1 << 4);
 #endif
     }
