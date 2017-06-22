@@ -24,6 +24,7 @@
 
 #include "xrdp.h"
 #include "log.h"
+#include "ssl_calls.h"
 
 /*****************************************************************************/
 /* all login help screen events go here */
@@ -339,6 +340,8 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     struct xrdp_bitmap *b;
     struct xrdp_cfg_globals *globals;
     char resultIP[256];
+    char *plain; /* base64 decoded string */
+    size_t base64_length; /* length of base64 string */
 
     globals = &self->xrdp_config->cfg_globals;
 
@@ -366,7 +369,16 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
         {
             value = (char *)list_get_item(mod->values, index);
 
-            if (g_strncmp("ask", value, 3) == 0)
+            /* if the value begins with "{base64}", decode the string following it */
+            if (g_strncmp("{base64}", value, 8) == 0)
+            {
+                base64_length = g_strlen(value + 8);
+                plain = (char *)g_malloc(base64_length, 0);
+                base64_decode(plain, value + 8, base64_length);
+                g_strncpy(value, plain, g_strlen(plain));
+                free(plain);
+            }
+            else if (g_strncmp("ask", value, 3) == 0)
             {
                 /* label */
                 b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
@@ -399,7 +411,19 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 b->pointer = 1;
                 b->tab_stop = 1;
                 b->caption1 = (char *)g_malloc(256, 1);
-                g_strncpy(b->caption1, value + 3, 255);
+                /* ask{base64}... 3 for "ask", 8 for "{base64}" */
+                if (g_strncmp("{base64}", value + 3, 8) == 0)
+                {
+                    base64_length = g_strlen(value + 3 + 8);
+                    plain = (char *)g_malloc(base64_length, 0);
+                    base64_decode(plain, value + 3 + 8, base64_length);
+                    g_strncpy(b->caption1, plain, 255);
+                    free(plain);
+                }
+                else
+                {
+                    g_strncpy(b->caption1, value + 3, 255);
+                }
                 b->edit_pos = g_mbstowcs(0, b->caption1, 0);
 
                 if (self->login_window->focused_control == 0)
