@@ -93,6 +93,8 @@ struct trans*
 trans_create(int mode, int in_size, int out_size);
 void
 trans_delete(struct trans* self);
+void
+trans_delete_from_child(struct trans* self);
 int
 trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
 int
