@@ -802,7 +802,15 @@ lib_clip_data(struct vnc *v)
         out_uint8s(out_s, 4);
         s_mark_end(out_s);
         size = (int)(out_s->end - out_s->data);
-        error = v->server_send_to_channel(v, v->clip_chanid, out_s->data, size, size, 3);
+        if (v->clip_chanid < 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                        "lib_clip_data: cliprdr channel not available, noop");
+        }
+        else
+        {
+            error = v->server_send_to_channel(v, v->clip_chanid, out_s->data, size, size, 3);
+        }
         free_stream(out_s);
     }
 
