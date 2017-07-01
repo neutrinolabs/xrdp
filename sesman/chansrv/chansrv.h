@@ -65,17 +65,6 @@ int find_empty_slot_in_dvc_channels(void);
 struct xrdp_api_data * struct_from_dvc_chan_id(tui32 dvc_chan_id);
 int remove_struct_with_chan_id(tui32 dvc_chan_id);
 
-#define LOG_LEVEL 5
-
-#define LOG(_a, _params) \
-    { \
-        if (_a < LOG_LEVEL) \
-        { \
-            g_write("xrdp-chansrv [%10.10u]: ", g_time3()); \
-            g_writeln _params ; \
-        } \
-    }
-
 #define LOGM(_args) do { log_message _args ; } while (0)
 
 #ifndef GSET_UINT8
