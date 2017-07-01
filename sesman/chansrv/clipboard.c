@@ -369,7 +369,7 @@ clipboard_init(void)
     int ver_min;
     Status st;
 
-    LOG(0, ("clipboard_init:"));
+    LOGM((LOG_LEVEL_INFO, "clipboard_init:"));
 
     if (g_clip_up)
     {
@@ -513,7 +513,7 @@ clipboard_init(void)
 int
 clipboard_deinit(void)
 {
-    LOG(0, ("clipboard_deinit:"));
+    LOGM((LOG_LEVEL_INFO, "clipboard_deinit:"));
     if (g_wnd != 0)
     {
         XDestroyWindow(g_display, g_wnd);

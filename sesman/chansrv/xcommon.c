@@ -29,11 +29,6 @@
 #include "clipboard.h"
 #include "rail.h"
 
-/*
-#undef LOG_LEVEL
-#define LOG_LEVEL 11
-*/
-
 extern int g_clip_up;                         /* in clipboard.c */
 
 extern int g_rail_up;                         /* in rail.c */
@@ -93,7 +88,7 @@ xcommon_init(void)
 {
     if (g_display != 0)
     {
-        LOG(10, ("xcommon_init: xcommon_init already called"));
+        LOGM((LOG_LEVEL_DEBUG, "xcommon_init: xcommon_init already called"));
         return 0;
     }
 
@@ -105,7 +100,7 @@ xcommon_init(void)
         return 1;
     }
 
-    LOG(0, ("xcommon_init: connected to display ok"));
+    LOGM((LOG_LEVEL_INFO, "xcommon_init: connected to display ok"));
 
     /* setting the error handlers can cause problem when shutting down
        chansrv on some xlibs */
@@ -131,7 +126,7 @@ xcommon_init(void)
     g_utf8_string = XInternAtom(g_display, "UTF8_STRING", 0);
     g_net_wm_name = XInternAtom(g_display, "_NET_WM_NAME", 0);
     g_wm_state = XInternAtom(g_display, "WM_STATE", 0);
-    
+
     return 0;
 }
 
@@ -175,7 +170,7 @@ xcommon_check_wait_objs(void)
         rail_rv = rail_xevent(&xevent);
         if ((clip_rv == 1) && (rail_rv == 1))
         {
-            LOG(10, ("xcommon_check_wait_objs unknown xevent type %d",
+            LOGM((LOG_LEVEL_DEBUG, "xcommon_check_wait_objs unknown xevent type %d",
                      xevent.type));
         }
     }

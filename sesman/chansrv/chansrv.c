@@ -99,7 +99,7 @@ add_timeout(int msoffset, void (*callback)(void *data), void *data)
     struct timeout_obj *tobj;
     tui32 now;
 
-    LOG(10, ("add_timeout:"));
+    LOGM((LOG_LEVEL_DEBUG, "add_timeout:"));
     now = g_time3();
     tobj = g_new0(struct timeout_obj, 1);
     tobj->mstime = now + msoffset;
@@ -126,7 +126,7 @@ get_timeout(int *timeout)
     tui32 now;
     int ltimeout;
 
-    LOG(10, ("get_timeout:"));
+    LOGM((LOG_LEVEL_DEBUG, "get_timeout:"));
     ltimeout = *timeout;
     if (ltimeout < 1)
     {
@@ -138,7 +138,7 @@ get_timeout(int *timeout)
         now = g_time3();
         while (tobj != 0)
         {
-            LOG(10, ("  now %u tobj->mstime %u", now, tobj->mstime));
+            LOGM((LOG_LEVEL_DEBUG, "  now %u tobj->mstime %u", now, tobj->mstime));
             if (now < tobj->mstime)
             {
                 ltimeout = tobj->mstime - now;
@@ -148,7 +148,7 @@ get_timeout(int *timeout)
     }
     if (ltimeout > 0)
     {
-        LOG(10, ("  ltimeout %d", ltimeout));
+        LOGM((LOG_LEVEL_DEBUG, "  ltimeout %d", ltimeout));
         if (*timeout < 1)
         {
             *timeout = ltimeout;
@@ -174,7 +174,7 @@ check_timeout(void)
     int count;
     tui32 now;
 
-    LOG(10, ("check_timeout:"));
+    LOGM((LOG_LEVEL_DEBUG, "check_timeout:"));
     count = 0;
     tobj = g_timeout_head;
     if (tobj != 0)
@@ -214,7 +214,7 @@ check_timeout(void)
             }
         }
     }
-    LOG(10, ("  count %d", count));
+    LOGM((LOG_LEVEL_DEBUG, "  count %d", count));
     return 0;
 }
 
@@ -563,7 +563,7 @@ process_message_channel_setup(struct stream *s)
         }
         else
         {
-            LOG(10, ("other %s", ci->name));
+            LOGM((LOG_LEVEL_DEBUG, "other %s", ci->name));
         }
 
         g_num_chan_items++;
@@ -623,7 +623,6 @@ process_message_channel_data(struct stream *s)
     in_uint32_le(s, total_length);
     LOGM((LOG_LEVEL_DEBUG, "process_message_channel_data: chan_id %d "
           "chan_flags %d", chan_id, chan_flags));
-    LOG(10, ("process_message_channel_data"));
     rv = send_channel_data_response_message();
 
     if (rv == 0)
@@ -686,7 +685,7 @@ process_message_channel_data(struct stream *s)
 static int
 process_message_channel_data_response(struct stream *s)
 {
-    LOG(10, ("process_message_channel_data_response:"));
+    LOGM((LOG_LEVEL_DEBUG, "process_message_channel_data_response:"));
     check_chan_items();
     return 0;
 }
@@ -801,7 +800,7 @@ my_api_trans_data_in(struct trans *trans)
 
     //g_writeln("my_api_trans_data_in:");
 
-    LOG(10, ("my_api_trans_data_in:"));
+    LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
 
     if (trans == 0)
     {
@@ -846,7 +845,7 @@ my_api_trans_data_in(struct trans *trans)
 
     if (bytes_read > 0)
     {
-        LOG(10, ("my_api_trans_data_in: got data %d", bytes_read));
+        LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in: got data %d", bytes_read));
         ad = (struct xrdp_api_data *) trans->callback_data;
 
         if (ad->dvc_chan_id < 0)
@@ -854,7 +853,7 @@ my_api_trans_data_in(struct trans *trans)
             /* writing data to a static virtual channel */
             if (send_channel_data(ad->chan_id, s->data, bytes_read) != 0)
             {
-                LOG(0, ("my_api_trans_data_in: send_channel_data failed"));
+                LOGM((LOG_LEVEL_ERROR, "my_api_trans_data_in: send_channel_data failed"));
             }
         }
         else
@@ -869,14 +868,14 @@ my_api_trans_data_in(struct trans *trans)
         if ((ad != NULL) && (ad->dvc_chan_id > 0))
         {
             /* WTSVirtualChannelClose() was invoked, or connection dropped */
-            LOG(10, ("my_api_trans_data_in: g_tcp_recv failed or disconnected for DVC"));
+            LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in: g_tcp_recv failed or disconnected for DVC"));
             ad->transp = NULL;
             ad->is_connected = 0;
             remove_struct_with_chan_id(ad->dvc_chan_id);
         }
         else
         {
-            LOG(10, ("my_api_trans_data_in: g_tcp_recv failed or disconnected for SVC"));
+            LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in: g_tcp_recv failed or disconnected for SVC"));
         }
         return 1;
     }
@@ -936,8 +935,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
         return 1;
     }
 
-    LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in:"));
-    LOG(10, ("my_api_trans_conn_in: got incoming"));
+    LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in: got incoming"));
 
     s = trans_get_in_s(new_trans);
     s->end = s->data;
@@ -946,7 +944,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
     if (error != 0)
     {
-        LOG(0, ("my_api_trans_conn_in: trans_force_read failed"));
+        LOGM((LOG_LEVEL_ERROR, "my_api_trans_conn_in: trans_force_read failed"));
         trans_delete(new_trans);
         return 1;
     }
@@ -967,7 +965,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
         if ((index = find_empty_slot_in_dvc_channels()) < 0)
         {
             /* exceeded MAX_DVC_CHANNELS */
-            LOG(0, ("my_api_trans_conn_in: MAX_DVC_CHANNELS reached; giving up!"))
+            LOGM((LOG_LEVEL_ERROR, "my_api_trans_conn_in: MAX_DVC_CHANNELS reached; giving up!"));
             g_free(ad);
             trans_delete(new_trans);
             return 1;
@@ -986,12 +984,12 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
         for (index = 0; index < g_num_chan_items; index++)
         {
-            LOG(10, ("my_api_trans_conn_in:  %s %s", ad->header,
+            LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in:  %s %s", ad->header,
                     g_chan_items[index].name));
 
             if (g_strcasecmp(ad->header, g_chan_items[index].name) == 0)
             {
-                LOG(10, ("my_api_trans_conn_in: found it at %d", index));
+                LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in: found it at %d", index));
                 ad->chan_id = g_chan_items[index].id;
                 break;
             }
@@ -1154,7 +1152,7 @@ channel_thread_loop(void *in_val)
             {
                 if (trans_check_wait_objs(g_api_lis_trans) != 0)
                 {
-                    LOG(0, ("channel_thread_loop: trans_check_wait_objs failed"));
+                    LOGM((LOG_LEVEL_ERROR, "channel_thread_loop: trans_check_wait_objs failed"));
                 }
             }
 
@@ -1255,14 +1253,14 @@ child_signal_handler(int sig)
 {
     int pid;
 
-    LOG(0, ("child_signal_handler:"));
+    LOGM((LOG_LEVEL_INFO, "child_signal_handler:"));
     do
     {
         pid = g_waitchild();
-        LOG(0, ("child_signal_handler: child pid %d", pid));
+        LOGM((LOG_LEVEL_INFO, "child_signal_handler: child pid %d", pid));
         if ((pid == g_exec_pid) && (pid > 0))
         {
-            LOG(0, ("child_signal_handler: found pid %d", pid));
+            LOGM((LOG_LEVEL_INFO, "child_signal_handler: found pid %d", pid));
             //shutdownx();
         }
     }
@@ -1273,7 +1271,7 @@ child_signal_handler(int sig)
 void
 segfault_signal_handler(int sig)
 {
-    LOG(0, ("segfault_signal_handler: entered......."));
+    LOGM((LOG_LEVEL_ERROR, "segfault_signal_handler: entered......."));
     xfuse_deinit();
     exit(0);
 }
@@ -1475,7 +1473,7 @@ run_exec(void)
 {
     int pid;
 
-    LOG(10, ("run_exec:"));
+    LOGM((LOG_LEVEL_DEBUG, "run_exec:"));
     pid = g_fork();
 
     if (pid == 0)

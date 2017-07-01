@@ -231,7 +231,7 @@ sound_send_server_output_formats(void)
 
     num_formats = sizeof(g_wave_outp_formats) /
                   sizeof(g_wave_outp_formats[0]) - 1;
-    LOG(10, ("sound_send_server_output_formats: num_formats %d", num_formats));
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_server_output_formats: num_formats %d", num_formats));
 
     make_stream(s);
     init_stream(s, 8182);
@@ -328,14 +328,14 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
                             int nBlockAlign, int wBitsPerSample,
                             int cbSize, char *data)
 {
-    LOG(1, ("sound_process_output_format:"));
-    LOG(1, ("      wFormatTag      %d", wFormatTag));
-    LOG(1, ("      nChannels       %d", nChannels));
-    LOG(1, ("      nSamplesPerSec  %d", nSamplesPerSec));
-    LOG(1, ("      nAvgBytesPerSec %d", nAvgBytesPerSec));
-    LOG(1, ("      nBlockAlign     %d", nBlockAlign));
-    LOG(1, ("      wBitsPerSample  %d", wBitsPerSample));
-    LOG(1, ("      cbSize          %d", cbSize));
+    LOGM((LOG_LEVEL_INFO, "sound_process_output_format:"));
+    LOGM((LOG_LEVEL_INFO, "      wFormatTag      %d", wFormatTag));
+    LOGM((LOG_LEVEL_INFO, "      nChannels       %d", nChannels));
+    LOGM((LOG_LEVEL_INFO, "      nSamplesPerSec  %d", nSamplesPerSec));
+    LOGM((LOG_LEVEL_INFO, "      nAvgBytesPerSec %d", nAvgBytesPerSec));
+    LOGM((LOG_LEVEL_INFO, "      nBlockAlign     %d", nBlockAlign));
+    LOGM((LOG_LEVEL_INFO, "      wBitsPerSample  %d", wBitsPerSample));
+    LOGM((LOG_LEVEL_INFO, "      cbSize          %d", cbSize));
 
     g_hexdump(data, cbSize);
 
@@ -368,14 +368,14 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
 
     if (wFormatTag == 0x0069)
     {
-        LOG(0, ("wFormatTag, opus"));
+        LOGM((LOG_LEVEL_INFO, "wFormatTag, opus"));
         g_client_does_opus = 1;
         g_client_opus_index = aindex;
         g_bbuf_size = 11520;
     }
     else if (wFormatTag == 0x0055)
     {
-        LOG(0, ("wFormatTag, mp3"));
+        LOGM((LOG_LEVEL_INFO, "wFormatTag, mp3"));
         g_client_does_mp3lame = 1;
         g_client_mp3lame_index = aindex;
         g_bbuf_size = 11520;
@@ -463,7 +463,7 @@ sound_wave_compress_opus(char *data, int data_bytes, int *format_index)
                                              &error);
         if (g_opus_encoder == 0)
         {
-            LOG(0, ("sound_wave_compress_opus: opus_encoder_create failed"));
+            LOGM((LOG_LEVEL_ERROR, "sound_wave_compress_opus: opus_encoder_create failed"));
             return data_bytes;
         }
     }
@@ -529,29 +529,29 @@ sound_wave_compress_mp3lame(char *data, int data_bytes, int *format_index)
     if (g_lame_encoder == 0)
     {
         /* init mp3 lame encoder */
-        LOG(0, ("sound_wave_compress_mp3lame: using mp3lame"));
+        LOGM((LOG_LEVEL_INFO, "sound_wave_compress_mp3lame: using mp3lame"));
 
         g_lame_encoder = lame_init();
         if (g_lame_encoder == 0)
         {
-            LOG(0, ("sound_wave_compress_mp3lame: lame_init() failed"));
+            LOGM((LOG_LEVEL_INFO, "sound_wave_compress_mp3lame: lame_init() failed"));
             return rv;
         }
         lame_set_num_channels(g_lame_encoder, g_mp3lame_44100.nChannels);
         lame_set_in_samplerate(g_lame_encoder, g_mp3lame_44100.nSamplesPerSec);
         if (lame_init_params(g_lame_encoder) == -1)
         {
-            LOG(0, ("sound_wave_compress_mp3lame: lame_init_params() failed"));
+            LOGM((LOG_LEVEL_ERROR, "sound_wave_compress_mp3lame: lame_init_params() failed"));
             return rv;
         }
 
-        LOG(0, ("sound_wave_compress_mp3lame: lame config:"));
-        LOG(0, ("                             brate            : %d", lame_get_brate(g_lame_encoder)));
-        LOG(0, ("                             compression ratio: %f", lame_get_compression_ratio(g_lame_encoder)));
-        LOG(0, ("                             encoder delay    : %d", lame_get_encoder_delay(g_lame_encoder)));
-        LOG(0, ("                             frame size       : %d", lame_get_framesize(g_lame_encoder)));
-        LOG(0, ("                             encoder padding  : %d", lame_get_encoder_padding(g_lame_encoder)));
-        LOG(0, ("                             mode             : %d", lame_get_mode(g_lame_encoder)));
+        LOGM((LOG_LEVEL_INFO, "sound_wave_compress_mp3lame: lame config:"));
+        LOGM((LOG_LEVEL_INFO, "                             brate            : %d", lame_get_brate(g_lame_encoder)));
+        LOGM((LOG_LEVEL_INFO, "                             compression ratio: %f", lame_get_compression_ratio(g_lame_encoder)));
+        LOGM((LOG_LEVEL_INFO, "                             encoder delay    : %d", lame_get_encoder_delay(g_lame_encoder)));
+        LOGM((LOG_LEVEL_INFO, "                             frame size       : %d", lame_get_framesize(g_lame_encoder)));
+        LOGM((LOG_LEVEL_INFO, "                             encoder padding  : %d", lame_get_encoder_padding(g_lame_encoder)));
+        LOGM((LOG_LEVEL_INFO, "                             mode             : %d", lame_get_mode(g_lame_encoder)));
     }
 
     odata_bytes = data_bytes;
@@ -569,7 +569,7 @@ sound_wave_compress_mp3lame(char *data, int data_bytes, int *format_index)
                                                  cdata_bytes);
     if (cdata_bytes < 0)
     {
-        LOG(0, ("sound_wave_compress: lame_encode_buffer_interleaved() "
+        LOGM((LOG_LEVEL_ERROR, "sound_wave_compress: lame_encode_buffer_interleaved() "
                 "failed, error %d", cdata_bytes));
         return rv;
     }
@@ -621,24 +621,24 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     int format_index;
     char *size_ptr;
 
-    LOG(10, ("sound_send_wave_data_chunk: data_bytes %d", data_bytes));
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: data_bytes %d", data_bytes));
 
     if ((data_bytes < 4) || (data_bytes > 128 * 1024))
     {
-        LOG(0, ("sound_send_wave_data_chunk: bad data_bytes %d", data_bytes));
+        LOGM((LOG_LEVEL_ERROR, "sound_send_wave_data_chunk: bad data_bytes %d", data_bytes));
         return 1;
     }
 
-    LOG(20, ("sound_send_wave_data_chunk: g_sent_flag[%d] = %d",
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: g_sent_flag[%d] = %d",
             g_cBlockNo + 1, g_sent_flag[(g_cBlockNo + 1) & 0xff]));
     if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
     {
-        LOG(10, ("sound_send_wave_data_chunk: no room"));
+        LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: no room"));
         return 2;
     }
     else
     {
-        LOG(10, ("sound_send_wave_data_chunk: got room"));
+        LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: got room"));
     }
 
     /* compress, if available */
@@ -647,7 +647,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
 
     /* part one of 2 PDU wave info */
 
-    LOG(10, ("sound_send_wave_data_chunk: sending %d bytes", data_bytes));
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: sending %d bytes", data_bytes));
 
     make_stream(s);
     init_stream(s, 16 + data_bytes); /* some extra space */
@@ -662,7 +662,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     g_sent_time[g_cBlockNo & 0xff] = time;
     g_sent_flag[g_cBlockNo & 0xff] = 1;
 
-    LOG(10, ("sound_send_wave_data_chunk: sending time %d, g_cBlockNo %d",
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: sending time %d, g_cBlockNo %d",
              time & 0xffff, g_cBlockNo & 0xff));
 
     out_uint8s(s, 3);
@@ -700,7 +700,7 @@ sound_send_wave_data(char *data, int data_bytes)
     int error;
     int res;
 
-    LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data: sending %d bytes", data_bytes));
     data_index = 0;
     error = 0;
     while (data_bytes > 0)
@@ -709,7 +709,7 @@ sound_send_wave_data(char *data, int data_bytes)
         chunk_bytes = MIN(space_left, data_bytes);
         if (chunk_bytes < 1)
         {
-            LOG(10, ("sound_send_wave_data: error"));
+            LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data: error"));
             error = 1;
             break;
         }
@@ -722,12 +722,12 @@ sound_send_wave_data(char *data, int data_bytes)
             if (res == 2)
             {
                 /* don't need to error on this */
-                LOG(0, ("sound_send_wave_data: dropped, no room"));
+                LOGM((LOG_LEVEL_ERROR, "sound_send_wave_data: dropped, no room"));
                 break;
             }
             else if (res != 0)
             {
-                LOG(10, ("sound_send_wave_data: error"));
+                LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data: error"));
                 error = 1;
                 break;
             }
@@ -748,14 +748,14 @@ sound_send_close(void)
     int bytes;
     char *size_ptr;
 
-    LOG(10, ("sound_send_close:"));
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_close:"));
 
     /* send any left over data */
     if (g_buf_index)
     {
-        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0) 
+        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0)
         {
-            LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
+            LOGM((LOG_LEVEL_DEBUG, "sound_send_close: sound_send_wave_data_chunk failed"));
             return 1;
         }
     }
@@ -786,7 +786,7 @@ sound_process_training(struct stream *s, int size)
     int time_diff;
 
     time_diff = g_time2() - g_training_sent_time;
-    LOG(0, ("sound_process_training: round trip time %u", time_diff));
+    LOGM((LOG_LEVEL_INFO, "sound_process_training: round trip time %u", time_diff));
     return 0;
 }
 
@@ -806,7 +806,7 @@ sound_process_wave_confirm(struct stream *s, int size)
     time_diff = time - g_sent_time[cConfirmedBlockNo & 0xff];
     g_sent_flag[cConfirmedBlockNo & 0xff] &= ~1;
 
-    LOG(10, ("sound_process_wave_confirm: wTimeStamp %d, "
+    LOGM((LOG_LEVEL_DEBUG, "sound_process_wave_confirm: wTimeStamp %d, "
         "cConfirmedBlockNo %d time diff %d",
         wTimeStamp, cConfirmedBlockNo, time_diff));
 
@@ -828,7 +828,7 @@ process_pcm_message(int id, int size, struct stream *s)
             return sound_send_close();
             break;
         default:
-            LOG(10, ("process_pcm_message: unknown id %d", id));
+            LOGM((LOG_LEVEL_DEBUG, "process_pcm_message: unknown id %d", id));
             break;
     }
     return 1;
@@ -858,11 +858,11 @@ sound_sndsrvr_sink_data_in(struct trans *trans)
 
     if ((id & ~3) || (size > 128 * 1024 + 8) || (size < 8))
     {
-        LOG(0, ("sound_sndsrvr_sink_data_in: bad message id %d size %d", id, size));
+        LOGM((LOG_LEVEL_ERROR, "sound_sndsrvr_sink_data_in: bad message id %d size %d", id, size));
         return 1;
     }
 
-    LOG(10, ("sound_sndsrvr_sink_data_in: good message id %d size %d", id, size));
+    LOGM((LOG_LEVEL_DEBUG, "sound_sndsrvr_sink_data_in: good message id %d size %d", id, size));
 
     error = trans_force_read(trans, size - 8);
 
@@ -882,7 +882,7 @@ sound_sndsrvr_sink_data_in(struct trans *trans)
 static int
 sound_sndsrvr_sink_conn_in(struct trans *trans, struct trans *new_trans)
 {
-    LOG(0, ("sound_sndsrvr_sink_conn_in:"));
+    LOGM((LOG_LEVEL_INFO, "sound_sndsrvr_sink_conn_in:"));
 
     if (trans == 0)
         return 1;
@@ -912,7 +912,7 @@ sound_sndsrvr_sink_conn_in(struct trans *trans, struct trans *new_trans)
 static int
 sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 {
-    LOG(0, ("sound_sndsrvr_source_conn_in: client connected"));
+    LOGM((LOG_LEVEL_INFO, "sound_sndsrvr_source_conn_in: client connected"));
 
     if (trans == 0)
         return 1;
@@ -939,7 +939,7 @@ sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 int
 sound_init(void)
 {
-    LOG(0, ("sound_init:"));
+    LOGM((LOG_LEVEL_INFO, "sound_init:"));
 
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
     g_stream_incoming_packet = NULL;
@@ -968,7 +968,7 @@ sound_init(void)
 int
 sound_deinit(void)
 {
-    LOG(10, ("sound_deinit:"));
+    LOGM((LOG_LEVEL_DEBUG, "sound_deinit:"));
     if (g_audio_l_trans_out != 0)
     {
         trans_delete(g_audio_l_trans_out);
@@ -1019,7 +1019,7 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     int size;
     int ok_to_free = 1;
 
-    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags, 
+    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags,
                             length, total_length))
     {
         return 0;
@@ -1053,7 +1053,7 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             break;
 
         default:
-            LOG(10, ("sound_data_in: unknown code %d size %d", code, size));
+            LOGM((LOG_LEVEL_DEBUG, "sound_data_in: unknown code %d size %d", code, size));
             break;
     }
 
@@ -1110,7 +1110,7 @@ sound_check_wait_objs(void)
     {
         if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
         {
-            LOG(10, ("sound_check_wait_objs: g_audio_l_trans_out returned non-zero"));
+            LOGM((LOG_LEVEL_DEBUG, "sound_check_wait_objs: g_audio_l_trans_out returned non-zero"));
             trans_delete(g_audio_l_trans_out);
             g_audio_l_trans_out = 0;
         }
@@ -1120,7 +1120,7 @@ sound_check_wait_objs(void)
     {
         if (trans_check_wait_objs(g_audio_c_trans_out) != 0)
         {
-            LOG(10, ("sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
+            LOGM((LOG_LEVEL_DEBUG, "sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
             trans_delete(g_audio_c_trans_out);
             g_audio_c_trans_out = 0;
             sound_start_sink_listener();
@@ -1131,7 +1131,7 @@ sound_check_wait_objs(void)
     {
         if (trans_check_wait_objs(g_audio_l_trans_in) != 0)
         {
-            LOG(10, ("sound_check_wait_objs: g_audio_l_trans_in returned non-zero"));
+            LOGM((LOG_LEVEL_DEBUG, "sound_check_wait_objs: g_audio_l_trans_in returned non-zero"));
             trans_delete(g_audio_l_trans_in);
             g_audio_l_trans_in = 0;
         }
@@ -1141,7 +1141,7 @@ sound_check_wait_objs(void)
     {
         if (trans_check_wait_objs(g_audio_c_trans_in) != 0)
         {
-            LOG(10, ("sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
+            LOGM((LOG_LEVEL_DEBUG, "sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
             trans_delete(g_audio_c_trans_in);
             g_audio_c_trans_in = 0;
             sound_start_source_listener();
@@ -1172,7 +1172,7 @@ sound_send_server_input_formats(void)
 
     num_formats = sizeof(g_wave_inp_formats) /
                   sizeof(g_wave_inp_formats[0]) - 1;
-    LOG(10, ("sound_send_server_input_formats: num_formats %d", num_formats));
+    LOGM((LOG_LEVEL_DEBUG, "sound_send_server_input_formats: num_formats %d", num_formats));
 
     make_stream(s);
     init_stream(s, 8182);
@@ -1231,14 +1231,14 @@ sound_process_input_format(int aindex, int wFormatTag, int nChannels,
                            int nBlockAlign, int wBitsPerSample,
                            int cbSize, char *data)
 {
-    LOG(10, ("sound_process_input_format:"));
-    LOG(10, ("      wFormatTag      %d", wFormatTag));
-    LOG(10, ("      nChannels       %d", nChannels));
-    LOG(10, ("      nSamplesPerSec  %d", nSamplesPerSec));
-    LOG(10, ("      nAvgBytesPerSec %d", nAvgBytesPerSec));
-    LOG(10, ("      nBlockAlign     %d", nBlockAlign));
-    LOG(10, ("      wBitsPerSample  %d", wBitsPerSample));
-    LOG(10, ("      cbSize          %d", cbSize));
+    LOGM((LOG_LEVEL_DEBUG, "sound_process_input_format:"));
+    LOGM((LOG_LEVEL_DEBUG, "      wFormatTag      %d", wFormatTag));
+    LOGM((LOG_LEVEL_DEBUG, "      nChannels       %d", nChannels));
+    LOGM((LOG_LEVEL_DEBUG, "      nSamplesPerSec  %d", nSamplesPerSec));
+    LOGM((LOG_LEVEL_DEBUG, "      nAvgBytesPerSec %d", nAvgBytesPerSec));
+    LOGM((LOG_LEVEL_DEBUG, "      nBlockAlign     %d", nBlockAlign));
+    LOGM((LOG_LEVEL_DEBUG, "      wBitsPerSample  %d", wBitsPerSample));
+    LOGM((LOG_LEVEL_DEBUG, "      cbSize          %d", cbSize));
 
 #if 1
     /* select CD quality audio */
@@ -1287,7 +1287,7 @@ sound_process_input_formats(struct stream *s, int size)
     int cbSize;
     char *data;
 
-    LOG(10, ("sound_process_input_formats: size=%d", size));
+    LOGM((LOG_LEVEL_DEBUG, "sound_process_input_formats: size=%d", size));
 
     in_uint8s(s, 8); /* skip 8 bytes */
     in_uint16_le(s, num_formats);
@@ -1323,7 +1323,7 @@ sound_input_start_recording(void)
 {
     struct stream* s;
 
-    LOG(10, ("sound_input_start_recording:"));
+    LOGM((LOG_LEVEL_DEBUG, "sound_input_start_recording:"));
 
     /* if there is any data in FIFO, discard it */
     while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
@@ -1362,7 +1362,7 @@ sound_input_stop_recording(void)
 {
     struct stream* s;
 
-    LOG(10, ("sound_input_stop_recording:"));
+    LOGM((LOG_LEVEL_DEBUG, "sound_input_stop_recording:"));
 
     xstream_new(s, 1024);
 
@@ -1392,7 +1392,7 @@ sound_process_input_data(struct stream *s, int bytes)
 {
     struct stream *ls;
 
-    LOG(10, ("sound_process_input_data: bytes %d g_bytes_in_fifo %d",
+    LOGM((LOG_LEVEL_DEBUG, "sound_process_input_data: bytes %d g_bytes_in_fifo %d",
         bytes, g_bytes_in_fifo));
 #if 0 /* no need to cap anymore */
     /* cap data in fifo */
@@ -1439,7 +1439,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     ts->p = ts->data + 8;
     in_uint8(ts, cmd);
     in_uint16_le(ts, bytes_req);
-    LOG(10, ("sound_sndsrvr_source_data_in: bytes_req %d", bytes_req));
+    LOGM((LOG_LEVEL_DEBUG, "sound_sndsrvr_source_data_in: bytes_req %d", bytes_req));
 
     xstream_new(s, bytes_req + 2);
 
@@ -1456,7 +1456,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
                 if (g_stream_inp != NULL)
                 {
                     g_bytes_in_fifo -= g_stream_inp->size;
-                    LOG(10, ("  g_bytes_in_fifo %d", g_bytes_in_fifo));
+                    LOGM((LOG_LEVEL_DEBUG, "  g_bytes_in_fifo %d", g_bytes_in_fifo));
                 }
             }
 
@@ -1526,7 +1526,7 @@ sound_start_source_listener(void)
     g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
     g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
     if (trans_listen(g_audio_l_trans_in, port) != 0)
-        LOG(0, ("trans_listen failed"));
+        LOGM((LOG_LEVEL_ERROR, "trans_listen failed"));
     return 0;
 }
 
@@ -1543,7 +1543,7 @@ sound_start_sink_listener(void)
     g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
     g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
     if (trans_listen(g_audio_l_trans_out, port) != 0)
-        LOG(0, ("trans_listen failed"));
+        LOGM((LOG_LEVEL_ERROR, "trans_listen failed"));
     return 0;
 }
 

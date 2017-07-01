@@ -344,7 +344,7 @@ scard_check_wait_objs(void)
 int
 scard_init(void)
 {
-    LOG(0, ("scard_init:"));
+    LOGM((LOG_LEVEL_INFO, "scard_init:"));
     return scard_pcsc_init();
 }
 
@@ -354,7 +354,7 @@ scard_init(void)
 int
 scard_deinit(void)
 {
-    LOG(0, ("scard_deinit:"));
+    LOGM((LOG_LEVEL_INFO, "scard_deinit:"));
     scard_pcsc_deinit();
     scard_release_resources();
     g_smartcards_inited = 0;

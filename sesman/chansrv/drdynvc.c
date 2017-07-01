@@ -105,12 +105,12 @@ drdynvc_process_capability_response(struct stream *s, unsigned char cmd)
 
     if ((cap_version != 2) && (cap_version != 3))
     {
-        LOG(0, ("drdynvc_process_capability_response: incompatible DVC "
+        LOGM((LOG_LEVEL_ERROR, "drdynvc_process_capability_response: incompatible DVC "
             "version %d detected", cap_version));
         return -1;
     }
 
-    LOG(0, ("drdynvc_process_capability_response: DVC version %d selected",
+    LOGM((LOG_LEVEL_INFO, "drdynvc_process_capability_response: DVC version %d selected",
         cap_version));
     g_drdynvc_inited = 1;
 
@@ -136,7 +136,7 @@ drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
 
     if ((chan_name == NULL) || (strlen(chan_name) == 0))
     {
-        LOG(0, ("drdynvc_send_open_channel_request: bad channel name specified"));
+        LOGM((LOG_LEVEL_ERROR, "drdynvc_send_open_channel_request: bad channel name specified"));
         return -1;
     }
 
@@ -187,7 +187,7 @@ drdynvc_process_open_channel_response(struct stream *s, unsigned char cmd)
         /* get struct xrdp_api_data containing this channel id */
         if ((adp = struct_from_dvc_chan_id(chan_id)) == NULL)
         {
-            LOG(0, ("drdynvc_process_open_channel_response: error : "
+            LOGM((LOG_LEVEL_ERROR, "drdynvc_process_open_channel_response: error : "
                     "could not find xrdp_api_data containing chan_id %d", chan_id));
 
             return -1;
@@ -258,7 +258,7 @@ int drdynvc_write_data(uint32_t chan_id, char *data, int data_size)
 
     if (data == NULL)
     {
-        LOG(0, ("drdynvc_write_data: data is NULL\n"));
+        LOGM((LOG_LEVEL_ERROR, "drdynvc_write_data: data is NULL\n"));
         return -1;
     }
 
@@ -371,7 +371,7 @@ drdynvc_process_data_first(struct stream *s, unsigned char cmd)
     /* get struct xrdp_api_data containing this channel id */
     if ((adp = struct_from_dvc_chan_id(chan_id)) == NULL)
     {
-        LOG(0, ("drdynvc_process_data_first: error : "
+        LOGM((LOG_LEVEL_ERROR, "drdynvc_process_data_first: error : "
                 "could not find xrdp_api_data containing chan_id %d", chan_id));
 
         return -1;
@@ -400,7 +400,7 @@ drdynvc_process_data(struct stream *s, unsigned char cmd)
     /* get struct xrdp_api_data containing this channel id */
     if ((adp = struct_from_dvc_chan_id(chan_id)) == NULL)
     {
-        LOG(0, ("drdynvc_process_data: error : "
+        LOGM((LOG_LEVEL_ERROR, "drdynvc_process_data: error : "
                 "could not find xrdp_api_data containing chan_id %d", chan_id));
 
         return -1;
@@ -456,7 +456,7 @@ drdynvc_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             break;
 
         default:
-            LOG(0, ("drdynvc_data_in: got unknown command 0x%x", cmd));
+            LOGM((LOG_LEVEL_INFO, "drdynvc_data_in: got unknown command 0x%x", cmd));
             break;
     }
 
