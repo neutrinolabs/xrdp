@@ -3239,9 +3239,14 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
     {
         if (wm->mm->usechansrv)
         {
-            return 1;
+            /*
+             * Xvnc backend reaches here
+             * should not return 1 as this case is not an error
+             */
+            return 0;
         }
 
+        /* vnc proxy mode reaches here */
         return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
                                        total_data_len, flags);
     }
