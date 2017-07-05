@@ -66,7 +66,7 @@ internal_log_file_open(const char *fname)
 #ifdef FD_CLOEXEC
     if (ret != -1)
     {
-        fcntl(ret, F_SETFD, FD_CLOEXEC); 
+        fcntl(ret, F_SETFD, FD_CLOEXEC);
     }
 #endif
 
@@ -94,6 +94,7 @@ internal_log_xrdp2syslog(const enum logLevels lvl)
         case LOG_LEVEL_INFO:
             return LOG_INFO;
         case LOG_LEVEL_DEBUG:
+        case LOG_LEVEL_TRACE:
             return LOG_DEBUG;
         default:
             g_writeln("Undefined log level - programming error");
@@ -127,6 +128,9 @@ internal_log_lvl2str(const enum logLevels lvl, char *str)
             break;
         case LOG_LEVEL_DEBUG:
             snprintf(str, 9, "%s", "[DEBUG] ");
+            break;
+        case LOG_LEVEL_TRACE:
+            snprintf(str, 9, "%s", "[TRACE] ");
             break;
         default:
             snprintf(str, 9, "%s", "PRG ERR!");
@@ -254,7 +258,11 @@ internal_log_text2level(const char *buf)
     {
         return LOG_LEVEL_DEBUG;
     }
-
+    else if (0 == g_strcasecmp(buf, "5") ||
+             0 == g_strcasecmp(buf, "trace"))
+    {
+        return LOG_LEVEL_TRACE;
+    }
     g_writeln("Your configured log level is corrupt - we use debug log level");
     return LOG_LEVEL_DEBUG;
 }
