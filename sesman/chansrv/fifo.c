@@ -26,8 +26,8 @@
 #define MODULE_NAME "FIFO      "
 #define LOCAL_DEBUG
 
+#include "chansrv.h"
 #include "fifo.h"
-#include "mlog.h"
 #include "os_calls.h"
 
 /**
@@ -41,12 +41,12 @@
 int
 fifo_init(FIFO* fp, int num_entries)
 {
-    log_debug_high("entered");
+    LOGM((LOG_LEVEL_TRACE, "entered"));
 
     /* validate params */
     if (!fp)
     {
-        log_debug_high("invalid parameters");
+        LOGM((LOG_LEVEL_TRACE, "invalid parameters"));
         return -1;
     }
 
@@ -60,13 +60,13 @@ fifo_init(FIFO* fp, int num_entries)
     if (fp->user_data)
     {
         fp->entries = num_entries;
-        log_debug_low("FIFO created; rd_ptr=%d wr_ptr=%d entries=%d",
-                      fp->rd_ptr, fp->wr_ptr, fp->entries);
+        LOGM((LOG_LEVEL_DEBUG, "FIFO created; rd_ptr=%d wr_ptr=%d entries=%d",
+                      fp->rd_ptr, fp->wr_ptr, fp->entries));
         return 0;
     }
     else
     {
-        log_error("FIFO create error; system out of memory");
+        LOGM((LOG_LEVEL_ERROR, "FIFO create error; system out of memory"));
         fp->entries = 0;
         return -1;
     }
@@ -82,11 +82,11 @@ fifo_init(FIFO* fp, int num_entries)
 int
 fifo_deinit(FIFO* fp)
 {
-    log_debug_high("entered");
+    LOGM((LOG_LEVEL_TRACE, "entered"));
 
     if (!fp)
     {
-        log_debug_high("FIFO is null");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is null"));
         return -1;
     }
 
@@ -112,11 +112,11 @@ fifo_deinit(FIFO* fp)
 int
 fifo_is_empty(FIFO* fp)
 {
-    log_debug_high("entered");
+    LOGM((LOG_LEVEL_TRACE, "entered"));
 
     if (!fp)
     {
-        log_debug_high("FIFO is null");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is null"));
         return 0;
     }
 
@@ -139,11 +139,11 @@ fifo_insert(FIFO* fp, void* data)
     int   next_val; /* next value for wr_ptr */
     int   i;
 
-    log_debug_high("entered");
+    LOGM((LOG_LEVEL_TRACE, "entered"));
 
     if (!fp)
     {
-        log_debug_high("FIFO is null");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is null"));
         return -1;
     }
 
@@ -157,11 +157,11 @@ fifo_insert(FIFO* fp, void* data)
         lp = (long *) g_malloc(sizeof(long) * (fp->entries + 10), 1);
         if (!lp)
         {
-            log_debug_low("FIFO full; cannot expand, no memory");
+            LOGM((LOG_LEVEL_DEBUG, "FIFO full; cannot expand, no memory"));
             return -1;
         }
 
-        log_debug_low("FIFO full, expanding by 10 entries");
+        LOGM((LOG_LEVEL_DEBUG, "FIFO full, expanding by 10 entries"));
 
         /* copy old data new location */
         for (i = 0; i < (fp->entries - 1); i++)
@@ -182,7 +182,7 @@ fifo_insert(FIFO* fp, void* data)
         fp->user_data = lp;
     }
 
-    log_debug_low("inserting data at index %d", fp->wr_ptr);
+    LOGM((LOG_LEVEL_DEBUG, "inserting data at index %d", fp->wr_ptr));
 
     fp->user_data[fp->wr_ptr] = (long) data;
     fp->wr_ptr = next_val;
@@ -202,27 +202,27 @@ fifo_remove(FIFO* fp)
 {
     long data;
 
-    log_debug_high("entered");
+    LOGM((LOG_LEVEL_TRACE, "entered"));
 
     if (!fp)
     {
-        log_debug_high("FIFO is null");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is null"));
         return 0;
     }
 
     if (fp->rd_ptr == fp->wr_ptr)
     {
-        log_debug_high("FIFO is empty");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is empty"));
         return 0;
     }
 
-    log_debug_low("removing data at index  %d", fp->rd_ptr);
+    LOGM((LOG_LEVEL_DEBUG, "removing data at index  %d", fp->rd_ptr));
 
     data = fp->user_data[fp->rd_ptr++];
 
     if (fp->rd_ptr >= fp->entries)
     {
-        log_debug_high("FIFO rd_ptr wrapped around");
+        LOGM((LOG_LEVEL_TRACE, "FIFO rd_ptr wrapped around"));
         fp->rd_ptr = 0;
     }
 
@@ -239,21 +239,21 @@ fifo_remove(FIFO* fp)
 void*
 fifo_peek(FIFO* fp)
 {
-    log_debug_high("entered");
+    LOGM((LOG_LEVEL_TRACE, "entered"));
 
     if (!fp)
     {
-        log_debug_high("FIFO is null");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is null"));
         return 0;
     }
 
     if (fp->rd_ptr == fp->wr_ptr)
     {
-        log_debug_high("FIFO is empty");
+        LOGM((LOG_LEVEL_TRACE, "FIFO is empty"));
         return 0;
     }
 
-    log_debug_low("peeking data at index %d", fp->rd_ptr);
+    LOGM((LOG_LEVEL_DEBUG, "peeking data at index %d", fp->rd_ptr));
 
     return (void *) fp->user_data[fp->rd_ptr];
 }

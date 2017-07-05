@@ -55,42 +55,6 @@
 #include "devredir.h"
 #include "smartcard.h"
 
-/* module based logging */
-#define LOG_ERROR   0
-#define LOG_INFO    1
-#define LOG_DEBUG   2
-
-#ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_ERROR
-#endif
-
-#define log_error(_params...)                           \
-{                                                       \
-    g_write("[%10.10u]: DEV_REDIR  %s: %d : ERROR: ",   \
-            g_time3(), __func__, __LINE__);             \
-    g_writeln (_params);                                \
-}
-
-#define log_info(_params...)                            \
-{                                                       \
-    if (LOG_INFO <= LOG_LEVEL)                          \
-    {                                                   \
-        g_write("[%10.10u]: DEV_REDIR  %s: %d : ",      \
-                g_time3(), __func__, __LINE__);         \
-        g_writeln (_params);                            \
-    }                                                   \
-}
-
-#define log_debug(_params...)                           \
-{                                                       \
-    if (LOG_DEBUG <= LOG_LEVEL)                         \
-    {                                                   \
-        g_write("[%10.10u]: DEV_REDIR  %s: %d : ",      \
-                g_time3(), __func__, __LINE__);         \
-        g_writeln (_params);                            \
-    }                                                   \
-}
-
 /* globals */
 extern int g_rdpdr_chan_id; /* in chansrv.c */
 int g_is_printer_redir_supported = 0;
@@ -210,8 +174,8 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     /* for now we only handle core type, not printers */
     if (comp_type != RDPDR_CTYP_CORE)
     {
-        log_error("invalid component type in response; expected 0x%x got 0x%x",
-                  RDPDR_CTYP_CORE, comp_type);
+        LOGM((LOG_LEVEL_ERROR, "invalid component type in response; expected 0x%x got 0x%x",
+                  RDPDR_CTYP_CORE, comp_type));
 
         rv = -1;
         goto done;
@@ -271,7 +235,7 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             break;
 
         default:
-            log_error("got unknown response 0x%x", pktID);
+            LOGM((LOG_LEVEL_ERROR, "got unknown response 0x%x", pktID));
             break;
     }
 
@@ -446,8 +410,8 @@ int dev_redir_send_drive_create_request(tui32 device_id,
     int            bytes;
     int            len;
 
-    log_debug("DesiredAccess=0x%x CreateDisposition=0x%x CreateOptions=0x%x",
-              DesiredAccess, CreateDisposition, CreateOptions);
+    LOGM((LOG_LEVEL_DEBUG, "DesiredAccess=0x%x CreateDisposition=0x%x CreateOptions=0x%x",
+              DesiredAccess, CreateDisposition, CreateOptions));
 
     /* path in unicode needs this much space */
     len = ((g_mbstowcs(NULL, path, 0) * sizeof(twchar)) / 2) + 2;
@@ -508,7 +472,7 @@ int dev_redir_send_drive_close_request(tui16 Component, tui16 PacketId,
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
     xstream_free(s);
-    log_debug("sent close request; expect CID_FILE_CLOSE");
+    LOGM((LOG_LEVEL_DEBUG, "sent close request; expect CID_FILE_CLOSE"));
     return 0;
 }
 
@@ -608,21 +572,21 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
         switch (cap_type)
         {
             case CAP_GENERAL_TYPE:
-                log_debug("got CAP_GENERAL_TYPE");
+                LOGM((LOG_LEVEL_DEBUG, "got CAP_GENERAL_TYPE"));
                 break;
 
             case CAP_PRINTER_TYPE:
-                log_debug("got CAP_PRINTER_TYPE");
+                LOGM((LOG_LEVEL_DEBUG, "got CAP_PRINTER_TYPE"));
                 g_is_printer_redir_supported = 1;
                 break;
 
             case CAP_PORT_TYPE:
-                log_debug("got CAP_PORT_TYPE");
+                LOGM((LOG_LEVEL_DEBUG, "got CAP_PORT_TYPE"));
                 g_is_port_redir_supported = 1;
                 break;
 
             case CAP_DRIVE_TYPE:
-                log_debug("got CAP_DRIVE_TYPE");
+                LOGM((LOG_LEVEL_DEBUG, "got CAP_DRIVE_TYPE"));
                 g_is_drive_redir_supported = 1;
                 if (cap_version == 2)
                 {
@@ -631,7 +595,7 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
                 break;
 
             case CAP_SMARTCARD_TYPE:
-                log_debug("got CAP_SMARTCARD_TYPE");
+                LOGM((LOG_LEVEL_DEBUG, "got CAP_SMARTCARD_TYPE"));
                 g_is_smartcard_redir_supported = 1;
                 scard_init();
                 break;
@@ -652,7 +616,7 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
     /* get number of devices being announced */
     xstream_rd_u32_le(s, device_count);
 
-    log_debug("num of devices announced: %d", device_count);
+    LOGM((LOG_LEVEL_DEBUG, "num of devices announced: %d", device_count));
 
     for (i = 0; i < device_count; i++)
     {
@@ -679,10 +643,10 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
                                      device_data_len);
                 }
 
-                log_debug("device_type=FILE_SYSTEM device_id=0x%x dosname=%s "
+                LOGM((LOG_LEVEL_DEBUG, "device_type=FILE_SYSTEM device_id=0x%x dosname=%s "
                           "device_data_len=%d full_name=%s", g_device_id,
                           preferred_dos_name,
-                          device_data_len, g_full_name_for_filesystem);
+                          device_data_len, g_full_name_for_filesystem));
 
                 devredir_send_server_device_announce_resp(g_device_id);
 
@@ -703,8 +667,8 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
 
                 /* for smart cards, device data len always 0 */
 
-                log_debug("device_type=SMARTCARD device_id=0x%x dosname=%s",
-                          g_device_id, preferred_dos_name);
+                LOGM((LOG_LEVEL_DEBUG, "device_type=SMARTCARD device_id=0x%x dosname=%s",
+                          g_device_id, preferred_dos_name));
 
                 devredir_send_server_device_announce_resp(g_device_id);
                 scard_device_announce(g_device_id);
@@ -714,7 +678,7 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
             case RDPDR_DTYP_SERIAL:
             case RDPDR_DTYP_PARALLEL:
             case RDPDR_DTYP_PRINT:
-                log_debug("unsupported dev: 0x%x", device_type);
+                LOGM((LOG_LEVEL_DEBUG, "unsupported dev: 0x%x", device_type));
                 break;
         }
     }
@@ -735,11 +699,11 @@ dev_redir_proc_device_iocompletion(struct stream *s)
     xstream_rd_u32_le(s, CompletionId);
     xstream_rd_u32_le(s, IoStatus);
 
-    log_debug("entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId);
+    LOGM((LOG_LEVEL_DEBUG, "entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId));
 
     if ((irp = devredir_irp_find(CompletionId)) == NULL)
     {
-        log_error("IRP with completion ID %d not found", CompletionId);
+        LOGM((LOG_LEVEL_ERROR, "IRP with completion ID %d not found", CompletionId));
         return;
     }
 
@@ -753,7 +717,7 @@ dev_redir_proc_device_iocompletion(struct stream *s)
     switch (irp->completion_type)
     {
     case CID_CREATE_DIR_REQ:
-        log_debug("got CID_CREATE_DIR_REQ");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_CREATE_DIR_REQ"));
         if (IoStatus != NT_STATUS_SUCCESS)
         {
             /* we were trying to create a request to enumerate a dir */
@@ -770,8 +734,8 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         }
 
         xstream_rd_u32_le(s, irp->FileId);
-        log_debug("got CID_CREATE_DIR_REQ IoStatus=0x%x FileId=%d",
-                  IoStatus, irp->FileId);
+        LOGM((LOG_LEVEL_DEBUG, "got CID_CREATE_DIR_REQ IoStatus=0x%x FileId=%d",
+                  IoStatus, irp->FileId));
 
         dev_redir_send_drive_dir_request(irp, DeviceId, 1, irp->pathname);
         break;
@@ -779,8 +743,8 @@ dev_redir_proc_device_iocompletion(struct stream *s)
     case CID_CREATE_OPEN_REQ:
         xstream_rd_u32_le(s, irp->FileId);
 
-        log_debug("got CID_CREATE_OPEN_REQ IoStatus=0x%x FileId=%d",
-                  IoStatus, irp->FileId);
+        LOGM((LOG_LEVEL_DEBUG, "got CID_CREATE_OPEN_REQ IoStatus=0x%x FileId=%d",
+                  IoStatus, irp->FileId));
 
         fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_open_file(fuse_data->data_ptr, IoStatus,
@@ -790,13 +754,13 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         break;
 
     case CID_READ:
-        log_debug("got CID_READ");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_READ"));
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
 
         if (fuse_data == NULL)
         {
-            log_error("fuse_data is NULL");
+            LOGM((LOG_LEVEL_ERROR, "fuse_data is NULL"));
         }
         else
         {
@@ -806,13 +770,13 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         break;
 
     case CID_WRITE:
-        log_debug("got CID_WRITE");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_WRITE"));
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
 
         if (fuse_data == NULL)
         {
-            log_error("fuse_data is NULL");
+            LOGM((LOG_LEVEL_ERROR, "fuse_data is NULL"));
         }
         else
         {
@@ -822,54 +786,54 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         break;
 
     case CID_CLOSE:
-        log_debug("got CID_CLOSE");
-        log_debug("deleting irp with completion_id=%d comp_type=%d",
-                  irp->CompletionId, irp->completion_type);
+        LOGM((LOG_LEVEL_DEBUG, "got CID_CLOSE"));
+        LOGM((LOG_LEVEL_DEBUG, "deleting irp with completion_id=%d comp_type=%d",
+                  irp->CompletionId, irp->completion_type));
         devredir_irp_delete(irp);
         break;
 
     case CID_FILE_CLOSE:
-        log_debug("got CID_FILE_CLOSE");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_FILE_CLOSE"));
         fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_file_close(fuse_data->data_ptr);
         devredir_irp_delete(irp);
         break;
 
     case CID_DIRECTORY_CONTROL:
-        log_debug("got CID_DIRECTORY_CONTROL");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_DIRECTORY_CONTROL"));
 
         dev_redir_proc_query_dir_response(irp, s, DeviceId,
                                           CompletionId, IoStatus);
         break;
 
     case CID_RMDIR_OR_FILE:
-        log_debug("got CID_RMDIR_OR_FILE");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_RMDIR_OR_FILE"));
         xstream_rd_u32_le(s, irp->FileId);
         devredir_proc_cid_rmdir_or_file(irp, IoStatus);
         return;
         break;
 
     case CID_RMDIR_OR_FILE_RESP:
-        log_debug("got CID_RMDIR_OR_FILE_RESP");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_RMDIR_OR_FILE_RESP"));
         devredir_proc_cid_rmdir_or_file_resp(irp, IoStatus);
         break;
 
     case CID_RENAME_FILE:
-        log_debug("got CID_RENAME_FILE");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_RENAME_FILE"));
         xstream_rd_u32_le(s, irp->FileId);
         devredir_proc_cid_rename_file(irp, IoStatus);
         return;
         break;
 
     case CID_RENAME_FILE_RESP:
-        log_debug("got CID_RENAME_FILE_RESP");
+        LOGM((LOG_LEVEL_DEBUG, "got CID_RENAME_FILE_RESP"));
         devredir_proc_cid_rename_file_resp(irp, IoStatus);
         break;
 
     default:
-        log_error("got unknown CompletionID: DeviceId=0x%x "
+        LOGM((LOG_LEVEL_ERROR, "got unknown CompletionID: DeviceId=0x%x "
                   "CompletionId=0x%x IoStatus=0x%x",
-                  DeviceId, CompletionId, IoStatus);
+                  DeviceId, CompletionId, IoStatus));
         break;
     }
 
@@ -877,11 +841,11 @@ done:
 
     if (fuse_data)
     {
-        log_debug("free FUSE_DATA=%p", fuse_data);
+        LOGM((LOG_LEVEL_DEBUG, "free FUSE_DATA=%p", fuse_data));
         free(fuse_data);
     }
 
-    log_debug("exiting");
+    LOGM((LOG_LEVEL_DEBUG, "exiting"));
 }
 
 void
@@ -930,7 +894,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
     /* process FILE_DIRECTORY_INFORMATION structures */
     while (i < Length)
     {
-        log_debug("processing FILE_DIRECTORY_INFORMATION structs");
+        LOGM((LOG_LEVEL_DEBUG, "processing FILE_DIRECTORY_INFORMATION structs"));
 
         xstream_seek(s_in, 4);  /* NextEntryOffset */
         xstream_seek(s_in, 4);  /* FileIndex */
@@ -956,21 +920,21 @@ dev_redir_proc_query_dir_response(IRP *irp,
 #else
         i += 64 + FileNameLength;
 #endif
-        //log_debug("CreationTime:      0x%llx", CreationTime);
-        //log_debug("LastAccessTime:    0x%llx", LastAccessTime);
-        //log_debug("LastWriteTime:     0x%llx", LastWriteTime);
-        //log_debug("EndOfFile:         %lld", EndOfFile);
-        //log_debug("FileAttributes:    0x%x", FileAttributes);
+        //LOGM((LOG_LEVEL_DEBUG, "CreationTime:      0x%llx", CreationTime));
+        //LOGM((LOG_LEVEL_DEBUG, "LastAccessTime:    0x%llx", LastAccessTime));
+        //LOGM((LOG_LEVEL_DEBUG, "LastWriteTime:     0x%llx", LastWriteTime));
+        //LOGM((LOG_LEVEL_DEBUG, "EndOfFile:         %lld", EndOfFile));
+        //LOGM((LOG_LEVEL_DEBUG, "FileAttributes:    0x%x", FileAttributes));
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-        //log_debug("ShortNameLength:   %d", ShortNameLength);
+        //LOGM((LOG_LEVEL_DEBUG, "ShortNameLength:   %d", ShortNameLength));
 #endif
-        //log_debug("FileNameLength:    %d", FileNameLength);
-        log_debug("FileName:          %s", filename);
+        //LOGM((LOG_LEVEL_DEBUG, "FileNameLength:    %d", FileNameLength));
+        LOGM((LOG_LEVEL_DEBUG, "FileName:          %s", filename));
 
         xinode = g_new0(struct xrdp_inode, 1);
         if (xinode == NULL)
         {
-            log_error("system out of memory");
+            LOGM((LOG_LEVEL_ERROR, "system out of memory"));
             fuse_data = devredir_fuse_data_peek(irp);
             xfuse_devredir_cb_enum_dir(fuse_data->data_ptr, NULL);
             return;
@@ -1010,7 +974,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path)
     int    rval;
     IRP   *irp;
 
-    log_debug("fusep=%p", fusep);
+    LOGM((LOG_LEVEL_DEBUG, "fusep=%p", fusep));
 
     if ((irp = devredir_irp_new()) == NULL)
         return -1;
@@ -1035,7 +999,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path)
                                                CreateDisposition,
                                                irp->CompletionId);
 
-    log_debug("looking for device_id=%d path=%s", device_id, irp->pathname);
+    LOGM((LOG_LEVEL_DEBUG, "looking for device_id=%d path=%s", device_id, irp->pathname));
 
     /* when we get a response to dev_redir_send_drive_create_request(), we   */
     /* call dev_redir_send_drive_dir_request(), which needs the following    */
@@ -1058,7 +1022,7 @@ dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
     int    rval;
     IRP   *irp;
 
-    log_debug("device_id=%d path=%s mode=0x%x", device_id, path, mode);
+    LOGM((LOG_LEVEL_DEBUG, "device_id=%d path=%s mode=0x%x", device_id, path, mode));
 
     if ((irp = devredir_irp_new()) == NULL)
         return -1;
@@ -1081,18 +1045,18 @@ dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
 
     if (mode & O_CREAT)
     {
-        log_debug("open file in O_CREAT");
+        LOGM((LOG_LEVEL_DEBUG, "open file in O_CREAT"));
         DesiredAccess = 0x0016019f; /* got this value from windows */
 
         if (type & S_IFDIR)
         {
-            log_debug("creating dir");
+            LOGM((LOG_LEVEL_DEBUG, "creating dir"));
             CreateOptions = CO_FILE_DIRECTORY_FILE | CO_FILE_SYNCHRONOUS_IO_NONALERT;
             irp->type = S_IFDIR;
         }
         else
         {
-            log_debug("creating file");
+            LOGM((LOG_LEVEL_DEBUG, "creating file"));
             CreateOptions = 0x44; /* got this value from windows */
         }
 
@@ -1101,7 +1065,7 @@ dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
     }
     else
     {
-        log_debug("open file in O_RDWR");
+        LOGM((LOG_LEVEL_DEBUG, "open file in O_RDWR"));
 #if 1
         /* without the 0x00000010 rdesktop opens files in */
         /* O_RDONLY instead of O_RDWR mode                */
@@ -1134,8 +1098,8 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 {
     IRP *irp;
 
-    log_debug("entered: fusep=%p device_id=%d FileId=%d",
-              fusep, device_id, FileId);
+    LOGM((LOG_LEVEL_DEBUG, "entered: fusep=%p device_id=%d FileId=%d",
+              fusep, device_id, FileId));
 
 #if 0
     if ((irp = devredir_irp_new()) == NULL)
@@ -1145,7 +1109,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 #else
     if ((irp = devredir_irp_find_by_fileid(FileId)) == NULL)
     {
-        log_error("no IRP found with FileId = %d", FileId);
+        LOGM((LOG_LEVEL_ERROR, "no IRP found with FileId = %d", FileId));
         return -1;
     }
 #endif
@@ -1222,7 +1186,7 @@ devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
 
     if ((irp = devredir_irp_find_by_fileid(FileId)) == NULL)
     {
-        log_error("no IRP found with FileId = %d", FileId);
+        LOGM((LOG_LEVEL_ERROR, "no IRP found with FileId = %d", FileId));
         xfuse_devredir_cb_read_file(fusep, NULL, 0);
         xstream_free(s);
         return -1;
@@ -1269,14 +1233,14 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     IRP           *new_irp;
     int            bytes;
 
-    log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
-              DeviceId, FileId, Length, (long long)Offset);
+    LOGM((LOG_LEVEL_DEBUG, "DeviceId=%d FileId=%d Length=%d Offset=%lld",
+              DeviceId, FileId, Length, (long long)Offset));
 
     xstream_new(s, 1024 + Length);
 
     if ((irp = devredir_irp_find_by_fileid(FileId)) == NULL)
     {
-        log_error("no IRP found with FileId = %d", FileId);
+        LOGM((LOG_LEVEL_ERROR, "no IRP found with FileId = %d", FileId));
         xfuse_devredir_cb_write_file(fusep, NULL, 0);
         xstream_free(s);
         return -1;
@@ -1330,7 +1294,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
 FUSE_DATA *
 devredir_fuse_data_peek(IRP *irp)
 {
-    log_debug("returning %p", irp->fd_head);
+    LOGM((LOG_LEVEL_DEBUG, "returning %p", irp->fd_head));
     return irp->fd_head;
 }
 
@@ -1347,7 +1311,7 @@ devredir_fuse_data_dequeue(IRP *irp)
 
     if ((irp == NULL) || (irp->fd_head == NULL))
     {
-        log_debug("+++ returning NULL");
+        LOGM((LOG_LEVEL_DEBUG, "+++ returning NULL"));
         return NULL;
     }
 
@@ -1357,16 +1321,16 @@ devredir_fuse_data_dequeue(IRP *irp)
         head = irp->fd_head;
         irp->fd_head = NULL;
         irp->fd_tail = NULL;
-        log_debug("+++ returning FUSE_DATA=%p containing FUSE_INFO=%p",
-                  head, head->data_ptr);
+        LOGM((LOG_LEVEL_DEBUG, "+++ returning FUSE_DATA=%p containing FUSE_INFO=%p",
+                  head, head->data_ptr));
         return head;
     }
 
     /* more than one element in queue */
     head = irp->fd_head;
     irp->fd_head = head->next;
-    log_debug("+++ returning FUSE_DATA=%p containing FUSE_INFO=%p",
-              head, head->data_ptr);
+    LOGM((LOG_LEVEL_DEBUG, "+++ returning FUSE_DATA=%p containing FUSE_INFO=%p",
+              head, head->data_ptr));
     return head;
 }
 
@@ -1397,8 +1361,8 @@ devredir_fuse_data_enqueue(IRP *irp, void *vp)
         /* queue is empty, insert at head */
         irp->fd_head = fd;
         irp->fd_tail = fd;
-        log_debug("+++ inserted FUSE_DATA=%p containing FUSE_INFO=%p at head",
-                  fd, vp);
+        LOGM((LOG_LEVEL_DEBUG, "+++ inserted FUSE_DATA=%p containing FUSE_INFO=%p at head",
+                  fd, vp));
         return 0;
     }
 
@@ -1406,8 +1370,8 @@ devredir_fuse_data_enqueue(IRP *irp, void *vp)
     tail = irp->fd_tail;
     tail->next = fd;
     irp->fd_tail = fd;
-    log_debug("+++ inserted FUSE_DATA=%p containing FUSE_INFO=%p at tail",
-              fd, vp);
+    LOGM((LOG_LEVEL_DEBUG, "+++ inserted FUSE_DATA=%p containing FUSE_INFO=%p at tail",
+              fd, vp));
     return 0;
 }
 
@@ -1605,7 +1569,7 @@ devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
 
     if (IoStatus != NT_STATUS_SUCCESS)
     {
-        log_debug("rename returned with IoStatus=0x%x", IoStatus);
+        LOGM((LOG_LEVEL_DEBUG, "rename returned with IoStatus=0x%x", IoStatus));
 
         FUSE_DATA *fuse_data = devredir_fuse_data_dequeue(irp);
         if (fuse_data)
@@ -1652,7 +1616,7 @@ devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
 
-    log_debug("entered");
+    LOGM((LOG_LEVEL_DEBUG, "entered"));
 
     fuse_data = devredir_fuse_data_dequeue(irp);
     if (fuse_data)

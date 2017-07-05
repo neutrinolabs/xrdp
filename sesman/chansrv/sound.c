@@ -539,6 +539,8 @@ sound_wave_compress_mp3lame(char *data, int data_bytes, int *format_index)
         }
         lame_set_num_channels(g_lame_encoder, g_mp3lame_44100.nChannels);
         lame_set_in_samplerate(g_lame_encoder, g_mp3lame_44100.nSamplesPerSec);
+        //lame_set_brate(g_lame_encoder, 64);
+        lame_set_quality(g_lame_encoder, 7);
         if (lame_init_params(g_lame_encoder) == -1)
         {
             LOGM((LOG_LEVEL_ERROR, "sound_wave_compress_mp3lame: lame_init_params() failed"));
@@ -633,7 +635,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
             g_cBlockNo + 1, g_sent_flag[(g_cBlockNo + 1) & 0xff]));
     if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
     {
-        LOGM((LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: no room"));
+        LOGM((LOG_LEVEL_ERROR, "sound_send_wave_data_chunk: no room %d", g_cBlockNo & 0xff));
         return 2;
     }
     else
@@ -755,7 +757,7 @@ sound_send_close(void)
     {
         if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0)
         {
-            LOGM((LOG_LEVEL_DEBUG, "sound_send_close: sound_send_wave_data_chunk failed"));
+            LOGM((LOG_LEVEL_ERROR, "sound_send_close: sound_send_wave_data_chunk failed"));
             return 1;
         }
     }
@@ -828,7 +830,7 @@ process_pcm_message(int id, int size, struct stream *s)
             return sound_send_close();
             break;
         default:
-            LOGM((LOG_LEVEL_DEBUG, "process_pcm_message: unknown id %d", id));
+            LOGM((LOG_LEVEL_ERROR, "process_pcm_message: unknown id %d", id));
             break;
     }
     return 1;
@@ -1053,7 +1055,7 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             break;
 
         default:
-            LOGM((LOG_LEVEL_DEBUG, "sound_data_in: unknown code %d size %d", code, size));
+            LOGM((LOG_LEVEL_ERROR, "sound_data_in: unknown code %d size %d", code, size));
             break;
     }
 
