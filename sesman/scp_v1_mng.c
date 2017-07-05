@@ -84,19 +84,13 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                 /* list disconnected sessions */
                 slist = session_get_byuser(NULL, &scount, SESMAN_SESSION_STATUS_ALL);
                 LOG_DBG("sessions on TS: %d (slist: %x)", scount, slist);
-
                 if (0 == slist)
                 {
-                    //          e=scp_v1s_connection_error(c, "Internal error");
                     log_message(LOG_LEVEL_INFO, "No sessions on Terminal Server");
-                    end = 0;
-                }
-                else
-                {
-                    e = scp_v1s_mng_list_sessions(c, s, scount, slist);
-                    g_free(slist);
                 }
 
+                e = scp_v1s_mng_list_sessions(c, s, scount, slist);
+                g_free(slist);
                 break;
             default:
                 /* we check the other errors */
