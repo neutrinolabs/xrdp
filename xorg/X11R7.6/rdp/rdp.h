@@ -76,7 +76,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //#include "colormapst.h"
 
-#define X11RDPVER "0.9.2"
+#define X11RDPVER "0.9.3"
 
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
