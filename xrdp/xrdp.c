@@ -363,6 +363,7 @@ xrdp_sanity_check(void)
 int
 main(int argc, char **argv)
 {
+    int exit_status = 0;
     int test;
     char cfg_file[256];
     enum logReturns error;
@@ -549,7 +550,17 @@ main(int argc, char **argv)
 
         if (0 != pid)
         {
-            g_writeln("process %d started ok", pid);
+            /* if can't listen, exit with failure status */
+            if (xrdp_listen_test() != 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
+                                             "possibly address already in use.");
+                g_deinit();
+                /* must exit with failure status,
+                   or systemd cannot detect xrdp daemon couldn't start properly */
+                g_exit(1);
+            }
+            g_writeln("daemon process %d started ok", pid);
             /* exit, this is the main process */
             g_deinit();
             g_exit(0);
@@ -620,7 +631,7 @@ main(int argc, char **argv)
     }
 
     g_listen->startup_params = startup_params;
-    xrdp_listen_main_loop(g_listen);
+    exit_status = xrdp_listen_main_loop(g_listen);
     xrdp_listen_delete(g_listen);
     tc_mutex_delete(g_sync_mutex);
     tc_mutex_delete(g_sync1_mutex);
@@ -637,5 +648,15 @@ main(int argc, char **argv)
     g_free(startup_params);
     log_end();
     g_deinit();
+
+    if (exit_status == 0)
+    {
+        g_exit(0);
+    }
+    else
+    {
+        g_exit(1);
+    }
+
     return 0;
 }

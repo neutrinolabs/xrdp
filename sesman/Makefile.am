@@ -78,7 +78,8 @@ dist_sesmansysconf_DATA = \
   sesman.ini
 
 dist_sesmansysconf_SCRIPTS = \
-  startwm.sh
+  startwm.sh \
+  reconnectwm.sh
 
 SUBDIRS = \
   libscp \

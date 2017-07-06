@@ -37,6 +37,7 @@
 #include "arch.h"
 #include "ssl_calls.h"
 #include "trans.h"
+#include "log.h"
 
 #define SSL_WANT_READ_WRITE_TIMEOUT 100
 
@@ -678,7 +679,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
         return 0;
     }
     status = SSL_shutdown(self->ssl);
-    while (status != 1)
+    if (status != 1)
     {
         status = SSL_shutdown(self->ssl);
         if (status <= 0)
@@ -743,6 +744,10 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
                 g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
+            /* socket closed */
+            case SSL_ERROR_ZERO_RETURN:
+                return 0;
+
             default:
                 ssl_tls_print_error("SSL_read", tls->ssl, status);
                 status = -1;
@@ -792,6 +797,10 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
                 g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
+            /* socket closed */
+            case SSL_ERROR_ZERO_RETURN:
+                return 0;
+
             default:
                 ssl_tls_print_error("SSL_write", tls->ssl, status);
                 status = -1;
@@ -821,7 +830,6 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
     return g_sck_can_recv(sck, millis);
 }
 
-
 /*****************************************************************************/
 const char *
 ssl_get_version(const struct ssl_st *ssl)
@@ -835,3 +843,90 @@ ssl_get_cipher_name(const struct ssl_st *ssl)
 {
     return SSL_get_cipher_name(ssl);
 }
+
+/*****************************************************************************/
+int
+ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
+{
+    long protocols;
+    long bad_protocols;
+    int rv;
+
+    if ((str == NULL) || (ssl_protocols == NULL))
+    {
+        return 1;
+    }
+    rv = 0;
+    protocols = 0;
+#if defined(SSL_OP_NO_SSLv3)
+    protocols |= SSL_OP_NO_SSLv3;
+#endif
+#if defined(SSL_OP_NO_TLSv1)
+    protocols |= SSL_OP_NO_TLSv1;
+#endif
+#if defined(SSL_OP_NO_TLSv1_1)
+    protocols |= SSL_OP_NO_TLSv1_1;
+#endif
+#if defined(SSL_OP_NO_TLSv1_2)
+    protocols |= SSL_OP_NO_TLSv1_2;
+#endif
+    bad_protocols = protocols;
+    if (g_pos(str, ",TLSv1.2,") >= 0)
+    {
+#if defined(SSL_OP_NO_TLSv1_2)
+        log_message(LOG_LEVEL_DEBUG, "TLSv1.2 enabled");
+        protocols &= ~SSL_OP_NO_TLSv1_2;
+#else
+        log_message(LOG_LEVEL_WARNING,
+                    "TLSv1.2 enabled by config, "
+                    "but not supported by system OpenSSL");
+        rv |= (1 << 1);
+#endif
+    }
+    if (g_pos(str, ",TLSv1.1,") >= 0)
+    {
+#if defined(SSL_OP_NO_TLSv1_1)
+        log_message(LOG_LEVEL_DEBUG, "TLSv1.1 enabled");
+        protocols &= ~SSL_OP_NO_TLSv1_1;
+#else
+        log_message(LOG_LEVEL_WARNING,
+                    "TLSv1.1 enabled by config, "
+                    "but not supported by system OpenSSL");
+        rv |= (1 << 2);
+#endif
+    }
+    if (g_pos(str, ",TLSv1,") >= 0)
+    {
+#if defined(SSL_OP_NO_TLSv1)
+        log_message(LOG_LEVEL_DEBUG, "TLSv1 enabled");
+        protocols &= ~SSL_OP_NO_TLSv1;
+#else
+        log_message(LOG_LEVEL_WARNING,
+                    "TLSv1 enabled by config, "
+                    "but not supported by system OpenSSL");
+        rv |= (1 << 3);
+#endif
+    }
+    if (g_pos(str, ",SSLv3,") >= 0)
+    {
+#if defined(SSL_OP_NO_SSLv3)
+        log_message(LOG_LEVEL_DEBUG, "SSLv3 enabled");
+        protocols &= ~SSL_OP_NO_SSLv3;
+#else
+        log_message(LOG_LEVEL_WARNING,
+                    "SSLv3 enabled by config, "
+                    "but not supported by system OpenSSL");
+        rv |= (1 << 4);
+#endif
+    }
+    if (protocols == bad_protocols)
+    {
+        log_message(LOG_LEVEL_WARNING, "No SSL/TLS protocols enabled. "
+                    "At least one protocol should be enabled to accept "
+                    "TLS connections.");
+        rv |= (1 << 5);
+    }
+    *ssl_protocols = protocols;
+    return rv;
+}
+

@@ -419,8 +419,6 @@ g_tcp_socket(void)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
     if (rv < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
-
         switch (errno)
         {
             case EAFNOSUPPORT: /* if IPv6 not supported, retry IPv4 */
@@ -429,6 +427,7 @@ g_tcp_socket(void)
                 break;
 
             default:
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
                 return -1;
         }
     }
@@ -727,8 +726,69 @@ g_sck_close(int sck)
 #endif
 }
 
+#if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
-/* returns error, zero is good */
+/* Helper function for g_tcp_connect.                                        */
+static int
+connect_loopback(int sck, const char *port)
+{
+    struct sockaddr_in6 sa;
+    struct sockaddr_in s;
+    int res;
+
+    // First IPv6
+    g_memset(&sa, 0, sizeof(sa));
+    sa.sin6_family = AF_INET6;
+    sa.sin6_addr = in6addr_loopback;             // IPv6 ::1
+    sa.sin6_port = htons((tui16)atoi(port));
+    res = connect(sck, (struct sockaddr*)&sa, sizeof(sa));
+    if (res == -1 && errno == EINPROGRESS)
+    {
+        return -1;
+    }
+    if (res == 0 || (res == -1 && errno == EISCONN))
+    {
+        return 0;
+    }
+
+    // else IPv4
+    g_memset(&sa, 0, sizeof(s));
+    s.sin_family = AF_INET;
+    s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
+    s.sin_port = htons((tui16)atoi(port));
+    res = connect(sck, (struct sockaddr*)&s, sizeof(s));
+    if (res == -1 && errno == EINPROGRESS)
+    {
+        return -1;
+    }
+    if (res == 0 || (res == -1 && errno == EISCONN))
+    {
+        return 0;
+    }
+
+    // else IPv6 with IPv4 address
+    g_memset(&sa, 0, sizeof(sa));
+    sa.sin6_family = AF_INET6;
+    inet_pton(AF_INET6, "::FFFF:127.0.0.1", &sa.sin6_addr);
+    sa.sin6_port = htons((tui16)atoi(port));
+    res = connect(sck, (struct sockaddr*)&sa, sizeof(sa));
+    if (res == -1 && errno == EINPROGRESS)
+    {
+        return -1;
+    }
+    if (res == 0 || (res == -1 && errno == EISCONN))
+    {
+        return 0;
+    }
+
+    return -1;
+}
+#endif
+
+/*****************************************************************************/
+/* returns error, zero is good                                               */
+/* The connection might get to be in progress, if so -1 is returned.         */
+/* The caller needs to call again to check if succeed.                       */
 #if defined(XRDP_ENABLE_IPV6)
 int
 g_tcp_connect(int sck, const char *address, const char *port)
@@ -738,22 +798,15 @@ g_tcp_connect(int sck, const char *address, const char *port)
     struct addrinfo *h = (struct addrinfo *)NULL;
     struct addrinfo *rp = (struct addrinfo *)NULL;
 
-    /* initialize (zero out) local variables: */
     g_memset(&p, 0, sizeof(struct addrinfo));
 
-   /* in IPv6-enabled environments, set the AI_V4MAPPED
-    * flag in ai_flags and specify ai_family=AF_INET6 in
-    * order to ensure that getaddrinfo() returns any
-    * available IPv4-mapped addresses in case the target
-    * host does not have a true IPv6 address:
-    */
     p.ai_socktype = SOCK_STREAM;
     p.ai_protocol = IPPROTO_TCP;
     p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
     p.ai_family = AF_INET6;
     if (g_strcmp(address, "127.0.0.1") == 0)
     {
-        res = getaddrinfo("::1", port, &p, &h);
+        return connect_loopback(sck, port);
     }
     else
     {
@@ -761,8 +814,8 @@ g_tcp_connect(int sck, const char *address, const char *port)
     }
     if (res != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_tcp_connect: getaddrinfo() failed: %s",
-                    gai_strerror(res));
+        log_message(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getaddrinfo() failed: %s",
+                    sck, address, port, gai_strerror(res));
     }
     if (res > -1)
     {
@@ -770,21 +823,20 @@ g_tcp_connect(int sck, const char *address, const char *port)
         {
             for (rp = h; rp != NULL; rp = rp->ai_next)
             {
-                rp = h;
                 res = connect(sck, (struct sockaddr *)(rp->ai_addr),
                               rp->ai_addrlen);
-                if (res != -1)
+                if (res == -1 && errno == EINPROGRESS)
                 {
+                    break; /* Return -1 */
+                }
+                if (res == 0 || (res == -1 && errno == EISCONN))
+                {
+                    res = 0;
                     break; /* Success */
                 }
             }
+            freeaddrinfo(h);
         }
-    }
-
-    /* Mac OSX connect() returns -1 for already established connections */
-    if (res == -1 && errno == EISCONN)
-    {
-        res = 0;
     }
 
     return res;
@@ -871,113 +923,39 @@ g_sck_set_non_blocking(int sck)
 
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
-/* return boolean */
-static int
-address_match(const char *address, struct addrinfo *j)
-{
-    struct sockaddr_in *ipv4_in;
-    struct sockaddr_in6 *ipv6_in;
-
-    if (address == 0)
-    {
-        return 1;
-    }
-    if (address[0] == 0)
-    {
-        return 1;
-    }
-    if (g_strcmp(address, "0.0.0.0") == 0)
-    {
-        return 1;
-    }
-    if ((g_strcmp(address, "127.0.0.1") == 0) ||
-        (g_strcmp(address, "::1") == 0) ||
-        (g_strcmp(address, "localhost") == 0))
-    {
-        if (j->ai_addr != 0)
-        {
-            if (j->ai_addr->sa_family == AF_INET)
-            {
-                ipv4_in = (struct sockaddr_in *) (j->ai_addr);
-                if (inet_pton(AF_INET, "127.0.0.1", &(ipv4_in->sin_addr)))
-                {
-                    return 1;
-                }
-            }
-            if (j->ai_addr->sa_family == AF_INET6)
-            {
-                ipv6_in = (struct sockaddr_in6 *) (j->ai_addr);
-                if (inet_pton(AF_INET6, "::1", &(ipv6_in->sin6_addr)))
-                {
-                    return 1;
-                }
-            }
-        }
-    }
-    if (j->ai_addr != 0)
-    {
-        if (j->ai_addr->sa_family == AF_INET)
-        {
-            ipv4_in = (struct sockaddr_in *) (j->ai_addr);
-            if (inet_pton(AF_INET, address, &(ipv4_in->sin_addr)))
-            {
-                return 1;
-            }
-        }
-        if (j->ai_addr->sa_family == AF_INET6)
-        {
-            ipv6_in = (struct sockaddr_in6 *) (j->ai_addr);
-            if (inet_pton(AF_INET6, address, &(ipv6_in->sin6_addr)))
-            {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-#endif
-
-#if defined(XRDP_ENABLE_IPV6)
-/*****************************************************************************/
-/* returns error, zero is good */
-static int
-g_tcp_bind_flags(int sck, const char *port, const char *address, int flags)
-{
-    int res;
-    int error;
-    struct addrinfo hints;
-    struct addrinfo *i;
-
-    res = -1;
-    g_memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_flags = flags;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    error = getaddrinfo(NULL, port, &hints, &i);
-    if (error == 0)
-    {
-        while ((i != 0) && (res < 0))
-        {
-            if (address_match(address, i))
-            {
-                res = bind(sck, i->ai_addr, i->ai_addrlen);
-            }
-            i = i->ai_next;
-        }
-    }
-    return res;
-}
-
-/*****************************************************************************/
 /* returns error, zero is good */
 int
 g_tcp_bind(int sck, const char *port)
 {
-    int flags;
+    struct sockaddr_in6 sa;
+    struct sockaddr_in s;
+    int errno6;
 
-    flags = AI_ADDRCONFIG | AI_PASSIVE;
-    return g_tcp_bind_flags(sck, port, 0, flags);
+    // First IPv6
+    g_memset(&sa, 0, sizeof(sa));
+    sa.sin6_family = AF_INET6;
+    sa.sin6_addr = in6addr_any;                 // IPv6 ::
+    sa.sin6_port = htons((tui16)atoi(port));
+    if (bind(sck, (struct sockaddr*)&sa, sizeof(sa)) == 0)
+    {
+        return 0;
+    }
+    errno6 = errno;
+
+    // else IPv4
+    g_memset(&sa, 0, sizeof(s));
+    s.sin_family = AF_INET;
+    s.sin_addr.s_addr = htonl(INADDR_ANY);     // IPv4 0.0.0.0
+    s.sin_port = htons((tui16)atoi(port));
+    if (bind(sck, (struct sockaddr*)&s, sizeof(s)) == 0)
+    {
+        return 0;
+    }
+
+    log_message(LOG_LEVEL_ERROR, "g_tcp_bind(%d, %s) failed "
+                "bind IPv6 (errno=%d) and IPv4 (errno=%d).",
+                sck, port, errno6, errno);
+    return -1;
 }
 #else
 int
@@ -1013,14 +991,139 @@ g_sck_local_bind(int sck, const char *port)
 
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
-/* returns error, zero is good */
+/* Helper function for g_tcp_bind_address.                                   */
+static int
+bind_loopback(int sck, const char *port)
+{
+    struct sockaddr_in6 sa;
+    struct sockaddr_in s;
+    int errno6;
+    int errno4;
+
+    // First IPv6
+    g_memset(&sa, 0, sizeof(sa));
+    sa.sin6_family = AF_INET6;
+    sa.sin6_addr = in6addr_loopback;             // IPv6 ::1
+    sa.sin6_port = htons((tui16)atoi(port));
+    if (bind(sck, (struct sockaddr*)&sa, sizeof(sa)) == 0)
+    {
+        return 0;
+    }
+    errno6 = errno;
+
+    // else IPv4
+    g_memset(&sa, 0, sizeof(s));
+    s.sin_family = AF_INET;
+    s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
+    s.sin_port = htons((tui16)atoi(port));
+    if (bind(sck, (struct sockaddr*)&s, sizeof(s)) == 0)
+    {
+        return 0;
+    }
+    errno4 = errno;
+
+    // else IPv6 with IPv4 address
+    g_memset(&sa, 0, sizeof(sa));
+    sa.sin6_family = AF_INET6;
+    inet_pton(AF_INET6, "::FFFF:127.0.0.1", &sa.sin6_addr);
+    sa.sin6_port = htons((tui16)atoi(port));
+    if (bind(sck, (struct sockaddr*)&sa, sizeof(sa)) == 0)
+    {
+        return 0;
+    }
+
+    log_message(LOG_LEVEL_ERROR, "bind_loopback(%d, %s) failed; "
+                "IPv6 ::1 (errno=%d), IPv4 127.0.0.1 (errno=%d) and IPv6 ::FFFF:127.0.0.1 (errno=%d).",
+                sck, port, errno6, errno4, errno);
+    return -1;
+}
+
+/*****************************************************************************/
+/* Helper function for g_tcp_bind_address.                                   */
+/* Returns error, zero is good.                                              */
+static int
+getaddrinfo_bind(int sck, const char *port, const char *address)
+{
+    int res;
+    int error;
+    struct addrinfo hints;
+    struct addrinfo *list;
+    struct addrinfo *i;
+
+    res = -1;
+    g_memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags = 0;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    error = getaddrinfo(address, port, &hints, &list);
+    if (error == 0)
+    {
+        i = list;
+        while ((i != 0) && (res < 0))
+        {
+            res = bind(sck, i->ai_addr, i->ai_addrlen);
+            i = i->ai_next;
+        }
+        freeaddrinfo(list);
+    }
+    else
+    {
+        log_message(LOG_LEVEL_ERROR, "getaddrinfo error: %s", gai_strerror(error));
+        return -1;
+    }
+    return res;
+}
+
+/*****************************************************************************/
+/* Binds a socket to a port. If no specified address the port will be bind   */
+/* to 'any', i.e. available on all network.                                  */
+/* For bind to local host, see valid address strings below.                  */
+/* Returns error, zero is good.                                              */
 int
 g_tcp_bind_address(int sck, const char *port, const char *address)
 {
-    int flags;
+    int res;
 
-    flags = AI_ADDRCONFIG | AI_PASSIVE;
-    return g_tcp_bind_flags(sck, port, address, flags);
+    if ((address == 0) ||
+        (address[0] == 0) ||
+        (g_strcmp(address, "0.0.0.0") == 0) ||
+        (g_strcmp(address, "::") == 0))
+    {
+        return g_tcp_bind(sck, port);
+    }
+
+    if ((g_strcmp(address, "127.0.0.1") == 0) ||
+        (g_strcmp(address, "::1") == 0) ||
+        (g_strcmp(address, "localhost") == 0))
+    {
+        return bind_loopback(sck, port);
+    }
+
+    // Let getaddrinfo translate the address string...
+    // IPv4: ddd.ddd.ddd.ddd
+    // IPv6: x:x:x:x:x:x:x:x%<interface>, or x::x:x:x:x%<interface>
+    res = getaddrinfo_bind(sck, port, address);
+    if (res != 0)
+    {
+        // If fail and it is an IPv4 address, try with the mapped address
+        struct in_addr a;
+        if ((inet_aton(address, &a) == 1) && (strlen(address) <= 15))
+        {
+            char sz[7+15+1];
+            sprintf(sz, "::FFFF:%s", address);
+            res = getaddrinfo_bind(sck, port, sz);
+            if (res == 0)
+            {
+                return 0;
+            }
+        }
+
+        log_message(LOG_LEVEL_ERROR, "g_tcp_bind_address(%d, %s, %s) Failed!",
+                    sck, port, address);
+        return -1;
+    }
+    return 0;
 }
 #else
 int
@@ -2127,6 +2230,18 @@ g_file_exist(const char *filename)
     return 0; // use FileAge(filename) <> -1
 #else
     return access(filename, F_OK) == 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns boolean, non zero if the file is readable */
+int
+g_file_readable(const char *filename)
+{
+#if defined(_WIN32)
+    return _waccess(filename, 04) == 0;
+#else
+    return access(filename, R_OK) == 0;
 #endif
 }
 
@@ -3381,7 +3496,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     int file_stride_bytes;
     char* line;
     char* line_ptr;
-    
+
     if ((depth == 24) && (bits_per_pixel == 32))
     {
     }
@@ -3407,7 +3522,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     bh.reserved1 = 0;
     bh.reserved2 = 0;
     bh.offset = sizeof(bm) + sizeof(bh) + sizeof(dh);
-    
+
     dh.hdr_size = sizeof(dh);
     dh.width = width;
     dh.height = height;

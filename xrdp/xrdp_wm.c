@@ -554,6 +554,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     char *q;
     const char *r;
     char param[256];
+    char default_section_name[256];
     char section_name[256];
     char cfg_file[256];
     char autorun_name[256];
@@ -581,6 +582,22 @@ xrdp_wm_init(struct xrdp_wm *self)
             values = list_create();
             values->auto_free = 1;
 
+            /* pick up the first section name except for 'globals', 'Logging', 'channels'
+             * in xrdp.ini and use it as default section name */
+            file_read_sections(fd, names);
+            default_section_name[0] = '\0';
+            for (index = 0; index < names->count; index++)
+            {
+                q = (char *)list_get_item(names, index);
+                if ((g_strncasecmp("globals", q, 8) != 0) &&
+                    (g_strncasecmp("Logging", q, 8) != 0) &&
+                    (g_strncasecmp("channels", q, 9) != 0))
+                {
+                    g_strncpy(default_section_name, q, 255);
+                    break;
+                }
+            }
+
             /* look for module name to be loaded */
             if (autorun_name[0] != 0)
             {
@@ -594,33 +611,35 @@ xrdp_wm_init(struct xrdp_wm *self)
                  * simplify for the user in a proxy setup */
 
                 /* we use the domain name as the module name to be loaded */
-                g_strncpy(section_name, self->session->client_info->domain,
-                              255);
+                g_strncpy(section_name,
+                          self->session->client_info->domain, 255);
             }
             else
             {
-                /* if no domain is passed, and no autorun in xrdp.ini,
-                   use the first item in the xrdp.ini
-                   file that's not named
-                   'globals' or 'Logging' or 'channels' */
-                /* TODO: change this and have an 'autologin'
-                   line in globals section */
-                file_read_sections(fd, names);
-                section_name[0] = '\0';
-                for (index = 0; index < names->count; index++)
-                {
-                    q = (char *)list_get_item(names, index);
-                    if ((g_strncasecmp("globals", q, 8) != 0) &&
-                        (g_strncasecmp("Logging", q, 8) != 0) &&
-                        (g_strncasecmp("channels", q, 9) != 0))
-                    {
-                        g_strncpy(section_name, q, 255);
-                        break;
-                    }
-                }
+                /* if no domain is given, and autorun is not specified in xrdp.ini
+                 * use default_section_name as section_name  */
+                g_strncpy(section_name, default_section_name, 255);
             }
 
             list_clear(names);
+
+            /* if given section name doesn't match any sections configured
+             * in xrdp.ini, fallback to default_section_name */
+            if (file_read_section(fd, section_name, names, values) != 0)
+            {
+                log_message(LOG_LEVEL_INFO,
+                            "Module \"%s\" specified by %s from %s port %s "
+                            "is not configured. Using \"%s\" instead.",
+                            section_name,
+                            self->session->client_info->username,
+                            self->session->client_info->client_addr,
+                            self->session->client_info->client_port,
+                            default_section_name);
+                list_clear(names);
+                list_clear(values);
+
+                g_strncpy(section_name, default_section_name, 255);
+            }
 
             /* look for the required module in xrdp.ini, fetch its parameters */
             if (file_read_section(fd, section_name, names, values) == 0)
@@ -684,10 +703,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             }
             else
             {
-                /* requested module name not found in xrdp.ini */
-                xrdp_wm_log_msg(self, LOG_LEVEL_ERROR,
-                                "Section \"%s\" not configured in xrdp.ini",
-                                section_name);
+                /* Hopefully, we never reach here. */
+                log_message(LOG_LEVEL_DEBUG,
+                            "Control should never reach %s:%d", __FILE__, __LINE__);
             }
 
             list_delete(names);

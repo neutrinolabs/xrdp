@@ -22,9 +22,9 @@
 #include <config_ac.h>
 #endif
 
-#include <openssl/ssl.h>
 #include "libxrdp.h"
 #include "log.h"
+#include "ssl_calls.h"
 
 #if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
@@ -49,7 +49,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
     char *item = NULL;
     char *value = NULL;
     char cfg_file[256];
-    char *p = NULL;
+    int pos;
     char *tmp = NULL;
     int tmp_length = 0;
 
@@ -174,44 +174,13 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             tmp_length = g_strlen(value) + 3;
             tmp = g_new(char, tmp_length);
             g_snprintf(tmp, tmp_length, "%s%s%s", ",", value, ",");
+            /* replace all spaces with comma */
             /* to accept space after comma */
-            while ((p = (char *) g_strchr(tmp, ' ')) != NULL)
+            while ((pos = g_pos(tmp, " ")) != -1)
             {
-                *p = ',';
+                tmp[pos] = ',';
             }
-
-            /* disable all protocols first, enable later */
-            client_info->ssl_protocols =
-                SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
-
-            if (g_pos(tmp, ",TLSv1.2,") >= 0)
-            {
-                log_message(LOG_LEVEL_DEBUG, "TLSv1.2 enabled");
-                client_info->ssl_protocols &= ~SSL_OP_NO_TLSv1_2;
-            }
-            if (g_pos(tmp, ",TLSv1.1,") >= 0)
-            {
-                log_message(LOG_LEVEL_DEBUG, "TLSv1.1 enabled");
-                client_info->ssl_protocols &= ~SSL_OP_NO_TLSv1_1;
-            }
-            if (g_pos(tmp, ",TLSv1,") >= 0)
-            {
-                log_message(LOG_LEVEL_DEBUG, "TLSv1 enabled");
-                client_info->ssl_protocols &= ~SSL_OP_NO_TLSv1;
-            }
-            if (g_pos(tmp, ",SSLv3,") >= 0)
-            {
-                log_message(LOG_LEVEL_DEBUG, "SSLv3 enabled");
-                client_info->ssl_protocols &= ~SSL_OP_NO_SSLv3;
-            }
-
-            if (client_info->ssl_protocols ==
-                (SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2))
-            {
-                log_message(LOG_LEVEL_WARNING, "No SSL/TLS protocols enabled. "
-                            "At least one protocol should be enabled to accept "
-                            "TLS connections.");
-            }
+            ssl_get_protocols_from_string(tmp, &(client_info->ssl_protocols));
             g_free(tmp);
         }
         else if (g_strcasecmp(item, "tls_ciphers") == 0)
@@ -269,6 +238,12 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 /* use user defined certificate */
                 g_strncpy(client_info->certificate, value, 1023);
             }
+
+	    if (!g_file_readable(client_info->certificate))
+            {
+                log_message(LOG_LEVEL_ERROR, "Cannot read certificate file %s: %s",
+                            client_info->certificate, g_get_strerror());
+            }
         }
         else if (g_strcasecmp(item, "key_file") == 0)
         {
@@ -292,6 +267,12 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             {
                 /* use user defined key_file */
                 g_strncpy(client_info->key_file, value, 1023);
+            }
+
+	    if (!g_file_readable(client_info->key_file))
+            {
+                log_message(LOG_LEVEL_ERROR, "Cannot read private key file %s: %s",
+                            client_info->key_file, g_get_strerror());
             }
         }
 

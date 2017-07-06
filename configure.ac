@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.65)
-AC_INIT([xrdp], [0.9.2], [xrdp-devel@googlegroups.com])
+AC_INIT([xrdp], [0.9.3], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
@@ -130,12 +130,12 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
 
 AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
-              [Use included painter library (default: yes)]),
+              [Do not use included painter library (default: no)]),
               [], [enable_painter=yes])
 AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
 
 AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
-              [Use included librfxcodec library (default: yes)]),
+              [Do not use included librfxcodec library (default: no)]),
               [], [enable_rfxcodec=yes])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 

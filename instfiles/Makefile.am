@@ -1,8 +1,28 @@
 EXTRA_DIST = \
    keymap-names.txt \
    xrdp.sh \
-   xrdp-sesman.service \
-   xrdp.service
+   xrdp-sesman.service.in \
+   xrdp.service.in
+
+#
+# substitute directories in service file
+#
+CLEANFILES= \
+  xrdp-sesman.service \
+  xrdp.service
+
+SUBST_VARS = sed \
+   -e 's|@sbindir[@]|$(sbindir)|g' \
+   -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+   -e 's|@localstatedir[@]|$(localstatedir)|g'
+
+subst_verbose = $(subst_verbose_@AM_V@)
+subst_verbose_ = $(subst_verbose_@AM_DEFAULT_V@)
+subst_verbose_0 = @echo "  SUBST    $@";
+
+SUFFIXES = .in
+.in:
+	$(subst_verbose)$(SUBST_VARS) $< > $@
 
 #
 # files for all platforms
@@ -59,6 +79,7 @@ endif
 
 #
 # install-data-hook for each platform
+# TODO: subst these directories as well as service files
 #
 if LINUX
 # must be tab below

@@ -1,3 +1,26 @@
+# Release notes for xrdp v0.9.3 (2017/07/07)
+
+## New features
+  * Log user-friendly messages when certificate/privkey is inaccessible
+
+## Bugfixes
+  * Now sesman sets mandatory LOGNAME environment variable #725
+  * Exit with failure status if port already in use #644
+  * Eliminate some hard  coded paths
+  * Fix some keyboard layout integration (UK, Spanish)
+  * Fix handle OS when IPv6 disabled #714
+  * Fix sesadmin shows error when no sessions #797
+  * Fix TLS spins 100% CPU #728
+  * Fix Xvnc backend disconnects when some data copied to clipboard #755
+  * Pick up the first section if given section(domain) doesn't match anything #750
+
+## Other changes
+  * Change xrdp-chansrv log path to include display number
+  * Optimize startwm.sh for SUSE
+  * Several cleanups and optimizations
+
+-----------------------
+
 # Release notes for xrdp v0.9.2 (2017/03/30)
 ## New features
   * RemoteFX codec support is now enabled by default.
