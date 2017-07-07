@@ -1521,13 +1521,17 @@ main(int argc, char **argv)
 
     read_ini();
     pid = g_getpid();
+    display_text = g_getenv("DISPLAY");
+
+    if (display_text)
+        get_display_num_from_display(display_text);
 
     log_level = get_log_level(g_getenv("CHANSRV_LOG_LEVEL"), LOG_LEVEL_INFO);
 
     /* starting logging subsystem */
     g_memset(&logconfig, 0, sizeof(struct log_config));
     logconfig.program_name = "xrdp-chansrv";
-    g_snprintf(log_file, 255, "%s/xrdp-chansrv.log", log_path);
+    g_snprintf(log_file, 255, "%s/xrdp-chansrv.%d.log", log_path, g_display_num);
     g_writeln("chansrv::main: using log file [%s]", log_file);
 
     if (g_file_exist(log_file))
@@ -1570,11 +1574,7 @@ main(int argc, char **argv)
     g_signal_child_stop(child_signal_handler); /* SIGCHLD */
     g_signal_segfault(segfault_signal_handler);
 
-    display_text = g_getenv("DISPLAY");
     LOGM((LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text));
-
-    if (display_text)
-        get_display_num_from_display(display_text);
 
     if (g_display_num == 0)
     {

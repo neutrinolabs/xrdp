@@ -36,8 +36,8 @@ UNIX socket used by external programs to implement channels.
 .I @socketdir@/xrdp_api_*
 UNIX socket used by \fBxrdp\-chansrv\fP to communicate with \fBxrdp\-sesman\fP.
 .TP
-.I $XDG_DATA_HOME/xrdp/xrdp-chansrv.log
-Log file used by \fBxrdp\-chansrv\fP(8).
+.I $XDG_DATA_HOME/xrdp/xrdp-chansrv.%s.log
+Log file used by \fBxrdp\-chansrv\fP(8). \fB%s\fP is display number.
 
 .SH "SEE ALSO"
 .BR xrdp\-sesman (8),

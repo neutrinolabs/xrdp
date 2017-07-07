@@ -2,7 +2,7 @@ sudo: false # use new container
 language: c
 
 branches:
-  except: /^(gh-pages|v[0-9]\..*)/
+  except: /^(gh-pages|v0\.[0-8].*)/
 
 addons:
   apt:

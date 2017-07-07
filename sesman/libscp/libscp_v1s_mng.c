@@ -188,11 +188,18 @@ scp_v1s_mng_list_sessions(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
     struct SCP_DISCONNECTED_SESSION *cds;
 
     /* calculating the number of packets to send */
-    pktcnt = sescnt / SCP_SERVER_MAX_LIST_SIZE;
-
-    if ((sescnt % SCP_SERVER_MAX_LIST_SIZE) != 0)
+    if (sescnt == 0)
     {
-        pktcnt++;
+      pktcnt = 1;
+    }
+    else
+    {
+      pktcnt = sescnt / SCP_SERVER_MAX_LIST_SIZE;
+
+      if ((sescnt % SCP_SERVER_MAX_LIST_SIZE) != 0)
+      {
+          pktcnt++;
+      }
     }
 
     for (idx = 0; idx < pktcnt; idx++)
