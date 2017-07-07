@@ -808,6 +808,8 @@ trans_listen_address(struct trans *self, char *port, const char *address)
     }
     else if (self->mode == TRANS_MODE_UNIX) /* unix socket */
     {
+        g_create_path(port);
+
         g_free(self->listen_filename);
         self->listen_filename = 0;
         g_file_delete(port);
