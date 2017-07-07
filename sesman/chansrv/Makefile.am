@@ -58,7 +58,6 @@ xrdp_chansrv_SOURCES = \
   fifo.h \
   irp.c \
   irp.h \
-  mlog.h \
   rail.c \
   rail.h \
   smartcard.c \
