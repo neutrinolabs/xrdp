@@ -1580,8 +1580,8 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId,
         if (fip->reply_type == RT_FUSE_REPLY_OPEN)
         {
             LOGM((LOG_LEVEL_DEBUG, "sending fuse_reply_open()  "
-                      "DeviceId=%d FileId=%d req=%p fi=%p",
-                      fh->DeviceId, fh->FileId, fip->req, fip->fi));
+                      "req=%p fi=%p",
+                      fip->req, fip->fi));
 
             /* update open count */
             if ((xinode = g_xrdp_fs.inode_table[fip->inode]) != NULL)
