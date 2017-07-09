@@ -38,7 +38,8 @@
         } \
     }
 
-#define MAX_ORDERS_SIZE (16 * 1024 - 256)
+#define MAX_ORDERS_SIZE(_client_info) \
+    (MAX((_client_info)->max_fastpath_frag_bytes, 16 * 1024) - 256);
 
 /*****************************************************************************/
 struct xrdp_orders *
@@ -220,13 +221,15 @@ int
 xrdp_orders_check(struct xrdp_orders *self, int max_size)
 {
     int size;
-    int max_packet_size;
+    int max_order_size;
+    struct xrdp_client_info *ci;
 
-    max_packet_size = MAX_ORDERS_SIZE;
+    ci = &(self->rdp_layer->client_info);
+    max_order_size = MAX_ORDERS_SIZE(ci);
 
     if (self->order_level < 1)
     {
-        if (max_size > max_packet_size)
+        if (max_size > max_order_size)
         {
             return 1;
         }
@@ -243,14 +246,14 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         g_writeln("error in xrdp_orders_check, size too small: %d bytes", size);
         return 1;
     }
-    if (size > max_packet_size)
+    if (size > max_order_size)
     {
         /* this suggests someone calls this function without passing the
            correct max_size so we end up putting more into the buffer
            than we indicate we can */
         g_writeln("error in xrdp_orders_check, size too big: %d bytes", size);
         /* We where getting called with size already greater than
-           max_packet_size
+           max_order_size
            Which I suspect was because the sending of text did not include
            the text len to check the buffer size. So attempt to send the data
            anyway.
@@ -258,7 +261,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         /*    return 1; */
     }
 
-    if ((size + max_size + 100) > max_packet_size)
+    if ((size + max_size + 100) > max_order_size)
     {
         xrdp_orders_force_send(self);
         xrdp_orders_init(self);
@@ -2217,6 +2220,8 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
     int j = 0;
     int pixel = 0;
     int e = 0;
+    int max_order_size;
+    struct xrdp_client_info *ci;
 
     if (width > 64)
     {
@@ -2239,7 +2244,9 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
 
     Bpp = (bpp + 7) / 8;
     bufsize = (width + e) * height * Bpp;
-    while (bufsize + 16 > MAX_ORDERS_SIZE)
+    ci = &(self->rdp_layer->client_info);
+    max_order_size = MAX_ORDERS_SIZE(ci);
+    while (bufsize + 16 > max_order_size)
     {
         height--;
         bufsize = (width + e) * height * Bpp;
@@ -2339,6 +2346,8 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     struct stream *s = NULL;
     struct stream *temp_s = NULL;
     char *p = NULL;
+    int max_order_size;
+    struct xrdp_client_info *ci;
 
     if (width > 64)
     {
@@ -2351,6 +2360,9 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
         g_writeln("error, height > 64");
         return 1;
     }
+
+    ci = &(self->rdp_layer->client_info);
+    max_order_size = MAX_ORDERS_SIZE(ci);
 
     e = width % 4;
 
@@ -2368,13 +2380,13 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     if (bpp > 24)
     {
         lines_sending = xrdp_bitmap32_compress(data, width, height, s,
-                                               bpp, MAX_ORDERS_SIZE,
+                                               bpp, max_order_size,
                                                i - 1, temp_s, e, 0x10);
     }
     else
     {
         lines_sending = xrdp_bitmap_compress(data, width, height, s,
-                                             bpp, MAX_ORDERS_SIZE,
+                                             bpp, max_order_size,
                                              i - 1, temp_s, e);
     }
 
@@ -2490,8 +2502,9 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
     int j = 0;
     int pixel = 0;
     int e = 0;
+    int max_order_size;
+    struct xrdp_client_info *ci;
 
-    g_writeln("xrdp_orders_send_raw_bitmap2:");
     if (width > 64)
     {
         g_writeln("error, width > 64");
@@ -2504,6 +2517,9 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
         return 1;
     }
 
+    ci = &(self->rdp_layer->client_info);
+    max_order_size = MAX_ORDERS_SIZE(ci);
+
     e = width % 4;
 
     if (e != 0)
@@ -2513,7 +2529,7 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
 
     Bpp = (bpp + 7) / 8;
     bufsize = (width + e) * height * Bpp;
-    while (bufsize + 14 > MAX_ORDERS_SIZE)
+    while (bufsize + 14 > max_order_size)
     {
         height--;
         bufsize = (width + e) * height * Bpp;
@@ -2614,6 +2630,8 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
     struct stream *s = NULL;
     struct stream *temp_s = NULL;
     char *p = NULL;
+    int max_order_size;
+    struct xrdp_client_info *ci;
 
     if (width > 64)
     {
@@ -2626,6 +2644,9 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
         g_writeln("error, height > 64");
         return 1;
     }
+
+    ci = &(self->rdp_layer->client_info);
+    max_order_size = MAX_ORDERS_SIZE(ci);
 
     e = width % 4;
 
@@ -2643,13 +2664,13 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
     if (bpp > 24)
     {
         lines_sending = xrdp_bitmap32_compress(data, width, height, s,
-                                               bpp, MAX_ORDERS_SIZE,
+                                               bpp, max_order_size,
                                                i - 1, temp_s, e, 0x10);
     }
     else
     {
         lines_sending = xrdp_bitmap_compress(data, width, height, s,
-                                             bpp, MAX_ORDERS_SIZE,
+                                             bpp, max_order_size,
                                              i - 1, temp_s, e);
     }
 
