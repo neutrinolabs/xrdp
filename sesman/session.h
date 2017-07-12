@@ -150,4 +150,11 @@ session_get_bypid(int pid);
 struct SCP_DISCONNECTED_SESSION*
 session_get_byuser(const char *user, int *cnt, unsigned char flags);
 
+/**
+ *
+ * @brief delete socket files
+ * @param display number
+ * @return non-zero value (number of errors) if failed
+ */
+int cleanup_sockets(int display);
 #endif
