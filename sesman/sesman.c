@@ -420,7 +420,7 @@ main(int argc, char **argv)
     /* make sure the socket directory exists */
     g_mk_temp_dir("xrdp-sesman");
 
-    /* make sure the /tmp/.X11-unix directory exist */
+    /* make sure the /tmp/.X11-unix directory exists */
     if (!g_directory_exist("/tmp/.X11-unix"))
     {
         if (!g_create_dir("/tmp/.X11-unix"))
