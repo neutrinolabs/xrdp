@@ -417,6 +417,17 @@ main(int argc, char **argv)
     log_message(LOG_LEVEL_INFO,
                 "starting xrdp-sesman with pid %d", g_pid);
 
+    /* make sure socket (XRDP_SOCKET_PATH) directory exists */
+    if (!g_directory_exist(XRDP_SOCKET_PATH))
+    {
+        if (!g_create_path(XRDP_SOCKET_PATH "/"))
+        {
+            log_message(LOG_LEVEL_ERROR,
+                "sesman.c: error creating dir "XRDP_SOCKET_PATH);
+        }
+        g_chmod_hex(XRDP_SOCKET_PATH, 0x1777);
+    }
+
     /* make sure the /tmp/.X11-unix directory exist */
     if (!g_directory_exist("/tmp/.X11-unix"))
     {
