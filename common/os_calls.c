@@ -1012,7 +1012,7 @@ bind_loopback(int sck, const char *port)
     errno6 = errno;
 
     // else IPv4
-    g_memset(&sa, 0, sizeof(s));
+    g_memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
     s.sin_port = htons((tui16)atoi(port));
