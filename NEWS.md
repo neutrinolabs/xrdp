@@ -5,10 +5,14 @@
 
 ## Bugfixes
   * Now sesman sets mandatory LOGNAME environment variable #725
+  * Now sesman ensures socket directory present #801
   * Exit with failure status if port already in use #644
-  * Eliminate some hard  coded paths
+  * Eliminate some hard coded paths
+  * Fix a glitch with IPv4 struct initialization #803
   * Fix some keyboard layout integration (UK, Spanish)
   * Fix handle OS when IPv6 disabled #714
+  * Fix issues around systemd session #778
+  * Fix protocol error when 32 bit color and non RemoteFX session #737 #804
   * Fix sesadmin shows error when no sessions #797
   * Fix TLS spins 100% CPU #728
   * Fix Xvnc backend disconnects when some data copied to clipboard #755
@@ -18,6 +22,9 @@
   * Change xrdp-chansrv log path to include display number
   * Optimize startwm.sh for SUSE
   * Several cleanups and optimizations
+
+## Known issues
+  * Windows 10 (1703) shows mode black blank screen in RemoteFX mode
 
 -----------------------
 
