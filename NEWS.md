@@ -24,7 +24,7 @@
   * Several cleanups and optimizations
 
 ## Known issues
-  * Windows 10 (1703) shows mode black blank screen in RemoteFX mode
+  * Windows 10 (1703) shows black blank screen in RemoteFX mode
 
 -----------------------
 
