@@ -22,9 +22,9 @@
 #include <config_ac.h>
 #endif
 
+#include "base64.h"
 #include "xrdp.h"
 #include "log.h"
-#include "ssl_calls.h"
 
 /*****************************************************************************/
 /* all login help screen events go here */
