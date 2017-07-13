@@ -31,6 +31,8 @@ module_LTLIBRARIES = \
 
 libcommon_la_SOURCES = \
   arch.h \
+  base64.h \
+  base64.c \
   crc16.h \
   defines.h \
   fifo.c \

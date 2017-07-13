@@ -114,9 +114,5 @@ const char *
 ssl_get_cipher_name(const struct ssl_st *ssl);
 int
 ssl_get_protocols_from_string(const char *str, long *ssl_protocols);
-size_t
-base64_decoded_bytes(const char *src);
-char *
-base64_decode(char *dst, const char *src, size_t len);
 
 #endif
