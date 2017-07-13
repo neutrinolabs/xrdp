@@ -69,7 +69,7 @@ env_check_password_file(const char *filename, const char *passwd)
     g_strncpy(encryptedPasswd, passwd, 8);
     g_memset(key, 0, sizeof(key));
     g_mirror_memcpy(key, g_fixedkey, 8);
-    des = ssl_des3_encrypt_info_create(key, 0); 
+    des = ssl_des3_encrypt_info_create(key, 0);
     ssl_des3_encrypt(des, 8, encryptedPasswd, encryptedPasswd);
     ssl_des3_info_delete(des);
     fd = g_file_open_ex(filename, 0, 1, 1, 1);
@@ -124,7 +124,7 @@ env_set_user(const char *username, char **passwd_file, int display,
             error = g_setuid(uid);
         }
 
-        g_mk_temp_dir(0);
+        g_mk_socket_path(0);
 
         if (error == 0)
         {

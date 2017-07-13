@@ -38,7 +38,7 @@
 #define g_close_wait_obj g_delete_wait_obj
 
 int      g_rm_temp_dir(void);
-int      g_mk_temp_dir(const char* app_name);
+int      g_mk_socket_path(const char* app_name);
 void     g_init(const char* app_name);
 void     g_deinit(void);
 void*    g_malloc(int size, int zero);
