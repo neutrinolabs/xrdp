@@ -432,6 +432,12 @@ main(int argc, char **argv)
         g_file_close(fd);
     }
 
+    if (session_init_shared())
+      log_message(LOG_LEVEL_ERROR,
+                  "error opening session shm file[%s]: %s",
+                  SESMAN_SHAREDMEM_FILENAME, g_get_strerror());
+
+
     /* start program main loop */
     log_message(LOG_LEVEL_INFO,
                 "starting xrdp-sesman with pid %d", g_pid);
@@ -460,6 +466,7 @@ main(int argc, char **argv)
     {
         g_file_delete(pid_file);
     }
+    session_close_shared();
 
     g_delete_wait_obj(g_term_event);
 

@@ -29,6 +29,9 @@
  *
  */
 
+//#define DONT_USE_SHM
+//#define DEBUG_SESSION_LOCK
+
 #if defined(HAVE_CONFIG_H)
 #include "config_ac.h"
 #endif
@@ -37,10 +40,22 @@
 #include <sys/prctl.h>
 #endif
 
+#include <sys/mman.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <string.h>
+#include <errno.h>
+
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
 #include "xrdp_sockets.h"
+#include "thread_calls.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
@@ -54,6 +69,13 @@ struct session_chain *g_sessions;
 int g_session_count;
 
 extern tbus g_term_event; /* in sesman.c */
+extern int g_pid;         /* in sesman.c */
+
+struct session_shared_data *g_shm_mapping;
+#ifndef DONT_USE_SHM
+static int g_sesshm_thread_going = 1;
+#endif
+
 
 /**
  * Creates a string consisting of all parameters that is hosted in the param list
@@ -90,6 +112,577 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 }
 
 
+
+/******************************************************************************/
+/**
+ *
+ * @brief obtain lock on the mutex in the shared mapping
+ * @return 0 on success; non-zero otherwise
+ *
+ */
+static int
+sesshm_lock()
+{
+#ifdef DONT_USE_SHM
+    return 0;
+#else
+    int rc = pthread_mutex_lock(&g_shm_mapping->mutex);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "pthread_mutex_lock() failed (%d)", errno);
+    }
+    return rc;
+#endif
+}
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief try for up to one second to obtain lock on the mutex in the shared mapping
+ * @return 0 on success; non-zero otherwise
+ *
+ */
+#ifndef DONT_USE_SHM
+static int
+sesshm_try_lock()
+{
+    return 0;
+    struct timespec timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_nsec = 0;
+
+    int rc = pthread_mutex_timedlock(&g_shm_mapping->mutex, &timeout);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "pthread_mutex_timedlock() failed (%d)", errno);
+    }
+    return rc;
+}
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief release lock on the mutex in the shared mapping
+ * @return 0 on success; non-zero otherwise
+ *
+ */
+static int
+sesshm_unlock()
+{
+#ifdef DONT_USE_SHM
+    return 0;
+#else
+    int rc = pthread_mutex_unlock(&g_shm_mapping->mutex);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "pthread_mutex_unlock() failed (%d)", errno);
+    }
+    return rc;
+#endif
+}
+
+
+#ifdef DEBUG_SESSION_LOCK
+#define sesshm_try_lock() \
+       ({  \
+           log_message(LOG_LEVEL_DEBUG, \
+                       "pid %d tid %d: sesshm_try_lock() called from %s at line %d", \
+                       getpid(), (int)tc_get_threadid(), __func__, __LINE__); \
+           sesshm_try_lock(); \
+       })
+#define sesshm_lock() \
+       {  \
+           log_message(LOG_LEVEL_DEBUG, \
+                       "pid %d tid %d: sesshm_lock() called from %s at line %d", \
+                       getpid(), (int)tc_get_threadid(), __func__, __LINE__); \
+           sesshm_lock(); \
+       }
+#define sesshm_unlock() \
+       { \
+           log_message(LOG_LEVEL_DEBUG, \
+                       "pid %d tid %d: sesshm_unlock() called from %s at line %d", \
+                       getpid(), (int)tc_get_threadid(), __func__, __LINE__); \
+           sesshm_unlock(); \
+       }
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief map the file fd into memory using mmap
+ * @return pointer to the mapping
+ *
+ */
+#ifndef DONT_USE_SHM
+static struct session_shared_data *
+sesshm_map(int fd)
+{
+    g_shm_mapping = mmap(NULL,
+                         SESMAN_SHAREDMEM_LENGTH,
+                         PROT_READ|PROT_WRITE,
+                         MAP_SHARED,
+                         fd,
+                         0);
+    close(fd);
+    return g_shm_mapping;
+}
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief thread to poll the shared memory for various changes
+ * @return NULL
+ *
+ */
+#ifndef DONT_USE_SHM
+static void *
+sesshm_thread(void *arg)
+{
+    int pid = g_getpid();
+    while (g_sesshm_thread_going)
+    {
+        sleep(SESMAN_SHAREDMEM_HEARTBEAT_INTERVAL);
+
+        if (g_pid == pid)
+        {
+            /* Daemon process
+             * Check that the file hasn't been hijacked by a new daemon
+             * process and that the heartbeat hasn't timed out for the
+             * sessions. */
+            sesshm_lock();
+            if (g_pid != g_shm_mapping->daemon_pid)
+            {
+                log_message(LOG_LEVEL_ERROR,
+                            "new daemon pid %d entered in shm!  quitting (%d)",
+                            g_shm_mapping->daemon_pid, g_pid);
+                exit(1);
+            }
+
+            int current_time = g_time1();
+            struct session_chain *tmp = g_sessions;
+            struct session_chain *prev = 0;
+            while (tmp != 0)
+            {
+                if (tmp->item == 0)
+                {
+                    log_message(LOG_LEVEL_ERROR, "found null session "
+                                "descriptor!");
+                }
+                else if (current_time - tmp->item->shm_heartbeat_time
+                         > SESMAN_SHAREDMEM_HEARTBEAT_TIMEOUT)
+                {
+                    /* deleting the session */
+                    log_message(LOG_LEVEL_INFO, "++ terminated session (heartbeat timed out):  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+
+                    tmp->item->shm_is_allocated = 0;
+
+                    if (prev == 0)
+                    {
+                        /* prev does no exist, so it's the first element - so we set
+                           g_sessions */
+                        g_sessions = tmp->next;
+                    }
+                    else
+                    {
+                        prev->next = tmp->next;
+                    }
+
+                    g_free(tmp);
+                    g_session_count--;
+                }
+
+                /* go on */
+                prev = tmp;
+                tmp = tmp->next;
+            }
+            sesshm_unlock();
+        }
+        else
+        {
+            /* Session process */
+            sesshm_lock();
+            /* Check that this process hadn't been timed out or otherwise
+             * told to exit */
+            int okay = 0;
+            int i;
+            for (i = 0; i < g_shm_mapping->max_sessions; i ++)
+            {
+                if (g_shm_mapping->sessions[i].shm_is_allocated
+                    && pid == g_shm_mapping->sessions[i].pid)
+                {
+                    if (g_shm_mapping->sessions[i].shm_is_allocated)
+                    {
+                        okay = 1;
+
+                        /* Update the heartbeat time */
+                        g_shm_mapping->sessions[i].shm_heartbeat_time = g_time1();
+                    }
+                }
+            }
+            if (!okay)
+            {
+                log_message(LOG_LEVEL_INFO, "++ killed session (deallocated in shm):  session_pid %d", pid);
+                sesshm_unlock();
+
+                // TODO XXX Kill the child X server and/or window manager
+
+                exit(1);
+            }
+            sesshm_unlock();
+        }
+    }
+
+    return NULL;
+}
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief create a new session_shared_data shared memory file
+ * @return 0 on success, nonzero otherwise
+ *
+ */
+#ifndef DONT_USE_SHM
+static int
+sesshm_create_new_shm()
+{
+    int rc;
+    int i;
+    int fd;
+
+    log_message(LOG_LEVEL_INFO, "Creating shm file %s",
+                SESMAN_SHAREDMEM_FILENAME);
+
+    unlink(SESMAN_SHAREDMEM_FILENAME);
+    fd = open(SESMAN_SHAREDMEM_FILENAME, O_CREAT|O_RDWR, 00600);
+    if (fd == -1)
+    {
+        log_message(LOG_LEVEL_ERROR, "open() failed (%d)", errno);
+        return 1;
+    }
+    rc = ftruncate(fd, SESMAN_SHAREDMEM_LENGTH);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "truncate() failed (%d)", errno);
+        return 2;
+    }
+
+    /* Map it into memory */
+    g_shm_mapping = sesshm_map(fd);
+    if (g_shm_mapping == MAP_FAILED)
+    {
+        log_message(LOG_LEVEL_ERROR, "mmap() failed (%d)", errno);
+        return 3;
+    }
+
+    /* Initalise mutex */
+    pthread_mutexattr_t mutexattr;
+    rc = pthread_mutexattr_init(&mutexattr);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "pthread_mutexattr_init() failed (%d)",
+                    errno);
+        return 4;
+    }
+    rc = pthread_mutexattr_setpshared(&mutexattr, PTHREAD_PROCESS_SHARED);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "pthread_mutexattr_setpshared() failed (%d)", errno);
+        return 5;
+    }
+    pthread_mutex_init(&g_shm_mapping->mutex, &mutexattr);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "pthread_mutex_init() failed (%d)", errno);
+        return 6;
+    }
+
+    /* Initialise data */
+    sesshm_lock();
+    strncpy(g_shm_mapping->tag, SESMAN_SHAREDMEM_TAG,
+            sizeof(g_shm_mapping->tag));
+    g_shm_mapping->data_format_version = SESMAN_SHAREDMEM_FORMAT_VERSION;
+    g_shm_mapping->max_sessions = SESMAN_SHAREDMEM_MAX_SESSIONS;
+    g_shm_mapping->daemon_pid = g_pid;
+    for (i = 0; i < g_shm_mapping->max_sessions; i ++)
+    {
+        g_shm_mapping->sessions[i].shm_is_allocated = 0;
+    }
+    sesshm_unlock();
+
+    return 0;
+}
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief try to open an existing session_shared_data shared memory file
+ * @return 0 on success, nonzero otherwise
+ *
+ */
+#ifndef DONT_USE_SHM
+static int
+sesshm_try_open_existing_shm()
+{
+    int rc;
+    int fd;
+    int i;
+
+    log_message(LOG_LEVEL_INFO, "Looking for existing shm file %s",
+                SESMAN_SHAREDMEM_FILENAME);
+
+    /* Does the shared file already exist? */
+    fd = open(SESMAN_SHAREDMEM_FILENAME, O_RDWR);
+    if (fd == -1)
+    {
+        log_message(LOG_LEVEL_ERROR, "open() failed (%d)", errno);
+        return 1;
+    }
+
+    char tag[SESMAN_SHAREDMEM_TAG_LENGTH];
+    rc = read(fd, tag, SESMAN_SHAREDMEM_TAG_LENGTH);
+    if (rc != SESMAN_SHAREDMEM_TAG_LENGTH)
+    {
+        log_message(LOG_LEVEL_ERROR, "read() failed (%d)", errno);
+        return 2;
+    }
+    if (strncmp(tag, SESMAN_SHAREDMEM_TAG, SESMAN_SHAREDMEM_TAG_LENGTH))
+    {
+        log_message(LOG_LEVEL_ERROR, "tag is wrong file shm file %s",
+                   SESMAN_SHAREDMEM_FILENAME);
+        // XXX Should we exit(1) here instead?
+        return 3;
+    }
+
+    /* Is it the right size? */
+    off_t end = lseek(fd, 0, SEEK_END);
+    if (end != SESMAN_SHAREDMEM_LENGTH)
+    {
+        log_message(LOG_LEVEL_ERROR, "shm file %s has wrong length",
+                   SESMAN_SHAREDMEM_FILENAME);
+        return 4;
+    }
+    rc = lseek(fd, 0, SEEK_SET);
+    if (rc != 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "seek() failed (%d)", errno);
+        return 5;
+    }
+
+    /* Map it into memory */
+    g_shm_mapping = sesshm_map(fd);
+    if (g_shm_mapping == MAP_FAILED)
+    {
+        log_message(LOG_LEVEL_ERROR, "mmap() failed (%d)", errno);
+        return 6;
+    }
+
+    /* Check that it isn't already locked.  Otherwise if it was locked by a
+     * process that crashed then we will wait forever. */
+    rc = sesshm_try_lock();
+    if (rc)
+    {
+        log_message(LOG_LEVEL_ERROR, "sesshm_try_lock() failed (%d)", errno);
+        // XXX Should we exit(1) here instead?
+        return 7;
+    }
+
+    if (g_shm_mapping->data_format_version != SESMAN_SHAREDMEM_FORMAT_VERSION)
+    {
+        sesshm_unlock();
+        log_message(LOG_LEVEL_ERROR, "wrong data version (%d)", errno);
+        // XXX Should we exit(1) here instead?
+        return 8;
+    }
+
+    g_shm_mapping->daemon_pid = g_pid;
+    for (i = 0; i < g_shm_mapping->max_sessions; i ++)
+    {
+        if (g_shm_mapping->sessions[i].shm_is_allocated)
+        {
+            struct session_chain *temp =
+                (struct session_chain *)g_malloc(sizeof(struct session_chain), 0);
+            temp->item = &g_shm_mapping->sessions[i];
+            temp->next = g_sessions;
+            g_sessions = temp;
+            g_session_count ++;
+        }
+    }
+    sesshm_unlock();
+    log_message(LOG_LEVEL_INFO, "Existing shm file ok: found %d sessions",
+                g_session_count);
+
+    return 0;
+}
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief initialises the session shared data
+ * @return 0 on success, nonzero otherwise
+ *
+ */
+int
+session_init_shared()
+{
+#ifdef DONT_USE_SHM
+    return 0;
+#else
+    int rc;
+
+    /* Look for an existing shared file */
+    rc = sesshm_try_open_existing_shm();
+
+    /* If it's not okay then create it */
+    if (rc != 0)
+        rc = sesshm_create_new_shm();
+
+    /* Start polling thread */
+    if (rc == 0)
+        tc_thread_create(sesshm_thread, 0);
+
+    return rc;
+#endif
+}
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief releases the session shared data
+ * @return 0 on success, nonzero otherwise
+ *
+ */
+int
+session_close_shared()
+{
+#ifdef DONT_USE_SHM
+    return 0;
+#else
+    g_sesshm_thread_going = 0;
+
+    sesshm_lock();
+    if (g_shm_mapping->daemon_pid == g_getpid())
+        g_shm_mapping->daemon_pid = -1;
+    sesshm_unlock();
+
+    int rc = munmap(g_shm_mapping, SESMAN_SHAREDMEM_LENGTH);
+    if (rc != 0)
+        return 1;
+
+    return 0;
+#endif
+}
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief allocate a session and mark it as used
+ * @return the session_item allocated
+ *
+ */
+static struct session_item *
+alloc_session_item()
+{
+#ifdef DONT_USE_SHM
+    return (struct session_item *)g_malloc(sizeof(struct session_item), 0);
+#else
+    int i;
+    sesshm_lock();
+    for (i = 0; i < g_shm_mapping->max_sessions; i ++)
+    {
+        if (!g_shm_mapping->sessions[i].shm_is_allocated)
+        {
+            memset(&g_shm_mapping->sessions[i],
+                   0,
+                   sizeof(g_shm_mapping->sessions[i]));
+            g_shm_mapping->sessions[i].shm_is_allocated = 1;
+            sesshm_unlock();
+            return &g_shm_mapping->sessions[i];
+        }
+    }
+    sesshm_unlock();
+    return 0;
+#endif
+}
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief validate whether a session_item pointer is valid
+ * @param item a pointer to a session_item
+ * @return 1 if valid or 0 if not
+ *
+ */
+#ifndef DONT_USE_SHM
+static int
+validate_session_item_ptr(struct session_item *item)
+{
+    char *start = (char *) &g_shm_mapping->sessions[0];
+    int diff = (char *) item - start;
+    int size = sizeof(g_shm_mapping->sessions[0]);
+    int valid = (diff % size == 0
+                 && diff >= 0
+                 && (diff / size < g_shm_mapping->max_sessions));
+
+    if (!valid)
+        log_message(LOG_LEVEL_ALWAYS,
+                    "validate_session_item_ptr: bad pointer %p",
+                    item);
+
+    return valid;
+}
+#endif
+
+
+/******************************************************************************/
+/**
+ *
+ * @brief deallocate a session and mark it as unused
+ * @param item the session_item to deallocate
+ *
+ */
+static void
+free_session_item(struct session_item *item)
+{
+#ifdef DONT_USE_SHM
+    g_free(item);
+#else
+    /* This assumes that the caller has called sesshm_lock() */
+    if (!validate_session_item_ptr(item))
+    {
+        log_message(LOG_LEVEL_ALWAYS, "free_session_item: bad pointer");
+    }
+    else if (!item->shm_is_allocated)
+    {
+        log_message(LOG_LEVEL_ALWAYS, "free_session_item: session not active %p", item);
+    }
+    else
+    {
+        item->shm_is_allocated = 0;
+    }
+#endif
+}
+
+
 /******************************************************************************/
 struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
@@ -97,8 +690,6 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
 {
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
-
-    tmp = g_sessions;
 
     /* convert from SCP_SESSION_TYPE namespace to SESMAN_SESSION_TYPE namespace */
     switch (type)
@@ -125,6 +716,9 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
             policy, name, width, height, bpp, type, client_ip);
 #endif
 
+    sesshm_lock();
+    tmp = g_sessions;
+
     while (tmp != 0)
     {
 #if 0
@@ -147,11 +741,13 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
             tmp->item->bpp == bpp &&
             tmp->item->type == type)
         {
+            sesshm_unlock();
             return tmp->item;
         }
 
         tmp = tmp->next;
     }
+    sesshm_unlock();
 
     return 0;
 }
@@ -278,6 +874,7 @@ session_is_display_in_chain(int display)
     struct session_chain *chain;
     struct session_item *item;
 
+    sesshm_lock();
     chain = g_sessions;
 
     while (chain != 0)
@@ -286,11 +883,13 @@ session_is_display_in_chain(int display)
 
         if (item->display == display)
         {
+            sesshm_unlock();
             return 1;
         }
 
         chain = chain->next;
     }
+    sesshm_unlock();
 
     return 0;
 }
@@ -360,6 +959,8 @@ session_start_chansrv(char *username, int display)
     chansrv_pid = g_fork();
     if (chansrv_pid == 0)
     {
+        session_close_shared();
+
         chansrv_params = list_create();
         chansrv_params->auto_free = 1;
 
@@ -443,7 +1044,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         return 0;
     }
 
-    temp->item = (struct session_item *)g_malloc(sizeof(struct session_item), 0);
+    temp->item = alloc_session_item();
 
     if (temp->item == 0)
     {
@@ -457,7 +1058,9 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
 
     if (display == 0)
     {
-        g_free(temp->item);
+        sesshm_lock();
+        free_session_item(temp->item);
+        sesshm_unlock();
         g_free(temp);
         return 0;
     }
@@ -532,6 +1135,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         }
         else if (window_manager_pid == 0)
         {
+            session_close_shared();
             wait_for_xserver(display);
             env_set_user(s->username,
                          0,
@@ -621,6 +1225,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             }
             else if (display_pid == 0) /* child */
             {
+                session_close_shared();
                 if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
                     env_set_user(s->username,
@@ -819,6 +1424,10 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 g_sigterm(display_pid);
                 g_sigterm(chansrv_pid);
                 cleanup_sockets(display);
+                sesshm_lock();
+                free_session_item(temp->item);
+                sesshm_unlock();
+                session_close_shared();
                 g_deinit();
                 g_exit(0);
             }
@@ -849,14 +1458,22 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         temp->item->type = type;
         temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
 
+#ifndef DONT_USE_SHM
+        temp->item->shm_heartbeat_time = g_time1();
+#endif
+
+        sesshm_lock();
         temp->next = g_sessions;
         g_sessions = temp;
         g_session_count++;
+        sesshm_unlock();
 
         return display;
     }
 
-    g_free(temp->item);
+    sesshm_lock();
+    free_session_item(temp->item);
+    sesshm_unlock();
     g_free(temp);
     return display;
 }
@@ -919,6 +1536,7 @@ session_kill(int pid)
     struct session_chain *tmp;
     struct session_chain *prev;
 
+    sesshm_lock();
     tmp = g_sessions;
     prev = 0;
 
@@ -940,14 +1558,15 @@ session_kill(int pid)
                 prev->next = tmp->next;
             }
 
+            sesshm_unlock();
             return SESMAN_SESSION_KILL_NULLITEM;
         }
 
         if (tmp->item->pid == pid)
         {
             /* deleting the session */
-            log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
-            g_free(tmp->item);
+            log_message(LOG_LEVEL_INFO, "++ terminated session (received SIGCHLD):  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+            free_session_item(tmp->item);
 
             if (prev == 0)
             {
@@ -962,6 +1581,7 @@ session_kill(int pid)
 
             g_free(tmp);
             g_session_count--;
+            sesshm_unlock();
             return SESMAN_SESSION_KILL_OK;
         }
 
@@ -969,6 +1589,7 @@ session_kill(int pid)
         prev = tmp;
         tmp = tmp->next;
     }
+    sesshm_unlock();
 
     return SESMAN_SESSION_KILL_NOTFOUND;
 }
@@ -979,6 +1600,7 @@ session_sigkill_all(void)
 {
     struct session_chain *tmp;
 
+    sesshm_lock();
     tmp = g_sessions;
 
     while (tmp != 0)
@@ -996,6 +1618,7 @@ session_sigkill_all(void)
         /* go on */
         tmp = tmp->next;
     }
+    sesshm_unlock();
 }
 
 /******************************************************************************/
@@ -1013,12 +1636,14 @@ session_get_bypid(int pid)
         return 0;
     }
 
+    sesshm_lock();
     tmp = g_sessions;
 
     while (tmp != 0)
     {
         if (tmp->item == 0)
         {
+            sesshm_unlock();
             log_message(LOG_LEVEL_ERROR, "session descriptor for "
                         "pid %d is null!", pid);
             g_free(dummy);
@@ -1028,12 +1653,14 @@ session_get_bypid(int pid)
         if (tmp->item->pid == pid)
         {
             g_memcpy(dummy, tmp->item, sizeof(struct session_item));
+            sesshm_unlock();
             return dummy;
         }
 
         /* go on */
         tmp = tmp->next;
     }
+    sesshm_unlock();
 
     g_free(dummy);
     return 0;
@@ -1050,6 +1677,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
 
     count = 0;
 
+    sesshm_lock();
     tmp = g_sessions;
 
     while (tmp != 0)
@@ -1071,6 +1699,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
         /* go on */
         tmp = tmp->next;
     }
+    sesshm_unlock();
 
     if (count == 0)
     {
@@ -1087,6 +1716,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
         return 0;
     }
 
+    sesshm_lock();
     tmp = g_sessions;
     index = 0;
 
@@ -1134,6 +1764,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
         /* go on */
         tmp = tmp->next;
     }
+    sesshm_unlock();
 
     (*cnt) = count;
     return sess;

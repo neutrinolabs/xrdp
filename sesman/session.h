@@ -46,6 +46,16 @@
 #define SESMAN_SESSION_KILL_NULLITEM  1
 #define SESMAN_SESSION_KILL_NOTFOUND  2
 
+// XXX No reason why this needs to be a constant
+#define SESMAN_SHAREDMEM_MAX_SESSIONS       64
+#define SESMAN_SHAREDMEM_FORMAT_VERSION     1
+#define SESMAN_SHAREDMEM_HEARTBEAT_INTERVAL 15 /* seconds */
+#define SESMAN_SHAREDMEM_HEARTBEAT_TIMEOUT  (60 * 3) /* seconds */
+#define SESMAN_SHAREDMEM_FILENAME           "/var/run/xrdp-sesman.shm"
+#define SESMAN_SHAREDMEM_TAG                "XRDP-SESMAN-SHM"
+#define SESMAN_SHAREDMEM_TAG_LENGTH         16
+#define SESMAN_SHAREDMEM_LENGTH             sizeof(struct session_shared_data)
+
 struct session_date
 {
   tui16 year;
@@ -77,6 +87,12 @@ struct session_item
   struct session_date idle_time;
   char client_ip[256];
   tui8 guid[16];
+
+#ifndef DONT_USE_SHM
+  /* used for shared memory */
+  int    shm_is_allocated;
+  int    shm_heartbeat_time;
+#endif
 };
 
 struct session_chain
@@ -84,6 +100,34 @@ struct session_chain
   struct session_chain* next;
   struct session_item* item;
 };
+
+struct session_shared_data
+{
+  char                         tag[SESMAN_SHAREDMEM_TAG_LENGTH];
+  int                          data_format_version;
+  pthread_mutex_t              mutex;
+  int                          daemon_pid;
+  int                          max_sessions;
+  struct session_item          sessions[SESMAN_SHAREDMEM_MAX_SESSIONS];
+};
+
+/**
+ *
+ * @brief initialises the session shared data
+ * @return 0 on success, nonzero otherwise
+ *
+ */
+int
+session_init_shared(void);
+
+/**
+ *
+ * @brief releases the session shared data
+ * @return 0 on success, nonzero otherwise
+ *
+ */
+int
+session_close_shared();
 
 /**
  *
