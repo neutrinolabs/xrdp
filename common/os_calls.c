@@ -118,8 +118,9 @@ g_mk_temp_dir(const char *app_name)
             /* if failed, still check if it got created by someone else */
             if (!g_directory_exist(XRDP_SOCKET_PATH))
             {
-                printf("g_mk_temp_dir: g_create_dir(%s) failed\n",
-                       XRDP_SOCKET_PATH);
+                log_message(LOG_LEVEL_ERROR,
+                            "g_mk_temp_dir: g_create_dir(%s) failed",
+                            XRDP_SOCKET_PATH);
                 return 1;
             }
         }
