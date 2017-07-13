@@ -1,4 +1,4 @@
-# Release notes for xrdp v0.9.3 (2017/07/07)
+# Release notes for xrdp v0.9.3 (2017/07/15)
 
 ## New features
   * Log user-friendly messages when certificate/privkey is inaccessible
