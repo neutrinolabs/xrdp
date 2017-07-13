@@ -118,8 +118,9 @@ g_mk_temp_dir(const char *app_name)
             /* if failed, still check if it got created by someone else */
             if (!g_directory_exist(XRDP_SOCKET_PATH))
             {
-                printf("g_mk_temp_dir: g_create_dir(%s) failed\n",
-                       XRDP_SOCKET_PATH);
+                log_message(LOG_LEVEL_ERROR,
+                            "g_mk_temp_dir: g_create_dir(%s) failed",
+                            XRDP_SOCKET_PATH);
                 return 1;
             }
         }
@@ -1012,7 +1013,7 @@ bind_loopback(int sck, const char *port)
     errno6 = errno;
 
     // else IPv4
-    g_memset(&sa, 0, sizeof(s));
+    g_memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
     s.sin_port = htons((tui16)atoi(port));
