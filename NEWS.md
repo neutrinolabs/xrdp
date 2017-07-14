@@ -8,7 +8,7 @@
   * Now sesman ensures socket directory present #801
   * Exit with failure status if port already in use #644
   * Eliminate some hard coded paths
-  * Fix a glitch with IPv4 struct initialization #803
+  * Fix glitches with IPv4 struct initialization #803
   * Fix some keyboard layout integration (UK, Spanish)
   * Fix handle OS when IPv6 disabled #714
   * Fix issues around systemd session #778
