@@ -418,7 +418,7 @@ main(int argc, char **argv)
                 "starting xrdp-sesman with pid %d", g_pid);
 
     /* make sure the socket directory exists */
-    g_mk_temp_dir("xrdp-sesman");
+    g_mk_socket_path("xrdp-sesman");
 
     /* make sure the /tmp/.X11-unix directory exists */
     if (!g_directory_exist("/tmp/.X11-unix"))

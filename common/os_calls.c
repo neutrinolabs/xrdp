@@ -109,17 +109,17 @@ g_rm_temp_dir(void)
 
 /*****************************************************************************/
 int
-g_mk_temp_dir(const char *app_name)
+g_mk_socket_path(const char *app_name)
 {
     if (!g_directory_exist(XRDP_SOCKET_PATH))
     {
-        if (!g_create_dir(XRDP_SOCKET_PATH))
+        if (!g_create_path(XRDP_SOCKET_PATH))
         {
             /* if failed, still check if it got created by someone else */
             if (!g_directory_exist(XRDP_SOCKET_PATH))
             {
                 log_message(LOG_LEVEL_ERROR,
-                            "g_mk_temp_dir: g_create_dir(%s) failed",
+                            "g_mk_socket_path: g_create_path(%s) failed",
                             XRDP_SOCKET_PATH);
                 return 1;
             }
@@ -153,7 +153,7 @@ g_init(const char *app_name)
         setlocale(LC_CTYPE, "en_US.UTF-8");
     }
 
-    g_mk_temp_dir(app_name);
+    g_mk_socket_path(app_name);
 }
 
 /*****************************************************************************/
@@ -753,7 +753,7 @@ connect_loopback(int sck, const char *port)
     }
 
     // else IPv4
-    g_memset(&sa, 0, sizeof(s));
+    g_memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
     s.sin_port = htons((tui16)atoi(port));
@@ -944,7 +944,7 @@ g_tcp_bind(int sck, const char *port)
     errno6 = errno;
 
     // else IPv4
-    g_memset(&sa, 0, sizeof(s));
+    g_memset(&s, 0, sizeof(s));
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_ANY);     // IPv4 0.0.0.0
     s.sin_port = htons((tui16)atoi(port));
@@ -2954,7 +2954,7 @@ g_execvp(const char *p1, char *args[])
 
     g_rm_temp_dir();
     rv = execvp(p1, args);
-    g_mk_temp_dir(0);
+    g_mk_socket_path(0);
     return rv;
 #endif
 }
@@ -2971,7 +2971,7 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
 
     g_rm_temp_dir();
     rv = execlp(a1, a2, a3, (void *)0);
-    g_mk_temp_dir(0);
+    g_mk_socket_path(0);
     return rv;
 #endif
 }
@@ -3067,7 +3067,7 @@ g_fork(void)
 
     if (rv == 0) /* child */
     {
-        g_mk_temp_dir(0);
+        g_mk_socket_path(0);
     }
 
     return rv;
