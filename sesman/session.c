@@ -224,12 +224,12 @@ sesshm_unlock()
 static struct session_shared_data *
 sesshm_map(int fd)
 {
-    g_shm_mapping = mmap(NULL,
-                         SESMAN_SHAREDMEM_LENGTH,
-                         PROT_READ|PROT_WRITE,
-                         MAP_SHARED,
-                         fd,
-                         0);
+    g_shm_mapping = (struct session_shared_data *) mmap(NULL,
+                                                        SESMAN_SHAREDMEM_LENGTH,
+                                                        PROT_READ|PROT_WRITE,
+                                                        MAP_SHARED,
+                                                        fd,
+                                                        0);
     close(fd);
     return g_shm_mapping;
 }
