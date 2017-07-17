@@ -113,7 +113,7 @@ g_mk_socket_path(const char *app_name)
 {
     if (!g_directory_exist(XRDP_SOCKET_PATH))
     {
-        if (!g_create_path(XRDP_SOCKET_PATH))
+        if (!g_create_path(XRDP_SOCKET_PATH"/"))
         {
             /* if failed, still check if it got created by someone else */
             if (!g_directory_exist(XRDP_SOCKET_PATH))
