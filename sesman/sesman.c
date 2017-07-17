@@ -29,6 +29,7 @@
 #endif
 
 #include "sesman.h"
+#include "sesshm.h"
 
 int g_sck;
 int g_pid;
