@@ -113,6 +113,34 @@ tc_mutex_create(void)
 }
 
 /*****************************************************************************/
+int
+tc_shared_mutex_create(tbus mutex)
+{
+#if defined(_WIN32)
+    /* Not implemented yet */
+    return 1;
+#else
+    pthread_mutexattr_t mutexattr;
+    int rc;
+
+    rc = pthread_mutexattr_init(&mutexattr);
+    if (rc != 0)
+    {
+        return 1;
+    }
+
+    rc = pthread_mutexattr_setpshared(&mutexattr, PTHREAD_PROCESS_SHARED);
+    if (rc != 0)
+    {
+        return 1;
+    }
+
+    rc = pthread_mutex_init((pthread_mutex_t *)mutex, &mutexattr);
+    return rc;
+#endif
+}
+
+/*****************************************************************************/
 void
 tc_mutex_delete(tbus mutex)
 {
@@ -137,6 +165,22 @@ tc_mutex_lock(tbus mutex)
 #else
     pthread_mutex_lock((pthread_mutex_t *)mutex);
     return 0;
+#endif
+}
+
+/*****************************************************************************/
+int
+tc_mutex_timed_lock(tbus mutex, int timeout_ms)
+{
+#if defined(_WIN32)
+    WaitForSingleObject((HANDLE)mutex, timeout_ms);
+    return 0;
+#else
+    struct timespec timeout;
+    timeout.tv_sec = timeout_ms / 1000;
+    timeout.tv_nsec = ((long)timeout_ms % 1000) * 1000;
+
+    return pthread_mutex_timedlock((pthread_mutex_t *)mutex, &timeout);
 #endif
 }
 

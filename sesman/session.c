@@ -40,17 +40,6 @@
 #include <sys/prctl.h>
 #endif
 
-#include <sys/mman.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <string.h>
-#include <errno.h>
-
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
@@ -121,16 +110,29 @@ dumpItemsToString(struct list *self, char *outstr, int len)
  *
  */
 static int
+#ifdef DEBUG_SESSION_LOCK
+sesshm_lock(const char *caller_func, int caller_line)
+#else
 sesshm_lock()
+#endif
 {
 #ifdef DONT_USE_SHM
     return 0;
 #else
-    int rc = pthread_mutex_lock(&g_shm_mapping->mutex);
+    int rc;
+
+#ifdef DEBUG_SESSION_LOCK
+    log_message(LOG_LEVEL_DEBUG,
+                "pid %d tid %d: %s() called from %s at line %d",
+                g_getpid(), (int)tc_get_threadid(), __func__,
+                caller_func, caller_line);
+#endif
+
+    rc = tc_mutex_lock((tbus)&g_shm_mapping->mutex);
     if (rc != 0)
     {
         log_message(LOG_LEVEL_ERROR,
-                    "pthread_mutex_lock() failed (%d)", errno);
+                    "tc_mutex_lock() failed (%d)", g_get_errno());
     }
     return rc;
 #endif
@@ -146,18 +148,26 @@ sesshm_lock()
  */
 #ifndef DONT_USE_SHM
 static int
+#ifdef DEBUG_SESSION_LOCK
+sesshm_try_lock(const char *caller_func, int caller_line)
+#else
 sesshm_try_lock()
+#endif
 {
-    return 0;
-    struct timespec timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_nsec = 0;
+    int rc;
 
-    int rc = pthread_mutex_timedlock(&g_shm_mapping->mutex, &timeout);
+#ifdef DEBUG_SESSION_LOCK
+    log_message(LOG_LEVEL_DEBUG,
+                "pid %d tid %d: %s() called from %s at line %d",
+                g_getpid(), (int)tc_get_threadid(), __func__,
+                caller_func, caller_line);
+#endif
+
+    rc = tc_mutex_timed_lock((tbus)&g_shm_mapping->mutex, 1 * 1000);
     if (rc != 0)
     {
         log_message(LOG_LEVEL_ERROR,
-                    "pthread_mutex_timedlock() failed (%d)", errno);
+                    "tc_mutex_timed_lock() failed (%d)", g_get_errno());
     }
     return rc;
 }
@@ -172,16 +182,29 @@ sesshm_try_lock()
  *
  */
 static int
+#ifdef DEBUG_SESSION_LOCK
+sesshm_unlock(const char *caller_func, int caller_line)
+#else
 sesshm_unlock()
+#endif
 {
 #ifdef DONT_USE_SHM
     return 0;
 #else
-    int rc = pthread_mutex_unlock(&g_shm_mapping->mutex);
+    int rc;
+
+#ifdef DEBUG_SESSION_LOCK
+    log_message(LOG_LEVEL_DEBUG,
+                "pid %d tid %d: %s() called from %s at line %d",
+                g_getpid(), (int)tc_get_threadid(), __func__,
+                caller_func, caller_line);
+#endif
+
+    rc = tc_mutex_unlock((tbus) &g_shm_mapping->mutex);
     if (rc != 0)
     {
         log_message(LOG_LEVEL_ERROR,
-                    "pthread_mutex_unlock() failed (%d)", errno);
+                    "tc_mutex_unlock() failed (%d)", g_get_errno());
     }
     return rc;
 #endif
@@ -189,50 +212,9 @@ sesshm_unlock()
 
 
 #ifdef DEBUG_SESSION_LOCK
-#define sesshm_try_lock() \
-       ({  \
-           log_message(LOG_LEVEL_DEBUG, \
-                       "pid %d tid %d: sesshm_try_lock() called from %s at line %d", \
-                       getpid(), (int)tc_get_threadid(), __func__, __LINE__); \
-           sesshm_try_lock(); \
-       })
-#define sesshm_lock() \
-       {  \
-           log_message(LOG_LEVEL_DEBUG, \
-                       "pid %d tid %d: sesshm_lock() called from %s at line %d", \
-                       getpid(), (int)tc_get_threadid(), __func__, __LINE__); \
-           sesshm_lock(); \
-       }
-#define sesshm_unlock() \
-       { \
-           log_message(LOG_LEVEL_DEBUG, \
-                       "pid %d tid %d: sesshm_unlock() called from %s at line %d", \
-                       getpid(), (int)tc_get_threadid(), __func__, __LINE__); \
-           sesshm_unlock(); \
-       }
-#endif
-
-
-/******************************************************************************/
-/**
- *
- * @brief map the file fd into memory using mmap
- * @return pointer to the mapping
- *
- */
-#ifndef DONT_USE_SHM
-static struct session_shared_data *
-sesshm_map(int fd)
-{
-    g_shm_mapping = (struct session_shared_data *) mmap(NULL,
-                                                        SESMAN_SHAREDMEM_LENGTH,
-                                                        PROT_READ|PROT_WRITE,
-                                                        MAP_SHARED,
-                                                        fd,
-                                                        0);
-    close(fd);
-    return g_shm_mapping;
-}
+#define sesshm_try_lock()    sesshm_try_lock(__func__, __LINE__)
+#define sesshm_lock()        sesshm_lock(__func__, __LINE__)
+#define sesshm_unlock()      sesshm_unlock(__func__, __LINE__)
 #endif
 
 
@@ -247,13 +229,19 @@ sesshm_map(int fd)
 static void *
 sesshm_thread(void *arg)
 {
-    int pid = g_getpid();
+    int pid;
+
+    pid = g_getpid();
     while (g_sesshm_thread_going)
     {
-        sleep(SESMAN_SHAREDMEM_HEARTBEAT_INTERVAL);
+        g_sleep_secs(SESMAN_SHAREDMEM_HEARTBEAT_INTERVAL);
 
         if (g_pid == pid)
         {
+            int current_time;
+            struct session_chain *tmp;
+            struct session_chain *prev;
+
             /* Daemon process
              * Check that the file hasn't been hijacked by a new daemon
              * process and that the heartbeat hasn't timed out for the
@@ -267,9 +255,9 @@ sesshm_thread(void *arg)
                 exit(1);
             }
 
-            int current_time = g_time1();
-            struct session_chain *tmp = g_sessions;
-            struct session_chain *prev = 0;
+            current_time = g_time1();
+            tmp = g_sessions;
+            prev = 0;
             while (tmp != 0)
             {
                 if (tmp->item == 0)
@@ -364,55 +352,43 @@ sesshm_create_new_shm()
     log_message(LOG_LEVEL_INFO, "Creating shm file %s",
                 SESMAN_SHAREDMEM_FILENAME);
 
-    unlink(SESMAN_SHAREDMEM_FILENAME);
-    fd = open(SESMAN_SHAREDMEM_FILENAME, O_CREAT|O_RDWR, 00600);
+    g_file_delete(SESMAN_SHAREDMEM_FILENAME);
+    fd = g_file_open_ex(SESMAN_SHAREDMEM_FILENAME, 1, 1, 1, 0);
     if (fd == -1)
     {
-        log_message(LOG_LEVEL_ERROR, "open() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "open() failed (%d)", g_get_errno());
         return 1;
     }
-    rc = ftruncate(fd, SESMAN_SHAREDMEM_LENGTH);
+    rc = g_ftruncate(fd, SESMAN_SHAREDMEM_LENGTH);
     if (rc != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "truncate() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "truncate() failed (%d)", g_get_errno());
         return 2;
     }
 
     /* Map it into memory */
-    g_shm_mapping = sesshm_map(fd);
-    if (g_shm_mapping == MAP_FAILED)
+    g_shm_mapping = ((struct session_shared_data *)
+                     g_map_file_shared(fd, SESMAN_SHAREDMEM_LENGTH));
+    g_file_close(fd);
+    if (g_shm_mapping == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "mmap() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "mmap() failed (%d)", g_get_errno());
         return 3;
     }
 
     /* Initalise mutex */
-    pthread_mutexattr_t mutexattr;
-    rc = pthread_mutexattr_init(&mutexattr);
+    rc = tc_shared_mutex_create((tbus) &g_shm_mapping->mutex);
     if (rc != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "pthread_mutexattr_init() failed (%d)",
-                    errno);
-        return 4;
-    }
-    rc = pthread_mutexattr_setpshared(&mutexattr, PTHREAD_PROCESS_SHARED);
-    if (rc != 0)
-    {
-        log_message(LOG_LEVEL_ERROR,
-                    "pthread_mutexattr_setpshared() failed (%d)", errno);
-        return 5;
-    }
-    pthread_mutex_init(&g_shm_mapping->mutex, &mutexattr);
-    if (rc != 0)
-    {
-        log_message(LOG_LEVEL_ERROR, "pthread_mutex_init() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "tc_shared_mutex_create() failed (%d)",
+                    g_get_errno());
         return 6;
     }
 
     /* Initialise data */
     sesshm_lock();
-    strncpy(g_shm_mapping->tag, SESMAN_SHAREDMEM_TAG,
-            sizeof(g_shm_mapping->tag));
+    g_strncpy(g_shm_mapping->tag, SESMAN_SHAREDMEM_TAG,
+              sizeof(g_shm_mapping->tag));
     g_shm_mapping->data_format_version = SESMAN_SHAREDMEM_FORMAT_VERSION;
     g_shm_mapping->max_sessions = SESMAN_SHAREDMEM_MAX_SESSIONS;
     g_shm_mapping->daemon_pid = g_pid;
@@ -441,26 +417,27 @@ sesshm_try_open_existing_shm()
     int rc;
     int fd;
     int i;
+    off_t end;
+    char tag[SESMAN_SHAREDMEM_TAG_LENGTH];
 
     log_message(LOG_LEVEL_INFO, "Looking for existing shm file %s",
                 SESMAN_SHAREDMEM_FILENAME);
 
     /* Does the shared file already exist? */
-    fd = open(SESMAN_SHAREDMEM_FILENAME, O_RDWR);
+    fd = g_file_open_ex(SESMAN_SHAREDMEM_FILENAME, 1, 1, 0, 0);
     if (fd == -1)
     {
-        log_message(LOG_LEVEL_ERROR, "open() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "open() failed (%d)", g_get_errno());
         return 1;
     }
 
-    char tag[SESMAN_SHAREDMEM_TAG_LENGTH];
-    rc = read(fd, tag, SESMAN_SHAREDMEM_TAG_LENGTH);
+    rc = g_file_read(fd, tag, SESMAN_SHAREDMEM_TAG_LENGTH);
     if (rc != SESMAN_SHAREDMEM_TAG_LENGTH)
     {
-        log_message(LOG_LEVEL_ERROR, "read() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "read() failed (%d)", g_get_errno());
         return 2;
     }
-    if (strncmp(tag, SESMAN_SHAREDMEM_TAG, SESMAN_SHAREDMEM_TAG_LENGTH))
+    if (g_strncmp(tag, SESMAN_SHAREDMEM_TAG, SESMAN_SHAREDMEM_TAG_LENGTH))
     {
         log_message(LOG_LEVEL_ERROR, "tag is wrong file shm file %s",
                    SESMAN_SHAREDMEM_FILENAME);
@@ -469,25 +446,27 @@ sesshm_try_open_existing_shm()
     }
 
     /* Is it the right size? */
-    off_t end = lseek(fd, 0, SEEK_END);
+    end = g_file_seek_rel_end(fd, 0);
     if (end != SESMAN_SHAREDMEM_LENGTH)
     {
         log_message(LOG_LEVEL_ERROR, "shm file %s has wrong length",
                    SESMAN_SHAREDMEM_FILENAME);
         return 4;
     }
-    rc = lseek(fd, 0, SEEK_SET);
+    rc = g_file_seek(fd, 0);
     if (rc != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "seek() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "seek() failed (%d)", g_get_errno());
         return 5;
     }
 
     /* Map it into memory */
-    g_shm_mapping = sesshm_map(fd);
-    if (g_shm_mapping == MAP_FAILED)
+    g_shm_mapping = ((struct session_shared_data *)
+                     g_map_file_shared(fd, SESMAN_SHAREDMEM_LENGTH));
+    g_file_close(fd);
+    if (g_shm_mapping == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "mmap() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "mmap() failed (%d)", g_get_errno());
         return 6;
     }
 
@@ -496,7 +475,8 @@ sesshm_try_open_existing_shm()
     rc = sesshm_try_lock();
     if (rc)
     {
-        log_message(LOG_LEVEL_ERROR, "sesshm_try_lock() failed (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "sesshm_try_lock() failed (%d)",
+                    g_get_errno());
         // XXX Should we exit(1) here instead?
         return 7;
     }
@@ -504,7 +484,7 @@ sesshm_try_open_existing_shm()
     if (g_shm_mapping->data_format_version != SESMAN_SHAREDMEM_FORMAT_VERSION)
     {
         sesshm_unlock();
-        log_message(LOG_LEVEL_ERROR, "wrong data version (%d)", errno);
+        log_message(LOG_LEVEL_ERROR, "wrong data version (%d)", g_get_errno());
         // XXX Should we exit(1) here instead?
         return 8;
     }
@@ -514,8 +494,11 @@ sesshm_try_open_existing_shm()
     {
         if (g_shm_mapping->sessions[i].shm_is_allocated)
         {
-            struct session_chain *temp =
-                (struct session_chain *)g_malloc(sizeof(struct session_chain), 0);
+            struct session_chain *temp;
+
+            temp =
+                (struct session_chain *)g_malloc(sizeof(struct session_chain),
+                                                 0);
             temp->item = &g_shm_mapping->sessions[i];
             temp->next = g_sessions;
             g_sessions = temp;
@@ -551,11 +534,15 @@ session_init_shared()
 
     /* If it's not okay then create it */
     if (rc != 0)
+    {
         rc = sesshm_create_new_shm();
+    }
 
     /* Start polling thread */
     if (rc == 0)
+    {
         tc_thread_create(sesshm_thread, 0);
+    }
 
     return rc;
 #endif
@@ -575,16 +562,22 @@ session_close_shared()
 #ifdef DONT_USE_SHM
     return 0;
 #else
+    int rc;
+
     g_sesshm_thread_going = 0;
 
     sesshm_lock();
     if (g_shm_mapping->daemon_pid == g_getpid())
+    {
         g_shm_mapping->daemon_pid = -1;
+    }
     sesshm_unlock();
 
-    int rc = munmap(g_shm_mapping, SESMAN_SHAREDMEM_LENGTH);
+    rc = g_unmap_file_shared(g_shm_mapping, SESMAN_SHAREDMEM_LENGTH);
     if (rc != 0)
+    {
         return 1;
+    }
 
     return 0;
 #endif
@@ -610,9 +603,9 @@ alloc_session_item()
     {
         if (!g_shm_mapping->sessions[i].shm_is_allocated)
         {
-            memset(&g_shm_mapping->sessions[i],
-                   0,
-                   sizeof(g_shm_mapping->sessions[i]));
+            g_memset(&g_shm_mapping->sessions[i],
+                     0,
+                     sizeof(g_shm_mapping->sessions[i]));
             g_shm_mapping->sessions[i].shm_is_allocated = 1;
             sesshm_unlock();
             return &g_shm_mapping->sessions[i];
@@ -636,17 +629,24 @@ alloc_session_item()
 static int
 validate_session_item_ptr(struct session_item *item)
 {
-    char *start = (char *) &g_shm_mapping->sessions[0];
-    int diff = (char *) item - start;
-    int size = sizeof(g_shm_mapping->sessions[0]);
-    int valid = (diff % size == 0
-                 && diff >= 0
-                 && (diff / size < g_shm_mapping->max_sessions));
+    char *start;
+    int diff;
+    int size;
+    int valid;
+
+    start = (char *) &g_shm_mapping->sessions[0];
+    diff = (char *) item - start;
+    size = sizeof(g_shm_mapping->sessions[0]);
+    valid = (diff % size == 0
+             && diff >= 0
+             && (diff / size < g_shm_mapping->max_sessions));
 
     if (!valid)
+    {
         log_message(LOG_LEVEL_ALWAYS,
                     "validate_session_item_ptr: bad pointer %p",
                     item);
+    }
 
     return valid;
 }

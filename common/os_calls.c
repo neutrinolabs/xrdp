@@ -60,6 +60,7 @@
 #include <pwd.h>
 #include <time.h>
 #include <grp.h>
+#include <sys/mman.h>
 #endif
 
 #include <stdlib.h>
@@ -1475,6 +1476,17 @@ g_sleep(int msecs)
 }
 
 /*****************************************************************************/
+void
+g_sleep_secs(int secs)
+{
+#if defined(_WIN32)
+    Sleep(secs * 1000);
+#else
+    sleep(secs);
+#endif
+}
+
+/*****************************************************************************/
 int
 g_sck_last_error_would_block(int sck)
 {
@@ -2106,6 +2118,17 @@ g_memcmp(const void *s1, const void *s2, int len)
 }
 
 /*****************************************************************************/
+int
+g_ftruncate(int fd, int length)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return ftruncate(fd, length);
+#endif
+}
+
+/*****************************************************************************/
 /* returns -1 on error, else return handle or file descriptor */
 int
 g_file_open(const char *file_name)
@@ -2243,6 +2266,31 @@ g_file_seek(int fd, int offset)
 
 #else
     return (int)lseek(fd, offset, SEEK_SET);
+#endif
+}
+
+/*****************************************************************************/
+/* move file pointer relative to end of file,
+ * returns offset on success, -1 on failure */
+int
+g_file_seek_rel_end(int fd, int offset)
+{
+#if defined(_WIN32)
+    int rv;
+
+    rv = (int)SetFilePointer((HANDLE)fd, offset, 0, FILE_END);
+
+    if (rv == (int)INVALID_SET_FILE_POINTER)
+    {
+        return -1;
+    }
+    else
+    {
+        return rv;
+    }
+
+#else
+    return (int)lseek(fd, offset, SEEK_END);
 #endif
 }
 
@@ -3042,6 +3090,35 @@ g_get_proc_address(long lib, const char *name)
 #else
     return dlsym((void *)lib, name);
 #endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+void *
+g_map_file_shared(int fd, int length)
+{
+    void *mapped;
+
+    mapped = mmap(NULL,
+                  length,
+                  PROT_READ|PROT_WRITE,
+                  MAP_SHARED,
+                  fd,
+                  0);
+
+    /* MAP_FAILED != NULL but mmap() will not return 0 unless MAP_FIXED is
+     * specified. */
+    if (mapped == MAP_FAILED)
+        mapped = NULL;
+    return mapped;
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+int
+g_unmap_file_shared(void *mapped, int length)
+{
+    return munmap(mapped, length);
 }
 
 /*****************************************************************************/

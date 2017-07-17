@@ -31,10 +31,14 @@ int
 tc_threadid_equal(tbus tid1, tbus tid2);
 tbus
 tc_mutex_create(void);
+int
+tc_shared_mutex_create(tbus mutex);
 void
 tc_mutex_delete(tbus mutex);
 int
 tc_mutex_lock(tbus mutex);
+int
+tc_mutex_timed_lock(tbus mutex, int timeout_ms);
 int
 tc_mutex_unlock(tbus mutex);
 tbus
