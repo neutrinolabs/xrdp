@@ -73,7 +73,7 @@ base64_decode(char *dst, const char *src, size_t len)
     /* if input is corrupt, return empty string */
     if (estimated_decoded_bytes != decoded_bytes)
     {
-    g_strncpy(dst, "", sizeof(""));
+        g_strncpy(dst, "", sizeof(""));
     }
 
     return dst;
