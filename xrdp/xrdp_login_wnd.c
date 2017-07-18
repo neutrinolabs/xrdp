@@ -26,6 +26,11 @@
 #include "xrdp.h"
 #include "log.h"
 
+#define ASK "ask"
+#define ASK_LEN g_strlen(ASK)
+#define BASE64PREFIX "{base64}"
+#define BASE64PREFIX_LEN g_strlen(BASE64PREFIX)
+
 /*****************************************************************************/
 /* all login help screen events go here */
 static int
@@ -370,15 +375,15 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
             value = (char *)list_get_item(mod->values, index);
 
             /* if the value begins with "{base64}", decode the string following it */
-            if (g_strncmp("{base64}", value, 8) == 0)
+            if (g_strncmp(BASE64PREFIX, value, BASE64PREFIX_LEN) == 0)
             {
-                base64_length = g_strlen(value + 8);
+                base64_length = g_strlen(value + BASE64PREFIX_LEN);
                 plain = (char *)g_malloc(base64_length, 0);
-                base64_decode(plain, value + 8, base64_length);
+                base64_decode(plain, value + BASE64PREFIX_LEN, base64_length);
                 g_strncpy(value, plain, g_strlen(plain));
                 g_free(plain);
             }
-            else if (g_strncmp("ask", value, 3) == 0)
+            else if (g_strncmp(ASK, value, ASK_LEN) == 0)
             {
                 /* label */
                 b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
@@ -412,17 +417,17 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 b->tab_stop = 1;
                 b->caption1 = (char *)g_malloc(256, 1);
                 /* ask{base64}... 3 for "ask", 8 for "{base64}" */
-                if (g_strncmp("{base64}", value + 3, 8) == 0)
+                if (g_strncmp(BASE64PREFIX, value + ASK_LEN, BASE64PREFIX_LEN) == 0)
                 {
-                    base64_length = g_strlen(value + 3 + 8);
+                    base64_length = g_strlen(value + ASK_LEN + BASE64PREFIX_LEN);
                     plain = (char *)g_malloc(base64_length, 0);
-                    base64_decode(plain, value + 3 + 8, base64_length);
+                    base64_decode(plain, value + ASK_LEN + BASE64PREFIX_LEN, base64_length);
                     g_strncpy(b->caption1, plain, 255);
                     g_free(plain);
                 }
                 else
                 {
-                    g_strncpy(b->caption1, value + 3, 255);
+                    g_strncpy(b->caption1, value + ASK_LEN, 255);
                 }
                 b->edit_pos = g_mbstowcs(0, b->caption1, 0);
 
