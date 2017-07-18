@@ -376,7 +376,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 plain = (char *)g_malloc(base64_length, 0);
                 base64_decode(plain, value + 8, base64_length);
                 g_strncpy(value, plain, g_strlen(plain));
-                free(plain);
+                g_free(plain);
             }
             else if (g_strncmp("ask", value, 3) == 0)
             {
@@ -418,7 +418,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                     plain = (char *)g_malloc(base64_length, 0);
                     base64_decode(plain, value + 3 + 8, base64_length);
                     g_strncpy(b->caption1, plain, 255);
-                    free(plain);
+                    g_free(plain);
                 }
                 else
                 {
