@@ -1,0 +1,5 @@
+#%PAM-1.0
+auth        include     system
+account     include     system
+password    include     system
+session     include     system
