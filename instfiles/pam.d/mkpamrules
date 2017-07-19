@@ -25,6 +25,11 @@ guess_rules ()
     return
   fi
 
+  if test ! -f "$pamdir/system-auth" -a -s "$pamdir/system"; then
+    rules="freebsd"
+    return
+  fi
+
   rules="unix"
   return
 }
