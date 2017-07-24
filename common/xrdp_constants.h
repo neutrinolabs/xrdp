@@ -394,11 +394,13 @@
 #define CF_GDIOBJFIRST                 768
 #define CF_GDIOBJLAST                  1023
 
-/* Sound format constants */
-#define WAVE_FORMAT_PCM                1
-#define WAVE_FORMAT_ADPCM              2
-#define WAVE_FORMAT_ALAW               6
-#define WAVE_FORMAT_MULAW              7
+/* Sound format constants - see also RFC 2361 */
+#define WAVE_FORMAT_PCM                0x0001
+#define WAVE_FORMAT_ADPCM              0x0002
+#define WAVE_FORMAT_ALAW               0x0006
+#define WAVE_FORMAT_MULAW              0x0007
+#define WAVE_FORMAT_MPEGLAYER3         0x0055
+#define WAVE_FORMAT_OPUS               0x0069
 
 /* Virtual channel options */
 #define XR_CHANNEL_OPTION_SHOW_PROTOCOL 0x00200000
