@@ -755,7 +755,7 @@ sound_send_close(void)
     /* send any left over data */
     if (g_buf_index)
     {
-        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0) 
+        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0)
         {
             LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
             return 1;
@@ -1021,7 +1021,7 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     int size;
     int ok_to_free = 1;
 
-    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags, 
+    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags,
                             length, total_length))
     {
         return 0;
