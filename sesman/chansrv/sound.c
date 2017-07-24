@@ -367,19 +367,20 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
     }
 #endif
 
-    if (wFormatTag == WAVE_FORMAT_OPUS)
+    switch(wFormatTag)
     {
-        LOG(0, ("wFormatTag, opus"));
-        g_client_does_opus = 1;
-        g_client_opus_index = aindex;
-        g_bbuf_size = 11520;
-    }
-    else if (wFormatTag == WAVE_FORMAT_MPEGLAYER3)
-    {
-        LOG(0, ("wFormatTag, mp3"));
-        g_client_does_mp3lame = 1;
-        g_client_mp3lame_index = aindex;
-        g_bbuf_size = 11520;
+        case WAVE_FORMAT_MPEGLAYER3:
+            LOG(0, ("wFormatTag, mp3"));
+            g_client_does_mp3lame = 1;
+            g_client_mp3lame_index = aindex;
+            g_bbuf_size = 11520;
+            break;
+        case WAVE_FORMAT_OPUS:
+            LOG(0, ("wFormatTag, opus"));
+            g_client_does_opus = 1;
+            g_client_opus_index = aindex;
+            g_bbuf_size = 11520;
+            break;
     }
 
     return 0;
