@@ -31,6 +31,7 @@
 #include "thread_calls.h"
 #include "defines.h"
 #include "fifo.h"
+#include "xrdp_constants.h"
 #include "xrdp_sockets.h"
 #include "chansrv_common.h"
 
@@ -89,7 +90,7 @@ struct xr_wave_format_ex
 static tui8 g_pcm_22050_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_22050 =
 {
-    1,               /* wFormatTag - WAVE_FORMAT_PCM */
+    WAVE_FORMAT_PCM, /* wFormatTag */
     2,               /* num of channels */
     22050,           /* samples per sec */
     88200,           /* avg bytes per sec */
@@ -102,7 +103,7 @@ static struct xr_wave_format_ex g_pcm_22050 =
 static tui8 g_pcm_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_44100 =
 {
-    1,               /* wFormatTag - WAVE_FORMAT_PCM */
+    WAVE_FORMAT_PCM, /* wFormatTag */
     2,               /* num of channels */
     44100,           /* samples per sec */
     176400,          /* avg bytes per sec */
@@ -116,7 +117,7 @@ static struct xr_wave_format_ex g_pcm_44100 =
 static tui8 g_opus_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_opus_44100 =
 {
-    0x0069,           /* wFormatTag - WAVE_FORMAT_OPUS */
+    WAVE_FORMAT_OPUS, /* wFormatTag */
     2,                /* num of channels */
     44100,            /* samples per sec */
     176400,           /* avg bytes per sec */
@@ -131,14 +132,14 @@ static struct xr_wave_format_ex g_opus_44100 =
 static tui8 g_mp3lame_44100_data[] = { 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0xb6, 0x00, 0x01, 0x00, 0x71, 0x05 };
 static struct xr_wave_format_ex g_mp3lame_44100 =
 {
-    0x0055,              /* wFormatTag - WAVE_FORMAT_MPEGLAYER3 */
-    2,                   /* num of channels */
-    44100,               /* samples per sec */
-    176400,              /* avg bytes per sec */
-    4,                   /* block align */
-    0,                   /* bits per sample */
-    12,                  /* data size */
-    g_mp3lame_44100_data /* data */
+    WAVE_FORMAT_MPEGLAYER3, /* wFormatTag */
+    2,                      /* num of channels */
+    44100,                  /* samples per sec */
+    176400,                 /* avg bytes per sec */
+    4,                      /* block align */
+    0,                      /* bits per sample */
+    12,                     /* data size */
+    g_mp3lame_44100_data    /* data */
 };
 #endif
 
@@ -172,7 +173,7 @@ static int g_current_server_format_index = 0;
 static tui8 g_pcm_inp_22050_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_inp_22050 =
 {
-    1,               /* wFormatTag - WAVE_FORMAT_PCM */
+    WAVE_FORMAT_PCM, /* wFormatTag */
     2,               /* num of channels */
     22050,           /* samples per sec */
     88200,           /* avg bytes per sec */
@@ -185,7 +186,7 @@ static struct xr_wave_format_ex g_pcm_inp_22050 =
 static tui8 g_pcm_inp_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_inp_44100 =
 {
-    1,               /* wFormatTag - WAVE_FORMAT_PCM */
+    1,               /* wFormatTag */
     2,               /* num of channels */
     44100,           /* samples per sec */
     176400,          /* avg bytes per sec */
@@ -366,14 +367,14 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
     }
 #endif
 
-    if (wFormatTag == 0x0069)
+    if (wFormatTag == WAVE_FORMAT_OPUS)
     {
         LOG(0, ("wFormatTag, opus"));
         g_client_does_opus = 1;
         g_client_opus_index = aindex;
         g_bbuf_size = 11520;
     }
-    else if (wFormatTag == 0x0055)
+    else if (wFormatTag == WAVE_FORMAT_MPEGLAYER3)
     {
         LOG(0, ("wFormatTag, mp3"));
         g_client_does_mp3lame = 1;
