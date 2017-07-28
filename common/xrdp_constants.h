@@ -401,6 +401,7 @@
 #define WAVE_FORMAT_MULAW              0x0007
 #define WAVE_FORMAT_MPEGLAYER3         0x0055
 #define WAVE_FORMAT_OPUS               0x0069
+#define WAVE_FORMAT_AAC_MS             0xA106
 
 /* Virtual channel options */
 #define XR_CHANNEL_OPTION_SHOW_PROTOCOL 0x00200000

@@ -116,6 +116,10 @@ AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
               [], [enable_xrdpvr=no])
 AM_CONDITIONAL(XRDP_XRDPVR, [test x$enable_xrdpvr = xyes])
+AC_ARG_ENABLE(fdkaac, AS_HELP_STRING([--enable-fdkaac],
+              [Build aac(audio codec) (default: no)]),
+              [], [enable_fdkaac=no])
+AM_CONDITIONAL(XRDP_FDK_AAC, [test x$enable_fdkaac = xyes])
 AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
               [Build opus(audio codec) (default: no)]),
               [], [enable_opus=no])
@@ -228,6 +232,13 @@ if test "x$enable_fuse" = "xyes"
 then
   PKG_CHECK_MODULES([FUSE], [fuse >= 2.6], [],
     [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])])
+fi
+
+# checking for fdk aac
+if test "x$enable_fdkaac" = "xyes"
+then
+  AC_CHECK_HEADER([fdk-aac/aacenc_lib.h], [],
+    [AC_MSG_ERROR([please install libfdk-aac-dev or dontknow-devel])])
 fi
 
 # checking for opus
