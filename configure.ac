@@ -238,7 +238,7 @@ fi
 if test "x$enable_fdkaac" = "xyes"
 then
   AC_CHECK_HEADER([fdk-aac/aacenc_lib.h], [],
-    [AC_MSG_ERROR([please install libfdk-aac-dev or dontknow-devel])])
+    [AC_MSG_ERROR([please install libfdk-aac-dev or fdk-aac-devel])])
 fi
 
 # checking for opus

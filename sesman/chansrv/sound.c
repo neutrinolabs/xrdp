@@ -520,7 +520,6 @@ sound_wave_compress_fdk_aac(char *data, int data_bytes, int *format_index)
         }
 
         aot = 2; /* MPEG-4 AAC Low Complexity. */
-        //aot = 129; /* MPEG-2 AAC Low Complexity. */
         error = aacEncoder_SetParam(g_fdk_aac_encoder, AACENC_AOT, aot);
         if (error != AACENC_OK)
         {
