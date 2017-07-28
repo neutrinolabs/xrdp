@@ -61,6 +61,7 @@ static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
 static FIFO   g_in_fifo;
 static int    g_bytes_in_fifo = 0;
+static int    g_unacked_frames = 0;
 
 static struct stream *g_stream_inp = NULL;
 static struct stream *g_stream_incoming_packet = NULL;
@@ -660,6 +661,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     out_uint16_le(s, time);
     out_uint16_le(s, format_index); /* wFormatNo */
     g_cBlockNo++;
+    g_unacked_frames++;
     out_uint8(s, g_cBlockNo);
     g_sent_time[g_cBlockNo & 0xff] = time;
     g_sent_flag[g_cBlockNo & 0xff] = 1;
@@ -799,19 +801,42 @@ sound_process_wave_confirm(struct stream *s, int size)
 {
     int wTimeStamp;
     int cConfirmedBlockNo;
+    int cleared_count;
     int time;
     int time_diff;
+    int block_no;
+    int block_no_clamped;
+    int found;
+    int index;
 
     time = g_time2();
     in_uint16_le(s, wTimeStamp);
     in_uint8(s, cConfirmedBlockNo);
     time_diff = time - g_sent_time[cConfirmedBlockNo & 0xff];
-    g_sent_flag[cConfirmedBlockNo & 0xff] &= ~1;
-
+    cleared_count = 0;
+    found = 0;
+    block_no = g_cBlockNo;
+    for (index = 0; index < g_unacked_frames; index++)
+    {
+        block_no_clamped = block_no & 0xff;
+        if ((cConfirmedBlockNo == block_no_clamped) || found)
+        {
+            found = 1;
+            if (g_sent_flag[block_no_clamped] & 1)
+            {
+                LOG(10, ("sound_process_wave_confirm: clearing %d",
+                    block_no_clamped));
+                g_sent_flag[block_no_clamped] &= ~1;
+                cleared_count++;
+            }
+        }
+        block_no--;
+    }
     LOG(10, ("sound_process_wave_confirm: wTimeStamp %d, "
-        "cConfirmedBlockNo %d time diff %d",
-        wTimeStamp, cConfirmedBlockNo, time_diff));
-
+        "cConfirmedBlockNo %d time diff %d cleared_count %d "
+        "g_unacked_frames %d", wTimeStamp, cConfirmedBlockNo, time_diff,
+        cleared_count, g_unacked_frames));
+    g_unacked_frames -= cleared_count;
     return 0;
 }
 
