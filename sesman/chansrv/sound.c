@@ -123,7 +123,7 @@ static struct xr_wave_format_ex g_pcm_44100 =
 static tui8 g_fdk_aac_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_fdk_aac_44100 =
 {
-    WAVE_FORMAT_AAC_MS,  /* wFormatTag */
+    WAVE_FORMAT_AAC,     /* wFormatTag */
     2,                   /* num of channels */
     44100,               /* samples per sec */
     12000,               /* avg bytes per sec */
@@ -396,7 +396,7 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
 
     switch(wFormatTag)
     {
-        case WAVE_FORMAT_AAC_MS:
+        case WAVE_FORMAT_AAC:
             LOG(0, ("wFormatTag, fdk aac"));
             g_client_does_fdk_aac = 1;
             g_client_fdk_aac_index = aindex;
