@@ -611,6 +611,12 @@ int xfuse_create_share(tui32 device_id, const char *dirname)
     if (dirname == NULL || strlen(dirname) == 0)
         return -1;
 
+    /* Do we have an inode table yet? */
+    if (xfuse_init_xrdp_fs())
+    {
+        return -1;
+    }
+
     xinode = g_new0(struct xrdp_inode, 1);
     if (xinode == NULL)
     {
@@ -857,6 +863,12 @@ static int xfuse_init_lib(struct fuse_args *args)
 static int xfuse_init_xrdp_fs(void)
 {
     struct xrdp_inode *xino;
+
+    /* Already called? */
+    if (g_xrdp_fs.inode_table != NULL)
+    {
+        return 0;
+    }
 
     g_xrdp_fs.inode_table = g_new0(struct xrdp_inode *, 4096);
     if (g_xrdp_fs.inode_table == NULL)
