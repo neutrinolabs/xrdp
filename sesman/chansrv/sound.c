@@ -486,19 +486,19 @@ sound_wave_compress_fdk_aac(char *data, int data_bytes, int *format_index)
     int bitrate;
     int afterburner;
     int channel_order;
-    AACENC_InfoStruct info = { 0 };
-    AACENC_BufDesc in_buf = { 0 };
-    AACENC_BufDesc out_buf = { 0 };
-    AACENC_InArgs in_args = { 0 };
-    AACENC_OutArgs out_args = { 0 };
-    void *in_buffer[1];
-    int in_identifier[1];
-    int in_size[1];
-    int in_elem_size[1];
-    void *out_buffer[1];
-    int out_identifier[1];
-    int out_size[1];
-    int out_elem_size[1];
+    AACENC_InfoStruct info;
+    AACENC_BufDesc in_buf;
+    AACENC_BufDesc out_buf;
+    AACENC_InArgs in_args;
+    AACENC_OutArgs out_args;
+    void *in_buffer;
+    int in_identifier;
+    int in_size;
+    int in_elem_size;
+    void *out_buffer;
+    int out_identifier;
+    int out_size;
+    int out_elem_size;
 
     rv = data_bytes;
 
@@ -587,6 +587,7 @@ sound_wave_compress_fdk_aac(char *data, int data_bytes, int *format_index)
                     "the encoder"));
         }
 
+        g_memset(&info, 0, sizeof(info));
         error = aacEncInfo(g_fdk_aac_encoder, &info);
         if (error != AACENC_OK)
         {
@@ -614,29 +615,33 @@ sound_wave_compress_fdk_aac(char *data, int data_bytes, int *format_index)
         data_bytes = g_bbuf_size;
     }
 
-    in_buffer[0] = data;
-    in_identifier[0] = IN_AUDIO_DATA;
-    in_size[0] = data_bytes;
-    in_elem_size[0] = 2;
+    in_buffer = data;
+    in_identifier = IN_AUDIO_DATA;
+    in_size = data_bytes;
+    in_elem_size = 2;
 
+    g_memset(&in_args, 0, sizeof(in_args));
     in_args.numInSamples = data_bytes / 2;
+    g_memset(&in_buf, 0, sizeof(in_buf));
     in_buf.numBufs = 1;
-    in_buf.bufs = in_buffer;
-    in_buf.bufferIdentifiers = in_identifier;
-    in_buf.bufSizes = in_size;
-    in_buf.bufElSizes = in_elem_size;
+    in_buf.bufs = &in_buffer;
+    in_buf.bufferIdentifiers = &in_identifier;
+    in_buf.bufSizes = &in_size;
+    in_buf.bufElSizes = &in_elem_size;
 
-    out_buffer[0] = cdata;
-    out_identifier[0] = OUT_BITSTREAM_DATA;
-    out_size[0] = cdata_bytes;
-    out_elem_size[0] = 1;
+    out_buffer = cdata;
+    out_identifier = OUT_BITSTREAM_DATA;
+    out_size = cdata_bytes;
+    out_elem_size = 1;
 
+    g_memset(&out_buf, 0, sizeof(out_buf));
     out_buf.numBufs = 1;
-    out_buf.bufs = out_buffer;
-    out_buf.bufferIdentifiers = out_identifier;
-    out_buf.bufSizes = out_size;
-    out_buf.bufElSizes = out_elem_size;
+    out_buf.bufs = &out_buffer;
+    out_buf.bufferIdentifiers = &out_identifier;
+    out_buf.bufSizes = &out_size;
+    out_buf.bufElSizes = &out_elem_size;
 
+    g_memset(&out_args, 0, sizeof(out_args));
     error = aacEncEncode(g_fdk_aac_encoder, &in_buf, &out_buf,
                          &in_args, &out_args);
     if (error == AACENC_OK)
