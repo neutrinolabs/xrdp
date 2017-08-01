@@ -237,7 +237,7 @@ fi
 # checking for fdk aac
 if test "x$enable_fdkaac" = "xyes"
 then
-  AC_CHECK_HEADER([fdk-aac/aacenc_lib.h], [],
+  PKG_CHECK_MODULES([FDKAAC], [fdk-aac >= 0.1.0], [],
     [AC_MSG_ERROR([please install libfdk-aac-dev or fdk-aac-devel])])
 fi
 
