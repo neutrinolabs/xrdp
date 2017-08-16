@@ -60,7 +60,7 @@ SUBDIRS += \
   pulse
 dist_startscript_SCRIPTS = xrdp.sh
 if HAVE_SYSTEMD
-dist_systemdsystemunit_DATA = \
+systemdsystemunit_DATA = \
   xrdp-sesman.service \
   xrdp.service
 else
