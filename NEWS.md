@@ -1,3 +1,12 @@
+# Release notes for xrdp v0.9.3.1 (2017/08/16)
+
+This release fixes a trivial packaging issue #848 occurred in v0.9.3.  The issue only affects systemd systems.  This release is principally for distro packagers or users who compile & install xrdp from source.
+
+Users who running xrdp on these systems don't need to upgrade from v0.9.3 to v0.9.3.1.
+
+* Linux systems without systemd
+* non-Linux systems such as BSD operating systems
+
 # Release notes for xrdp v0.9.3 (2017/07/15)
 
 ## New features
