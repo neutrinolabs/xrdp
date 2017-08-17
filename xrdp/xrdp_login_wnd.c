@@ -729,7 +729,15 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
         {
             char fileName[256] ;
             but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-            g_snprintf(fileName, 255, "%s/%s", XRDP_SHARE_PATH, globals->ls_background_image);
+            if (globals->ls_background_image[0] == '/')
+            {
+                g_snprintf(fileName, 255, "%s", globals->ls_background_image);
+            }
+            else
+            {
+                g_snprintf(fileName, 255, "%s/%s",
+                           XRDP_SHARE_PATH, globals->ls_background_image);
+            }
             log_message(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
             xrdp_bitmap_load(but, fileName, self->palette);
             but->parent = self->screen;
