@@ -210,7 +210,7 @@ mysend(int sck, const void* adata, int bytes)
 /*
  * write data to client connection
  *
- * @return 0 on success, -1 on error
+ * @return 1 on success, 0 on error
  *****************************************************************************/
 int
 WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
@@ -227,18 +227,18 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
     if (wts == 0)
     {
         LLOGLN(10, ("WTSVirtualChannelWrite: wts is NULL"));
-        return -1;
+        return 0;
     }
 
     if (wts->status != 1)
     {
         LLOGLN(10, ("WTSVirtualChannelWrite: wts->status != 1"));
-        return -1;
+        return 0;
     }
 
     if (!can_send(wts->fd, 0))
     {
-        return 0;    /* can't write now, ok to try again */
+        return 1;    /* can't write now, ok to try again */
     }
 
     rv = 0;
@@ -251,7 +251,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
     else
     {
         LLOGLN(0, ("WTSVirtualChannelWrite: header write failed"));
-        return -1;
+        return 0;
     }
 
     LLOGLN(10, ("WTSVirtualChannelWrite: mysend() returned %d", rv));
@@ -260,7 +260,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
     {
         /* success, but zero bytes may have been written */
         *pBytesWritten = rv;
-        return 0;
+        return 1;
     }
 
 #if 0 /* coverity: this is dead code */
@@ -272,10 +272,14 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
 #endif
 
     /* fatal error */
-    return -1;
+    return 0;
 }
 
-/*****************************************************************************/
+/*
+ * read data from a client connection
+ *
+ * @return 1 on success, 0 on error
+ *****************************************************************************/
 int
 WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
                       char *Buffer, unsigned int BufferSize,
