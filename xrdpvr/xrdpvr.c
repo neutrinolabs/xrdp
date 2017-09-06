@@ -915,7 +915,7 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
         rv = WTSVirtualChannelWrite(channel, &s->data[index], bytes_to_send,
                                     &bytes_written);
 
-        if (rv < 0)
+        if (rv == 0)
         {
             return -1;
         }
@@ -923,7 +923,7 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
         index += bytes_written;
         bytes_to_send -= bytes_written;
 
-        if ((rv == 0) && (bytes_to_send == 0))
+        if ((rv != 0) && (bytes_to_send == 0))
         {
             return 0;
         }
