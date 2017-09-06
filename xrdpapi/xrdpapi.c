@@ -227,18 +227,18 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
     if (wts == 0)
     {
         LLOGLN(10, ("WTSVirtualChannelWrite: wts is NULL"));
-        return -1;
+        return 0;
     }
 
     if (wts->status != 1)
     {
         LLOGLN(10, ("WTSVirtualChannelWrite: wts->status != 1"));
-        return -1;
+        return 0;
     }
 
     if (!can_send(wts->fd, 0))
     {
-        return 0;    /* can't write now, ok to try again */
+        return 1;    /* can't write now, ok to try again */
     }
 
     rv = 0;
@@ -251,7 +251,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
     else
     {
         LLOGLN(0, ("WTSVirtualChannelWrite: header write failed"));
-        return -1;
+        return 0;
     }
 
     LLOGLN(10, ("WTSVirtualChannelWrite: mysend() returned %d", rv));
@@ -260,19 +260,19 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
     {
         /* success, but zero bytes may have been written */
         *pBytesWritten = rv;
-        return 0;
+        return 1;
     }
 
 #if 0 /* coverity: this is dead code */
     /* error, but is it ok to try again? */
     if ((rv == EWOULDBLOCK) || (rv == EAGAIN) || (rv == EINPROGRESS))
     {
-        return 0;    /* failed to send, but should try again */
+        return 1;    /* failed to send, but should try again */
     }
 #endif
 
     /* fatal error */
-    return -1;
+    return 0;
 }
 
 /*****************************************************************************/
