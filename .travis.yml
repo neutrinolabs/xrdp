@@ -46,6 +46,7 @@ max_x86_deps: &max_x86_deps
   - *common_deps
   - g++-multilib
   - gcc-multilib
+  - libgl1-mesa-dev:i386
   - libglu1-mesa-dev:i386
   - libjpeg-dev:i386
   - libmp3lame-dev:i386
