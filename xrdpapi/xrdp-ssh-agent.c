@@ -287,6 +287,7 @@ handle_connection(int client_fd)
             if (rc == 1)
             {
                 char *pos = buffer;
+                errno = 0;
                 while (bytes_to_write > 0)
                 {
                     int bytes_written = send(client_fd, pos, bytes_to_write, 0);
@@ -300,7 +301,7 @@ handle_connection(int client_fd)
                     {
                         fprintf(stderr, "send() returned 0!\n");
                     }
-                    else
+                    else if (errno != EINTR)
                     {
                         /* Error */
                         fprintf(stderr, "Error %d on recv\n", errno);
