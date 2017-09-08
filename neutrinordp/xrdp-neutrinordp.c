@@ -1468,7 +1468,9 @@ lfreerdp_pre_connect(freerdp *instance)
 
     instance->settings->glyph_cache = true;
     /* GLYPH_SUPPORT_FULL and GLYPH_SUPPORT_PARTIAL seem to be the same */
-    instance->settings->glyphSupportLevel = GLYPH_SUPPORT_FULL;
+    /* disabled as workaround for corrupted display like black bars left of cmd with W2K8 */
+    /* instance->settings->glyphSupportLevel = GLYPH_SUPPORT_FULL; */
+    instance->settings->glyphSupportLevel = GLYPH_SUPPORT_NONE;
 
     instance->settings->order_support[NEG_DSTBLT_INDEX] = 1; /* 0x00 */
     instance->settings->order_support[NEG_PATBLT_INDEX] = 1;
@@ -1497,7 +1499,10 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->order_support[NEG_FAST_GLYPH_INDEX] = 0; /* 0x18 */
     instance->settings->order_support[NEG_ELLIPSE_SC_INDEX] = 0;
     instance->settings->order_support[NEG_ELLIPSE_CB_INDEX] = 0;
-    instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1;
+    /* disabled as workaround for corrupted display like black bars left of cmd with W2K8 */
+    /* instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1; */
+    instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 0;
+    
     instance->settings->order_support[NEG_GLYPH_WEXTTEXTOUT_INDEX] = 0;
     instance->settings->order_support[NEG_GLYPH_WLONGTEXTOUT_INDEX] = 0;
     instance->settings->order_support[NEG_GLYPH_WLONGEXTTEXTOUT_INDEX] = 0;
