@@ -122,10 +122,13 @@ mktemp_proto(char *s, size_t len)
 	const char *tmpdir;
 	int r;
 
-	if ((tmpdir = getenv("TMPDIR")) != NULL) {
+	if ((tmpdir = getenv("TMPDIR")) != NULL)
+        {
 		r = snprintf(s, len, "%s/ssh-XXXXXXXXXXXX", tmpdir);
 		if (r > 0 && (size_t)r < len)
+                {
 			return;
+                }
 	}
 	r = snprintf(s, len, "/tmp/ssh-XXXXXXXXXXXX");
 	if (r < 0 || (size_t)r >= len)
@@ -144,7 +147,8 @@ setup_ssh_agent(struct sockaddr_un *addr)
 
     /* Create private directory for agent socket */
     mktemp_proto(socket_dir, sizeof(socket_dir));
-    if (mkdtemp(socket_dir) == NULL) {
+    if (mkdtemp(socket_dir) == NULL)
+    {
         perror("mkdtemp: private socket dir");
         exit(1);
     }
@@ -215,19 +219,23 @@ setup_ssh_agent(struct sockaddr_un *addr)
 
     (void)chdir("/");
     int devnullfd;
-    if ((devnullfd = open(_PATH_DEVNULL, O_RDWR, 0)) != -1) {
+    if ((devnullfd = open(_PATH_DEVNULL, O_RDWR, 0)) != -1)
+    {
         /* XXX might close listen socket */
         (void)dup2(devnullfd, STDIN_FILENO);
         (void)dup2(devnullfd, STDOUT_FILENO);
         (void)dup2(devnullfd, STDERR_FILENO);
         if (devnullfd > 2)
+        {
             close(devnullfd);
+        }
     }
 
     /* deny core dumps, since memory contains unencrypted private keys */
     struct rlimit rlim;
     rlim.rlim_cur = rlim.rlim_max = 0;
-    if (setrlimit(RLIMIT_CORE, &rlim) < 0) {
+    if (setrlimit(RLIMIT_CORE, &rlim) < 0)
+    {
         fprintf(stderr, "setrlimit RLIMIT_CORE: %s", strerror(errno));
         exit(1);
     }
