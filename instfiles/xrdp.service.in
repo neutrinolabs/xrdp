@@ -6,6 +6,7 @@ After=network.target xrdp-sesman.service
 
 [Service]
 Type=forking
+User=root
 PIDFile=@localstatedir@/run/xrdp.pid
 EnvironmentFile=-@sysconfdir@/sysconfig/xrdp
 EnvironmentFile=-@sysconfdir@/default/xrdp
