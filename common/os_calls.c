@@ -1293,30 +1293,72 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 }
 
 /*****************************************************************************/
+/*
+ * TODO: this function writes not only IP address, name is confusing
+ */
 void
 g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 {
-    struct sockaddr_in s;
-    struct in_addr in;
-    socklen_t len;
-    int ip_port;
+    char *addr;
+    int port;
     int ok;
 
-    ok = 0;
-    memset(&s, 0, sizeof(s));
-    len = sizeof(s);
-
-    if (getpeername(rcv_sck, (struct sockaddr *)&s, &len) == 0)
+    union
     {
-        memset(&in, 0, sizeof(in));
-        in.s_addr = s.sin_addr.s_addr;
-        ip_port = ntohs(s.sin_port);
+        struct sockaddr sock_addr;
+        struct sockaddr_in sock_addr_in;
+#if defined(XRDP_ENABLE_IPV6)
+        struct sockaddr_in6 sock_addr_in6;
+#endif
+        struct sockaddr_un sock_addr_un;
+    } sock_info;
 
-        if (ip_port != 0)
+    ok = 0;
+    socklen_t sock_len = sizeof(sock_info);
+    memset(&sock_info, 0, sock_len);
+#if defined(XRDP_ENABLE_IPV6)
+    addr = (char *)g_malloc(INET6_ADDRSTRLEN, 1);
+#else
+    addr = (char *)g_malloc(INET_ADDRSTRLEN, 1);
+#endif
+
+    if (getpeername(rcv_sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
+    {
+        switch(sock_info.sock_addr.sa_family)
         {
-            ok = 1;
-            snprintf(ip_address, bytes, "%s:%d - socket: %d", inet_ntoa(in),
-                     ip_port, rcv_sck);
+            case AF_INET:
+            {
+                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
+                g_snprintf(addr, INET_ADDRSTRLEN, "%s", inet_ntoa(sock_addr_in->sin_addr));
+                port = ntohs(sock_addr_in->sin_port);
+                ok = 1;
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+            case AF_INET6:
+            {
+                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
+                inet_ntop(sock_addr_in6->sin6_family,
+                          &sock_addr_in6->sin6_addr, addr, INET6_ADDRSTRLEN);
+                port = ntohs(sock_addr_in6->sin6_port);
+                ok = 1;
+                break;
+            }
+
+#endif
+
+            default:
+            {
+                break;
+            }
+
+        }
+
+        if (ok)
+        {
+            snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
         }
     }
 
@@ -1324,6 +1366,8 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
     {
         snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
     }
+
+    g_free(addr);
 }
 
 /*****************************************************************************/
