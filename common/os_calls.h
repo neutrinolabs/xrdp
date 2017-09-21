@@ -37,6 +37,11 @@
 #define g_tcp_select g_sck_select
 #define g_close_wait_obj g_delete_wait_obj
 
+#if defined(XRDP_ENABLE_VSOCK)
+#define g_vsock_socket g_sck_vsock_socket
+#define g_vsock_bind g_sck_vsock_bind
+#endif
+
 int      g_rm_temp_dir(void);
 int      g_mk_socket_path(const char* app_name);
 void     g_init(const char* app_name);
@@ -62,6 +67,9 @@ int      g_sck_get_send_buffer_bytes(int sck, int *bytes);
 int      g_sck_set_recv_buffer_bytes(int sck, int bytes);
 int      g_sck_get_recv_buffer_bytes(int sck, int *bytes);
 int      g_sck_local_socket(void);
+#if defined(XRDP_ENABLE_VSOCK)
+int      g_sck_vsock_socket(void);
+#endif
 int      g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid);
 void     g_sck_close(int sck);
 int      g_tcp_connect(int sck, const char* address, const char* port);
@@ -69,6 +77,9 @@ int      g_sck_local_connect(int sck, const char* port);
 int      g_sck_set_non_blocking(int sck);
 int      g_tcp_bind(int sck, const char *port);
 int      g_sck_local_bind(int sck, const char* port);
+#if defined(XRDP_ENABLE_VSOCK)
+int      g_sck_vsock_bind(int sck, const char* port);
+#endif
 int      g_tcp_bind_address(int sck, const char* port, const char* address);
 int      g_sck_listen(int sck);
 int      g_tcp_accept(int sck);
