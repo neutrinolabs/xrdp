@@ -792,7 +792,9 @@ trans_listen_address(struct trans *self, char *port, const char *address)
     {
         self->sck = g_tcp_socket();
         if (self->sck < 0)
+        {
             return 1;
+        }
 
         g_tcp_set_non_blocking(self->sck);
 
@@ -814,7 +816,9 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 
         self->sck = g_tcp_local_socket();
         if (self->sck < 0)
+        {
             return 1;
+        }
 
         g_tcp_set_non_blocking(self->sck);
 
@@ -831,6 +835,28 @@ trans_listen_address(struct trans *self, char *port, const char *address)
             }
         }
     }
+#if defined(XRDP_ENABLE_VSOCK)
+    else if (self->mode == TRANS_MODE_VSOCK) /* vsock socket */
+    {
+        self->sck = g_vsock_socket();
+        if (self->sck < 0)
+        {
+            return 1;
+        }
+
+        g_tcp_set_non_blocking(self->sck);
+
+        if (g_vsock_bind(self->sck, port) == 0)
+        {
+            if (g_tcp_listen(self->sck) == 0)
+            {
+                self->status = TRANS_STATUS_UP; /* ok */
+                self->type1 = TRANS_TYPE_LISTENER; /* listener */
+                return 0;
+            }
+        }
+    }
+#endif
 
     return 1;
 }

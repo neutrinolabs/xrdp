@@ -41,6 +41,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#if defined(XRDP_ENABLE_VSOCK)
+#include <linux/vm_sockets.h>
+#endif
 #include <sys/un.h>
 #include <sys/time.h>
 #include <sys/times.h>
@@ -583,6 +586,19 @@ g_sck_local_socket(void)
 }
 
 /*****************************************************************************/
+#if defined(XRDP_ENABLE_VSOCK)
+int
+g_sck_vsock_socket(void)
+{
+#if defined(_WIN32)
+    return 0;
+#else
+    return socket(PF_VSOCK, SOCK_STREAM, 0);
+#endif
+}
+#endif
+
+/*****************************************************************************/
 /* returns error */
 int
 g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
@@ -989,6 +1005,26 @@ g_sck_local_bind(int sck, const char *port)
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
+
+/*****************************************************************************/
+#if defined(XRDP_ENABLE_VSOCK)
+int
+g_sck_vsock_bind(int sck, const char *port)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    struct sockaddr_vm s;
+
+    memset(&s, 0, sizeof(struct sockaddr_vm));
+    s.svm_family = AF_VSOCK;
+    s.svm_port = atoi(port);
+    s.svm_cid = VMADDR_CID_ANY;
+
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_vm));
+#endif
+}
+#endif
 
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
