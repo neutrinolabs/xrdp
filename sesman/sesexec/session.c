@@ -48,6 +48,7 @@
 #include "os_calls.h"
 #include "sesexec.h"
 #include "string_calls.h"
+#include "utmp.h"
 #include "xauth.h"
 #include "xwait.h"
 #include "xrdp_sockets.h"
