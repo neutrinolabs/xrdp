@@ -25,6 +25,8 @@ xrdp_sesexec_SOURCES = \
   env.h \
   login_info.c \
   login_info.h \
+  utmp.c \
+  utmp.h \
   xauth.c \
   xauth.h \
   xwait.c \
