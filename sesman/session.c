@@ -41,6 +41,7 @@
 #include "libscp_types.h"
 #include "xauth.h"
 #include "xrdp_sockets.h"
+#include "utmp.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
