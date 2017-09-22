@@ -29,10 +29,10 @@
 #define XRDP_LINE_FORMAT "xrdp:%d"
 /**
  *
- * @brief 
- *       
+ * @brief
+ *
  * @param pid
- * @return 0 
+ * @return 0
  */
 
 int add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostname, short state);
