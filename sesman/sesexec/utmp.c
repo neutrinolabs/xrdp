@@ -37,7 +37,7 @@
 #include <utmp.h>
 #include <utmpx.h>
 
-/* 
+/*
  * Prepare the utmpx struct and write it.
  * this can handle login and logout at once with the 'state' parameter
  */
@@ -55,12 +55,12 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
     ut.ut_tv.tv_usec = tv.tv_usec;
-    strncpy(ut.ut_line, line , sizeof (ut.ut_line));  
-    strncpy(ut.ut_user, user , sizeof (ut.ut_user));  
+    strncpy(ut.ut_line, line , sizeof (ut.ut_line));
+    strncpy(ut.ut_user, user , sizeof (ut.ut_user));
     strncpy(ut.ut_host, rhostname, sizeof (ut.ut_host));
 
     /* utmp */
-    setutxent();  
+    setutxent();
     pututxline(&ut);
     endutxent ();
 
@@ -70,25 +70,25 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     return 0;
 }
 
-int 
+int
 utmp_login(int pid, int display, const char *user, const char *rhostname)
 {
     char str_display[16];
 
-    log_message(LOG_LEVEL_DEBUG, 
-            "adding login info for utmp/wtmp: %d - %d - %s - %s", 
+    log_message(LOG_LEVEL_DEBUG,
+            "adding login info for utmp/wtmp: %d - %d - %s - %s",
             pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
     return add_xtmp_entry(pid, str_display, user, rhostname, USER_PROCESS);
 }
 
-int 
+int
 utmp_logout(int pid, int display, const char *user, const char *rhostname)
 {
     char str_display[16];
 
-    log_message(LOG_LEVEL_DEBUG, 
-            "adding logout info for utmp/wtmp: %d - %d - %s - %s", 
+    log_message(LOG_LEVEL_DEBUG,
+            "adding logout info for utmp/wtmp: %d - %d - %s - %s",
             pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
     return add_xtmp_entry(pid, str_display, user, rhostname, DEAD_PROCESS);
