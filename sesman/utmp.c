@@ -32,7 +32,9 @@
 #include <pwd.h>
 #include <unistd.h>
 #include <stdio.h>
+
 #include "log.h"
+#include "os_calls.h"
 
 #include <utmp.h>
 #include <utmpx.h>
