@@ -514,6 +514,8 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
+AC_CHECK_HEADERS(utmp.h utmpx.h)
+
 CFLAGS="$save_CFLAGS"
 
 # perform unit tests if libcheck and libmocka found
