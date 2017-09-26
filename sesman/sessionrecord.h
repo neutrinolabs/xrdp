@@ -18,13 +18,25 @@
 
 /**
  *
- * @file utmp.h
+ * @file sessionrecord.h
  * @brief utmp/wtmp handling code
  *
  */
 
-#ifndef UTMP_H
-#define UTMP_H
+#ifndef SESSIONRECORD_H
+#define SESSIONRECORD_H
+
+
+#ifdef HAVE_UTMPX_H
+#include <utmpx.h>
+typedef struct utmpx _utmp;
+#else
+#include <utmpx.h>
+typedef struct utmp _utmp;
+#endif
+
+
+
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
 /**

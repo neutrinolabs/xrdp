@@ -40,6 +40,7 @@
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
+#include "sessionrecord.h"
 #include "xrdp_sockets.h"
 #include "utmp.h"
 
