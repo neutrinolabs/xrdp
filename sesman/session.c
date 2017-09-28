@@ -42,7 +42,6 @@
 #include "xauth.h"
 #include "sessionrecord.h"
 #include "xrdp_sockets.h"
-#include "utmp.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
