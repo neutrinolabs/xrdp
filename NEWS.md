@@ -1,4 +1,4 @@
-# Release notes for xrdp v0.9.4 (2017/09/XX)
+# Release notes for xrdp v0.9.4 (2017/09/28)
 
 ## New features
   * Accept prefill credentials in base64 form #153 #811
