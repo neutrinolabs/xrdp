@@ -372,6 +372,10 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
 
     /* Create socket */
     error = trans_listen_address(self->listen_trans, port, address);
+    if (port[0] == '/')
+    {
+        g_chmod_hex(port, 0x0666);
+    }
 
     if (error == 0)
     {

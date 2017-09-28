@@ -22,8 +22,14 @@
 #include <config_ac.h>
 #endif
 
+#include "base64.h"
 #include "xrdp.h"
 #include "log.h"
+
+#define ASK "ask"
+#define ASK_LEN g_strlen(ASK)
+#define BASE64PREFIX "{base64}"
+#define BASE64PREFIX_LEN g_strlen(BASE64PREFIX)
 
 /*****************************************************************************/
 /* all login help screen events go here */
@@ -339,6 +345,8 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     struct xrdp_bitmap *b;
     struct xrdp_cfg_globals *globals;
     char resultIP[256];
+    char *plain; /* base64 decoded string */
+    size_t base64_length; /* length of base64 string */
 
     globals = &self->xrdp_config->cfg_globals;
 
@@ -366,7 +374,16 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
         {
             value = (char *)list_get_item(mod->values, index);
 
-            if (g_strncmp("ask", value, 3) == 0)
+            /* if the value begins with "{base64}", decode the string following it */
+            if (g_strncmp(BASE64PREFIX, value, BASE64PREFIX_LEN) == 0)
+            {
+                base64_length = g_strlen(value + BASE64PREFIX_LEN);
+                plain = (char *)g_malloc(base64_length, 0);
+                base64_decode(plain, value + BASE64PREFIX_LEN, base64_length);
+                g_strncpy(value, plain, g_strlen(plain));
+                g_free(plain);
+            }
+            else if (g_strncmp(ASK, value, ASK_LEN) == 0)
             {
                 /* label */
                 b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
@@ -399,7 +416,19 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 b->pointer = 1;
                 b->tab_stop = 1;
                 b->caption1 = (char *)g_malloc(256, 1);
-                g_strncpy(b->caption1, value + 3, 255);
+                /* ask{base64}... 3 for "ask", 8 for "{base64}" */
+                if (g_strncmp(BASE64PREFIX, value + ASK_LEN, BASE64PREFIX_LEN) == 0)
+                {
+                    base64_length = g_strlen(value + ASK_LEN + BASE64PREFIX_LEN);
+                    plain = (char *)g_malloc(base64_length, 0);
+                    base64_decode(plain, value + ASK_LEN + BASE64PREFIX_LEN, base64_length);
+                    g_strncpy(b->caption1, plain, 255);
+                    g_free(plain);
+                }
+                else
+                {
+                    g_strncpy(b->caption1, value + ASK_LEN, 255);
+                }
                 b->edit_pos = g_mbstowcs(0, b->caption1, 0);
 
                 if (self->login_window->focused_control == 0)
@@ -700,7 +729,15 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
         {
             char fileName[256] ;
             but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-            g_snprintf(fileName, 255, "%s/%s", XRDP_SHARE_PATH, globals->ls_background_image);
+            if (globals->ls_background_image[0] == '/')
+            {
+                g_snprintf(fileName, 255, "%s", globals->ls_background_image);
+            }
+            else
+            {
+                g_snprintf(fileName, 255, "%s/%s",
+                           XRDP_SHARE_PATH, globals->ls_background_image);
+            }
             log_message(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
             xrdp_bitmap_load(but, fileName, self->palette);
             but->parent = self->screen;

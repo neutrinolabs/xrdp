@@ -796,6 +796,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 auth_end(data);
                 g_sigterm(display_pid);
                 g_sigterm(chansrv_pid);
+                cleanup_sockets(display);
                 g_deinit();
                 g_exit(0);
             }
@@ -1115,4 +1116,66 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
 
     (*cnt) = count;
     return sess;
+}
+
+/******************************************************************************/
+int
+cleanup_sockets(int display)
+{
+    log_message(LOG_LEVEL_DEBUG, "cleanup_sockets:");
+    char file[256];
+    int error;
+
+    error = 0;
+
+    g_snprintf(file, 255, CHANSRV_PORT_OUT_STR, display);
+    if (g_file_exist(file))
+    {
+        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                       "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
+    g_snprintf(file, 255, CHANSRV_PORT_IN_STR, display);
+    if (g_file_exist(file))
+    {
+        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                       "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
+    g_snprintf(file, 255, XRDP_CHANSRV_STR, display);
+    if (g_file_exist(file))
+    {
+        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                       "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
+    g_snprintf(file, 255, CHANSRV_API_STR, display);
+    if (g_file_exist(file))
+    {
+        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                       "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
+    return error;
+
 }

@@ -2,6 +2,7 @@ EXTRA_DIST = \
   Doxyfile
 
 AM_CPPFLAGS = \
+  -DXRDP_SYSCONF_PATH=\"${sysconfdir}\" \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \

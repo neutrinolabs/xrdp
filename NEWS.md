@@ -1,3 +1,27 @@
+# Release notes for xrdp v0.9.4 (2017/09/28)
+
+## New features
+  * Accept prefill credentials in base64 form #153 #811
+  * Indroduce AAC encoder to audio redirection (requires Windows 10 client)
+
+## Bugfixes
+  * Fix ocasional SEGV in drive redirection #838
+  * Fix client's IP addresses in xrdp-sesman.log are always logged as `0.0.0.0` #878 #882
+  * Fix `ls_background_image` didn't accept full path #776 #853
+  * Fix misuse of hidelogwindow #414 #876
+  * Fix WTSVirtualChannelWrite return code #859
+  * Fix no longer needed socket files remained in the socket dir #812 #831
+  * Make creating socket path a bit more robust #823
+
+## Other changes
+  * Add Belgian keyboard #858
+  * Add a PAM file for FreeBSD #824
+  * Several refactorings and cosmetic changes
+
+## Known issues
+  * Windows 10 (1703) shows black blank screen in RemoteFX mode
+   * This issue is already fixed at Insider Preview build 16273
+
 # Release notes for xrdp v0.9.3.1 (2017/08/16)
 
 This release fixes a trivial packaging issue #848 occurred in v0.9.3.  The issue only affects systemd systems.  This release is principally for distro packagers or users who compile & install xrdp from source.

@@ -213,7 +213,7 @@ file_split_name_value(char *text, char *name, char *value)
 
     for (i = 0; i < len; i++)
     {
-        if (text[i] == '=')
+        if (text[i] == '=' && !on_to)
         {
             on_to = 1;
         }

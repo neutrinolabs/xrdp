@@ -37,7 +37,7 @@ int Utils::getMountList(void *wtsChannel, QList<QListWidgetItem *> *itemList)
 
     /* send command */
     rv = WTSVirtualChannelWrite(wtsChannel, s.data, bytesToSend, &bytesWritten);
-    if (rv)
+    if (rv == 0)
     {
         QMessageBox::information(NULL, "Get device list", "\nError sending "
                                  "command to client");
@@ -126,7 +126,7 @@ int Utils::unmountDevice(void *wtsChannel, QString device, QStatusBar *statusBar
 
     /* send command */
     rv = WTSVirtualChannelWrite(wtsChannel, s.data, bytesToSend, &bytesWritten);
-    if (rv)
+    if (rv == 0)
     {
         QMessageBox::information(NULL, "Unmount device", "\nError sending "
                                  "command to client");
