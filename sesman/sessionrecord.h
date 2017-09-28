@@ -18,21 +18,33 @@
 
 /**
  *
- * @file utmp.h
+ * @file sessionrecord.h
  * @brief utmp/wtmp handling code
  *
  */
 
-#ifndef UTMP_H
-#define UTMP_H
+#ifndef SESSIONRECORD_H
+#define SESSIONRECORD_H
+
+
+#ifdef HAVE_UTMPX_H
+#include <utmpx.h>
+typedef struct utmpx _utmp;
+#else
+#include <utmpx.h>
+typedef struct utmp _utmp;
+#endif
+
+
+
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
 /**
  *
- * @brief
- *
+ * @brief 
+ *       
  * @param pid
- * @return 0
+ * @return 0 
  */
 
 int add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostname, short state);

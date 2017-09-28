@@ -61,10 +61,10 @@ xrdp_sesman_SOURCES = \
   sesman.h \
   session.c \
   session.h \
+  sessionrecord.c \
+  sessionrecord.h \
   sig.c \
   sig.h \
-  utmp.c \
-  utmp.h \
   xauth.c \
   xauth.h \
   $(AUTH_C)
