@@ -1471,11 +1471,13 @@ access_control(char *username, char *password, char *srv)
     unsigned long size;
     int index;
     int socket = g_tcp_socket();
+    char port[8];
 
     if (socket != -1)
     {
+        xrdp_mm_get_sesman_port(port, sizeof(port));
         /* we use a blocking socket here */
-        reply = g_tcp_connect(socket, srv, "3350");
+        reply = g_tcp_connect(socket, srv, port);
 
         if (reply == 0)
         {
