@@ -165,6 +165,7 @@
 #define RDP_NULL_POINTER               0
 #define RDP_DEFAULT_POINTER            0x7F00
 
+/* Input event type (MS-RDPBCGR 2.2.8.1.1.3.1.1) */
 #define RDP_INPUT_SYNCHRONIZE          0
 #define RDP_INPUT_CODEPOINT            1
 #define RDP_INPUT_VIRTKEY              2

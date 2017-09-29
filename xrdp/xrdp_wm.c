@@ -1789,19 +1789,19 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
 
     switch (msg)
     {
-        case 0: /* RDP_INPUT_SYNCHRONIZE */
+        case RDP_INPUT_SYNCHRONIZE:
             rv = xrdp_wm_key_sync(wm, param3, param1);
             break;
-        case 4: /* RDP_INPUT_SCANCODE */
+        case RDP_INPUT_SCANCODE:
             rv = xrdp_wm_key(wm, param3, param1);
             break;
-        case 5: /* RDP_INPUT_UNICODE */
+        case RDP_INPUT_UNICODE:
             rv = xrdp_wm_key_unicode(wm, param3, param1);
             break;
-        case 0x8001: /* RDP_INPUT_MOUSE */
+        case RDP_INPUT_MOUSE:
             rv = xrdp_wm_process_input_mouse(wm, param3, param1, param2);
             break;
-        case 0x8002: /* RDP_INPUT_MOUSEX (INPUT_EVENT_MOUSEX) */
+        case RDP_INPUT_MOUSEX:
             rv = xrdp_wm_process_input_mousex(wm, param3, param1, param2);
             break;
         case 0x4444: /* invalidate, this is not from RDP_DATA_PDU_INPUT */
