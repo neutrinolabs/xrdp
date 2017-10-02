@@ -1180,9 +1180,9 @@ g_tcp_accept(int sck)
             {
                 struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
 
-                snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                         inet_ntoa(sock_addr_in->sin_addr),
-                         ntohs(sock_addr_in->sin_port));
+                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
+                           inet_ntoa(sock_addr_in->sin_addr),
+                           ntohs(sock_addr_in->sin_port));
                 log_message(LOG_LEVEL_INFO, "%s", msg);
 
                 break;
@@ -1197,8 +1197,8 @@ g_tcp_accept(int sck)
 
                 inet_ntop(sock_addr_in6->sin6_family,
                           &sock_addr_in6->sin6_addr, addr, sizeof(addr));
-                snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                         addr, ntohs(sock_addr_in6->sin6_port));
+                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
+                           addr, ntohs(sock_addr_in6->sin6_port));
                 log_message(LOG_LEVEL_INFO, "%s", msg);
 
                 break;
@@ -1358,13 +1358,13 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 
         if (ok)
         {
-            snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
+            g_snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
         }
     }
 
     if (!ok)
     {
-        snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
+        g_snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
     }
 
     g_free(addr);
