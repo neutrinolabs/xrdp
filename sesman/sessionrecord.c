@@ -50,16 +50,16 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     _utmp ut;
     struct timeval tv;
 
-    memset (&ut, 0, sizeof (ut));
+    memset(&ut, 0, sizeof(ut));
 
     ut.ut_type=state;
     ut.ut_pid = pid;
     gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
     ut.ut_tv.tv_usec = tv.tv_usec;
-    strncpy(ut.ut_line, line , sizeof (ut.ut_line));
-    strncpy(ut.ut_user, user , sizeof (ut.ut_user));
-    strncpy(ut.ut_host, rhostname, sizeof (ut.ut_host));
+    strncpy(ut.ut_line, line , sizeof(ut.ut_line));
+    strncpy(ut.ut_user, user , sizeof(ut.ut_user));
+    strncpy(ut.ut_host, rhostname, sizeof(ut.ut_host));
 
     /* utmp */
     setutxent();
@@ -74,6 +74,7 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     log_message(LOG_LEVEL_DEBUG, "HAVE_UTMP_H");
     updwtmp("/var/log/wtmp", &ut);
 #endif
+
     return 0;
 }
 
@@ -83,9 +84,10 @@ utmp_login(int pid, int display, const char *user, const char *rhostname)
     char str_display[16];
 
     log_message(LOG_LEVEL_DEBUG,
-            "adding login info for utmp/wtmp: %d - %d - %s - %s",
-            pid, display, user, rhostname);
+                "adding login info for utmp/wtmp: %d - %d - %s - %s",
+                pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
+
     return add_xtmp_entry(pid, str_display, user, rhostname, USER_PROCESS);
 }
 
@@ -95,8 +97,9 @@ utmp_logout(int pid, int display, const char *user, const char *rhostname)
     char str_display[16];
 
     log_message(LOG_LEVEL_DEBUG,
-            "adding logout info for utmp/wtmp: %d - %d - %s - %s",
-            pid, display, user, rhostname);
+                "adding logout info for utmp/wtmp: %d - %d - %s - %s",
+                pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
+
     return add_xtmp_entry(pid, str_display, user, rhostname, DEAD_PROCESS);
 }
