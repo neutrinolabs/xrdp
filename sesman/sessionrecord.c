@@ -32,13 +32,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "log.h"
 #include "os_calls.h"
 #include "sessionrecord.h"
 
-/* 
+/*
  * Prepare the utmp/ struct and write it.
  * this can handle login and logout at once with the 'state' parameter
  */
