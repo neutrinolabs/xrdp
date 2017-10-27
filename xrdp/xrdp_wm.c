@@ -1683,6 +1683,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
+    /* vertical mouse wheel */
     if (device_flags & 0x200) /* PTRFLAGS_WHEEL */
     {
         if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
@@ -1692,6 +1693,24 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         else
         {
             xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+        }
+    }
+
+    /* horizontal mouse wheel */
+
+    /**
+     * As mstsc does MOUSE not MOUSEX for horizontal scrolling,
+     * PTRFLAGS_HWHEEL must be handled here.
+     */
+    if (device_flags & 0x400) /* PTRFLAGS_HWHEEL */
+    {
+        if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
+        {
+            xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+        }
+        else
+        {
+            xrdp_wm_mouse_click(self, 0, 0, 7, 0);
         }
     }
 
