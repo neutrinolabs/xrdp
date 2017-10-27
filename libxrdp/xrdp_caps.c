@@ -924,7 +924,11 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
     out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
 
-    flags = INPUT_FLAG_SCANCODES | INPUT_FLAG_MOUSEX | INPUT_FLAG_UNICODE;
+    flags = INPUT_FLAG_SCANCODES |
+            INPUT_FLAG_MOUSEX    |
+            INPUT_FLAG_UNICODE   |
+            TS_INPUT_FLAG_MOUSE_HWHEEL;
+
     if (self->client_info.use_fast_path & 2)
     {
         flags |= INPUT_FLAG_FASTPATH_INPUT | INPUT_FLAG_FASTPATH_INPUT2;
