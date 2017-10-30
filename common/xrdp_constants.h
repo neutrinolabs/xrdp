@@ -190,13 +190,16 @@
 #define RDP_KEYPRESS                   0
 #define RDP_KEYRELEASE                 (KBD_FLAG_DOWN | KBD_FLAG_UP)
 
-#define MOUSE_FLAG_MOVE                0x0800
-#define MOUSE_FLAG_BUTTON1             0x1000
-#define MOUSE_FLAG_BUTTON2             0x2000
-#define MOUSE_FLAG_BUTTON3             0x4000
-#define MOUSE_FLAG_BUTTON4             0x0280
-#define MOUSE_FLAG_BUTTON5             0x0380
-#define MOUSE_FLAG_DOWN                0x8000
+/* Mouse Event (MS-RDPBCGR 2.2.8.1.1.3.1.1.3) */
+#define PTRFLAGS_HWHEEL                0x0400
+#define PTRFLAGS_WHEEL                 0x0200
+#define PTRFLAGS_WHEEL_NEGATIVE        0x0100
+#define WheelRorationMask              0x01FF
+#define PTRFLAGS_MOVE                  0x0800
+#define PTRFLAGS_DOWN                  0x8000
+#define PTRFLAGS_BUTTON1               0x1000
+#define PTRFLAGS_BUTTON2               0x2000
+#define PTRFLAGS_BUTTON3               0x4000
 
 /* Raster operation masks */
 #define ROP2_S(rop3)                   (rop3 & 0xf)

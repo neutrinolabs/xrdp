@@ -1642,14 +1642,14 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 {
     DEBUG(("mouse event flags %4.4x x %d y %d", device_flags, x, y));
 
-    if (device_flags & MOUSE_FLAG_MOVE) /* 0x0800 */
+    if (device_flags & PTRFLAGS_MOVE)
     {
         xrdp_wm_mouse_move(self, x, y);
     }
 
-    if (device_flags & MOUSE_FLAG_BUTTON1) /* 0x1000 */
+    if (device_flags & PTRFLAGS_BUTTON1)
     {
-        if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+        if (device_flags & PTRFLAGS_DOWN)
         {
             xrdp_wm_mouse_click(self, x, y, 1, 1);
         }
@@ -1659,9 +1659,9 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
-    if (device_flags & MOUSE_FLAG_BUTTON2) /* 0x2000 */
+    if (device_flags & PTRFLAGS_BUTTON2)
     {
-        if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+        if (device_flags & PTRFLAGS_DOWN)
         {
             xrdp_wm_mouse_click(self, x, y, 2, 1);
         }
@@ -1671,9 +1671,9 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
-    if (device_flags & MOUSE_FLAG_BUTTON3) /* 0x4000 */
+    if (device_flags & PTRFLAGS_BUTTON3)
     {
-        if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+        if (device_flags & PTRFLAGS_DOWN)
         {
             xrdp_wm_mouse_click(self, x, y, 3, 1);
         }
@@ -1684,9 +1684,9 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
     }
 
     /* vertical mouse wheel */
-    if (device_flags & 0x200) /* PTRFLAGS_WHEEL */
+    if (device_flags & PTRFLAGS_WHEEL)
     {
-        if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
+        if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
             xrdp_wm_mouse_click(self, 0, 0, 5, 0);
         }
@@ -1702,9 +1702,9 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
      * As mstsc does MOUSE not MOUSEX for horizontal scrolling,
      * PTRFLAGS_HWHEEL must be handled here.
      */
-    if (device_flags & 0x400) /* PTRFLAGS_HWHEEL */
+    if (device_flags & PTRFLAGS_HWHEEL)
     {
-        if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
+        if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
             xrdp_wm_mouse_click(self, 0, 0, 6, 0);
         }
