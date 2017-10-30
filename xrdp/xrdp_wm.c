@@ -1722,24 +1722,24 @@ static int
 xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
                              int x, int y)
 {
-    if (device_flags & 0x8000) /* PTRXFLAGS_DOWN */
+    if (device_flags & PTRXFLAGS_DOWN)
     {
-        if (device_flags & 0x0001) /* PTRXFLAGS_BUTTON1 */
+        if (device_flags & PTRXFLAGS_BUTTON1)
         {
             xrdp_wm_mouse_click(self, x, y, 6, 1);
         }
-        else if (device_flags & 0x0002) /* PTRXFLAGS_BUTTON2 */
+        else if (device_flags & PTRXFLAGS_BUTTON2)
         {
             xrdp_wm_mouse_click(self, x, y, 7, 1);
         }
     }
     else
     {
-        if (device_flags & 0x0001) /* PTRXFLAGS_BUTTON1 */
+        if (device_flags & PTRXFLAGS_BUTTON1)
         {
             xrdp_wm_mouse_click(self, x, y, 6, 0);
         }
-        else if (device_flags & 0x0002) /* PTRXFLAGS_BUTTON2 */
+        else if (device_flags & PTRXFLAGS_BUTTON2)
         {
             xrdp_wm_mouse_click(self, x, y, 7, 0);
         }
