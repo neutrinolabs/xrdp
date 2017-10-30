@@ -1264,6 +1264,8 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3UP, x, y, 0, 0);
                 }
 
+                /* vertical scroll */
+
                 if (but == 4)
                 {
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON4DOWN,
@@ -1279,21 +1281,23 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5UP,
                                              self->mouse_x, self->mouse_y, 0, 0);
                 }
-                if (but == 6 && down)
+
+                /* horizontal scroll */
+
+                if (but == 6)
                 {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6DOWN, x, y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6DOWN,
+                                             self->mouse_x, self->mouse_y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6UP,
+                                             self->mouse_x, self->mouse_y, 0, 0);
                 }
-                else if (but == 6 && !down)
+
+                if (but == 7)
                 {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6UP, x, y, 0, 0);
-                }
-                if (but == 7 && down)
-                {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7DOWN, x, y, 0, 0);
-                }
-                else if (but == 7 && !down)
-                {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7UP, x, y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7DOWN,
+                                             self->mouse_x, self->mouse_y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7UP,
+                                             self->mouse_x, self->mouse_y, 0, 0);
                 }
             }
         }
