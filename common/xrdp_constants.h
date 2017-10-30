@@ -201,6 +201,11 @@
 #define PTRFLAGS_BUTTON2               0x2000
 #define PTRFLAGS_BUTTON3               0x4000
 
+/* Mouse Event (MS-RDPBCGR 2.2.8.1.1.3.1.1.4) */
+#define PTRXFLAGS_DOWN                 0x8000
+#define PTRXFLAGS_BUTTON1              0x0001
+#define PTRXFLAGS_BUTTON2              0x0002
+
 /* Raster operation masks */
 #define ROP2_S(rop3)                   (rop3 & 0xf)
 #define ROP2_P(rop3)                   ((rop3 & 0x3) | ((rop3 & 0x30) >> 2))
