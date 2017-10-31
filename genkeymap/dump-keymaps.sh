@@ -11,6 +11,10 @@ fi
 setxkbmap -model pc104 -layout us
 ./xrdp-genkeymap ../instfiles/km-00000409.ini
 
+# English - US 'dvorak' 0x00010409
+setxkbmap -model pc104 -layout dvorak
+./xrdp-genkeymap ../instfiles/km-00010409.ini
+
 # English - UK 'en-GB' 0x00000809
 setxkbmap -model pc105 -layout gb
 ./xrdp-genkeymap ../instfiles/km-00000809.ini
