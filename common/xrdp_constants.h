@@ -194,7 +194,7 @@
 #define PTRFLAGS_HWHEEL                0x0400
 #define PTRFLAGS_WHEEL                 0x0200
 #define PTRFLAGS_WHEEL_NEGATIVE        0x0100
-#define WheelRorationMask              0x01FF
+#define WheelRotationMask              0x01FF
 #define PTRFLAGS_MOVE                  0x0800
 #define PTRFLAGS_DOWN                  0x8000
 #define PTRFLAGS_BUTTON1               0x1000
