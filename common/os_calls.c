@@ -579,7 +579,7 @@ int
 g_sck_local_socket(void)
 {
 #if defined(_WIN32)
-    return 0;
+    return -1;
 #else
     return socket(PF_LOCAL, SOCK_STREAM, 0);
 #endif
@@ -592,7 +592,7 @@ g_sck_vsock_socket(void)
 #if defined(XRDP_ENABLE_VSOCK)
     return socket(PF_VSOCK, SOCK_STREAM, 0);
 #else
-    return 0;
+    return -1;
 #endif
 }
 
