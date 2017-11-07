@@ -206,7 +206,6 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                             }
                         }
                     }
-#if defined(XRDP_ENABLE_VSOCK)
                     if (g_strcasecmp(val, "use_vsock") == 0)
                     {
                         val = (char *)list_get_item(values, index);
@@ -215,7 +214,6 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                             *mode = TRANS_MODE_VSOCK;
                         }
                     }
-#endif
                     if (g_strcasecmp(val, "address") == 0)
                     {
                         val = (char *)list_get_item(values, index);
@@ -381,13 +379,11 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         /* not valid with UDS */
         tcp_nodelay = 0;
     }
-#if defined(XRDP_ENABLE_VSOCK)
     else if (self->listen_trans->mode == TRANS_MODE_VSOCK)
     {
         /* not valid with VSOCK */
         tcp_nodelay = 0;
     }
-#endif
 
     /* Create socket */
     error = trans_listen_address(self->listen_trans, port, address);
@@ -568,6 +564,13 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, possible port "
                   "already in use");
+#if !defined(XRDP_ENABLE_VSOCK)
+        if (self->listen_trans->mode == TRANS_MODE_VSOCK)
+        {
+            log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, "
+                        "vsock support not compiled and config requested");
+        }
+#endif
     }
 
     self->status = -1;
