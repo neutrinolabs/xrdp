@@ -835,7 +835,9 @@ trans_listen_address(struct trans *self, char *port, const char *address)
     {
         self->sck = g_sck_vsock_socket();
         if (self->sck < 0)
+        {
             return 1;
+        }
 
         g_tcp_set_non_blocking(self->sck);
 
