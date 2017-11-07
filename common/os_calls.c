@@ -1011,7 +1011,7 @@ g_sck_vsock_bind(int sck, const char *port)
 #if defined(XRDP_ENABLE_VSOCK)
     struct sockaddr_vm s;
 
-    memset(&s, 0, sizeof(struct sockaddr_vm));
+    g_memset(&s, 0, sizeof(struct sockaddr_vm));
     s.svm_family = AF_VSOCK;
     s.svm_port = atoi(port);
     s.svm_cid = VMADDR_CID_ANY;
