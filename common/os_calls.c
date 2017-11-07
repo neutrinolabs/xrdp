@@ -586,17 +586,15 @@ g_sck_local_socket(void)
 }
 
 /*****************************************************************************/
-#if defined(XRDP_ENABLE_VSOCK)
 int
 g_sck_vsock_socket(void)
 {
-#if defined(_WIN32)
-    return 0;
-#else
+#if defined(XRDP_ENABLE_VSOCK)
     return socket(PF_VSOCK, SOCK_STREAM, 0);
+#else
+    return 0;
 #endif
 }
-#endif
 
 /*****************************************************************************/
 /* returns error */
@@ -1007,13 +1005,10 @@ g_sck_local_bind(int sck, const char *port)
 }
 
 /*****************************************************************************/
-#if defined(XRDP_ENABLE_VSOCK)
 int
 g_sck_vsock_bind(int sck, const char *port)
 {
-#if defined(_WIN32)
-    return -1;
-#else
+#if defined(XRDP_ENABLE_VSOCK)
     struct sockaddr_vm s;
 
     memset(&s, 0, sizeof(struct sockaddr_vm));
@@ -1022,9 +1017,10 @@ g_sck_vsock_bind(int sck, const char *port)
     s.svm_cid = VMADDR_CID_ANY;
 
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_vm));
+#else
+    return -1;
 #endif
 }
-#endif
 
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/

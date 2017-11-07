@@ -26,10 +26,7 @@
 
 #define TRANS_MODE_TCP 1
 #define TRANS_MODE_UNIX 2
-
-#if defined(XRDP_ENABLE_VSOCK)
 #define TRANS_MODE_VSOCK 3
-#endif
 
 #define TRANS_TYPE_LISTENER 1
 #define TRANS_TYPE_SERVER 2
