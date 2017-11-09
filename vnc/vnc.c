@@ -1057,7 +1057,16 @@ lib_mod_connect(struct vnc *v)
     v->trans->si = si;
     v->trans->my_source = XRDP_SOURCE_MOD;
 
-    error = trans_connect(v->trans, v->ip, con_port, 3000);
+    int count;
+    for (count = 0; count < 10; count++)
+    {
+        error = trans_connect(v->trans, v->ip, con_port, 3000);
+        if (error == 0)
+        {
+            break;
+        }
+        g_sleep(1000);
+    }
 
     if (error == 0)
     {
