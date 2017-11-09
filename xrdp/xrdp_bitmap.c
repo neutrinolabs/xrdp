@@ -27,7 +27,6 @@
 
 #include "xrdp.h"
 #include "log.h"
-#include "crc16.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
