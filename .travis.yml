@@ -19,7 +19,8 @@ min_amd64_deps: &min_amd64_deps
 min_amd64_conf: &min_amd64_conf
   env:
     - CONF_FLAGS="--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
-                  --disable-rfxcodec --disable-painter --disable-pixman"
+                  --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
+                  --disable-pixman"
   addons:
     apt:
       packages:
@@ -30,12 +31,15 @@ max_amd64_deps: &max_amd64_deps
   - libfuse-dev
   - libjpeg-dev
   - libmp3lame-dev
+  - libfdk-aac-dev
+  - libopus-dev
   - libpixman-1-dev
 
 max_amd64_conf: &max_amd64_conf
   env:
     - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
-                  --enable-rfxcodec --enable-painter --enable-pixman"
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --enable-pixman"
     - DISTCHECK=1
   addons:
     apt:
@@ -50,6 +54,8 @@ max_x86_deps: &max_x86_deps
   - libglu1-mesa-dev:i386
   - libjpeg-dev:i386
   - libmp3lame-dev:i386
+  - libfdk-aac-dev:i386
+  - libopus-dev:i386
   - libpam0g-dev:i386
   - libssl-dev:i386
   - libx11-dev:i386
@@ -64,8 +70,8 @@ max_x86_deps: &max_x86_deps
 max_x86_conf: &max_x86_conf
   env:
     - CONF_FLAGS="--enable-ipv6 --enable-jpeg --disable-fuse --enable-mp3lame
-                  --enable-rfxcodec --enable-painter --disable-pixman
-                  --host=i686-linux"
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --disable-pixman --host=i686-linux"
     - PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
     - CFLAGS=-m32
     - LDFLAGS=-m32
