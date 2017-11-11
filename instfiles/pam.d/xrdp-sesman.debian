@@ -1,5 +1,8 @@
 #%PAM-1.0
 @include common-auth
 @include common-account
+
+# Set the loginuid process attribute.
+session    required     pam_loginuid.so
 @include common-session
 @include common-password

@@ -1,5 +1,8 @@
 #%PAM-1.0
 auth        include     password-auth
 account     include     password-auth
+
+# Set the loginuid process attribute.
+session     required    pam_loginuid.so
 session     include     password-auth
 password    include     password-auth
