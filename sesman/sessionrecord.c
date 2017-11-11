@@ -20,7 +20,8 @@
  *
  * @file sessionrecord.c
  * @brief utmp/wtmp handling code
- *
+ * Idea: Only implement actual utmp, i.e. utmpx for 99%.
+ *       See http://80386.nl/unix/utmpx/
  */
 
 #if defined(HAVE_CONFIG_H)
@@ -64,13 +65,15 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     /* utmp */
     setutxent();
     pututxline(&ut);
-    endutxent ();
+    endutxent();
 
-    /* wtmp XXX hardcoded! UTMPX_FILE pb def*/
+    /* wtmp : update on linux, FreeBSD uses utx */
 #ifdef HAVE_UTMPX_H
-    log_message(LOG_LEVEL_DEBUG, "HAVE_UTMPX_H");
+#if !defined(__FreeBSD__)
     updwtmpx(_PATH_WTMP, &ut);
+#endif
 #elif defined(HAVE_UTMP_H)
+    /* Does such system still exist ? */
     log_message(LOG_LEVEL_DEBUG, "HAVE_UTMP_H");
     updwtmp("/var/log/wtmp", &ut);
 #endif
