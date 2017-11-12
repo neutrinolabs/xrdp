@@ -50,6 +50,26 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
 {
     _utmp ut;
     struct timeval tv;
+    char *hostname = 0;
+
+    /* The string rhostname containt too much data, only get the ip
+     * the format is
+     * "2001:123:12:1234:1234:1234:1234:1234:53194 - socket: 12"
+     * "::ffff:99.99.9.999:51165 - socket: 12"
+     * "99.99.9.999:51165 - socket: 12"
+     *
+     * So the IP is the string up the two last colons
+     */
+    int i = strlen(rhostname) - 1;
+    while ((i>0) && (rhostname[i] != ':')) {
+        i--;
+    }
+    i--;
+    while ((i>0) && (rhostname[i] != ':')) {
+        i--;
+    }
+
+    hostname = strndup(rhostname, i);
 
     memset(&ut, 0, sizeof(ut));
 
@@ -60,7 +80,7 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     ut.ut_tv.tv_usec = tv.tv_usec;
     strncpy(ut.ut_line, line , sizeof(ut.ut_line));
     strncpy(ut.ut_user, user , sizeof(ut.ut_user));
-    strncpy(ut.ut_host, rhostname, sizeof(ut.ut_host));
+    strncpy(ut.ut_host, hostname, sizeof(ut.ut_host));
 
     /* utmp */
     setutxent();
