@@ -36,16 +36,14 @@ typedef struct utmp _utmp;
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
 
-/**
- *
- * @brief
- *
- * @param pid
- * @return 0
- */
-
 int add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostname, short state);
 
+/**
+ * @brief functions for adding utmp entries. one at login, one for logout
+ *
+ * @param pid of the session, display, login, and hostname
+ * @return 0
+ */
 int utmp_login(int pid, int display, const char *user, const char *rhostname);
 
 int utmp_logout(int pid, int display, const char *user, const char *rhostname);

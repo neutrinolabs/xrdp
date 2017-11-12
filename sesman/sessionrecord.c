@@ -60,27 +60,29 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
      *
      * So the IP is the string up the two last colons
      */
-    int i = strlen(rhostname) - 1;
-    while ((i>0) && (rhostname[i] != ':')) {
+    int i = g_strlen(rhostname) - 1;
+    while ((i>0) && (rhostname[i] != ':'))
+    {
         i--;
     }
     i--;
-    while ((i>0) && (rhostname[i] != ':')) {
+    while ((i>0) && (rhostname[i] != ':'))
+    {
         i--;
     }
 
     hostname = g_strndup(rhostname, i);
 
-    memset(&ut, 0, sizeof(ut));
+    g_memset(&ut, 0, sizeof(ut));
 
     ut.ut_type=state;
     ut.ut_pid = pid;
     gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
     ut.ut_tv.tv_usec = tv.tv_usec;
-    strncpy(ut.ut_line, line , sizeof(ut.ut_line));
-    strncpy(ut.ut_user, user , sizeof(ut.ut_user));
-    strncpy(ut.ut_host, hostname, sizeof(ut.ut_host));
+    g_strncpy(ut.ut_line, line , sizeof(ut.ut_line));
+    g_strncpy(ut.ut_user, user , sizeof(ut.ut_user));
+    g_strncpy(ut.ut_host, hostname, sizeof(ut.ut_host));
 
     /* utmp */
     setutxent();
