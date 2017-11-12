@@ -38,6 +38,7 @@
 
 #include "log.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "sessionrecord.h"
 
 /*
@@ -51,16 +52,16 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     _utmp ut;
     struct timeval tv;
 
-    memset(&ut, 0, sizeof(ut));
+    g_memset(&ut, 0, sizeof(ut));
 
     ut.ut_type=state;
     ut.ut_pid = pid;
     gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
     ut.ut_tv.tv_usec = tv.tv_usec;
-    strncpy(ut.ut_line, line , sizeof(ut.ut_line));
-    strncpy(ut.ut_user, user , sizeof(ut.ut_user));
-    strncpy(ut.ut_host, rhostname, sizeof(ut.ut_host));
+    g_strncpy(ut.ut_line, line , sizeof(ut.ut_line));
+    g_strncpy(ut.ut_user, user , sizeof(ut.ut_user));
+    g_strncpy(ut.ut_host, rhostname, sizeof(ut.ut_host));
 
     /* utmp */
     setutxent();
