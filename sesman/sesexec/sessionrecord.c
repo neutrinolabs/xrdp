@@ -77,6 +77,7 @@ add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostnam
     log_message(LOG_LEVEL_DEBUG, "HAVE_UTMP_H");
     updwtmp("/var/log/wtmp", &ut);
 #endif
+    g_free(hostname);
 
     return 0;
 }
