@@ -670,6 +670,9 @@ g_sck_close(int sck)
 #if defined(XRDP_ENABLE_IPV6)
         struct sockaddr_in6 sock_addr_in6;
 #endif
+#if defined(XRDP_ENABLE_VSOCK)
+        struct sockaddr_vm sock_addr_vm;
+#endif
     } sock_info;
     socklen_t sock_len = sizeof(sock_info);
 
@@ -708,6 +711,22 @@ g_sck_close(int sck)
             case AF_UNIX:
                 g_snprintf(sockname, sizeof(sockname), "AF_UNIX");
                 break;
+
+#if defined(XRDP_ENABLE_VSOCK)
+
+            case AF_VSOCK:
+            {
+                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
+
+                g_snprintf(sockname,
+                           sizeof(sockname),
+                           "AF_VSOCK cid %d port %d",
+                           sock_addr_vm->svm_cid,
+                           sock_addr_vm->svm_port);
+                break;
+            }
+
+#endif
 
             default:
                 g_snprintf(sockname, sizeof(sockname), "unknown family %d",
@@ -1258,6 +1277,9 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
         struct sockaddr_in6 sock_addr_in6;
 #endif
         struct sockaddr_un sock_addr_un;
+#if defined(XRDP_ENABLE_VSOCK)
+        struct sockaddr_vm sock_addr_vm;
+#endif
     } sock_info;
 
     socklen_t sock_len = sizeof(sock_info);
@@ -1305,6 +1327,26 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
                 g_snprintf(msg, sizeof(msg), "AF_UNIX connection received");
                 break;
             }
+
+#if defined(XRDP_ENABLE_VSOCK)
+
+            case AF_VSOCK:
+            {
+                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
+
+                g_snprintf(addr, addr_bytes - 1, "%d", sock_addr_vm->svm_cid);
+                g_snprintf(port, addr_bytes - 1, "%d", sock_addr_vm->svm_port);
+
+                g_snprintf(msg,
+                           sizeof(msg),
+                           "AF_VSOCK connection received from cid: %s port: %s",
+                           addr,
+                           port);
+
+                break;
+            }
+
+#endif
             default:
             {
                 g_strncpy(addr, "", addr_bytes - 1);
