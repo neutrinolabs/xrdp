@@ -33,29 +33,31 @@
 
 
 /* RDP Security Negotiation codes */
-#define RDP_NEG_REQ                    0x01
-#define RDP_NEG_RSP                    0x02
-#define RDP_NEG_FAILURE                0x03
-#define RDP_CORRELATION_INFO           0x06
-/* Protocol types codes */
-#define PROTOCOL_RDP                   0x0
-#define PROTOCOL_SSL                   0x1
-#define PROTOCOL_HYBRID                0x2
-#define PROTOCOL_HYBRID_EX             0x8
-/* Negotiation packet flags */
-#define EXTENDED_CLIENT_DATA_SUPPORTED 0x1
-#define DYNVC_GFX_PROTOCOL_SUPPORTED   0x2
-#define RDP_NEGRSP_RESERVED            0x4
-/* Failure Codes */
-#define SSL_REQUIRED_BY_SERVER          0x1
-#define SSL_NOT_ALLOWED_BY_SERVER       0x2
-#define SSL_CERT_NOT_ON_SERVER          0x3
-#define INCONSISTENT_FLAGS              0x4
-#define HYBRID_REQUIRED_BY_SERVER       0x5
-#define SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER   0x6
+#define RDP_NEG_REQ                    0x01  /* MS-RDPBCGR 2.2.1.1.1 */
+#define RDP_NEG_RSP                    0x02  /* MS-RDPBCGR 2.2.1.2.1 */
+#define RDP_NEG_FAILURE                0x03  /* MS-RDPBCGR 2.2.1.2.2 */
+#define RDP_CORRELATION_INFO           0x06  /* MS-RDPBCGR 2.2.1.1.2 */
+/* Protocol types codes (MS-RDPBCGR 2.2.1.1.1) */
+#define PROTOCOL_RDP                   0x00000000
+#define PROTOCOL_SSL                   0x00000001
+#define PROTOCOL_HYBRID                0x00000002
+#define PROTOCOL_RDSTLS                0x00000004
+#define PROTOCOL_HYBRID_EX             0x00000008
+/* Negotiation packet flags (MS-RDPBCGR 2.2.1.2.1) */
+#define EXTENDED_CLIENT_DATA_SUPPORTED            0x01
+#define DYNVC_GFX_PROTOCOL_SUPPORTED              0x02
+#define NEGRSP_RESERVED                           0x04
+#define RESTRICTED_ADMIN_MODE_SUPPORTED           0x08
+#define REDIRECTED_AUTHENTICATION_MODE_SUPPORTED  0x10
+/* RDP Negotiation Failure Codes (MS-RDPBCGR 2.2.1.2.2) */
+#define SSL_REQUIRED_BY_SERVER                 0x00000001
+#define SSL_NOT_ALLOWED_BY_SERVER              0x00000002
+#define SSL_CERT_NOT_ON_SERVER                 0x00000003
+#define INCONSISTENT_FLAGS                     0x00000004
+#define HYBRID_REQUIRED_BY_SERVER              0x00000005
+#define SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER  0x00000006
 
-
-/* MCS PDU codes */
+/* MCS PDU codes (T.125) */
 #define MCS_EDRQ                       1  /* Erect Domain Request */
 #define MCS_DPUM                       8  /* Disconnect Provider Ultimatum */
 #define MCS_AURQ                       10 /* Attach User Request */
@@ -77,7 +79,7 @@
 #define MCS_GLOBAL_CHANNEL             1003
 #define MCS_USERCHANNEL_BASE           1001
 
-/* MCS Connection Type (MS-RDPBCGR 2.2.1.3.2) */
+/* Client Core Data: connectionType  (MS-RDPBCGR 2.2.1.3.2) */
 #define CONNECTION_TYPE_MODEM          0x01
 #define CONNECTION_TYPE_BROADBAND_LOW  0x02
 #define CONNECTION_TYPE_SATELLITE      0x03
@@ -165,7 +167,8 @@
 #define RDP_NULL_POINTER               0
 #define RDP_DEFAULT_POINTER            0x7F00
 
-/* Input event type (MS-RDPBCGR 2.2.8.1.1.3.1.1) */
+/* Slow-Path Input Event: messageType (MS-RDPBCGR 2.2.8.1.1.3.1.1) */
+/* TODO: to be renamed */
 #define RDP_INPUT_SYNCHRONIZE          0
 #define RDP_INPUT_CODEPOINT            1
 #define RDP_INPUT_VIRTKEY              2
@@ -190,7 +193,7 @@
 #define RDP_KEYPRESS                   0
 #define RDP_KEYRELEASE                 (KBD_FLAG_DOWN | KBD_FLAG_UP)
 
-/* Mouse Event (MS-RDPBCGR 2.2.8.1.1.3.1.1.3) */
+/* Mouse Event: pointerFlags (MS-RDPBCGR 2.2.8.1.1.3.1.1.3) */
 #define PTRFLAGS_HWHEEL                0x0400
 #define PTRFLAGS_WHEEL                 0x0200
 #define PTRFLAGS_WHEEL_NEGATIVE        0x0100
@@ -201,7 +204,7 @@
 #define PTRFLAGS_BUTTON2               0x2000
 #define PTRFLAGS_BUTTON3               0x4000
 
-/* Mouse Event (MS-RDPBCGR 2.2.8.1.1.3.1.1.4) */
+/* Extended Mouse Event: pointerFlags (MS-RDPBCGR 2.2.8.1.1.3.1.1.4) */
 #define PTRXFLAGS_DOWN                 0x8000
 #define PTRXFLAGS_BUTTON1              0x0001
 #define PTRXFLAGS_BUTTON2              0x0002
@@ -236,6 +239,7 @@
 /* RDP capabilities */
 #define RDP_CAPSET_GENERAL             1
 #define RDP_CAPLEN_GENERAL             0x18
+/* General Capability Set: osMajorType (MS-RDPBCGR 2.2.7.1.1) */
 #define OSMAJORTYPE_UNSPECIFIED        0x0000
 #define OSMAJORTYPE_WINDOWS            0x0001
 #define OSMAJORTYPE_OS2                0x0002
@@ -245,6 +249,7 @@
 #define OSMAJORTYPE_OSX                0x0006
 #define OSMAJORTYPE_ANDROID            0x0007
 #define OSMAJORTYPE_CHROME_OS          0x0008
+/* General Capability Set: osMinorType (MS-RDPBCGR 2.2.7.1.1) */
 #define OSMINORTYPE_UNSPECIFIED        0x0000
 #define OSMINORTYPE_WINDOWS_31X        0x0001
 #define OSMINORTYPE_WINDOWS_95         0x0002
@@ -329,6 +334,8 @@
 #define RDP_LOGON_BLOB                 0x0100
 #define RDP_LOGON_LEAVE_AUDIO          0x2000
 
+/* Extended Info Packet: performanceFlags (MS-RDPBCGR 2.2.1.11.1.1.1) */
+/* TODO: to be renamed */
 #define RDP5_DISABLE_NOTHING           0x00
 #define RDP5_NO_WALLPAPER              0x01
 #define RDP5_NO_FULLWINDOWDRAG         0x02
@@ -403,7 +410,7 @@
 #define CF_GDIOBJFIRST                 768
 #define CF_GDIOBJLAST                  1023
 
-/* Sound format constants - see also RFC 2361 */
+/* Sound format constants - see also RFC 2361 and MS-RDPAI  */
 #define WAVE_FORMAT_PCM                0x0001
 #define WAVE_FORMAT_ADPCM              0x0002
 #define WAVE_FORMAT_ALAW               0x0006
@@ -413,6 +420,9 @@
 #define WAVE_FORMAT_AAC                0xA106
 
 /* Virtual channel options */
+/* Channel Definition Structure: options (MS-RDPBCGR 2.2.1.3.4.1) */
+#define REMOTE_CONTROL_PERSISTENT       0x00100000
+/* TODO: to be renamed */
 #define XR_CHANNEL_OPTION_SHOW_PROTOCOL 0x00200000
 #define XR_CHANNEL_OPTION_COMPRESS      0x00400000
 #define XR_CHANNEL_OPTION_COMPRESS_RDP  0x00800000
@@ -448,6 +458,8 @@
 
 /* RDPDR constants */
 #define RDPDR_MAX_DEVICES              0x10
+/* RDPDR: Device Announce Header: DeviceType (MS-RDPEFS 2.2.1.3) */
+/* TODO: to be renamed */
 #define DEVICE_TYPE_SERIAL             0x01
 #define DEVICE_TYPE_PARALLEL           0x02
 #define DEVICE_TYPE_PRINTER            0x04
@@ -510,13 +522,13 @@
 #define RDP_ORDER_BRUSHCACHE    7
 #define RDP_ORDER_BMPCACHE3     8
 
-/* orderSupportExFlags (2 bytes): A 16-bit, unsigned integer.
-   Extended order support flags. */
+/* Order Capability Set: orderSupportExFlags (MS-RDPBCGR 2.2.7.1.3)  */
+/* TODO: to be renamed */
 #define XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT   0x0002
 #define XR_ORDERFLAGS_EX_ALTSEC_FRAME_MARKER_SUPPORT 0x0004
 #define XR_ORDERFLAGS_EX_OFFSCREEN_COMPOSITE_SUPPORT 0x0100
 
-/* orders negotiation indexes */
+/* Order Capability Set: orderSupport (MS-RDPBCGR 2.2.7.1.3) */
 #define TS_NEG_DSTBLT_INDEX             0x00
 #define TS_NEG_PATBLT_INDEX             0x01
 #define TS_NEG_SCRBLT_INDEX             0x02
@@ -590,20 +602,22 @@
 
 #define CB_ITEMCHANGE  300
 
-
+/* General Capability Set: extraFlags (MS-RDPBCGR 2.2.7.1.1) */
 #define  TS_CAPS_PROTOCOLVERSION       0x0200
 #define  FASTPATH_OUTPUT_SUPPORTED     0x0001
 #define  NO_BITMAP_COMPRESSION_HDR     0x0400
 #define  LONG_CREDENTIALS_SUPPORTED    0x0004
 #define  AUTORECONNECT_SUPPORTED       0x0008
 #define  ENC_SALTED_CHECKSUM           0x0010
+
+/* Order Capability Set: orderFlags (MS-RDPBCGR 2.2.7.1.3) */
 #define  NEGOTIATEORDERSUPPORT         0x0002
 #define  ZEROBOUNDSDELTASUPPORT        0x0008
 #define  COLORINDEXSUPPORT             0x0020
 #define  SOLIDPATTERNBRUSHONLY         0x0040
 #define  ORDERFLAGS_EXTRA_FLAGS        0x0080
 
-/* Input Capability Set (MS-RDPBCGR 2.2.7.1.6) */
+/* Input Capability Set: inputFlags (MS-RDPBCGR 2.2.7.1.6) */
 #define  INPUT_FLAG_SCANCODES          0x0001
 #define  INPUT_FLAG_MOUSEX             0x0004
 #define  INPUT_FLAG_FASTPATH_INPUT     0x0008
@@ -614,12 +628,16 @@
 #define  TS_INPUT_FLAG_MOUSE_HWHEEL    0x0100
 #define  TS_INPUT_FLAG_QOE_TIMESTAMPS  0x0200
 
+/* Desktop Composition Capability Set: CompDeskSupportLevel (MS-RDPBCGR 2.2.7.2.8) */
 #define  COMPDESK_NOT_SUPPORTED      0x0000
 #define  COMPDESK_SUPPORTED          0x0001
 
+/* Surface Commands Capability Set: cmdFlags (MS-RDPBCGR 2.2.7.2.9) */
 #define SURFCMDS_SETSURFACEBITS      0x00000002
 #define SURFCMDS_FRAMEMARKER         0x00000010
 #define SURFCMDS_STREAMSUFRACEBITS   0x00000040
+
+/* Bitmap Codec: codecGUID (MS-RDPBCGR 2.2.7.2.10.1.1) */
 
 /* CODEC_GUID_NSCODEC  CA8D1BB9-000F-154F-589FAE2D1A87E2D6 */
 #define XR_CODEC_GUID_NSCODEC \
@@ -633,6 +651,10 @@
 #define XR_CODEC_GUID_IMAGE_REMOTEFX \
   "\xD4\xCC\x44\x27\x8A\x9D\x74\x4E\x80\x3C\x0E\xCB\xEE\xA1\x9C\x54"
 
+/* MFVideoFormat_H264  0x34363248-0000-0010-800000AA00389B71 */
+#define XR_CODEC_GUID_H264 \
+  "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
+
 /* CODEC_GUID_JPEG     1BAF4CE6-9EED-430C-869ACB8B37B66237 */
 #define XR_CODEC_GUID_JPEG \
   "\xE6\x4C\xAF\x1B\xED\x9E\x0C\x43\x86\x9A\xCB\x8B\x37\xB6\x62\x37"
@@ -641,34 +663,37 @@
 #define XR_CODEC_GUID_PNG \
   "\x8D\x85\x0C\x0E\xE0\x28\xDB\x45\xAD\xAA\x0F\x83\xE5\x7C\xC5\x60"
 
-/* MFVideoFormat_H264  0x34363248-0000-0010-800000AA00389B71 */
-#define XR_CODEC_GUID_H264 \
-  "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
+/* Client Fast-Path Input Event PDU: action (MS-RDPBCGR 2.2.8.1.2) */
+#define FASTPATH_INPUT_ACTION_FASTPATH      0x0
+#define FASTPATH_INPUT_ACTION_X224          0x3
 
-/* fastpath input */
-#define FASTPATH_INPUT_SECURE_CHECKSUM 0x1
-#define FASTPATH_INPUT_ENCRYPTED       0x2
+/* Client Fast-Path Input Event PDU: flags (MS-RDPBCGR 2.2.8.1.2) */
+#define FASTPATH_INPUT_SECURE_CHECKSUM      0x1
+#define FASTPATH_INPUT_ENCRYPTED            0x2
 
-#define FASTPATH_INPUT_ACTION_FASTPATH 0x0
-#define FASTPATH_INPUT_ACTION_X224     0x3
+/* Fast-Path Input Event: eventCode (MS-RDPBCGR 2.2.8.1.2.2) */
+#define FASTPATH_INPUT_EVENT_SCANCODE       0x0
+#define FASTPATH_INPUT_EVENT_MOUSE          0x1
+#define FASTPATH_INPUT_EVENT_MOUSEX         0x2
+#define FASTPATH_INPUT_EVENT_SYNC           0x3
+#define FASTPATH_INPUT_EVENT_UNICODE        0x4
+#define FASTPATH_INPUT_EVENT_QOE_TIMESTAMP  0x6
 
-#define FASTPATH_INPUT_EVENT_SCANCODE  0x0
-#define FASTPATH_INPUT_EVENT_MOUSE     0x1
-#define FASTPATH_INPUT_EVENT_MOUSEX    0x2
-#define FASTPATH_INPUT_EVENT_SYNC      0x3
-#define FASTPATH_INPUT_EVENT_UNICODE   0x4
+/* Fast-Path Keyboard Event: eventHeader (MS-RDPBCGR 2.2.8.2.2.1) */
+#define FASTPATH_INPUT_KBDFLAGS_RELEASE     0x01
+#define FASTPATH_INPUT_KBDFLAGS_EXTENDED    0x02
+#define FASTPATH_INPUT_KBDFLAGS_EXTENDED1   0x04
 
-#define FASTPATH_INPUT_KBDFLAGS_RELEASE   0x01
-#define FASTPATH_INPUT_KBDFLAGS_EXTENDED  0x02
+/* Server Fast-Path Update PDU: action (MS-RDPBCGR 2.2.0.1.2) */
+#define FASTPATH_OUTPUT_ACTION_FASTPATH     0x0
+#define FASTPATH_OUTPUT_ACTION_X224         0x3
 
+/* Server Fast-Path Update PDU: flags (MS-RDPBCGR 2.2.0.1.2) */
+#define FASTPATH_OUTPUT_ACTION_FASTPATH     0x0
+#define FASTPATH_OUTPUT_SECURE_CHECKSUM     0x1
+#define FASTPATH_OUTPUT_ENCRYPTED           0x2
 
-/* fastpath output */
-#define FASTPATH_OUTPUT_ACTION_FASTPATH   0x0
-#define FASTPATH_OUTPUT_ACTION_X224       0x3
-
-#define FASTPATH_OUTPUT_SECURE_CHECKSUM   0x1
-#define FASTPATH_OUTPUT_ENCRYPTED         0x2
-
+/* Fast-Path Update: updateCode (MS-RDPBCGR 2.2.9.1.2.1) */
 #define FASTPATH_UPDATETYPE_ORDERS        0x0
 #define FASTPATH_UPDATETYPE_BITMAP        0x1
 #define FASTPATH_UPDATETYPE_PALETTE       0x2
@@ -681,13 +706,16 @@
 #define FASTPATH_UPDATETYPE_CACHED        0xA
 #define FASTPATH_UPDATETYPE_POINTER       0xB
 
-#define FASTPATH_FRAGMENT_SINGLE     0x0
-#define FASTPATH_FRAGMENT_LAST       0x1
-#define FASTPATH_FRAGMENT_FIRST      0x2
-#define FASTPATH_FRAGMENT_NEXT       0x3
+/* Fast-Path Update: fragmentation (MS-RDPBCGR 2.2.9.1.2.1) */
+#define FASTPATH_FRAGMENT_SINGLE          0x0
+#define FASTPATH_FRAGMENT_LAST            0x1
+#define FASTPATH_FRAGMENT_FIRST           0x2
+#define FASTPATH_FRAGMENT_NEXT            0x3
+#define FASTPATH_OUTPUT_COMPRESSION_USED  0x2
 
 #define FASTPATH_MAX_PACKET_SIZE    0x3fff
 
+/* Surface Command Type (MS-RDPBCGR 2.2.9.1.2.1.10.1) */
 #define CMDTYPE_SET_SURFACE_BITS       0x0001
 #define CMDTYPE_FRAME_MARKER           0x0004
 #define CMDTYPE_STREAM_SURFACE_BITS    0x0006
