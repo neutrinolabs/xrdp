@@ -333,8 +333,8 @@ xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
     int client_does_fastpath_input;
 
     in_uint16_le(s, inputFlags);
-    client_does_fastpath_input = (inputFlags & INPUT_FLAG_FASTPATH_INPUT) ||
-                                 (inputFlags & INPUT_FLAG_FASTPATH_INPUT2);
+    client_does_fastpath_input = (inputFlags & TS_INPUT_FLAG_FASTPATH_INPUT) ||
+                                 (inputFlags & TS_INPUT_FLAG_FASTPATH_INPUT2);
     if ((self->client_info.use_fast_path & 2) && !client_does_fastpath_input)
     {
         self->client_info.use_fast_path &= ~2;
@@ -924,14 +924,14 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
     out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
 
-    flags = INPUT_FLAG_SCANCODES |
-            INPUT_FLAG_MOUSEX    |
-            INPUT_FLAG_UNICODE   |
+    flags = TS_INPUT_FLAG_SCANCODES |
+            TS_INPUT_FLAG_MOUSEX    |
+            TS_INPUT_FLAG_UNICODE   |
             TS_INPUT_FLAG_MOUSE_HWHEEL;
 
     if (self->client_info.use_fast_path & 2)
     {
-        flags |= INPUT_FLAG_FASTPATH_INPUT | INPUT_FLAG_FASTPATH_INPUT2;
+        flags |= TS_INPUT_FLAG_FASTPATH_INPUT | TS_INPUT_FLAG_FASTPATH_INPUT2;
     }
     out_uint16_le(s, flags);
     out_uint8s(s, 82);
