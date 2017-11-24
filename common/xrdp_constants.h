@@ -101,6 +101,13 @@
 #define CONNECTION_TYPE_LAN            0x06
 #define CONNECTION_TYPE_AUTODETECT     0x07
 
+/* Client Core Data: colorDepth, postBeta2ColorDepth (MS-RDPBCGR 2.2.1.3.2) */
+#define RNS_UD_COLOR_4BPP              0xCA00
+#define RNS_UD_COLOR_8BPP              0xCA01
+#define RNS_UD_COLOR_16BPP_555         0xCA02
+#define RNS_UD_COLOR_16BPP_565         0xCA03
+#define RNS_UD_COLOR_24BPP             0xCA04
+
 /* Slow-Path Input Event: messageType (MS-RDPBCGR 2.2.8.1.1.3.1.1) */
 /* TODO: to be renamed */
 #define RDP_INPUT_SYNCHRONIZE          0

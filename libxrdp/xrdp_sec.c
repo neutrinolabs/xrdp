@@ -1608,10 +1608,10 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     g_writeln("colorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp)", colorDepth);
     switch (colorDepth)
     {
-        case 0xca00: /* RNS_UD_COLOR_4BPP */
+        case RNS_UD_COLOR_4BPP:
             self->rdp_layer->client_info.bpp = 4;
             break;
-        case 0xca01: /* RNS_UD_COLOR_8BPP */
+        case RNS_UD_COLOR_8BPP:
             self->rdp_layer->client_info.bpp = 8;
             break;
     }
@@ -1630,19 +1630,19 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
 
     switch (postBeta2ColorDepth)
     {
-        case 0xca00: /* RNS_UD_COLOR_4BPP */
+        case RNS_UD_COLOR_4BPP:
             self->rdp_layer->client_info.bpp = 4;
             break;
-        case 0xca01: /* RNS_UD_COLOR_8BPP */
+        case RNS_UD_COLOR_8BPP :
             self->rdp_layer->client_info.bpp = 8;
             break;
-        case 0xca02: /* RNS_UD_COLOR_16BPP_555 */
+        case RNS_UD_COLOR_16BPP_555:
             self->rdp_layer->client_info.bpp = 15;
             break;
-        case 0xca03: /* RNS_UD_COLOR_16BPP_565 */
+        case RNS_UD_COLOR_16BPP_565:
             self->rdp_layer->client_info.bpp = 16;
             break;
-        case 0xca04: /* RNS_UD_COLOR_24BPP */
+        case RNS_UD_COLOR_24BPP:
             self->rdp_layer->client_info.bpp = 24;
             break;
     }
