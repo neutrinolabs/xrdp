@@ -417,53 +417,53 @@
 
 /* Capability Set: capabilitySetType (MS-RDPBCGR 2.2.1.13.1.1.1) */
 /* TODO: to be renamed */
-#define RDP_CAPSET_GENERAL             1
+#define RDP_CAPSET_GENERAL             0x0001
 #define RDP_CAPLEN_GENERAL             0x18
 
-#define RDP_CAPSET_BITMAP              2
+#define RDP_CAPSET_BITMAP              0x0002
 #define RDP_CAPLEN_BITMAP              0x1C
 
-#define RDP_CAPSET_ORDER               3
+#define RDP_CAPSET_ORDER               0x0003
 #define RDP_CAPLEN_ORDER               0x58
 #define ORDER_CAP_NEGOTIATE            2
 #define ORDER_CAP_NOSUPPORT            4
 
-#define RDP_CAPSET_BMPCACHE            4
+#define RDP_CAPSET_BMPCACHE            0x0004
 #define RDP_CAPLEN_BMPCACHE            0x28
 
-#define RDP_CAPSET_CONTROL             5
+#define RDP_CAPSET_CONTROL             0x0005
 #define RDP_CAPLEN_CONTROL             0x0C
 
-#define RDP_CAPSET_ACTIVATE            7
+#define RDP_CAPSET_ACTIVATE            0x0007
 #define RDP_CAPLEN_ACTIVATE            0x0C
 
-#define RDP_CAPSET_POINTER             8
+#define RDP_CAPSET_POINTER             0x0008
 #define RDP_CAPLEN_POINTER             0x0a
 #define RDP_CAPLEN_POINTER_MONO        0x08
 
-#define RDP_CAPSET_SHARE               9
+#define RDP_CAPSET_SHARE               0x0009
 #define RDP_CAPLEN_SHARE               0x08
 
-#define RDP_CAPSET_COLCACHE            10
+#define RDP_CAPSET_COLCACHE            0x000A
 #define RDP_CAPLEN_COLCACHE            0x08
 
-#define RDP_CAPSET_INPUT               13
+#define RDP_CAPSET_INPUT               0x000D
 #define RDP_CAPLEN_INPUT               0x58
 
-#define RDP_CAPSET_FONT                14
+#define RDP_CAPSET_FONT                0x000E
 #define RDP_CAPLEN_FONT                0x04
 
-#define RDP_CAPSET_BRUSHCACHE          15
+#define RDP_CAPSET_BRUSHCACHE          0x000F
 #define RDP_CAPLEN_BRUSHCACHE          0x08
 
-#define RDP_CAPSET_BITMAP_OFFSCREEN    18
+#define RDP_CAPSET_BITMAP_OFFSCREEN    0x0012
 #define RDP_CAPLEN_BITMAP_OFFSCREEN    0x08
 
-#define RDP_CAPSET_BMPCACHE2           19
+#define RDP_CAPSET_BMPCACHE2           0x0013
 #define RDP_CAPLEN_BMPCACHE2           0x28
 #define BMPCACHE2_FLAG_PERSIST         ((long)1<<31)
 
-#define RDP_CAPSET_VIRCHAN             20
+#define RDP_CAPSET_VIRCHAN             0x0014
 #define RDP_CAPLEN_VIRCHAN             0x08
 
 #define RDP_CAPSET_MULTIFRAGMENT       0x001A
@@ -472,16 +472,16 @@
 #define RDP_CAPSET_FRAME_ACKNOWLEDGE   0x001E
 #define RDP_CAPLEN_FRAME_ACKNOWLEDGE   0x08
 
-#define RDP_CAPSET_SURFCMDS            0x1C
+#define RDP_CAPSET_SURFCMDS            0x001C
 #define RDP_CAPLEN_SURFCMDS            0x0C
 
-#define RDP_CAPSET_BMPCODECS           0x1D
+#define RDP_CAPSET_BMPCODECS           0x001D
 #define RDP_CAPLEN_BMPCODECS           0x1C
 
-#define RDP_CAPSET_COMPDESK            0x19
+#define RDP_CAPSET_COMPDESK            0x0019
 #define RDP_CAPLEN_COMPDESK            0x06
 
-#define RDP_CAPSET_LPOINTER            0x1B
+#define RDP_CAPSET_LPOINTER            0x001B
 #define RDP_CAPLEN_LPOINTER            0x06
 
 /* TS_SECURITY_HEADER: flags (MS-RDPBCGR 2.2.8.1.1.2.1) */
