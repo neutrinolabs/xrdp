@@ -610,89 +610,89 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         len -= 4;
         switch (type)
         {
-            case RDP_CAPSET_GENERAL: /* 1 */
+            case RDP_CAPSET_GENERAL: /* 0x01 */
                 DEBUG(("RDP_CAPSET_GENERAL"));
                 xrdp_caps_process_general(self, s, len);
                 break;
-            case RDP_CAPSET_BITMAP: /* 2 */
+            case RDP_CAPSET_BITMAP: /* 0x02 */
                 DEBUG(("RDP_CAPSET_BITMAP"));
                 break;
-            case RDP_CAPSET_ORDER: /* 3 */
+            case RDP_CAPSET_ORDER: /* 0x03 */
                 DEBUG(("RDP_CAPSET_ORDER"));
                 xrdp_caps_process_order(self, s, len);
                 break;
-            case RDP_CAPSET_BMPCACHE: /* 4 */
+            case RDP_CAPSET_BMPCACHE: /* 0x04 */
                 DEBUG(("RDP_CAPSET_BMPCACHE"));
                 xrdp_caps_process_bmpcache(self, s, len);
                 break;
-            case RDP_CAPSET_CONTROL: /* 5 */
+            case RDP_CAPSET_CONTROL: /* 0x05 */
                 DEBUG(("RDP_CAPSET_CONTROL"));
                 break;
             case 6:
                 xrdp_caps_process_cache_v3_codec_id(self, s, len);
                 break;
-            case RDP_CAPSET_ACTIVATE: /* 7 */
+            case RDP_CAPSET_ACTIVATE: /* 0x07 */
                 DEBUG(("RDP_CAPSET_ACTIVATE"));
                 break;
-            case RDP_CAPSET_POINTER: /* 8 */
+            case RDP_CAPSET_POINTER: /* 0x08 */
                 DEBUG(("RDP_CAPSET_POINTER"));
                 xrdp_caps_process_pointer(self, s, len);
                 break;
-            case RDP_CAPSET_SHARE: /* 9 */
+            case RDP_CAPSET_SHARE: /* 0x09 */
                 DEBUG(("RDP_CAPSET_SHARE"));
                 break;
-            case RDP_CAPSET_COLCACHE: /* 10 */
+            case RDP_CAPSET_COLCACHE: /* 0x0A */
                 DEBUG(("RDP_CAPSET_COLCACHE"));
                 break;
-            case 12: /* 12 */
-                DEBUG(("--12"));
+            case RDP_CAPSET_SOUND: /* 0x0C */
+                DEBUG(("--0x0C"));
                 break;
-            case 13: /* 13 */
+            case RDP_CAPSET_INPUT: /* 0x0D */
                 xrdp_caps_process_input(self, s, len);
                 break;
-            case 14: /* 14 */
-                DEBUG(("--14"));
+            case RDP_CAPSET_FONT: /* 0x0E */
+                DEBUG(("--0x0D"));
                 break;
-            case RDP_CAPSET_BRUSHCACHE: /* 15 */
+            case RDP_CAPSET_BRUSHCACHE: /* 0x0F */
                 xrdp_caps_process_brushcache(self, s, len);
                 break;
-            case 16: /* 16 */
-                DEBUG(("--16"));
+            case RDP_CAPSET_GLYPHCACHE: /* 0x11 */
+                DEBUG(("--0x11"));
                 break;
-            case 17: /* 17 */
+            case RDP_CAPSET_OFFSCREENCACHE: /* 0x12 */
                 DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));
                 xrdp_caps_process_offscreen_bmpcache(self, s, len);
                 break;
-            case RDP_CAPSET_BMPCACHE2: /* 19 */
+            case RDP_CAPSET_BMPCACHE2: /* 0x13 */
                 DEBUG(("RDP_CAPSET_BMPCACHE2"));
                 xrdp_caps_process_bmpcache2(self, s, len);
                 break;
-            case 20: /* 20 */
-                DEBUG(("--20"));
+            case RDP_CAPSET_VIRCHAN: /* 0x14 */
+                DEBUG(("--0x14"));
                 break;
-            case 21: /* 21 */
-                DEBUG(("--21"));
+            case RDP_CAPSET_DRAWNINEGRIDCACHE: /* 0x15 */
+                DEBUG(("--0x15"));
                 break;
-            case 22: /* 22 */
-                DEBUG(("--22"));
+            case RDP_CAPSET_DRAWGDIPLUS: /* 0x16 */
+                DEBUG(("--0x16"));
                 break;
-            case 0x0017: /* 23 CAPSETTYPE_RAIL */
+            case RDP_CAPSET_RAIL: /* 0x17 CAPSETTYPE_RAIL */
                 xrdp_caps_process_rail(self, s, len);
                 break;
-            case 0x0018: /* 24 CAPSETTYPE_WINDOW */
+            case RDP_CAPSET_WINDOW: /* 24 CAPSETTYPE_WINDOW */
                 xrdp_caps_process_window(self, s, len);
                 break;
-            case 0x001A: /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
+            case RDP_CAPSET_MULTIFRAGMENT: /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
                 xrdp_caps_process_multifragmentupdate(self, s, len);
                 break;
-            case RDP_CAPSET_BMPCODECS: /* 0x1d(29) */
+            case RDP_CAPSET_SURFCMDS: /* 0x1C CAPSETTYPE_SURFACE_COMMANDS */
+                xrdp_caps_process_surface_cmds(self, s, len);
+                break;
+            case RDP_CAPSET_BMPCODECS: /* 0x1D */
                 xrdp_caps_process_codecs(self, s, len);
                 break;
-            case 0x001E: /* CAPSSETTYPE_FRAME_ACKNOWLEDGE */
+            case RDP_CAPSET_FRAME_ACKNOWLEDGE: /* 0x1E CAPSSETTYPE_FRAME_ACKNOWLEDGE */
                 xrdp_caps_process_frame_ack(self, s, len);
-                break;
-            case RDP_CAPSET_SURFCMDS: /* CAPSETTYPE_SURFACE_COMMANDS */
-                xrdp_caps_process_surface_cmds(self, s, len);
                 break;
             default:
                 g_writeln("unknown in xrdp_caps_process_confirm_active %d", type);
