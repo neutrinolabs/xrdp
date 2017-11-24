@@ -447,6 +447,8 @@
 #define RDP_CAPSET_COLCACHE            0x000A
 #define RDP_CAPLEN_COLCACHE            0x08
 
+#define RDP_CAPSET_SOUND               0x000C
+
 #define RDP_CAPSET_INPUT               0x000D
 #define RDP_CAPLEN_INPUT               0x58
 
@@ -455,6 +457,9 @@
 
 #define RDP_CAPSET_BRUSHCACHE          0x000F
 #define RDP_CAPLEN_BRUSHCACHE          0x08
+
+#define RDP_CAPSET_GLYPHCACHE          0x0010
+#define RDP_CAPSET_OFFSCREENCACHE      0x0011
 
 #define RDP_CAPSET_BITMAP_OFFSCREEN    0x0012
 #define RDP_CAPLEN_BITMAP_OFFSCREEN    0x08
@@ -466,8 +471,19 @@
 #define RDP_CAPSET_VIRCHAN             0x0014
 #define RDP_CAPLEN_VIRCHAN             0x08
 
+#define RDP_CAPSET_DRAWNINEGRIDCACHE   0x0015
+#define RDP_CAPSET_DRAWGDIPLUS         0x0016
+#define RDP_CAPSET_RAIL                0x0017
+#define RDP_CAPSET_WINDOW              0x0018
+
+#define RDP_CAPSET_COMPDESK            0x0019
+#define RDP_CAPLEN_COMPDESK            0x06
+
 #define RDP_CAPSET_MULTIFRAGMENT       0x001A
 #define RDP_CAPLEN_MULTIFRAGMENT       0x08
+
+#define RDP_CAPSET_LPOINTER            0x001B
+#define RDP_CAPLEN_LPOINTER            0x06
 
 #define RDP_CAPSET_FRAME_ACKNOWLEDGE   0x001E
 #define RDP_CAPLEN_FRAME_ACKNOWLEDGE   0x08
@@ -478,11 +494,7 @@
 #define RDP_CAPSET_BMPCODECS           0x001D
 #define RDP_CAPLEN_BMPCODECS           0x1C
 
-#define RDP_CAPSET_COMPDESK            0x0019
-#define RDP_CAPLEN_COMPDESK            0x06
 
-#define RDP_CAPSET_LPOINTER            0x001B
-#define RDP_CAPLEN_LPOINTER            0x06
 
 /* TS_SECURITY_HEADER: flags (MS-RDPBCGR 2.2.8.1.1.2.1) */
 /* TODO: to be renamed */
