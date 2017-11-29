@@ -479,8 +479,6 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             if (trans_get_wait_objs(self->listen_trans, robjs,
                                     &robjs_count) != 0)
             {
-                log_message(LOG_LEVEL_ERROR,"Listening socket is in wrong state, "
-                            "terminating listener");
                 break;
             }
 
