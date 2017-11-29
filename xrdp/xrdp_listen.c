@@ -476,15 +476,12 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             robjs[robjs_count++] = done_obj;
             timeout = -1;
 
-            /* if (self->listen_trans != 0) */
+            if (trans_get_wait_objs(self->listen_trans, robjs,
+                                    &robjs_count) != 0)
             {
-                if (trans_get_wait_objs(self->listen_trans, robjs,
-                                        &robjs_count) != 0)
-                {
-                    log_message(LOG_LEVEL_ERROR,"Listening socket is in wrong state, "
-                              "terminating listener");
-                    break;
-                }
+                log_message(LOG_LEVEL_ERROR,"Listening socket is in wrong state, "
+                            "terminating listener");
+                break;
             }
 
             /* wait - timeout -1 means wait indefinitely*/
