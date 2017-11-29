@@ -142,6 +142,8 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_setenv("XRDP_SESSION", "1", 1);
             /* XRDP_SOCKET_PATH should be set even here, chansrv uses this */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
+            g_sprintf(text, "%s/pcsc_socket_%d", XRDP_SOCKET_PATH, display);
+            g_setenv("PCSCLITE_CSOCK_NAME", text, 1);
             if ((env_names != 0) && (env_values != 0) &&
                 (env_names->count == env_values->count))
             {
