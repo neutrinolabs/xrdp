@@ -117,7 +117,8 @@ int  scard_send_is_valid_context(void *user_data,
                                  char *context, int context_bytes);
 int  scard_send_list_readers(void *user_data,
                              char *context, int context_bytes,
-                             char *groups, int cchReaders, int wide);
+                             char *groups, int cchReaders, int wide,
+                             int mszReadersIsNULL);
 
 int  scard_send_get_status_change(void *user_data,
                                   char *context, int context_bytes,
@@ -143,7 +144,8 @@ int  scard_send_end_transaction(void *user_data,
 int  scard_send_status(void *user_data, int wide,
                        char *context, int context_bytes,
                        char *card, int card_bytes,
-                       int cchReaderLen, int cbAtrLen);
+                       int cchReaderLen, int cbAtrLen,
+                       int reader_name_is_null);
 int  scard_send_disconnect(void *user_data,
                            char *context, int context_bytes,
                            char *card, int card_bytes,
@@ -154,7 +156,8 @@ int  scard_send_transmit(void *user_data,
                          char *card, int card_bytes,
                          char *send_data, int send_bytes, int recv_bytes,
                          struct xrdp_scard_io_request *send_ior,
-                         struct xrdp_scard_io_request *recv_ior);
+                         struct xrdp_scard_io_request *recv_ior,
+                         int recv_ior_is_null, int recv_is_null);
 
 int  scard_send_control(void *user_data,
                         char *context, int context_bytes,
