@@ -145,7 +145,7 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_setenv("XRDP_SESSION", "1", 1);
             /* XRDP_SOCKET_PATH should be set even here, chansrv uses this */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
-            g_sprintf(text, "%s/pcsc_socket_%d", XRDP_SOCKET_PATH, display);
+            g_sprintf(text, XRDP_PCSC_STR, display);
             g_setenv("PCSCLITE_CSOCK_NAME", text, 1);
             /* pulse sink socket */
             g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_OUT_BASE_STR, display);
