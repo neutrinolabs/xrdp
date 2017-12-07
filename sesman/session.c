@@ -242,6 +242,13 @@ x_server_running_check_ports(int display)
         x_running = g_file_exist(text);
     }
 
+    if (!x_running)
+    {
+        LOG(LOG_LEVEL_DEBUG, "Did not find a running X server at %s", text);
+        g_sprintf(text, XRDP_PCSC_STR, display);
+        x_running = g_file_exist(text);
+    }
+
     if (x_running)
     {
         LOG(LOG_LEVEL_INFO, "Found X server running at %s", text);
