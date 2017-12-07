@@ -123,6 +123,7 @@ create_uds_client(struct trans *con)
     {
         return 0;
     }
+    uds_client->ref_count = 1;
     g_autoinc++;
     uds_client->uds_client_id = g_autoinc;
     uds_client->con = con;

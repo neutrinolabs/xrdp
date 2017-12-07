@@ -1340,6 +1340,18 @@ cleanup_sockets(int display)
         }
     }
 
+    g_snprintf(file, 255, XRDP_PCSC_STR, display);
+    if (g_file_exist(file))
+    {
+        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                       "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
     return error;
 
 }
