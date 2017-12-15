@@ -472,29 +472,29 @@ config_read_session_variables(int file, struct config_sesman *cs,
     list_clear(param_v);
     list_clear(param_n);
 
-    cs->session_variables1 = list_create();
-    cs->session_variables1->auto_free = 1;
-    cs->session_variables2 = list_create();
-    cs->session_variables2->auto_free = 1;
+    cs->env_names = list_create();
+    cs->env_names->auto_free = 1;
+    cs->env_values = list_create();
+    cs->env_values->auto_free = 1;
 
     file_read_section(file, SESMAN_CFG_SESSION_VARIABLES, param_n, param_v);
 
     for (i = 0; i < param_n->count; i++)
     {
-        list_add_item(cs->session_variables1,
+        list_add_item(cs->env_names,
                       (tintptr) g_strdup((char *) list_get_item(param_n, i)));
-        list_add_item(cs->session_variables2,
+        list_add_item(cs->env_values,
                       (tintptr) g_strdup((char *) list_get_item(param_v, i)));
     }
 
     /* printing session variables */
     g_writeln("%s parameters:", SESMAN_CFG_SESSION_VARIABLES);
 
-    for (i = 0; i < cs->session_variables1->count; i++)
+    for (i = 0; i < cs->env_names->count; i++)
     {
         g_writeln("  Parameter %02d                   %s=%s", i,
-               (char *) list_get_item(cs->session_variables1, i),
-               (char *) list_get_item(cs->session_variables2, i));
+               (char *) list_get_item(cs->env_names, i),
+               (char *) list_get_item(cs->env_values, i));
     }
 
     return 0;
@@ -506,7 +506,7 @@ config_free(struct config_sesman *cs)
     list_delete(cs->rdp_params);
     list_delete(cs->vnc_params);
     list_delete(cs->xorg_params);
-    list_delete(cs->session_variables1);
-    list_delete(cs->session_variables2);
+    list_delete(cs->env_names);
+    list_delete(cs->env_values);
     g_free(cs);
 }

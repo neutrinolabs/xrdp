@@ -371,8 +371,8 @@ session_start_chansrv(char *username, int display)
         list_add_item(chansrv_params, 0); /* mandatory */
 
         env_set_user(username, 0, display,
-                     g_cfg->session_variables1,
-                     g_cfg->session_variables2);
+                     g_cfg->env_names,
+                     g_cfg->env_values);
 
         /* executing chansrv */
         g_execvp(exe_path, (char **) (chansrv_params->items));
@@ -513,8 +513,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             env_set_user(s->username,
                          0,
                          display,
-                         g_cfg->session_variables1,
-                         g_cfg->session_variables2);
+                         g_cfg->env_names,
+                         g_cfg->env_values);
             if (x_server_running(display))
             {
                 auth_set_env(data);
@@ -604,16 +604,16 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     env_set_user(s->username,
                                  &passwd_file,
                                  display,
-                                 g_cfg->session_variables1,
-                                 g_cfg->session_variables2);
+                                 g_cfg->env_names,
+                                 g_cfg->env_values);
                 }
                 else
                 {
                     env_set_user(s->username,
                                  0,
                                  display,
-                                 g_cfg->session_variables1,
-                                 g_cfg->session_variables2);
+                                 g_cfg->env_names,
+                                 g_cfg->env_values);
                 }
 
 
@@ -857,8 +857,8 @@ session_reconnect_fork(int display, char *username)
         env_set_user(username,
                      0,
                      display,
-                     g_cfg->session_variables1,
-                     g_cfg->session_variables2);
+                     g_cfg->env_names,
+                     g_cfg->env_values);
         g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
         if (g_file_exist(text))
