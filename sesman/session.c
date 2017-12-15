@@ -360,7 +360,7 @@ session_start_chansrv(char *username, int display)
     chansrv_pid = g_fork();
     if (chansrv_pid == 0)
     {
-        chansrv_params = list_create(); 
+        chansrv_params = list_create();
         chansrv_params->auto_free = 1;
 
         /* building parameters */
