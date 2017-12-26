@@ -56,36 +56,13 @@ current directory.
 Enter into the directory and build the pulseaudio package.
 
     cd pulseaudio-10.0
-    dpkg-buildpackage -rfakeroot -uc -b
-
-Enter into pulse directory in xrdp source.
-
-    cd ~/xrdp/sesman/chansrv/pulse
-    nano Makefile
-
-Edit the `Makefile`. Replace `/tmp/pulseaudio-10.0` with your pulseaudio source
-directory.
-
-```diff
-diff --git a/sesman/chansrv/pulse/Makefile b/sesman/chansrv/pulse/Makefile
-index 74977221..395ef0a0 100644
---- a/sesman/chansrv/pulse/Makefile
-+++ b/sesman/chansrv/pulse/Makefile
-@@ -3,7 +3,7 @@
- #
-
- # change this to your pulseaudio source directory
--PULSE_DIR = /tmp/pulseaudio-10.0
-+PULSE_DIR = /home/debian/pulseaudio-10.0
- CFLAGS    = -Wall -O2 -I$(PULSE_DIR) -I$(PULSE_DIR)/src -DHAVE_CONFIG_H -fPIC
-
- all: module-xrdp-sink.so module-xrdp-source.so
-```
+    ./configure
 
 Finally, let's make. You'll have two .so files `module-xrdp-sink.so` and
 `module-xrdp-source.so`.
 
-    make
+    cd ~/xrdp/sesman/chansrv/pulse
+    make PULSE_DIR="~/pulseaudio-10.0"
 
 ## Other distro
 
@@ -105,16 +82,11 @@ directory, then run `./configure`.
 If additional packages are required to run `./configure`, install requisite
 packages depending on your environment.
 
-Next, enter into pulse directory in xrdp source and replace `/tmp/pulseaudio-10.0`
-in `Makefile` with your pulseaudio source directory.
-
-    cd ~/xrdp/sesman/chansrv/pulse
-    nano Makefile
-
 Finally, let's make. You'll have two .so files `module-xrdp-sink.so` and
 `module-xrdp-source.so`.
 
-    make
+    cd ~/xrdp/sesman/chansrv/pulse
+    make PULSE_DIR="~/pulseaudio-10.0"
 
 # Install
 
