@@ -343,18 +343,17 @@ main(int argc, char **argv)
     if (daemon)
     {
         /* start of daemonizing code */
-        g_pid = g_fork();
+        if (sesman_listen_test(g_cfg) != 0)
+	{
 
-        if (0 != g_pid)
+            log_message(LOG_LEVEL_ERROR, "Failed to start xrdp-sesman daemon, "
+                                         "possibly address already in use.");
+            g_deinit();
+            g_exit(1);
+        }
+
+        if (0 != g_fork())
         {
-            if (sesman_listen_test(g_cfg) != 0)
-	    {
-
-                log_message(LOG_LEVEL_ERROR, "Failed to start xrdp-sesman daemon, "
-                                             "possibly address already in use.");
-                g_deinit();
-                g_exit(1);
-            }
             g_deinit();
             g_exit(0);
         }
