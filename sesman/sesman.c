@@ -344,7 +344,7 @@ main(int argc, char **argv)
     {
         /* start of daemonizing code */
         if (sesman_listen_test(g_cfg) != 0)
-	{
+        {
 
             log_message(LOG_LEVEL_ERROR, "Failed to start xrdp-sesman daemon, "
                                          "possibly address already in use.");
