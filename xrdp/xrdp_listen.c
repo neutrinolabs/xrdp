@@ -153,6 +153,7 @@ static int
 xrdp_listen_get_port_address(char *port, int port_bytes,
                              char *address, int address_bytes,
                              int *tcp_nodelay, int *tcp_keepalive,
+                             int *mode,
                              struct xrdp_startup_params *startup_param)
 {
     int fd;
@@ -170,6 +171,7 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
     /* see if port or address is in xrdp.ini file */
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
+    *mode = TRANS_MODE_TCP;
     *tcp_nodelay = 0 ;
     *tcp_keepalive = 0 ;
 
@@ -204,7 +206,14 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                             }
                         }
                     }
-
+                    if (g_strcasecmp(val, "use_vsock") == 0)
+                    {
+                        val = (char *)list_get_item(values, index);
+                        if (g_text2bool(val) == 1)
+                        {
+                            *mode = TRANS_MODE_VSOCK;
+                        }
+                    }
                     if (g_strcasecmp(val, "address") == 0)
                     {
                         val = (char *)list_get_item(values, index);
@@ -355,6 +364,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     if (xrdp_listen_get_port_address(port, sizeof(port),
                                      address, sizeof(address),
                                      &tcp_nodelay, &tcp_keepalive,
+                                     &self->listen_trans->mode,
                                      self->startup_params) != 0)
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
@@ -367,6 +377,11 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         /* set UDS mode */
         self->listen_trans->mode = TRANS_MODE_UNIX;
         /* not valid with UDS */
+        tcp_nodelay = 0;
+    }
+    else if (self->listen_trans->mode == TRANS_MODE_VSOCK)
+    {
+        /* not valid with VSOCK */
         tcp_nodelay = 0;
     }
 
@@ -461,15 +476,10 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             robjs[robjs_count++] = done_obj;
             timeout = -1;
 
-            /* if (self->listen_trans != 0) */
+            if (trans_get_wait_objs(self->listen_trans, robjs,
+                                    &robjs_count) != 0)
             {
-                if (trans_get_wait_objs(self->listen_trans, robjs,
-                                        &robjs_count) != 0)
-                {
-                    log_message(LOG_LEVEL_ERROR,"Listening socket is in wrong state, "
-                              "terminating listener");
-                    break;
-                }
+                break;
             }
 
             /* wait - timeout -1 means wait indefinitely*/
@@ -549,6 +559,13 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, possible port "
                   "already in use");
+#if !defined(XRDP_ENABLE_VSOCK)
+        if (self->listen_trans->mode == TRANS_MODE_VSOCK)
+        {
+            log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, "
+                        "vsock support not compiled and config requested");
+        }
+#endif
     }
 
     self->status = -1;
@@ -563,6 +580,7 @@ xrdp_listen_test(void)
 {
     int rv = 0;
     char port[128];
+    int mode;
     char address[256];
     int tcp_nodelay;
     int tcp_keepalive;
@@ -579,6 +597,7 @@ xrdp_listen_test(void)
     if (xrdp_listen_get_port_address(port, sizeof(port),
                                      address, sizeof(address),
                                      &tcp_nodelay, &tcp_keepalive,
+                                     &mode,
                                      xrdp_listen->startup_params) != 0)
     {
         log_message(LOG_LEVEL_DEBUG, "xrdp_listen_test: "

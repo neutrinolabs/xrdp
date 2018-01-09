@@ -1264,6 +1264,8 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3UP, x, y, 0, 0);
                 }
 
+                /* vertical scroll */
+
                 if (but == 4)
                 {
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON4DOWN,
@@ -1279,21 +1281,23 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5UP,
                                              self->mouse_x, self->mouse_y, 0, 0);
                 }
-                if (but == 6 && down)
+
+                /* horizontal scroll */
+
+                if (but == 6)
                 {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6DOWN, x, y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6DOWN,
+                                             self->mouse_x, self->mouse_y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6UP,
+                                             self->mouse_x, self->mouse_y, 0, 0);
                 }
-                else if (but == 6 && !down)
+
+                if (but == 7)
                 {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6UP, x, y, 0, 0);
-                }
-                if (but == 7 && down)
-                {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7DOWN, x, y, 0, 0);
-                }
-                else if (but == 7 && !down)
-                {
-                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7UP, x, y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7DOWN,
+                                             self->mouse_x, self->mouse_y, 0, 0);
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7UP,
+                                             self->mouse_x, self->mouse_y, 0, 0);
                 }
             }
         }
@@ -1638,14 +1642,14 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 {
     DEBUG(("mouse event flags %4.4x x %d y %d", device_flags, x, y));
 
-    if (device_flags & MOUSE_FLAG_MOVE) /* 0x0800 */
+    if (device_flags & PTRFLAGS_MOVE)
     {
         xrdp_wm_mouse_move(self, x, y);
     }
 
-    if (device_flags & MOUSE_FLAG_BUTTON1) /* 0x1000 */
+    if (device_flags & PTRFLAGS_BUTTON1)
     {
-        if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+        if (device_flags & PTRFLAGS_DOWN)
         {
             xrdp_wm_mouse_click(self, x, y, 1, 1);
         }
@@ -1655,9 +1659,9 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
-    if (device_flags & MOUSE_FLAG_BUTTON2) /* 0x2000 */
+    if (device_flags & PTRFLAGS_BUTTON2)
     {
-        if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+        if (device_flags & PTRFLAGS_DOWN)
         {
             xrdp_wm_mouse_click(self, x, y, 2, 1);
         }
@@ -1667,9 +1671,9 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
-    if (device_flags & MOUSE_FLAG_BUTTON3) /* 0x4000 */
+    if (device_flags & PTRFLAGS_BUTTON3)
     {
-        if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+        if (device_flags & PTRFLAGS_DOWN)
         {
             xrdp_wm_mouse_click(self, x, y, 3, 1);
         }
@@ -1679,15 +1683,34 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
-    if (device_flags & 0x200) /* PTRFLAGS_WHEEL */
+    /* vertical mouse wheel */
+    if (device_flags & PTRFLAGS_WHEEL)
     {
-        if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
+        if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
             xrdp_wm_mouse_click(self, 0, 0, 5, 0);
         }
         else
         {
             xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+        }
+    }
+
+    /* horizontal mouse wheel */
+
+    /**
+     * As mstsc does MOUSE not MOUSEX for horizontal scrolling,
+     * PTRFLAGS_HWHEEL must be handled here.
+     */
+    if (device_flags & PTRFLAGS_HWHEEL)
+    {
+        if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
+        {
+            xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+        }
+        else
+        {
+            xrdp_wm_mouse_click(self, 0, 0, 7, 0);
         }
     }
 
@@ -1699,24 +1722,24 @@ static int
 xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
                              int x, int y)
 {
-    if (device_flags & 0x8000) /* PTRXFLAGS_DOWN */
+    if (device_flags & PTRXFLAGS_DOWN)
     {
-        if (device_flags & 0x0001) /* PTRXFLAGS_BUTTON1 */
+        if (device_flags & PTRXFLAGS_BUTTON1)
         {
             xrdp_wm_mouse_click(self, x, y, 6, 1);
         }
-        else if (device_flags & 0x0002) /* PTRXFLAGS_BUTTON2 */
+        else if (device_flags & PTRXFLAGS_BUTTON2)
         {
             xrdp_wm_mouse_click(self, x, y, 7, 1);
         }
     }
     else
     {
-        if (device_flags & 0x0001) /* PTRXFLAGS_BUTTON1 */
+        if (device_flags & PTRXFLAGS_BUTTON1)
         {
             xrdp_wm_mouse_click(self, x, y, 6, 0);
         }
-        else if (device_flags & 0x0002) /* PTRXFLAGS_BUTTON2 */
+        else if (device_flags & PTRXFLAGS_BUTTON2)
         {
             xrdp_wm_mouse_click(self, x, y, 7, 0);
         }
@@ -1789,19 +1812,19 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
 
     switch (msg)
     {
-        case 0: /* RDP_INPUT_SYNCHRONIZE */
+        case RDP_INPUT_SYNCHRONIZE:
             rv = xrdp_wm_key_sync(wm, param3, param1);
             break;
-        case 4: /* RDP_INPUT_SCANCODE */
+        case RDP_INPUT_SCANCODE:
             rv = xrdp_wm_key(wm, param3, param1);
             break;
-        case 5: /* RDP_INPUT_UNICODE */
+        case RDP_INPUT_UNICODE:
             rv = xrdp_wm_key_unicode(wm, param3, param1);
             break;
-        case 0x8001: /* RDP_INPUT_MOUSE */
+        case RDP_INPUT_MOUSE:
             rv = xrdp_wm_process_input_mouse(wm, param3, param1, param2);
             break;
-        case 0x8002: /* RDP_INPUT_MOUSEX (INPUT_EVENT_MOUSEX) */
+        case RDP_INPUT_MOUSEX:
             rv = xrdp_wm_process_input_mousex(wm, param3, param1, param2);
             break;
         case 0x4444: /* invalidate, this is not from RDP_DATA_PDU_INPUT */

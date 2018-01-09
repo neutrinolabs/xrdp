@@ -1306,7 +1306,7 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
     g_memset(cfg_file, 0, sizeof(char) * 256);
     /* default to port 3350 */
     g_strncpy(port, "3350", port_bytes - 1);
-    /* see if port is in xrdp.ini file */
+    /* see if port is in sesman.ini file */
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
 
@@ -1471,11 +1471,13 @@ access_control(char *username, char *password, char *srv)
     unsigned long size;
     int index;
     int socket = g_tcp_socket();
+    char port[8];
 
     if (socket != -1)
     {
+        xrdp_mm_get_sesman_port(port, sizeof(port));
         /* we use a blocking socket here */
-        reply = g_tcp_connect(socket, srv, "3350");
+        reply = g_tcp_connect(socket, srv, port);
 
         if (reply == 0)
         {

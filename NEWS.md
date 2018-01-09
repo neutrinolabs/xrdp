@@ -1,3 +1,34 @@
+# Release notes for xrdp v0.9.5 (2017/12/27)
+
+## Security fixes
+* Fix local denial of service [CVE-2017-16927](http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-16927) #958 #979
+
+## New features
+* Add a new log level TRACE more verbose than DEBUG #835 #944
+* SSH agent forwarding via RDP #867 #868 FreeRDP/FreeRDP#4122
+* Support horizontal wheel properly #928
+
+## Bug fixes
+
+* Avoid use of hard-coded sesman port #895
+* Workaround for corrupted display with Windows Server 2008 using NeutrinoRDP #869
+* Fix glitch in audio redirection by AAC #910 #936
+* Implement vsock support #930 #935 #948
+* Avoid 100% CPU usage on SSL accept #956
+
+## Other changes
+* Add US Dvorak keyboard #929
+* Suppress some misleading logs #964
+* Add Finnish keyboard #972
+* Add more user-friendlier description about Xorg config #974
+* Renew pulseaudio document #984 #985
+* Lots of cleanups and refactoring
+
+## Known issues
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
+
 # Release notes for xrdp v0.9.4 (2017/09/28)
 
 ## New features
@@ -22,6 +53,8 @@
   * Windows 10 (1703) shows black blank screen in RemoteFX mode
    * This issue is already fixed at Insider Preview build 16273
 
+-----------------------
+
 # Release notes for xrdp v0.9.3.1 (2017/08/16)
 
 This release fixes a trivial packaging issue #848 occurred in v0.9.3.  The issue only affects systemd systems.  This release is principally for distro packagers or users who compile & install xrdp from source.
@@ -30,6 +63,8 @@ Users who running xrdp on these systems don't need to upgrade from v0.9.3 to v0.
 
 * Linux systems without systemd
 * non-Linux systems such as BSD operating systems
+
+-----------------------
 
 # Release notes for xrdp v0.9.3 (2017/07/15)
 

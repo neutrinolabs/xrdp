@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.65)
-AC_INIT([xrdp], [0.9.4], [xrdp-devel@googlegroups.com])
+AC_INIT([xrdp], [0.9.5], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
@@ -70,6 +70,9 @@ AC_ARG_ENABLE(pam, AS_HELP_STRING([--disable-pam],
               [Build PAM support (default: yes)]),
               [], [enable_pam=yes])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
+AC_ARG_ENABLE(vsock, AS_HELP_STRING([--enable-vsock],
+              [Build AF_VSOCK support (default: no)]),
+              [], [enable_vsock=no])
 AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--enable-ipv6],
               [Build IPv6 support (default: no, experimental)]),
               [], [enable_ipv6=no])
@@ -196,6 +199,15 @@ then
 fi
 
 AC_SUBST(PAM_RULES)
+
+if test "x$enable_vsock" = "xyes"
+then
+  enable_vsock=yes
+  AC_CHECK_HEADERS([linux/socket.h linux/vm_sockets.h],
+                   [AC_DEFINE([XRDP_ENABLE_VSOCK], 1, [Enable AF_VSOCK])],
+                   [],
+                   [#include <sys/socket.h>])
+fi
 
 if test "x$enable_ipv6only" = "xyes"
 then

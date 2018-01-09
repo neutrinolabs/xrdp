@@ -831,6 +831,26 @@ trans_listen_address(struct trans *self, char *port, const char *address)
             }
         }
     }
+    else if (self->mode == TRANS_MODE_VSOCK) /* vsock socket */
+    {
+        self->sck = g_sck_vsock_socket();
+        if (self->sck < 0)
+        {
+            return 1;
+        }
+
+        g_tcp_set_non_blocking(self->sck);
+
+        if (g_sck_vsock_bind(self->sck, port) == 0)
+        {
+            if (g_tcp_listen(self->sck) == 0)
+            {
+                self->status = TRANS_STATUS_UP; /* ok */
+                self->type1 = TRANS_TYPE_LISTENER; /* listener */
+                return 0;
+            }
+        }
+    }
 
     return 1;
 }

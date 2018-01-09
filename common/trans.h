@@ -26,6 +26,7 @@
 
 #define TRANS_MODE_TCP 1
 #define TRANS_MODE_UNIX 2
+#define TRANS_MODE_VSOCK 3
 
 #define TRANS_TYPE_LISTENER 1
 #define TRANS_TYPE_SERVER 2
@@ -62,7 +63,7 @@ struct source_info
 struct trans
 {
     tbus sck; /* socket handle */
-    int mode; /* 1 tcp, 2 unix socket */
+    int mode; /* 1 tcp, 2 unix socket, 3 vsock */
     int status;
     int type1; /* 1 listener 2 server 3 client */
     ttrans_data_in trans_data_in;

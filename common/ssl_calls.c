@@ -651,6 +651,15 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
              *     SSL_ERROR_WANT_READ
              *     SSL_ERROR_WANT_WRITE
              */
+            switch (SSL_get_error(self->ssl, connection_status))
+            {
+                case SSL_ERROR_WANT_READ:
+                    g_sck_can_recv(self->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
+                    break;
+                case SSL_ERROR_WANT_WRITE:
+                    g_sck_can_send(self->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
+                    break;
+            }
         }
         else
         {

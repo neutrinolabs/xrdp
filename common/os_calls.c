@@ -41,6 +41,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#if defined(XRDP_ENABLE_VSOCK)
+#include <linux/vm_sockets.h>
+#endif
 #include <sys/un.h>
 #include <sys/time.h>
 #include <sys/times.h>
@@ -576,9 +579,20 @@ int
 g_sck_local_socket(void)
 {
 #if defined(_WIN32)
-    return 0;
+    return -1;
 #else
     return socket(PF_LOCAL, SOCK_STREAM, 0);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_sck_vsock_socket(void)
+{
+#if defined(XRDP_ENABLE_VSOCK)
+    return socket(PF_VSOCK, SOCK_STREAM, 0);
+#else
+    return -1;
 #endif
 }
 
@@ -656,6 +670,9 @@ g_sck_close(int sck)
 #if defined(XRDP_ENABLE_IPV6)
         struct sockaddr_in6 sock_addr_in6;
 #endif
+#if defined(XRDP_ENABLE_VSOCK)
+        struct sockaddr_vm sock_addr_vm;
+#endif
     } sock_info;
     socklen_t sock_len = sizeof(sock_info);
 
@@ -694,6 +711,22 @@ g_sck_close(int sck)
             case AF_UNIX:
                 g_snprintf(sockname, sizeof(sockname), "AF_UNIX");
                 break;
+
+#if defined(XRDP_ENABLE_VSOCK)
+
+            case AF_VSOCK:
+            {
+                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
+
+                g_snprintf(sockname,
+                           sizeof(sockname),
+                           "AF_VSOCK cid %d port %d",
+                           sock_addr_vm->svm_cid,
+                           sock_addr_vm->svm_port);
+                break;
+            }
+
+#endif
 
             default:
                 g_snprintf(sockname, sizeof(sockname), "unknown family %d",
@@ -990,6 +1023,24 @@ g_sck_local_bind(int sck, const char *port)
 #endif
 }
 
+/*****************************************************************************/
+int
+g_sck_vsock_bind(int sck, const char *port)
+{
+#if defined(XRDP_ENABLE_VSOCK)
+    struct sockaddr_vm s;
+
+    g_memset(&s, 0, sizeof(struct sockaddr_vm));
+    s.svm_family = AF_VSOCK;
+    s.svm_port = atoi(port);
+    s.svm_cid = VMADDR_CID_ANY;
+
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_vm));
+#else
+    return -1;
+#endif
+}
+
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* Helper function for g_tcp_bind_address.                                   */
@@ -1180,9 +1231,9 @@ g_tcp_accept(int sck)
             {
                 struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
 
-                snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                         inet_ntoa(sock_addr_in->sin_addr),
-                         ntohs(sock_addr_in->sin_port));
+                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
+                           inet_ntoa(sock_addr_in->sin_addr),
+                           ntohs(sock_addr_in->sin_port));
                 log_message(LOG_LEVEL_INFO, "%s", msg);
 
                 break;
@@ -1197,8 +1248,8 @@ g_tcp_accept(int sck)
 
                 inet_ntop(sock_addr_in6->sin6_family,
                           &sock_addr_in6->sin6_addr, addr, sizeof(addr));
-                snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                         addr, ntohs(sock_addr_in6->sin6_port));
+                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
+                           addr, ntohs(sock_addr_in6->sin6_port));
                 log_message(LOG_LEVEL_INFO, "%s", msg);
 
                 break;
@@ -1226,6 +1277,9 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
         struct sockaddr_in6 sock_addr_in6;
 #endif
         struct sockaddr_un sock_addr_un;
+#if defined(XRDP_ENABLE_VSOCK)
+        struct sockaddr_vm sock_addr_vm;
+#endif
     } sock_info;
 
     socklen_t sock_len = sizeof(sock_info);
@@ -1273,6 +1327,26 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
                 g_snprintf(msg, sizeof(msg), "AF_UNIX connection received");
                 break;
             }
+
+#if defined(XRDP_ENABLE_VSOCK)
+
+            case AF_VSOCK:
+            {
+                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
+
+                g_snprintf(addr, addr_bytes - 1, "%d", sock_addr_vm->svm_cid);
+                g_snprintf(port, addr_bytes - 1, "%d", sock_addr_vm->svm_port);
+
+                g_snprintf(msg,
+                           sizeof(msg),
+                           "AF_VSOCK connection received from cid: %s port: %s",
+                           addr,
+                           port);
+
+                break;
+            }
+
+#endif
             default:
             {
                 g_strncpy(addr, "", addr_bytes - 1);
@@ -1358,13 +1432,13 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 
         if (ok)
         {
-            snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
+            g_snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
         }
     }
 
     if (!ok)
     {
-        snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
+        g_snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
     }
 
     g_free(addr);

@@ -2,7 +2,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-*Current Version:* 0.9.4
+*Current Version:* 0.9.5
 
 # xrdp - an open source RDP server
 
@@ -29,7 +29,7 @@ RDP transport is encrypted using TLS by default.
 
 ### Access to Remote Resources
  * two-way clipboard transfer (text, bitmap, file)
- * audio redirection
+ * audio redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
  * drive redirection (mount local client drives on remote machine)
 
 ## Quick Start
@@ -113,6 +113,11 @@ Then run following commands to compile and install xrdp:
 make
 sudo make install
 ```
+
+If you want to use audio redirection, you need to build and install additional
+pulseaudio modules. The build instructions can be found at wiki.
+
+* [How to set up audio redirection](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection)
 
 ## Directory Structure
 

@@ -94,6 +94,7 @@ internal_log_xrdp2syslog(const enum logLevels lvl)
         case LOG_LEVEL_INFO:
             return LOG_INFO;
         case LOG_LEVEL_DEBUG:
+        case LOG_LEVEL_TRACE:
             return LOG_DEBUG;
         default:
             g_writeln("Undefined log level - programming error");
@@ -127,6 +128,9 @@ internal_log_lvl2str(const enum logLevels lvl, char *str)
             break;
         case LOG_LEVEL_DEBUG:
             snprintf(str, 9, "%s", "[DEBUG] ");
+            break;
+        case LOG_LEVEL_TRACE:
+            snprintf(str, 9, "%s", "[TRACE] ");
             break;
         default:
             snprintf(str, 9, "%s", "PRG ERR!");
@@ -194,9 +198,6 @@ internal_log_end(struct log_config *l_cfg)
         return ret;
     }
 
-    /* closing log file */
-    log_message(LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
-
     if (-1 != l_cfg->fd)
     {
         /* closing logfile... */
@@ -253,6 +254,11 @@ internal_log_text2level(const char *buf)
              0 == g_strcasecmp(buf, "debug"))
     {
         return LOG_LEVEL_DEBUG;
+    }
+    else if (0 == g_strcasecmp(buf, "5") ||
+             0 == g_strcasecmp(buf, "trace"))
+    {
+        return LOG_LEVEL_TRACE;
     }
 
     g_writeln("Your configured log level is corrupt - we use debug log level");
