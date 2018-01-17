@@ -172,12 +172,12 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     if (self->process_enc == process_enc_jpg)
     {
     }
+#ifdef XRDP_RFXCODEC
     else if (self->process_enc == process_enc_rfx)
     {
-#ifdef XRDP_RFXCODEC
         rfxcodec_encode_destroy(self->codec_handle);
-#endif
     }
+#endif
 
     /* destroy wait objects used for signalling */
     g_delete_wait_obj(self->xrdp_encoder_event_to_proc);
