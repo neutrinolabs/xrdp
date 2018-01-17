@@ -144,6 +144,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
         if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
         {
             log_message(LOG_LEVEL_WARNING, "[v1c_mng:%d] connection aborted: network error", __LINE__);
+            g_free(ds);
             return SCP_CLIENT_STATE_NETWORK_ERR;
         }
 
@@ -152,6 +153,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
         if (version != 1)
         {
             log_message(LOG_LEVEL_WARNING, "[v1c_mng:%d] connection aborted: version error", __LINE__);
+            g_free(ds);
             return SCP_CLIENT_STATE_VERSION_ERR;
         }
 
@@ -160,6 +162,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
         if (size < 12)
         {
             log_message(LOG_LEVEL_WARNING, "[v1c_mng:%d] connection aborted: size error", __LINE__);
+            g_free(ds);
             return SCP_CLIENT_STATE_SIZE_ERR;
         }
 
@@ -168,6 +171,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
         if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
         {
             log_message(LOG_LEVEL_WARNING, "[v1c_mng:%d] connection aborted: network error", __LINE__);
+            g_free(ds);
             return SCP_CLIENT_STATE_NETWORK_ERR;
         }
 
@@ -176,6 +180,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
         if (cmd != SCP_COMMAND_SET_MANAGE)
         {
             log_message(LOG_LEVEL_WARNING, "[v1c_mng:%d] connection aborted: sequence error", __LINE__);
+            g_free(ds);
             return SCP_CLIENT_STATE_SEQUENCE_ERR;
         }
 
@@ -184,6 +189,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
         if (cmd != SCP_CMD_MNG_LIST) /* session list */
         {
             log_message(LOG_LEVEL_WARNING, "[v1c_mng:%d] connection aborted: sequence error", __LINE__);
+            g_free(ds);
             return SCP_CLIENT_STATE_SEQUENCE_ERR;
         }
 
