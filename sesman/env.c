@@ -102,6 +102,7 @@ env_set_user(const char *username, char **passwd_file, int display,
     char *pw_shell;
     char *pw_dir;
     char text[256];
+    char hostname[256];
 
     pw_shell = 0;
     pw_dir = 0;
@@ -152,13 +153,14 @@ env_set_user(const char *username, char **passwd_file, int display,
                     g_setenv(name, value, 1);
                 }
             }
-
+            g_gethostname(hostname, 255);
+            hostname[255] = 0;
             if (passwd_file != 0)
             {
                 if (0 == g_cfg->auth_file_path)
                 {
                     /* if no auth_file_path is set, then we go for
-                     $HOME/.vnc/sesman_username_passwd:DISPLAY */
+                     $HOME/.vnc/sesman_USERNAME_passwd:DISPLAY:HOSTNAME */
                     if (!g_directory_exist(".vnc"))
                     {
                         if (g_mkdir(".vnc") < 0)
@@ -169,13 +171,21 @@ env_set_user(const char *username, char **passwd_file, int display,
                         }
                     }
 
-                    len = g_snprintf(NULL, 0, "%s/.vnc/sesman_%s_passwd:%d",
-                                     pw_dir, username, display);
+                    len = g_snprintf(NULL, 0, "%s/.vnc/sesman_%s_passwd:%d:%s",
+                                     pw_dir, username, display, hostname);
 
                     *passwd_file = (char *) g_malloc(len + 1, 1);
                     if (*passwd_file != NULL)
                     {
-                        /* Try legacy name first, remove if found */
+                        /* Try legacy names first, remove if found */
+                        g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd:%d",
+                                  pw_dir, username, display);
+                        if (g_file_exist(*passwd_file))
+                        {
+                            log_message(LOG_LEVEL_WARNING, "Removing old "
+                                        "password file %s", *passwd_file);
+                            g_file_delete(*passwd_file);
+                        }
                         g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd",
                                   pw_dir, username);
                         if (g_file_exist(*passwd_file))
@@ -184,9 +194,8 @@ env_set_user(const char *username, char **passwd_file, int display,
                                         "password file %s", *passwd_file);
                             g_file_delete(*passwd_file);
                         }
-
-                        g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd:%d",
-                                  pw_dir, username, display);
+                        g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd:%d:%s",
+                                  pw_dir, username, display, hostname);
                     }
                 }
                 else
