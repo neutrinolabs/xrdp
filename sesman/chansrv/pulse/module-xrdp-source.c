@@ -55,7 +55,7 @@ typedef bool pa_bool_t;
 #endif
 
 #include "module-xrdp-source-symdef.h"
-#include "../../../common/xrdp_sockets.h"
+#include "xrdp_sockets.h"
 
 PA_MODULE_AUTHOR("Laxmikant Rashinkar");
 PA_MODULE_DESCRIPTION("xrdp source");
