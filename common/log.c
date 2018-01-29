@@ -270,7 +270,6 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
 {
     int fd;
     enum logReturns ret = LOG_GENERAL_ERROR;
-    struct list *sec;
     struct list *param_n;
     struct list *param_v;
 
@@ -299,9 +298,6 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
         return ret;
     }
 
-    sec = list_create();
-    sec->auto_free = 1;
-    file_read_sections(fd, sec);
     param_n = list_create();
     param_n->auto_free = 1;
     param_v = list_create();
@@ -311,14 +307,7 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
     ret = internal_config_read_logging(fd, g_staticLogConfig, param_n,
                                        param_v, applicationName);
 
-    if (ret != LOG_STARTUP_OK)
-    {
-        g_file_close(fd);
-        return ret;
-    }
-
     /* cleanup */
-    list_delete(sec);
     list_delete(param_v);
     list_delete(param_n);
     g_file_close(fd);
