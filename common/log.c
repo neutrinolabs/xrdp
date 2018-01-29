@@ -331,7 +331,7 @@ internal_config_read_logging(int file, struct log_config *lc,
     /* setting defaults */
     lc->program_name = applicationName;
     lc->log_file = 0;
-    lc->fd = 0;
+    lc->fd = -1;
     lc->log_level = LOG_LEVEL_DEBUG;
     lc->enable_syslog = 0;
     lc->syslog_level = LOG_LEVEL_DEBUG;
@@ -604,7 +604,7 @@ log_message(const enum logLevels lvl, const char *msg, ...)
         pthread_mutex_lock(&(g_staticLogConfig->log_lock));
 #endif
 
-        if (g_staticLogConfig->fd > 0)
+        if (g_staticLogConfig->fd >= 0)
         {
             writereply = g_file_write(g_staticLogConfig->fd, buff, g_strlen(buff));
 
