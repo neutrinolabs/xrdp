@@ -78,6 +78,10 @@ SUBDIRS += \
   pulse
 endif
 
+if MACOS
+SUBDIRS += pam.d
+endif
+
 #
 # install-data-hook for each platform
 # TODO: subst these directories as well as service files
