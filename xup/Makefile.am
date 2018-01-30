@@ -19,4 +19,6 @@ libxup_la_SOURCES = \
 libxup_la_LIBADD = \
   $(top_builddir)/common/libcommon.la
 
+if !MACOS
 libxup_la_LDFLAGS = -avoid-version -module
+endif

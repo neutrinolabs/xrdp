@@ -40,12 +40,16 @@ case $host_os in
 	*openbsd*)
 		openbsd=yes
 		;;
+	*darwin*)
+		macos=yes
+		;;
 esac
 
 AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
 AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
 AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
+AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
 
 AC_ARG_WITH([socketdir],
   [AS_HELP_STRING([--with-socketdir=DIR],
