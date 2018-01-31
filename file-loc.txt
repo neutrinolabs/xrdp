@@ -30,7 +30,8 @@ default build will install the following
   startwm.sh
   xrdp.ini
   xrdp_keyboard.ini
-  xrdp.sh
+  xrdp.sh (non Mac OS)
+  xrdp.command (Mac OS)
 
 /etc/xrdp/pulse
   default.pa

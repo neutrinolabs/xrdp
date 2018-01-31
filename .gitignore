@@ -17,6 +17,7 @@ depcomp
 genkeymap/xrdp-genkeymap
 install-sh
 instfiles/pam.d/xrdp-sesman
+instfiles/xrdp.command
 keygen/xrdp-keygen
 *.la
 .libs
