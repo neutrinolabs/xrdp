@@ -1,6 +1,7 @@
 EXTRA_DIST = \
    keymap-names.txt \
    xrdp.sh \
+   xrdp.command.in \
    xrdp-sesman.service.in \
    xrdp.service.in
 
@@ -76,6 +77,10 @@ SUBDIRS += \
   pam.d \
   rc.d \
   pulse
+endif
+
+if MACOS
+dist_startscript_SCRIPTS = xrdp.command
 endif
 
 #
