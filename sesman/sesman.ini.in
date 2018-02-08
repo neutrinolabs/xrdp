@@ -99,4 +99,4 @@ param=96
 FuseMountName=thinclient_drives
 
 [SessionVariables]
-PULSE_SCRIPT=/etc/xrdp/pulse/default.pa
+PULSE_SCRIPT=@sesmansysconfdir@/pulse/default.pa
