@@ -155,7 +155,7 @@ tcutils=true
 ; in sesman.ini. See and configure also sesman.ini.
 [Xorg]
 name=Xorg
-lib=libxup.so
+lib=libxup.@lib_extension@
 username=ask
 password=ask
 ip=127.0.0.1
@@ -164,7 +164,7 @@ code=20
 
 [X11rdp]
 name=X11rdp
-lib=libxup.so
+lib=libxup.@lib_extension@
 username=ask
 password=ask
 ip=127.0.0.1
@@ -174,7 +174,7 @@ code=10
 
 [Xvnc]
 name=Xvnc
-lib=libvnc.so
+lib=libvnc.@lib_extension@
 username=ask
 password=ask
 ip=127.0.0.1
@@ -184,7 +184,7 @@ port=-1
 
 [console]
 name=console
-lib=libvnc.so
+lib=libvnc.@lib_extension@
 ip=127.0.0.1
 port=5900
 username=na
@@ -193,7 +193,7 @@ password=ask
 
 [vnc-any]
 name=vnc-any
-lib=libvnc.so
+lib=libvnc.@lib_extension@
 ip=ask
 port=ask5900
 username=na
@@ -205,7 +205,7 @@ password=ask
 
 [sesman-any]
 name=sesman-any
-lib=libvnc.so
+lib=libvnc.@lib_extension@
 ip=ask
 port=-1
 username=ask
@@ -214,7 +214,7 @@ password=ask
 
 [neutrinordp-any]
 name=neutrinordp-any
-lib=libxrdpneutrinordp.so
+lib=libxrdpneutrinordp.@lib_extension@
 ip=ask
 port=ask3389
 username=ask
