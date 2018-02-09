@@ -101,16 +101,21 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         case PROTOCOL_HYBRID:
         case PROTOCOL_HYBRID_EX:
         default:
-            if ((self->requestedProtocol & PROTOCOL_SSL) &&
-                g_file_readable(client_info->certificate) &&
-                g_file_readable(client_info->key_file))
+            self->selectedProtocol = PROTOCOL_RDP;
+            if (self->requestedProtocol & PROTOCOL_SSL)
             {
-                /* that's a patch since we don't support CredSSP for now */
-                self->selectedProtocol = PROTOCOL_SSL;
-            }
-            else
-            {
-                self->selectedProtocol = PROTOCOL_RDP;
+                if (g_file_readable(client_info->certificate) &&
+                    g_file_readable(client_info->key_file))
+                {
+                    /* that's a patch since we don't support CredSSP for now */
+                    self->selectedProtocol = PROTOCOL_SSL;
+                }
+                else
+                {
+                    /* certificate or privkey is not readable */
+                    log_message(LOG_LEVEL_DEBUG, "No readable certificates or "
+                                "private keys, use RDP instead of TLS connection");
+                }
             }
             break;
     }
