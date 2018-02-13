@@ -595,6 +595,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
 
     if (g_strlen(tls_ciphers) > 1)
     {
+        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s", tls_ciphers);
         if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
         {
             g_writeln("ssl_tls_accept: invalid cipher options");
