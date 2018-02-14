@@ -304,7 +304,9 @@ session_get_avail_display_from_chain(void)
 
     display = g_cfg->sess.x11_display_offset;
 
-    while ((display - g_cfg->sess.x11_display_offset) <= g_cfg->sess.max_sessions)
+    /* positive max_sessions value limits the max number of sessions */
+    while (g_cfg->sess.max_sessions <= 0 ||
+           (display - g_cfg->sess.x11_display_offset) <= g_cfg->sess.max_sessions)
     {
         if (!session_is_display_in_chain(display))
         {
@@ -422,7 +424,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     passwd_file = 0;
 
     /* check to limit concurrent sessions */
-    if (g_session_count >= g_cfg->sess.max_sessions)
+    if (g_cfg->sess.max_sessions > 0 && g_session_count >= g_cfg->sess.max_sessions)
     {
         log_message(LOG_LEVEL_INFO, "max concurrent session limit "
                     "exceeded. login for user %s denied", s->username);
