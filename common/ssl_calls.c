@@ -32,7 +32,7 @@
 #include <openssl/hmac.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
-# include <openssl/dh.h>
+#include <openssl/dh.h>
 
 #include "os_calls.h"
 #include "arch.h"
@@ -488,13 +488,13 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
 
 /*****************************************************************************/
 /** static DH parameter, can be used if no custom parameter is specified
-see also 
+see also
  * https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_tmp_dh_callback(3)
 */
 DH *get_dh2236()
 {
-    static unsigned char dhp_2236[] = {
+    static unsigned char dh2236_p[] = {
         0x0A, 0x32, 0x29, 0xCA, 0x5A, 0x84, 0x4C, 0xD2, 0x66, 0x61,
         0x29, 0xAD, 0x46, 0xD7, 0xFB, 0x3A, 0x1E, 0x92, 0x8D, 0x3F,
         0xC8, 0x16, 0x41, 0x83, 0x0C, 0xA1, 0x96, 0x29, 0xD9, 0x0B,
@@ -524,16 +524,19 @@ DH *get_dh2236()
         0x82, 0x42, 0x40, 0xD9, 0x30, 0xA3, 0x90, 0x6B, 0x99, 0x1B,
         0x11, 0x3A, 0x36, 0xE9, 0xD8, 0x52, 0x8A, 0x85, 0xDD, 0xB3
     };
-    static unsigned char dhg_2236[] = {
-        0x02
+    static unsigned char dh2236_g[] = {
+        0x02,
     };
     DH *dh = DH_new();
 
     if (dh == NULL)
+    {
         return NULL;
-    dh->p=BN_bin2bn(dhp_2236,sizeof(dhp_2236),NULL);
-    dh->g=BN_bin2bn(dhg_2236,sizeof(dhg_2236),NULL);
-    if (dh->p == NULL || dh->g == NULL) {
+    }
+    dh->p = BN_bin2bn(dh2236_p, sizeof(dh2236_p), NULL);
+    dh->g = BN_bin2bn(dh2236_g, sizeof(dh2236_g), NULL);
+    if ((dh->p == NULL) || (dh->g == NULL))
+    {
         DH_free(dh);
         return NULL;
     }
@@ -647,12 +650,13 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                      SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
-    DH *dh = get_dh2236 ();
-    if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1) {
+    DH *dh = get_dh2236();
+    if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
+    {
         g_writeln("SSL_CTX_set_tmp_dh failed");
         return 1;
     }
-    DH_free (dh);
+    DH_free(dh);
 #if defined(SSL_CTX_set_ecdh_auto)
     SSL_CTX_set_ecdh_auto(self->ctx, 1);
 #endif
