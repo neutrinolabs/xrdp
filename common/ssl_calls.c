@@ -492,6 +492,7 @@ see also
  * https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_tmp_dh_callback(3)
 */
+#if 0 /* temprarily disable DHE until make DH parameters not static */
 DH *get_dh2236()
 {
     static unsigned char dh2236_p[] = {
@@ -538,6 +539,7 @@ DH *get_dh2236()
     }
     return dh;
 }
+#endif
 
 /*****************************************************************************/
 struct ssl_tls *
@@ -646,6 +648,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                      SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
+#if 0 /* temprarily disable DHE until make DH parameters not static */
     DH *dh = get_dh2236();
     if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
     {
@@ -653,6 +656,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
         return 1;
     }
     DH_free(dh);
+#endif
 #if defined(SSL_CTX_set_ecdh_auto)
     SSL_CTX_set_ecdh_auto(self->ctx, 1);
 #endif
