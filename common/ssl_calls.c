@@ -65,6 +65,42 @@ RSA_get0_key(const RSA *key, const BIGNUM **n, const BIGNUM **e,
      *n = key->n;
      *d = key->d;
 }
+
+static inline int
+DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+    /* If the fields p and g in d are NULL, the corresponding input
+     * parameters MUST be non-NULL.  q may remain NULL.
+     */
+    if ((dh->p == NULL && p == NULL)
+        || (dh->g == NULL && g == NULL))
+    {
+        return 0;
+    }
+
+    if (p != NULL) 
+    {
+        BN_free(dh->p);
+        dh->p = p;
+    }
+    if (q != NULL)
+    {
+        BN_free(dh->q);
+        dh->q = q;
+    }
+    if (g != NULL)
+    {
+        BN_free(dh->g);
+        dh->g = g;
+    }
+
+    if (q != NULL)
+    {
+        dh->length = BN_num_bits(q);
+    }
+
+    return 1;
+}
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 
 
@@ -492,8 +528,7 @@ see also
  * https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_tmp_dh_callback(3)
 */
-#if 0 /* temprarily disable DHE until make DH parameters not static */
-DH *get_dh2236()
+static DH *ssl_get_dh2236()
 {
     static unsigned char dh2236_p[] = {
         0x0E, 0xF8, 0x69, 0x0B, 0x35, 0x2F, 0x62, 0x59, 0xF7, 0xAF, 0x4E, 0x19,
@@ -524,22 +559,34 @@ DH *get_dh2236()
     static unsigned char dh2236_g[] = {
         0x02,
     };
-    DH *dh = DH_new();
 
+    DH *dh = DH_new();
     if (dh == NULL)
     {
         return NULL;
     }
-    dh->p = BN_bin2bn(dh2236_p, sizeof(dh2236_p), NULL);
-    dh->g = BN_bin2bn(dh2236_g, sizeof(dh2236_g), NULL);
-    if ((dh->p == NULL) || (dh->g == NULL))
+
+    BIGNUM *p = BN_bin2bn(dh2236_p, sizeof(dh2236_p), NULL);
+    BIGNUM *g = BN_bin2bn(dh2236_g, sizeof(dh2236_g), NULL);
+    if (p == NULL || g == NULL)
     {
+        BN_free(p);
+        BN_free(g);
         DH_free(dh);
         return NULL;
     }
+
+    // p, g are freed later by DH_free()
+    if (0 == DH_set0_pqg(dh, p, NULL, g))
+    {
+        BN_free(p);
+        BN_free(g);
+        DH_free(dh);
+        return NULL;
+    }
+
     return dh;
 }
-#endif
 
 /*****************************************************************************/
 struct ssl_tls *
@@ -654,22 +701,30 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                      SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
-#if 0 /* temprarily disable DHE until make DH parameters not static */
-    DH *dh = get_dh2236();
-    if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
+
+    /* set DH parameters */
+    DH *dh = ssl_get_dh2236();
+    if (dh == NULL)
     {
-        g_writeln("SSL_CTX_set_tmp_dh failed");
+        log_message(LOG_LEVEL_ERROR, "ssl_tls_accept: ssl_get_dh2236 failed");
         return 1;
     }
-    DH_free(dh);
-#endif
+
+    if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "ssl_tls_accept: SSL_CTX_set_tmp_dh failed");
+        return 1;
+    }
+    DH_free(dh); // ok to free, copied into ctx by SSL_CTX_set_tmp_dh()
+
 #if defined(SSL_CTX_set_ecdh_auto)
     SSL_CTX_set_ecdh_auto(self->ctx, 1);
 #endif
 
     if (g_strlen(tls_ciphers) > 1)
     {
-        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s", \
+        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s",
             tls_ciphers);
         if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
         {
