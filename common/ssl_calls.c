@@ -643,6 +643,12 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
     self->ctx = SSL_CTX_new(SSLv23_server_method());
+    if (self->ctx == NULL)
+    {
+        log_message(LOG_LEVEL_ERROR, "ssl_tls_accept: SSL_CTX_new failed");
+        return 1;
+    }
+
     /* set context options */
     SSL_CTX_set_mode(self->ctx,
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
@@ -663,7 +669,8 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
 
     if (g_strlen(tls_ciphers) > 1)
     {
-        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s", tls_ciphers);
+        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s", \
+            tls_ciphers);
         if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
         {
             g_writeln("ssl_tls_accept: invalid cipher options");
@@ -672,12 +679,6 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     }
 
     SSL_CTX_set_read_ahead(self->ctx, 1);
-
-    if (self->ctx == NULL)
-    {
-        g_writeln("ssl_tls_accept: SSL_CTX_new failed");
-        return 1;
-    }
 
     if (SSL_CTX_use_RSAPrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
             <= 0)
