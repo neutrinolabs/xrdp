@@ -986,8 +986,6 @@ dev_redir_proc_query_dir_response(IRP *irp,
         /* add this entry to xrdp file system */
         fuse_data = devredir_fuse_data_peek(irp);
         xfuse_devredir_cb_enum_dir(fuse_data->data_ptr, xinode);
-
-        g_free(xinode);
     }
 
     dev_redir_send_drive_dir_request(irp, DeviceId, 0, NULL);
