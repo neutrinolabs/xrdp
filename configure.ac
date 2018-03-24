@@ -96,7 +96,7 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [], [enable_pamuserpass=no])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$enable_pamuserpass = xyes])
 AC_ARG_ENABLE(pam-config, AS_HELP_STRING([--enable-pam-config=CONF],
-              [Select PAM config to install: arch, debian, redhat, suse, freebsd, unix
+              [Select PAM config to install: arch, debian, redhat, suse, freebsd, macos, unix
                (default: autodetect)]))
 
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
