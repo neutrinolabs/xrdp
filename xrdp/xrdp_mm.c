@@ -1310,7 +1310,7 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
 
-    if (fd > 0)
+    if (fd >= 0)
     {
         names = list_create();
         names->auto_free = 1;
@@ -1343,10 +1343,8 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
 
         list_delete(names);
         list_delete(values);
-    }
-
-    if (fd != -1)
         g_file_close(fd);
+    }
 
     return 0;
 }

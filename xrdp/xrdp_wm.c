@@ -405,7 +405,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
 
-    if (fd > 0)
+    if (fd >= 0)
     {
         names = list_create();
         names->auto_free = 1;

@@ -240,8 +240,16 @@ struct config_sesman
    */
   struct config_sessions sess;
 
-  struct list* session_variables1;
-  struct list* session_variables2;
+  /**
+   * @var env_names
+   * @brief environment variable name list
+   */
+  struct list* env_names;
+   /**
+   * @var env_values
+   * @brief environment variable value list
+   */
+  struct list* env_values;
 };
 
 /**

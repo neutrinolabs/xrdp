@@ -123,7 +123,11 @@ xrdp_shutdown(int sig)
 void
 xrdp_child(int sig)
 {
-    g_waitchild();
+    int safety;
+
+    for (safety = 0; (g_waitchild() >= 0) && (safety <= 10); safety++)
+    {
+    }
 }
 
 /*****************************************************************************/

@@ -2,7 +2,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-*Current Version:* 0.9.5
+*Current Version:* 0.9.6
 
 # xrdp - an open source RDP server
 
@@ -40,9 +40,12 @@ experience. It is recommended that xrdp depends on xorgxrdp, so it should
 be sufficient to install xrdp. If xorgxrdp is not provided, use Xvnc
 server.
 
+xrdp listens on 3389/tcp. Make sure your firewall accepts connection to
+3389/tcp from where you want to access.
+
 ### Ubuntu / Debian
 ```bash
-apt-get install xrdp
+apt install xrdp
 ```
 
 ### RedHat / CentOS / Fedora
@@ -62,13 +65,6 @@ yum install xrdp
 `yum` is being replaced with `dnf`, so you may need to use `dnf` instead
 of `yum` in the above commands.
 
-To allow outside access to the service, open port 3389 on the firewall.
-
-```
-firewall-cmd --permanent --zone=public --add-port=3389/tcp
-firewall-cmd --reload
-```
-
 ## Environment
 
 **xrdp** primarily targets to GNU/Linux. Tested on x86, x86_64, SPARC and
@@ -80,7 +76,7 @@ SIMD instructions.
 FreeBSD is not a primary target of xrdp. It is working on FreeBSD except
 for the drive redirection feature.
 
-Other operating systems such as Mac OS are not supported so far, but we
+Other operating systems such as macOS are not supported so far, but we
 welcome your contributions.
 
 ## Compiling

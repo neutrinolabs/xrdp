@@ -169,6 +169,16 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
 
     /* todo delete specific encoder */
 
+    if (self->process_enc == process_enc_jpg)
+    {
+    }
+#ifdef XRDP_RFXCODEC
+    else if (self->process_enc == process_enc_rfx)
+    {
+        rfxcodec_encode_destroy(self->codec_handle);
+    }
+#endif
+
     /* destroy wait objects used for signalling */
     g_delete_wait_obj(self->xrdp_encoder_event_to_proc);
     g_delete_wait_obj(self->xrdp_encoder_event_processed);
@@ -208,6 +218,7 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
         }
         fifo_delete(fifo);
     }
+    tc_mutex_delete(self->mutex);
     g_free(self);
 }
 

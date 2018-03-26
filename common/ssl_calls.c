@@ -32,6 +32,7 @@
 #include <openssl/hmac.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
+#include <openssl/dh.h>
 
 #include "os_calls.h"
 #include "arch.h"
@@ -63,6 +64,42 @@ RSA_get0_key(const RSA *key, const BIGNUM **n, const BIGNUM **e,
 {
      *n = key->n;
      *d = key->d;
+}
+
+static inline int
+DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+    /* If the fields p and g in d are NULL, the corresponding input
+     * parameters MUST be non-NULL.  q may remain NULL.
+     */
+    if ((dh->p == NULL && p == NULL)
+        || (dh->g == NULL && g == NULL))
+    {
+        return 0;
+    }
+
+    if (p != NULL) 
+    {
+        BN_free(dh->p);
+        dh->p = p;
+    }
+    if (q != NULL)
+    {
+        BN_free(dh->q);
+        dh->q = q;
+    }
+    if (g != NULL)
+    {
+        BN_free(dh->g);
+        dh->g = g;
+    }
+
+    if (q != NULL)
+    {
+        dh->length = BN_num_bits(q);
+    }
+
+    return 1;
 }
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 
@@ -486,6 +523,72 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
 }
 
 /*****************************************************************************/
+/** static DH parameter, can be used if no custom parameter is specified
+see also
+ * https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
+ * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_tmp_dh_callback(3)
+*/
+static DH *ssl_get_dh2236()
+{
+    static unsigned char dh2236_p[] = {
+        0x0E, 0xF8, 0x69, 0x0B, 0x35, 0x2F, 0x62, 0x59, 0xF7, 0xAF, 0x4E, 0x19,
+        0xB5, 0x9B, 0xD2, 0xEB, 0x33, 0x78, 0x1D, 0x43, 0x1D, 0xB6, 0xE4, 0xA3,
+        0x63, 0x47, 0x6A, 0xD4, 0xA8, 0x28, 0x11, 0x8C, 0x3F, 0xC8, 0xF1, 0x32,
+        0x2B, 0x5D, 0x9F, 0xF8, 0xA6, 0xCA, 0x21, 0x71, 0xDE, 0x30, 0xD7, 0xB5,
+        0xD6, 0xA4, 0xC2, 0xEE, 0xC0, 0x49, 0x30, 0xE7, 0x8C, 0x9B, 0x1A, 0x5A,
+        0x08, 0x2A, 0x11, 0x84, 0xE2, 0xC8, 0x36, 0x6C, 0xDC, 0x06, 0x79, 0x59,
+        0x51, 0xA4, 0xA0, 0x8F, 0xE1, 0x20, 0x94, 0x80, 0xAC, 0x6D, 0xFD, 0x3B,
+        0xA6, 0xA6, 0x70, 0x51, 0x93, 0x59, 0x28, 0x51, 0x54, 0xA3, 0xC5, 0x15,
+        0x44, 0x2C, 0x12, 0xE7, 0x95, 0x62, 0x0E, 0x65, 0x2F, 0x8C, 0x0D, 0xF8,
+        0x63, 0x52, 0x00, 0x2A, 0xA5, 0xD7, 0x59, 0xEF, 0x13, 0x18, 0x33, 0x25,
+        0xBC, 0xAD, 0xC8, 0x0A, 0x72, 0x8D, 0x26, 0x63, 0xD5, 0xB3, 0xBC, 0x43,
+        0x35, 0x0B, 0x5D, 0xC7, 0xCA, 0x45, 0x17, 0x06, 0x24, 0x71, 0xCA, 0x20,
+        0x73, 0xE8, 0x18, 0xD3, 0x8E, 0xE9, 0xE9, 0x8F, 0x67, 0xC0, 0x2C, 0x14,
+        0x7E, 0x41, 0x18, 0x6C, 0x74, 0x72, 0x56, 0x34, 0xC0, 0xDB, 0xDD, 0x85,
+        0x8B, 0xE0, 0x99, 0xE8, 0x5E, 0xC8, 0xF7, 0xD1, 0x0C, 0xF8, 0x83, 0x34,
+        0x37, 0x9E, 0x01, 0xDF, 0x1C, 0xD9, 0xE9, 0x95, 0xC1, 0x4C, 0x64, 0x37,
+        0x9B, 0xF5, 0x8F, 0x99, 0x97, 0x55, 0x68, 0x2E, 0x23, 0xB0, 0x35, 0xF3,
+        0xA5, 0x97, 0x92, 0xA0, 0x6D, 0xB4, 0xF8, 0xD8, 0x47, 0xCE, 0x3F, 0x0B,
+        0x36, 0x0E, 0xEB, 0x13, 0x15, 0xFD, 0x4F, 0x98, 0x4F, 0x14, 0x26, 0xE2,
+        0xAC, 0xD9, 0x42, 0xC6, 0x43, 0x8A, 0x95, 0x6B, 0x2B, 0x44, 0x38, 0x7F,
+        0x60, 0x97, 0x77, 0xD8, 0x7C, 0x6F, 0x5D, 0x62, 0x7C, 0xE1, 0xC8, 0x83,
+        0x12, 0x8B, 0x5E, 0x5E, 0xC7, 0x5E, 0xD5, 0x60, 0xF3, 0x2F, 0xFC, 0xFE,
+        0x70, 0xAC, 0x58, 0x3A, 0x3C, 0x18, 0x15, 0x54, 0x84, 0xA8, 0xAA, 0x41,
+        0x26, 0x7B, 0xE0, 0xA3,
+    };
+    static unsigned char dh2236_g[] = {
+        0x02,
+    };
+
+    DH *dh = DH_new();
+    if (dh == NULL)
+    {
+        return NULL;
+    }
+
+    BIGNUM *p = BN_bin2bn(dh2236_p, sizeof(dh2236_p), NULL);
+    BIGNUM *g = BN_bin2bn(dh2236_g, sizeof(dh2236_g), NULL);
+    if (p == NULL || g == NULL)
+    {
+        BN_free(p);
+        BN_free(g);
+        DH_free(dh);
+        return NULL;
+    }
+
+    // p, g are freed later by DH_free()
+    if (0 == DH_set0_pqg(dh, p, NULL, g))
+    {
+        BN_free(p);
+        BN_free(g);
+        DH_free(dh);
+        return NULL;
+    }
+
+    return dh;
+}
+
+/*****************************************************************************/
 struct ssl_tls *
 ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 {
@@ -587,14 +690,42 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
     self->ctx = SSL_CTX_new(SSLv23_server_method());
+    if (self->ctx == NULL)
+    {
+        log_message(LOG_LEVEL_ERROR, "ssl_tls_accept: SSL_CTX_new failed");
+        return 1;
+    }
+
     /* set context options */
     SSL_CTX_set_mode(self->ctx,
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                      SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
 
+    /* set DH parameters */
+    DH *dh = ssl_get_dh2236();
+    if (dh == NULL)
+    {
+        log_message(LOG_LEVEL_ERROR, "ssl_tls_accept: ssl_get_dh2236 failed");
+        return 1;
+    }
+
+    if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "ssl_tls_accept: SSL_CTX_set_tmp_dh failed");
+        return 1;
+    }
+    DH_free(dh); // ok to free, copied into ctx by SSL_CTX_set_tmp_dh()
+
+#if defined(SSL_CTX_set_ecdh_auto)
+    SSL_CTX_set_ecdh_auto(self->ctx, 1);
+#endif
+
     if (g_strlen(tls_ciphers) > 1)
     {
+        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s",
+            tls_ciphers);
         if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
         {
             g_writeln("ssl_tls_accept: invalid cipher options");
@@ -603,12 +734,6 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     }
 
     SSL_CTX_set_read_ahead(self->ctx, 1);
-
-    if (self->ctx == NULL)
-    {
-        g_writeln("ssl_tls_accept: SSL_CTX_new failed");
-        return 1;
-    }
 
     if (SSL_CTX_use_RSAPrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
             <= 0)

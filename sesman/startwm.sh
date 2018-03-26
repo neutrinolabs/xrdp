@@ -1,4 +1,11 @@
-#!/bin/sh
+#!/usr/bin/env bash
+#
+# This script is an example. You might need to edit this script
+# depending on your distro if it doesn't work for you.
+#
+# Uncomment the following line for debug:
+# exec xterm
+
 
 # Execution sequence for interactive login shell - pseudocode
 #

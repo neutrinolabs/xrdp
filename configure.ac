@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.65)
-AC_INIT([xrdp], [0.9.5], [xrdp-devel@googlegroups.com])
+AC_INIT([xrdp], [0.9.6], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
@@ -40,12 +40,16 @@ case $host_os in
 	*openbsd*)
 		openbsd=yes
 		;;
+	*darwin*)
+		macos=yes
+		;;
 esac
 
 AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
 AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
 AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
+AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
 
 AC_ARG_WITH([socketdir],
   [AS_HELP_STRING([--with-socketdir=DIR],

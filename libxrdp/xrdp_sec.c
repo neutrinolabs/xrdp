@@ -265,7 +265,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
 
     fd = g_file_open(keyboard_cfg_file);
 
-    if (fd > 0)
+    if (fd >= 0)
     {
         int section_found = -1;
         char section_rdp_layouts[256] = { 0 };

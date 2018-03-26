@@ -1,3 +1,40 @@
+# Release notes for xrdp v0.9.6 (2018/03/26)
+
+## Compatibility notice
+Exclamation mark (`!`) has been removed from comment out symbol of config files.
+Use number sign (`#`) or semicolon (`;`) instead. As a result of this change, now
+you can use exclamation mark as config value such as in `tls_ciphers`.
+
+```
+tls_ciphers=HIGH:!aNULL:!eNULL:!EXPORT:!RC4
+```
+
+See also: #1033
+
+## macOS supports
+Please note that xrdp still doesn't support macOS officially so far.
+However, a volunteer is working on macOS compatibility.
+
+* Generate dylibs for macOS #1015
+* Add PAM support for macOS #1021
+
+## Bug fixes
+* Make listen check before daemon fork #988
+* Fix xrdp sometimes become zombie processes #1000
+* Include hostname in sesman password file name #1006 #1007 #1076
+* Fix default startwm.sh to use bash explicitly #1009 #1049
+* Fix the issue FreeBSD doesn't acknowledge terminated sessions #1016 #1030
+
+## Other changes
+* Add Swiss French keyboard #1053
+* Improve perfect forward secrecy, explicitly enable ECDHE/DHE #1024 #1052 #1063
+* Lots of leak fixes, cleanups and refactoring
+
+## Known issues
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
+
 # Release notes for xrdp v0.9.5 (2017/12/27)
 
 ## Security fixes

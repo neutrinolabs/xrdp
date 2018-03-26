@@ -30,6 +30,11 @@ guess_rules ()
     return
   fi
 
+  if test -s "$pamdir/authorization"; then
+    rules="macos"
+    return
+  fi
+
   rules="unix"
   return
 }

@@ -270,7 +270,6 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
 {
     int fd;
     enum logReturns ret = LOG_GENERAL_ERROR;
-    struct list *sec;
     struct list *param_n;
     struct list *param_v;
 
@@ -299,9 +298,6 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
         return ret;
     }
 
-    sec = list_create();
-    sec->auto_free = 1;
-    file_read_sections(fd, sec);
     param_n = list_create();
     param_n->auto_free = 1;
     param_v = list_create();
@@ -311,14 +307,7 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
     ret = internal_config_read_logging(fd, g_staticLogConfig, param_n,
                                        param_v, applicationName);
 
-    if (ret != LOG_STARTUP_OK)
-    {
-        g_file_close(fd);
-        return ret;
-    }
-
     /* cleanup */
-    list_delete(sec);
     list_delete(param_v);
     list_delete(param_n);
     g_file_close(fd);
@@ -342,7 +331,7 @@ internal_config_read_logging(int file, struct log_config *lc,
     /* setting defaults */
     lc->program_name = applicationName;
     lc->log_file = 0;
-    lc->fd = 0;
+    lc->fd = -1;
     lc->log_level = LOG_LEVEL_DEBUG;
     lc->enable_syslog = 0;
     lc->syslog_level = LOG_LEVEL_DEBUG;
@@ -615,7 +604,7 @@ log_message(const enum logLevels lvl, const char *msg, ...)
         pthread_mutex_lock(&(g_staticLogConfig->log_lock));
 #endif
 
-        if (g_staticLogConfig->fd > 0)
+        if (g_staticLogConfig->fd >= 0)
         {
             writereply = g_file_write(g_staticLogConfig->fd, buff, g_strlen(buff));
 
