@@ -41,49 +41,81 @@
 #include "string_calls.h"
 #include "sessionrecord.h"
 
+#ifdef HAVE_UTMPX_H
+#include <utmpx.h>
+typedef struct utmpx _utmp;
+#else
+#include <utmpx.h>
+typedef struct utmp _utmp;
+#endif
+
+
+#define XRDP_LINE_FORMAT "xrdp:%d"
+
 /*
- * Prepare the utmp/ struct and write it.
+ * update the wtmp file on UTMPX platforms (~ Linux)
+ * but no on FreeBSD : FreeBSD uses utx to do the job
+ */
+#ifdef HAVE_UTMPX_H
+#if !defined(__FreeBSD__)
+static inline void
+_updwtmp(const _utmp *ut)
+{
+    updwtmpx(_PATH_WTMP, ut);
+}
+#else
+static inline void
+_updwtmp(const _utmp ut)
+{
+}
+#endif
+#elif defined(HAVE_UTMP_H)
+/* Does such system still exist ? */
+_updwtmp(const _utmp *ut)
+{
+    log_message(LOG_LEVEL_DEBUG,
+            "Unsupported system: HAVE_UTMP_H defined without HAVE_UTMPX_H");
+    updwtmp("/var/log/wtmp", ut);
+}
+#endif
+
+
+/*
+ * Prepare the utmp struct and write it.
  * this can handle login and logout at once with the 'state' parameter
  */
 
-int
-add_xtmp_entry(int pid, const char *line, const char *user, const char *rhostname, short state)
+void
+add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rhostname, const short state)
 {
     _utmp ut;
     struct timeval tv;
 
     g_memset(&ut, 0, sizeof(ut));
 
-    ut.ut_type=state;
+    ut.ut_type = state;
     ut.ut_pid = pid;
     gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
     ut.ut_tv.tv_usec = tv.tv_usec;
-    g_strncpy(ut.ut_line, line , sizeof(ut.ut_line));
+    g_strncpy(ut.ut_line, display_id, sizeof(ut.ut_line));
     g_strncpy(ut.ut_user, user , sizeof(ut.ut_user));
     g_strncpy(ut.ut_host, rhostname, sizeof(ut.ut_host));
 
-    /* utmp */
+    /* update the utmp file */
+    /* open utmp */
     setutxent();
+    /* add the computed entry */
     pututxline(&ut);
+    /* closes utmp */
     endutxent();
 
-    /* wtmp : update on linux, FreeBSD uses utx */
-#ifdef HAVE_UTMPX_H
-#if !defined(__FreeBSD__)
-    updwtmpx(_PATH_WTMP, &ut);
-#endif
-#elif defined(HAVE_UTMP_H)
-    /* Does such system still exist ? */
-    log_message(LOG_LEVEL_DEBUG, "HAVE_UTMP_H");
-    updwtmp("/var/log/wtmp", &ut);
-#endif
-    g_free(hostname);
+    /* update the wtmp file if needed */
 
-    return 0;
+    _updwtmp(&ut);
 }
 
-int
+void
 utmp_login(int pid, int display, const char *user, const char *rhostname)
 {
     char str_display[16];
@@ -93,10 +125,10 @@ utmp_login(int pid, int display, const char *user, const char *rhostname)
                 pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
 
-    return add_xtmp_entry(pid, str_display, user, rhostname, USER_PROCESS);
+    add_xtmp_entry(pid, str_display, user, rhostname, USER_PROCESS);
 }
 
-int
+void
 utmp_logout(int pid, int display, const char *user, const char *rhostname)
 {
     char str_display[16];
@@ -106,5 +138,5 @@ utmp_logout(int pid, int display, const char *user, const char *rhostname)
                 pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
 
-    return add_xtmp_entry(pid, str_display, user, rhostname, DEAD_PROCESS);
+    add_xtmp_entry(pid, str_display, user, rhostname, DEAD_PROCESS);
 }
