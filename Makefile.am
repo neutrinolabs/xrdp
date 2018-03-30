@@ -64,7 +64,8 @@ SUBDIRS = \
   genkeymap \
   xrdpapi \
   pkgconfig \
-  $(XRDPVRDIR)
+  $(XRDPVRDIR) \
+  tests
 
 distclean-local:
 	-rm -f xrdp_configure_options.h
