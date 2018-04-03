@@ -1,3 +1,9 @@
+TESTS = \
+  test.sh
+
+EXTRA_DIST= \
+  test.sh
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
