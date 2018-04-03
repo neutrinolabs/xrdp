@@ -70,7 +70,7 @@
 #define log_error(_params...)                           \
 do                                                      \
 {                                                       \
-    g_write("[%10.10u]: SMART_CARD %s: %d : ERROR: ",   \
+    g_write("[%10.10lld]: SMART_CARD %s: %d : ERROR: ", \
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 } while (0)
@@ -80,7 +80,7 @@ do                                                      \
 {                                                       \
     if (LOG_INFO <= LOG_LEVEL)                          \
     {                                                   \
-        g_write("[%10.10u]: SMART_CARD %s: %d : ",      \
+        g_write("[%10.10lld]: SMART_CARD %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \
@@ -92,7 +92,7 @@ do                                                      \
     if (LOG_DEBUG <= LOG_LEVEL)                         \
     if (2 <= 1)                         \
     {                                                   \
-        g_write("[%10.10u]: SMART_CARD %s: %d : ",      \
+        g_write("[%10.10lld]: SMART_CARD %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \

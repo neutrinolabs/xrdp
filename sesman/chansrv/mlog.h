@@ -42,7 +42,7 @@
 #define log_error(_params...)                                         \
 do                                                                    \
 {                                                                     \
-        g_write("[%10.10u]: %s %s: %d: ERROR: ", g_time3(),           \
+        g_write("[%10.10lld]: %s %s: %d: ERROR: ", g_time3(),         \
                 MODULE_NAME, __func__, __LINE__);                     \
         g_writeln (_params);                                          \
 }                                                                     \
@@ -51,7 +51,7 @@ while(0)
 #define log_always(_params...)                                        \
 do                                                                    \
 {                                                                     \
-        g_write("[%10.10u]: %s %s: %d: ALWAYS: ", g_time3(),          \
+        g_write("[%10.10lld]: %s %s: %d: ALWAYS: ", g_time3(),        \
                 MODULE_NAME, __func__, __LINE__);                     \
         g_writeln (_params);                                          \
 }                                                                     \
@@ -67,7 +67,7 @@ do                                                                    \
 {                                                                     \
     if (LOG_INFO <= LOG_LEVEL)                                        \
     {                                                                 \
-        g_write("[%10.10u]: %s %s: %d: INFO:  ", g_time3(),           \
+        g_write("[%10.10lld]: %s %s: %d: INFO:  ", g_time3(),         \
                 MODULE_NAME, __func__, __LINE__);                     \
         g_writeln (_params);                                          \
     }                                                                 \
@@ -83,7 +83,7 @@ do                                                                    \
 {                                                                     \
     if (LOG_DEBUG_LOW <= LOG_LEVEL)                                   \
     {                                                                 \
-        g_write("[%10.10u]: %s %s: %d: DEBUG: ", g_time3(),           \
+        g_write("[%10.10lld]: %s %s: %d: DEBUG: ", g_time3(),         \
                 MODULE_NAME, __func__, __LINE__);                     \
         g_writeln (_params);                                          \
     }                                                                 \
@@ -99,7 +99,7 @@ do                                                                    \
 {                                                                     \
     if (LOG_DEBUG_HIGH <= LOG_LEVEL)                                  \
     {                                                                 \
-        g_write("[%10.10u]: %s %s: %d: DEBUG: ", g_time3(),           \
+        g_write("[%10.10lld]: %s %s: %d: DEBUG: ", g_time3(),         \
                 MODULE_NAME, __func__, __LINE__);                     \
         g_writeln (_params);                                          \
     }                                                                 \

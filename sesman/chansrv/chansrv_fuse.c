@@ -132,14 +132,14 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 
 #define log_error(_params...)                           \
 {                                                       \
-    g_write("[%10.10u]: FUSE       %s: %d : ERROR: ",   \
+    g_write("[%10.10lld]: FUSE       %s: %d : ERROR: ", \
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
 
 #define log_always(_params...)                          \
 {                                                       \
-    g_write("[%10.10u]: FUSE       %s: %d : ALWAYS: ",  \
+    g_write("[%10.10lld]: FUSE       %s: %d : ALWAYS: ",\
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
@@ -148,7 +148,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 {                                                       \
     if (LOG_INFO <= LOG_LEVEL)                          \
     {                                                   \
-        g_write("[%10.10u]: FUSE       %s: %d : ",      \
+        g_write("[%10.10lld]: FUSE       %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \
@@ -158,7 +158,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 {                                                       \
     if (LOG_DEBUG <= LOG_LEVEL)                         \
     {                                                   \
-        g_write("[%10.10u]: FUSE       %s: %d : ",      \
+        g_write("[%10.10lld]: FUSE       %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \

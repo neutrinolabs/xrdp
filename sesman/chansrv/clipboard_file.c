@@ -49,14 +49,14 @@
 
 #define log_error(_params...)                           \
 {                                                       \
-    g_write("[%10.10u]: CLIPFILE   %s: %d : ERROR: ",   \
+    g_write("[%10.10lld]: CLIPFILE   %s: %d : ERROR: ", \
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
 
 #define log_always(_params...)                          \
 {                                                       \
-    g_write("[%10.10u]: CLIPFILE   %s: %d : ALWAYS: ",  \
+    g_write("[%10.10lld]: CLIPFILE   %s: %d : ALWAYS: ",\
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
@@ -65,7 +65,7 @@
 {                                                       \
     if (LOG_INFO <= LOG_LVL)                            \
     {                                                   \
-        g_write("[%10.10u]: CLIPFILE   %s: %d : ",      \
+        g_write("[%10.10lld]: CLIPFILE   %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \
@@ -75,7 +75,7 @@
 {                                                       \
     if (LOG_DEBUG <= LOG_LVL)                           \
     {                                                   \
-        g_write("[%10.10u]: CLIPFILE   %s: %d : ",      \
+        g_write("[%10.10lld]: CLIPFILE   %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \

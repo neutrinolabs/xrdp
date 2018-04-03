@@ -49,7 +49,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-      g_write("chansrv:smartcard_pcsc [%10.10u]: ", g_time3()); \
+      g_write("chansrv:smartcard_pcsc [%10.10lld]: ", g_time3()); \
       g_writeln _args ; \
     } \
   } \
