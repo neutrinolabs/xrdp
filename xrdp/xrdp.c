@@ -397,7 +397,7 @@ main(int argc, char **argv)
         g_writeln("xrdp -h for help");
         g_writeln("%s", "");
         g_deinit();
-        g_exit(0);
+        g_exit(1);
     }
 
     g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
