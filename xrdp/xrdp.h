@@ -49,6 +49,10 @@ tbus
 g_get_sync_event(void);
 void
 g_process_waiting_function(void);
+void
+print_version(void);
+void
+print_help(void);
 
 /* xrdp_cache.c */
 struct xrdp_cache*

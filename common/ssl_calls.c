@@ -33,6 +33,7 @@
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
+#include <openssl/crypto.h>
 
 #include "os_calls.h"
 #include "arch.h"
@@ -78,7 +79,7 @@ DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
         return 0;
     }
 
-    if (p != NULL) 
+    if (p != NULL)
     {
         BN_free(dh->p);
         dh->p = p;
@@ -1062,5 +1063,17 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
     }
     *ssl_protocols = protocols;
     return rv;
+}
+
+/*****************************************************************************/
+const char
+*get_openssl_version()
+{
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    return SSLeay_version(SSLEAY_VERSION);
+#else
+    return OpenSSL_version(OPENSSL_VERSION);
+#endif
+
 }
 

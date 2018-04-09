@@ -114,5 +114,7 @@ const char *
 ssl_get_cipher_name(const struct ssl_st *ssl);
 int
 ssl_get_protocols_from_string(const char *str, long *ssl_protocols);
+const char *
+get_openssl_version();
 
 #endif
