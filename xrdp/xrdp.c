@@ -242,6 +242,14 @@ g_process_waiting_function(void)
 }
 
 /*****************************************************************************/
+/**
+ *
+ * @brief  Command line argument parser
+ * @param  number of command line arguments
+ * @param  pointer array of commandline arguments
+ * @return 0 on success, n on nth argument is unknown
+ *
+ */
 int
 xrdp_process_params(int argc, char **argv,
                     struct xrdp_startup_params *startup_params)
@@ -315,9 +323,9 @@ xrdp_process_params(int argc, char **argv,
             startup_params->fork = 1;
             g_writeln("--fork parameter found, ini override");
         }
-        else
+        else /* unknown option */
         {
-            return 1;
+            return index;
         }
 
         index++;
@@ -402,6 +410,7 @@ main(int argc, char **argv)
     int no_daemon;
     char text[256];
     char pid_file[256];
+    int errored_argc;
 
     g_init("xrdp");
     ssl_init();
@@ -416,14 +425,15 @@ main(int argc, char **argv)
     startup_params = (struct xrdp_startup_params *)
                      g_malloc(sizeof(struct xrdp_startup_params), 1);
 
-    if (xrdp_process_params(argc, argv, startup_params) != 0)
+    errored_argc = xrdp_process_params(argc, argv, startup_params);
+    if (errored_argc > 0)
     {
         print_version();
         g_writeln("%s", "");
         print_help();
         g_writeln("%s", "");
 
-        g_writeln("Unknown option");
+        g_writeln("Unknown option: %s", argv[errored_argc]);
         g_deinit();
         g_exit(1);
     }
