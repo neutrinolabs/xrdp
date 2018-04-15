@@ -31,7 +31,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-        g_write("xrdp:xrdp_cache [%10.10lld]: ", g_time3()); \
+        g_write("xrdp:xrdp_cache [%"PRIu64"]: ", g_time3()); \
         g_writeln _args ; \
     } \
   } \

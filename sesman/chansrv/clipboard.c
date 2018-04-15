@@ -186,14 +186,14 @@ x-special/gnome-copied-files
 
 #define log_error(_params...)                           \
 {                                                       \
-    g_write("[%10.10lld]: CLIPBOARD  %s: %d : ERROR: ", \
+    g_write("[%"PRIu64"]: CLIPBOARD  %s: %d : ERROR: ", \
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
 
 #define log_always(_params...)                          \
 {                                                       \
-    g_write("[%10.10lld]: CLIPBOARD  %s: %d : ALWAYS: ",\
+    g_write("[%"PRIu64"]: CLIPBOARD  %s: %d : ALWAYS: ",\
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
@@ -202,7 +202,7 @@ x-special/gnome-copied-files
 {                                                       \
     if (LOG_INFO <= LOG_LEVEL)                          \
     {                                                   \
-        g_write("[%10.10lld]: CLIPBOARD  %s: %d : ",    \
+        g_write("[%"PRIu64"]: CLIPBOARD  %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \
@@ -212,7 +212,7 @@ x-special/gnome-copied-files
 {                                                       \
     if (LOG_DEBUG <= LOG_LEVEL)                         \
     {                                                   \
-        g_write("[%10.10lld]: CLIPBOARD  %s: %d : ",    \
+        g_write("[%"PRIu64"]: CLIPBOARD  %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \

@@ -33,7 +33,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-        g_write("xrdp:vnc [%10.10lld]: ", g_time3()); \
+        g_write("xrdp:vnc [%"PRIu64"]: ", g_time3()); \
         g_writeln _args ; \
     } \
   } \

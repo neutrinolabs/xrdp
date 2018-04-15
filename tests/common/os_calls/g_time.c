@@ -28,20 +28,20 @@ int
 main(void)
 {
 #if !defined(_WIN32) /* This test is not intended to be run under Win32 */
-    long long gTime1, gTime2, gTime3;
+    uint64_t gTime1, gTime2, gTime3;
 
     gTime1 = g_time1();
     gTime2 = g_time2();
     gTime3 = g_time3();
 
-    printf("g_time1()        = %16lld [ sec] (epoch time)\n",
-            (long long) gTime1);
-    printf("g_time1() * 1000 = %16lld [msec] (epoch time)\n",
-            (long long) gTime1 * 1000);
-    printf("g_time2()        = %16lld [msec] (since machine was started)\n",
-            (long long) gTime2);
-    printf("g_time3()        = %16lld [msec] (epoch time in msec)\n",
-            (long long) gTime3);
+    printf("g_time1()        = %16"PRIu64" [ sec] (epoch time)\n",
+            gTime1);
+    printf("g_time1() * 1000 = %16"PRIu64" [msec] (epoch time)\n",
+            gTime1 * 1000);
+    printf("g_time2()        = %16"PRIu64" [msec] (since machine was started)\n",
+            gTime2);
+    printf("g_time3()        = %16"PRIu64" [msec] (epoch time in msec)\n",
+            gTime3);
 
     printf("\n");
     printf("Testing...\n");

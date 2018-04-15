@@ -34,7 +34,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-        g_write("xrdp:xrdp_bitmap [%10.10lld]: ", g_time3()); \
+        g_write("xrdp:xrdp_bitmap [%"PRIu64"]: ", g_time3()); \
         g_writeln _args ; \
     } \
   } \

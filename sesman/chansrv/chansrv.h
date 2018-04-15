@@ -71,7 +71,7 @@ int remove_struct_with_chan_id(tui32 dvc_chan_id);
     { \
         if (_a < LOG_LEVEL) \
         { \
-            g_write("xrdp-chansrv [%10.10lld]: ", g_time3()); \
+            g_write("xrdp-chansrv [%"PRIu64"]: ", g_time3()); \
             g_writeln _params ; \
         } \
     }
