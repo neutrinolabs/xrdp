@@ -295,6 +295,8 @@ struct xrdp_mm
   int delete_chan_trans; /* boolean set when done with channel connection */
   int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
   struct xrdp_encoder *encoder;
+  int cs2xr_cid_map[256];
+  int xr2cr_cid_map[256];
 };
 
 struct xrdp_key_info
@@ -376,8 +378,6 @@ struct xrdp_wm
   struct xrdp_bitmap* target_surface; /* either screen or os surface */
   int current_surface_index;
   int hints;
-  int allowedchannels[MAX_NR_CHANNELS];
-  int allowedinitialized ;
   char pamerrortxt[256];
 
   /* configuration derived from xrdp.ini */

@@ -36,7 +36,6 @@
 #include "rail.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
-#include "drdynvc.h"
 #include "xrdp_sockets.h"
 
 static struct trans *g_lis_trans = 0;
@@ -49,25 +48,17 @@ static int g_cliprdr_index = -1;
 static int g_rdpsnd_index = -1;
 static int g_rdpdr_index = -1;
 static int g_rail_index = -1;
-static int g_drdynvc_index = -1;
-
-/* state info for dynamic virtual channels */
-static struct xrdp_api_data *g_dvc_channels[MAX_DVC_CHANNELS];
 
 static tbus g_term_event = 0;
 static tbus g_thread_done_event = 0;
 
 static int g_use_unix_socket = 0;
 
-static const unsigned char g_xrdpapi_magic[12] =
-{ 0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f };
-
 int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
 int g_rdpdr_chan_id = -1;   /* rdpdr   */
 int g_rail_chan_id = -1;    /* rail    */
-int g_drdynvc_chan_id = -1; /* drdynvc */
 
 char *g_exec_name;
 tbus g_exec_event;
@@ -76,10 +67,36 @@ tbus g_exec_sem;
 int g_exec_pid = 0;
 
 #define ARRAYSIZE(x) (sizeof(x)/sizeof(*(x)))
+/* max total channel bytes size */
+#define MAX_CHANNEL_BYTES (1 * 1024 * 1024 * 1024) /* 1 GB */
+#define MAX_CHANNEL_FRAG_BYTES 1600
 
-/* each time we create a DVC we need a unique DVC channel id */
-/* this variable gets bumped up once per DVC we create       */
-tui32 g_dvc_chan_id = 100;
+#define CHANSRV_DRDYNVC_STATUS_CLOSED       0
+#define CHANSRV_DRDYNVC_STATUS_OPEN_SENT    1
+#define CHANSRV_DRDYNVC_STATUS_OPEN         2
+#define CHANSRV_DRDYNVC_STATUS_CLOSE_SENT   3
+
+struct chansrv_drdynvc
+{
+    int chan_id;
+    int status; /* see CHANSRV_DRDYNVC_STATUS_* */
+    int flags;
+    int pad0;
+    int (*open_response)(int chan_id, int creation_status);
+    int (*close_response)(int chan_id);
+    int (*data_first)(int chan_id, char *data, int bytes, int total_bytes);
+    int (*data)(int chan_id, char *data, int bytes);
+    struct trans *xrdp_api_trans;
+};
+
+static struct chansrv_drdynvc g_drdynvcs[256];
+
+/* data in struct trans::callback_data */
+struct xrdp_api_data
+{
+    int chan_flags;
+    int chan_id;
+};
 
 struct timeout_obj
 {
@@ -226,151 +243,60 @@ g_is_term(void)
 }
 
 /*****************************************************************************/
-/* add data to chan_item, on its way to the client */
-/* returns error */
-static int
-add_data_to_chan_item(struct chan_item *chan_item, char *data, int size)
-{
-    struct stream *s;
-    struct chan_out_data *cod;
-
-    make_stream(s);
-    init_stream(s, size);
-    g_memcpy(s->data, data, size);
-    s->end = s->data + size;
-    cod = (struct chan_out_data *)g_malloc(sizeof(struct chan_out_data), 1);
-    cod->s = s;
-
-    if (chan_item->tail == 0)
-    {
-        chan_item->tail = cod;
-        chan_item->head = cod;
-    }
-    else
-    {
-        chan_item->tail->next = cod;
-        chan_item->tail = cod;
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
-send_data_from_chan_item(struct chan_item *chan_item)
-{
-    struct stream *s;
-    struct chan_out_data *cod;
-    int bytes_left;
-    int size;
-    int chan_flags;
-    int error;
-
-    if (chan_item->head == 0)
-    {
-        return 0;
-    }
-
-    cod = chan_item->head;
-    bytes_left = (int)(cod->s->end - cod->s->p);
-    size = MIN(1600, bytes_left);
-    chan_flags = 0;
-
-    if (cod->s->p == cod->s->data)
-    {
-        chan_flags |= 1; /* first */
-    }
-
-    if (cod->s->p + size >= cod->s->end)
-    {
-        chan_flags |= 2; /* last */
-    }
-
-    s = trans_get_out_s(g_con_trans, 8192);
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8 + 2 + 2 + 2 + 4 + size); /* size */
-    out_uint32_le(s, 8); /* msg id */
-    out_uint32_le(s, 8 + 2 + 2 + 2 + 4 + size); /* size */
-    out_uint16_le(s, chan_item->id);
-    out_uint16_le(s, chan_flags);
-    out_uint16_le(s, size);
-    out_uint32_le(s, cod->s->size);
-    out_uint8a(s, cod->s->p, size);
-    s_mark_end(s);
-    LOGM((LOG_LEVEL_DEBUG, "chansrv::send_data_from_chan_item: -- "
-          "size %d chan_flags 0x%8.8x", size, chan_flags));
-
-    error = trans_write_copy(g_con_trans);
-    if (error != 0)
-    {
-        return 1;
-    }
-
-    cod->s->p += size;
-
-    if (cod->s->p >= cod->s->end)
-    {
-        free_stream(cod->s);
-        chan_item->head = chan_item->head->next;
-
-        if (chan_item->head == 0)
-        {
-            chan_item->tail = 0;
-        }
-
-        g_free(cod);
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
-check_chan_items(void)
-{
-    int index;
-
-    for (index = 0; index < g_num_chan_items; index++)
-    {
-        if (g_chan_items[index].head != 0)
-        {
-            send_data_from_chan_item(g_chan_items + index);
-        }
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
+/* send data to a static virtual channel
+   size can be > MAX_CHANNEL_FRAG_BYTES, in which case, > 1 message
+   will be sent*/
 /* returns error */
 int
-send_channel_data(int chan_id, char *data, int size)
+send_channel_data(int chan_id, const char *data, int size)
 {
-    int index;
+    int sending_bytes;
+    int chan_flags;
+    int error;
+    int total_size;
+    struct stream *s;
 
-    //g_writeln("send_channel_data chan_id %d size %d", chan_id, size);
-
-    LOGM((LOG_LEVEL_DEBUG, "chansrv::send_channel_data: size %d", size));
-
-    if (chan_id == -1)
+    if ((chan_id < 0) || (chan_id > 31) ||
+        (data == NULL) ||
+        (size < 1) || (size > MAX_CHANNEL_BYTES))
     {
-        g_writeln("send_channel_data: error, chan_id is -1");
+        /* bad param */
         return 1;
     }
-
-    for (index = 0; index < g_num_chan_items; index++)
+    total_size = size;
+    chan_flags = 1; /* first */
+    while (size > 0)
     {
-        if (g_chan_items[index].id == chan_id)
+        sending_bytes = MIN(MAX_CHANNEL_FRAG_BYTES, size);
+        if (sending_bytes >= size)
         {
-            add_data_to_chan_item(g_chan_items + index, data, size);
-            check_chan_items();
-            return 0;
+            chan_flags |= 2; /* last */
         }
+        s = trans_get_out_s(g_con_trans, 26 + sending_bytes);
+        if (s == NULL)
+        {
+            return 2;
+        }
+        out_uint32_le(s, 0); /* version */
+        out_uint32_le(s, 26 + sending_bytes);
+        out_uint32_le(s, 8); /* msg id */
+        out_uint32_le(s, 18 + sending_bytes);
+        out_uint16_le(s, chan_id);
+        out_uint16_le(s, chan_flags);
+        out_uint16_le(s, sending_bytes);
+        out_uint32_le(s, total_size);
+        out_uint8a(s, data, sending_bytes);
+        s_mark_end(s);
+        size -= sending_bytes;
+        data += sending_bytes;
+        error = trans_write_copy(g_con_trans);
+        if (error != 0)
+        {
+            return 3;
+        }
+        chan_flags = 0;
     }
-
-    return 1;
+    return 0;
 }
 
 /*****************************************************************************/
@@ -401,92 +327,12 @@ send_rail_drawing_orders(char* data, int size)
 /*****************************************************************************/
 /* returns error */
 static int
-send_init_response_message(void)
-{
-    struct stream *s = (struct stream *)NULL;
-
-    LOGM((LOG_LEVEL_INFO, "send_init_response_message:"));
-    s = trans_get_out_s(g_con_trans, 8192);
-
-    if (s == 0)
-    {
-        return 1;
-    }
-
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8); /* size */
-    out_uint32_le(s, 2); /* msg id */
-    out_uint32_le(s, 8); /* size */
-    s_mark_end(s);
-    return trans_write_copy(g_con_trans);
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
-send_channel_setup_response_message(void)
-{
-    struct stream *s = (struct stream *)NULL;
-
-    LOGM((LOG_LEVEL_DEBUG, "send_channel_setup_response_message:"));
-    s = trans_get_out_s(g_con_trans, 8192);
-
-    if (s == 0)
-    {
-        return 1;
-    }
-
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8); /* size */
-    out_uint32_le(s, 4); /* msg id */
-    out_uint32_le(s, 8); /* size */
-    s_mark_end(s);
-    return trans_write_copy(g_con_trans);
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
-send_channel_data_response_message(void)
-{
-    struct stream *s = (struct stream *)NULL;
-
-    LOGM((LOG_LEVEL_DEBUG, "send_channel_data_response_message:"));
-    s = trans_get_out_s(g_con_trans, 8192);
-
-    if (s == 0)
-    {
-        return 1;
-    }
-
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8); /* size */
-    out_uint32_le(s, 6); /* msg id */
-    out_uint32_le(s, 8); /* size */
-    s_mark_end(s);
-    return trans_write_copy(g_con_trans);
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
-process_message_init(struct stream *s)
-{
-    LOGM((LOG_LEVEL_DEBUG, "process_message_init:"));
-    return send_init_response_message();
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
 process_message_channel_setup(struct stream *s)
 {
     int num_chans;
     int index;
     int rv;
     struct chan_item *ci;
-    struct chan_out_data *cod;
-    struct chan_out_data *old_cod;
 
     g_num_chan_items = 0;
     g_cliprdr_index = -1;
@@ -497,7 +343,6 @@ process_message_channel_setup(struct stream *s)
     g_rdpsnd_chan_id = -1;
     g_rdpdr_chan_id = -1;
     g_rail_chan_id = -1;
-    g_drdynvc_chan_id = -1;
     LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup:"));
     in_uint16_le(s, num_chans);
     LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup: num_chans %d",
@@ -509,25 +354,6 @@ process_message_channel_setup(struct stream *s)
         g_memset(ci->name, 0, sizeof(ci->name));
         in_uint8a(s, ci->name, 8);
         in_uint16_le(s, ci->id);
-        /* there might be leftover data from last session after reconnecting
-           so free it */
-        if (ci->head != 0)
-        {
-            cod = ci->head;
-            while (1)
-            {
-                free_stream(cod->s);
-                old_cod = cod;
-                cod = cod->next;
-                g_free(old_cod);
-                if (ci->tail == old_cod)
-                {
-                    break;
-                }
-            }
-        }
-        ci->head = 0;
-        ci->tail = 0;
         in_uint16_le(s, ci->flags);
         LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
               "id %d flags %8.8x", ci->name, ci->id, ci->flags));
@@ -556,11 +382,6 @@ process_message_channel_setup(struct stream *s)
             g_rail_index = g_num_chan_items;
             g_rail_chan_id = ci->id;
         }
-        else if (g_strcasecmp(ci->name, "drdynvc") == 0)
-        {
-            g_drdynvc_index = g_num_chan_items; // LK_TODO use  this
-            g_drdynvc_chan_id = ci->id;         // LK_TODO use this
-        }
         else
         {
             LOG(10, ("other %s", ci->name));
@@ -569,7 +390,7 @@ process_message_channel_setup(struct stream *s)
         g_num_chan_items++;
     }
 
-    rv = send_channel_setup_response_message();
+    rv = 0;
 
     if (g_cliprdr_index >= 0)
     {
@@ -593,12 +414,6 @@ process_message_channel_setup(struct stream *s)
         rail_init();
     }
 
-    if (g_drdynvc_index >= 0)
-    {
-        g_memset(&g_dvc_channels[0], 0, sizeof(g_dvc_channels));
-        drdynvc_init();
-    }
-
     return rv;
 }
 
@@ -607,12 +422,13 @@ process_message_channel_setup(struct stream *s)
 static int
 process_message_channel_data(struct stream *s)
 {
-    int chan_id = 0;
-    int chan_flags = 0;
-    int rv = 0;
-    int length = 0;
-    int total_length = 0;
+    int chan_id;
+    int chan_flags;
+    int rv;
+    int length;
+    int total_length;
     int index;
+    int found;
     struct stream *ls;
     struct trans *ltran;
     struct xrdp_api_data *api_data;
@@ -624,7 +440,7 @@ process_message_channel_data(struct stream *s)
     LOGM((LOG_LEVEL_DEBUG, "process_message_channel_data: chan_id %d "
           "chan_flags %d", chan_id, chan_flags));
     LOG(10, ("process_message_channel_data"));
-    rv = send_channel_data_response_message();
+    rv = 0;
 
     if (rv == 0)
     {
@@ -644,22 +460,20 @@ process_message_channel_data(struct stream *s)
         {
             rv = rail_data_in(s, chan_id, chan_flags, length, total_length);
         }
-        else if (chan_id == g_drdynvc_chan_id)
+        else
         {
-            rv = drdynvc_data_in(s, chan_id, chan_flags, length, total_length);
-        }
-        else if (g_api_con_trans_list != 0)
-        {
+            found = 0;
             for (index = 0; index < g_api_con_trans_list->count; index++)
             {
                 ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
-                if (ltran != 0)
+                if (ltran != NULL)
                 {
                     api_data = (struct xrdp_api_data *) (ltran->callback_data);
-                    if (api_data != 0)
+                    if (api_data != NULL)
                     {
                         if (api_data->chan_id == chan_id)
                         {
+                            found = 1;
                             ls = ltran->out_s;
                             if (chan_flags & 1) /* first */
                             {
@@ -669,25 +483,333 @@ process_message_channel_data(struct stream *s)
                             if (chan_flags & 2) /* last */
                             {
                                 s_mark_end(ls);
-                                rv = trans_force_write(ltran);
+                                rv = trans_write_copy(ltran);
                             }
                             break;
                         }
                     }
                 }
             }
+            if (found == 0)
+            {
+                LOG(0, ("process_message_channel_data: not found channel %d", chan_id));
+            }
         }
+
     }
     return rv;
 }
 
 /*****************************************************************************/
 /* returns error */
+/* open response from client */
 static int
-process_message_channel_data_response(struct stream *s)
+process_message_drdynvc_open_response(struct stream *s)
 {
-    LOG(10, ("process_message_channel_data_response:"));
-    check_chan_items();
+    struct chansrv_drdynvc *drdynvc;
+    int chan_id;
+    int creation_status;
+
+    LOG(10, ("process_message_drdynvc_open_response:"));
+    if (!s_check_rem(s, 8))
+    {
+        return 1;
+    }
+    in_uint32_le(s, chan_id);
+    in_uint32_le(s, creation_status);
+    if ((chan_id < 0) || (chan_id > 255))
+    {
+        return 1;
+    }
+    drdynvc = g_drdynvcs + chan_id;
+    if (drdynvc->status != CHANSRV_DRDYNVC_STATUS_OPEN_SENT)
+    {
+        g_writeln("process_message_drdynvc_open_response: status not right");
+        return 1;
+    }
+    if (creation_status == 0)
+    {
+        drdynvc->status = CHANSRV_DRDYNVC_STATUS_OPEN;
+    }
+    else
+    {
+        drdynvc->status = CHANSRV_DRDYNVC_STATUS_CLOSED;
+    }
+    if (drdynvc->open_response != NULL)
+    {
+        if (drdynvc->open_response(chan_id, creation_status) != 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* close response from client */
+static int
+process_message_drdynvc_close_response(struct stream *s)
+{
+    struct chansrv_drdynvc *drdynvc;
+    int chan_id;
+
+    LOG(10, ("process_message_drdynvc_close_response:"));
+    if (!s_check_rem(s, 4))
+    {
+        return 1;
+    }
+    in_uint32_le(s, chan_id);
+    if ((chan_id < 0) || (chan_id > 255))
+    {
+        return 1;
+    }
+    drdynvc = g_drdynvcs + chan_id;
+    if (drdynvc->status != CHANSRV_DRDYNVC_STATUS_CLOSE_SENT)
+    {
+        g_writeln("process_message_drdynvc_close_response: status not right");
+        return 0;
+    }
+    drdynvc->status = CHANSRV_DRDYNVC_STATUS_CLOSED;
+    if (drdynvc->close_response != NULL)
+    {
+        if (drdynvc->close_response(chan_id) != 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* data from client */
+static int
+process_message_drdynvc_data_first(struct stream *s)
+{
+    struct chansrv_drdynvc *drdynvc;
+    int chan_id;
+    int bytes;
+    int total_bytes;
+    char *data;
+
+    LOG(10, ("process_message_drdynvc_data_first:"));
+    if (!s_check_rem(s, 12))
+    {
+        return 1;
+    }
+    in_uint32_le(s, chan_id);
+    in_uint32_le(s, bytes);
+    in_uint32_le(s, total_bytes);
+    if (!s_check_rem(s, bytes))
+    {
+        return 1;
+    }
+    in_uint8p(s, data, bytes);
+    if ((chan_id < 0) || (chan_id > 255))
+    {
+        return 1;
+    }
+    drdynvc = g_drdynvcs + chan_id;
+    if (drdynvc->data_first != NULL)
+    {
+        if (drdynvc->data_first(chan_id, data, bytes, total_bytes) != 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* data from client */
+static int
+process_message_drdynvc_data(struct stream *s)
+{
+    struct chansrv_drdynvc *drdynvc;
+    int chan_id;
+    int bytes;
+    char *data;
+
+    LOG(10, ("process_message_drdynvc_data:"));
+    if (!s_check_rem(s, 8))
+    {
+        return 1;
+    }
+    in_uint32_le(s, chan_id);
+    in_uint32_le(s, bytes);
+    if (!s_check_rem(s, bytes))
+    {
+        return 1;
+    }
+    in_uint8p(s, data, bytes);
+    drdynvc = g_drdynvcs + chan_id;
+    if (drdynvc->data != NULL)
+    {
+        if (drdynvc->data(chan_id, data, bytes) != 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* open call from chansrv */
+int
+chansrv_drdynvc_open(const char *name, int flags,
+                     struct chansrv_drdynvc_procs *procs, int *chan_id)
+{
+    struct stream *s;
+    int name_bytes;
+    int lchan_id;
+    int error;
+
+    lchan_id = 1;
+    while (g_drdynvcs[lchan_id].status != CHANSRV_DRDYNVC_STATUS_CLOSED)
+    {
+        lchan_id++;
+        if (lchan_id > 255)
+        {
+            return 1;
+        }
+    }
+    s = trans_get_out_s(g_con_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    name_bytes = g_strlen(name);
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 8 + 4 + name_bytes + 4 + 4);
+    out_uint32_le(s, 12); /* msg id */
+    out_uint32_le(s, 8 + 4 + name_bytes + 4 + 4);
+    out_uint32_le(s, name_bytes);
+    out_uint8a(s, name, name_bytes);
+    out_uint32_le(s, flags);
+    out_uint32_le(s, lchan_id);
+    s_mark_end(s);
+    error = trans_write_copy(g_con_trans);
+    if (error == 0)
+    {
+        if (chan_id != NULL)
+        {
+            *chan_id = lchan_id;
+            g_drdynvcs[lchan_id].open_response = procs->open_response;
+            g_drdynvcs[lchan_id].close_response = procs->close_response;
+            g_drdynvcs[lchan_id].data_first = procs->data_first;
+            g_drdynvcs[lchan_id].data = procs->data;
+            g_drdynvcs[lchan_id].status = CHANSRV_DRDYNVC_STATUS_OPEN_SENT;
+
+        }
+    }
+    return error;
+}
+
+/*****************************************************************************/
+/* close call from chansrv */
+int
+chansrv_drdynvc_close(int chan_id)
+{
+    struct stream *s;
+    int error;
+
+    s = trans_get_out_s(g_con_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 20);
+    out_uint32_le(s, 14); /* msg id */
+    out_uint32_le(s, 12);
+    out_uint32_le(s, chan_id);
+    s_mark_end(s);
+    error = trans_write_copy(g_con_trans);
+    g_drdynvcs[chan_id].status = CHANSRV_DRDYNVC_STATUS_CLOSE_SENT;
+    return error;
+}
+
+/*****************************************************************************/
+int
+chansrv_drdynvc_data_first(int chan_id, const char *data, int data_bytes,
+                           int total_data_bytes)
+{
+    struct stream *s;
+    int error;
+
+    //g_writeln("chansrv_drdynvc_data_first: data_bytes %d total_data_bytes %d",
+    //          data_bytes, total_data_bytes);
+    s = trans_get_out_s(g_con_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 28 + data_bytes);
+    out_uint32_le(s, 16); /* msg id */
+    out_uint32_le(s, 20 + data_bytes);
+    out_uint32_le(s, chan_id);
+    out_uint32_le(s, data_bytes);
+    out_uint32_le(s, total_data_bytes);
+    out_uint8a(s, data, data_bytes);
+    s_mark_end(s);
+    error = trans_write_copy(g_con_trans);
+    return error;
+}
+
+/*****************************************************************************/
+int
+chansrv_drdynvc_data(int chan_id, const char *data, int data_bytes)
+{
+    struct stream *s;
+    int error;
+
+    //g_writeln("chansrv_drdynvc_data: data_bytes %d", data_bytes);
+    s = trans_get_out_s(g_con_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 24 + data_bytes);
+    out_uint32_le(s, 18); /* msg id */
+    out_uint32_le(s, 16 + data_bytes);
+    out_uint32_le(s, chan_id);
+    out_uint32_le(s, data_bytes);
+    out_uint8a(s, data, data_bytes);
+    s_mark_end(s);
+    error = trans_write_copy(g_con_trans);
+    return error;
+}
+
+/*****************************************************************************/
+int
+chansrv_drdynvc_send_data(int chan_id, const char *data, int data_bytes)
+{
+    int this_send_bytes;
+
+    //g_writeln("chansrv_drdynvc_send_data: data_bytes %d", data_bytes);
+    if (data_bytes > 1590)
+    {
+        if (chansrv_drdynvc_data_first(chan_id, data, 1590, data_bytes) != 0)
+        {
+            return 1;
+        }
+        data_bytes -= 1590;
+        data += 1590;
+    }
+    while (data_bytes > 0)
+    {
+        this_send_bytes = MIN(1590, data_bytes);
+        if (chansrv_drdynvc_data(chan_id, data, this_send_bytes) != 0)
+        {
+            return 1;
+        }
+        data_bytes -= this_send_bytes;
+        data += this_send_bytes;
+    }
     return 0;
 }
 
@@ -725,17 +847,23 @@ process_message(void)
 
         switch (id)
         {
-            case 1: /* init */
-                rv = process_message_init(s);
-                break;
             case 3: /* channel setup */
                 rv = process_message_channel_setup(s);
                 break;
             case 5: /* channel data */
                 rv = process_message_channel_data(s);
                 break;
-            case 7: /* channel data response */
-                rv = process_message_channel_data_response(s);
+            case 13: /* drdynvc open response */
+                rv = process_message_drdynvc_open_response(s);
+                break;
+            case 15: /* drdynvc close response */
+                rv = process_message_drdynvc_close_response(s);
+                break;
+            case 17: /* drdynvc data first */
+                rv = process_message_drdynvc_data_first(s);
+                break;
+            case 19: /* drdynvc data */
+                rv = process_message_drdynvc_data(s);
                 break;
             default:
                 LOGM((LOG_LEVEL_ERROR, "process_message: unknown msg %d", id));
@@ -744,7 +872,8 @@ process_message(void)
 
         if (rv != 0)
         {
-            break;
+            g_writeln("process_message: error rv %d id %d", rv, id);
+            rv = 0;
         }
 
         s->p = next_msg;
@@ -782,9 +911,117 @@ my_trans_data_in(struct trans *trans)
     {
         /* here, the entire message block is read in, process it */
         error = process_message();
+        if (error == 0)
+        {
+        }
+        else
+        {
+            g_writeln("my_trans_data_in: process_message failed");
+        }
+    }
+    else
+    {
+        g_writeln("my_trans_data_in: trans_force_read failed");
     }
 
     return error;
+}
+
+/*****************************************************************************/
+struct trans *
+get_api_trans_from_chan_id(int chan_id)
+{
+    return g_drdynvcs[chan_id].xrdp_api_trans;
+}
+
+/*****************************************************************************/
+static int
+my_api_open_response(int chan_id, int creation_status)
+{
+    struct trans *trans;
+    struct stream *s;
+
+    //g_writeln("my_api_open_response: chan_id %d creation_status %d",
+    //          chan_id, creation_status);
+    trans = get_api_trans_from_chan_id(chan_id);
+    if (trans == NULL)
+    {
+        return 1;
+    }
+    s = trans_get_out_s(trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint32_le(s, creation_status);
+    s_mark_end(s);
+    if (trans_write_copy(trans) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+my_api_close_response(int chan_id)
+{
+    //g_writeln("my_api_close_response:");
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+my_api_data_first(int chan_id, char *data, int bytes, int total_bytes)
+{
+    struct trans *trans;
+    struct stream *s;
+
+    //g_writeln("my_api_data_first: bytes %d total_bytes %d", bytes, total_bytes);
+    trans = get_api_trans_from_chan_id(chan_id);
+    if (trans == NULL)
+    {
+        return 1;
+    }
+    s = trans_get_out_s(trans, bytes);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint8a(s, data, bytes);
+    s_mark_end(s);
+    if (trans_write_copy(trans) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+my_api_data(int chan_id, char *data, int bytes)
+{
+    struct trans *trans;
+    struct stream *s;
+
+    //g_writeln("my_api_data: bytes %d", bytes);
+    trans = get_api_trans_from_chan_id(chan_id);
+    if (trans == NULL)
+    {
+        return 1;
+    }
+    s = trans_get_out_s(trans, bytes);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint8a(s, data, bytes);
+    s_mark_end(s);
+    if (trans_write_copy(trans) != 0)
+    {
+        return 1;
+    }
+    return 0;
 }
 
 /*
@@ -794,94 +1031,130 @@ my_trans_data_in(struct trans *trans)
 int
 my_api_trans_data_in(struct trans *trans)
 {
-    struct stream        *s;
-    int                   bytes_read;
-    int                   i32;
+    struct stream *s;
+    struct stream *out_s;
     struct xrdp_api_data *ad;
+    int index;
+    int rv;
+    int bytes;
+    int ver;
+    int channel_name_bytes;
+    struct chansrv_drdynvc_procs procs;
+    char *chan_name;
 
-    //g_writeln("my_api_trans_data_in:");
-
-    LOG(10, ("my_api_trans_data_in:"));
-
-    if (trans == 0)
+    //g_writeln("my_api_trans_data_in: extra_flags %d", trans->extra_flags);
+    rv = 0;
+    ad = (struct xrdp_api_data *) (trans->callback_data);
+    s = trans_get_in_s(trans);
+    if (trans->extra_flags == 0)
     {
-        return 0;
-    }
-
-    if (g_api_con_trans_list != 0)
-    {
-        if (list_index_of(g_api_con_trans_list, (tintptr) trans) == -1)
+        in_uint32_le(s, bytes);
+        in_uint32_le(s, ver);
+        //g_writeln("my_api_trans_data_in: bytes %d ver %d", bytes, ver);
+        if (ver != 0)
         {
             return 1;
         }
+        trans->header_size = bytes;
+        trans->extra_flags = 1;
     }
-
-    LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
-
-    s = trans_get_in_s(trans);
-    bytes_read = g_tcp_recv(trans->sck, s->data, 16, 0);
-    if (bytes_read == 16)
+    else if (trans->extra_flags == 1)
     {
-        if (g_memcmp(s->data, g_xrdpapi_magic, 12) == 0)
+        rv = 1;
+        in_uint32_le(s, channel_name_bytes);
+        //g_writeln("my_api_trans_data_in: channel_name_bytes %d", channel_name_bytes);
+        chan_name = g_new0(char, channel_name_bytes + 1);
+        if (chan_name == NULL)
         {
-            in_uint8s(s, 12);
-            in_uint32_le(s, bytes_read);
-            init_stream(s, bytes_read);
-            if (trans_force_read(trans, bytes_read))
-                log_message(LOG_LEVEL_ERROR, "chansrv.c: error reading from transport");
+            return 1;
         }
-        else if (g_tcp_select(trans->sck, 0) & 1)
+        in_uint8a(s, chan_name, channel_name_bytes);
+        in_uint32_le(s, ad->chan_flags);
+        //g_writeln("my_api_trans_data_in: chan_name %s chan_flags 0x%8.8x", chan_name, ad->chan_flags);
+        if (ad->chan_flags == 0)
         {
-            i32 = bytes_read;
-            bytes_read = g_tcp_recv(trans->sck, s->data + bytes_read,
-                                    8192 * 4 - bytes_read, 0);
-            if (bytes_read > 0)
+            /* SVC */
+            for (index = 0; index < g_num_chan_items; index++)
             {
-                bytes_read += i32;
+                if (g_strcasecmp(g_chan_items[index].name, chan_name) == 0)
+                {
+                    ad->chan_id = g_chan_items[index].id;
+                    rv = 0;
+                    break;
+                }
             }
-        }
-    }
-
-    //g_writeln("bytes_read %d", bytes_read);
-
-    if (bytes_read > 0)
-    {
-        LOG(10, ("my_api_trans_data_in: got data %d", bytes_read));
-        ad = (struct xrdp_api_data *) trans->callback_data;
-
-        if (ad->dvc_chan_id < 0)
-        {
-            /* writing data to a static virtual channel */
-            if (send_channel_data(ad->chan_id, s->data, bytes_read) != 0)
+            if (rv == 0)
             {
-                LOG(0, ("my_api_trans_data_in: send_channel_data failed"));
+                /* open ok */
+                out_s = trans_get_out_s(trans, 8192);
+                if (out_s == NULL)
+                {
+                    return 1;
+                }
+                out_uint32_le(out_s, 0);
+                s_mark_end(out_s);
+                if (trans_write_copy(trans) != 0)
+                {
+                    return 1;
+                }
+            }
+            else
+            {
+                /* open failed */
+                out_s = trans_get_out_s(trans, 8192);
+                if (out_s == NULL)
+                {
+                    return 1;
+                }
+                out_uint32_le(out_s, 1);
+                s_mark_end(out_s);
+                if (trans_write_copy(trans) != 0)
+                {
+                    return 1;
+                }
             }
         }
         else
         {
-            /* writing data to a dynamic virtual channel */
-            drdynvc_write_data(ad->dvc_chan_id, s->data, bytes_read);
+            /* DVS */
+            g_memset(&procs, 0, sizeof(procs));
+            procs.open_response = my_api_open_response;
+            procs.close_response = my_api_close_response;
+            procs.data_first = my_api_data_first;
+            procs.data = my_api_data;
+            rv = chansrv_drdynvc_open(chan_name, ad->chan_flags,
+                                      &procs, &(ad->chan_id));
+            //g_writeln("my_api_trans_data_in: chansrv_drdynvc_open rv %d "
+            //          "chan_id %d", rv, ad->chan_id);
+            g_drdynvcs[ad->chan_id].xrdp_api_trans = trans;
         }
+        g_free(chan_name);
+        init_stream(s, 0);
+        trans->extra_flags = 2;
+        trans->header_size = 0;
     }
     else
     {
-        ad = (struct xrdp_api_data *) (trans->callback_data);
-        if ((ad != NULL) && (ad->dvc_chan_id > 0))
+        bytes = g_sck_recv(trans->sck, s->data, s->size, 0);
+        if (bytes < 1)
         {
-            /* WTSVirtualChannelClose() was invoked, or connection dropped */
-            LOG(10, ("my_api_trans_data_in: g_tcp_recv failed or disconnected for DVC"));
-            ad->transp = NULL;
-            ad->is_connected = 0;
-            remove_struct_with_chan_id(ad->dvc_chan_id);
+            //g_writeln("my_api_trans_data_in: disconnect");
+            return 1;
+        }
+        if (ad->chan_flags == 0)
+        {
+            /* SVC */
+            rv = send_channel_data(ad->chan_id, s->data, bytes);
         }
         else
         {
-            LOG(10, ("my_api_trans_data_in: g_tcp_recv failed or disconnected for SVC"));
+            /* DVS */
+            //g_writeln("my_api_trans_data_in: s->size %d bytes %d", s->size, bytes);
+            rv = chansrv_drdynvc_send_data(ad->chan_id, s->data, bytes);
         }
-        return 1;
+        init_stream(s, 0);
     }
-
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -926,92 +1199,24 @@ int
 my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
     struct xrdp_api_data *ad;
-    struct stream        *s;
-    int                   error;
-    int                   index;
-    char                  chan_pri;
 
-    if ((trans == 0) || (trans != g_api_lis_trans) || (new_trans == 0))
+    //g_writeln("my_api_trans_conn_in:");
+    if ((trans == NULL) || (trans != g_api_lis_trans) || (new_trans == NULL))
     {
+        g_writeln("my_api_trans_conn_in: error");
         return 1;
-    }
-
-    LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in:"));
-    LOG(10, ("my_api_trans_conn_in: got incoming"));
-
-    s = trans_get_in_s(new_trans);
-    s->end = s->data;
-
-    error = trans_force_read(new_trans, 64);
-
-    if (error != 0)
-    {
-        LOG(0, ("my_api_trans_conn_in: trans_force_read failed"));
-        trans_delete(new_trans);
-        return 1;
-    }
-
-    s->end = s->data;
-
-    ad = (struct xrdp_api_data *) g_malloc(sizeof(struct xrdp_api_data), 1);
-    g_memcpy(ad->header, s->data, 64);
-
-    ad->flags = GGET_UINT32(ad->header, 16);
-    ad->chan_id = -1;
-    ad->dvc_chan_id = -1;
-
-    if (ad->flags > 0)
-    {
-        /* opening a dynamic virtual channel */
-
-        if ((index = find_empty_slot_in_dvc_channels()) < 0)
-        {
-            /* exceeded MAX_DVC_CHANNELS */
-            LOG(0, ("my_api_trans_conn_in: MAX_DVC_CHANNELS reached; giving up!"))
-            g_free(ad);
-            trans_delete(new_trans);
-            return 1;
-        }
-
-        g_dvc_channels[index] = ad;
-        chan_pri = 4 - ad->flags;
-        ad->dvc_chan_id = g_dvc_chan_id++;
-        ad->is_connected = 0;
-        ad->transp = new_trans;
-        drdynvc_send_open_channel_request(chan_pri, ad->dvc_chan_id, ad->header);
-    }
-    else
-    {
-        /* opening a static virtual channel */
-
-        for (index = 0; index < g_num_chan_items; index++)
-        {
-            LOG(10, ("my_api_trans_conn_in:  %s %s", ad->header,
-                    g_chan_items[index].name));
-
-            if (g_strcasecmp(ad->header, g_chan_items[index].name) == 0)
-            {
-                LOG(10, ("my_api_trans_conn_in: found it at %d", index));
-                ad->chan_id = g_chan_items[index].id;
-                break;
-            }
-        }
-        if (index == g_num_chan_items)
-        {
-            g_writeln("did not find SVC named %s", ad->header);
-        }
-    }
-
-    new_trans->callback_data = ad;
-
-    if (g_api_con_trans_list == 0)
-    {
-        g_api_con_trans_list = list_create();
     }
     new_trans->trans_data_in = my_api_trans_data_in;
-    new_trans->header_size = 0;
-    list_add_item(g_api_con_trans_list, (tintptr) new_trans);
-
+    new_trans->header_size = 8;
+    new_trans->no_stream_init_on_data_in = 1;
+    ad = g_new0(struct xrdp_api_data, 1);
+    if (ad == NULL)
+    {
+        g_writeln("my_api_trans_conn_in: error");
+        return 1;
+    }
+    new_trans->callback_data = ad;
+    list_add_item(g_api_con_trans_list, (intptr_t) new_trans);
     return 0;
 }
 
@@ -1077,6 +1282,96 @@ setup_api_listen(void)
 }
 
 /*****************************************************************************/
+static int
+api_con_trans_list_get_wait_objs_rw(intptr_t *robjs, int *rcount,
+                                    intptr_t *wobjs, int *wcount,
+                                    int *timeout)
+{
+    int api_con_index;
+    struct trans *ltran;
+
+    for (api_con_index = g_api_con_trans_list->count - 1;
+         api_con_index >= 0;
+         api_con_index--)
+    {
+        ltran = (struct trans *)
+            list_get_item(g_api_con_trans_list, api_con_index);
+        if (ltran != NULL)
+        {
+            trans_get_wait_objs_rw(ltran, robjs, rcount, wobjs, wcount,
+                                   timeout);
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+api_con_trans_list_check_wait_objs(void)
+{
+    int api_con_index;
+    int drdynvc_index;
+    struct trans *ltran;
+    struct xrdp_api_data *ad;
+
+    for (api_con_index = g_api_con_trans_list->count - 1;
+         api_con_index >= 0;
+         api_con_index--)
+    {
+        ltran = (struct trans *)
+            list_get_item(g_api_con_trans_list, api_con_index);
+        if (ltran != NULL)
+        {
+            if (trans_check_wait_objs(ltran) != 0)
+            {
+                /* disconnect */
+                list_remove_item(g_api_con_trans_list, api_con_index);
+                ad = (struct xrdp_api_data *) (ltran->callback_data);
+                if (ad->chan_flags != 0)
+                {
+                    chansrv_drdynvc_close(ad->chan_id);
+                }
+                for (drdynvc_index = 0;
+                     drdynvc_index < ARRAYSIZE(g_drdynvcs);
+                     drdynvc_index++)
+                {
+                    if (g_drdynvcs[drdynvc_index].xrdp_api_trans == ltran)
+                    {
+                        g_drdynvcs[drdynvc_index].xrdp_api_trans = NULL;
+                    }
+                }
+                g_free(ad);
+                trans_delete(ltran);
+            }
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+api_con_trans_list_remove_all(void)
+{
+    int api_con_index;
+    struct trans *ltran;
+
+    for (api_con_index = g_api_con_trans_list->count - 1;
+         api_con_index >= 0;
+         api_con_index--)
+    {
+        ltran = (struct trans *)
+            list_get_item(g_api_con_trans_list, api_con_index);
+        if (ltran != NULL)
+        {
+            list_remove_item(g_api_con_trans_list, api_con_index);
+            g_free(ltran->callback_data);
+            trans_delete(ltran);
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 THREAD_RV THREAD_CC
 channel_thread_loop(void *in_val)
 {
@@ -1086,12 +1381,11 @@ channel_thread_loop(void *in_val)
     int num_wobjs;
     int timeout;
     int error;
-    int index;
     THREAD_RV rv;
-    struct trans *ltran;
 
     LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread start"));
     rv = 0;
+    g_api_con_trans_list = list_create();
     setup_api_listen();
     error = setup_listen();
 
@@ -1105,6 +1399,7 @@ channel_thread_loop(void *in_val)
         trans_get_wait_objs(g_lis_trans, objs, &num_objs);
         trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
 
+        //g_writeln("timeout %d", timeout);
         while (g_obj_wait(objs, num_objs, wobjs, num_wobjs, timeout) == 0)
         {
             check_timeout();
@@ -1157,24 +1452,8 @@ channel_thread_loop(void *in_val)
                     LOG(0, ("channel_thread_loop: trans_check_wait_objs failed"));
                 }
             }
-
-            if (g_api_con_trans_list != 0)
-            {
-                for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
-                {
-                    ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
-                    if (ltran != 0)
-                    {
-                        if (trans_check_wait_objs(ltran) != 0)
-                        {
-                            list_remove_item(g_api_con_trans_list, index);
-                            g_free(ltran->callback_data);
-                            trans_delete(ltran);
-                        }
-                    }
-                }
-            }
-
+            /* check the wait_objs in g_api_con_trans_list */
+            api_con_trans_list_check_wait_objs();
             xcommon_check_wait_objs();
             sound_check_wait_objs();
             dev_redir_check_wait_objs();
@@ -1184,23 +1463,16 @@ channel_thread_loop(void *in_val)
             num_wobjs = 0;
             objs[num_objs] = g_term_event;
             num_objs++;
-            trans_get_wait_objs(g_lis_trans, objs, &num_objs);
+            trans_get_wait_objs_rw(g_lis_trans, objs, &num_objs,
+                                   wobjs, &num_wobjs, &timeout);
             trans_get_wait_objs_rw(g_con_trans, objs, &num_objs,
                                    wobjs, &num_wobjs, &timeout);
-            trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
-
-            if (g_api_con_trans_list != 0)
-            {
-                for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
-                {
-                    ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
-                    if (ltran != 0)
-                    {
-                        trans_get_wait_objs(ltran, objs, &num_objs);
-                    }
-                }
-            }
-
+            trans_get_wait_objs_rw(g_api_lis_trans, objs, &num_objs,
+                                   wobjs, &num_wobjs, &timeout);
+            /* get the wait_objs from in g_api_con_trans_list */
+            api_con_trans_list_get_wait_objs_rw(objs, &num_objs,
+                                                wobjs, &num_wobjs,
+                                                &timeout);
             xcommon_get_wait_objs(objs, &num_objs, &timeout);
             sound_get_wait_objs(objs, &num_objs, &timeout);
             dev_redir_get_wait_objs(objs, &num_objs, &timeout);
@@ -1215,20 +1487,8 @@ channel_thread_loop(void *in_val)
     g_con_trans = 0;
     trans_delete(g_api_lis_trans);
     g_api_lis_trans = 0;
-    if (g_api_con_trans_list != 0)
-    {
-        for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
-        {
-            ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
-            if (ltran != 0)
-            {
-                list_remove_item(g_api_con_trans_list, index);
-                g_free(ltran->callback_data);
-                trans_delete(ltran);
-            }
-        }
-        list_delete(g_api_con_trans_list);
-    }
+    api_con_trans_list_remove_all();
+    list_delete(g_api_con_trans_list);
     LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread stop"));
     g_set_wait_obj(g_thread_done_event);
     return rv;
@@ -1541,6 +1801,8 @@ main(int argc, char **argv)
         g_file_delete(log_file);
     }
 
+    g_memset(g_drdynvcs, 0, sizeof(g_drdynvcs));
+
     logconfig.log_file = log_file;
     logconfig.fd = -1;
     logconfig.log_level = log_level;
@@ -1636,66 +1898,3 @@ main(int argc, char **argv)
     return 0;
 }
 
-/*
- * return unused slot in dvc_channels[]
- *
- * @return unused slot index on success, -1 on failure
- ******************************************************************************/
-int
-find_empty_slot_in_dvc_channels(void)
-{
-    int i;
-
-    for (i = 0; i < MAX_DVC_CHANNELS; i++)
-    {
-        if (g_dvc_channels[i] == NULL)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-/*
- * return struct xrdp_api_data that contains specified dvc_chan_id
- *
- * @param  dvc_chan_id  channel id to look for
- *
- * @return xrdp_api_data struct containing dvc_chan_id or NULL on failure
- ******************************************************************************/
-struct xrdp_api_data *
-struct_from_dvc_chan_id(tui32 dvc_chan_id)
-{
-    int i;
-
-    for (i = 0; i < MAX_DVC_CHANNELS; i++)
-    {
-        if (g_dvc_channels[i] != NULL &&
-            g_dvc_channels[i]->dvc_chan_id >= 0 &&
-            (tui32) g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
-        {
-            return g_dvc_channels[i];
-        }
-    }
-
-    return NULL;
-}
-
-int
-remove_struct_with_chan_id(tui32 dvc_chan_id)
-{
-    int i;
-
-    for (i = 0; i < MAX_DVC_CHANNELS; i++)
-    {
-        if (g_dvc_channels[i] != NULL &&
-            g_dvc_channels[i]->dvc_chan_id >= 0 &&
-            (tui32) g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
-        {
-            g_dvc_channels[i] = NULL;
-            return 0;
-        }
-    }
-    return -1;
-}

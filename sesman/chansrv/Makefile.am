@@ -57,8 +57,6 @@ xrdp_chansrv_SOURCES = \
   clipboard_file.h \
   devredir.c \
   devredir.h \
-  drdynvc.c \
-  drdynvc.h \
   fifo.c \
   fifo.h \
   irp.c \

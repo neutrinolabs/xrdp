@@ -44,24 +44,21 @@
 
 struct wts_obj
 {
-    int      fd;
-    int      status;
-    char     name[9];
-    char     dname[128];
-    int      display_num;
-    uint32_t flags;
+    int fd;
+    int display_num;
 };
 
 /* helper functions used by WTSxxx API - do not invoke directly */
-static int get_display_num_from_display(char *display_text);
-static int send_init(struct wts_obj *wts);
-static int can_send(int sck, int millis);
-static int can_recv(int sck, int millis);
-
-static const unsigned char g_xrdpapi_magic[12] =
-{
-    0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f
-};
+static int
+get_display_num_from_display(char *display_text);
+static int
+can_send(int sck, int millis);
+static int
+can_recv(int sck, int millis);
+static int
+mysend(int sck, const void* adata, int bytes);
+static int
+myrecv(int sck, void* adata, int bytes);
 
 /*
  * Opens a handle to the server end of a specified virtual channel - this
@@ -100,22 +97,27 @@ void *
 WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
                         unsigned int flags)
 {
-    struct wts_obj     *wts;
-    char               *display_text;
-    int                 bytes;
-    unsigned long       llong;
-    struct sockaddr_un  s;
+    struct wts_obj *wts;
+    char *display_text;
+    int bytes;
+    unsigned long long1;
+    struct sockaddr_un s;
+    char *connect_data;
+    int chan_name_bytes;
+    int lerrno;
 
     if (SessionId != WTS_CURRENT_SESSION)
     {
         LLOGLN(0, ("WTSVirtualChannelOpenEx: bad SessionId"));
         return 0;
     }
-
     wts = (struct wts_obj *) calloc(1, sizeof(struct wts_obj));
-
+    if (wts == NULL)
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: calloc failed"));
+        return 0;
+    }
     wts->fd = -1;
-    wts->flags = flags;
     display_text = getenv("DISPLAY");
 
     if (display_text != 0)
@@ -133,16 +135,17 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     /* we use unix domain socket to communicate with chansrv */
     if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: socket failed"));
         free(wts);
         return NULL;
     }
 
     /* set non blocking */
-    llong = fcntl(wts->fd, F_GETFL);
-    llong = llong | O_NONBLOCK;
-    if (fcntl(wts->fd, F_SETFL, llong) < 0)
+    long1 = fcntl(wts->fd, F_GETFL);
+    long1 = long1 | O_NONBLOCK;
+    if (fcntl(wts->fd, F_SETFL, long1) < 0)
     {
-        LLOGLN(10, ("WTSVirtualChannelOpenEx: set non-block mode failed"));
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: set non-block mode failed"));
     }
 
     /* connect to chansrv session */
@@ -153,17 +156,93 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     s.sun_path[bytes - 1] = 0;
     bytes = sizeof(struct sockaddr_un);
 
-    if (connect(wts->fd, (struct sockaddr *) &s, bytes) == 0)
+    if (connect(wts->fd, (struct sockaddr *) &s, bytes) < 0)
     {
-        LLOGLN(10, ("WTSVirtualChannelOpenEx: connected ok, name %s", pVirtualName));
-        strncpy(wts->name, pVirtualName, 8);
-
-        /* wait for connection to complete and send init */
-        if (send_init(wts) == 0)
+        lerrno = errno;
+        if ((lerrno == EWOULDBLOCK) || (lerrno == EAGAIN) ||
+                (lerrno == EINPROGRESS))
         {
-            /* all ok */
-            wts->status = 1;
+            /* ok */
         }
+        else
+        {
+            LLOGLN(0, ("WTSVirtualChannelOpenEx: connect failed"));
+            free(wts);
+            return NULL;
+        }
+    }
+
+    /* wait for connection to complete */
+    if (!can_send(wts->fd, 500))
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: can_send failed"));
+        free(wts);
+        return NULL;
+    }
+
+    chan_name_bytes = strlen(pVirtualName);
+    bytes = 4 + 4 + 4 + chan_name_bytes + 4;
+
+    LLOGLN(10, ("WTSVirtualChannelOpenEx: chan_name_bytes %d bytes %d pVirtualName %s", chan_name_bytes, bytes, pVirtualName));
+
+    connect_data = (char *) calloc(bytes, 1);
+    if (connect_data == NULL)
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: calloc failed"));
+        free(wts);
+        return NULL;
+    }
+
+    connect_data[0] = (bytes >> 0) & 0xFF;
+    connect_data[1] = (bytes >> 8) & 0xFF;
+    connect_data[2] = (bytes >> 16) & 0xFF;
+    connect_data[3] = (bytes >> 24) & 0xFF;
+
+    /* version here(4-7), just leave 0 */
+
+    connect_data[8] = (chan_name_bytes >> 0) & 0xFF;
+    connect_data[9] = (chan_name_bytes >> 8) & 0xFF;
+    connect_data[10] = (chan_name_bytes >> 16) & 0xFF;
+    connect_data[11] = (chan_name_bytes >> 24) & 0xFF;
+
+    memcpy(connect_data + 12, pVirtualName, chan_name_bytes);
+
+    connect_data[4 + 4 + 4 + chan_name_bytes + 0] = (flags >> 0) & 0xFF;
+    connect_data[4 + 4 + 4 + chan_name_bytes + 1] = (flags >> 8) & 0xFF;
+    connect_data[4 + 4 + 4 + chan_name_bytes + 2] = (flags >> 16) & 0xFF;
+    connect_data[4 + 4 + 4 + chan_name_bytes + 3] = (flags >> 24) & 0xFF;
+
+    LLOGLN(10, ("WTSVirtualChannelOpenEx: calling mysend with %d bytes", bytes));
+
+    if (mysend(wts->fd, connect_data, bytes) != bytes)
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: mysend failed"));
+        free(wts);
+        return NULL;
+    }
+    LLOGLN(10, ("WTSVirtualChannelOpenEx: sent ok"));
+
+    if (!can_recv(wts->fd, 500))
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: can_recv failed"));
+        free(wts);
+        return NULL;
+    }
+
+    /* get response */
+    if (myrecv(wts->fd, connect_data, 4) != 4)
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: myrecv failed"));
+        free(wts);
+        return NULL;
+    }
+
+    if ((connect_data[0] != 0) || (connect_data[1] != 0) ||
+        (connect_data[2] != 0) || (connect_data[3] != 0))
+    {
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: connect_data not ok"));
+        free(wts);
+        return NULL;
     }
 
     return wts;
@@ -179,18 +258,18 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
 
 /*****************************************************************************/
 static int
-mysend(int sck, const void* adata, int bytes)
+mysend(int sck, const void *adata, int bytes)
 {
     int sent;
     int error;
-    const char* data;
+    const char *data;
 
 #if defined(SO_NOSIGPIPE)
     const int on = 1;
     setsockopt(sck, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
 #endif
 
-    data = (const char*)adata;
+    data = (const char *) adata;
     sent = 0;
     while (sent < bytes)
     {
@@ -207,6 +286,36 @@ mysend(int sck, const void* adata, int bytes)
     return sent;
 }
 
+/*****************************************************************************/
+static int
+myrecv(int sck, void *adata, int bytes)
+{
+    int recd;
+    int error;
+    char *data;
+
+#if defined(SO_NOSIGPIPE)
+    const int on = 1;
+    setsockopt(sck, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+#endif
+
+    data = (char *) adata;
+    recd = 0;
+    while (recd < bytes)
+    {
+        if (can_recv(sck, 100))
+        {
+            error = recv(sck, data + recd, bytes - recd, MSG_NOSIGNAL);
+            if (error < 1)
+            {
+                return -1;
+            }
+            recd += error;
+        }
+    }
+    return recd;
+}
+
 /*
  * write data to client connection
  *
@@ -217,8 +326,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
                        unsigned int Length, unsigned int *pBytesWritten)
 {
     struct wts_obj *wts;
-    int             rv;
-    int             header[4];
+    int rv;
 
     wts = (struct wts_obj *) hChannelHandle;
 
@@ -230,29 +338,12 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;
     }
 
-    if (wts->status != 1)
-    {
-        LLOGLN(10, ("WTSVirtualChannelWrite: wts->status != 1"));
-        return 0;
-    }
-
     if (!can_send(wts->fd, 0))
     {
         return 1;    /* can't write now, ok to try again */
     }
 
-    rv = 0;
-    memcpy(header, g_xrdpapi_magic, 12);
-    header[3] = Length;
-    if (mysend(wts->fd, header, 16) == 16)
-    {
-        rv = mysend(wts->fd, Buffer, Length);
-    }
-    else
-    {
-        LLOGLN(0, ("WTSVirtualChannelWrite: header write failed"));
-        return 0;
-    }
+    rv = mysend(wts->fd, Buffer, Length);
 
     LLOGLN(10, ("WTSVirtualChannelWrite: mysend() returned %d", rv));
 
@@ -262,14 +353,6 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         *pBytesWritten = rv;
         return 1;
     }
-
-#if 0 /* coverity: this is dead code */
-    /* error, but is it ok to try again? */
-    if ((rv == EWOULDBLOCK) || (rv == EAGAIN) || (rv == EINPROGRESS))
-    {
-        return 0;    /* failed to send, but should try again */
-    }
-#endif
 
     /* fatal error */
     return 0;
@@ -292,11 +375,6 @@ WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
     wts = (struct wts_obj *)hChannelHandle;
 
     if (wts == 0)
-    {
-        return 0;
-    }
-
-    if (wts->status != 1)
     {
         return 0;
     }
@@ -341,7 +419,7 @@ WTSVirtualChannelClose(void *hChannelHandle)
 
     wts = (struct wts_obj *)hChannelHandle;
 
-    if (wts == 0)
+    if (wts == NULL)
     {
         return 0;
     }
@@ -364,12 +442,7 @@ WTSVirtualChannelQuery(void *hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
 
     wts = (struct wts_obj *)hChannelHandle;
 
-    if (wts == 0)
-    {
-        return 0;
-    }
-
-    if (wts->status != 1)
+    if (wts == NULL)
     {
         return 0;
     }
@@ -378,6 +451,10 @@ WTSVirtualChannelQuery(void *hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
     {
         *pBytesReturned = 4;
         *ppBuffer = malloc(4);
+        if (*ppBuffer == NULL)
+        {
+            return 0;
+        }
         memcpy(*ppBuffer, &(wts->fd), 4);
     }
 
@@ -388,7 +465,7 @@ WTSVirtualChannelQuery(void *hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
 void
 WTSFreeMemory(void *pMemory)
 {
-    if (pMemory != 0)
+    if (pMemory != NULL)
     {
         free(pMemory);
     }
@@ -454,39 +531,6 @@ can_recv(int sck, int millis)
 
 /*****************************************************************************/
 static int
-send_init(struct wts_obj *wts)
-{
-    char initmsg[64];
-
-    memset(initmsg, 0, 64);
-
-    /* insert channel name */
-    strncpy(initmsg, wts->name, 8);
-
-    /* insert open mode flags */
-    initmsg[16] = (wts->flags >>  0) & 0xff;
-    initmsg[17] = (wts->flags >>  8) & 0xff;
-    initmsg[18] = (wts->flags >> 16) & 0xff;
-    initmsg[19] = (wts->flags >> 24) & 0xff;
-
-    if (!can_send(wts->fd, 500))
-    {
-        LLOGLN(10, ("send_init: send() will block!"));
-        return 1;
-    }
-
-    if (send(wts->fd, initmsg, 64, 0) != 64)
-    {
-        LLOGLN(10, ("send_init: send() failed!"));
-        return 1;
-    }
-
-    LLOGLN(10, ("send_init: sent ok!"));
-    return 0;
-}
-
-/*****************************************************************************/
-static int
 get_display_num_from_display(char *display_text)
 {
     int index;
@@ -513,7 +557,6 @@ get_display_num_from_display(char *display_text)
             disp[disp_index] = display_text[index];
             disp_index++;
         }
-
         index++;
     }
 

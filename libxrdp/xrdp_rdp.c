@@ -1125,6 +1125,7 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         g_writeln("yeah, up_and_running");
         DEBUG(("up_and_running set"));
         xrdp_rdp_send_data_update_sync(self);
+        xrdp_channel_drdynvc_start(self->sec_layer->chan_layer);
     }
 
     DEBUG(("out xrdp_rdp_process_data_font"));
