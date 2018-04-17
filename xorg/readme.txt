@@ -1,2 +1,0 @@
-
-xorg server readme
