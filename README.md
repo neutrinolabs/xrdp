@@ -137,7 +137,6 @@ xrdp
 ├── tests ······· tests for the code
 ├── vnc ········· VNC client module for xrdp
 ├── vrplayer ···· QT player redirecting video/audio to clients over xrdpvr channel
-├── xorg ········ X11rdp, an Xorg backend for xrdp
 ├── xrdp ········ main server code
 ├── xrdpapi ····· virtual channel API
 ├── xrdpvr ······ API for playing media over RDP

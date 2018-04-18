@@ -21,8 +21,7 @@ EXTRA_DIST = \
   postinstall-pak \
   tcutils \
   tests \
-  vrplayer \
-  xorg
+  vrplayer
 
 if XRDP_NEUTRINORDP
 NEUTRINORDPDIR = neutrinordp
