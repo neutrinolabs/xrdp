@@ -65,7 +65,7 @@ SyslogLevel=DEBUG
 ; Fedora 26 or later    :  param=/usr/libexec/Xorg
 ; Debian 9 or later     :  param=/usr/lib/xorg/Xorg
 ; Ubuntu 16.04 or later :  param=/usr/lib/xorg/Xorg
-; Arch Linux            :  param=/usr/bin/Xorg or param=Xorg
+; Arch Linux            :  param=/usr/lib/xorg-server/Xorg
 ; CentOS 7              :  param=/usr/bin/Xorg or param=Xorg
 ;
 param=Xorg
