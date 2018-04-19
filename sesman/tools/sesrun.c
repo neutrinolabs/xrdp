@@ -46,6 +46,7 @@ main(int argc, char **argv)
     int height;
     int bpp;
     int display;
+    int session_code;
     struct stream *in_s;
     struct stream *out_s;
     char *username;
@@ -62,15 +63,17 @@ main(int argc, char **argv)
     {
         g_printf("xrdp session starter v0.1\n");
         g_printf("\nusage:\n");
-        g_printf("sesrun <server> <username> <password> <width> <height> <bpp>\n");
+        g_printf("sesrun <server> <username> <password> <width> <height> <bpp> <session_cod>\n");
+        g_printf("session code 0 for Xvnc, 10 for X11RDP, 20 for Xorg\n");
     }
-    else if (argc == 7)
+    else if (argc == 8)
     {
         username = argv[2];
         password = argv[3];
         width = g_atoi(argv[4]);
         height = g_atoi(argv[5]);
         bpp = g_atoi(argv[6]);
+        session_code = g_atoi(argv[7]);
         make_stream(in_s);
         init_stream(in_s, 8192);
         make_stream(out_s);
@@ -83,7 +86,7 @@ main(int argc, char **argv)
         if (g_tcp_connect(sck, argv[1], g_cfg.listen_port) == 0)
         {
             s_push_layer(out_s, channel_hdr, 8);
-            out_uint16_be(out_s, 0); /* code */
+            out_uint16_be(out_s, session_code); /* code */
             i = g_strlen(username);
             out_uint16_be(out_s, i);
             out_uint8a(out_s, username, i);
