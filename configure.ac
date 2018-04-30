@@ -370,3 +370,28 @@ AC_CONFIG_FILES([
 ])
 
 AC_OUTPUT
+
+echo ""
+echo "xrdp will be compiled with:"
+echo ""
+echo "  mp3lame         $enable_mp3lame"
+echo "  opus            $enable_opus"
+echo "  fdkaac          $enable_fdkaac"
+echo "  jpeg            $enable_jpeg"
+echo "  turbo jpeg      $enable_tjpeg"
+echo "  rfxcodec        $enable_rfxcodec"
+echo "  painter         $enable_painter"
+echo "  pixman          $enable_pixman"
+echo "  fuse            $enable_fuse"
+echo "  ipv6            $enable_ipv6"
+echo "  vsock           $enable_vsock"
+echo "  pam             $enable_pam"
+echo "  kerberos        $enable_kerberos"
+echo "  debug           $enable_xrdpdebug"
+echo ""
+echo "  strict_locations        $enable_strict_locations"
+echo "  prefix                  $prefix"
+echo "  exec_prefix             $exec_prefix"
+echo "  libdir                  $libdir"
+echo "  bindir                  $bindir"
+echo "  sysconfdir              $sysconfdir"
