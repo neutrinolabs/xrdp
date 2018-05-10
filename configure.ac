@@ -328,7 +328,8 @@ AC_SUBST([moduledir], '${libdir}/xrdp')
 AC_ARG_ENABLE([strict-locations],
   [AS_HELP_STRING([--enable-strict-locations],
                   [Use standard Autoconf install directories unless overridden
-                   (default: use /etc and /var)])])
+                   (default: use /etc and /var)])],
+                  [], [enable_strict_locations=no])
 
 if test "x$enable_strict_locations" != "xyes"; then
   sysconfdir="/etc";
