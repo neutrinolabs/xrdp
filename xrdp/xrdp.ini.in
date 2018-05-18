@@ -7,14 +7,14 @@ fork=true
 
 ; ports to listen on, examples
 ;unix://./tmp/xrdp.socket
-;tcp://.:3389/  (<- Localhost 127.0.0.1:3389)
-;tcp://:3389/ (<- *:3389)
-;tcp://<any ipv4 format addr>:3389) (<- 192.168.1.1:3389)
-;tcp6://.:3389/
-;tcp6://:3389/
-;tcp6://<any ipv6 format>:3389/
-;vsock://<cid>:<port>/
-port=3389
+;tcp://.:3389                      (<- 127.0.0.1:3389)
+;tcp://:3389                       (<- *:3389)
+;tcp://<any ipv4 format addr>:3389 (<- 192.168.1.1:3389)
+;tcp6://.:3389
+;tcp6://:3389
+;tcp6://{<any ipv6 format addr>}:3389
+;vsock://<cid>:<port>
+port=tcp://:3389
 
 ; 'port' above should be connected to with vsock instead of tcp
 use_vsock=false
