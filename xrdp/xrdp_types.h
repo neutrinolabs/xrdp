@@ -527,14 +527,16 @@ struct xrdp_mod_data
 
 struct xrdp_startup_params
 {
-  char port[128];
+  char port[1024];
   int kill;
   int no_daemon;
   int help;
   int version;
   int fork;
-  int send_buffer_bytes;
-  int recv_buffer_bytes;
+  int tcp_send_buffer_bytes;
+  int tcp_recv_buffer_bytes;
+  int tcp_nodelay;
+  int tcp_keepalive;
 };
 
 /*

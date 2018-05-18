@@ -30,6 +30,9 @@
 static tbus g_process_sem = 0;
 static struct xrdp_process *g_process = 0;
 
+int
+xrdp_listen_conn_in(struct trans *self, struct trans *new_self);
+
 /*****************************************************************************/
 static int
 xrdp_listen_create_pro_done(struct xrdp_listen *self)
@@ -150,104 +153,65 @@ xrdp_process_run(void *in_val)
 
 /*****************************************************************************/
 static int
-xrdp_listen_get_port_address(char *port, int port_bytes,
-                             char *address, int address_bytes,
-                             int *tcp_nodelay, int *tcp_keepalive,
-                             int *mode,
-                             struct xrdp_startup_params *startup_param)
+xrdp_listen_get_startup_params(struct xrdp_listen *self)
 {
     int fd;
-    int error;
     int index;
     char *val;
     struct list *names;
     struct list *values;
     char cfg_file[256];
+    struct xrdp_startup_params *startup_params;
 
-    /* default to port 3389 */
-    g_strncpy(port, "3389", port_bytes - 1);
-    /* Default to all */
-    g_strncpy(address, "0.0.0.0", address_bytes - 1);
-    /* see if port or address is in xrdp.ini file */
+    startup_params = self->startup_params;
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
-    *mode = TRANS_MODE_TCP;
-    *tcp_nodelay = 0 ;
-    *tcp_keepalive = 0 ;
-
     if (fd != -1)
     {
         names = list_create();
         names->auto_free = 1;
         values = list_create();
         values->auto_free = 1;
-
         if (file_read_section(fd, "globals", names, values) == 0)
         {
             for (index = 0; index < names->count; index++)
             {
                 val = (char *)list_get_item(names, index);
-
                 if (val != 0)
                 {
                     if (g_strcasecmp(val, "port") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        if (val[0] == '/')
-                        {
-                            g_strncpy(port, val, port_bytes - 1);
-                        }
-                        else
-                        {
-                            error = g_atoi(val);
-                            if ((error > 0) && (error < 65000))
-                            {
-                                g_strncpy(port, val, port_bytes - 1);
-                            }
-                        }
+                        g_strncpy(startup_params->port, val, sizeof(startup_params->port) - 1);
                     }
-                    if (g_strcasecmp(val, "use_vsock") == 0)
-                    {
-                        val = (char *)list_get_item(values, index);
-                        if (g_text2bool(val) == 1)
-                        {
-                            *mode = TRANS_MODE_VSOCK;
-                        }
-                    }
-                    if (g_strcasecmp(val, "address") == 0)
-                    {
-                        val = (char *)list_get_item(values, index);
-                        g_strncpy(address, val, address_bytes - 1);
-                    }
-
                     if (g_strcasecmp(val, "fork") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        startup_param->fork = g_text2bool(val);
+                        startup_params->fork = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_nodelay") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        *tcp_nodelay = g_text2bool(val);
+                        startup_params->tcp_nodelay = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_keepalive") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        *tcp_keepalive = g_text2bool(val);
+                        startup_params->tcp_keepalive = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_send_buffer_bytes") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        startup_param->send_buffer_bytes = g_atoi(val);
+                        startup_params->tcp_send_buffer_bytes = g_atoi(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_recv_buffer_bytes") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        startup_param->recv_buffer_bytes = g_atoi(val);
+                        startup_params->tcp_recv_buffer_bytes = g_atoi(val);
                     }
                 }
             }
@@ -255,17 +219,137 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
 
         list_delete(names);
         list_delete(values);
-    }
-
-    if (fd != -1)
         g_file_close(fd);
-
-    /* startup_param overrides */
-    if (startup_param->port[0] != 0)
-    {
-        g_strncpy(port, startup_param->port, port_bytes - 1);
     }
+    return 0;
+}
 
+/*****************************************************************************/
+static int
+xrdp_listen_stop_all_listen(struct xrdp_listen *self)
+{
+    int index;
+    struct trans *ltrans;
+
+    for (index = 0; index < self->trans_list->count; index++)
+    {
+        ltrans = (struct trans *)
+                 list_get_item(self->trans_list, index);
+        trans_delete(ltrans);
+    }
+    list_clear(self->trans_list);
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+xrdp_listen_process_startup_params(struct xrdp_listen *self)
+{
+    int mode; /* TRANS_MODE_TCP, TRANS_MODE_UNIX, TRANS_MODE_VSOCK */
+    int error;
+    int cont;
+    int bytes;
+    struct trans *ltrans;
+    char address[128];
+    char port[128];
+    struct xrdp_startup_params *startup_params;
+
+    startup_params = self->startup_params;
+
+    cont = 1;
+    while (cont)
+    {
+
+        cont = 0;
+        g_strncpy(address, "0.0.0.0", 127);
+        g_strncpy(port, startup_params->port, 127);
+        mode = TRANS_MODE_TCP;
+
+        ltrans = trans_create(mode, 16, 16);
+        if (ltrans == NULL)
+        {
+            log_message(LOG_LEVEL_ERROR, "trans_create failed");
+            xrdp_listen_stop_all_listen(self);
+            return 1;
+        }
+        log_message(LOG_LEVEL_INFO, "listening to port %s on %s",
+                    port, address);
+        error = trans_listen_address(ltrans, port, address);
+        if (error != 0)
+        {
+            log_message(LOG_LEVEL_ERROR, "trans_listen_address failed");
+            trans_delete(ltrans);
+            xrdp_listen_stop_all_listen(self);
+            return 1;
+        }
+        if (mode == TRANS_MODE_TCP)
+        {
+            if (startup_params->tcp_nodelay)
+            {
+                if (g_tcp_set_no_delay(ltrans->sck))
+                {
+                    log_message(LOG_LEVEL_ERROR, "Error setting tcp_nodelay");
+                }
+            }
+            if (startup_params->tcp_keepalive)
+            {
+                if (g_tcp_set_keepalive(ltrans->sck))
+                {
+                    log_message(LOG_LEVEL_ERROR, "Error setting "
+                                "tcp_keepalive");
+                }
+            }
+            if (startup_params->tcp_send_buffer_bytes > 0)
+            {
+                bytes = startup_params->tcp_send_buffer_bytes;
+                log_message(LOG_LEVEL_INFO, "setting send buffer to %d bytes",
+                            bytes);
+                if (g_sck_set_send_buffer_bytes(ltrans->sck, bytes) != 0)
+                {
+                    log_message(LOG_LEVEL_ERROR, "error setting send buffer");
+                }
+                else
+                {
+                    if (g_sck_get_send_buffer_bytes(ltrans->sck, &bytes) != 0)
+                    {
+                        log_message(LOG_LEVEL_ERROR, "error getting send "
+                                    "buffer");
+                    }
+                    else
+                    {
+                        log_message(LOG_LEVEL_INFO, "send buffer set to %d "
+                                    "bytes", bytes);
+                    }
+                }
+            }
+            if (startup_params->tcp_recv_buffer_bytes > 0)
+            {
+                bytes = startup_params->tcp_recv_buffer_bytes;
+                log_message(LOG_LEVEL_INFO, "setting recv buffer to %d bytes",
+                            bytes);
+                if (g_sck_set_recv_buffer_bytes(ltrans->sck, bytes) != 0)
+                {
+                    log_message(LOG_LEVEL_ERROR, "error setting recv buffer");
+                }
+                else
+                {
+                    if (g_sck_get_recv_buffer_bytes(ltrans->sck, &bytes) != 0)
+                    {
+                        log_message(LOG_LEVEL_ERROR, "error getting recv "
+                                    "buffer");
+                    }
+                    else
+                    {
+                        log_message(LOG_LEVEL_INFO, "recv buffer set to %d "
+                                    "bytes", bytes);
+                    }
+                }
+            }
+        }
+        ltrans->trans_conn_in = xrdp_listen_conn_in;
+        ltrans->callback_data = self;
+        list_add_item(self->trans_list, (intptr_t) ltrans);
+    }
     return 0;
 }
 
@@ -356,254 +440,135 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     int robjs_count;
     int cont;
     int index;
-    int timeout = 0;
-    char port[128];
-    char address[256];
-    tbus robjs[8];
-    tbus term_obj;
-    tbus sync_obj;
-    tbus done_obj;
-    int tcp_nodelay;
-    int tcp_keepalive;
-    int bytes;
-    int mode;
+    int timeout;
+    intptr_t robjs[32];
+    intptr_t term_obj;
+    intptr_t sync_obj;
+    intptr_t done_obj;
     struct trans *ltrans;
 
     self->status = 1;
-
-    if (xrdp_listen_get_port_address(port, sizeof(port),
-                                     address, sizeof(address),
-                                     &tcp_nodelay, &tcp_keepalive,
-                                     //&self->listen_trans[0]->mode,
-                                     &mode,
-                                     self->startup_params) != 0)
+    if (xrdp_listen_get_startup_params(self) != 0)
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
-
-    if (port[0] == '/')
+    if (xrdp_listen_process_startup_params(self) != 0)
     {
-        ltrans = trans_create(TRANS_MODE_UNIX, 16, 16);
-        /* not valid with UDS */
-        tcp_nodelay = 0;
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        self->status = -1;
+        return 1;
     }
-    else if (mode == TRANS_MODE_VSOCK)
+    term_obj = g_get_term_event(); /*Global termination event */
+    sync_obj = g_get_sync_event();
+    done_obj = self->pro_done_event;
+    cont = 1;
+    while (cont)
     {
-        ltrans = trans_create(TRANS_MODE_VSOCK, 16, 16);
-        /* not valid with VSOCK */
-        tcp_nodelay = 0;
-    }
-    else
-    {
-        ltrans = trans_create(TRANS_MODE_TCP, 16, 16);
-    }
+        /* build the wait obj list */
+        robjs_count = 0;
+        robjs[robjs_count++] = term_obj;
+        robjs[robjs_count++] = sync_obj;
+        robjs[robjs_count++] = done_obj;
+        timeout = -1;
 
-    /* Create socket */
-    error = trans_listen_address(ltrans, port, address);
-    if (port[0] == '/')
-    {
-        g_chmod_hex(port, 0x0666);
-    }
-
-    if (error == 0)
-    {
-        log_message(LOG_LEVEL_INFO, "listening to port %s on %s",
-                    port, address);
-        if (tcp_nodelay)
-        {
-            if (g_tcp_set_no_delay(ltrans->sck))
-            {
-                log_message(LOG_LEVEL_ERROR,"Error setting tcp_nodelay");
-            }
-        }
-
-        if (tcp_keepalive)
-        {
-            if (g_tcp_set_keepalive(ltrans->sck))
-            {
-                log_message(LOG_LEVEL_ERROR,"Error setting tcp_keepalive");
-            }
-        }
-
-        if (self->startup_params->send_buffer_bytes > 0)
-        {
-            bytes = self->startup_params->send_buffer_bytes;
-            log_message(LOG_LEVEL_INFO, "setting send buffer to %d bytes",
-                        bytes);
-            if (g_sck_set_send_buffer_bytes(ltrans->sck, bytes) != 0)
-            {
-                log_message(LOG_LEVEL_ERROR, "error setting send buffer");
-            }
-            else
-            {
-                if (g_sck_get_send_buffer_bytes(ltrans->sck, &bytes) != 0)
-                {
-                    log_message(LOG_LEVEL_ERROR, "error getting send buffer");
-                }
-                else
-                {
-                    log_message(LOG_LEVEL_INFO, "send buffer set to %d bytes", bytes);
-                }
-            }
-        }
-
-        if (self->startup_params->recv_buffer_bytes > 0)
-        {
-            bytes = self->startup_params->recv_buffer_bytes;
-            log_message(LOG_LEVEL_INFO, "setting recv buffer to %d bytes",
-                        bytes);
-            if (g_sck_set_recv_buffer_bytes(ltrans->sck, bytes) != 0)
-            {
-                log_message(LOG_LEVEL_ERROR, "error setting recv buffer");
-            }
-            else
-            {
-                if (g_sck_get_recv_buffer_bytes(ltrans->sck, &bytes) != 0)
-                {
-                    log_message(LOG_LEVEL_ERROR, "error getting recv buffer");
-                }
-                else
-                {
-                    log_message(LOG_LEVEL_INFO, "recv buffer set to %d bytes", bytes);
-                }
-            }
-        }
-
-        ltrans->trans_conn_in = xrdp_listen_conn_in;
-        ltrans->callback_data = self;
-        list_add_item(self->trans_list, (intptr_t) ltrans);
-        term_obj = g_get_term_event(); /*Global termination event */
-        sync_obj = g_get_sync_event();
-        done_obj = self->pro_done_event;
-        cont = 1;
-
-        while (cont)
-        {
-            /* build the wait obj list */
-            robjs_count = 0;
-            robjs[robjs_count++] = term_obj;
-            robjs[robjs_count++] = sync_obj;
-            robjs[robjs_count++] = done_obj;
-            timeout = -1;
-
-            for (index = 0; index < self->trans_list->count; index++)
-            {
-                ltrans = (struct trans *)
-                         list_get_item(self->trans_list, index);
-                if (trans_get_wait_objs(ltrans, robjs, &robjs_count) != 0)
-                {
-                    cont = 0;
-                    break;
-                }
-            }
-            if (cont == 0)
-            {
-                break;
-            }
-
-            /* wait - timeout -1 means wait indefinitely*/
-            if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
-            {
-                /* error, should not get here */
-                g_sleep(100);
-            }
-
-            if (g_is_wait_obj_set(term_obj)) /* termination called */
-            {
-                break;
-            }
-
-            /* some function must be processed by this thread */
-            if (g_is_wait_obj_set(sync_obj))
-            {
-                g_reset_wait_obj(sync_obj);
-                g_process_waiting_function(); /* run the function */
-            }
-
-            if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
-            {
-                g_reset_wait_obj(done_obj);
-                /* a process has died remove it from lists*/
-                xrdp_listen_delete_done_pro(self);
-            }
-
-            /* Run the callback when accept() returns a new socket*/
-            for (index = 0; index < self->trans_list->count; index++)
-            {
-                ltrans = (struct trans *)
-                         list_get_item(self->trans_list, index);
-                if (trans_check_wait_objs(ltrans) != 0)
-                {
-                    cont = 0;
-                    break;
-                }
-            }
-            if (cont == 0)
-            {
-                break;
-            }
-        }
-
-        /* stop listening */
         for (index = 0; index < self->trans_list->count; index++)
         {
             ltrans = (struct trans *)
                      list_get_item(self->trans_list, index);
-            trans_delete(ltrans);
-        }
-        list_clear(self->trans_list);
-
-        /* second loop to wait for all process threads to close */
-        cont = 1;
-
-        while (cont)
-        {
-            if (self->process_list->count == 0)
+            if (trans_get_wait_objs(ltrans, robjs, &robjs_count) != 0)
             {
+                cont = 0;
                 break;
             }
+        }
+        if (cont == 0)
+        {
+            break;
+        }
 
-            timeout = -1;
-            /* build the wait obj list */
-            robjs_count = 0;
-            robjs[robjs_count++] = sync_obj;
-            robjs[robjs_count++] = done_obj;
+        /* wait - timeout -1 means wait indefinitely*/
+        if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
+        {
+            /* error, should not get here */
+            g_sleep(100);
+        }
 
-            /* wait - timeout -1 means wait indefinitely*/
-            if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
+        if (g_is_wait_obj_set(term_obj)) /* termination called */
+        {
+            break;
+        }
+
+        /* some function must be processed by this thread */
+        if (g_is_wait_obj_set(sync_obj))
+        {
+            g_reset_wait_obj(sync_obj);
+            g_process_waiting_function(); /* run the function */
+        }
+
+        if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
+        {
+            g_reset_wait_obj(done_obj);
+            /* a process has died remove it from lists*/
+            xrdp_listen_delete_done_pro(self);
+        }
+
+        /* Run the callback when accept() returns a new socket*/
+        for (index = 0; index < self->trans_list->count; index++)
+        {
+            ltrans = (struct trans *)
+                     list_get_item(self->trans_list, index);
+            if (trans_check_wait_objs(ltrans) != 0)
             {
-                /* error, should not get here */
-                g_sleep(100);
+                cont = 0;
+                break;
             }
-
-            /* some function must be processed by this thread */
-            if (g_is_wait_obj_set(sync_obj))
-            {
-                g_reset_wait_obj(sync_obj);
-                g_process_waiting_function(); /* run the function that is waiting*/
-            }
-
-            if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
-            {
-                g_reset_wait_obj(done_obj);
-                xrdp_listen_delete_done_pro(self);
-            }
+        }
+        if (cont == 0)
+        {
+            break;
         }
     }
-    else
+
+    /* stop listening */
+    xrdp_listen_stop_all_listen(self);
+
+    /* second loop to wait for all process threads to close */
+    cont = 1;
+
+    while (cont)
     {
-        trans_delete(ltrans);
-        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, possible port "
-                  "already in use");
-#if !defined(XRDP_ENABLE_VSOCK)
-        if (ltrans->mode == TRANS_MODE_VSOCK)
+        if (self->process_list->count == 0)
         {
-            log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, "
-                        "vsock support not compiled and config requested");
+            break;
         }
-#endif
+
+        timeout = -1;
+        /* build the wait obj list */
+        robjs_count = 0;
+        robjs[robjs_count++] = sync_obj;
+        robjs[robjs_count++] = done_obj;
+
+        /* wait - timeout -1 means wait indefinitely*/
+        if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
+        {
+            /* error, should not get here */
+            g_sleep(100);
+        }
+
+        /* some function must be processed by this thread */
+        if (g_is_wait_obj_set(sync_obj))
+        {
+            g_reset_wait_obj(sync_obj);
+            g_process_waiting_function(); /* run the function that is waiting*/
+        }
+
+        if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
+        {
+            g_reset_wait_obj(done_obj);
+            xrdp_listen_delete_done_pro(self);
+        }
     }
 
     self->status = -1;
