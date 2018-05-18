@@ -259,7 +259,7 @@ xrdp_listen_parse_filename(char *strout, int strout_max,
     {
         if (in)
         {
-            if ((strin[strin_index] != ' ') && (strin[strin_index] != ','))
+            if ((strin[strin_index] > ' ') && (strin[strin_index] != ','))
             {
                 strout[strout_index++] = strin[strin_index++];
                 count++;
@@ -272,7 +272,7 @@ xrdp_listen_parse_filename(char *strout, int strout_max,
         }
         else
         {
-            if ((strin[strin_index] != ' ') && (strin[strin_index] != ','))
+            if ((strin[strin_index] > ' ') && (strin[strin_index] != ','))
             {
                 in = 1;
                 strout[strout_index++] = strin[strin_index++];
@@ -381,6 +381,52 @@ xrdp_listen_parse_ipv4(char *strout, int strout_max,
 }
 
 /*****************************************************************************/
+static int
+xrdp_listen_parse_ipv6(char *strout, int strout_max,
+                       const char *strin, int strin_max)
+{
+    int count;
+    int in;
+    int strin_index;
+    int strout_index;
+
+    strin_index = 0;
+    strout_index = 0;
+    in = 0;
+    count = 0;
+    while ((strin_index < strin_max) && (strout_index < strout_max))
+    {
+        if (in)
+        {
+            if (strin[strin_index] != '}')
+            {
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            if (strin[strin_index] == '{')
+            {
+                in = 1;
+                strin_index++;
+                count++;
+                continue;
+            }
+        }
+        strin_index++;
+        count++;
+    }
+    strout[strout_index] = 0;
+    return count;
+}
+
+/*****************************************************************************/
 /* address and port are assumed 128 bytes */
 static int
 xrdp_listen_pp(struct xrdp_listen *self, int *index,
@@ -445,6 +491,58 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             str += bytes;
             lindex += bytes;
             *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "tcp6://.:", 9) == 0)
+        {
+            str += 9;
+            lindex += 9;
+            g_strncpy(address, "::1", 127);
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "tcp6://:", 8) == 0)
+        {
+            str += 8;
+            lindex += 8;
+            g_strncpy(address, "::", 127);
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "tcp6://", 7) == 0)
+        {
+            str += 7;
+            lindex += 7;
+            bytes = xrdp_listen_parse_ipv6(address, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "vsock://", 8) == 0)
+        {
+            str += 8;
+            lindex += 8;
+            bytes = xrdp_listen_parse_integer(address, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_VSOCK;
             *index = lindex;
             return 0;
         }
