@@ -243,28 +243,256 @@ xrdp_listen_stop_all_listen(struct xrdp_listen *self)
 
 /*****************************************************************************/
 static int
+xrdp_listen_parse_filename(char *strout, int strout_max,
+                           const char *strin, int strin_max)
+{
+    int count;
+    int in;
+    int strin_index;
+    int strout_index;
+
+    strin_index = 0;
+    strout_index = 0;
+    in = 0;
+    count = 0;
+    while ((strin_index < strin_max) && (strout_index < strout_max))
+    {
+        if (in)
+        {
+            if ((strin[strin_index] != ' ') && (strin[strin_index] != ','))
+            {
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            if ((strin[strin_index] != ' ') && (strin[strin_index] != ','))
+            {
+                in = 1;
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+        }
+        strin_index++;
+        count++;
+    }
+    strout[strout_index] = 0;
+    return count;
+}
+
+/*****************************************************************************/
+static int
+xrdp_listen_parse_integer(char *strout, int strout_max,
+                          const char *strin, int strin_max)
+{
+    int count;
+    int in;
+    int strin_index;
+    int strout_index;
+
+    strin_index = 0;
+    strout_index = 0;
+    in = 0;
+    count = 0;
+    while ((strin_index < strin_max) && (strout_index < strout_max))
+    {
+        if (in)
+        {
+            if ((strin[strin_index] >= '0') && (strin[strin_index] <= '9'))
+            {
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            if ((strin[strin_index] >= '0') && (strin[strin_index] <= '9'))
+            {
+                in = 1;
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+        }
+        strin_index++;
+        count++;
+    }
+    strout[strout_index] = 0;
+    return count;
+}
+
+/*****************************************************************************/
+static int
+xrdp_listen_parse_ipv4(char *strout, int strout_max,
+                       const char *strin, int strin_max)
+{
+    int count;
+    int in;
+    int strin_index;
+    int strout_index;
+
+    strin_index = 0;
+    strout_index = 0;
+    in = 0;
+    count = 0;
+    while ((strin_index < strin_max) && (strout_index < strout_max))
+    {
+        if (in)
+        {
+            if (((strin[strin_index] >= '0') && (strin[strin_index] <= '9')) ||
+                 (strin[strin_index] == '.'))
+            {
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            if ((strin[strin_index] >= '0') && (strin[strin_index] <= '9'))
+            {
+                in = 1;
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+        }
+        strin_index++;
+        count++;
+    }
+    strout[strout_index] = 0;
+    return count;
+}
+
+/*****************************************************************************/
+/* address and port are assumed 128 bytes */
+static int
+xrdp_listen_pp(struct xrdp_listen *self, int *index,
+               char *address, char *port, int *mode)
+{
+    struct xrdp_startup_params *startup_params;
+    const char *str;
+    const char *str_end;
+    int lindex;
+    int bytes;
+
+    startup_params = self->startup_params;
+    lindex = *index;
+    str = startup_params->port + lindex;
+    str_end = startup_params->port + g_strlen(startup_params->port);
+    while (str < str_end)
+    {
+        if (g_strncmp(str, "unix://.", 8) == 0)
+        {
+            str += 8;
+            lindex += 8;
+            address[0] = 0;
+            bytes = xrdp_listen_parse_filename(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_UNIX;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "tcp://.:", 8) == 0)
+        {
+            str += 8;
+            lindex += 8;
+            g_strncpy(address, "127.0.0.1", 127);
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "tcp://:", 7) == 0)
+        {
+            str += 7;
+            lindex += 7;
+            g_strncpy(address, "0.0.0.0", 127);
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else if (g_strncmp(str, "tcp://", 6) == 0)
+        {
+            str += 6;
+            lindex += 6;
+            bytes = xrdp_listen_parse_ipv4(address, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            *mode = TRANS_MODE_TCP;
+            *index = lindex;
+            return 0;
+        }
+        else
+        {
+            str++;
+            lindex++;
+        }
+    }
+    if (lindex == *index)
+    {
+        return 1;
+    }
+    if (str >= str_end)
+    {
+        return 1;
+    }
+    *index = lindex;
+    return 0;
+}
+
+/*****************************************************************************/
+static int
 xrdp_listen_process_startup_params(struct xrdp_listen *self)
 {
     int mode; /* TRANS_MODE_TCP, TRANS_MODE_UNIX, TRANS_MODE_VSOCK */
     int error;
     int cont;
     int bytes;
+    int index;
     struct trans *ltrans;
     char address[128];
     char port[128];
     struct xrdp_startup_params *startup_params;
 
     startup_params = self->startup_params;
-
+    index = 0;
     cont = 1;
     while (cont)
     {
-
-        cont = 0;
-        g_strncpy(address, "0.0.0.0", 127);
-        g_strncpy(port, startup_params->port, 127);
-        mode = TRANS_MODE_TCP;
-
+        if (xrdp_listen_pp(self, &index, address, port, &mode) != 0)
+        {
+            log_message(LOG_LEVEL_INFO, "xrdp_listen_pp done");
+            cont = 0;
+            break;
+        }
+        log_message(LOG_LEVEL_INFO, "address [%s] port [%s] mode %d",
+                    address, port, mode);
         ltrans = trans_create(mode, 16, 16);
         if (ltrans == NULL)
         {
