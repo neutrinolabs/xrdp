@@ -405,7 +405,7 @@ struct xrdp_process
 struct xrdp_listen
 {
   int status;
-  struct trans* listen_trans; /* in tcp listen mode */
+  struct list *trans_list; /* list of struct trans* */
   struct list* process_list;
   tbus pro_done_event;
   struct xrdp_startup_params* startup_params;
