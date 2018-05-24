@@ -58,7 +58,7 @@ AC_ARG_WITH([socketdir],
 AC_SUBST([socketdir], [$with_socketdir])
 
 AC_ARG_WITH([systemdsystemunitdir],
-        AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
+        AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files, no to disable]),
         [], [
 if test "x$linux" = xyes; then
   with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -385,6 +385,7 @@ echo "  painter         $enable_painter"
 echo "  pixman          $enable_pixman"
 echo "  fuse            $enable_fuse"
 echo "  ipv6            $enable_ipv6"
+echo "  ipv6only        $enable_ipv6only"
 echo "  vsock           $enable_vsock"
 echo "  pam             $enable_pam"
 echo "  kerberos        $enable_kerberos"
@@ -396,3 +397,4 @@ echo "  exec_prefix             $exec_prefix"
 echo "  libdir                  $libdir"
 echo "  bindir                  $bindir"
 echo "  sysconfdir              $sysconfdir"
+echo "#define CONFIGURE_STRING \"$@\"" > configure_params.h
