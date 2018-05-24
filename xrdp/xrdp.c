@@ -24,6 +24,7 @@
 
 #include "xrdp.h"
 #include "log.h"
+#include "configure_params.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
@@ -62,6 +63,10 @@ print_version(void)
 void
 print_help(void)
 {
+#if defined(CONFIGURE_STRING)
+    g_writeln("xrdp configure command line parameters [%s]", CONFIGURE_STRING);
+    g_writeln("%s", "");
+#endif
     g_writeln("Usage: xrdp [options]");
     g_writeln("   -h, --help       show help");
     g_writeln("   -n, --nodaemon   don't fork into background");
