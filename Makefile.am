@@ -65,3 +65,6 @@ SUBDIRS = \
   xrdpapi \
   pkgconfig \
   $(XRDPVRDIR)
+
+clean-local:
+	-rm -f configure_params.h
