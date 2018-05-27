@@ -734,7 +734,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
         }
     }
 
-    SSL_CTX_set_read_ahead(self->ctx, 1);
+    SSL_CTX_set_read_ahead(self->ctx, 0);
 
     if (SSL_CTX_use_RSAPrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
             <= 0)
