@@ -78,7 +78,7 @@ config_read(struct config_sesman *cfg)
     /* read global config */
     config_read_globals(fd, cfg, param_n, param_v);
 
-    /* read Xvnc/X11rdp/XOrg parameter list */
+    /* read Xvnc/X11rdp/Xorg parameter list */
     config_read_vnc_params(fd, cfg, param_n, param_v);
     config_read_rdp_params(fd, cfg, param_n, param_v);
     config_read_xorg_params(fd, cfg, param_n, param_v);
@@ -416,8 +416,8 @@ config_read_xorg_params(int file, struct config_sesman *cs,
                       (long) g_strdup((char *) list_get_item(param_v, i)));
     }
 
-    /* printing XOrg parameters */
-    g_printf("XOrg parameters:\r\n");
+    /* printing Xorg parameters */
+    g_printf("Xorg parameters:\r\n");
 
     for (i = 0; i < cs->xorg_params->count; i++)
     {

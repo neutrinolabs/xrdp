@@ -320,7 +320,7 @@ config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
 
 /**
  *
- * @brief Reads sesman [XOrg] configuration section
+ * @brief Reads sesman [Xorg] configuration section
  * @param file configuration file descriptor
  * @param cs pointer to a config_sesman struct
  * @param param_n parameter name list
