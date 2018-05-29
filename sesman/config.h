@@ -349,6 +349,14 @@ config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
 int
 config_read_session_variables(int file, struct config_sesman *cs,
                               struct list *param_n, struct list *param_v);
+/**
+ *
+ * @brief Dumps configuration
+ * @param pointer to a config_sesman struct
+ *
+ */
+void
+config_dump(struct config_sesman *config);
 
 void
 config_free(struct config_sesman *cs);
