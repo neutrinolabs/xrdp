@@ -83,9 +83,6 @@ config_read(struct config_sesman *cfg)
     config_read_rdp_params(fd, cfg, param_n, param_v);
     config_read_xorg_params(fd, cfg, param_n, param_v);
 
-    /* read logging config */
-    // config_read_logging(fd, &(cfg->log), param_n, param_v);
-
     /* read security config */
     config_read_security(fd, &(cfg->sec), param_n, param_v);
 

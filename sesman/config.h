@@ -278,20 +278,6 @@ config_read_globals(int file, struct config_sesman* cf,
 
 /**
  *
- * @brief Reads sesman [logging] configuration section
- * @param file configuration file descriptor
- * @param lc pointer to a log_config struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_logging(int file, struct log_config* lc, struct list* param_n,
-                    struct list* param_v);
-
-/**
- *
  * @brief Reads sesman [Security] configuration section
  * @param file configuration file descriptor
  * @param sc pointer to a config_security struct
