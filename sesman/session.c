@@ -860,7 +860,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
 /******************************************************************************/
 /* called with the main thread */
 static int
-session_reconnect_fork(int display, char *username)
+session_reconnect_fork(int display, char *username, long data)
 {
     int pid;
     char text[256];
@@ -877,6 +877,7 @@ session_reconnect_fork(int display, char *username)
                      display,
                      g_cfg->env_names,
                      g_cfg->env_values);
+        auth_set_env(data);
         g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
         if (g_file_exist(text))
@@ -904,9 +905,9 @@ session_start(long data, tui8 type, struct SCP_CONNECTION *c,
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
 int
-session_reconnect(int display, char *username)
+session_reconnect(int display, char *username, long data)
 {
-    return session_reconnect_fork(display, username);
+    return session_reconnect_fork(display, username, data);
 }
 
 /******************************************************************************/
