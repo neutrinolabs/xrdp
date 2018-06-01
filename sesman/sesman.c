@@ -342,8 +342,17 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
+    if (daemon)
+    {
+        /* not to spit on the console, shut up stdout/stderr before anything's logged */
+        g_file_close(0);
+        g_file_close(1);
+        g_file_close(2);
+    }
+
     /* libscp initialization */
     scp_init();
+
 
     if (daemon)
     {
@@ -362,10 +371,6 @@ main(int argc, char **argv)
             g_deinit();
             g_exit(0);
         }
-
-        g_file_close(0);
-        g_file_close(1);
-        g_file_close(2);
 
         if (g_file_open("/dev/null") < 0)
         {
