@@ -209,8 +209,7 @@ main(int argc, char **argv)
 
     if (1 == argc)
     {
-        /* no options on command line. normal startup */
-        g_printf("starting sesman...\n");
+        /* start in daemon mode if no cli options */
         daemon = 1;
     }
     else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--nodaemon")) ||
@@ -312,6 +311,12 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
+    /* not to spit on the console, show config summary only when running in foreground */
+    if (!daemon)
+    {
+        config_dump(g_cfg);
+    }
+
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* starting logging subsystem */
@@ -337,8 +342,17 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
+    if (daemon)
+    {
+        /* not to spit on the console, shut up stdout/stderr before anything's logged */
+        g_file_close(0);
+        g_file_close(1);
+        g_file_close(2);
+    }
+
     /* libscp initialization */
     scp_init();
+
 
     if (daemon)
     {
@@ -357,10 +371,6 @@ main(int argc, char **argv)
             g_deinit();
             g_exit(0);
         }
-
-        g_file_close(0);
-        g_file_close(1);
-        g_file_close(2);
 
         if (g_file_open("/dev/null") < 0)
         {

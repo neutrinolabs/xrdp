@@ -278,20 +278,6 @@ config_read_globals(int file, struct config_sesman* cf,
 
 /**
  *
- * @brief Reads sesman [logging] configuration section
- * @param file configuration file descriptor
- * @param lc pointer to a log_config struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_logging(int file, struct log_config* lc, struct list* param_n,
-                    struct list* param_v);
-
-/**
- *
  * @brief Reads sesman [Security] configuration section
  * @param file configuration file descriptor
  * @param sc pointer to a config_security struct
@@ -334,7 +320,7 @@ config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
 
 /**
  *
- * @brief Reads sesman [XOrg] configuration section
+ * @brief Reads sesman [Xorg] configuration section
  * @param file configuration file descriptor
  * @param cs pointer to a config_sesman struct
  * @param param_n parameter name list
@@ -363,6 +349,14 @@ config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
 int
 config_read_session_variables(int file, struct config_sesman *cs,
                               struct list *param_n, struct list *param_v);
+/**
+ *
+ * @brief Dumps configuration
+ * @param pointer to a config_sesman struct
+ *
+ */
+void
+config_dump(struct config_sesman *config);
 
 void
 config_free(struct config_sesman *cs);
