@@ -503,6 +503,7 @@ config_read_session_variables(int file, struct config_sesman *cs,
 void
 config_free(struct config_sesman *cs)
 {
+    g_free(cs->auth_file_path);
     list_delete(cs->rdp_params);
     list_delete(cs->vnc_params);
     list_delete(cs->xorg_params);
