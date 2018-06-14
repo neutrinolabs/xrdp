@@ -530,6 +530,7 @@ config_dump(struct config_sesman *config)
 void
 config_free(struct config_sesman *cs)
 {
+    g_free(cs->auth_file_path);
     list_delete(cs->rdp_params);
     list_delete(cs->vnc_params);
     list_delete(cs->xorg_params);
