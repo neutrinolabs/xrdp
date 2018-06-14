@@ -62,14 +62,23 @@ specified by \fBUserWindowManager\fR if it exists.
 
 .TP
 \fBUserWindowManager\fR=\fIfilename\fR
-Name of the startup script relative to the user's home directory. If
+Path of the startup script relative to the user's home directory. If
 present and enabled by \fBEnableUserWindowManager\fR, that script is
 executed instead of \fBDefaultWindowManager\fR.
 
 .TP
 \fBDefaultWindowManager\fR=\fIfilename\fR
-Full path to the default startup script used by xrdp-sesman to start a
-session if the user script is disabled or missing.
+Full path or relative path of the default startup script used by xrdp-sesman
+to start a session.  If the path is not a full path, it will be resolved as
+relative path to \fI@xrdpconfdir@\fR. If not specified, defaults to
+\fI@xrdpconfdir@/startwm.sh\fR.
+
+.TP
+\fBReconnectScript\fR=\fIfilename\fR
+Full path or relative path if the script which executed when users reconnects
+to the existing session. If the path is not a full path, it will be resolved as
+relative path to \fI@xrdpconfdir@\fR. If not specified, defaults to
+\fI@xrdpconfdir@/reconnectwm.sh\fR.
 
 .SH "LOGGING"
 Following parameters can be used in the \fB[Logging]\fR section.

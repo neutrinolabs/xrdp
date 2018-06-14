@@ -17,7 +17,8 @@ SUBST_VARS = sed \
    -e 's|@bindir[@]|$(bindir)|g' \
    -e 's|@localstatedir[@]|$(localstatedir)|g' \
    -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
-   -e 's|@socketdir[@]|$(socketdir)|g'
+   -e 's|@socketdir[@]|$(socketdir)|g' \
+   -e 's|@xrdpconfdir[@]|$(sysconfdir)/xrdp|g'
 
 subst_verbose = $(subst_verbose_@AM_V@)
 subst_verbose_ = $(subst_verbose_@AM_DEFAULT_V@)
