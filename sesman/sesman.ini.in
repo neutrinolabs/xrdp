@@ -4,6 +4,7 @@ ListenPort=3350
 EnableUserWindowManager=true
 UserWindowManager=startwm.sh
 DefaultWindowManager=startwm.sh
+ReconnectScript=reconnectwm.sh
 
 [Security]
 AllowRootLogin=true

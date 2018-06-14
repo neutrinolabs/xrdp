@@ -117,6 +117,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     cf->user_wm[0] = '\0';
     cf->default_wm = 0;
     cf->auth_file_path = 0;
+    cf->reconnect_sh = 0;
 
     file_read_section(file, SESMAN_CFG_GLOBALS, param_n, param_v);
 
@@ -147,6 +148,10 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_AUTH_FILE_PATH))
         {
             cf->auth_file_path = g_strdup((char *)list_get_item(param_v, i));
+        }
+        else if (g_strcasecmp(buf, SESMAN_CFG_RECONNECT_SH) == 0)
+        {
+            cf->reconnect_sh = g_strdup((char *)list_get_item(param_v, i));
         }
     }
 
@@ -185,6 +190,25 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         g_cfg->default_wm = g_strdup(buf);
         g_free(buf);
     }
+
+    if (cf->reconnect_sh == 0)
+    {
+        cf->reconnect_sh = g_strdup("reconnectwm.sh");
+    }
+    else if (g_strlen(cf->reconnect_sh) == 0)
+    {
+        g_free(cf->reconnect_sh);
+        cf->reconnect_sh = g_strdup("reconnectwm.sh");
+    }
+    if (cf->reconnect_sh[0] != '/')
+    {
+        buf = (char *)g_malloc(1024, 0);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
+        g_free(g_cfg->reconnect_sh);
+        g_cfg->reconnect_sh = g_strdup(buf);
+        g_free(buf);
+    }
+
 
     return 0;
 }
@@ -451,6 +475,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    EnableUserWindowManager:  %d", config->enable_user_wm);
     g_writeln("    UserWindowManager:        %s", config->user_wm);
     g_writeln("    DefaultWindowManager:     %s", config->default_wm);
+    g_writeln("    ReconnectScript:          %s", config->reconnect_sh);
     g_writeln("    AuthFilePath:             %s",
              ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
 
@@ -546,6 +571,7 @@ void
 config_free(struct config_sesman *cs)
 {
     g_free(cs->default_wm);
+    g_free(cs->reconnect_sh);
     g_free(cs->auth_file_path);
     list_delete(cs->rdp_params);
     list_delete(cs->vnc_params);

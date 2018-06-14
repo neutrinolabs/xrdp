@@ -862,7 +862,6 @@ static int
 session_reconnect_fork(int display, char *username, long data)
 {
     int pid;
-    char text[256];
 
     pid = g_fork();
 
@@ -877,11 +876,10 @@ session_reconnect_fork(int display, char *username, long data)
                      g_cfg->env_names,
                      g_cfg->env_values);
         auth_set_env(data);
-        g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
-        if (g_file_exist(text))
+        if (g_file_exist(g_cfg->reconnect_sh))
         {
-            g_execlp3(text, g_cfg->default_wm, 0);
+            g_execlp3(g_cfg->reconnect_sh, g_cfg->reconnect_sh, 0);
         }
 
         g_exit(0);
