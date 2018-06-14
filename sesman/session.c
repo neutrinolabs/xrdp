@@ -575,8 +575,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 }
                 /* if we're here something happened to g_execlp3
                    so we try running the default window manager */
-                g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
-                g_execlp3(text, g_cfg->default_wm, 0);
+                g_execlp3(g_cfg->default_wm, g_cfg->default_wm, 0);
 
                 log_message(LOG_LEVEL_ALWAYS, "error starting default "
                              "wm for user %s - pid %d", s->username, g_getpid());

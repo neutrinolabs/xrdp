@@ -198,7 +198,7 @@ struct config_sesman
    * @var default_wm
    * @brief Default window manager
    */
-  char default_wm[32];
+  char *default_wm;
   /**
    * @var user_wm
    * @brief Default window manager
