@@ -105,6 +105,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
                     struct list *param_v)
 {
     int i;
+    int length;
     char *buf;
 
     list_clear(param_v);
@@ -180,11 +181,11 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         g_free(cf->default_wm);
         cf->default_wm = g_strdup("startwm.sh");
     }
-
-    /* if default_wm doesn't begin with '/', it's a relative path from XRDP_CFG_PATH */
+    /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
     if (cf->default_wm[0] != '/')
     {
-        buf = (char *)g_malloc(1024, 0);
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->default_wm) + 1; /* '/' */
+        buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
         g_free(g_cfg->default_wm);
         g_cfg->default_wm = g_strdup(buf);
@@ -200,15 +201,16 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         g_free(cf->reconnect_sh);
         cf->reconnect_sh = g_strdup("reconnectwm.sh");
     }
+    /* if reconnect_sh doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
     if (cf->reconnect_sh[0] != '/')
     {
-        buf = (char *)g_malloc(1024, 0);
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->reconnect_sh) + 1; /* '/' */
+        buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
         g_free(g_cfg->reconnect_sh);
         g_cfg->reconnect_sh = g_strdup(buf);
         g_free(buf);
     }
-
 
     return 0;
 }
