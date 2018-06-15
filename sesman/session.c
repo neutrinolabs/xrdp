@@ -584,7 +584,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                             "%s", g_get_errno(), g_get_strerror());
                 log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
                 log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                            text);
+                            g_cfg->default_wm);
                 log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
                             g_cfg->default_wm);
 
