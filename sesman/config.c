@@ -184,6 +184,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
     if (cf->default_wm[0] != '/')
     {
+        /* sizeof operator returns string length including null terminator  */
         length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->default_wm) + 1; /* '/' */
         buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
@@ -204,6 +205,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     /* if reconnect_sh doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
     if (cf->reconnect_sh[0] != '/')
     {
+        /* sizeof operator returns string length including null terminator  */
         length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->reconnect_sh) + 1; /* '/' */
         buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
