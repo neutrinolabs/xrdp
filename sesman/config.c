@@ -105,6 +105,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
                     struct list *param_v)
 {
     int i;
+    int length;
     char *buf;
 
     list_clear(param_v);
@@ -115,8 +116,9 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     cf->listen_port[0] = '\0';
     cf->enable_user_wm = 0;
     cf->user_wm[0] = '\0';
-    cf->default_wm[0] = '\0';
+    cf->default_wm = 0;
     cf->auth_file_path = 0;
+    cf->reconnect_sh = 0;
 
     file_read_section(file, SESMAN_CFG_GLOBALS, param_n, param_v);
 
@@ -126,7 +128,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_DEFWM))
         {
-            g_strncpy(cf->default_wm, (char *)list_get_item(param_v, i), 31);
+            cf->default_wm = g_strdup((char *)list_get_item(param_v, i));
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_USERWM))
         {
@@ -148,6 +150,10 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         {
             cf->auth_file_path = g_strdup((char *)list_get_item(param_v, i));
         }
+        else if (g_strcasecmp(buf, SESMAN_CFG_RECONNECT_SH) == 0)
+        {
+            cf->reconnect_sh = g_strdup((char *)list_get_item(param_v, i));
+        }
     }
 
     /* checking for missing required parameters */
@@ -166,9 +172,46 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         cf->enable_user_wm = 0;
     }
 
-    if ('\0' == cf->default_wm[0])
+    if (cf->default_wm == 0)
     {
-        g_strncpy(cf->default_wm, "startwm.sh", 11);
+        cf->default_wm = g_strdup("startwm.sh");
+    }
+    else if (g_strlen(cf->default_wm) == 0)
+    {
+        g_free(cf->default_wm);
+        cf->default_wm = g_strdup("startwm.sh");
+    }
+    /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    if (cf->default_wm[0] != '/')
+    {
+        /* sizeof operator returns string length including null terminator  */
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->default_wm) + 1; /* '/' */
+        buf = (char *)g_malloc(length, 0);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
+        g_free(g_cfg->default_wm);
+        g_cfg->default_wm = g_strdup(buf);
+        g_free(buf);
+    }
+
+    if (cf->reconnect_sh == 0)
+    {
+        cf->reconnect_sh = g_strdup("reconnectwm.sh");
+    }
+    else if (g_strlen(cf->reconnect_sh) == 0)
+    {
+        g_free(cf->reconnect_sh);
+        cf->reconnect_sh = g_strdup("reconnectwm.sh");
+    }
+    /* if reconnect_sh doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    if (cf->reconnect_sh[0] != '/')
+    {
+        /* sizeof operator returns string length including null terminator  */
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->reconnect_sh) + 1; /* '/' */
+        buf = (char *)g_malloc(length, 0);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
+        g_free(g_cfg->reconnect_sh);
+        g_cfg->reconnect_sh = g_strdup(buf);
+        g_free(buf);
     }
 
     return 0;
@@ -436,6 +479,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    EnableUserWindowManager:  %d", config->enable_user_wm);
     g_writeln("    UserWindowManager:        %s", config->user_wm);
     g_writeln("    DefaultWindowManager:     %s", config->default_wm);
+    g_writeln("    ReconnectScript:          %s", config->reconnect_sh);
     g_writeln("    AuthFilePath:             %s",
              ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
 
@@ -530,6 +574,8 @@ config_dump(struct config_sesman *config)
 void
 config_free(struct config_sesman *cs)
 {
+    g_free(cs->default_wm);
+    g_free(cs->reconnect_sh);
     g_free(cs->auth_file_path);
     list_delete(cs->rdp_params);
     list_delete(cs->vnc_params);

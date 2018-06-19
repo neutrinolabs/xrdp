@@ -575,8 +575,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 }
                 /* if we're here something happened to g_execlp3
                    so we try running the default window manager */
-                g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
-                g_execlp3(text, g_cfg->default_wm, 0);
+                g_execlp3(g_cfg->default_wm, g_cfg->default_wm, 0);
 
                 log_message(LOG_LEVEL_ALWAYS, "error starting default "
                              "wm for user %s - pid %d", s->username, g_getpid());
@@ -585,7 +584,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                             "%s", g_get_errno(), g_get_strerror());
                 log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
                 log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                            text);
+                            g_cfg->default_wm);
                 log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
                             g_cfg->default_wm);
 
@@ -863,7 +862,6 @@ static int
 session_reconnect_fork(int display, char *username, long data)
 {
     int pid;
-    char text[256];
 
     pid = g_fork();
 
@@ -878,11 +876,10 @@ session_reconnect_fork(int display, char *username, long data)
                      g_cfg->env_names,
                      g_cfg->env_values);
         auth_set_env(data);
-        g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
-        if (g_file_exist(text))
+        if (g_file_exist(g_cfg->reconnect_sh))
         {
-            g_execlp3(text, g_cfg->default_wm, 0);
+            g_execlp3(g_cfg->reconnect_sh, g_cfg->reconnect_sh, 0);
         }
 
         g_exit(0);

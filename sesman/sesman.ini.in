@@ -1,9 +1,15 @@
+;; See `man 5 sesman.ini` for details
+
 [Globals]
 ListenAddress=127.0.0.1
 ListenPort=3350
 EnableUserWindowManager=true
+; Give in relative path to user's home directory
 UserWindowManager=startwm.sh
+; Give in full path or relative path to @sesmansysconfdir@
 DefaultWindowManager=startwm.sh
+; Give in full path or relative path to @sesmansysconfdir@
+ReconnectScript=reconnectwm.sh
 
 [Security]
 AllowRootLogin=true

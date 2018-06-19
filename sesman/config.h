@@ -39,6 +39,7 @@
 #define SESMAN_CFG_USERWM            "UserWindowManager"
 #define SESMAN_CFG_MAX_SESSION       "MaxSessions"
 #define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
+#define SESMAN_CFG_RECONNECT_SH      "ReconnectScript"
 
 #define SESMAN_CFG_RDP_PARAMS        "X11rdp"
 #define SESMAN_CFG_XORG_PARAMS       "Xorg"
@@ -198,12 +199,17 @@ struct config_sesman
    * @var default_wm
    * @brief Default window manager
    */
-  char default_wm[32];
+  char *default_wm;
   /**
    * @var user_wm
    * @brief Default window manager
    */
   char user_wm[32];
+  /**
+   * @var reconnect_sh
+   * @brief Script executed when reconnected
+   */
+  char *reconnect_sh;
   /**
    * @var auth_file_path
    * @brief Auth file path
