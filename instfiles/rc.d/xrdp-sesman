@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 1992-2018 The FreeBSD Project. All rights reserved.
+# Copyright (c) 1992-2015 The FreeBSD Project. All rights reserved.
 # Copyright (c) 2015-2018 Koichiro Iwao <meta@FreeBSD.org>
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,57 +26,19 @@
 #
 # $FreeBSD$
 #
-# REQUIRE: DAEMON
-# PROVIDE: xrdp
+# REQUIRE: LOGIN
+# PROVIDE: xrdp_sesman
 #
-# Add the following line to /etc/rc.conf to enable xrdp:
-#
-#  xrdp_enable="YES"
-#  xrdp_sesman_enable="YES"
 
 . /etc/rc.subr
 
-name="xrdp"
-rcvar="xrdp_enable"
+name="xrdp_sesman"
+rcvar="xrdp_sesman_enable"
 
 load_rc_config "$name"
-: ${xrdp_enable="NO"}
+: ${xrdp_sesman_enable="NO"}
 
-extra_commands="status allstart allstop allrestart"
-command="%%PREFIX%%/sbin/xrdp"
-
-allstart_cmd="xrdp_allstart"
-allstop_cmd="xrdp_allstop"
-allrestart_cmd="xrdp_allrestart"
-
-xrdp_allstart()
-{
-     run_rc_command "start"
-
-    if checkyesno "xrdp_sesman_enable" && \
-        ! %%PREFIX%%/etc/rc.d/xrdp-sesman forcestatus 1>/dev/null 2>&1; then
-        %%PREFIX%%/etc/rc.d/xrdp-sesman start || return 1
-    fi
-}
-
-xrdp_allstop()
-{
-    if checkyesno "xrdp_sesman_enable" && \
-        %%PREFIX%%/etc/rc.d/xrdp-sesman forcestatus 1>/dev/null 2>&1; then
-        %%PREFIX%%/etc/rc.d/xrdp-sesman stop || return 1
-    fi
-
-    run_rc_command "stop"
-}
-
-xrdp_allrestart()
-{
-    if checkyesno "xrdp_sesman_enable" && \
-        %%PREFIX%%/etc/rc.d/xrdp-sesman forcestatus 1>/dev/null 2>&1; then
-        %%PREFIX%%/etc/rc.d/xrdp-sesman restart || return 1
-    fi
-
-    run_rc_command "restart"
-}
+extra_commands="status"
+command="%%PREFIX%%/sbin/xrdp-sesman"
 
 run_rc_command "$1"
