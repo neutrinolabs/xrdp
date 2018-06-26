@@ -56,17 +56,20 @@ print_version(void)
                 "Neutrino Labs, and all contributors.");
     g_writeln("  See https://github.com/neutrinolabs/xrdp for more information.");
     g_writeln("%s", "");
+
+#if defined(CONFIGURE_STRING)
+    g_writeln("  Configure options:");
+    g_writeln("%s", CONFIGURE_STRING);
+#endif
+
     g_writeln("  Compiled with %s", get_openssl_version());
+
 }
 
 /*****************************************************************************/
 void
 print_help(void)
 {
-#if defined(CONFIGURE_STRING)
-    g_writeln("xrdp configure command line parameters [%s]", CONFIGURE_STRING);
-    g_writeln("%s", "");
-#endif
     g_writeln("Usage: xrdp [options]");
     g_writeln("   -h, --help       show help");
     g_writeln("   -n, --nodaemon   don't fork into background");
