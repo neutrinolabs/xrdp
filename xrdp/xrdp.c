@@ -24,7 +24,7 @@
 
 #include "xrdp.h"
 #include "log.h"
-#include "configure_params.h"
+#include "xrdp_configure_options.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
@@ -57,9 +57,9 @@ print_version(void)
     g_writeln("  See https://github.com/neutrinolabs/xrdp for more information.");
     g_writeln("%s", "");
 
-#if defined(CONFIGURE_STRING)
+#if defined(XRDP_CONFIGURE_OPTIONS)
     g_writeln("  Configure options:");
-    g_writeln("%s", CONFIGURE_STRING);
+    g_writeln("%s", XRDP_CONFIGURE_OPTIONS);
 #endif
 
     g_writeln("  Compiled with %s", get_openssl_version());
