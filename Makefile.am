@@ -67,4 +67,4 @@ SUBDIRS = \
   $(XRDPVRDIR)
 
 distclean-local:
-	-rm -f configure_params.h
+	-rm -f xrdp_configure_options.h

@@ -397,4 +397,9 @@ echo "  exec_prefix             $exec_prefix"
 echo "  libdir                  $libdir"
 echo "  bindir                  $bindir"
 echo "  sysconfdir              $sysconfdir"
-echo "#define CONFIGURE_STRING \"$@\"" > configure_params.h
+
+# xrdp_configure_options.h will be written to the build directory, not the source directory
+echo '#define XRDP_CONFIGURE_OPTIONS \' > ./xrdp_configure_options.h
+./config.status --config | xargs -n 1 | sed -e 's/^/"      /' -e 's/$/\\n" \\/' >> ./xrdp_configure_options.h
+echo '""' >> ./xrdp_configure_options.h
+
