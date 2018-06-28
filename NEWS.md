@@ -1,4 +1,4 @@
-# Release notes for xrdp v0.9.7 (2018/06/xx)
+# Release notes for xrdp v0.9.7 (2018/06/29)
 
 ## Deprecation notice
 x11rdp has been removed from xrdp reposiory and stored in the separate repository.
