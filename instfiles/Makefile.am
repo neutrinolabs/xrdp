@@ -97,5 +97,6 @@ endif
 if FREEBSD
 # must be tab below
 install-data-hook:
-	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp
+	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
+                                         $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
 endif

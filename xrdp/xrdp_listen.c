@@ -288,7 +288,7 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
         g_close_wait_obj(self->pro_done_event);
         xrdp_listen_create_pro_done(self);
         /* delete listener, child need not listen */
-        trans_delete(self->listen_trans);
+        trans_delete_from_child(self->listen_trans);
         self->listen_trans = 0;
         /* new connect instance */
         process = xrdp_process_create(self, 0);

@@ -143,6 +143,24 @@ trans_delete(struct trans *self)
 }
 
 /*****************************************************************************/
+void
+trans_delete_from_child(struct trans *self)
+{
+    if (self == 0)
+    {
+        return;
+    }
+
+    if (self->listen_filename != 0)
+    {
+        g_free(self->listen_filename);
+        self->listen_filename = 0;
+    }
+
+    trans_delete(self);
+}
+
+/*****************************************************************************/
 int
 trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
 {

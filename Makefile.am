@@ -21,8 +21,7 @@ EXTRA_DIST = \
   postinstall-pak \
   tcutils \
   tests \
-  vrplayer \
-  xorg
+  vrplayer
 
 if XRDP_NEUTRINORDP
 NEUTRINORDPDIR = neutrinordp
@@ -66,3 +65,6 @@ SUBDIRS = \
   xrdpapi \
   pkgconfig \
   $(XRDPVRDIR)
+
+distclean-local:
+	-rm -f xrdp_configure_options.h

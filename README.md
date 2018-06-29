@@ -2,7 +2,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-*Current Version:* 0.9.6
+*Current Version:* 0.9.7
 
 # xrdp - an open source RDP server
 
@@ -137,7 +137,6 @@ xrdp
 ├── tests ······· tests for the code
 ├── vnc ········· VNC client module for xrdp
 ├── vrplayer ···· QT player redirecting video/audio to clients over xrdpvr channel
-├── xorg ········ X11rdp, an Xorg backend for xrdp
 ├── xrdp ········ main server code
 ├── xrdpapi ····· virtual channel API
 ├── xrdpvr ······ API for playing media over RDP

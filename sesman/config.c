@@ -78,13 +78,10 @@ config_read(struct config_sesman *cfg)
     /* read global config */
     config_read_globals(fd, cfg, param_n, param_v);
 
-    /* read Xvnc/X11rdp/XOrg parameter list */
+    /* read Xvnc/X11rdp/Xorg parameter list */
     config_read_vnc_params(fd, cfg, param_n, param_v);
     config_read_rdp_params(fd, cfg, param_n, param_v);
     config_read_xorg_params(fd, cfg, param_n, param_v);
-
-    /* read logging config */
-    // config_read_logging(fd, &(cfg->log), param_n, param_v);
 
     /* read security config */
     config_read_security(fd, &(cfg->sec), param_n, param_v);
@@ -108,6 +105,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
                     struct list *param_v)
 {
     int i;
+    int length;
     char *buf;
 
     list_clear(param_v);
@@ -118,8 +116,9 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     cf->listen_port[0] = '\0';
     cf->enable_user_wm = 0;
     cf->user_wm[0] = '\0';
-    cf->default_wm[0] = '\0';
+    cf->default_wm = 0;
     cf->auth_file_path = 0;
+    cf->reconnect_sh = 0;
 
     file_read_section(file, SESMAN_CFG_GLOBALS, param_n, param_v);
 
@@ -129,7 +128,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_DEFWM))
         {
-            g_strncpy(cf->default_wm, (char *)list_get_item(param_v, i), 31);
+            cf->default_wm = g_strdup((char *)list_get_item(param_v, i));
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_USERWM))
         {
@@ -151,6 +150,10 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         {
             cf->auth_file_path = g_strdup((char *)list_get_item(param_v, i));
         }
+        else if (g_strcasecmp(buf, SESMAN_CFG_RECONNECT_SH) == 0)
+        {
+            cf->reconnect_sh = g_strdup((char *)list_get_item(param_v, i));
+        }
     }
 
     /* checking for missing required parameters */
@@ -169,19 +172,47 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         cf->enable_user_wm = 0;
     }
 
-    if ('\0' == cf->default_wm[0])
+    if (cf->default_wm == 0)
     {
-        g_strncpy(cf->default_wm, "startwm.sh", 11);
+        cf->default_wm = g_strdup("startwm.sh");
+    }
+    else if (g_strlen(cf->default_wm) == 0)
+    {
+        g_free(cf->default_wm);
+        cf->default_wm = g_strdup("startwm.sh");
+    }
+    /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    if (cf->default_wm[0] != '/')
+    {
+        /* sizeof operator returns string length including null terminator  */
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->default_wm) + 1; /* '/' */
+        buf = (char *)g_malloc(length, 0);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
+        g_free(g_cfg->default_wm);
+        g_cfg->default_wm = g_strdup(buf);
+        g_free(buf);
     }
 
-    /* showing read config */
-    g_printf("sesman config:\r\n");
-    g_printf("\tListenAddress:            %s\r\n", cf->listen_address);
-    g_printf("\tListenPort:               %s\r\n", cf->listen_port);
-    g_printf("\tEnableUserWindowManager:  %i\r\n", cf->enable_user_wm);
-    g_printf("\tUserWindowManager:        %s\r\n", cf->user_wm);
-    g_printf("\tDefaultWindowManager:     %s\r\n", cf->default_wm);
-    g_printf("\tAuthFilePath:             %s\r\n", ((cf->auth_file_path) ? (cf->auth_file_path) : ("disabled")));
+    if (cf->reconnect_sh == 0)
+    {
+        cf->reconnect_sh = g_strdup("reconnectwm.sh");
+    }
+    else if (g_strlen(cf->reconnect_sh) == 0)
+    {
+        g_free(cf->reconnect_sh);
+        cf->reconnect_sh = g_strdup("reconnectwm.sh");
+    }
+    /* if reconnect_sh doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    if (cf->reconnect_sh[0] != '/')
+    {
+        /* sizeof operator returns string length including null terminator  */
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->reconnect_sh) + 1; /* '/' */
+        buf = (char *)g_malloc(length, 0);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
+        g_free(g_cfg->reconnect_sh);
+        g_cfg->reconnect_sh = g_strdup(buf);
+        g_free(buf);
+    }
 
     return 0;
 }
@@ -242,30 +273,6 @@ config_read_security(int file, struct config_security *sc,
         {
             sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
         }
-    }
-
-    /* printing security config */
-    g_printf("security configuration:\r\n");
-    g_printf("\tAllowRootLogin:       %i\r\n", sc->allow_root);
-    g_printf("\tMaxLoginRetry:        %i\r\n", sc->login_retry);
-    g_printf("\tAlwaysGroupCheck:     %i\r\n", sc->ts_always_group_check);
-
-    if (sc->ts_users_enable)
-    {
-        g_printf("\tTSUsersGroup:         %i\r\n", sc->ts_users);
-    }
-    else
-    {
-        g_printf("\tNo TSUsersGroup defined\r\n");
-    }
-
-    if (sc->ts_admins_enable)
-    {
-        g_printf("\tTSAdminsGroup:        %i\r\n", sc->ts_admins);
-    }
-    else
-    {
-        g_printf("\tNo TSAdminsGroup defined\r\n");
     }
 
     return 0;
@@ -355,15 +362,6 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
         }
     }
 
-    /* printing session config */
-    g_printf("session configuration:\r\n");
-    g_printf("\tMaxSessions:                 %i\r\n", se->max_sessions);
-    g_printf("\tX11DisplayOffset:            %i\r\n", se->x11_display_offset);
-    g_printf("\tKillDisconnected:            %i\r\n", se->kill_disconnected);
-    g_printf("\tIdleTimeLimit:               %i\r\n", se->max_idle_time);
-    g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_disc_time);
-    g_printf("\tPolicy:       %i\r\n", se->policy);
-
     return 0;
 }
 
@@ -385,14 +383,6 @@ config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
     for (i = 0; i < param_n->count; i++)
     {
         list_add_item(cs->rdp_params, (long)g_strdup((char *)list_get_item(param_v, i)));
-    }
-
-    /* printing X11rdp parameters */
-    g_printf("X11rdp parameters:\r\n");
-
-    for (i = 0; i < cs->rdp_params->count; i++)
-    {
-        g_printf("\tParameter %02d                   %s\r\n", i, (char *)list_get_item(cs->rdp_params, i));
     }
 
     return 0;
@@ -419,15 +409,6 @@ config_read_xorg_params(int file, struct config_sesman *cs,
                       (long) g_strdup((char *) list_get_item(param_v, i)));
     }
 
-    /* printing XOrg parameters */
-    g_printf("XOrg parameters:\r\n");
-
-    for (i = 0; i < cs->xorg_params->count; i++)
-    {
-        g_printf("\tParameter %02d                   %s\r\n",
-                 i, (char *) list_get_item(cs->xorg_params, i));
-    }
-
     return 0;
 }
 
@@ -449,14 +430,6 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
     for (i = 0; i < param_n->count; i++)
     {
         list_add_item(cs->vnc_params, (long)g_strdup((char *)list_get_item(param_v, i)));
-    }
-
-    /* printing Xvnc parameters */
-    g_printf("Xvnc parameters:\r\n");
-
-    for (i = 0; i < cs->vnc_params->count; i++)
-    {
-        g_printf("\tParameter %02d                   %s\r\n", i, (char *)list_get_item(cs->vnc_params, i));
     }
 
     return 0;
@@ -487,22 +460,123 @@ config_read_session_variables(int file, struct config_sesman *cs,
                       (tintptr) g_strdup((char *) list_get_item(param_v, i)));
     }
 
-    /* printing session variables */
-    g_writeln("%s parameters:", SESMAN_CFG_SESSION_VARIABLES);
+    return 0;
+}
 
-    for (i = 0; i < cs->env_names->count; i++)
+void
+config_dump(struct config_sesman *config)
+{
+    int i;
+    struct config_sessions *se;
+    struct config_security *sc;
+    se = &(config->sess);
+    sc = &(config->sec);
+
+    /* Global sesman configuration */
+    g_writeln("Global configuration:");
+    g_writeln("    ListenAddress:            %s", config->listen_address);
+    g_writeln("    ListenPort:               %s", config->listen_port);
+    g_writeln("    EnableUserWindowManager:  %d", config->enable_user_wm);
+    g_writeln("    UserWindowManager:        %s", config->user_wm);
+    g_writeln("    DefaultWindowManager:     %s", config->default_wm);
+    g_writeln("    ReconnectScript:          %s", config->reconnect_sh);
+    g_writeln("    AuthFilePath:             %s",
+             ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
+
+    /* Session configuration */
+    g_writeln("Session configuration:");
+    g_writeln("    MaxSessions:              %d", se->max_sessions);
+    g_writeln("    X11DisplayOffset:         %d", se->x11_display_offset);
+    g_writeln("    KillDisconnected:         %d", se->kill_disconnected);
+    g_writeln("    IdleTimeLimit:            %d", se->max_idle_time);
+    g_writeln("    DisconnectedTimeLimit:    %d", se->max_disc_time);
+    g_writeln("    Policy:                   %d", se->policy);
+
+    /* Security configuration */
+    g_writeln("Security configuration:");
+    g_writeln("    AllowRootLogin:           %d", sc->allow_root);
+    g_writeln("    MaxLoginRetry:            %d", sc->login_retry);
+    g_writeln("    AlwaysGroupCheck:         %d", sc->ts_always_group_check);
+
+    g_printf( "    TSUsersGroup:             ");
+    if (sc->ts_users_enable)
     {
-        g_writeln("  Parameter %02d                   %s=%s", i,
-               (char *) list_get_item(cs->env_names, i),
-               (char *) list_get_item(cs->env_values, i));
+        g_printf("%d", sc->ts_users);
+    }
+    else
+    {
+        g_printf("(not defined)");
+    }
+    g_writeln("%s", "");
+
+    g_printf( "    TSAdminsGroup:            ");
+    if (sc->ts_admins_enable)
+    {
+        g_printf("%d", sc->ts_admins);
+    }
+    else
+    {
+        g_printf("(not defined)");
+    }
+    g_writeln("%s", "");
+
+
+    /* Xorg */
+    if (config->xorg_params->count)
+    {
+        g_writeln("Xorg parameters:");
     }
 
-    return 0;
+    for (i = 0; i < config->xorg_params->count; i++)
+    {
+        g_writeln("    Parameter %02d              %s",
+                 i, (char *) list_get_item(config->xorg_params, i));
+    }
+
+    /* Xvnc */
+    if (config->vnc_params->count)
+    {
+        g_writeln("Xvnc parameters:");
+    }
+
+    for (i = 0; i < config->vnc_params->count; i++)
+    {
+        g_writeln("    Parameter %02d              %s",
+                 i, (char *)list_get_item(config->vnc_params, i));
+    }
+
+    /* X11rdp */
+    if (config->rdp_params->count)
+    {
+        g_writeln("X11rdp parameters:");
+    }
+
+    for (i = 0; i < config->rdp_params->count; i++)
+    {
+        g_writeln("    Parameter %02d              %s",
+                 i, (char *)list_get_item(config->rdp_params, i));
+    }
+
+    /* SessionVariables */
+    if (config->env_names->count)
+    {
+        g_writeln("%s parameters:", SESMAN_CFG_SESSION_VARIABLES);
+    }
+
+    for (i = 0; i < config->env_names->count; i++)
+    {
+        g_writeln("    Parameter %02d              %s=%s",
+                  i, (char *) list_get_item(config->env_names, i),
+                     (char *) list_get_item(config->env_values, i));
+    }
 }
 
 void
 config_free(struct config_sesman *cs)
 {
+    g_free(cs->default_wm);
+    g_free(cs->reconnect_sh);
+    g_free(cs->auth_file_path);
     list_delete(cs->rdp_params);
     list_delete(cs->vnc_params);
     list_delete(cs->xorg_params);

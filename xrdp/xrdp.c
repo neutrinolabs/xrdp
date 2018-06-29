@@ -24,6 +24,7 @@
 
 #include "xrdp.h"
 #include "log.h"
+#include "xrdp_configure_options.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
@@ -44,6 +45,38 @@ static long g_sync_result = 0;
 static long g_sync_param1 = 0;
 static long g_sync_param2 = 0;
 static long (*g_sync_func)(long param1, long param2);
+
+/*****************************************************************************/
+void
+print_version(void)
+{
+    g_writeln("xrdp %s", PACKAGE_VERSION);
+    g_writeln("  A Remote Desktop Protocol Server.");
+    g_writeln("  Copyright (C) 2004-2018 Jay Sorg, "
+                "Neutrino Labs, and all contributors.");
+    g_writeln("  See https://github.com/neutrinolabs/xrdp for more information.");
+    g_writeln("%s", "");
+
+#if defined(XRDP_CONFIGURE_OPTIONS)
+    g_writeln("  Configure options:");
+    g_writeln("%s", XRDP_CONFIGURE_OPTIONS);
+#endif
+
+    g_writeln("  Compiled with %s", get_openssl_version());
+
+}
+
+/*****************************************************************************/
+void
+print_help(void)
+{
+    g_writeln("Usage: xrdp [options]");
+    g_writeln("   -h, --help       show help");
+    g_writeln("   -n, --nodaemon   don't fork into background");
+    g_writeln("   -k, --kill       shut down xrdp");
+    g_writeln("   -p, --port       tcp listen port");
+    g_writeln("   -f, --fork       fork on new connection");
+}
 
 /*****************************************************************************/
 /* This function is used to run a function from the main thread.
@@ -217,6 +250,14 @@ g_process_waiting_function(void)
 }
 
 /*****************************************************************************/
+/**
+ *
+ * @brief  Command line argument parser
+ * @param  number of command line arguments
+ * @param  pointer array of commandline arguments
+ * @return 0 on success, n on nth argument is unknown
+ *
+ */
 int
 xrdp_process_params(int argc, char **argv,
                     struct xrdp_startup_params *startup_params)
@@ -290,9 +331,9 @@ xrdp_process_params(int argc, char **argv,
             startup_params->fork = 1;
             g_writeln("--fork parameter found, ini override");
         }
-        else
+        else /* unknown option */
         {
-            return 1;
+            return index;
         }
 
         index++;
@@ -377,6 +418,7 @@ main(int argc, char **argv)
     int no_daemon;
     char text[256];
     char pid_file[256];
+    int errored_argc;
 
     g_init("xrdp");
     ssl_init();
@@ -391,13 +433,17 @@ main(int argc, char **argv)
     startup_params = (struct xrdp_startup_params *)
                      g_malloc(sizeof(struct xrdp_startup_params), 1);
 
-    if (xrdp_process_params(argc, argv, startup_params) != 0)
+    errored_argc = xrdp_process_params(argc, argv, startup_params);
+    if (errored_argc > 0)
     {
-        g_writeln("Unknown Parameter");
-        g_writeln("xrdp -h for help");
+        print_version();
         g_writeln("%s", "");
+        print_help();
+        g_writeln("%s", "");
+
+        g_writeln("Unknown option: %s", argv[errored_argc]);
         g_deinit();
-        g_exit(0);
+        g_exit(1);
     }
 
     g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
@@ -405,30 +451,17 @@ main(int argc, char **argv)
 
     if (startup_params->help)
     {
+        print_version();
         g_writeln("%s", "");
-        g_writeln("xrdp: A Remote Desktop Protocol server.");
-        g_writeln("Copyright (C) Jay Sorg 2004-2014");
-        g_writeln("See http://www.xrdp.org for more information.");
-        g_writeln("%s", "");
-        g_writeln("Usage: xrdp [options]");
-        g_writeln("   -h, --help       show help");
-        g_writeln("   -n, --nodaemon   don't fork into background");
-        g_writeln("   -k, --kill       shut down xrdp");
-        g_writeln("   -p, --port       tcp listen port");
-        g_writeln("   -f, --fork       fork on new connection");
-        g_writeln("%s", "");
+        print_help();
+
         g_deinit();
         g_exit(0);
     }
 
     if (startup_params->version)
     {
-        g_writeln("%s", "");
-        g_writeln("xrdp: A Remote Desktop Protocol server.");
-        g_writeln("Copyright (C) Jay Sorg 2004-2014");
-        g_writeln("See http://www.xrdp.org for more information.");
-        g_writeln("Version %s", PACKAGE_VERSION);
-        g_writeln("%s", "");
+        print_version();
         g_deinit();
         g_exit(0);
     }

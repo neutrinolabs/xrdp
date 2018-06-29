@@ -278,7 +278,7 @@ Sets the library to be used with this connection.
 Specifies the username used for authenticating in the connection.
 If set to \fIask\fR, user name should be provided in the login window.
 
-If the username includes comment out symbols such as '!', '#', or ';', the username can be
+If the username includes comment out symbols such as '#', or ';', the username can be
 provided in base64 form prefixing "{base64}".
 
 .TP

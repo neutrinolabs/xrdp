@@ -35,6 +35,11 @@ guess_rules ()
     return
   fi
 
+  if test -s "$pamdir/system-remote-login"; then
+    rules="arch"
+    return
+  fi
+
   rules="unix"
   return
 }
