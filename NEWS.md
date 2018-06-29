@@ -1,3 +1,32 @@
+# Release notes for xrdp v0.9.7 (2018/06/29)
+
+## Deprecation notice
+x11rdp has been removed from xrdp reposiory and stored in the separate repository.
+Checkout [x11rdp repository](https://github.com/neutrionlabs/x11rdp) if you still need x11rdp.
+In most cases, [xorgxrdp](https://github.com/neutrinolabs/xorgxrdp) can replace x11rdp.
+
+## Bug fixes
+* Fix endianness detection on ppc64el #1082
+* Fix a bug xrdp file copy slow #1112 #1132
+* Copy the PAM session environment for the reconnect script #1120
+* Accept fullpath for DefaultWindowManager, ReconnectScript #1147
+
+## Other changes
+* Add PAM support for Arch Linux #1078
+* Show OpenSSL version to '--version' CLI option #1096
+* Separate x11rdp from xrdp repository #1104
+* Support sesrun start xorgxrdp sessions #1108
+* Show configure summary when configure is done #1126 #1134 #1137
+* Less spit on the console when sesman starts #1142
+* Fix memory leaks #1146
+* Separate rc script for FreeBSD into xrdp and xrdp-sesman #1153
+* Improve documents and helps
+
+## Known issues
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
+
 # Release notes for xrdp v0.9.6 (2018/03/26)
 
 ## Compatibility notice
