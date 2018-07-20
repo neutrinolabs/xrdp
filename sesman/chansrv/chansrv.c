@@ -1279,6 +1279,16 @@ segfault_signal_handler(int sig)
 }
 
 /*****************************************************************************/
+static void
+x_server_fatal_handler(void)
+{
+    LOGM((LOG_LEVEL_INFO, "xserver_fatal_handler: entered......."));
+    /* At this point the X server has gone away. Dont make any X calls. */
+    xfuse_deinit();
+    exit(0);
+}
+
+/*****************************************************************************/
 static int
 get_display_num_from_display(char *display_text)
 {
@@ -1575,6 +1585,9 @@ main(int argc, char **argv)
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */
     g_signal_child_stop(child_signal_handler); /* SIGCHLD */
     g_signal_segfault(segfault_signal_handler);
+
+    /* Cater for the X server exiting unexpectedly */
+    xcommon_set_x_server_fatal_handler(x_server_fatal_handler);
 
     LOGM((LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text));
 
