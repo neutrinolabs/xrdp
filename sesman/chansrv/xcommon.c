@@ -28,6 +28,7 @@
 #include "log.h"
 #include "clipboard.h"
 #include "rail.h"
+#include "xcommon.h"
 
 /*
 #undef LOG_LEVEL
@@ -50,6 +51,9 @@ Atom g_utf8_string = 0;
 Atom g_net_wm_name = 0;
 Atom g_wm_state = 0;
 
+static x_server_fatal_cb_type x_server_fatal_handler = 0;
+
+
 /*****************************************************************************/
 static int
 xcommon_error_handler(Display *dis, XErrorEvent *xer)
@@ -64,16 +68,27 @@ xcommon_error_handler(Display *dis, XErrorEvent *xer)
 }
 
 /*****************************************************************************/
-/* The X server had an internal error.  This is the last function called.
-   Do any cleanup that needs to be done on exit, like removing temporary files.
+/* Allow the caller to be notified on X server failure
+   Specified callback can do any cleanup that needs to be done on exit,
+   like removing temporary files. This is the last function called.
    Don't worry about memory leaks */
-#if 0
+void
+xcommon_set_x_server_fatal_handler(x_server_fatal_cb_type handler)
+{
+    x_server_fatal_handler = handler;
+}
+
+/*****************************************************************************/
+/* The X server had an internal error */
 static int
 xcommon_fatal_handler(Display *dis)
 {
+    if (x_server_fatal_handler)
+    {
+        x_server_fatal_handler();
+    }
     return 0;
 }
-#endif
 
 /*****************************************************************************/
 /* returns time in milliseconds
@@ -110,7 +125,7 @@ xcommon_init(void)
     /* setting the error handlers can cause problem when shutting down
        chansrv on some xlibs */
     XSetErrorHandler(xcommon_error_handler);
-    //XSetIOErrorHandler(xcommon_fatal_handler);
+    XSetIOErrorHandler(xcommon_fatal_handler);
 
     g_x_socket = XConnectionNumber(g_display);
 

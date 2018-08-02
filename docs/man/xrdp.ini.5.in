@@ -206,7 +206,7 @@ The highest value is 255 (hex FF).
 The following parameters can be used in the \fB[Logging]\fR section:
 
 .TP
-\fBLogFile\fR=\fI@localstatedir@/log/sesman.log\fR
+\fBLogFile\fR=\fI@localstatedir@/log/xrdp.log\fR
 This options contains the path to logfile. It can be either absolute or relative.\fR
 
 .TP
