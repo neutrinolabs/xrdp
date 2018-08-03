@@ -1,7 +1,6 @@
 EXTRA_DIST = \
   clipboard-notes.txt \
   pcsc \
-  pulse \
   wave-format-server.txt
 
 AM_CPPFLAGS = \
