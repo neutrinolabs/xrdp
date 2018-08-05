@@ -89,6 +89,37 @@ dumpItemsToString(struct list *self, char *outstr, int len)
     return outstr ;
 }
 
+/* find the last occurrence of ch in str limited by n */
+static int
+last_index_of(const char *str, char ch, int n)
+{
+    int last_colon = -1;
+    int i;
+
+    for (i = 0; i < n && str[i] != 0; i++)
+    {
+        if (str[i] == ch)
+            last_colon = i;
+    }
+
+    return last_colon;
+}
+
+/* compare two strings containing ip-addresses and ports but ignore the latter */
+static int
+is_equal_ip_ignoring_port(const char *ip1, const char *ip2, size_t n)
+{
+    int last_colon_ip1 = last_index_of(ip1, ':', n);
+    int last_colon_ip2 = last_index_of(ip2, ':', n);
+
+    if (last_colon_ip1 != last_colon_ip2)
+        return 0;
+
+    if (last_colon_ip1 == -1)
+        last_colon_ip1 = n;
+
+    return strncmp(ip1, ip2, last_colon_ip1) == 0;
+}
 
 /******************************************************************************/
 struct session_item *
@@ -141,7 +172,7 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
             (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
              (tmp->item->width == width && tmp->item->height == height)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-             (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
+             is_equal_ip_ignoring_port(client_ip, tmp->item->client_ip, 255)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
              (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
             tmp->item->bpp == bpp &&
