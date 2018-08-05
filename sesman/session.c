@@ -118,7 +118,7 @@ is_equal_ip_ignoring_port(const char *ip1, const char *ip2, size_t n)
     if (last_colon_ip1 == -1)
         last_colon_ip1 = n;
 
-    return strncmp(ip1, ip2, last_colon_ip1) == 0;
+    return g_strncmp(ip1, ip2, last_colon_ip1) == 0;
 }
 
 /******************************************************************************/
