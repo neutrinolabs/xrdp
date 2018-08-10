@@ -135,6 +135,7 @@ int      g_htoi(char* str);
 int      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
                                   int bytes_out_str);
 int      g_pos(const char* str, const char* to_find);
+int      g_last_ch_pos(const char *str, char ch_to_find, int n);
 int      g_mbstowcs(twchar* dest, const char* src, int n);
 int      g_wcstombs(char* dest, const twchar* src, int n);
 int      g_strtrim(char* str, int trim_flags);

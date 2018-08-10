@@ -2824,6 +2824,22 @@ g_pos(const char *str, const char *to_find)
 
 /*****************************************************************************/
 int
+g_last_ch_pos(const char *str, char ch_to_find, int n)
+{
+    int last_pos = -1;
+    int i;
+
+    for (i = 0; i < n && str[i] != 0; i++)
+    {
+        if (str[i] == ch_to_find)
+            last_pos = i;
+    }
+
+    return last_pos;
+}
+
+/*****************************************************************************/
+int
 g_mbstowcs(twchar *dest, const char *src, int n)
 {
     wchar_t *ldest;
