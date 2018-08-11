@@ -91,16 +91,20 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 
 /* compare two strings containing ip-addresses and ports but ignore the latter */
 static int
-is_equal_ip_ignoring_port(const char *ip1, const char *ip2, size_t n)
+is_equal_ip_ignoring_port(const char *ip1, const char *ip2, const size_t n)
 {
     int last_colon_ip1 = g_last_ch_pos(ip1, ':', n);
     int last_colon_ip2 = g_last_ch_pos(ip2, ':', n);
 
     if (last_colon_ip1 != last_colon_ip2)
+    {
         return 0;
+    }
 
     if (last_colon_ip1 == -1)
+    {
         last_colon_ip1 = n;
+    }
 
     return g_strncmp(ip1, ip2, last_colon_ip1) == 0;
 }

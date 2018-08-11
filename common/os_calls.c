@@ -2824,7 +2824,7 @@ g_pos(const char *str, const char *to_find)
 
 /*****************************************************************************/
 int
-g_last_ch_pos(const char *str, char ch_to_find, int n)
+g_last_ch_pos(const char *str, char ch_to_find, const int n)
 {
     int last_pos = -1;
     int i;
