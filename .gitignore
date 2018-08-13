@@ -43,4 +43,4 @@ sesman/sesman.ini
 stamp-h1
 xrdp/xrdp
 xrdp/xrdp.ini
-configure_params.h
+xrdp_configure_options.h
