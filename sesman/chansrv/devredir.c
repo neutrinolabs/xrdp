@@ -735,7 +735,7 @@ dev_redir_proc_device_iocompletion(struct stream *s)
     xstream_rd_u32_le(s, CompletionId);
     xstream_rd_u32_le(s, IoStatus);
 
-    log_debug("entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId);
+    //log_debug("entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId);
 
     if ((irp = devredir_irp_find(CompletionId)) == NULL)
     {
@@ -881,7 +881,7 @@ done:
         free(fuse_data);
     }
 
-    log_debug("exiting");
+    //log_debug("exiting");
 }
 
 void

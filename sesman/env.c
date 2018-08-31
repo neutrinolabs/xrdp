@@ -33,6 +33,7 @@
 #include "list.h"
 #include "sesman.h"
 #include "ssl_calls.h"
+#include "xrdp_sockets.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
 extern struct config_sesman *g_cfg;  /* in sesman.c */
@@ -143,6 +144,8 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_setenv("XRDP_SESSION", "1", 1);
             /* XRDP_SOCKET_PATH should be set even here, chansrv uses this */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
+            g_sprintf(text, XRDP_PCSC_STR, display);
+            g_setenv("PCSCLITE_CSOCK_NAME", text, 1);
             if ((env_names != 0) && (env_values != 0) &&
                 (env_names->count == env_values->count))
             {

@@ -169,55 +169,57 @@ static int  scard_get_free_slot(void);
 static void scard_release_resources(void);
 static void scard_send_EstablishContext(IRP *irp, int scope);
 static void scard_send_ReleaseContext(IRP *irp,
-                                             char *context, int context_bytes);
+                                      char *context, int context_bytes);
 static void scard_send_IsContextValid(IRP* irp,
-                                             char *context, int context_bytes);
+                                      char *context, int context_bytes);
 static void scard_send_ListReaders(IRP *irp,
-                                          char *context, int context_bytes,
-                                          char *groups, int cchReaders,
-                                          int wide);
+                                   char *context, int context_bytes,
+                                   char *groups, int cchReaders,
+                                   int wide, int mszReadersIsNULL);
 static void scard_send_GetStatusChange(IRP *irp,
-                                              char *context, int context_bytes,
-                                              int wide,
-                                              tui32 timeout, tui32 num_readers,
-                                              READER_STATE *rsa);
+                                       char *context, int context_bytes,
+                                       int wide,
+                                       tui32 timeout, tui32 num_readers,
+                                       READER_STATE *rsa);
 static void scard_send_Connect(IRP *irp,
-                                      char *context, int context_bytes,
-                                      int wide,
-                                      READER_STATE *rs);
+                               char *context, int context_bytes,
+                               int wide,
+                               READER_STATE *rs);
 static void scard_send_Reconnect(IRP *irp,
-                                        char *context, int context_bytes,
-                                        char *card, int card_bytes,
-                                        READER_STATE *rs);
+                                 char *context, int context_bytes,
+                                 char *card, int card_bytes,
+                                 READER_STATE *rs);
 static void scard_send_BeginTransaction(IRP *irp,
-                                               char *context, int context_bytes,
-                                               char *card, int card_bytes);
+                                        char *context, int context_bytes,
+                                        char *card, int card_bytes);
 static void scard_send_EndTransaction(IRP *irp,
-                                             char *context, int context_bytes,
-                                             char *card, int card_bytes,
-                                             tui32 dwDisposition);
+                                      char *context, int context_bytes,
+                                      char *card, int card_bytes,
+                                      tui32 dwDisposition);
 static void scard_send_Status(IRP *irp, int wide,
-                                     char *context, int context_bytes,
-                                     char *card, int card_bytes,
-                                     int cchReaderLen, int cbAtrLen);
+                              char *context, int context_bytes,
+                              char *card, int card_bytes,
+                              int cchReaderLen, int cbAtrLen,
+                              int reader_name_is_null);
 static void scard_send_Disconnect(IRP *irp,
-                                         char *context, int context_bytes,
-                                         char *card, int card_bytes,
-                                         int dwDisposition);
+                                  char *context, int context_bytes,
+                                  char *card, int card_bytes,
+                                  int dwDisposition);
 static int  scard_send_Transmit(IRP *irp,
-                                       char *context, int context_byte,
-                                       char *card, int card_bytes,
-                                       char *send_data, int send_bytes,
-                                       int recv_bytes,
-                                       struct xrdp_scard_io_request *send_ior,
-                                       struct xrdp_scard_io_request *recv_ior);
+                                char *context, int context_byte,
+                                char *card, int card_bytes,
+                                char *send_data, int send_bytes,
+                                int recv_bytes,
+                                struct xrdp_scard_io_request *send_ior,
+                                struct xrdp_scard_io_request *recv_ior,
+                                int recv_ior_is_null, int recv_is_null);
 static int scard_send_Control(IRP* irp, char *context, int context_bytes,
-                                     char *card, int card_bytes,
-                                     char *send_data, int send_bytes,
-                                     int recv_bytes, int control_code);
+                              char *card, int card_bytes,
+                              char *send_data, int send_bytes,
+                              int recv_bytes, int control_code);
 static int scard_send_Cancel(IRP *irp, char *context, int context_bytes);
 static int scard_send_GetAttrib(IRP *irp, char *card, int card_bytes,
-                                       READER_STATE *rs);
+                                READER_STATE *rs);
 
 /******************************************************************************
 **                    local callbacks into this module                       **
@@ -448,7 +450,8 @@ scard_send_is_valid_context(void *user_data, char *context, int context_bytes)
  *****************************************************************************/
 int
 scard_send_list_readers(void *user_data, char *context, int context_bytes,
-                        char *groups, int cchReaders, int wide)
+                        char *groups, int cchReaders, int wide,
+                        int mszReadersIsNULL)
 {
     IRP *irp;
 
@@ -466,7 +469,7 @@ scard_send_list_readers(void *user_data, char *context, int context_bytes,
 
     /* send IRP to client */
     scard_send_ListReaders(irp, context, context_bytes, groups,
-                           cchReaders, wide);
+                           cchReaders, wide, mszReadersIsNULL);
 
     return 0;
 }
@@ -648,7 +651,7 @@ scard_send_end_transaction(void *user_data, char *context, int context_bytes,
 int
 scard_send_status(void *user_data, int wide, char *context, int context_bytes,
                   char *card, int card_bytes,
-                  int cchReaderLen, int cbAtrLen)
+                  int cchReaderLen, int cbAtrLen, int reader_name_is_null)
 {
     IRP *irp;
 
@@ -667,7 +670,7 @@ scard_send_status(void *user_data, int wide, char *context, int context_bytes,
 
     /* send IRP to client */
     scard_send_Status(irp, wide, context, context_bytes, card, card_bytes,
-                      cchReaderLen, cbAtrLen);
+                      cchReaderLen, cbAtrLen, reader_name_is_null);
 
     return 0;
 }
@@ -713,7 +716,8 @@ scard_send_transmit(void *user_data, char *context, int context_bytes,
                     char *card, int card_bytes,
                     char *send_data, int send_bytes, int recv_bytes,
                     struct xrdp_scard_io_request *send_ior,
-                    struct xrdp_scard_io_request *recv_ior)
+                    struct xrdp_scard_io_request *recv_ior,
+                    int recv_ior_is_null, int recv_is_null)
 {
     IRP *irp;
 
@@ -733,7 +737,8 @@ scard_send_transmit(void *user_data, char *context, int context_bytes,
     /* send IRP to client */
     scard_send_Transmit(irp, context, context_bytes, card, card_bytes,
                         send_data, send_bytes,
-                        recv_bytes, send_ior, recv_ior);
+                        recv_bytes, send_ior, recv_ior,
+                        recv_ior_is_null, recv_is_null);
 
     return 0;
 }
@@ -1117,7 +1122,8 @@ scard_send_IsContextValid(IRP *irp, char *context, int context_bytes)
  *****************************************************************************/
 static void
 scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
-                       char *groups, int cchReaders, int wide)
+                       char *groups, int cchReaders, int wide,
+                       int mszReadersIsNULL)
 {
     /* see [MS-RDPESC] 2.2.2.4 */
 
@@ -1167,7 +1173,7 @@ scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
     out_uint32_le(s, 0x00020000);
     out_uint32_le(s, bytes_groups);
     out_uint32_le(s, val);
-    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, mszReadersIsNULL);
     out_uint32_le(s, cchReaders);
 
     /* insert context */
@@ -1683,7 +1689,7 @@ scard_send_EndTransaction(IRP *irp, char *context, int context_bytes,
 static void
 scard_send_Status(IRP *irp, int wide, char *context, int context_bytes,
                   char *card, int card_bytes,
-                  int cchReaderLen, int cbAtrLen)
+                  int cchReaderLen, int cbAtrLen, int reader_name_is_null)
 {
     /* see [MS-RDPESC] 2.2.2.18 */
 
@@ -1726,7 +1732,7 @@ scard_send_Status(IRP *irp, int wide, char *context, int context_bytes,
     out_uint32_le(s, 0x00020000);
     out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004);
-    out_uint32_le(s, 0x00000001);
+    out_uint32_le(s, reader_name_is_null);
     out_uint32_le(s, cchReaderLen); /* readerLen, see [MS-RDPESC] 4.11 */
     out_uint32_le(s, cbAtrLen); /* atrLen,    see [MS-RDPESC] 4.11 */
 
@@ -1837,7 +1843,8 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
                     char *card, int card_bytes, char *send_data,
                     int send_bytes, int recv_bytes,
                     struct xrdp_scard_io_request *send_ior,
-                    struct xrdp_scard_io_request *recv_ior)
+                    struct xrdp_scard_io_request *recv_ior,
+                    int recv_ior_is_null, int recv_is_null)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
 
@@ -1954,10 +1961,10 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
     val = send_bytes > 0 ? 0x00020008 : 0;
     out_uint32_le(s, val); /* map3 */
 
-    val = recv_ior->cbPciLength > 0 ? 0x0002000c : 0;
+    val = recv_ior_is_null ? 0 : 0x00020008;
     out_uint32_le(s, val); /* map 4 */
 
-    out_uint32_le(s, 0); // map5
+    out_uint32_le(s, recv_is_null); // map5
     out_uint32_le(s, recv_bytes);
 
     /* map0 */
@@ -1981,7 +1988,7 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
         align_s(s, 4);
     }
 
-    if (recv_ior->cbPciLength > 0)
+    if (recv_ior_is_null == 0)
     {
         /* map4 */
         out_uint32_le(s, recv_ior->dwProtocol);

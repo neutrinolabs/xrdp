@@ -29,61 +29,61 @@ int scard_pcsc_check_wait_objs(void);
 int scard_pcsc_init(void);
 int scard_pcsc_deinit(void);
 int scard_function_establish_context_return(void *user_data,
-                                                   struct stream *in_s,
-                                                   int len, int status);
+                                            struct stream *in_s,
+                                            int len, int status);
 int scard_function_release_context_return(void *user_data,
-                                                 struct stream *in_s,
-                                                 int len, int status);
+                                          struct stream *in_s,
+                                          int len, int status);
 int scard_function_list_readers_return(void *user_data,
-                                              struct stream *in_s,
-                                              int len, int status);
+                                       struct stream *in_s,
+                                       int len, int status);
 
 int scard_function_transmit_return(void *user_data,
+                                   struct stream *in_s,
+                                   int len, int status);
+
+int scard_function_control_return(void *user_data,
+                                  struct stream *in_s,
+                                  int len, int status);
+
+int scard_function_get_status_change_return(void *user_data,
+                                            struct stream *in_s,
+                                            int len, int status);
+
+int scard_function_connect_return(void *user_data,
+                                  struct stream *in_s,
+                                  int len, int status);
+
+int scard_function_status_return(void *user_data,
+                                 struct stream *in_s,
+                                 int len, int status);
+
+int scard_function_begin_transaction_return(void *user_data,
+                                            struct stream *in_s,
+                                            int len, int status);
+
+int scard_function_end_transaction_return(void *user_data,
                                           struct stream *in_s,
                                           int len, int status);
 
-int scard_function_control_return(void *user_data,
-                                         struct stream *in_s,
-                                         int len, int status);
-
-int scard_function_get_status_change_return(void *user_data,
-                                                   struct stream *in_s,
-                                                   int len, int status);
-
-int scard_function_connect_return(void *user_data,
-                                         struct stream *in_s,
-                                         int len, int status);
-
-int scard_function_status_return(void *user_data,
-                                        struct stream *in_s,
-                                        int len, int status);
-
-int scard_function_begin_transaction_return(void *user_data,
-                                                   struct stream *in_s,
-                                                   int len, int status);
-
-int scard_function_end_transaction_return(void *user_data,
-                                                 struct stream *in_s,
-                                                 int len, int status);
-
 int scard_function_is_context_valid_return(void *user_data,
-                                                  struct stream *in_s,
-                                                  int len, int status);
-
-int scard_function_reconnect_return(void *user_data,
                                            struct stream *in_s,
                                            int len, int status);
 
+int scard_function_reconnect_return(void *user_data,
+                                    struct stream *in_s,
+                                    int len, int status);
+
 int scard_function_disconnect_return(void *user_data,
-                                            struct stream *in_s,
-                                            int len, int status);
+                                     struct stream *in_s,
+                                     int len, int status);
 
 int scard_function_cancel_return(void *user_data,
-                                        struct stream *in_s,
-                                        int len, int status);
+                                 struct stream *in_s,
+                                 int len, int status);
 
 int scard_function_get_attrib_return(void *user_data,
-                                            struct stream *in_s,
-                                            int len, int status);
+                                     struct stream *in_s,
+                                     int len, int status);
 
 #endif /* end #ifndef _SMARTCARD_PCSC_H */

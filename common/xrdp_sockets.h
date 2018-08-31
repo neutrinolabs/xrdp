@@ -28,6 +28,7 @@
 #define CHANSRV_API_BASE_STR       "xrdpapi_%d"
 #define XRDP_X11RDP_BASE_STR       "xrdp_display_%d"
 #define XRDP_DISCONNECT_BASE_STR   "xrdp_disconnect_display_%d"
+#define XRDP_PCSC_BASE_STR         "xrdp_pcsc_socket_%d"
 
 /* fullpath of sockets */
 #define XRDP_CHANSRV_STR      XRDP_SOCKET_PATH "/" XRDP_CHANSRV_BASE_STR
@@ -36,5 +37,6 @@
 #define CHANSRV_API_STR       XRDP_SOCKET_PATH "/" CHANSRV_API_BASE_STR
 #define XRDP_X11RDP_STR       XRDP_SOCKET_PATH "/" XRDP_X11RDP_BASE_STR
 #define XRDP_DISCONNECT_STR   XRDP_SOCKET_PATH "/" XRDP_DISCONNECT_BASE_STR
+#define XRDP_PCSC_STR         XRDP_SOCKET_PATH "/" XRDP_PCSC_BASE_STR
 
 #endif
