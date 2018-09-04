@@ -30,6 +30,7 @@
 
 #include <grp.h>
 
+#include "xrdp_sockets.h"
 #include "list.h"
 #include "sesman.h"
 #include "ssl_calls.h"
@@ -143,6 +144,12 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_setenv("XRDP_SESSION", "1", 1);
             /* XRDP_SOCKET_PATH should be set even here, chansrv uses this */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
+            /* pulse sink socket */
+            g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_OUT_BASE_STR, display);
+            g_setenv("XRDP_PULSE_SINK_SOCKET", text, 1);
+            /* pulse source socket */
+            g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_IN_BASE_STR, display);
+            g_setenv("XRDP_PULSE_SOURCE_SOCKET", text, 1);
             if ((env_names != 0) && (env_values != 0) &&
                 (env_names->count == env_values->count))
             {
