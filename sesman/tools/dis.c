@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <errno.h>
 
 #include "xrdp_sockets.h"
 
@@ -75,6 +76,10 @@ int main(int argc, char **argv)
     if (sendto(sck, "sig", 4, 0, (struct sockaddr *)&sa, len) > 0)
     {
         printf("message sent ok\n");
+    }
+    else
+    {
+        printf("message send failed: %s\n", strerror(errno));
     }
 
     return 0;
