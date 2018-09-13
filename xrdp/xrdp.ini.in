@@ -29,7 +29,7 @@ certificate=
 key_file=
 ; set SSL protocols
 ; can be comma separated list of 'SSLv3', 'TLSv1', 'TLSv1.1', 'TLSv1.2', 'TLSv1.3'
-ssl_protocols=TLSv1, TLSv1.1, TLSv1.2, TLSv1.3
+ssl_protocols=TLSv1.2, TLSv1.3
 ; set TLS cipher suites
 #tls_ciphers=HIGH
 
