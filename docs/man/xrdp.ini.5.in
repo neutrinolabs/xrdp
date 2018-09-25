@@ -144,7 +144,7 @@ Negotiate these security methods with clients.
 .RE
 
 .TP
-\fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2]\fP
+\fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2] [TLSv1.3]\fP
 Enables the specified SSL/TLS protocols. Each value should be separated by comma.
 SSLv2 is always disabled. At least one protocol should be given to accept TLS connections.
 This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
@@ -206,7 +206,7 @@ The highest value is 255 (hex FF).
 The following parameters can be used in the \fB[Logging]\fR section:
 
 .TP
-\fBLogFile\fR=\fI@localstatedir@/log/sesman.log\fR
+\fBLogFile\fR=\fI@localstatedir@/log/xrdp.log\fR
 This options contains the path to logfile. It can be either absolute or relative.\fR
 
 .TP

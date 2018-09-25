@@ -386,7 +386,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
             else if (g_strncmp(ASK, value, ASK_LEN) == 0)
             {
                 /* label */
-                b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
+                b = xrdp_bitmap_create(globals->ls_label_width, DEFAULT_EDIT_H, self->screen->bpp,
                                        WND_TYPE_LABEL, self);
                 list_insert_item(self->login_window->child_list, insert_index,
                                  (long)b);
@@ -401,7 +401,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 set_string(&b->caption1, name);
 
                 /* edit */
-                b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp,
+                b = xrdp_bitmap_create(globals->ls_input_width, DEFAULT_EDIT_H, self->screen->bpp,
                                        WND_TYPE_EDIT, self);
                 list_insert_item(self->login_window->child_list, insert_index,
                                  (long)b);
@@ -859,7 +859,7 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
     globals->ls_logo_x_pos = 63;
     globals->ls_logo_y_pos = 50;
     globals->ls_label_x_pos = 30;
-    globals->ls_label_width = 60;
+    globals->ls_label_width = 65;
     globals->ls_input_x_pos = 110;
     globals->ls_input_width = 210;
     globals->ls_input_y_pos = 150;

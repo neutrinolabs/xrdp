@@ -496,9 +496,7 @@ struct xrdp_bitmap
 #define DEFAULT_ELEMENT_TOP   35
 #define DEFAULT_BUTTON_W      60
 #define DEFAULT_BUTTON_H      23
-#define DEFAULT_COMBO_W       210
 #define DEFAULT_COMBO_H       21
-#define DEFAULT_EDIT_W        210
 #define DEFAULT_EDIT_H        21
 #define DEFAULT_WND_LOGIN_W   425
 #define DEFAULT_WND_LOGIN_H   475

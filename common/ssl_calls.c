@@ -1005,7 +1005,22 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
 #if defined(SSL_OP_NO_TLSv1_2)
     protocols |= SSL_OP_NO_TLSv1_2;
 #endif
+#if defined(SSL_OP_NO_TLSv1_3)
+    protocols |= SSL_OP_NO_TLSv1_3;
+#endif
     bad_protocols = protocols;
+    if (g_pos(str, ",TLSv1.3,") >= 0)
+    {
+#if defined(SSL_OP_NO_TLSv1_3)
+        log_message(LOG_LEVEL_DEBUG, "TLSv1.3 enabled");
+        protocols &= ~SSL_OP_NO_TLSv1_3;
+#else
+        log_message(LOG_LEVEL_WARNING,
+                    "TLSv1.3 enabled by config, "
+                    "but not supported by system OpenSSL");
+        rv |= (1 << 6);
+#endif
+    }
     if (g_pos(str, ",TLSv1.2,") >= 0)
     {
 #if defined(SSL_OP_NO_TLSv1_2)
