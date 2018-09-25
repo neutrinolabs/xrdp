@@ -1,4 +1,4 @@
-# Release notes for xrdp v0.9.8 (2018/XX/XX)
+# Release notes for xrdp v0.9.8 (2018/09/25)
 
 ## Deprecation notice
 We removed TLSv1 and TLSv1.1 from the default config. The current default is TLSv1.2
