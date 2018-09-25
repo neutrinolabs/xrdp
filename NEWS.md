@@ -1,3 +1,30 @@
+# Release notes for xrdp v0.9.8 (2018/XX/XX)
+
+## Deprecation notice
+We removed TLSv1 and TLSv1.1 from the default config. The current default is TLSv1.2
+and TLSv1.3. Users can whenever re-enable these early TLS versions by editing xrdp.
+To use TLSv1.3, OpenSSL or LibreSSL must support TLSv1.3. You can know the OpenSSL
+or LibreSSL version by `xrdp --version` command that compiled with xrdp.
+
+## Other topics
+
+Pulseaudio modules has been removed from xrdp source tree since it is actually
+independent and not part of xrdp. The repository has been moved to:
+https://github.com/neutrinolabs/pulseaudio-module-xrdp
+
+If you want to use audio redirection, make sure install the module separately.
+
+## New features
+* Add TLSv1.3 support #1193
+
+## Bug fixes
+* Ensure unmount redirected drive on fatal X error #1140
+
+## Other changes
+* Show more helpful message if xrdp-dis failed #1206
+* Pass pulse socket name via environment variable #1198
+* Fix xrdp's log path in man page #1168
+
 # Release notes for xrdp v0.9.7 (2018/06/29)
 
 ## Deprecation notice
