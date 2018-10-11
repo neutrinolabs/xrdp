@@ -1332,7 +1332,7 @@ api_con_trans_list_check_wait_objs(void)
                     chansrv_drdynvc_close(ad->chan_id);
                 }
                 for (drdynvc_index = 0;
-                     drdynvc_index < ARRAYSIZE(g_drdynvcs);
+                     drdynvc_index < (int) ARRAYSIZE(g_drdynvcs);
                      drdynvc_index++)
                 {
                     if (g_drdynvcs[drdynvc_index].xrdp_api_trans == ltran)

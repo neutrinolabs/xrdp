@@ -303,7 +303,7 @@ drdynvc_process_open_channel_response(struct xrdp_channel *self,
     //g_writeln("drdynvc_process_open_channel_response: chan_id 0x%x "
     //          "creation_status %d", chan_id, creation_status);
     session = self->sec_layer->rdp_layer->session;
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id > 255)
     {
         return 1;
     }
@@ -338,7 +338,7 @@ drdynvc_process_close_channel_response(struct xrdp_channel *self,
     }
     //g_writeln("drdynvc_process_close_channel_response: chan_id 0x%x", chan_id);
     session = self->sec_layer->rdp_layer->session;
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id > 255)
     {
         return 1;
     }
@@ -395,7 +395,7 @@ drdynvc_process_data_first(struct xrdp_channel *self,
     bytes = (int) (s->end - s->p);
     //g_writeln("drdynvc_process_data_first: bytes %d total_bytes %d", bytes, total_bytes);
     session = self->sec_layer->rdp_layer->session;
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id > 255)
     {
         return 1;
     }
@@ -425,7 +425,7 @@ drdynvc_process_data(struct xrdp_channel *self,
     bytes = (int) (s->end - s->p);
     //g_writeln("drdynvc_process_data: bytes %d", bytes);
     session = self->sec_layer->rdp_layer->session;
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id > 255)
     {
         return 1;
     }
