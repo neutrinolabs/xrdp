@@ -1228,9 +1228,16 @@ xfuse_create_file_in_xrdp_fs(tui32 device_id, int pinode, const char *name,
 {
     XRDP_INODE *xinode;
     XRDP_INODE *xinodep;
+    time_t cur_time;
 
     if ((name == NULL) || (strlen(name) == 0))
         return NULL;
+
+    /* Do we have an inode table yet? */
+    if (xfuse_init_xrdp_fs())
+    {
+        return NULL;
+    }
 
     xinode = g_new0(XRDP_INODE, 1);
     if (xinode == NULL)
@@ -1238,6 +1245,8 @@ xfuse_create_file_in_xrdp_fs(tui32 device_id, int pinode, const char *name,
         log_error("system out of memory");
         return NULL;
     }
+
+    cur_time = time(0);
 
     xinode->parent_inode = pinode;
     xinode->inode = g_xrdp_fs.next_node++;
