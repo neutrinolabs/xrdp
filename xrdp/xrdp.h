@@ -138,6 +138,8 @@ int
 callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
          intptr_t param3, intptr_t param4);
 int
+xrdp_wm_drdynvc_up(intptr_t id);
+int
 xrdp_wm_delete_all_children(struct xrdp_wm* self);
 int
 xrdp_wm_show_log(struct xrdp_wm *self);
@@ -367,6 +369,8 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      int e);
 
 /* xrdp_mm.c */
+int
+xrdp_mm_drdynvc_up(struct xrdp_mm* self);
 struct xrdp_mm*
 xrdp_mm_create(struct xrdp_wm* owner);
 void
