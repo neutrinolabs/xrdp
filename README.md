@@ -9,9 +9,15 @@
 ## Overview
 
 **xrdp** provides a graphical login to remote machines using Microsoft
-Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of
-RDP clients: FreeRDP, rdesktop, KRDC, NeutrinoRDP and Microsoft Remote Desktop
-Client (for Windows, Mac OS, iOS and Android).
+Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of RDP clients:
+  - FreeRDP
+  - rdesktop
+  - KRDC
+  - NeutrinoRDP
+  - Windows MSTSC (Microsoft Terminal Services Client)
+  - Microsoft Remote Desktop (which is distinct from MSTSC)
+
+Many of these work on some or all of Windows, Mac OS, iOS, and/or Android.
 
 RDP transport is encrypted using TLS by default.
 
@@ -24,7 +30,7 @@ RDP transport is encrypted using TLS by default.
  * Connect to a Linux desktop using RDP from anywhere (requires
    [xorgxrdp](https://github.com/neutrinolabs/xorgxrdp) Xorg module)
  * Reconnect to an existing session
- * Session resizing
+ * Session resizing on connect and while an existing session is active.
  * RDP/VNC proxy (connect to another RDP/VNC server via xrdp)
 
 ### Access to Remote Resources

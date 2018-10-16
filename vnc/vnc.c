@@ -1224,7 +1224,7 @@ send_update_request_for_resize_status(struct vnc *v)
     make_stream(s);
     init_stream(s, 8192);
 
-    switch (v->initial_resize_status)
+    switch (v->resize_status)
     {
         case VRS_WAITING_FOR_FIRST_UPDATE:
             /*
@@ -1364,14 +1364,14 @@ lib_framebuffer_first_update(struct vnc *v)
             {
                 LOG(LOG_LEVEL_DEBUG, "Server layout is the same "
                     "as the client layout");
-                v->initial_resize_status = VRS_DONE;
+                v->resize_status = VRS_DONE;
             }
             else
             {
                 LOG(LOG_LEVEL_DEBUG, "Server layout differs from "
                     "the client layout. Changing server layout");
                 error = send_set_desktop_size(v, &v->client_layout);
-                v->initial_resize_status = VRS_WAITING_FOR_RESIZE_CONFIRM;
+                v->resize_status = VRS_WAITING_FOR_RESIZE_CONFIRM;
             }
         }
         else
@@ -1382,7 +1382,7 @@ lib_framebuffer_first_update(struct vnc *v)
             LOG(LOG_LEVEL_DEBUG, "Resizing client to server %dx%d",
                 v->server_width, v->server_height);
             error = resize_client(v, 0, v->server_width, v->server_height);
-            v->initial_resize_status = VRS_DONE;
+            v->resize_status = VRS_DONE;
         }
 
         g_free(layout.s);
@@ -1437,7 +1437,7 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
                     v->server_width, v->server_height);
                 error = resize_client(v, 0, v->server_width, v->server_height);
             }
-            v->initial_resize_status = VRS_DONE;
+            v->resize_status = VRS_DONE;
         }
 
         g_free(layout.s);
@@ -1777,7 +1777,7 @@ lib_mod_process_message(struct vnc *v, struct stream *s)
     {
         if (type == S2C_FRAMEBUFFER_UPDATE)
         {
-            switch (v->initial_resize_status)
+            switch (v->resize_status)
             {
                 case VRS_WAITING_FOR_FIRST_UPDATE:
                     error = lib_framebuffer_first_update(v);
@@ -2237,7 +2237,7 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
-        v->initial_resize_status = VRS_WAITING_FOR_FIRST_UPDATE;
+        v->resize_status = VRS_WAITING_FOR_FIRST_UPDATE;
         error = send_update_request_for_resize_status(v);
     }
 
@@ -2466,6 +2466,34 @@ lib_mod_suppress_output(struct vnc *v, int suppress,
 }
 
 /******************************************************************************/
+/* return error */
+int
+lib_mod_server_version_message(struct vnc *v)
+{
+    return 0;
+}
+
+/******************************************************************************/
+/* return error */
+int
+lib_mod_server_monitor_resize(struct vnc *v, int width, int height)
+{
+    int error = 0;
+    set_single_screen_layout(&v->client_layout, width, height);
+    v->resize_status = VRS_WAITING_FOR_FIRST_UPDATE;
+    error = send_update_request_for_resize_status(v);
+    return error;
+}
+
+/******************************************************************************/
+/* return error */
+int
+lib_mod_server_monitor_full_invalidate(struct vnc *v, int param1, int param2)
+{
+    return 0;
+}
+
+/******************************************************************************/
 tintptr EXPORT_CC
 mod_init(void)
 {
@@ -2486,6 +2514,9 @@ mod_init(void)
     v->mod_check_wait_objs = lib_mod_check_wait_objs;
     v->mod_frame_ack = lib_mod_frame_ack;
     v->mod_suppress_output = lib_mod_suppress_output;
+    v->mod_server_monitor_resize = lib_mod_server_monitor_resize;
+    v->mod_server_monitor_full_invalidate = lib_mod_server_monitor_full_invalidate;
+    v->mod_server_version_message = lib_mod_server_version_message;
 
     /* Member variables */
     v->enabled_encodings_mask = -1;

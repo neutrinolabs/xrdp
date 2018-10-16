@@ -367,6 +367,21 @@ xrdp_bitmap_compress(char *in_data, int width, int height,
                      int e);
 
 /* xrdp_mm.c */
+
+struct dynamic_monitor_layout
+{
+    int flags;
+    int left;
+    int top;
+    int width;
+    int height;
+    int physical_width;
+    int physical_height;
+    int orientation;
+    int desktop_scale_factor;
+    int device_scale_factor;
+};
+
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self);
 int

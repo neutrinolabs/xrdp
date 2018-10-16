@@ -492,6 +492,10 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         settings->nla_security = g_text2bool(value);
     }
+    else if (g_strcmp(name, "enable_dynamic_resizing") == 0)
+    {
+        settings->desktop_resize = g_text2bool(value);
+    }
     else
     {
         LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [%s]", name, value);
@@ -596,6 +600,27 @@ lxrdp_suppress_output(struct mod *mod, int suppress,
 #if defined(NEUTRINORDP_HAS_SUPPRESS_OUTPUT)
     mod->inst->SendSuppressOutput(mod->inst, !suppress, left, top, right, bottom);
 #endif
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_server_version_message(struct mod *mod)
+{
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_server_monitor_resize(struct mod *mod, int width, int height)
+{
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_server_monitor_full_invalidate(struct mod *mod, int width, int height)
+{
     return 0;
 }
 
@@ -2074,6 +2099,9 @@ mod_init(void)
     mod->mod_check_wait_objs = lxrdp_check_wait_objs;
     mod->mod_frame_ack = lxrdp_frame_ack;
     mod->mod_suppress_output = lxrdp_suppress_output;
+    mod->mod_server_version_message = lxrdp_server_version_message;
+    mod->mod_server_monitor_resize = lxrdp_server_monitor_resize;
+    mod->mod_server_monitor_full_invalidate = lxrdp_server_monitor_full_invalidate;
 
     mod->inst = freerdp_new();
     mod->inst->PreConnect = lfreerdp_pre_connect;

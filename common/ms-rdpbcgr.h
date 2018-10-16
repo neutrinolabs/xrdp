@@ -78,7 +78,12 @@
 /* This isn't explicitly named in MS-RDPBCGR */
 #define CHANNEL_NAME_LEN                7
 
-/* Oprions field */
+/* 2.2.1.3.6 Client Monitor Data - */
+/* monitorCount (4 bytes): A 32-bit, unsigned integer. The number of display */
+/* monitor definitions in the monitorDefArray field (the maximum allowed is 16). */
+#define CLIENT_MONITOR_DATA_MAXIMUM_MONITORS 16
+
+/* Options field */
 /* NOTE: XR_ prefixed to avoid conflict with FreeRDP */
 #define XR_CHANNEL_OPTION_INITIALIZED   0x80000000
 #define XR_CHANNEL_OPTION_ENCRYPT_RDP   0x40000000
