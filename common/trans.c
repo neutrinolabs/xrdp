@@ -1065,3 +1065,23 @@ trans_shutdown_tls_mode(struct trans *self)
 
     return 0;
 }
+
+/******************************************************************************/
+int
+trans_use_helper()
+{
+    const char *xrdp_use_helper = getenv("XRDP_USE_HELPER");
+    if (xrdp_use_helper == NULL)
+    {
+        return 0;
+    }
+    if (g_strcmp(xrdp_use_helper, "0") == 0)
+    {
+        return 0;
+    }
+    if (g_strcmp(xrdp_use_helper, "1") == 0)
+    {
+        return 1;
+    }
+    return 0;
+}

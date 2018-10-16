@@ -113,7 +113,7 @@ EnableSyslog=true
 param=Xorg
 ; Leave the rest paramaters as-is unless you understand what will happen.
 param=-config
-param=xrdp/xorg.conf
+param=xrdp/xorg_nvidia.conf
 param=-noreset
 param=-nolisten
 param=tcp
@@ -166,3 +166,4 @@ EnableSyslog=true
 
 [SessionVariables]
 PULSE_SCRIPT=@sesmansysconfdir@/pulse/default.pa
+XRDP_USE_HELPER=1

@@ -306,6 +306,11 @@ libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
 int EXPORT_CC
 libxrdp_send_session_info(struct xrdp_session *session, const char *data,
                           int data_bytes);
+int EXPORT_CC
+libxrdp_planar_compress(char *in_data, int width, int height,
+                        struct stream *s, int bpp, int byte_limit,
+                        int start_line, struct stream *temp_s,
+                        int e, int flags);
 
 /**
  * Processes a stream that is based on either

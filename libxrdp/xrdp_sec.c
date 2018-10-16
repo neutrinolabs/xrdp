@@ -24,8 +24,11 @@
 
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
+#include "ms-rdpedisp.h"
 #include "log.h"
 #include "string_calls.h"
+#include <limits.h>
+
 
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
@@ -2072,6 +2075,15 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
     {
         self->rdp_layer->client_info.bpp = 32;
+    }
+    if (earlyCapabilityFlags & 0x100) /* RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL */
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO, "client supports gfx");
+        self->rdp_layer->client_info.gfx = 1;
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO, "client DOES NOT support gfx");
     }
 
     if (!s_check_rem(s, 64))

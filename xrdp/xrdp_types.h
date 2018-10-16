@@ -28,6 +28,7 @@
 #include "xrdp_constants.h"
 #include "fifo.h"
 #include "guid.h"
+#include "xrdp_client_info.h"
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
@@ -344,6 +345,12 @@ struct xrdp_mm
     int cs2xr_cid_map[256];
     int xr2cr_cid_map[256];
     int dynamic_monitor_chanid;
+    struct xrdp_egfx *egfx;
+    int egfx_up;
+    int egfx_flags;
+    int gfx_delay_autologin;
+    struct list *resize_queue;
+    tbus resize_state_machine;
 };
 
 struct xrdp_key_info
@@ -465,6 +472,9 @@ struct xrdp_wm
 
     /* configuration derived from xrdp.ini */
     struct xrdp_config *xrdp_config;
+
+    struct xrdp_region *screen_dirty_region;
+    int last_screen_draw_time;
 };
 
 /* rdp process */

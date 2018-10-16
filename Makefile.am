@@ -59,7 +59,8 @@ SUBDIRS = \
   pkgconfig \
   $(XRDPVRDIR) \
   tests \
-  tools
+  tools \
+  xorgxrdp_helper
 
 distclean-local:
 	-rm -f xrdp_configure_options.h

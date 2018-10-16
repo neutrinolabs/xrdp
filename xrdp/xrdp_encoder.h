@@ -27,6 +27,13 @@ struct xrdp_encoder
     int frame_id_server; /* last frame id received from Xorg */
     int frame_id_server_sent;
     int frames_in_flight;
+    int gfx;
+    int gfx_ack_off;
+    const char *quants;
+    int num_quants;
+    int quant_idx_y;
+    int quant_idx_u;
+    int quant_idx_v;
 };
 
 /* used when scheduling tasks in xrdp_encoder.c */
@@ -34,8 +41,10 @@ struct xrdp_enc_data
 {
     struct xrdp_mod *mod;
     int num_drects;
+    int pad0;
     short *drects;     /* 4 * num_drects */
     int num_crects;
+    int pad1;
     short *crects;     /* 4 * num_crects */
     char *data;
     int width;
@@ -59,6 +68,7 @@ struct xrdp_enc_data_done
     int y;
     int cx;
     int cy;
+    int flags;
 };
 
 typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;

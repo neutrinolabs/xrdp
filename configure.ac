@@ -161,6 +161,21 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [], [enable_pixman=no])
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
 
+#example XRDP_NVENC_CFLAGS="-I/usr/local/cuda-11.3/include -I$HOME/Video_Codec_SDK_11.0.10/Interface" XRDP_NVENC_LIBS="-lcuda -lnvidia-encode" ./configure --enable-nvenc
+AC_ARG_ENABLE(nvenc, AS_HELP_STRING([--enable-nvenc],
+              [Use nvenc library (default: no), env vars XRDP_NVENC_CFLAGS and
+               XRDP_NVENC_LIBS should be set if used]),
+              [], [enable_nvenc=no])
+AM_CONDITIONAL(XRDP_NVENC, [test x$enable_nvenc = xyes])
+AC_ARG_ENABLE(yami, AS_HELP_STRING([--enable-yami],
+              [Use yami library (default: no)]),
+              [], [enable_yami=no])
+AM_CONDITIONAL(XRDP_YAMI, [test x$enable_yami = xyes])
+AC_ARG_ENABLE(x264, AS_HELP_STRING([--enable-x264],
+              [Use x264 library (default: no)]),
+              [], [enable_x264=no])
+AM_CONDITIONAL(XRDP_X264, [test x$enable_x264 = xyes])
+
 AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
               [Do not use included painter library (default: no)]),
               [], [enable_painter=yes])
@@ -393,6 +408,32 @@ fi
 
 AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(PIXMAN, pixman-1 >= 0.1.0)] )
 
+AS_IF( [test "x$enable_x264" = "xyes"] , [PKG_CHECK_MODULES(XRDP_X264, x264 >= 0.3.0)] )
+
+if test "x$enable_nvenc" = "xyes"
+then
+if test ! -z "$XRDP_NVENC_CFLAGS"
+then
+  AC_SUBST(XRDP_NVENC_CFLAGS, ["$XRDP_NVENC_CFLAGS"])
+fi
+if test ! -z "$XRDP_NVENC_LIBS"
+then
+  AC_SUBST(XRDP_NVENC_LIBS, ["$XRDP_NVENC_LIBS"])
+fi
+fi
+
+if test "x$enable_yami" = "xyes"
+then
+if test ! -z "$XRDP_YAMI_CFLAGS"
+then
+  AC_SUBST(XRDP_YAMI_CFLAGS, ["$XRDP_YAMI_CFLAGS"])
+fi
+if test ! -z "$XRDP_YAMI_LIBS"
+then
+  AC_SUBST(XRDP_YAMI_LIBS, ["$XRDP_YAMI_LIBS"])
+fi
+fi
+
 # checking for TurboJPEG
 if test "x$enable_tjpeg" = "xyes"
 then
@@ -515,6 +556,7 @@ AC_CONFIG_FILES([
   xrdp/Makefile
   xrdpvr/Makefile
   xup/Makefile
+  xorgxrdp_helper/Makefile
 ])
 
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
@@ -529,6 +571,9 @@ echo "  fdkaac                  $enable_fdkaac"
 echo "  jpeg                    $enable_jpeg"
 echo "  turbo jpeg              $enable_tjpeg"
 echo "  rfxcodec                $enable_rfxcodec"
+echo "  nvenc                   $enable_nvenc"
+echo "  yami                    $enable_yami"
+echo "  x264                    $enable_x264"
 echo "  painter                 $enable_painter"
 echo "  pixman                  $enable_pixman"
 echo "  fuse                    $enable_fuse"
