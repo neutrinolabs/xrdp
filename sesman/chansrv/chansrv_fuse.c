@@ -1228,9 +1228,16 @@ xfuse_create_file_in_xrdp_fs(tui32 device_id, int pinode, const char *name,
 {
     XRDP_INODE *xinode;
     XRDP_INODE *xinodep;
+    time_t cur_time;
 
     if ((name == NULL) || (strlen(name) == 0))
         return NULL;
+
+    /* Do we have an inode table yet? */
+    if (xfuse_init_xrdp_fs())
+    {
+        return NULL;
+    }
 
     xinode = g_new0(XRDP_INODE, 1);
     if (xinode == NULL)
@@ -1239,14 +1246,16 @@ xfuse_create_file_in_xrdp_fs(tui32 device_id, int pinode, const char *name,
         return NULL;
     }
 
+    cur_time = time(0);
+
     xinode->parent_inode = pinode;
     xinode->inode = g_xrdp_fs.next_node++;
     xinode->nlink = 1;
     xinode->uid = getuid();
     xinode->gid = getgid();
-    xinode->atime = time(0);
-    xinode->mtime = time(0);
-    xinode->ctime = time(0);
+    xinode->atime = cur_time;
+    xinode->mtime = cur_time;
+    xinode->ctime = cur_time;
     xinode->device_id = device_id;
     xinode->is_synced = 1;
     strcpy(xinode->name, name);
