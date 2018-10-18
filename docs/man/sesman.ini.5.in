@@ -140,6 +140,13 @@ Sets the time limit (in seconds) before a disconnected session is killed.
 If set to \fI0\fR, automatic killing is disabled.
 
 .TP
+\fBIdleTimeLimit\fR=\fInumber\fR
+Sets the time limit (in seconds) before an idle session is disconnected.
+Idle means no keyboard inputs and no mouse moves/clicks here.
+If set to \fI0\fR, idle sessions will never be disconnected by timeout.
+This works only with xorgxrdp session. Moreover, xorgxrdp must be v0.2.9 or later.
+
+.TP
 \fBPolicy\fR=\fI[Default|UBD|UBI|UBC|UBDI|UBDC]\fR
 Session allocation policy. By default, a new session is created
 for the combination <User,BitPerPixel> when using Xrdp, and
