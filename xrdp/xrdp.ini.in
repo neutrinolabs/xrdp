@@ -162,16 +162,6 @@ ip=127.0.0.1
 port=-1
 code=20
 
-[X11rdp]
-name=X11rdp
-lib=libxup.@lib_extension@
-username=ask
-password=ask
-ip=127.0.0.1
-port=-1
-xserverbpp=24
-code=10
-
 [Xvnc]
 name=Xvnc
 lib=libvnc.@lib_extension@
