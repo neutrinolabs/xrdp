@@ -193,15 +193,6 @@ password=ask
 #pamsessionmng=127.0.0.1
 #delay_ms=2000
 
-[sesman-any]
-name=sesman-any
-lib=libvnc.@lib_extension@
-ip=ask
-port=-1
-username=ask
-password=ask
-#delay_ms=2000
-
 [neutrinordp-any]
 name=neutrinordp-any
 lib=libxrdpneutrinordp.@lib_extension@
