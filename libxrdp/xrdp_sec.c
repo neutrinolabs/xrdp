@@ -701,6 +701,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         DEBUG(("flag RDP_LOGON_LEAVE_AUDIO found"));
     }
 
+    if (flags & RDP_LOGON_RAIL)
+    {
+        self->rdp_layer->client_info.rail_enable = 1;
+        DEBUG(("flag RDP_LOGON_RAIL found"));
+    }
+
     if ((flags & RDP_LOGON_AUTO) && (!self->rdp_layer->client_info.is_mce))
         /* todo, for now not allowing autologon and mce both */
     {

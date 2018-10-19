@@ -154,6 +154,7 @@ struct xrdp_client_info
   int client_os_minor;
 
   int no_orders_supported;
+  int rail_enable;
 };
 
 #endif
