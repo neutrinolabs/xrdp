@@ -172,15 +172,6 @@ port=-1
 #xserverbpp=24
 #delay_ms=2000
 
-[console]
-name=console
-lib=libvnc.@lib_extension@
-ip=127.0.0.1
-port=5900
-username=na
-password=ask
-#delay_ms=2000
-
 [vnc-any]
 name=vnc-any
 lib=libvnc.@lib_extension@
