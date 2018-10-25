@@ -275,10 +275,6 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                             client_info->key_file, g_get_strerror());
             }
         }
-        else if (g_strcasecmp(item, "use_cache_glyph_v2") == 0)
-        {
-            client_info->use_cache_glyph_v2 = g_text2bool(value);
-        }
 
     }
 

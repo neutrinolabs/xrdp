@@ -53,8 +53,6 @@ use_fastpath=both
 #require_credentials=true
 ; You can set the PAM error text in a gateway setup (MAX 256 chars)
 #pamerrortxt=change your password according to policy at http://url
-; Cache Glyph Revison 2. default: false
-use_cache_glyph_v2=true
 
 ;
 ; colors used by windows in RGB format
