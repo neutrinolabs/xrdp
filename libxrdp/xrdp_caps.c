@@ -794,20 +794,18 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     caps_count++;
     out_uint16_le(s, CAPSTYPE_GENERAL);
     out_uint16_le(s, CAPSTYPE_GENERAL_LEN);
-    out_uint16_le(s, 1); /* OS major type */
-    out_uint16_le(s, 3); /* OS minor type */
+    out_uint16_le(s, OSMAJORTYPE_WINDOWS);
+    out_uint16_le(s, OSMINORTYPE_WINDOWS_NT);
     out_uint16_le(s, 0x200); /* Protocol version */
     out_uint16_le(s, 0); /* pad */
     out_uint16_le(s, 0); /* Compression types */
-    /* NO_BITMAP_COMPRESSION_HDR 0x0400
-       FASTPATH_OUTPUT_SUPPORTED 0x0001 */
     if (self->client_info.use_fast_path & 1)
     {
-        out_uint16_le(s, 0x401);
+        out_uint16_le(s, NO_BITMAP_COMPRESSION_HDR & FASTPATH_OUTPUT_SUPPORTED);
     }
     else
     {
-        out_uint16_le(s, 0x400);
+        out_uint16_le(s, NO_BITMAP_COMPRESSION_HDR);
     }
     out_uint16_le(s, 0); /* Update capability */
     out_uint16_le(s, 0); /* Remote unshare capability */
