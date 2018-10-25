@@ -361,6 +361,33 @@ xrdp_caps_process_brushcache(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
+static int
+xrdp_caps_process_glyphcache(struct xrdp_rdp *self, struct stream *s,
+                             int len)
+{
+    int glyph_support_level;
+
+    if (len < 40 + 4 + 2 + 2)
+    {
+        g_writeln("xrdp_caps_process_glyphcache: error");
+        return 1;
+    }
+
+    in_uint8s(s, 40);  /* glyph cache */
+    in_uint8s(s, 4);   /* frag cache */
+    in_uint16_le(s, glyph_support_level);
+    in_uint8s(s, 2);   /* pad */
+
+    if (self->client_info.use_cache_glyph_v2 && (glyph_support_level != 3))
+    {
+        self->client_info.use_cache_glyph_v2 = 0;
+    }
+    g_writeln("xrdp_caps_process_glyphcache: support level %d ",
+              glyph_support_level);
+    return 0;
+}
+
+/*****************************************************************************/
 int
 xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
                                      int len)
@@ -657,7 +684,8 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 xrdp_caps_process_brushcache(self, s, len);
                 break;
             case RDP_CAPSET_GLYPHCACHE:
-                DEBUG(("--0x11"));
+                DEBUG(("RDP_CAPSET_GLYPHCACHE"));
+                xrdp_caps_process_glyphcache(self, s, len);
                 break;
             case RDP_CAPSET_OFFSCREENCACHE:
                 DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));
