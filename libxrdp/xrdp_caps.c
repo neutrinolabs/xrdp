@@ -637,89 +637,89 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         len -= 4;
         switch (type)
         {
-            case RDP_CAPSET_GENERAL:
+            case CAPSTYPE_GENERAL:
                 DEBUG(("RDP_CAPSET_GENERAL"));
                 xrdp_caps_process_general(self, s, len);
                 break;
-            case RDP_CAPSET_BITMAP:
+            case CAPSTYPE_BITMAP:
                 DEBUG(("RDP_CAPSET_BITMAP"));
                 break;
-            case RDP_CAPSET_ORDER:
+            case CAPSTYPE_ORDER:
                 DEBUG(("RDP_CAPSET_ORDER"));
                 xrdp_caps_process_order(self, s, len);
                 break;
-            case RDP_CAPSET_BMPCACHE:
+            case CAPSTYPE_BITMACACHE:
                 DEBUG(("RDP_CAPSET_BMPCACHE"));
                 xrdp_caps_process_bmpcache(self, s, len);
                 break;
-            case RDP_CAPSET_CONTROL:
+            case CAPSTYPE_CONTROL:
                 DEBUG(("RDP_CAPSET_CONTROL"));
                 break;
             case 6:
                 xrdp_caps_process_cache_v3_codec_id(self, s, len);
                 break;
-            case RDP_CAPSET_ACTIVATE:
+            case CAPSTYPE_ACTIVATION:
                 DEBUG(("RDP_CAPSET_ACTIVATE"));
                 break;
-            case RDP_CAPSET_POINTER:
+            case CAPSTYPE_POINTER:
                 DEBUG(("RDP_CAPSET_POINTER"));
                 xrdp_caps_process_pointer(self, s, len);
                 break;
-            case RDP_CAPSET_SHARE:
+            case CAPSTYPE_SHARE:
                 DEBUG(("RDP_CAPSET_SHARE"));
                 break;
-            case RDP_CAPSET_COLCACHE:
+            case CAPSTYPE_COLORCACHE:
                 DEBUG(("RDP_CAPSET_COLCACHE"));
                 break;
-            case RDP_CAPSET_SOUND:
+            case CAPSTYPE_SOUND:
                 DEBUG(("--0x0C"));
                 break;
-            case RDP_CAPSET_INPUT:
+            case CAPSTYPE_INPUT:
                 xrdp_caps_process_input(self, s, len);
                 break;
-            case RDP_CAPSET_FONT:
+            case CAPSTYPE_FONT:
                 DEBUG(("--0x0D"));
                 break;
-            case RDP_CAPSET_BRUSHCACHE:
+            case CAPSTYPE_BRUSH:
                 xrdp_caps_process_brushcache(self, s, len);
                 break;
-            case RDP_CAPSET_GLYPHCACHE:
+            case CAPSTYPE_GLYPHCACHE:
                 DEBUG(("RDP_CAPSET_GLYPHCACHE"));
                 xrdp_caps_process_glyphcache(self, s, len);
                 break;
-            case RDP_CAPSET_OFFSCREENCACHE:
+            case CAPSTYPE_BITMAPCACHE_HOSTSUPPORT:
                 DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));
                 xrdp_caps_process_offscreen_bmpcache(self, s, len);
                 break;
-            case RDP_CAPSET_BMPCACHE2:
+            case CAPSTYPE_BITMAPCACHE_REV2:
                 DEBUG(("RDP_CAPSET_BMPCACHE2"));
                 xrdp_caps_process_bmpcache2(self, s, len);
                 break;
-            case RDP_CAPSET_VIRCHAN:
+            case CAPSTYPE_VIRTUALCHANNEL:
                 DEBUG(("--0x14"));
                 break;
-            case RDP_CAPSET_DRAWNINEGRIDCACHE:
+            case CAPSTYPE_DRAWNINGRIDCACHE:
                 DEBUG(("--0x15"));
                 break;
-            case RDP_CAPSET_DRAWGDIPLUS:
+            case CAPSTYPE_DRAWGDIPLUS:
                 DEBUG(("--0x16"));
                 break;
-            case RDP_CAPSET_RAIL:
+            case CAPSTYPE_RAIL:
                 xrdp_caps_process_rail(self, s, len);
                 break;
-            case RDP_CAPSET_WINDOW:
+            case CAPSTYPE_WINDOW:
                 xrdp_caps_process_window(self, s, len);
                 break;
-            case RDP_CAPSET_MULTIFRAGMENT:
+            case CAPSSETTYPE_MULTIFRAGMENTUPDATE:
                 xrdp_caps_process_multifragmentupdate(self, s, len);
                 break;
-            case RDP_CAPSET_SURFCMDS:
+            case CAPSETTYPE_SURFACE_COMMANDS:
                 xrdp_caps_process_surface_cmds(self, s, len);
                 break;
-            case RDP_CAPSET_BMPCODECS:
+            case CAPSSETTYPE_BITMAP_CODECS:
                 xrdp_caps_process_codecs(self, s, len);
                 break;
-            case RDP_CAPSET_FRAME_ACKNOWLEDGE:
+            case CAPSTYPE_FRAME_ACKNOWLEDGE:
                 xrdp_caps_process_frame_ack(self, s, len);
                 break;
             default:
@@ -785,15 +785,15 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output share capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_SHARE);
-    out_uint16_le(s, RDP_CAPLEN_SHARE);
+    out_uint16_le(s, CAPSTYPE_SHARE);
+    out_uint16_le(s, CAPSTYPE_SHARE_LEN);
     out_uint16_le(s, self->mcs_channel);
     out_uint16_be(s, 0xb5e2); /* 0x73e1 */
 
     /* Output general capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_GENERAL); /* 1 */
-    out_uint16_le(s, RDP_CAPLEN_GENERAL); /* 24(0x18) */
+    out_uint16_le(s, CAPSTYPE_GENERAL); /* 1 */
+    out_uint16_le(s, CAPSTYPE_GENERAL_LEN); /* 24(0x18) */
     out_uint16_le(s, 1); /* OS major type */
     out_uint16_le(s, 3); /* OS minor type */
     out_uint16_le(s, 0x200); /* Protocol version */
@@ -816,8 +816,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output bitmap capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_BITMAP); /* 2 */
-    out_uint16_le(s, RDP_CAPLEN_BITMAP); /* 28(0x1c) */
+    out_uint16_le(s, CAPSTYPE_BITMAP); /* 2 */
+    out_uint16_le(s, CAPSTYPE_BITMAP_LEN); /* 28(0x1c) */
     out_uint16_le(s, self->client_info.bpp); /* Preferred BPP */
     out_uint16_le(s, 1); /* Receive 1 BPP */
     out_uint16_le(s, 1); /* Receive 4 BPP */
@@ -833,13 +833,13 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output font capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_FONT); /* 14 */
-    out_uint16_le(s, RDP_CAPLEN_FONT); /* 4 */
+    out_uint16_le(s, CAPSTYPE_FONT); /* 14 */
+    out_uint16_le(s, CAPSTYPE_FONT_LEN); /* 4 */
 
     /* Output order capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_ORDER); /* 3 */
-    out_uint16_le(s, RDP_CAPLEN_ORDER); /* 88(0x58) */
+    out_uint16_le(s, CAPSTYPE_ORDER); /* 3 */
+    out_uint16_le(s, CAPSTYPE_ORDER_LEN); /* 88(0x58) */
     out_uint8s(s, 16);
     out_uint32_be(s, 0x40420f00);
     out_uint16_le(s, 1); /* Cache X granularity */
@@ -891,7 +891,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output bmpcodecs capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_BMPCODECS);
+    out_uint16_le(s, CAPSSETTYPE_BITMAP_CODECS);
     codec_caps_size_ptr = s->p;
     out_uint8s(s, 2); /* cap len set later */
     codec_caps_count = 0;
@@ -934,23 +934,23 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output color cache capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_COLCACHE);
-    out_uint16_le(s, RDP_CAPLEN_COLCACHE);
+    out_uint16_le(s, CAPSTYPE_COLORCACHE);
+    out_uint16_le(s, CAPSTYPE_COLORCACHE_LEN);
     out_uint16_le(s, 6); /* cache size */
     out_uint16_le(s, 0); /* pad */
 
     /* Output pointer capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_POINTER);
-    out_uint16_le(s, RDP_CAPLEN_POINTER);
+    out_uint16_le(s, CAPSTYPE_POINTER);
+    out_uint16_le(s, CAPSTYPE_POINTER_LEN);
     out_uint16_le(s, 1); /* Colour pointer */
     out_uint16_le(s, 0x19); /* Cache size */
     out_uint16_le(s, 0x19); /* Cache size */
 
     /* Output input capability set */
     caps_count++;
-    out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
-    out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
+    out_uint16_le(s, CAPSTYPE_INPUT); /* 13(0xd) */
+    out_uint16_le(s, CAPSTYPE_INPUT_LEN); /* 88(0x58) */
 
     flags = INPUT_FLAG_SCANCODES |
             INPUT_FLAG_MOUSEX    |
@@ -992,20 +992,20 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     {
         /* multifragment update */
         caps_count++;
-        out_uint16_le(s, RDP_CAPSET_MULTIFRAGMENT); /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
-        out_uint16_le(s, RDP_CAPLEN_MULTIFRAGMENT);
+        out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE); /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
+        out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE_LEN);
         out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
 
         /* frame acks */
         caps_count++;
-        out_uint16_le(s, RDP_CAPSET_FRAME_ACKNOWLEDGE); /* CAPSETTYPE_FRAME_ACKNOWLEDGE */
-        out_uint16_le(s, RDP_CAPLEN_FRAME_ACKNOWLEDGE);
+        out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE); /* CAPSETTYPE_FRAME_ACKNOWLEDGE */
+        out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE_LEN);
         out_uint32_le(s, 2); /* 2 frames in flight */
 
         /* surface commands */
         caps_count++;
-        out_uint16_le(s, RDP_CAPSET_SURFCMDS); /* CAPSETTYPE_SURFACE_COMMANDS */
-        out_uint16_le(s, RDP_CAPLEN_SURFCMDS); /* lengthCapability */
+        out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS); /* CAPSETTYPE_SURFACE_COMMANDS */
+        out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS_LEN); /* lengthCapability */
         out_uint32_le(s, (SURFCMDS_SETSURFACEBITS |
                           SURFCMDS_FRAMEMARKER |
                           SURFCMDS_STREAMSUFRACEBITS)); /* cmdFlags */
