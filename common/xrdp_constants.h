@@ -588,6 +588,12 @@
 #define KBD_FLAG_CAPITAL               0x0004
 #define TS_SYNC_KANA_LOCK              0x0008
 
+/* Glyph Cache Capability Set: GlyphSupportLevel (MS-RDPBCGR 2.2.7.1.8) */
+#define GLYPH_SUPPORT_NONE             0x0000
+#define GLYPH_SUPPORT_PARTIAL          0x0001
+#define GLYPH_SUPPORT_FULL             0x0002
+#define GLYPH_SUPPORT_ENCODE           0x0003
+
 /******************************************************************************
  *
  * Constants come from other Microsoft products
