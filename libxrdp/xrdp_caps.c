@@ -792,8 +792,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output general capability set */
     caps_count++;
-    out_uint16_le(s, CAPSTYPE_GENERAL); /* 1 */
-    out_uint16_le(s, CAPSTYPE_GENERAL_LEN); /* 24(0x18) */
+    out_uint16_le(s, CAPSTYPE_GENERAL);
+    out_uint16_le(s, CAPSTYPE_GENERAL_LEN);
     out_uint16_le(s, 1); /* OS major type */
     out_uint16_le(s, 3); /* OS minor type */
     out_uint16_le(s, 0x200); /* Protocol version */
@@ -816,8 +816,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output bitmap capability set */
     caps_count++;
-    out_uint16_le(s, CAPSTYPE_BITMAP); /* 2 */
-    out_uint16_le(s, CAPSTYPE_BITMAP_LEN); /* 28(0x1c) */
+    out_uint16_le(s, CAPSTYPE_BITMAP);
+    out_uint16_le(s, CAPSTYPE_BITMAP_LEN);
     out_uint16_le(s, self->client_info.bpp); /* Preferred BPP */
     out_uint16_le(s, 1); /* Receive 1 BPP */
     out_uint16_le(s, 1); /* Receive 4 BPP */
@@ -833,13 +833,13 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output font capability set */
     caps_count++;
-    out_uint16_le(s, CAPSTYPE_FONT); /* 14 */
-    out_uint16_le(s, CAPSTYPE_FONT_LEN); /* 4 */
+    out_uint16_le(s, CAPSTYPE_FONT);
+    out_uint16_le(s, CAPSTYPE_FONT_LEN);
 
     /* Output order capability set */
     caps_count++;
-    out_uint16_le(s, CAPSTYPE_ORDER); /* 3 */
-    out_uint16_le(s, CAPSTYPE_ORDER_LEN); /* 88(0x58) */
+    out_uint16_le(s, CAPSTYPE_ORDER);
+    out_uint16_le(s, CAPSTYPE_ORDER_LEN);
     out_uint8s(s, 16);
     out_uint32_be(s, 0x40420f00);
     out_uint16_le(s, 1); /* Cache X granularity */
@@ -949,8 +949,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* Output input capability set */
     caps_count++;
-    out_uint16_le(s, CAPSTYPE_INPUT); /* 13(0xd) */
-    out_uint16_le(s, CAPSTYPE_INPUT_LEN); /* 88(0x58) */
+    out_uint16_le(s, CAPSTYPE_INPUT);
+    out_uint16_le(s, CAPSTYPE_INPUT_LEN);
 
     flags = INPUT_FLAG_SCANCODES |
             INPUT_FLAG_MOUSEX    |
@@ -992,20 +992,20 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     {
         /* multifragment update */
         caps_count++;
-        out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE); /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
+        out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE);
         out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE_LEN);
         out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
 
         /* frame acks */
         caps_count++;
-        out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE); /* CAPSETTYPE_FRAME_ACKNOWLEDGE */
+        out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE);
         out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE_LEN);
         out_uint32_le(s, 2); /* 2 frames in flight */
 
         /* surface commands */
         caps_count++;
-        out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS); /* CAPSETTYPE_SURFACE_COMMANDS */
-        out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS_LEN); /* lengthCapability */
+        out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS);
+        out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS_LEN);
         out_uint32_le(s, (SURFCMDS_SETSURFACEBITS |
                           SURFCMDS_FRAMEMARKER |
                           SURFCMDS_STREAMSUFRACEBITS)); /* cmdFlags */
