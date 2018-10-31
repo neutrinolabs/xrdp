@@ -2444,10 +2444,10 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
 /* returns error */
 /* max size datasize + 18*/
 /* todo, only sends one for now */
-int
-xrdp_orders_send_font(struct xrdp_orders *self,
-                      struct xrdp_font_char *font_char,
-                      int font_index, int char_index)
+static int
+xrdp_orders_cache_glyph(struct xrdp_orders *self,
+                        struct xrdp_font_char *font_char,
+                        int font_index, int char_index)
 {
     int order_flags = 0;
     int datasize = 0;
@@ -2484,6 +2484,150 @@ xrdp_orders_send_font(struct xrdp_orders *self,
     out_uint16_le(self->out_s, font_char->height);
     out_uint8a(self->out_s, font_char->data, datasize);
     return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int write_2byte_signed(struct stream * s, int value)
+{
+    unsigned char byte;
+    int negative = 0;
+
+    if (value < 0)
+    {
+        negative = 1;
+        value *= -1;
+    }
+
+    if (value > 0x3FFF)
+    {
+        return 1;
+    }
+
+    if (value >= 0x3F)
+    {
+        byte = ((value & 0x3F00) >> 8);
+
+        if (negative)
+        {
+            byte |= 0x40;
+        }
+
+        out_uint8(s, byte | 0x80);
+        byte = (value & 0xFF);
+        out_uint8(s, byte);
+    }
+    else
+    {
+        byte = (value & 0x3F);
+
+        if (negative)
+        {
+            byte |= 0x40;
+        }
+
+        out_uint8(s, byte);
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int write_2byte_unsigned(struct stream * s, unsigned int value)
+{
+    unsigned char byte;
+
+    if (value > 0x7FFF)
+    {
+        return 1;
+    }
+
+    if (value >= 0x7F)
+    {
+        byte = ((value & 0x7F00) >> 8);
+        out_uint8(s, byte | 0x80);
+        byte = (value & 0xFF);
+        out_uint8(s, byte);
+    }
+    else
+    {
+        byte = (value & 0x7F);
+        out_uint8(s, byte);
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* max size datasize + 15*/
+/* todo, only sends one for now */
+static int
+xrdp_orders_cache_glyph_v2(struct xrdp_orders *self,
+                           struct xrdp_font_char *font_char,
+                           int font_index, int char_index)
+{
+    int order_flags = 0;
+    int datasize = 0;
+    int len = 0;
+    int extra_flags;
+    char *len_ptr;
+
+    if (font_char->bpp == 8) /* alpha font */
+    {
+        datasize = ((font_char->width + 3) & ~3) * font_char->height;
+    }
+    else
+    {
+        datasize = FONT_DATASIZE(font_char);
+    }
+
+    /* cacheId, flags(GLYPH_ORDER_REV2), cGlyphs */
+    extra_flags = (font_index & 0x000F) | (0x2 << 4) | (1 << 8);
+
+    if (xrdp_orders_check(self, datasize + 15) != 0)
+    {
+        return 1;
+    }
+    self->order_count++;
+    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    out_uint8(self->out_s, order_flags);
+    len_ptr = self->out_s->p;
+    out_uint16_le(self->out_s, 0);  /* set later */
+    out_uint16_le(self->out_s, extra_flags);
+    out_uint8(self->out_s, RDP_ORDER_FONTCACHE); /* type */
+
+    out_uint8(self->out_s, char_index);
+    if (write_2byte_signed(self->out_s, font_char->offset) ||
+        write_2byte_signed(self->out_s, font_char->baseline) ||
+        write_2byte_unsigned(self->out_s, font_char->width) ||
+        write_2byte_unsigned(self->out_s, font_char->height))
+    {
+        return 1;
+    }
+
+    out_uint8a(self->out_s, font_char->data, datasize);
+    len = (self->out_s->p - len_ptr) + 1 - 13;
+    len_ptr[0] = len & 0xFF;
+    len_ptr[1] = (len >> 8) & 0xFF;
+
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int
+xrdp_orders_send_font(struct xrdp_orders *self,
+                      struct xrdp_font_char *font_char,
+                      int font_index, int char_index)
+{
+    if (self->rdp_layer->client_info.use_cache_glyph_v2)
+    {
+        return xrdp_orders_cache_glyph_v2(self, font_char, font_index, char_index);
+    }
+
+    return xrdp_orders_cache_glyph(self, font_char, font_index, char_index);
 }
 
 /*****************************************************************************/
