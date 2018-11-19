@@ -197,6 +197,12 @@ login for all users is enabled.
 have session management rights.
 
 .TP
+\fBRestrictOutboundClipboard\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, will restrict the clipboard
+outbound from the server, to prevent data copied inside the xrdp session
+to be be pasted in the client host. Default value is \fBfalse\fR.
+
+.TP
 \fBAlwaysGroupCheck\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, require group membership even
 if the group specified in \fBTerminalServerUsers\fR doesn't exist.

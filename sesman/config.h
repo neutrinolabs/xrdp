@@ -126,6 +126,11 @@ struct config_security
    * @brief if the Groups are not found deny access
    */
   int ts_always_group_check;
+  /**
+   * @var restrict_oubound_clipboard
+   * @brief if the clipboard should be enforced restricted. If true only allow client -> server, not vice versa.
+   */
+  int restrict_oubound_clipboard;
 };
 
 /**
