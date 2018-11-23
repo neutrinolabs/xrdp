@@ -964,20 +964,23 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, flags);
     out_uint8s(s, 82);
 
-    /* Remote Programs Capability Set */
-    caps_count++;
-    out_uint16_le(s, 0x0017); /* CAPSETTYPE_RAIL */
-    out_uint16_le(s, 8);
-    out_uint32_le(s, 3); /* TS_RAIL_LEVEL_SUPPORTED
-                          TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED */
+    if (self->client_info.rail_enable) /* MS-RDPERP 3.3.5.1.4 */
+    {
+        /* Remote Programs Capability Set */
+        caps_count++;
+        out_uint16_le(s, 0x0017); /* CAPSETTYPE_RAIL */
+        out_uint16_le(s, 8);
+        out_uint32_le(s, 3); /* TS_RAIL_LEVEL_SUPPORTED
+                              TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED */
 
-    /* Window List Capability Set */
-    caps_count++;
-    out_uint16_le(s, 0x0018); /* CAPSETTYPE_WINDOW */
-    out_uint16_le(s, 11);
-    out_uint32_le(s, 2); /* TS_WINDOW_LEVEL_SUPPORTED_EX */
-    out_uint8(s, 3); /* NumIconCaches */
-    out_uint16_le(s, 12); /* NumIconCacheEntries */
+        /* Window List Capability Set */
+        caps_count++;
+        out_uint16_le(s, 0x0018); /* CAPSETTYPE_WINDOW */
+        out_uint16_le(s, 11);
+        out_uint32_le(s, 2); /* TS_WINDOW_LEVEL_SUPPORTED_EX */
+        out_uint8(s, 3); /* NumIconCaches */
+        out_uint16_le(s, 12); /* NumIconCacheEntries */
+    }
 
     /* 6 - bitmap cache v3 codecid */
     caps_count++;
