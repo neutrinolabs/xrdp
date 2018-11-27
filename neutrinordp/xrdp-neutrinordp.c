@@ -1527,7 +1527,7 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->password = g_strdup(mod->password);
     instance->settings->domain = g_strdup(mod->domain);
 
-    if (mod->client_info.rail_support_level > 0)
+    if (mod->client_info.rail_enable && (mod->client_info.rail_support_level > 0))
     {
         LLOGLN(0, ("Railsupport !!!!!!!!!!!!!!!!!!"));
         instance->settings->remote_app = 1;
