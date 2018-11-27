@@ -966,16 +966,17 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     {
         /* Remote Programs Capability Set */
         caps_count++;
-        out_uint16_le(s, 0x0017); /* CAPSETTYPE_RAIL */
-        out_uint16_le(s, 8);
-        out_uint32_le(s, 3); /* TS_RAIL_LEVEL_SUPPORTED
-                              TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED */
+        out_uint16_le(s, CAPSTYPE_RAIL);
+        out_uint16_le(s, 8); /* LengthCapability: MS-RDPERP 2.2.1.1.1 */
+        out_uint32_le(s, 3); /* See: https://msdn.microsoft.com/en-us/library/cc242518.aspx
+                                TS_RAIL_LEVEL_SUPPORTED
+                                TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED */
 
         /* Window List Capability Set */
         caps_count++;
-        out_uint16_le(s, 0x0018); /* CAPSETTYPE_WINDOW */
-        out_uint16_le(s, 11);
-        out_uint32_le(s, 2); /* TS_WINDOW_LEVEL_SUPPORTED_EX */
+        out_uint16_le(s, CAPSTYPE_WINDOW);
+        out_uint16_le(s, 11); /* LengthCapability: MS-RDPERP 2.2.1.1.2 */
+        out_uint32_le(s, TS_WINDOW_LEVEL_SUPPORTED_EX);
         out_uint8(s, 3); /* NumIconCaches */
         out_uint16_le(s, 12); /* NumIconCacheEntries */
     }

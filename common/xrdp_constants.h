@@ -201,6 +201,11 @@
 #define OSMINORTYPE_PSEUDO_XSERVER     0x0008
 #define OSMINORTYPE_WINDOWS_RT         0x0009
 
+/* Window List Capability Set: WndSupportLevel (MS-RDPERP 2.2.1.1.2) */
+#define TS_WINDOW_LEVEL_NOT_SUPPORTED  0x00000000
+#define TS_WINDOW_LEVEL_SUPPORTED      0x00000001
+#define TS_WINDOW_LEVEL_SUPPORTED_EX   0x00000002
+
 /* Extended Info Packet: performanceFlags (MS-RDPBCGR 2.2.1.11.1.1.1) */
 /* TODO: to be renamed */
 #define RDP5_DISABLE_NOTHING           0x00
