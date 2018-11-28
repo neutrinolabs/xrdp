@@ -801,7 +801,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0); /* Compression types */
     if (self->client_info.use_fast_path & 1)
     {
-        out_uint16_le(s, NO_BITMAP_COMPRESSION_HDR & FASTPATH_OUTPUT_SUPPORTED);
+        out_uint16_le(s, NO_BITMAP_COMPRESSION_HDR | FASTPATH_OUTPUT_SUPPORTED);
     }
     else
     {
