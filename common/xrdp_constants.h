@@ -671,12 +671,12 @@
 #define LICENCE_SIGNATURE_SIZE         16
 
 
-/* RDP PDU codes */
-#define RDP_PDU_DEMAND_ACTIVE          1
-#define RDP_PDU_CONFIRM_ACTIVE         3
-#define RDP_PDU_REDIRECT               4
-#define RDP_PDU_DEACTIVATE             6
-#define RDP_PDU_DATA                   7
+/* PDU Types (MS-RDPBCGR 2.2.8.1.1.1.1) */
+#define PDUTYPE_DEMANDACTIVEPDU        0x1
+#define PDUTYPE_CONFIRMACTIVEPDU       0x3
+#define PDUTYPE_DEACTIVATEALLPDU       0x6
+#define PDUTYPE_DATAPDU                0x7
+#define PDUTYPE_SERVER_REDIR_PKT       0xA
 
 /* See T.128 */
 /* not used anywhere */

@@ -561,7 +561,7 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     DEBUG(("in xrdp_rdp_send_data"));
     s_pop_layer(s, rdp_hdr);
     len = (int)(s->end - s->p);
-    pdutype = 0x10 | RDP_PDU_DATA;
+    pdutype = 0x10 | PDUTYPE_DATAPDU;
     pdulen = len;
     dlen = len;
     ctype = 0;
@@ -1296,7 +1296,7 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 
     s_mark_end(s);
 
-    if (xrdp_rdp_send(self, s, RDP_PDU_DEACTIVATE) != 0)
+    if (xrdp_rdp_send(self, s, PDUTYPE_DEACTIVATEALLPDU) != 0)
     {
         free_stream(s);
         DEBUG(("out xrdp_rdp_send_deactivate error"));

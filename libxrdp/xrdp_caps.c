@@ -1024,7 +1024,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     caps_count_ptr[2] = caps_count >> 16;
     caps_count_ptr[3] = caps_count >> 24;
 
-    if (xrdp_rdp_send(self, s, RDP_PDU_DEMAND_ACTIVE) != 0)
+    if (xrdp_rdp_send(self, s, PDUTYPE_DEMANDACTIVEPDU) != 0)
     {
         free_stream(s);
         return 1;
