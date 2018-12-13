@@ -550,10 +550,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                         char *params = strchr(s->program+1, ' ');
                         if(params)
                         {
-                            params = strchr(s->program+1, ' ');
-                        }
-                        if(params)
-                        {
                             *params = '\0';
                             params++;
                         }
