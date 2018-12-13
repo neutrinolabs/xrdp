@@ -687,7 +687,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 DEBUG(("RDP_CAPSET_GLYPHCACHE"));
                 xrdp_caps_process_glyphcache(self, s, len);
                 break;
-            case CAPSTYPE_BITMAPCACHE_HOSTSUPPORT:
+            case CAPSTYPE_OFFSCREENCACHE:
                 DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));
                 xrdp_caps_process_offscreen_bmpcache(self, s, len);
                 break;
