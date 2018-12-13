@@ -648,7 +648,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 DEBUG(("CAPSTYPE_ORDER"));
                 xrdp_caps_process_order(self, s, len);
                 break;
-            case CAPSTYPE_BITMACACHE:
+            case CAPSTYPE_BITMAPCACHE:
                 DEBUG(("CAPSTYPE_BMPCACHE"));
                 xrdp_caps_process_bmpcache(self, s, len);
                 break;

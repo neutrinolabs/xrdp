@@ -431,7 +431,7 @@
 #define ORDER_CAP_NEGOTIATE                     2 /* NEGOTIATEORDERSUPPORT? not used */
 #define ORDER_CAP_NOSUPPORT                     4 /* not used */
 
-#define CAPSTYPE_BITMACACHE                     0x0004
+#define CAPSTYPE_BITMAPCACHE                    0x0004
 #define CAPSTYPE_BITMAPCACHE_LEN                0x28
 
 #define CAPSTYPE_CONTROL                        0x0005
