@@ -547,13 +547,13 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 {
                     if (s->program[0] != 0)
                     {
-                        char *params = strchr(s->program+1, ' ');
+                        char *params = strchr(s->program, ' ');
                         if(params)
                         {
                             *params = '\0';
                             params++;
                         }
-                        if (params && strlen(params) > 0)
+                        if (params && strlen(s->program) > 0 &&  strlen(params) > 0)
                         { 
                            g_execlp3(s->program, "-c", params);
                         }
