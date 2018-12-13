@@ -1,3 +1,29 @@
+# Release notes for xrdp v0.9.9 (2018/12/25)
+
+# Release cycle
+From the next release, release cycle will be changed from quarterly to every
+4 months. xrdp will be released in April, August, December.
+
+# New features
+* Disconnection by idle timeout (requires xorgxrdp v0.2.9 or later) #1227
+* Glyph cache v2 (fixes no font issue on iOS/macOS/Android client) #367 #1235
+
+# Bug fixes
+* Fix xrdp-chansrv crashes caused in drive redirection #1202 #1225
+* Fix build with FDK AAC v2 #1257
+* Do not enable RemoteApp if the INFO_RAIL flag is not set (RDP-RDP proxy) #1253
+
+# Other changes
+* Add Spanish Latin Amarican keyboard #1237 #1240 #1244
+* Dynamic channel improvements #1222 #1224
+* Remove some deprecated sesman session types #1232
+* Refactoring and cleanups
+
+# Known issues
+* FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
+  xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
 # Release notes for xrdp v0.9.8 (2018/09/25)
 
 ## Deprecation notice
