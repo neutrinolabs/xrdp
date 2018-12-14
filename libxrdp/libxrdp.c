@@ -230,10 +230,10 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             case 0:
                 dead_lock_counter++;
                 break;
-            case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
+            case PDUTYPE_CONFIRMACTIVEPDU:
                 xrdp_caps_process_confirm_active(rdp, s);
                 break;
-            case RDP_PDU_DATA: /* 7 */
+            case PDUTYPE_DATAPDU:
                 if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
                     DEBUG(("libxrdp_process_data returned non zero"));

@@ -385,15 +385,14 @@
 #define RDP_MPPC_DICT_SIZE             8192 /* RDP 4.0 | MS-RDPBCGR 3.1.8 */
 
 /* Drawing Order: controlFlags (MS-RDPEGDI 2.2.2.2.1, ) */
-/* TODO: to be renamed */
-#define RDP_ORDER_STANDARD   0x01
-#define RDP_ORDER_SECONDARY  0x02
-#define RDP_ORDER_BOUNDS     0x04
-#define RDP_ORDER_CHANGE     0x08
-#define RDP_ORDER_DELTA      0x10
-#define RDP_ORDER_LASTBOUNDS 0x20
-#define RDP_ORDER_SMALL      0x40
-#define RDP_ORDER_TINY       0x80
+#define TS_STANDARD                     0x01
+#define TS_SECONDARY                    0x02
+#define TS_BOUNDS                       0x04
+#define TS_TYPE_CHANGE                  0x08
+#define TS_DELTA_COORDINATES            0x10
+#define TS_ZERO_BOUNDS_DELTAS           0x20
+#define TS_ZERO_FIELD_BYTE_BIT0         0x40
+#define TS_ZERO_FIELD_BYTE_BIT1         0x80
 
 /* Drawing Order: orderType (MS-RDPEGDI 2.2.2.2.1.1.2) ? */
 #define RDP_ORDER_DESTBLT   0
@@ -409,15 +408,14 @@
 #define RDP_ORDER_COMPOSITE 37 /* 0x25 */
 
 /* Secondary Drawing Order Header: orderType (MS-RDPEGDI 2.2.2.2.1.2.1.1) */
-/* TODO: to be renamed */
-#define RDP_ORDER_RAW_BMPCACHE  0
-#define RDP_ORDER_COLCACHE      1
-#define RDP_ORDER_BMPCACHE      2
-#define RDP_ORDER_FONTCACHE     3
-#define RDP_ORDER_RAW_BMPCACHE2 4
-#define RDP_ORDER_BMPCACHE2     5
-#define RDP_ORDER_BRUSHCACHE    7
-#define RDP_ORDER_BMPCACHE3     8
+#define TS_CACHE_BITMAP_UNCOMPRESSED        0x00
+#define TS_CACHE_COLOR_TABLE                0x01
+#define TS_CACHE_BITMAP_COMPRESSED          0x02
+#define TS_CACHE_GLYPH                      0x03
+#define TS_CACHE_BITMAP_UNCOMPRESSED_REV2   0x04
+#define TS_CACHE_BITMAP_COMPRESSED_REV2     0x05
+#define TS_CACHE_BRUSH                      0x07
+#define TS_CACHE_BITMAP_COMPRESSED_REV3     0x08
 
 /* Maps to generalCapabilitySet in T.128 page 138 */
 
@@ -433,7 +431,7 @@
 #define ORDER_CAP_NEGOTIATE                     2 /* NEGOTIATEORDERSUPPORT? not used */
 #define ORDER_CAP_NOSUPPORT                     4 /* not used */
 
-#define CAPSTYPE_BITMACACHE                     0x0004
+#define CAPSTYPE_BITMAPCACHE                    0x0004
 #define CAPSTYPE_BITMAPCACHE_LEN                0x28
 
 #define CAPSTYPE_CONTROL                        0x0005
@@ -673,12 +671,12 @@
 #define LICENCE_SIGNATURE_SIZE         16
 
 
-/* RDP PDU codes */
-#define RDP_PDU_DEMAND_ACTIVE          1
-#define RDP_PDU_CONFIRM_ACTIVE         3
-#define RDP_PDU_REDIRECT               4
-#define RDP_PDU_DEACTIVATE             6
-#define RDP_PDU_DATA                   7
+/* PDU Types (MS-RDPBCGR 2.2.8.1.1.1.1) */
+#define PDUTYPE_DEMANDACTIVEPDU        0x1
+#define PDUTYPE_CONFIRMACTIVEPDU       0x3
+#define PDUTYPE_DEACTIVATEALLPDU       0x6
+#define PDUTYPE_DATAPDU                0x7
+#define PDUTYPE_SERVER_REDIR_PKT       0xA
 
 /* See T.128 */
 /* not used anywhere */

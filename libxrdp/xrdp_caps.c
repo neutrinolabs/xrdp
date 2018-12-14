@@ -638,71 +638,71 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         switch (type)
         {
             case CAPSTYPE_GENERAL:
-                DEBUG(("RDP_CAPSET_GENERAL"));
+                DEBUG(("CAPSTYPE_GENERAL"));
                 xrdp_caps_process_general(self, s, len);
                 break;
             case CAPSTYPE_BITMAP:
-                DEBUG(("RDP_CAPSET_BITMAP"));
+                DEBUG(("CAPSTYPE_BITMAP"));
                 break;
             case CAPSTYPE_ORDER:
-                DEBUG(("RDP_CAPSET_ORDER"));
+                DEBUG(("CAPSTYPE_ORDER"));
                 xrdp_caps_process_order(self, s, len);
                 break;
-            case CAPSTYPE_BITMACACHE:
-                DEBUG(("RDP_CAPSET_BMPCACHE"));
+            case CAPSTYPE_BITMAPCACHE:
+                DEBUG(("CAPSTYPE_BMPCACHE"));
                 xrdp_caps_process_bmpcache(self, s, len);
                 break;
             case CAPSTYPE_CONTROL:
-                DEBUG(("RDP_CAPSET_CONTROL"));
+                DEBUG(("CAPSTYPE_CONTROL"));
                 break;
             case 6:
                 xrdp_caps_process_cache_v3_codec_id(self, s, len);
                 break;
             case CAPSTYPE_ACTIVATION:
-                DEBUG(("RDP_CAPSET_ACTIVATE"));
+                DEBUG(("CAPSTYPE_ACTIVAION"));
                 break;
             case CAPSTYPE_POINTER:
-                DEBUG(("RDP_CAPSET_POINTER"));
+                DEBUG(("CAPSTYPE_POINTER"));
                 xrdp_caps_process_pointer(self, s, len);
                 break;
             case CAPSTYPE_SHARE:
-                DEBUG(("RDP_CAPSET_SHARE"));
+                DEBUG(("CAPSTYPE_SHARE"));
                 break;
             case CAPSTYPE_COLORCACHE:
-                DEBUG(("RDP_CAPSET_COLCACHE"));
+                DEBUG(("CAPSTYPE_COLORCACHE"));
                 break;
             case CAPSTYPE_SOUND:
-                DEBUG(("--0x0C"));
+                DEBUG(("CAPSTYPE_SOUND"));
                 break;
             case CAPSTYPE_INPUT:
                 xrdp_caps_process_input(self, s, len);
                 break;
             case CAPSTYPE_FONT:
-                DEBUG(("--0x0D"));
+                DEBUG(("CAPSTYPE_FONT"));
                 break;
             case CAPSTYPE_BRUSH:
                 xrdp_caps_process_brushcache(self, s, len);
                 break;
             case CAPSTYPE_GLYPHCACHE:
-                DEBUG(("RDP_CAPSET_GLYPHCACHE"));
+                DEBUG(("CAPSTYPE_GLYPHCACHE"));
                 xrdp_caps_process_glyphcache(self, s, len);
                 break;
-            case CAPSTYPE_BITMAPCACHE_HOSTSUPPORT:
-                DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));
+            case CAPSTYPE_OFFSCREENCACHE:
+                DEBUG(("CAPSTYPE_OFFSCREENCACHE"));
                 xrdp_caps_process_offscreen_bmpcache(self, s, len);
                 break;
             case CAPSTYPE_BITMAPCACHE_REV2:
-                DEBUG(("RDP_CAPSET_BMPCACHE2"));
+                DEBUG(("CAPSTYPE_BITMAPCACHE_REV2"));
                 xrdp_caps_process_bmpcache2(self, s, len);
                 break;
             case CAPSTYPE_VIRTUALCHANNEL:
-                DEBUG(("--0x14"));
+                DEBUG(("CAPSTYPE_VIRTUALCHANNEL"));
                 break;
             case CAPSTYPE_DRAWNINGRIDCACHE:
-                DEBUG(("--0x15"));
+                DEBUG(("CAPSTYPE_DRAWNINGRIDCACHE"));
                 break;
             case CAPSTYPE_DRAWGDIPLUS:
-                DEBUG(("--0x16"));
+                DEBUG(("CAPSTYPE_DRAWGDIPLUS"));
                 break;
             case CAPSTYPE_RAIL:
                 xrdp_caps_process_rail(self, s, len);
@@ -925,7 +925,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint8(s, 75); /* jpeg compression ratio */
     /* calculate and set size and count */
     codec_caps_size = (int)(s->p - codec_caps_size_ptr);
-    codec_caps_size += 2; /* 2 bytes for RDP_CAPSET_BMPCODECS above */
+    codec_caps_size += 2; /* 2 bytes for CAPSTYPE_BMPCODECS above */
     codec_caps_size_ptr[0] = codec_caps_size;
     codec_caps_size_ptr[1] = codec_caps_size >> 8;
     codec_caps_count_ptr[0] = codec_caps_count;
@@ -1024,7 +1024,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     caps_count_ptr[2] = caps_count >> 16;
     caps_count_ptr[3] = caps_count >> 24;
 
-    if (xrdp_rdp_send(self, s, RDP_PDU_DEMAND_ACTIVE) != 0)
+    if (xrdp_rdp_send(self, s, PDUTYPE_DEMANDACTIVEPDU) != 0)
     {
         free_stream(s);
         return 1;

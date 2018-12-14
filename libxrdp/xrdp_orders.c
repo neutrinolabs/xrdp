@@ -503,11 +503,11 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_RECT)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_RECT;
@@ -518,11 +518,11 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
         if (x < rect->left || y < rect->top ||
                 x + cx > rect->right || y + cy > rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -538,14 +538,14 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
 
     if (xrdp_orders_send_delta(self, vals, 8))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
 
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -555,8 +555,8 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -565,7 +565,7 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
     {
         present |= 0x01;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, x - self->orders_state.rect_x);
         }
@@ -581,7 +581,7 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
     {
         present |= 0x02;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, y - self->orders_state.rect_y);
         }
@@ -597,7 +597,7 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
     {
         present |= 0x04;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cx - self->orders_state.rect_cx);
         }
@@ -613,7 +613,7 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
     {
         present |= 0x08;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cy - self->orders_state.rect_cy);
         }
@@ -674,11 +674,11 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_SCREENBLT)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_SCREENBLT;
@@ -689,11 +689,11 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
         if (x < rect->left || y < rect->top ||
                 x + cx > rect->right || y + cy > rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -713,14 +713,14 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
 
     if (xrdp_orders_send_delta(self, vals, 12))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
 
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -730,8 +730,8 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -740,7 +740,7 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x01;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, x - self->orders_state.scr_blt_x);
         }
@@ -756,7 +756,7 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x02;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, y - self->orders_state.scr_blt_y);
         }
@@ -772,7 +772,7 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x04;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cx - self->orders_state.scr_blt_cx);
         }
@@ -788,7 +788,7 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x08;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cy - self->orders_state.scr_blt_cy);
         }
@@ -811,7 +811,7 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x20;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcx - self->orders_state.scr_blt_srcx);
         }
@@ -827,7 +827,7 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x40;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcy - self->orders_state.scr_blt_srcy);
         }
@@ -866,11 +866,11 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_PATBLT)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_PATBLT;
@@ -881,11 +881,11 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
         if (x < rect->left || y < rect->top ||
                 x + cx > rect->right || y + cy > rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -901,14 +901,14 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
 
     if (xrdp_orders_send_delta(self, vals, 8))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
 
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -918,8 +918,8 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 2);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -928,7 +928,7 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x0001;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, x - self->orders_state.pat_blt_x);
         }
@@ -944,7 +944,7 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x0002;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, y - self->orders_state.pat_blt_y);
         }
@@ -960,7 +960,7 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x0004;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cx - self->orders_state.pat_blt_cx);
         }
@@ -976,7 +976,7 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x0008;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cy - self->orders_state.pat_blt_cy);
         }
@@ -1083,11 +1083,11 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_DESTBLT)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_DESTBLT;
@@ -1098,11 +1098,11 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
         if (x < rect->left || y < rect->top ||
                 x + cx > rect->right || y + cy > rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -1118,14 +1118,14 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
 
     if (xrdp_orders_send_delta(self, vals, 8))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
 
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -1135,8 +1135,8 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -1145,7 +1145,7 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x01;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, x - self->orders_state.dest_blt_x);
         }
@@ -1161,7 +1161,7 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x02;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, y - self->orders_state.dest_blt_y);
         }
@@ -1177,7 +1177,7 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x04;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cx - self->orders_state.dest_blt_cx);
         }
@@ -1193,7 +1193,7 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
     {
         present |= 0x08;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cy - self->orders_state.dest_blt_cy);
         }
@@ -1254,11 +1254,11 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_LINE)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_LINE;
@@ -1271,11 +1271,11 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
                 MAX(endx, startx) >= rect->right ||
                 MAX(endy, starty) >= rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -1291,14 +1291,14 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
 
     if (xrdp_orders_send_delta(self, vals, 8))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
 
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -1308,8 +1308,8 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 2);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -1325,7 +1325,7 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
     {
         present |= 0x0002;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, startx - self->orders_state.line_startx);
         }
@@ -1341,7 +1341,7 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
     {
         present |= 0x0004;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, starty - self->orders_state.line_starty);
         }
@@ -1357,7 +1357,7 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
     {
         present |= 0x0008;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, endx - self->orders_state.line_endx);
         }
@@ -1373,7 +1373,7 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
     {
         present |= 0x0010;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, endy - self->orders_state.line_endy);
         }
@@ -1456,11 +1456,11 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_MEMBLT)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_MEMBLT;
@@ -1471,11 +1471,11 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
         if (x < rect->left || y < rect->top ||
                 x + cx > rect->right || y + cy > rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -1495,14 +1495,14 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
 
     if (xrdp_orders_send_delta(self, vals, 12))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
 
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -1512,8 +1512,8 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 2);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -1532,7 +1532,7 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     {
         present |= 0x0002;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, x - self->orders_state.mem_blt_x);
         }
@@ -1548,7 +1548,7 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     {
         present |= 0x0004;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, y - self->orders_state.mem_blt_y);
         }
@@ -1564,7 +1564,7 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     {
         present |= 0x0008;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cx - self->orders_state.mem_blt_cx);
         }
@@ -1580,7 +1580,7 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     {
         present |= 0x0010;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, cy - self->orders_state.mem_blt_cy);
         }
@@ -1603,7 +1603,7 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     {
         present |= 0x0040;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcx - self->orders_state.mem_blt_srcx);
         }
@@ -1619,7 +1619,7 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     {
         present |= 0x0080;
 
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcy - self->orders_state.mem_blt_srcy);
         }
@@ -1666,10 +1666,10 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
     if (self->orders_state.last_order != RDP_ORDER_COMPOSITE)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
     self->orders_state.last_order = RDP_ORDER_COMPOSITE;
     if (rect != 0)
@@ -1678,11 +1678,11 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         if (dstx < rect->left || dsty < rect->top ||
             dstx + width > rect->right || dsty + height > rect->bottom)
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
             if (xrdp_orders_last_bounds(self, rect))
             {
 
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
 
             }
         }
@@ -1709,12 +1709,12 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     vals[19] = self->orders_state.com_blt_mskwidth;
     if (xrdp_orders_send_delta(self, vals, 20))
     {
-        order_flags |= RDP_ORDER_DELTA;
+        order_flags |= TS_DELTA_COORDINATES;
     }
     /* order_flags, set later, 1 byte */
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -1722,8 +1722,8 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     /* present, set later, 3 bytes */
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 3);
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-        !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+        !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -1745,7 +1745,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (srcwidth != self->orders_state.com_blt_srcwidth)
     {
         present |= 0x000004;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcwidth - self->orders_state.com_blt_srcwidth);
         }
@@ -1821,7 +1821,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (mskwidth != self->orders_state.com_blt_mskwidth)
     {
         present |= 0x000200;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, mskwidth - self->orders_state.com_blt_mskwidth);
         }
@@ -1849,7 +1849,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (srcx != self->orders_state.com_blt_srcx)
     {
         present |= 0x001000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcx - self->orders_state.com_blt_srcx);
         }
@@ -1863,7 +1863,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (srcy != self->orders_state.com_blt_srcy)
     {
         present |= 0x002000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, srcy - self->orders_state.com_blt_srcy);
         }
@@ -1877,7 +1877,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (mskx != self->orders_state.com_blt_mskx)
     {
         present |= 0x004000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, mskx - self->orders_state.com_blt_mskx);
         }
@@ -1891,7 +1891,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (msky != self->orders_state.com_blt_msky)
     {
         present |= 0x008000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, msky - self->orders_state.com_blt_msky);
         }
@@ -1905,7 +1905,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (dstx != self->orders_state.com_blt_dstx)
     {
         present |= 0x010000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, dstx - self->orders_state.com_blt_dstx);
         }
@@ -1919,7 +1919,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (dsty != self->orders_state.com_blt_dsty)
     {
         present |= 0x020000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, dsty - self->orders_state.com_blt_dsty);
         }
@@ -1933,7 +1933,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (width != self->orders_state.com_blt_width)
     {
         present |= 0x040000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, width - self->orders_state.com_blt_width);
         }
@@ -1947,7 +1947,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     if (height != self->orders_state.com_blt_height)
     {
         present |= 0x080000;
-        if (order_flags & RDP_ORDER_DELTA)
+        if (order_flags & TS_DELTA_COORDINATES)
         {
             out_uint8(self->out_s, height - self->orders_state.com_blt_height);
         }
@@ -1995,11 +1995,11 @@ xrdp_orders_text(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD;
+    order_flags = TS_STANDARD;
 
     if (self->orders_state.last_order != RDP_ORDER_TEXT2)
     {
-        order_flags |= RDP_ORDER_CHANGE;
+        order_flags |= TS_TYPE_CHANGE;
     }
 
     self->orders_state.last_order = RDP_ORDER_TEXT2;
@@ -2017,11 +2017,11 @@ xrdp_orders_text(struct xrdp_orders *self,
                  clip_right > rect->right ||
                  clip_bottom > rect->bottom))
         {
-            order_flags |= RDP_ORDER_BOUNDS;
+            order_flags |= TS_BOUNDS;
 
             if (xrdp_orders_last_bounds(self, rect))
             {
-                order_flags |= RDP_ORDER_LASTBOUNDS;
+                order_flags |= TS_ZERO_BOUNDS_DELTAS;
             }
         }
     }
@@ -2030,7 +2030,7 @@ xrdp_orders_text(struct xrdp_orders *self,
     order_flags_ptr = self->out_s->p;
     out_uint8s(self->out_s, 1);
 
-    if (order_flags & RDP_ORDER_CHANGE)
+    if (order_flags & TS_TYPE_CHANGE)
     {
         out_uint8(self->out_s, self->orders_state.last_order);
     }
@@ -2040,8 +2040,8 @@ xrdp_orders_text(struct xrdp_orders *self,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 3);
 
-    if ((order_flags & RDP_ORDER_BOUNDS) &&
-            !(order_flags & RDP_ORDER_LASTBOUNDS))
+    if ((order_flags & TS_BOUNDS) &&
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -2184,12 +2184,12 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = 1027 - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     out_uint16_le(self->out_s, 0); /* flags */
-    out_uint8(self->out_s, RDP_ORDER_COLCACHE); /* type */
+    out_uint8(self->out_s, TS_CACHE_COLOR_TABLE); /* type */
     out_uint8(self->out_s, cache_id);
     out_uint16_le(self->out_s, 256); /* num colors */
 
@@ -2256,12 +2256,12 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (bufsize + 9) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     out_uint16_le(self->out_s, 8); /* flags */
-    out_uint8(self->out_s, RDP_ORDER_RAW_BMPCACHE); /* type */
+    out_uint8(self->out_s, TS_CACHE_BITMAP_UNCOMPRESSED); /* type */
     out_uint8(self->out_s, cache_id);
     out_uint8s(self->out_s, 1); /* pad */
     out_uint8(self->out_s, width + e);
@@ -2402,7 +2402,7 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
 
     if (self->rdp_layer->client_info.op2)
@@ -2418,7 +2418,7 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
         out_uint16_le(self->out_s, 8); /* flags */
     }
 
-    out_uint8(self->out_s, RDP_ORDER_BMPCACHE); /* type */
+    out_uint8(self->out_s, TS_CACHE_BITMAP_COMPRESSED); /* type */
     out_uint8(self->out_s, cache_id);
     out_uint8s(self->out_s, 1); /* pad */
     out_uint8(self->out_s, width + e);
@@ -2469,12 +2469,12 @@ xrdp_orders_cache_glyph(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (datasize + 12) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     out_uint16_le(self->out_s, flags);
-    out_uint8(self->out_s, RDP_ORDER_FONTCACHE); /* type */
+    out_uint8(self->out_s, TS_CACHE_GLYPH); /* type */
     out_uint8(self->out_s, font_index);
     out_uint8(self->out_s, 1); /* num of chars */
     out_uint16_le(self->out_s, char_index);
@@ -2591,12 +2591,12 @@ xrdp_orders_cache_glyph_v2(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len_ptr = self->out_s->p;
     out_uint16_le(self->out_s, 0);  /* set later */
     out_uint16_le(self->out_s, extra_flags);
-    out_uint8(self->out_s, RDP_ORDER_FONTCACHE); /* type */
+    out_uint8(self->out_s, TS_CACHE_GLYPH); /* type */
 
     out_uint8(self->out_s, char_index);
     if (write_2byte_signed(self->out_s, font_char->offset) ||
@@ -2683,13 +2683,13 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (bufsize + 6) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     i = (((Bpp + 2) << 3) & 0x38) | (cache_id & 7);
     out_uint16_le(self->out_s, i); /* flags */
-    out_uint8(self->out_s, RDP_ORDER_RAW_BMPCACHE2); /* type */
+    out_uint8(self->out_s, TS_CACHE_BITMAP_UNCOMPRESSED_REV2); /* type */
     out_uint8(self->out_s, width + e);
     out_uint8(self->out_s, height);
     out_uint16_be(self->out_s, bufsize | 0x4000);
@@ -2830,14 +2830,14 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (bufsize + 6) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     i = (((Bpp + 2) << 3) & 0x38) | (cache_id & 7);
     i = i | (0x08 << 7); /* CBR2_NO_BITMAP_COMPRESSION_HDR */
     out_uint16_le(self->out_s, i); /* flags */
-    out_uint8(self->out_s, RDP_ORDER_BMPCACHE2); /* type */
+    out_uint8(self->out_s, TS_CACHE_BITMAP_COMPRESSED_REV2); /* type */
     out_uint8(self->out_s, width + e);
     out_uint8(self->out_s, height);
     out_uint16_be(self->out_s, bufsize | 0x4000);
@@ -2921,13 +2921,13 @@ xrdp_orders_out_v3(struct xrdp_orders *self, int cache_id, int cache_idx,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (bufsize + 22) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     i = (((Bpp + 2) << 3) & 0x38) | (cache_id & 7);
     out_uint16_le(self->out_s, i); /* flags */
-    out_uint8(self->out_s, RDP_ORDER_BMPCACHE3); /* type */
+    out_uint8(self->out_s, TS_CACHE_BITMAP_COMPRESSED_REV3); /* type */
     /* cache index */
     out_uint16_le(self->out_s, cache_idx);
     /* persistent cache key 1/2 */
@@ -3068,12 +3068,12 @@ xrdp_orders_send_brush(struct xrdp_orders *self, int width, int height,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+    order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (size + 6) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
     out_uint16_le(self->out_s, 0); /* flags */
-    out_uint8(self->out_s, RDP_ORDER_BRUSHCACHE); /* type */
+    out_uint8(self->out_s, TS_CACHE_BRUSH); /* type */
     out_uint8(self->out_s, cache_id);
     out_uint8(self->out_s, bpp);
     out_uint8(self->out_s, width);
@@ -3113,7 +3113,7 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders *self, int id,
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_SECONDARY;
+    order_flags = TS_SECONDARY;
     order_flags |= 1 << 2; /* type RDP_ORDER_ALTSEC_CREATE_OFFSCR_BITMAP */
     out_uint8(self->out_s, order_flags);
     cache_id = id & 0x7fff;
@@ -3157,7 +3157,7 @@ xrdp_orders_send_switch_os_surface(struct xrdp_orders *self, int id)
         return 1;
     }
     self->order_count++;
-    order_flags = RDP_ORDER_SECONDARY;
+    order_flags = TS_SECONDARY;
     order_flags |= 0 << 2; /* type RDP_ORDER_ALTSEC_SWITCH_SURFACE */
     out_uint8(self->out_s, order_flags);
     cache_id = id & 0xffff;
