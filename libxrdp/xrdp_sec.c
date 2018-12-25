@@ -701,6 +701,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         DEBUG(("flag RDP_LOGON_LEAVE_AUDIO found"));
     }
 
+    if (flags & RDP_LOGON_RAIL)
+    {
+        self->rdp_layer->client_info.rail_enable = 1;
+        DEBUG(("flag RDP_LOGON_RAIL found"));
+    }
+
     if ((flags & RDP_LOGON_AUTO) && (!self->rdp_layer->client_info.is_mce))
         /* todo, for now not allowing autologon and mce both */
     {
@@ -1840,57 +1846,54 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 {
     int num_channels;
     int index;
-    struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
+    struct xrdp_client_info *client_info;
+    struct mcs_channel_item *channel_item;
 
     client_info = &(self->rdp_layer->client_info);
-
-
-    DEBUG(("processing channels, channels_allowed is %d", client_info->channels_allowed));
-
+    DEBUG(("processing channels, channels_allowed is %d",
+           client_info->channels_allowed));
     /* this is an option set in xrdp.ini */
-    if (client_info->channels_allowed != 1) /* are channels on? */
+    if (client_info->channels_allowed == 0) /* are channels on? */
     {
-        g_writeln("xrdp_sec_process_mcs_data_channels: all channels are disabled by configuration");
+        log_message(LOG_LEVEL_INFO, "all channels are disabled by "
+                    "configuration");
         return 0;
     }
-
     if (!s_check_rem(s, 4))
     {
         return 1;
     }
-
     in_uint32_le(s, num_channels);
-
     if (num_channels > 31)
     {
         return 1;
     }
-
     for (index = 0; index < num_channels; index++)
     {
-        struct mcs_channel_item *channel_item;
-
-        channel_item = (struct mcs_channel_item *)
-                       g_malloc(sizeof(struct mcs_channel_item), 1);
+        channel_item = g_new0(struct mcs_channel_item, 1);
         if (!s_check_rem(s, 12))
         {
             g_free(channel_item);
             return 1;
         }
         in_uint8a(s, channel_item->name, 8);
-        if (g_strlen(channel_item->name) == 0)
-        {
-            log_message(LOG_LEVEL_WARNING, "xrdp_sec_process_mcs_data_channels: got an empty channel name, ignoring it");
-            g_free(channel_item);
-            continue;
-        }
         in_uint32_le(s, channel_item->flags);
-        channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-        list_add_item(self->mcs_layer->channel_list, (tintptr) channel_item);
-        DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
-               channel_item->name));
+        if (g_strlen(channel_item->name) > 0)
+        {
+            channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
+            log_message(LOG_LEVEL_INFO, "adding channel item name %s chan_id "
+                        "%d flags 0x%8.8x", channel_item->name,
+                        channel_item->chanid, channel_item->flags);
+            list_add_item(self->mcs_layer->channel_list,
+                          (intptr_t) channel_item);
+            DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
+                   channel_item->name));
+        }
+        else
+        {
+            g_free(channel_item);
+        }
     }
-
     return 0;
 }
 

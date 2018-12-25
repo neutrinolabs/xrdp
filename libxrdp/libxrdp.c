@@ -230,10 +230,10 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             case 0:
                 dead_lock_counter++;
                 break;
-            case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
+            case PDUTYPE_CONFIRMACTIVEPDU:
                 xrdp_caps_process_confirm_active(rdp, s);
                 break;
-            case RDP_PDU_DATA: /* 7 */
+            case PDUTYPE_DATAPDU:
                 if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
                     DEBUG(("libxrdp_process_data returned non zero"));
@@ -1261,6 +1261,93 @@ libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
 
     free_stream(s);
     return 0;
+}
+
+/*****************************************************************************/
+int
+libxrdp_disable_channel(struct xrdp_session *session, int channel_id,
+                        int is_disabled)
+{
+    struct xrdp_rdp *rdp;
+    struct xrdp_mcs *mcs;
+    struct mcs_channel_item *channel_item;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    mcs = rdp->sec_layer->mcs_layer;
+    if (mcs->channel_list == NULL)
+    {
+        return 1;
+    }
+    channel_item = (struct mcs_channel_item *)
+                   list_get_item(mcs->channel_list, channel_id);
+    if (channel_item == NULL)
+    {
+        return 1;
+    }
+    channel_item->disabled = is_disabled;
+    return 1;
+}
+
+/*****************************************************************************/
+int
+libxrdp_drdynvc_open(struct xrdp_session *session, const char *name,
+                     int flags, struct xrdp_drdynvc_procs *procs,
+                     int *chan_id)
+{
+    struct xrdp_rdp *rdp;
+    struct xrdp_sec *sec;
+    struct xrdp_channel *chan;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    sec = rdp->sec_layer;
+    chan = sec->chan_layer;
+    return xrdp_channel_drdynvc_open(chan, name, flags, procs, chan_id);
+}
+
+/*****************************************************************************/
+int
+libxrdp_drdynvc_close(struct xrdp_session *session, int chan_id)
+{
+    struct xrdp_rdp *rdp;
+    struct xrdp_sec *sec;
+    struct xrdp_channel *chan;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    sec = rdp->sec_layer;
+    chan = sec->chan_layer;
+    return xrdp_channel_drdynvc_close(chan, chan_id);
+}
+
+/*****************************************************************************/
+int
+libxrdp_drdynvc_data_first(struct xrdp_session *session, int chan_id,
+                           const char *data, int data_bytes,
+                           int total_data_bytes)
+{
+    struct xrdp_rdp *rdp;
+    struct xrdp_sec *sec;
+    struct xrdp_channel *chan;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    sec = rdp->sec_layer;
+    chan = sec->chan_layer;
+    return xrdp_channel_drdynvc_data_first(chan, chan_id, data, data_bytes,
+                                           total_data_bytes);
+}
+
+/*****************************************************************************/
+int
+libxrdp_drdynvc_data(struct xrdp_session *session, int chan_id,
+                     const char *data, int data_bytes)
+{
+    struct xrdp_rdp *rdp;
+    struct xrdp_sec *sec;
+    struct xrdp_channel *chan;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    sec = rdp->sec_layer;
+    chan = sec->chan_layer;
+    return xrdp_channel_drdynvc_data(chan, chan_id, data, data_bytes);
 }
 
 /*****************************************************************************/

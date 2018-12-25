@@ -24,46 +24,20 @@
 #include "parse.h"
 #include "log.h"
 
-#define MAX_DVC_CHANNELS 32
-
-struct chan_out_data
-{
-    struct stream *s;
-    struct chan_out_data *next;
-};
-
 struct chan_item
 {
     int id;
     int flags;
     char name[16];
-    struct chan_out_data *head;
-    struct chan_out_data *tail;
-};
-
-/* data in struct trans::callback_data */
-struct xrdp_api_data
-{
-    int  chan_id;
-    char header[64];
-    int  flags;
-
-    /* for dynamic virtual channels */
-    struct trans *transp;
-    int           dvc_chan_id;
-    int           is_connected;
 };
 
 int
 g_is_term(void);
 
-int send_channel_data(int chan_id, char *data, int size);
+int send_channel_data(int chan_id, const char *data, int size);
 int send_rail_drawing_orders(char* data, int size);
 int main_cleanup(void);
 int add_timeout(int msoffset, void (*callback)(void* data), void* data);
-int find_empty_slot_in_dvc_channels(void);
-struct xrdp_api_data * struct_from_dvc_chan_id(tui32 dvc_chan_id);
-int remove_struct_with_chan_id(tui32 dvc_chan_id);
 
 #define LOG_LEVEL 5
 
@@ -96,5 +70,26 @@ int remove_struct_with_chan_id(tui32 dvc_chan_id);
     (GGET_UINT16(_ptr, _offset)) | \
     ((GGET_UINT16(_ptr, (_offset) + 2)) << 16)
 #endif
+
+struct chansrv_drdynvc_procs
+{
+    int (*open_response)(int chan_id, int creation_status);
+    int (*close_response)(int chan_id);
+    int (*data_first)(int chan_id, char *data, int bytes, int total_bytes);
+    int (*data)(int chan_id, char *data, int bytes);
+};
+
+int
+chansrv_drdynvc_open(const char *name, int flags,
+                     struct chansrv_drdynvc_procs *procs, int *chan_id);
+int
+chansrv_drdynvc_close(int chan_id);
+int
+chansrv_drdynvc_data_first(int chan_id, const char *data, int data_bytes,
+                           int total_data_bytes);
+int
+chansrv_drdynvc_data(int chan_id, const char *data, int data_bytes);
+int
+chansrv_drdynvc_send_data(int chan_id, const char *data, int data_bytes);
 
 #endif

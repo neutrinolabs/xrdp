@@ -162,16 +162,6 @@ ip=127.0.0.1
 port=-1
 code=20
 
-[X11rdp]
-name=X11rdp
-lib=libxup.@lib_extension@
-username=ask
-password=ask
-ip=127.0.0.1
-port=-1
-xserverbpp=24
-code=10
-
 [Xvnc]
 name=Xvnc
 lib=libvnc.@lib_extension@
@@ -180,15 +170,6 @@ password=ask
 ip=127.0.0.1
 port=-1
 #xserverbpp=24
-#delay_ms=2000
-
-[console]
-name=console
-lib=libvnc.@lib_extension@
-ip=127.0.0.1
-port=5900
-username=na
-password=ask
 #delay_ms=2000
 
 [vnc-any]
@@ -201,15 +182,6 @@ password=ask
 #pamusername=asksame
 #pampassword=asksame
 #pamsessionmng=127.0.0.1
-#delay_ms=2000
-
-[sesman-any]
-name=sesman-any
-lib=libvnc.@lib_extension@
-ip=ask
-port=-1
-username=ask
-password=ask
 #delay_ms=2000
 
 [neutrinordp-any]

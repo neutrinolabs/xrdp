@@ -38,6 +38,12 @@
 #if defined(XRDP_FDK_AAC)
 #include <fdk-aac/aacenc_lib.h>
 static HANDLE_AACENCODER g_fdk_aac_encoder = 0;
+
+#define AACENCODER_LIB_VER_GTEQ(vl0, vl1, vl2) \
+    (defined(AACENCODER_LIB_VL0) && \
+        ((AACENCODER_LIB_VL0 > vl0) || \
+         (AACENCODER_LIB_VL0 == vl0 && AACENCODER_LIB_VL1 >= vl1) || \
+         (AACENCODER_LIB_VL0 == vl0 && AACENCODER_LIB_VL1 == vl1 && AACENCODER_LIB_VL2 > vl2)))
 #endif
 
 #if defined(XRDP_OPUS)
@@ -598,7 +604,12 @@ sound_wave_compress_fdk_aac(char *data, int data_bytes, int *format_index)
         LOG(0, ("    inBufFillLevel %d", info.inBufFillLevel));
         LOG(0, ("    inputChannels %d", info.inputChannels));
         LOG(0, ("    frameLength %d", info.frameLength));
+#if AACENCODER_LIB_VER_GTEQ(4, 0, 0)
+        LOG(0, ("    nDelay %d", info.nDelay));
+        LOG(0, ("    nDelayCore %d", info.nDelayCore));
+#else
         LOG(0, ("    encoderDelay %d", info.encoderDelay));
+#endif
         LOG(0, ("    confBuf"));
         LOG(0, ("    confSize %d", info.confSize));
     }

@@ -51,6 +51,8 @@ struct mcs_channel_item
     char name[16];
     int flags;
     int chanid;
+    int disabled;
+    int pad0;
 };
 
 /* mcs */
@@ -128,11 +130,27 @@ struct xrdp_sec
     int is_security_header_present; /* boolean */
 };
 
+struct xrdp_drdynvc
+{
+    int chan_id;
+    int status; /* see XRDP_DRDYNVC_STATUS_* */
+    int flags;
+    int pad0;
+    int (*open_response)(intptr_t id, int chan_id, int creation_status);
+    int (*close_response)(intptr_t id, int chan_id);
+    int (*data_first)(intptr_t id, int chan_id, char *data, int bytes, int total_bytes);
+    int (*data)(intptr_t id, int chan_id, char *data, int bytes);
+};
+
 /* channel */
 struct xrdp_channel
 {
     struct xrdp_sec *sec_layer;
     struct xrdp_mcs *mcs_layer;
+    int drdynvc_channel_id;
+    int drdynvc_state;
+    struct stream *s;
+    struct xrdp_drdynvc drdynvcs[256];
 };
 
 /* rdp */
@@ -284,7 +302,6 @@ struct xrdp_mppc_enc
     int    first_pkt;        /* this is the first pkt passing through enc */
     tui16 *hash_table;
 };
-
 
 int
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);
@@ -553,6 +570,21 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
 int
 xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
                      int chanid);
+int
+xrdp_channel_drdynvc_start(struct xrdp_channel *self);
+int
+xrdp_channel_drdynvc_open(struct xrdp_channel *self, const char *name,
+                          int flags, struct xrdp_drdynvc_procs *procs,
+                          int *chan_id);
+int
+xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id);
+int
+xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
+                                const char *data, int data_bytes,
+                                int total_data_bytes);
+int
+xrdp_channel_drdynvc_data(struct xrdp_channel *self, int chan_id,
+                          const char *data, int data_bytes);
 
 /* xrdp_fastpath.c */
 struct xrdp_fastpath *

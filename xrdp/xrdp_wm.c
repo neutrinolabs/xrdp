@@ -27,6 +27,18 @@
 #include "xrdp.h"
 #include "log.h"
 
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:xrdp_wm [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
 /*****************************************************************************/
 struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
@@ -562,6 +574,69 @@ xrdp_wm_init(struct xrdp_wm *self)
     g_writeln("in xrdp_wm_init: ");
 
     load_xrdp_config(self->xrdp_config, self->screen->bpp);
+
+    /* global channels allow */
+    names = list_create();
+    names->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+    if (file_by_name_read_section(cfg_file, "Channels", names, values) == 0)
+    {
+        int error;
+        int ii;
+        int chan_id;
+        int chan_flags;
+        int disabled;
+        char chan_name[16];
+
+        ii = 0;
+        error = libxrdp_query_channel(self->session, ii, chan_name,
+                                      &chan_flags);
+        while (error == 0)
+        {
+            r = NULL;
+            for (index = 0; index < names->count; index++)
+            {
+                q = (char *) list_get_item(names, index);
+                if (g_strcasecmp(q, chan_name) == 0)
+                {
+                    r = (char *) list_get_item(values, index);
+                    break;
+                }
+            }
+            if (r == NULL)
+            {
+                /* not found, disable the channel */
+                chan_id = libxrdp_get_channel_id(self->session, chan_name);
+                libxrdp_disable_channel(self->session, chan_id, 1);
+                g_writeln("xrdp_wm_init: channel %s channel id %d is "
+                          "disabled", chan_name, chan_id);
+            }
+            else
+            {
+                /* found */
+                chan_id = libxrdp_get_channel_id(self->session, q);
+                disabled = !g_text2bool(r);
+                libxrdp_disable_channel(self->session, chan_id, disabled);
+                if (disabled)
+                {
+                    g_writeln("xrdp_wm_init: channel %s channel id %d is "
+                              "disabled", chan_name, chan_id);
+                }
+                else
+                {
+                    g_writeln("xrdp_wm_init: channel %s channel id %d is "
+                              "allowed", chan_name, chan_id);
+                }
+            }
+            ii++;
+            error = libxrdp_query_channel(self->session, ii, chan_name,
+                                          &chan_flags);
+        }
+    }
+    list_delete(names);
+    list_delete(values);
 
     xrdp_wm_load_static_colors_plus(self, autorun_name);
     xrdp_wm_load_static_pointers(self);
@@ -1758,27 +1833,21 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
                              tbus param3, tbus param4)
 {
     int rv;
-    int chanid ;
     rv = 1;
 
     if (self->mm->mod != 0)
     {
-        chanid = LOWORD(param1);
-
-        if (is_channel_allowed(self, chanid))
+        if (self->mm->usechansrv)
         {
-            if (self->mm->usechansrv)
+            rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
+                                              param3, param4);
+        }
+        else
+        {
+            if (self->mm->mod->mod_event != 0)
             {
-                rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
-                                                  param3, param4);
-            }
-            else
-            {
-                if (self->mm->mod->mod_event != 0)
-                {
-                    rv = self->mm->mod->mod_event(self->mm->mod, 0x5555, param1, param2,
-                                                  param3, param4);
-                }
+                rv = self->mm->mod->mod_event(self->mm->mod, 0x5555, param1, param2,
+                                              param3, param4);
             }
         }
     }
@@ -1843,6 +1912,9 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
         case 0x5557:
             //g_writeln("callback: frame ack %d", param1);
             xrdp_mm_frame_ack(wm->mm, param1);
+            break;
+        case 0x5558:
+            xrdp_mm_drdynvc_up(wm->mm);
             break;
     }
     return rv;

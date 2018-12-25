@@ -269,7 +269,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 g_strncpy(client_info->key_file, value, 1023);
             }
 
-	    if (!g_file_readable(client_info->key_file))
+            if (!g_file_readable(client_info->key_file))
             {
                 log_message(LOG_LEVEL_ERROR, "Cannot read private key file %s: %s",
                             client_info->key_file, g_get_strerror());
@@ -561,7 +561,7 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     DEBUG(("in xrdp_rdp_send_data"));
     s_pop_layer(s, rdp_hdr);
     len = (int)(s->end - s->p);
-    pdutype = 0x10 | RDP_PDU_DATA;
+    pdutype = 0x10 | PDUTYPE_DATAPDU;
     pdulen = len;
     dlen = len;
     ctype = 0;
@@ -1125,6 +1125,7 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         g_writeln("yeah, up_and_running");
         DEBUG(("up_and_running set"));
         xrdp_rdp_send_data_update_sync(self);
+        xrdp_channel_drdynvc_start(self->sec_layer->chan_layer);
     }
 
     DEBUG(("out xrdp_rdp_process_data_font"));
@@ -1295,7 +1296,7 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 
     s_mark_end(s);
 
-    if (xrdp_rdp_send(self, s, RDP_PDU_DEACTIVATE) != 0)
+    if (xrdp_rdp_send(self, s, PDUTYPE_DEACTIVATEALLPDU) != 0)
     {
         free_stream(s);
         DEBUG(("out xrdp_rdp_send_deactivate error"));

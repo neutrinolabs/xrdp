@@ -76,6 +76,14 @@ struct xrdp_session
     struct source_info si;
 };
 
+struct xrdp_drdynvc_procs
+{
+    int (*open_response)(intptr_t id, int chan_id, int creation_status);
+    int (*close_response)(intptr_t id, int chan_id);
+    int (*data_first)(intptr_t id, int chan_id, char *data, int bytes, int total_bytes);
+    int (*data)(intptr_t id, int chan_id, char *data, int bytes);
+};
+
 struct xrdp_session *
 libxrdp_init(tbus id, struct trans *trans);
 int
@@ -194,6 +202,22 @@ int
 libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
                         char *data, int data_len,
                         int total_data_len, int flags);
+int
+libxrdp_disable_channel(struct xrdp_session *session, int channel_id,
+                        int is_disabled);
+int
+libxrdp_drdynvc_open(struct xrdp_session *session, const char *name,
+                     int flags, struct xrdp_drdynvc_procs *procs,
+                     int *chan_id);
+int
+libxrdp_drdynvc_close(struct xrdp_session *session, int chan_id);
+int
+libxrdp_drdynvc_data_first(struct xrdp_session *session, int chan_id,
+                           const char *data, int data_bytes,
+                           int total_data_bytes);
+int
+libxrdp_drdynvc_data(struct xrdp_session *session, int chan_id,
+                     const char *data, int data_bytes);
 int
 libxrdp_orders_send_brush(struct xrdp_session *session,
                           int width, int height, int bpp, int type,

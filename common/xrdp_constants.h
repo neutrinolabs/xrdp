@@ -201,6 +201,11 @@
 #define OSMINORTYPE_PSEUDO_XSERVER     0x0008
 #define OSMINORTYPE_WINDOWS_RT         0x0009
 
+/* Window List Capability Set: WndSupportLevel (MS-RDPERP 2.2.1.1.2) */
+#define TS_WINDOW_LEVEL_NOT_SUPPORTED  0x00000000
+#define TS_WINDOW_LEVEL_SUPPORTED      0x00000001
+#define TS_WINDOW_LEVEL_SUPPORTED_EX   0x00000002
+
 /* Extended Info Packet: performanceFlags (MS-RDPBCGR 2.2.1.11.1.1.1) */
 /* TODO: to be renamed */
 #define RDP5_DISABLE_NOTHING           0x00
@@ -370,6 +375,7 @@
 #define RDP_COMPRESSION                0x0080
 #define RDP_LOGON_BLOB                 0x0100
 #define RDP_LOGON_LEAVE_AUDIO          0x2000
+#define RDP_LOGON_RAIL                 0x8000
 
 /* Compression Flags (MS-RDPBCGR 3.1.8.2.1) */
 /* TODO: to be renamed, not used anywhere */
@@ -379,15 +385,14 @@
 #define RDP_MPPC_DICT_SIZE             8192 /* RDP 4.0 | MS-RDPBCGR 3.1.8 */
 
 /* Drawing Order: controlFlags (MS-RDPEGDI 2.2.2.2.1, ) */
-/* TODO: to be renamed */
-#define RDP_ORDER_STANDARD   0x01
-#define RDP_ORDER_SECONDARY  0x02
-#define RDP_ORDER_BOUNDS     0x04
-#define RDP_ORDER_CHANGE     0x08
-#define RDP_ORDER_DELTA      0x10
-#define RDP_ORDER_LASTBOUNDS 0x20
-#define RDP_ORDER_SMALL      0x40
-#define RDP_ORDER_TINY       0x80
+#define TS_STANDARD                     0x01
+#define TS_SECONDARY                    0x02
+#define TS_BOUNDS                       0x04
+#define TS_TYPE_CHANGE                  0x08
+#define TS_DELTA_COORDINATES            0x10
+#define TS_ZERO_BOUNDS_DELTAS           0x20
+#define TS_ZERO_FIELD_BYTE_BIT0         0x40
+#define TS_ZERO_FIELD_BYTE_BIT1         0x80
 
 /* Drawing Order: orderType (MS-RDPEGDI 2.2.2.2.1.1.2) ? */
 #define RDP_ORDER_DESTBLT   0
@@ -403,98 +408,94 @@
 #define RDP_ORDER_COMPOSITE 37 /* 0x25 */
 
 /* Secondary Drawing Order Header: orderType (MS-RDPEGDI 2.2.2.2.1.2.1.1) */
-/* TODO: to be renamed */
-#define RDP_ORDER_RAW_BMPCACHE  0
-#define RDP_ORDER_COLCACHE      1
-#define RDP_ORDER_BMPCACHE      2
-#define RDP_ORDER_FONTCACHE     3
-#define RDP_ORDER_RAW_BMPCACHE2 4
-#define RDP_ORDER_BMPCACHE2     5
-#define RDP_ORDER_BRUSHCACHE    7
-#define RDP_ORDER_BMPCACHE3     8
+#define TS_CACHE_BITMAP_UNCOMPRESSED        0x00
+#define TS_CACHE_COLOR_TABLE                0x01
+#define TS_CACHE_BITMAP_COMPRESSED          0x02
+#define TS_CACHE_GLYPH                      0x03
+#define TS_CACHE_BITMAP_UNCOMPRESSED_REV2   0x04
+#define TS_CACHE_BITMAP_COMPRESSED_REV2     0x05
+#define TS_CACHE_BRUSH                      0x07
+#define TS_CACHE_BITMAP_COMPRESSED_REV3     0x08
 
 /* Maps to generalCapabilitySet in T.128 page 138 */
 
 /* Capability Set: capabilitySetType (MS-RDPBCGR 2.2.1.13.1.1.1) */
-/* TODO: to be renamed */
-#define RDP_CAPSET_GENERAL             0x0001
-#define RDP_CAPLEN_GENERAL             0x18
+#define CAPSTYPE_GENERAL                        0x0001
+#define CAPSTYPE_GENERAL_LEN                    0x18
 
-#define RDP_CAPSET_BITMAP              0x0002
-#define RDP_CAPLEN_BITMAP              0x1C
+#define CAPSTYPE_BITMAP                         0x0002
+#define CAPSTYPE_BITMAP_LEN                     0x1C
 
-#define RDP_CAPSET_ORDER               0x0003
-#define RDP_CAPLEN_ORDER               0x58
-#define ORDER_CAP_NEGOTIATE            2
-#define ORDER_CAP_NOSUPPORT            4
+#define CAPSTYPE_ORDER                          0x0003
+#define CAPSTYPE_ORDER_LEN                      0x58
+#define ORDER_CAP_NEGOTIATE                     2 /* NEGOTIATEORDERSUPPORT? not used */
+#define ORDER_CAP_NOSUPPORT                     4 /* not used */
 
-#define RDP_CAPSET_BMPCACHE            0x0004
-#define RDP_CAPLEN_BMPCACHE            0x28
+#define CAPSTYPE_BITMAPCACHE                    0x0004
+#define CAPSTYPE_BITMAPCACHE_LEN                0x28
 
-#define RDP_CAPSET_CONTROL             0x0005
-#define RDP_CAPLEN_CONTROL             0x0C
+#define CAPSTYPE_CONTROL                        0x0005
+#define CAPSTYPE_CONTROL_LEN                    0x0C
 
-#define RDP_CAPSET_ACTIVATE            0x0007
-#define RDP_CAPLEN_ACTIVATE            0x0C
+#define CAPSTYPE_ACTIVATION                     0x0007
+#define CAPSTYPE_ACTIVATION_LEN                 0x0C
 
-#define RDP_CAPSET_POINTER             0x0008
-#define RDP_CAPLEN_POINTER             0x0a
-#define RDP_CAPLEN_POINTER_MONO        0x08
+#define CAPSTYPE_POINTER                        0x0008
+#define CAPSTYPE_POINTER_LEN                    0x0a
+#define CAPSTYPE_POINTER_MONO_LEN               0x08
 
-#define RDP_CAPSET_SHARE               0x0009
-#define RDP_CAPLEN_SHARE               0x08
+#define CAPSTYPE_SHARE                          0x0009
+#define CAPSTYPE_SHARE_LEN                      0x08
 
-#define RDP_CAPSET_COLCACHE            0x000A
-#define RDP_CAPLEN_COLCACHE            0x08
+#define CAPSTYPE_COLORCACHE                     0x000A
+#define CAPSTYPE_COLORCACHE_LEN                 0x08
 
-#define RDP_CAPSET_SOUND               0x000C
+#define CAPSTYPE_SOUND                          0x000C
 
-#define RDP_CAPSET_INPUT               0x000D
-#define RDP_CAPLEN_INPUT               0x58
+#define CAPSTYPE_INPUT                          0x000D
+#define CAPSTYPE_INPUT_LEN                      0x58
 
-#define RDP_CAPSET_FONT                0x000E
-#define RDP_CAPLEN_FONT                0x04
+#define CAPSTYPE_FONT                           0x000E
+#define CAPSTYPE_FONT_LEN                       0x04
 
-#define RDP_CAPSET_BRUSHCACHE          0x000F
-#define RDP_CAPLEN_BRUSHCACHE          0x08
+#define CAPSTYPE_BRUSH                          0x000F
+#define CAPSTYPE_BRUSH_LEN                      0x08
 
-#define RDP_CAPSET_GLYPHCACHE          0x0010
-#define RDP_CAPSET_OFFSCREENCACHE      0x0011
+#define CAPSTYPE_GLYPHCACHE                     0x0010
+#define CAPSTYPE_OFFSCREENCACHE                 0x0011
 
-#define RDP_CAPSET_BITMAP_OFFSCREEN    0x0012
-#define RDP_CAPLEN_BITMAP_OFFSCREEN    0x08
+#define CAPSTYPE_BITMAPCACHE_HOSTSUPPORT        0x0012
+#define CAPSTYPE_BITMAPCACHE_HOSTSUPPORT_LEN    0x08
 
-#define RDP_CAPSET_BMPCACHE2           0x0013
-#define RDP_CAPLEN_BMPCACHE2           0x28
-#define BMPCACHE2_FLAG_PERSIST         ((long)1<<31)
+#define CAPSTYPE_BITMAPCACHE_REV2               0x0013
+#define CAPSTYPE_BITMAPCACHE_REV2_LEN           0x28
+#define BMPCACHE2_FLAG_PERSIST                  ((long)1<<31)
 
-#define RDP_CAPSET_VIRCHAN             0x0014
-#define RDP_CAPLEN_VIRCHAN             0x08
+#define CAPSTYPE_VIRTUALCHANNEL                 0x0014
+#define CAPSTYPE_VIRTUALCHANNEL_LEN             0x08
 
-#define RDP_CAPSET_DRAWNINEGRIDCACHE   0x0015
-#define RDP_CAPSET_DRAWGDIPLUS         0x0016
-#define RDP_CAPSET_RAIL                0x0017
-#define RDP_CAPSET_WINDOW              0x0018
+#define CAPSTYPE_DRAWNINGRIDCACHE               0x0015
+#define CAPSTYPE_DRAWGDIPLUS                    0x0016
+#define CAPSTYPE_RAIL                           0x0017
+#define CAPSTYPE_WINDOW                         0x0018
 
-#define RDP_CAPSET_COMPDESK            0x0019
-#define RDP_CAPLEN_COMPDESK            0x06
+#define CAPSSETTYPE_COMPDESK                    0x0019
+#define CAPSSETTYPE_COMPDESK_LEN                0x06
 
-#define RDP_CAPSET_MULTIFRAGMENT       0x001A
-#define RDP_CAPLEN_MULTIFRAGMENT       0x08
+#define CAPSSETTYPE_MULTIFRAGMENTUPDATE         0x001A
+#define CAPSSETTYPE_MULTIFRAGMENTUPDATE_LEN     0x08
 
-#define RDP_CAPSET_LPOINTER            0x001B
-#define RDP_CAPLEN_LPOINTER            0x06
+#define CAPSETTYPE_LARGE_POINTER                0x001B
+#define CAPSETTYPE_LARGE_POINTER_LEN            0x06
 
-#define RDP_CAPSET_FRAME_ACKNOWLEDGE   0x001E
-#define RDP_CAPLEN_FRAME_ACKNOWLEDGE   0x08
+#define CAPSETTYPE_SURFACE_COMMANDS             0x001C
+#define CAPSETTYPE_SURFACE_COMMANDS_LEN         0x0C
 
-#define RDP_CAPSET_SURFCMDS            0x001C
-#define RDP_CAPLEN_SURFCMDS            0x0C
+#define CAPSSETTYPE_BITMAP_CODECS               0x001D
+#define CAPSSETTYPE_BITMAP_CODECS_LEN           0x1C
 
-#define RDP_CAPSET_BMPCODECS           0x001D
-#define RDP_CAPLEN_BMPCODECS           0x1C
-
-
+#define CAPSTYPE_FRAME_ACKNOWLEDGE              0x001E
+#define CAPSTYPE_FRAME_ACKNOWLEDGE_LEN          0x08
 
 /* TS_SECURITY_HEADER: flags (MS-RDPBCGR 2.2.8.1.1.2.1) */
 /* TODO: to be renamed */
@@ -588,6 +589,12 @@
 #define KBD_FLAG_CAPITAL               0x0004
 #define TS_SYNC_KANA_LOCK              0x0008
 
+/* Glyph Cache Capability Set: GlyphSupportLevel (MS-RDPBCGR 2.2.7.1.8) */
+#define GLYPH_SUPPORT_NONE             0x0000
+#define GLYPH_SUPPORT_PARTIAL          0x0001
+#define GLYPH_SUPPORT_FULL             0x0002
+#define GLYPH_SUPPORT_ENCODE           0x0003
+
 /******************************************************************************
  *
  * Constants come from other Microsoft products
@@ -664,12 +671,12 @@
 #define LICENCE_SIGNATURE_SIZE         16
 
 
-/* RDP PDU codes */
-#define RDP_PDU_DEMAND_ACTIVE          1
-#define RDP_PDU_CONFIRM_ACTIVE         3
-#define RDP_PDU_REDIRECT               4
-#define RDP_PDU_DEACTIVATE             6
-#define RDP_PDU_DATA                   7
+/* PDU Types (MS-RDPBCGR 2.2.8.1.1.1.1) */
+#define PDUTYPE_DEMANDACTIVEPDU        0x1
+#define PDUTYPE_CONFIRMACTIVEPDU       0x3
+#define PDUTYPE_DEACTIVATEALLPDU       0x6
+#define PDUTYPE_DATAPDU                0x7
+#define PDUTYPE_SERVER_REDIR_PKT       0xA
 
 /* See T.128 */
 /* not used anywhere */
