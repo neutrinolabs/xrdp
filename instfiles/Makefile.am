@@ -30,6 +30,7 @@ SUFFIXES = .in
 startscriptdir=$(sysconfdir)/xrdp
 
 dist_startscript_DATA = \
+  km-00000406.ini \
   km-00000407.ini \
   km-00000409.ini \
   km-0000040a.ini \
