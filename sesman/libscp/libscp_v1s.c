@@ -133,7 +133,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     in_uint16_be(c->in_s, cmd);
     scp_session_set_height(session, cmd);
     in_uint16_be(c->in_s, cmd);
-    scp_session_set_height(session, cmd);
+    scp_session_set_width(session, cmd);
     in_uint8(c->in_s, sz);
     if (0 != scp_session_set_bpp(session, sz))
     {
