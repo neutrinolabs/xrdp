@@ -227,7 +227,7 @@ km_read_section(int fd, const char *section_name, struct xrdp_key_info *keymap)
 
 /*****************************************************************************/
 int
-get_keymaps(int keylayout, struct xrdp_keymap *keymap)
+get_keymaps(const char* keymaps_path, int keylayout, struct xrdp_keymap *keymap)
 {
     int fd;
     int basic_key_layout = keylayout & 0x0000ffff;
@@ -237,21 +237,21 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     filename = (char *)g_malloc(256, 0);
 
     /* check if there is a keymap file e.g. km-e00100411.ini */
-    g_snprintf(filename, 255, "%s/km-%08x.ini", XRDP_CFG_PATH, keylayout);
+    g_snprintf(filename, 255, "%s/km-%08x.ini", keymaps_path, keylayout);
 
     /* if the file does not exist, use only lower 16 bits instead */
     if (!g_file_exist(filename))
     {
         log_message(LOG_LEVEL_INFO, "Cannot find keymap file %s", filename);
         /* e.g. km-00000411.ini */
-        g_snprintf(filename, 255, "%s/km-%08x.ini", XRDP_CFG_PATH, basic_key_layout);
+        g_snprintf(filename, 255, "%s/km-%08x.ini", keymaps_path, basic_key_layout);
     }
 
     /* finally, use 'en-us' */
     if (!g_file_exist(filename))
     {
         log_message(LOG_LEVEL_INFO, "Cannot find keymap file %s", filename);
-        g_snprintf(filename, 255, "%s/km-00000409.ini", XRDP_CFG_PATH);
+        g_snprintf(filename, 255, "%s/km-00000409.ini", keymaps_path);
     }
 
     if (g_file_exist(filename))

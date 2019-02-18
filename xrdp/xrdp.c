@@ -74,6 +74,7 @@ print_help(void)
     g_writeln("   -h, --help       show help");
     g_writeln("   -n, --nodaemon   don't fork into background");
     g_writeln("   -k, --kill       shut down xrdp");
+    g_writeln("   -c, --config     path to xrdp.ini (default '%s/xrdp.ini')", XRDP_CFG_PATH);
     g_writeln("   -p, --port       tcp listen port");
     g_writeln("   -f, --fork       fork on new connection");
 }
@@ -263,70 +264,89 @@ xrdp_process_params(int argc, char **argv,
                     struct xrdp_startup_params *startup_params)
 {
     int index;
-    char option[128];
-    char value[128];
 
-    index = 1;
+    // fill with defaults
+    startup_params->port[0] = 0;
+    startup_params->kill = 0;
+    startup_params->no_daemon = 0;
+    startup_params->help = 0;
+    startup_params->version = 0;
+    startup_params->fork = 0;
+    startup_params->send_buffer_bytes = 0;
+    startup_params->recv_buffer_bytes = 0;
+    g_sprintf(startup_params->xrdp_ini_file, "%s/xrdp.ini", XRDP_CFG_PATH);
 
-    while (index < argc)
+    for (index = 1; index < argc; index ++)
     {
-        g_strncpy(option, argv[index], 127);
-
-        if (index + 1 < argc)
-        {
-            g_strncpy(value, argv[index + 1], 127);
-        }
-        else
-        {
-            value[0] = 0;
-        }
-
-        if ((g_strncasecmp(option, "-help", 255)) == 0 ||
-                (g_strncasecmp(option, "--help", 255)) == 0 ||
-                (g_strncasecmp(option, "-h", 255)) == 0)
+        if ((g_strncasecmp(argv[index], "-help", 255)) == 0 ||
+                (g_strncasecmp(argv[index], "--help", 255)) == 0 ||
+                (g_strncasecmp(argv[index], "-h", 255)) == 0)
         {
             startup_params->help = 1;
         }
-        else if ((g_strncasecmp(option, "-kill", 255) == 0) ||
-                 (g_strncasecmp(option, "--kill", 255) == 0) ||
-                 (g_strncasecmp(option, "-k", 255) == 0))
+        else if ((g_strncasecmp(argv[index], "-kill", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--kill", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "-k", 255) == 0))
         {
             startup_params->kill = 1;
         }
-        else if ((g_strncasecmp(option, "-nodaemon", 255) == 0) ||
-                 (g_strncasecmp(option, "--nodaemon", 255) == 0) ||
-                 (g_strncasecmp(option, "-n", 255) == 0) ||
-                 (g_strncasecmp(option, "-nd", 255) == 0) ||
-                 (g_strncasecmp(option, "--nd", 255) == 0) ||
-                 (g_strncasecmp(option, "-ns", 255) == 0) ||
-                 (g_strncasecmp(option, "--ns", 255) == 0))
+        else if ((g_strncasecmp(argv[index], "-nodaemon", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--nodaemon", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "-n", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "-nd", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--nd", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "-ns", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--ns", 255) == 0))
         {
             startup_params->no_daemon = 1;
         }
-        else if ((g_strncasecmp(option, "-v", 255) == 0) ||
-                 (g_strncasecmp(option, "--version", 255) == 0))
+        else if ((g_strncasecmp(argv[index], "-v", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--version", 255) == 0))
         {
             startup_params->version = 1;
         }
-        else if ((g_strncasecmp(option, "-p", 255) == 0) ||
-                 (g_strncasecmp(option, "--port", 255) == 0))
+        else if ((g_strncasecmp(argv[index], "-p", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--port", 255) == 0))
         {
             index++;
-            g_strncpy(startup_params->port, value, 127);
 
-            if (g_strlen(startup_params->port) < 1)
+            if (index >= argc)
             {
-                g_writeln("error processing params, port [%s]", startup_params->port);
+                g_writeln("param requires after --port");
                 return 1;
             }
-            else
+            if (argv[index][0] == 0 || g_strlen(argv[index]) >= (int)sizeof(startup_params->port)-1)
             {
-                g_writeln("--port parameter found, ini override [%s]",
-                          startup_params->port);
+                g_writeln("error processing params, port [%s]", argv[index]);
+                return 1;
             }
+            g_strncpy(startup_params->port, argv[index], sizeof(startup_params->port)-1);
+            g_writeln("--port parameter found, ini override [%s]", startup_params->port);
         }
-        else if ((g_strncasecmp(option, "-f", 255) == 0) ||
-                 (g_strncasecmp(option, "--fork", 255) == 0))
+        else if ((g_strncasecmp(argv[index], "-c", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--config", 255) == 0))
+        {
+            index++;
+
+            if (index >= argc)
+            {
+                g_writeln("param requires after --config");
+                return 1;
+            }
+            if (argv[index][0] == 0 || g_strlen(argv[index]) >= (int)sizeof(startup_params->xrdp_ini_file)-1)
+            {
+                g_writeln("error processing params, config [%s]", argv[index]);
+                return 1;
+            }
+            if (argv[index][0] != '/') {
+                g_writeln("invalid argument of --config: path must be absolute");
+                return 1;
+            }
+            g_strncpy(startup_params->xrdp_ini_file, argv[index], (int)sizeof(startup_params->xrdp_ini_file)-1);
+            g_writeln("--config parameter found [%s]", startup_params->xrdp_ini_file);
+        }
+        else if ((g_strncasecmp(argv[index], "-f", 255) == 0) ||
+                 (g_strncasecmp(argv[index], "--fork", 255) == 0))
         {
             startup_params->fork = 1;
             g_writeln("--fork parameter found, ini override");
@@ -335,8 +355,6 @@ xrdp_process_params(int argc, char **argv,
         {
             return index;
         }
-
-        index++;
     }
 
     return 0;
@@ -344,12 +362,11 @@ xrdp_process_params(int argc, char **argv,
 
 /*****************************************************************************/
 /* Basic sanity checks before any forking */
-int
+static int
 xrdp_sanity_check(void)
 {
     int intval = 1;
     int host_be;
-    char key_file[256];
 
     /* check compiled endian with actual endian */
     host_be = !((int)(*(unsigned char *)(&intval)));
@@ -394,12 +411,6 @@ xrdp_sanity_check(void)
         return 1;
     }
 
-    g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
-    if (!g_file_exist(key_file))
-    {
-        g_writeln("File %s is missing, create it using xrdp-keygen", key_file);
-        return 1;
-    }
 
     return 0;
 }
@@ -410,7 +421,6 @@ main(int argc, char **argv)
 {
     int exit_status = 0;
     int test;
-    char cfg_file[256];
     enum logReturns error;
     struct xrdp_startup_params *startup_params;
     int pid;
@@ -427,8 +437,6 @@ main(int argc, char **argv)
     {
         DEBUG(("Argument %i - %s", test, argv[test]));
     }
-
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
 
     startup_params = (struct xrdp_startup_params *)
                      g_malloc(sizeof(struct xrdp_startup_params), 1);
@@ -508,7 +516,7 @@ main(int argc, char **argv)
     }
 
     /* starting logging subsystem */
-    error = log_start(cfg_file, "xrdp");
+    error = log_start(startup_params->xrdp_ini_file, "xrdp");
 
     if (error != LOG_STARTUP_OK)
     {

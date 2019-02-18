@@ -50,6 +50,7 @@
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
 extern int g_sck; /* in sesman.c */
+extern char g_sesman_ini_file[]; /* in sesman.c */
 struct session_chain *g_sessions;
 int g_session_count;
 
@@ -368,6 +369,7 @@ session_start_chansrv(char *username, int display)
                    XRDP_SBIN_PATH);
 
         list_add_item(chansrv_params, (intptr_t) g_strdup(exe_path));
+        list_add_item(chansrv_params, (intptr_t) g_strdup(g_sesman_ini_file));
         list_add_item(chansrv_params, 0); /* mandatory */
 
         env_set_user(username, 0, display,

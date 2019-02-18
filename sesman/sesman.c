@@ -34,6 +34,7 @@ int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct config_sesman *g_cfg; /* defined in config.h */
+char g_sesman_ini_file[256];
 
 tintptr g_term_event = 0;
 
@@ -185,6 +186,7 @@ print_usage(int retcode)
     g_printf("Usage: xrdp-sesman [options]\n");
     g_printf("   -n, --nodaemon   run as foreground process\n");
     g_printf("   -k, --kill       kill running xrdp-sesman\n");
+    g_printf("   -c, --config     config file (default '%s/sesman.ini')\n", XRDP_CFG_PATH);
     g_printf("   -h, --help       show this help\n");
     g_deinit();
     g_exit(retcode);
@@ -197,90 +199,98 @@ main(int argc, char **argv)
     int fd;
     enum logReturns log_error;
     int error;
-    int daemon = 1;
+    int index;
+    int daemon = 1; /* start in daemon mode if no cli options */
     int pid;
     char pid_s[32];
     char text[256];
     char pid_file[256];
-    char cfg_file[256];
 
     g_init("xrdp-sesman");
     g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
+    g_snprintf(g_sesman_ini_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
-    if (1 == argc)
-    {
-        /* start in daemon mode if no cli options */
-        daemon = 1;
-    }
-    else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--nodaemon")) ||
-                             (0 == g_strcasecmp(argv[1], "-nodaemon")) ||
-                             (0 == g_strcasecmp(argv[1], "-n")) ||
-                             (0 == g_strcasecmp(argv[1], "-ns"))))
-    {
-        /* starts sesman not daemonized */
-        g_printf("starting sesman in foreground...\n");
-        daemon = 0;
-    }
-    else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||
-                             (0 == g_strcasecmp(argv[1], "-help")) ||
-                             (0 == g_strcasecmp(argv[1], "-h"))))
-    {
-        print_usage(0);
-    }
-    else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--kill")) ||
-                             (0 == g_strcasecmp(argv[1], "-kill")) ||
-                             (0 == g_strcasecmp(argv[1], "-k"))))
-    {
-        /* killing running sesman */
-        /* check if sesman is running */
-        if (!g_file_exist(pid_file))
+    for (index = 1; index < argc; index ++) {
+        if ((0 == g_strcasecmp(argv[index], "--nodaemon")) ||
+            (0 == g_strcasecmp(argv[index], "-nodaemon")) ||
+            (0 == g_strcasecmp(argv[index], "-n")) ||
+            (0 == g_strcasecmp(argv[index], "-ns")))
         {
-            g_printf("sesman is not running (pid file not found - %s)\n", pid_file);
-            g_deinit();
-            g_exit(1);
+            /* starts sesman not daemonized */
+            g_printf("starting sesman in foreground...\n");
+            daemon = 0;
         }
-
-        fd = g_file_open(pid_file);
-
-        if (-1 == fd)
+        else if ((0 == g_strcasecmp(argv[index], "--help")) ||
+                 (0 == g_strcasecmp(argv[index], "-help")) ||
+                 (0 == g_strcasecmp(argv[index], "-h")))
         {
-            g_printf("error opening pid file[%s]: %s\n", pid_file, g_get_strerror());
-            return 1;
+            print_usage(0);
         }
-
-        g_memset(pid_s, 0, sizeof(pid_s));
-        error = g_file_read(fd, pid_s, 31);
-
-        if (-1 == error)
+        else if ((0 == g_strcasecmp(argv[index], "--kill")) ||
+                 (0 == g_strcasecmp(argv[index], "-kill")) ||
+                 (0 == g_strcasecmp(argv[index], "-k")))
         {
-            g_printf("error reading pid file: %s\n", g_get_strerror());
+            /* killing running sesman */
+            /* check if sesman is running */
+            if (!g_file_exist(pid_file))
+            {
+                g_printf("sesman is not running (pid file not found - %s)\n", pid_file);
+                g_deinit();
+                g_exit(1);
+            }
+
+            fd = g_file_open(pid_file);
+
+            if (-1 == fd)
+            {
+                g_printf("error opening pid file[%s]: %s\n", pid_file, g_get_strerror());
+                return 1;
+            }
+
+            g_memset(pid_s, 0, sizeof(pid_s));
+            error = g_file_read(fd, pid_s, 31);
+
+            if (-1 == error)
+            {
+                g_printf("error reading pid file: %s\n", g_get_strerror());
+                g_file_close(fd);
+                g_deinit();
+                g_exit(error);
+            }
+
             g_file_close(fd);
+            pid = g_atoi(pid_s);
+
+            error = g_sigterm(pid);
+
+            if (0 != error)
+            {
+                g_printf("error killing sesman: %s\n", g_get_strerror());
+            }
+            else
+            {
+                g_file_delete(pid_file);
+            }
+
             g_deinit();
             g_exit(error);
         }
-
-        g_file_close(fd);
-        pid = g_atoi(pid_s);
-
-        error = g_sigterm(pid);
-
-        if (0 != error)
+        else if (index != argc-1 && ((0 == g_strcasecmp(argv[index], "--config")) ||
+                                     (0 == g_strcasecmp(argv[index], "-c"))))
         {
-            g_printf("error killing sesman: %s\n", g_get_strerror());
+            index++;
+            if (argv[index][0] != '/') {
+                g_writeln("invalid argument of --config: path must be absolute");
+                return 1;
+            }
+            g_strncpy(g_sesman_ini_file, argv[index], 255);
         }
         else
         {
-            g_file_delete(pid_file);
+            /* there's something strange on the command line */
+            g_printf("Error: invalid command line arguments\n\n");
+            print_usage(1);
         }
-
-        g_deinit();
-        g_exit(error);
-    }
-    else
-    {
-        /* there's something strange on the command line */
-        g_printf("Error: invalid command line arguments\n\n");
-        print_usage(1);
     }
 
     if (g_file_exist(pid_file))
@@ -304,7 +314,7 @@ main(int argc, char **argv)
     }
 
     //g_cfg->log.fd = -1; /* don't use logging before reading its config */
-    if (0 != config_read(g_cfg))
+    if (0 != config_read(g_sesman_ini_file, g_cfg))
     {
         g_printf("error reading config: %s\nquitting.\n", g_get_strerror());
         g_deinit();
@@ -317,10 +327,8 @@ main(int argc, char **argv)
         config_dump(g_cfg);
     }
 
-    g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
-
     /* starting logging subsystem */
-    log_error = log_start(cfg_file, "xrdp-sesman");
+    log_error = log_start(g_sesman_ini_file, "xrdp-sesman");
 
     if (log_error != LOG_STARTUP_OK)
     {

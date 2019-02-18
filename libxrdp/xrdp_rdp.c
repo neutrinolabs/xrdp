@@ -25,6 +25,7 @@
 #include "libxrdp.h"
 #include "log.h"
 #include "ssl_calls.h"
+#include <string.h>
 
 #if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
@@ -41,27 +42,33 @@
 
 /*****************************************************************************/
 static int
-xrdp_rdp_read_config(struct xrdp_client_info *client_info)
+xrdp_rdp_read_config(const char *cfg_file, struct xrdp_client_info *client_info)
 {
     int index = 0;
     struct list *items = (struct list *)NULL;
     struct list *values = (struct list *)NULL;
     char *item = NULL;
     char *value = NULL;
-    char cfg_file[256];
+    char cfg_dir[256];
     int pos;
     char *tmp = NULL;
     int tmp_length = 0;
-
-    /* initialize (zero out) local variables: */
-    g_memset(cfg_file, 0, sizeof(char) * 256);
 
     items = list_create();
     items->auto_free = 1;
     values = list_create();
     values->auto_free = 1;
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+    g_strncpy(cfg_dir, cfg_file, 255);
+    *(strrchr(cfg_dir, '/')) = 0; // cfg_file validated to contain '/'
     DEBUG(("cfg_file %s", cfg_file));
+
+    /* default location is next to xrdp.ini */
+    g_snprintf(client_info->certificate, 255, "%s/cert.pem", cfg_dir);
+    g_snprintf(client_info->key_file, 255, "%s/key.pem", cfg_dir);
+    g_snprintf(client_info->xrdp_keyboard_ini_file, 255, "%s/xrdp_keyboard.ini", cfg_dir);
+    g_snprintf(client_info->rsakeys_ini_file, 255, "%s/rsakeys.ini", cfg_dir);
+    g_snprintf(client_info->keymaps_path, 255, "%s", cfg_dir);
+
     file_by_name_read_section(cfg_file, "globals", items, values);
 
     for (index = 0; index < items->count; index++)
@@ -215,20 +222,19 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "certificate") == 0)
         {
-            g_memset(client_info->certificate, 0, sizeof(char) * 1024);
+            g_memset(client_info->certificate, 0, sizeof(char) * 256);
             if (g_strlen(value) == 0)
             {
                 /* default certificate path */
-                g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
+                g_snprintf(client_info->certificate, 255, "%s/cert.pem", cfg_dir);
                 log_message(LOG_LEVEL_INFO,
                             "Using default X.509 certificate: %s",
                             client_info->certificate);
-
             }
             else if (value[0] != '/')
             {
                 /* default certificate path */
-                g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
+                g_snprintf(client_info->certificate, 255, "%s/cert.pem", cfg_dir);
                 log_message(LOG_LEVEL_WARNING,
                             "X.509 certificate should use absolute path, using "
                             "default instead: %s", client_info->certificate);
@@ -236,7 +242,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             else
             {
                 /* use user defined certificate */
-                g_strncpy(client_info->certificate, value, 1023);
+                g_strncpy(client_info->certificate, value, 255);
             }
 
 	    if (!g_file_readable(client_info->certificate))
@@ -247,18 +253,18 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "key_file") == 0)
         {
-            g_memset(client_info->key_file, 0, sizeof(char) * 1024);
+            g_memset(client_info->key_file, 0, sizeof(char) * 256);
             if (g_strlen(value) == 0)
             {
                 /* default key_file path */
-                g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
+                g_snprintf(client_info->key_file, 255, "%s/key.pem", cfg_dir);
                 log_message(LOG_LEVEL_INFO, "Using default X.509 key file: %s",
                             client_info->key_file);
             }
             else if (value[0] != '/')
             {
                 /* default key_file path */
-                g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
+                g_snprintf(client_info->key_file, 255, "%s/key.pem", cfg_dir);
                 log_message(LOG_LEVEL_WARNING,
                             "X.509 key file should use absolute path, using "
                             "default instead: %s", client_info->key_file);
@@ -266,7 +272,52 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             else
             {
                 /* use user defined key_file */
-                g_strncpy(client_info->key_file, value, 1023);
+                g_strncpy(client_info->key_file, value, 255);
+            }
+        }
+        else if (g_strcasecmp(item, "rsakeys_ini") == 0)
+        {
+            if (value[0] != '/')
+            {
+                g_snprintf(client_info->rsakeys_ini_file, 255, "%s/rsakeys.ini", cfg_dir);
+                log_message(LOG_LEVEL_WARNING,
+                            "rsakeys.ini file should use absolute path, using "
+                            "default instead: %s", client_info->rsakeys_ini_file);
+            }
+            else
+            {
+                /* use user defined rsakeys.ini */
+                g_strncpy(client_info->rsakeys_ini_file, value, 255);
+            }
+        }
+        else if (g_strcasecmp(item, "xrdp_keyboard_ini") == 0)
+        {
+            if (value[0] != '/')
+            {
+                g_snprintf(client_info->xrdp_keyboard_ini_file, 255, "%s/xrdp_keyboard.ini", cfg_dir);
+                log_message(LOG_LEVEL_WARNING,
+                            "xrdp_keyboard.ini file should use absolute path, using "
+                            "default instead: %s", client_info->xrdp_keyboard_ini_file);
+            }
+            else
+            {
+                /* use user defined xrdp_keyboard.ini */
+                g_strncpy(client_info->xrdp_keyboard_ini_file, value, 255);
+            }
+        }
+        else if (g_strcasecmp(item, "keymaps_path") == 0)
+        {
+            if (value[0] != '/')
+            {
+                g_snprintf(client_info->keymaps_path, 255, "%s", cfg_dir);
+                log_message(LOG_LEVEL_WARNING,
+                            "keymaps_path should use absolute path, using "
+                            "default instead: %s", client_info->keymaps_path);
+            }
+            else
+            {
+                /* use user defined xrdp_keyboard.ini */
+                g_strncpy(client_info->keymaps_path, value, 255);
             }
 
             if (!g_file_readable(client_info->key_file))
@@ -349,7 +400,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     self->session = session;
     self->share_id = 66538;
     /* read ini settings */
-    xrdp_rdp_read_config(&self->client_info);
+    xrdp_rdp_read_config(session->xrdp_ini_file, &self->client_info);
     /* create sec layer */
     self->sec_layer = xrdp_sec_create(self, trans);
     /* default 8 bit v1 color bitmap cache entries and size */

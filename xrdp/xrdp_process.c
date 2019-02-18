@@ -235,7 +235,7 @@ xrdp_process_main_loop(struct xrdp_process *self)
     self->server_trans->trans_data_in = xrdp_process_data_in;
     self->server_trans->callback_data = self;
     init_stream(self->server_trans->in_s, 8192 * 4);
-    self->session = libxrdp_init((tbus)self, self->server_trans);
+    self->session = libxrdp_init(self->lis_layer->startup_params->xrdp_ini_file, (tbus)self, self->server_trans);
     self->server_trans->si = &(self->session->si);
     self->server_trans->my_source = XRDP_SOURCE_CLIENT;
     /* this callback function is in xrdp_wm.c */
