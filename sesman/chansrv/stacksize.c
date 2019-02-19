@@ -12,7 +12,6 @@ void __set_thread_stack(void) {
 
 #ifndef __GLIBC__
     // Increase default stack size for libmusl:
-    printf("stack size set\n");
     pthread_attr_t a;
     memset(&a, 0, sizeof(pthread_attr_t));
     pthread_attr_setstacksize(&a, 8*1024*1024);  // 8MB as in glibc
