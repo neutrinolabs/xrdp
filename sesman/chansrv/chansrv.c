@@ -21,7 +21,7 @@
 #include <config_ac.h>
 #endif
 
-#include <../tools/stacksize.h>
+#include "stacksize.h"
 #include "arch.h"
 #include "os_calls.h"
 #include "thread_calls.h"

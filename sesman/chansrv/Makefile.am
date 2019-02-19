@@ -71,8 +71,8 @@ xrdp_chansrv_SOURCES = \
   sound.h \
   xcommon.c \
   xcommon.h \
-  ../tools/stacksize.c \
-  ../tools/stacksize.h
+  stacksize.c \
+  stacksize.h
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)
