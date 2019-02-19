@@ -6,8 +6,6 @@
 #include <string.h>
 #include "stacksize.h"
 
-#define _GNU_SOURCE
-
 void __set_thread_stack(void) {
 
 #ifndef __GLIBC__
