@@ -70,12 +70,14 @@ xrdp_chansrv_SOURCES = \
   sound.c \
   sound.h \
   xcommon.c \
-  xcommon.h
+  xcommon.h \
+  ../tools/stacksize.c \
+  ../tools/stacksize.h
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)
 
 xrdp_chansrv_LDADD = \
   $(top_builddir)/common/libcommon.la \
-  $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
+  $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 -lpthread $(X_EXTRA_LIBS) \
   $(CHANSRV_EXTRA_LIBS)

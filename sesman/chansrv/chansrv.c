@@ -21,6 +21,7 @@
 #include <config_ac.h>
 #endif
 
+#include <../tools/stacksize.h>
 #include "arch.h"
 #include "os_calls.h"
 #include "thread_calls.h"
@@ -1780,6 +1781,8 @@ main(int argc, char **argv)
     enum logReturns error;
     struct log_config logconfig;
     enum logLevels log_level;
+
+    __set_thread_stack();
 
     g_init("xrdp-chansrv"); /* os_calls */
 
