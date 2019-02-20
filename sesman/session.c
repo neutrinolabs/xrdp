@@ -916,7 +916,7 @@ session_kill(int pid)
 
     tmp = g_sessions;
     prev = 0;
-
+printf("!!!! KILL SESS\n\n");
     while (tmp != 0)
     {
         if (tmp->item == 0)
