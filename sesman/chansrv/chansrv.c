@@ -1612,6 +1612,8 @@ get_display_num_from_display(char *display_text)
 int
 main_cleanup(void)
 {
+    xfuse_deinit();
+
     g_delete_wait_obj(g_term_event);
     g_delete_wait_obj(g_thread_done_event);
     g_delete_wait_obj(g_exec_event);
