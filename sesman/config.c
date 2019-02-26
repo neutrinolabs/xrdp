@@ -481,7 +481,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    DefaultWindowManager:     %s", config->default_wm);
     g_writeln("    ReconnectScript:          %s", config->reconnect_sh);
     g_writeln("    AuthFilePath:             %s",
-             ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
+              ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
 
     /* Session configuration */
     g_writeln("Session configuration:");
@@ -530,7 +530,7 @@ config_dump(struct config_sesman *config)
     for (i = 0; i < config->xorg_params->count; i++)
     {
         g_writeln("    Parameter %02d              %s",
-                 i, (char *) list_get_item(config->xorg_params, i));
+                  i, (char *) list_get_item(config->xorg_params, i));
     }
 
     /* Xvnc */
@@ -542,7 +542,7 @@ config_dump(struct config_sesman *config)
     for (i = 0; i < config->vnc_params->count; i++)
     {
         g_writeln("    Parameter %02d              %s",
-                 i, (char *)list_get_item(config->vnc_params, i));
+                  i, (char *)list_get_item(config->vnc_params, i));
     }
 
     /* X11rdp */
@@ -554,7 +554,7 @@ config_dump(struct config_sesman *config)
     for (i = 0; i < config->rdp_params->count; i++)
     {
         g_writeln("    Parameter %02d              %s",
-                 i, (char *)list_get_item(config->rdp_params, i));
+                  i, (char *)list_get_item(config->rdp_params, i));
     }
 
     /* SessionVariables */
@@ -567,7 +567,7 @@ config_dump(struct config_sesman *config)
     {
         g_writeln("    Parameter %02d              %s=%s",
                   i, (char *) list_get_item(config->env_names, i),
-                     (char *) list_get_item(config->env_values, i));
+                  (char *) list_get_item(config->env_values, i));
     }
 }
 
