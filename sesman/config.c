@@ -235,7 +235,7 @@ config_read_security(int file, struct config_security *sc,
     sc->login_retry = 3;
     sc->ts_users_enable = 0;
     sc->ts_admins_enable = 0;
-    sc->restrict_oubound_clipboard = 0;
+    sc->restrict_outbound_clipboard = 0;
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -274,10 +274,10 @@ config_read_security(int file, struct config_security *sc,
         {
             sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
         }
-        
+
         if (0 == g_strcasecmp(buf, SESMAN_CFG_RESTRICT_CLIPBOARD))
         {
-             sc->restrict_oubound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
+            sc->restrict_outbound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
         }
 
 
@@ -505,7 +505,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    AllowRootLogin:           %d", sc->allow_root);
     g_writeln("    MaxLoginRetry:            %d", sc->login_retry);
     g_writeln("    AlwaysGroupCheck:         %d", sc->ts_always_group_check);
-    g_printf("\tRestrictOutboundClipboard: %i\r\n", sc->restrict_oubound_clipboard);
+    g_writeln("    RestrictOutboundClipboard: %d", sc->restrict_outbound_clipboard);
 
     g_printf( "    TSUsersGroup:             ");
     if (sc->ts_users_enable)

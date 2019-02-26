@@ -230,7 +230,7 @@ static char g_bmp_image_header[] =
 
 extern int g_cliprdr_chan_id;   /* in chansrv.c */
 
-struct config_sesman g_cfg      /* config.h */
+struct config_sesman *g_cfg;    /* config.h */
 
 extern Display *g_display;      /* in xcommon.c */
 extern int g_x_socket;          /* in xcommon.c */
@@ -381,16 +381,24 @@ clipboard_init(void)
         return 0;
     }
 
-    if (0 != config_read(&g_cfg))
-     {
-         g_printf("clipboard: error reading config. quitting.\n");
-         return 1;
-     }
+    /* reading config */
+    g_cfg = g_new0(struct config_sesman, 1);
 
-     log_debug("clipboard_init: outbound clipboard restricted -> " + g_cfg.sec.restrict_oubound_clipboard)
-     //one-way clipboard
-     g_outbound_clipboard_restricted = g_cfg.sec.restrict_oubound_clipboard;
+    if (0 == g_cfg)
+    {
+        g_printf("error creating config: quitting.\n");
+        g_deinit();
+        g_exit(1);
+    }
 
+    if (0 != config_read(g_cfg))
+    {
+        log_error("clipboard: error reading config. quitting.");
+        return 1;
+    }
+
+    //one-way clipboard
+    g_outbound_clipboard_restricted = g_cfg->sec.restrict_outbound_clipboard;
 
     xfuse_init();
     xcommon_init();
@@ -2513,13 +2521,14 @@ clipboard_xevent(void *xevent)
     switch (lxevent->type)
     {
         case SelectionNotify:
-            if (g_outbound_clipboard_restricted == 0) {
-                 log_debug("clipboard_xevent: clipboard SelectionNotify event on xorg.")
-                 clipboard_event_selection_notify(lxevent);
-             } else {
-                 log_debug("clipboard_xevent: clipboard restricted, ignoring xorg event.")
-                 return 1;
-             }
+            if (g_outbound_clipboard_restricted == 0)
+            {
+                clipboard_event_selection_notify(lxevent);
+            }
+            else
+            {
+                return 1;
+            }
             break;
         case SelectionRequest:
             clipboard_event_selection_request(lxevent);
