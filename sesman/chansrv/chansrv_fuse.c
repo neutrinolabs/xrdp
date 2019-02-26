@@ -492,7 +492,6 @@ xfuse_init(void)
 int
 xfuse_deinit(void)
 {
-    xfuse_deinit_xrdp_fs();
     fifo_deinit(&g_fifo_opendir);
 
     if (g_ch != 0)
@@ -519,6 +518,8 @@ xfuse_deinit(void)
         list_delete(g_req_list);
         g_req_list = 0;
     }
+
+    xfuse_deinit_xrdp_fs();
 
     g_xfuse_inited = 0;
     return 0;
@@ -969,6 +970,28 @@ static int xfuse_init_xrdp_fs(void)
 
 static int xfuse_deinit_xrdp_fs(void)
 {
+    fuse_ino_t i;
+    struct xrdp_inode        *xinode;
+
+    if (g_xrdp_fs.inode_table != NULL)
+    {
+        for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; ++i)
+        {
+            if ((xinode = g_xrdp_fs.inode_table[i]) != NULL)
+            {
+                g_xrdp_fs.inode_table[i] = NULL;
+                log_debug("Freeing %s",xinode->name);
+                free(xinode);
+            }
+        }
+        free(g_xrdp_fs.inode_table);
+        g_xrdp_fs.inode_table = NULL;
+    }
+
+    g_xrdp_fs.max_entries = 0;
+    g_xrdp_fs.num_entries = 0;
+    g_xrdp_fs.next_node = 1;
+
     return 0;
 }
 
