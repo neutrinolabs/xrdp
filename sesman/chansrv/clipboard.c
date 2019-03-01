@@ -2527,6 +2527,7 @@ clipboard_xevent(void *xevent)
             }
             else
             {
+                log_debug("outbound clipboard is restricted because %s is True in config", SESMAN_CFG_RESTRICT_CLIPBOARD);
                 return 1;
             }
             break;
