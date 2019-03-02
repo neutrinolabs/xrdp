@@ -59,6 +59,7 @@ int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
 int g_rdpdr_chan_id = -1;   /* rdpdr   */
 int g_rail_chan_id = -1;    /* rail    */
+int g_restrict_outbound_clipboard = 0;
 
 char *g_exec_name;
 tbus g_exec_event;
@@ -1780,7 +1781,7 @@ main(int argc, char **argv)
     enum logReturns error;
     struct log_config logconfig;
     enum logLevels log_level;
-
+    char *restrict_outbound_clipboard_env;
     g_init("xrdp-chansrv"); /* os_calls */
 
     log_path[255] = 0;
@@ -1789,6 +1790,13 @@ main(int argc, char **argv)
         g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
         g_deinit();
         return 1;
+    }
+
+    restrict_outbound_clipboard_env = g_getenv("CHANSRV_RESTRICT_OUTBOUND_CLIPBOARD");
+    if (restrict_outbound_clipboard_env != 0) {
+        if (g_strcmp(restrict_outbound_clipboard_env, "1") == 0) {
+            g_restrict_outbound_clipboard = 1;
+        }
     }
 
     read_ini();

@@ -9,9 +9,7 @@ AM_CPPFLAGS = \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
-  -I$(top_srcdir)/common \
-  -I$(top_srcdir)/sesman \
-  -I$(top_srcdir)/sesman/libscp
+  -I$(top_srcdir)/common
 
 if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
@@ -56,7 +54,6 @@ xrdp_chansrv_SOURCES = \
   clipboard_common.h \
   clipboard_file.c \
   clipboard_file.h \
-  config.c \
   devredir.c \
   devredir.h \
   fifo.c \
