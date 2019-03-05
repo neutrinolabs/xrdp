@@ -40,7 +40,7 @@
 
 #define log_error(_params...)                           \
 {                                                       \
-    g_write("[%10.10u]: IRP        %s: %d : ERROR: ",   \
+    g_write("[%"PRIu64"]: IRP        %s: %d : ERROR: ", \
             g_time3(), __func__, __LINE__);             \
     g_writeln (_params);                                \
 }
@@ -49,7 +49,7 @@
 {                                                       \
     if (LOG_INFO <= LOG_LEVEL)                          \
     {                                                   \
-        g_write("[%10.10u]: IRP        %s: %d : ",      \
+        g_write("[%"PRIu64"]: IRP        %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \
@@ -59,7 +59,7 @@
 {                                                       \
     if (LOG_DEBUG <= LOG_LEVEL)                         \
     {                                                   \
-        g_write("[%10.10u]: IRP        %s: %d : ",      \
+        g_write("[%"PRIu64"]: IRP        %s: %d : ",    \
                 g_time3(), __func__, __LINE__);         \
         g_writeln (_params);                            \
     }                                                   \

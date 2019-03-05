@@ -1,1 +1,5 @@
 !Makefile
+# ignore generated Makefiles
+/Makefile
+common/Makefile
+common/os_calls/Makefile

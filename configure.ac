@@ -363,6 +363,9 @@ AC_CONFIG_FILES([
   sesman/libscp/Makefile
   sesman/Makefile
   sesman/tools/Makefile
+  tests/Makefile
+  tests/common/Makefile
+  tests/common/os_calls/Makefile
   vnc/Makefile
   xrdpapi/Makefile
   xrdp/Makefile

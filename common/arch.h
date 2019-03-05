@@ -43,6 +43,9 @@ typedef unsigned long uintptr_t;
 #endif
 #endif
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 typedef int bool_t;
 
 /* you can define L_ENDIAN or B_ENDIAN and NEED_ALIGN or NO_NEED_ALIGN

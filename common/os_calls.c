@@ -3538,24 +3538,24 @@ g_time1(void)
 /*****************************************************************************/
 /* returns the number of milliseconds since the machine was
    started. */
-int
+uint64_t
 g_time2(void)
 {
 #if defined(_WIN32)
-    return (int)GetTickCount();
+    return (uint64_t)GetTickCount();
 #else
     struct tms tm;
     clock_t num_ticks = 0;
     g_memset(&tm, 0, sizeof(struct tms));
     num_ticks = times(&tm);
-    return (int)(num_ticks * 10);
+    return (uint64_t)(num_ticks * 10);
 #endif
 }
 
 /*****************************************************************************/
 /* returns time in milliseconds, uses gettimeofday
    does not work in win32 */
-int
+uint64_t
 g_time3(void)
 {
 #if defined(_WIN32)
@@ -3564,7 +3564,7 @@ g_time3(void)
     struct timeval tp;
 
     gettimeofday(&tp, 0);
-    return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
+    return ((uint64_t)tp.tv_sec * 1000) + ((uint64_t)tp.tv_usec / 1000);
 #endif
 }
 

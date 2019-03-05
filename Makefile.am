@@ -3,6 +3,8 @@ AM_DISTCHECK_CONFIGURE_FLAGS = \
   --without-systemdsystemunitdir \
   --enable-strict-locations
 
+# There're mixed contents automake and non-automake files/directories
+# under tests/ directory. List only non-automakes EXTRA_DIST.
 EXTRA_DIST = \
   COPYING \
   README.md \
@@ -64,7 +66,8 @@ SUBDIRS = \
   genkeymap \
   xrdpapi \
   pkgconfig \
-  $(XRDPVRDIR)
+  $(XRDPVRDIR) \
+  tests
 
 distclean-local:
 	-rm -f xrdp_configure_options.h

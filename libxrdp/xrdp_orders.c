@@ -33,7 +33,7 @@
     { \
         if (_log_level < LLOG_LEVEL) \
         { \
-            g_write("xrdp_orders.c [%10.10u]: ", g_time3()); \
+            g_write("xrdp_orders.c [%"PRIu64"]: ", g_time3()); \
             g_writeln _params ; \
         } \
     }

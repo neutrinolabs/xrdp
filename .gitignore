@@ -12,6 +12,7 @@ config.log
 config.status
 config.sub
 configure
+*.core
 depcomp
 .deps/
 genkeymap/xrdp-genkeymap
@@ -41,6 +42,11 @@ sesman/xrdp-sesman
 sesman/sesman.ini
 *.so
 stamp-h1
+test-driver
+test-suite.log
+tests/test.sh.log
+tests/test.sh.trs
+tests/common/os_calls/g_time
 xrdp/xrdp
 xrdp/xrdp.ini
 xrdp_configure_options.h

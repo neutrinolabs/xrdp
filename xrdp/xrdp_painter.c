@@ -34,7 +34,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-        g_write("xrdp:xrdp_painter [%10.10u]: ", g_time3()); \
+        g_write("xrdp:xrdp_painter [%"PRIu64"]: ", g_time3()); \
         g_writeln _args ; \
     } \
   } \
