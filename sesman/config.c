@@ -275,11 +275,10 @@ config_read_security(int file, struct config_security *sc,
             sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
         }
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_RESTRICT_CLIPBOARD))
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD))
         {
             sc->restrict_outbound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
         }
-
 
     }
 

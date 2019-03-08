@@ -1793,8 +1793,10 @@ main(int argc, char **argv)
     }
 
     restrict_outbound_clipboard_env = g_getenv("CHANSRV_RESTRICT_OUTBOUND_CLIPBOARD");
-    if (restrict_outbound_clipboard_env != 0) {
-        if (g_strcmp(restrict_outbound_clipboard_env, "1") == 0) {
+    if (restrict_outbound_clipboard_env != 0)
+    {
+        if (g_strcmp(restrict_outbound_clipboard_env, "1") == 0)
+        {
             g_restrict_outbound_clipboard = 1;
         }
     }
