@@ -106,7 +106,13 @@ tui32 g_device_id;          /* unique device ID - announced by client */
 tui16 g_client_rdp_version; /* returned by client                     */
 struct stream *g_input_stream = NULL;
 
-void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length);
+/*
+ * Local functions called from dev_redir_proc_device_iocompletion()
+ */
+static void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus);
+static void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus);
+static void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus);
+static void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus);
 
 /*****************************************************************************/
 int
@@ -1514,12 +1520,12 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
 }
 
 int
-dev_redir_string_ends_with(char *string, char c)
+dev_redir_string_ends_with(const char *string, char c)
 {
-    int len;
+    size_t len;
 
     len = strlen(string);
-    return (string[len - 1] == c) ? 1 : 0;
+    return (len > 0 && string[len - 1] == c) ? 1 : 0;
 }
 
 void
@@ -1530,7 +1536,7 @@ devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
     xstream_wr_u16_le(s, PacketId);
 }
 
-void
+static void
 devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
 {
     struct stream *s;
@@ -1567,7 +1573,7 @@ devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
     return;
 }
 
-void
+static void
 devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
@@ -1594,7 +1600,7 @@ devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
                                        IRP_MJ_CLOSE, 0, 32);
 }
 
-void
+static void
 devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
 {
     struct stream *s;
@@ -1647,7 +1653,7 @@ devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     return;
 }
 
-void
+static void
 devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;

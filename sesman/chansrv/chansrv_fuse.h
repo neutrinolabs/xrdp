@@ -36,8 +36,6 @@ struct xrdp_inode
     time_t          ctime;             /* Time of last status change.       */
     char            name[1024];        /* Dir or filename                   */
     tui32           device_id;         /* for file system redirection       */
-    char            is_synced;         /* dir struct has been read from     */
-                                       /* remote device, done just once     */
     int             lindex;            /* used in clipboard operations      */
     int             is_loc_resource;   /* this is not a redirected resource */
     int             close_in_progress; /* close cmd sent to client          */
@@ -60,6 +58,7 @@ int xfuse_add_clip_dir_item(const char *filename, int flags, int size, int linde
 int xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode);
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId);
+void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length);
 void xfuse_devredir_cb_read_file(void *vp, const char *buf, size_t length);
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus);

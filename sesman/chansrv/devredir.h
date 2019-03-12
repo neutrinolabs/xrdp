@@ -84,15 +84,10 @@ void devredir_insert_DeviceIoRequest(struct stream *s,
 void devredir_cvt_slash(char *path);
 void devredir_cvt_to_unicode(char *unicode, const char *path);
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len);
-int  dev_redir_string_ends_with(char *string, char c);
+int  dev_redir_string_ends_with(const char *string, char c);
 
 void devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
                                   tui16 PacketId);
-
-void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus);
-void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus);
-void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus);
-void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus);
 
 /* called from FUSE module */
 int dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path);
