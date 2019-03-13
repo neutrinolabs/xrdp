@@ -822,7 +822,8 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         }
         else
         {
-            xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
+            xfuse_devredir_cb_write_file(fuse_data->data_ptr, IoStatus,
+                                         s->p, Length);
             devredir_irp_delete(irp);
         }
         break;
@@ -1107,14 +1108,30 @@ dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
     }
     else
     {
-        log_debug("open file in O_RDWR");
 #if 1
-        /* without the 0x00000010 rdesktop opens files in */
-        /* O_RDONLY instead of O_RDWR mode                */
-        if (mode & O_RDWR)
-            DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE | 0x00000010;
-        else
-            DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
+        switch(mode & O_ACCMODE)
+        {
+            case O_RDONLY:
+                log_debug("open file in O_RDONLY");
+                DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
+                break;
+
+            case O_WRONLY:
+                log_debug("open file in O_WRONLY");
+                DesiredAccess = DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
+                break;
+
+            default:
+                /*
+                 * The access mode could conceivably be invalid here,
+                 * but we assume this has been checked by the caller
+                 */
+                log_debug("open file in O_RDWR");
+                /* without the 0x00000010 rdesktop opens files in */
+                /* O_RDONLY instead of O_RDWR mode                */
+                DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | 
+                                DA_SYNCHRONIZE | 0x00000010;
+        }
 
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN; // WAS 1
@@ -1283,7 +1300,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     if ((irp = devredir_irp_find_by_fileid(FileId)) == NULL)
     {
         log_error("no IRP found with FileId = %d", FileId);
-        xfuse_devredir_cb_write_file(fusep, NULL, 0);
+        xfuse_devredir_cb_write_file(fusep, NT_STATUS_UNSUCCESSFUL, NULL, 0);
         xstream_free(s);
         return -1;
     }
@@ -1292,7 +1309,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     if ((new_irp = devredir_irp_clone(irp)) == NULL)
     {
         /* system out of memory */
-        xfuse_devredir_cb_write_file(fusep, NULL, 0);
+        xfuse_devredir_cb_write_file(fusep, NT_STATUS_UNSUCCESSFUL, NULL, 0);
         xstream_free(s);
         return -1;
     }

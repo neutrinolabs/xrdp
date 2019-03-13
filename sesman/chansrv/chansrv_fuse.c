@@ -72,7 +72,7 @@ int xfuse_file_contents_size(int stream_id, int file_size)                   { r
 int xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex) { return 0; }
 int xfuse_create_share(tui32 device_id, const char *dirname)                       { return 0; }
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId)     {}
-void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length)        {}
+void xfuse_devredir_cb_write_file(void *vp, tui32 IoStatus, const char *buf, size_t length)        {}
 void xfuse_devredir_cb_read_file(void *vp, const char *buf, size_t length)         {}
 int  xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         { return 0; }
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
@@ -1639,12 +1639,12 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId,
     {
         switch (IoStatus)
         {
-        case 0xC0000022:
+        case NT_STATUS_ACCESS_DENIED:
             fuse_reply_err(fip->req, EACCES);
             break;
 
-        case 0xC0000033:
-        case 0xC0000034:
+        case NT_STATUS_OBJECT_NAME_INVALID:
+        case NT_STATUS_OBJECT_NAME_NOT_FOUND:
             fuse_reply_err(fip->req, ENOENT);
             break;
 
@@ -1762,7 +1762,10 @@ void xfuse_devredir_cb_read_file(void *vp, const char *buf, size_t length)
     free(fip);
 }
 
-void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length)
+void xfuse_devredir_cb_write_file(void *vp,
+                                  tui32 IoStatus,
+                                  const char *buf,
+                                  size_t length)
 {
     XRDP_INODE   *xinode;
     XFUSE_INFO   *fip;
@@ -1771,20 +1774,34 @@ void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length)
     if ((fip == NULL) || (fip->req == NULL) || (fip->fi == NULL))
     {
         log_error("fip, fip->req or fip->fi is NULL");
-        return;
     }
-
-    log_debug("+++ XFUSE_INFO=%p, XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=0x%llx",
-              fip, fip->fi, (long long) fip->fi->fh);
-
-    fuse_reply_write(fip->req, length);
-
-    /* update file size */
-    if ((xinode = g_xrdp_fs.inode_table[fip->inode]) != NULL)
-        xinode->size += length;
     else
-        log_error("inode at inode_table[%ld] is NULL", fip->inode);
+    {
+        log_debug(
+            "+++ XFUSE_INFO=%p, XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=0x%llx",
+            fip, fip->fi, (long long) fip->fi->fh);
 
+        if (IoStatus != NT_STATUS_SUCCESS)
+        {
+            log_error("Write NTSTATUS is %d", (int) IoStatus);
+            fuse_reply_err(fip->req, EIO);
+        }
+        else
+        {
+            fuse_reply_write(fip->req, length);
+
+            /* update file size */
+            if ((xinode = g_xrdp_fs.inode_table[fip->inode]) != NULL)
+            {
+                xinode->size += length;
+            }
+            else
+            {
+                log_error("inode at inode_table[%ld] is NULL", fip->inode);
+            }
+
+        }
+    }
     free(fip);
 }
 
@@ -2551,10 +2568,23 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     }
     if (xinode->mode & S_IFDIR)
     {
-        log_debug("reading a dir not allowed!");
+        log_debug("reading/writing a dir not allowed!");
         fuse_reply_err(req, EISDIR);
         return;
     }
+
+    switch (fi->flags & O_ACCMODE)
+    {
+        case O_RDONLY:
+        case O_WRONLY:
+        case O_RDWR:
+            break;
+
+        default:
+            log_debug("Invalid access mode specified");
+            fuse_reply_err(req, EINVAL);
+            return;
+     }
 
     device_id = xfuse_get_device_id_for_inode(ino, full_path);
 
@@ -2594,7 +2624,12 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     {
         cptr = "\\";
     }
-    /* get dev_redir to open the remote file */
+    /* get dev_redir to open the remote file
+     *
+     * For a successful call, if the caller has set O_TRUNC when writing
+     * the file, fuse should call us back via fuse_cb_setattr() to set
+     * the size to zero - we don't need to do this ourselves.
+     */
     if (dev_redir_file_open((void *) fip, device_id, cptr,
                             fi->flags, S_IFREG, NULL))
     {
