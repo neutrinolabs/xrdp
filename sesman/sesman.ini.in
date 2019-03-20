@@ -19,6 +19,9 @@ TerminalServerAdmins=tsadmins
 ; When AlwaysGroupCheck=false access will be permitted
 ; if the group TerminalServerUsers is not defined.
 AlwaysGroupCheck=false
+; When RestrictOutboundClipboard=true clipboard from the
+; server is not pushed to the client.
+RestrictOutboundClipboard=false
 
 [Sessions]
 ;; X11DisplayOffset - x11 display number offset
