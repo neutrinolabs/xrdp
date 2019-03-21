@@ -19,29 +19,27 @@
 #ifndef _CHANSRV_FUSE_H
 #define _CHANSRV_FUSE_H
 
-/* a file or dir entry in the xrdp file system */
-struct xrdp_inode
+#include "arch.h"
+
+/*
+ * a file or dir entry in the xrdp file system (opaque type externally) */
+struct xrdp_inode;
+
+/* Used to pass file info in to xfuse_devredir_add_file_or_dir()
+ *
+ * The string storage the name field points to is only valid
+ * for the duration of the xfuse_devredir_add_file_or_dir()
+ * call
+ */
+struct file_attr
 {
-    tui32           parent_inode;      /* Parent serial number.             */
-    tui32           inode;             /* File serial number.               */
+    const char     *name;              /* Name of file or directory         */
     tui32           mode;              /* File mode.                        */
-    tui32           nlink;             /* symbolic link count.              */
-    tui32           nentries;          /* number of entries in a dir        */
-    tui32           nopen;             /* number of simultaneous opens      */
-    tui32           uid;               /* User ID of the file's owner.      */
-    tui32           gid;               /* Group ID of the file's group.     */
     size_t          size;              /* Size of file, in bytes.           */
     time_t          atime;             /* Time of last access.              */
     time_t          mtime;             /* Time of last modification.        */
     time_t          ctime;             /* Time of last status change.       */
-    char            name[1024];        /* Dir or filename                   */
-    tui32           device_id;         /* for file system redirection       */
-    int             lindex;            /* used in clipboard operations      */
-    int             is_loc_resource;   /* this is not a redirected resource */
-    int             close_in_progress; /* close cmd sent to client          */
-    int             stale;             /* mark file as stale, ok to remove  */
 };
-typedef struct xrdp_inode XRDP_INODE; // LK_TODO use this instead of using struct xrdp_inode
 
 int xfuse_init(void);
 int xfuse_deinit(void);
@@ -55,8 +53,12 @@ int xfuse_file_contents_size(int stream_id, int file_size);
 int xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex);
 
 /* functions that are invoked from devredir */
-int xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode);
+struct xrdp_inode *xfuse_devredir_add_file_or_dir(
+                                 void *vp,
+                                 const struct file_attr *file_info);
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus);
+void xfuse_devredir_cb_lookup_entry(void *vp, tui32 IoStatus,
+                                    struct xrdp_inode *xinode);
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId);
 void xfuse_devredir_cb_write_file(
                                  void *vp,
