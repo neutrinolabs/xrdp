@@ -23,15 +23,15 @@ Kills running \fBxrdp\-sesman\fR daemon.
 Output help information and exit.
 
 .SH "FILES"
-@bindir@/sesman
+@bindir@/xrdp\-sesman
 .br
-@bindir@/sesrun
+@bindir@/xrdp\-sesrun
 .br
 @sysconfdir@/xrdp/sesman.ini
 .br
-@localstatedir@/log/sesman.log
+@localstatedir@/log/xrdp\-sesman.log
 .br
-@localstatedir@/run/sesman.pid
+@localstatedir@/run/xrdp\-sesman.pid
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>
