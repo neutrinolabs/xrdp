@@ -185,11 +185,11 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     if (cf->default_wm[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->default_wm) + 1; /* '/' */
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(cf->default_wm) + 1; /* '/' */
         buf = (char *)g_malloc(length, 0);
-        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
-        g_free(g_cfg->default_wm);
-        g_cfg->default_wm = g_strdup(buf);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, cf->default_wm);
+        g_free(cf->default_wm);
+        cf->default_wm = g_strdup(buf);
         g_free(buf);
     }
 
@@ -206,13 +206,22 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     if (cf->reconnect_sh[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(g_cfg->reconnect_sh) + 1; /* '/' */
+        length = sizeof(XRDP_CFG_PATH) + g_strlen(cf->reconnect_sh) + 1; /* '/' */
         buf = (char *)g_malloc(length, 0);
-        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, g_cfg->reconnect_sh);
-        g_free(g_cfg->reconnect_sh);
-        g_cfg->reconnect_sh = g_strdup(buf);
+        g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, cf->reconnect_sh);
+        g_free(cf->reconnect_sh);
+        cf->reconnect_sh = g_strdup(buf);
         g_free(buf);
     }
+
+    log_message(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
+    log_message(LOG_LEVEL_TRACE, "    listen_address    = %s", cf->listen_address);
+    log_message(LOG_LEVEL_TRACE, "    listen_port       = %s", cf->listen_port);
+    log_message(LOG_LEVEL_TRACE, "    enable_user_wm    = %d", cf->enable_user_wm);
+    log_message(LOG_LEVEL_TRACE, "    default_wm        = %s", cf->default_wm);
+    log_message(LOG_LEVEL_TRACE, "    user_wm           = %s", cf->user_wm);
+    log_message(LOG_LEVEL_TRACE, "    reconnect_sh      = %s", cf->reconnect_sh);
+    log_message(LOG_LEVEL_TRACE, "    auth_file_path    = %s", cf->auth_file_path);
 
     return 0;
 }
