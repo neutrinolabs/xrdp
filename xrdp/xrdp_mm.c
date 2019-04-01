@@ -1440,7 +1440,10 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, const char *ip, const char *port)
             self->chan_trans_up = 1;
             break;
         }
-
+        if (g_is_term())
+        {
+            break;
+        }
         g_sleep(1000);
         log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: connect failed "
                   "trying again...");
@@ -2275,7 +2278,10 @@ xrdp_mm_connect(struct xrdp_mm *self)
                 ok = 1;
                 break;
             }
-
+            if (g_is_term())
+            {
+                break;
+            }
             g_sleep(1000);
             g_writeln("xrdp_mm_connect: connect failed "
                       "trying again...");
