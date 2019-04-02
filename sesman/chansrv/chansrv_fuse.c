@@ -77,6 +77,10 @@ struct xrdp_inode *xfuse_devredir_add_file_or_dir(
                                  const struct file_attr *fattr)
     { return NULL;}
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
+void xfuse_devredir_cb_lookup_entry(void *vp,
+                                 tui32 IoStatus,
+                                 struct xrdp_inode *xinode)
+    {}
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)                 {}
 void xfuse_devredir_cb_file_close(void *vp)                                  {}
