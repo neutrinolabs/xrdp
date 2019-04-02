@@ -1210,6 +1210,38 @@ xrdp_rdp_process_frame_ack(struct xrdp_rdp *self, struct stream *s)
 }
 
 /*****************************************************************************/
+static int
+xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
+{
+    int allowDisplayUpdates;
+
+    if (!s_check_rem(s, 1))
+    {
+        return 1;
+    }
+    in_uint8(s, allowDisplayUpdates); 
+    switch (allowDisplayUpdates)
+    {
+        case 0: /* SUPPRESS_DISPLAY_UPDATES */
+            self->client_info.suppress_output = 1;
+            break;
+        case 1: /* ALLOW_DISPLAY_UPDATES */
+            self->client_info.suppress_output = 0;
+            if (!s_check_rem(s, 11))
+            {
+                return 1;
+            }
+            in_uint8s(s, 3); /* pad */
+            in_uint8s(s, 2); /* left */
+            in_uint8s(s, 2); /* top */
+            in_uint8s(s, 2); /* right */
+            in_uint8s(s, 2); /* bottom */
+            break;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 /* RDP_PDU_DATA */
 int
 xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
@@ -1240,11 +1272,8 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
         case 33: /* 33(0x21) ?? Invalidate an area I think */
             xrdp_rdp_process_screen_update(self, s);
             break;
-        case 35: /* 35(0x23) */
-            /* 35 ?? this comes when minimizing a full screen mstsc.exe 2600 */
-            /* I think this is saying the client no longer wants screen */
-            /* updates and it will issue a 33 above to catch up */
-            /* so minimized apps don't take bandwidth */
+        case 35: /* 35(0x23) PDUTYPE2_SUPPRESS_OUTPUT */
+            xrdp_rdp_process_suppress(self, s);
             break;
         case 36: /* 36(0x24) ?? disconnect query? */
             /* when this message comes, send a 37 back so the client */
