@@ -1214,16 +1214,26 @@ static int
 xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
 {
     int allowDisplayUpdates;
+    int left;
+    int top;
+    int right;
+    int bottom;
+    int cx;
+    int cy;
 
     if (!s_check_rem(s, 1))
     {
         return 1;
     }
-    in_uint8(s, allowDisplayUpdates); 
+    in_uint8(s, allowDisplayUpdates);
+    g_writeln("xrdp_rdp_process_suppress: allowDisplayUpdates %d bytes "
+              "left %d", allowDisplayUpdates, (int) (s->end - s->p));
     switch (allowDisplayUpdates)
     {
         case 0: /* SUPPRESS_DISPLAY_UPDATES */
             self->client_info.suppress_output = 1;
+            g_writeln("xrdp_rdp_process_suppress: suppress_output %d",
+                      self->client_info.suppress_output);
             break;
         case 1: /* ALLOW_DISPLAY_UPDATES */
             self->client_info.suppress_output = 0;
@@ -1232,10 +1242,21 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
                 return 1;
             }
             in_uint8s(s, 3); /* pad */
-            in_uint8s(s, 2); /* left */
-            in_uint8s(s, 2); /* top */
-            in_uint8s(s, 2); /* right */
-            in_uint8s(s, 2); /* bottom */
+            in_uint16_le(s, left);
+            in_uint16_le(s, top);
+            in_uint16_le(s, right);
+            in_uint16_le(s, bottom);
+            g_writeln("xrdp_rdp_process_suppress: suppress_output %d "
+                      "left %d top %d right %d bottom %d",
+                      self->client_info.suppress_output,
+                      left, top, right, bottom);
+            cx = right - left;
+            cy = bottom - top;
+            if (self->session->callback != 0)
+            {
+                self->session->callback(self->session->id, 0x4444,
+                                        left, top, cx, cy);
+            }
             break;
     }
     return 0;
@@ -1246,16 +1267,31 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
 int
 xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
 {
-    int data_type;
+    int uncompressedLength;
+    int pduType2;
+    int compressedType;
+    int compressedLength;
 
+    if (!s_check_rem(s, 12))
+    {
+        return 1;
+    }
     in_uint8s(s, 6);
-    in_uint8s(s, 2); /* len */
-    in_uint8(s, data_type);
-    in_uint8s(s, 1); /* ctype */
-    in_uint8s(s, 2); /* clen */
-    DEBUG(("xrdp_rdp_process_data code %d", data_type));
-
-    switch (data_type)
+    in_uint16_le(s, uncompressedLength);
+    in_uint8(s, pduType2);
+    in_uint8(s, compressedType);
+    in_uint16_le(s, compressedLength);
+    if (compressedType != 0)
+    {
+        /* don't support compression */
+        return 1;
+    }
+    if (compressedLength > uncompressedLength)
+    {
+        return 1;
+    }
+    DEBUG(("xrdp_rdp_process_data pduType2 %d", pduType2));
+    switch (pduType2)
     {
         case RDP_DATA_PDU_POINTER: /* 27(0x1b) */
             xrdp_rdp_process_data_pointer(self, s);
@@ -1288,10 +1324,9 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
             xrdp_rdp_process_frame_ack(self, s);
             break;
         default:
-            g_writeln("unknown in xrdp_rdp_process_data %d", data_type);
+            g_writeln("unknown in xrdp_rdp_process_data pduType2 %d", pduType2);
             break;
     }
-
     return 0;
 }
 /*****************************************************************************/
