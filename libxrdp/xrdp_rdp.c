@@ -1218,8 +1218,6 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
     int top;
     int right;
     int bottom;
-    int cx;
-    int cy;
 
     if (!s_check_rem(s, 1))
     {
@@ -1234,6 +1232,11 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
             self->client_info.suppress_output = 1;
             g_writeln("xrdp_rdp_process_suppress: suppress_output %d",
                       self->client_info.suppress_output);
+            if (self->session->callback != 0)
+            {
+                self->session->callback(self->session->id, 0x5559, 1,
+                                        0, 0, 0);
+            }
             break;
         case 1: /* ALLOW_DISPLAY_UPDATES */
             self->client_info.suppress_output = 0;
@@ -1250,12 +1253,11 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
                       "left %d top %d right %d bottom %d",
                       self->client_info.suppress_output,
                       left, top, right, bottom);
-            cx = right - left;
-            cy = bottom - top;
             if (self->session->callback != 0)
             {
-                self->session->callback(self->session->id, 0x4444,
-                                        left, top, cx, cy);
+                self->session->callback(self->session->id, 0x5559, 0,
+                                        MAKELONG(left, top),
+                                        MAKELONG(right, bottom), 0);
             }
             break;
     }

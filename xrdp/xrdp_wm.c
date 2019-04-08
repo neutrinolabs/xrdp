@@ -1916,6 +1916,11 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
         case 0x5558:
             xrdp_mm_drdynvc_up(wm->mm);
             break;
+        case 0x5559:
+            xrdp_mm_suppress_output(wm->mm, param1,
+                                    LOWORD(param2), HIWORD(param2),
+                                    LOWORD(param3), HIWORD(param3));
+            break;
     }
     return rv;
 }

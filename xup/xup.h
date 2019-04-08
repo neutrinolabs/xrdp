@@ -45,7 +45,9 @@ struct mod
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct mod* v);
   int (*mod_frame_ack)(struct mod* v, int flags, int frame_id);
-  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+  int (*mod_suppress_output)(struct mod* v, int suppress,
+                             int left, int top, int right, int bottom);
+  tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
                                  functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
