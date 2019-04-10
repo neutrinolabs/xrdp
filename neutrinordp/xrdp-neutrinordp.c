@@ -27,6 +27,12 @@
 #include "log.h"
 #include <freerdp/settings.h>
 
+#if defined(VERSION_STRUCT_RDP_FREERDP)
+#if VERSION_STRUCT_RDP_FREERDP > 1
+#define NEUTRINORDP_HAS_SUPPRESS_OUTPUT
+#endif
+#endif
+
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
 #else
@@ -538,6 +544,24 @@ lxrdp_check_wait_objs(struct mod *mod)
         return 1;
     }
 
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_frame_ack(struct mod* mod, int flags, int frame_id)
+{
+    return 0;
+}
+
+/******************************************************************************/
+static int
+lxrdp_suppress_output(struct mod* mod, int suppress,
+                      int left, int top, int right, int bottom)
+{
+#if defined(NEUTRINORDP_HAS_SUPPRESS_OUTPUT)
+    mod->inst->SendSuppressOutput(mod->inst, !suppress, left, top, right, bottom);
+#endif
     return 0;
 }
 
@@ -2009,6 +2033,8 @@ mod_init(void)
     mod->mod_session_change = lxrdp_session_change;
     mod->mod_get_wait_objs = lxrdp_get_wait_objs;
     mod->mod_check_wait_objs = lxrdp_check_wait_objs;
+    mod->mod_frame_ack = lxrdp_frame_ack;
+    mod->mod_suppress_output = lxrdp_suppress_output;
 
     mod->inst = freerdp_new();
     mod->inst->PreConnect = lfreerdp_pre_connect;
