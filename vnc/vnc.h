@@ -24,7 +24,7 @@
 #include "os_calls.h"
 #include "defines.h"
 
-#define CURRENT_MOD_VER 3
+#define CURRENT_MOD_VER 4
 
 struct vnc
 {

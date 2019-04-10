@@ -58,7 +58,7 @@ struct pointer_item
     int bpp;
 };
 
-#define CURRENT_MOD_VER 3
+#define CURRENT_MOD_VER 4
 
 struct mod
 {

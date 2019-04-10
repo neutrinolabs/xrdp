@@ -26,7 +26,7 @@
 #include "xrdp_client_info.h"
 #include "xrdp_rail.h"
 
-#define CURRENT_MOD_VER 3
+#define CURRENT_MOD_VER 4
 
 struct mod
 {
