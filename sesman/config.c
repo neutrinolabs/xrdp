@@ -34,8 +34,6 @@
 #include "sesman.h"
 #include "log.h"
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 
 
 /******************************************************************************/
