@@ -84,18 +84,16 @@ void devredir_insert_DeviceIoRequest(struct stream *s,
 void devredir_cvt_slash(char *path);
 void devredir_cvt_to_unicode(char *unicode, const char *path);
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len);
-int  dev_redir_string_ends_with(char *string, char c);
+int  dev_redir_string_ends_with(const char *string, char c);
 
 void devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
                                   tui16 PacketId);
 
-void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus);
-void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus);
-void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus);
-void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus);
-
 /* called from FUSE module */
 int dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path);
+
+int dev_redir_lookup_entry(void *fusep, tui32 device_id, const char *dirpath,
+                           const char *entry);
 
 int dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
                         int mode, int type, const char *gen_buf);
@@ -260,11 +258,15 @@ enum CREATE_OPTIONS
 #define IRP_MN_NOTIFY_CHANGE_DIRECTORY  0x00000002
 
 /*
- * NTSTATUS codes (used by IoStatus)
+ * NTSTATUS codes (used by IoStatus) - see section 2.3 of MS-ERREF
  */
 
 #define NT_STATUS_SUCCESS               0x00000000
 #define NT_STATUS_UNSUCCESSFUL          0xC0000001
+#define NT_STATUS_NO_SUCH_FILE          0xC000000F
+#define NT_STATUS_ACCESS_DENIED         0xC0000022
+#define NT_STATUS_OBJECT_NAME_INVALID   0xC0000033
+#define NT_STATUS_OBJECT_NAME_NOT_FOUND 0xC0000034
 
 /*
  * File system ioctl codes
@@ -289,12 +291,16 @@ enum COMPLETION_ID
     CID_RMDIR_OR_FILE,
     CID_RMDIR_OR_FILE_RESP,
     CID_RENAME_FILE,
-    CID_RENAME_FILE_RESP
+    CID_RENAME_FILE_RESP,
+    CID_LOOKUP_BASIC_ENTRY,
+    CID_LOOKUP_STD_ENTRY,
+    CID_LOOKUP_ENTRY_RESP
 };
 
 enum FS_INFORMATION_CLASS
 {
     FileBasicInformation       = 0x00000004, /* set atime, mtime, ctime etc */
+    FileStandardInformation    = 0x00000005, /* Alloc size, EOF #links, etc */
     FileEndOfFileInformation   = 0x00000014, /* set EOF info                */
     FileDispositionInformation = 0x0000000D, /* mark a file for deletion    */
     FileRenameInformation      = 0x0000000A, /* rename a file               */
