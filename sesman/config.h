@@ -54,12 +54,13 @@
 #define SESMAN_CFG_LOG_ENABLE_SYSLOG "EnableSyslog"
 #define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
 */
-#define SESMAN_CFG_SECURITY          "Security"
-#define SESMAN_CFG_SEC_LOGIN_RETRY   "MaxLoginRetry"
-#define SESMAN_CFG_SEC_ALLOW_ROOT    "AllowRootLogin"
-#define SESMAN_CFG_SEC_USR_GROUP     "TerminalServerUsers"
-#define SESMAN_CFG_SEC_ADM_GROUP     "TerminalServerAdmins"
-#define SESMAN_CFG_SEC_ALWAYSGROUPCHECK "AlwaysGroupCheck"
+#define SESMAN_CFG_SECURITY                        "Security"
+#define SESMAN_CFG_SEC_LOGIN_RETRY                 "MaxLoginRetry"
+#define SESMAN_CFG_SEC_ALLOW_ROOT                  "AllowRootLogin"
+#define SESMAN_CFG_SEC_USR_GROUP                   "TerminalServerUsers"
+#define SESMAN_CFG_SEC_ADM_GROUP                   "TerminalServerAdmins"
+#define SESMAN_CFG_SEC_ALWAYSGROUPCHECK            "AlwaysGroupCheck"
+#define SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD "RestrictOutboundClipboard"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
@@ -126,6 +127,11 @@ struct config_security
    * @brief if the Groups are not found deny access
    */
   int ts_always_group_check;
+  /**
+   * @var restrict_outbound_clipboard
+   * @brief if the clipboard should be enforced restricted. If true only allow client -> server, not vice versa.
+   */
+  int restrict_outbound_clipboard;
 };
 
 /**

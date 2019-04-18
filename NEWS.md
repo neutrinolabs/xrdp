@@ -1,28 +1,58 @@
-# Release notes for xrdp v0.9.9 (2018/12/25)
+# Release notes for xrdp v0.9.10 (2019/04/18)
 
-# Release cycle
+## Special thanks
+Thank you for matt335672 contributing to lots of improvements in drive redirection!
+
+## New features
+* Restrict outbound (server->client) clipboard transfer, configured in `sesman.ini` #1298
+
+## Bug fixes
+* Fix the issue libscp v1 not setting width but height twice #1293
+* Fix the issue reconnecting to session causes duplicate drive entries in fuse fs #1299
+* Fix default_wm and reconnect_sh refer wrong path after sesman caught SIGUP #1315 #1331
+* Shutdown xrdp more responsively #1325
+* Improve remote file lookup in drive redirection #996 #1327 
+* Overwriting & appending to existing files is are now supported #1327
+
+## Other changes
+* Add Danish Keyboard #1290
+* Put xrdp- prefix to some executables appear in man page #1313
+* Replace some URLs from SF.net to xrdp.org #1313
+
+## Known issues
+* FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
+  xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
+
+## Release notes for xrdp v0.9.9 (2018/12/25)
+
+## Release cycle
 From the next release, release cycle will be changed from quarterly to every
 4 months. xrdp will be released in April, August, December.
 
-# New features
+## New features
 * Disconnection by idle timeout (requires xorgxrdp v0.2.9 or later) #1227
 * Glyph cache v2 (fixes no font issue on iOS/macOS/Android client) #367 #1235
 
-# Bug fixes
+## Bug fixes
 * Fix xrdp-chansrv crashes caused in drive redirection #1202 #1225
 * Fix build with FDK AAC v2 #1257
 * Do not enable RemoteApp if the INFO_RAIL flag is not set (RDP-RDP proxy) #1253
 
-# Other changes
+## Other changes
 * Add Spanish Latin Amarican keyboard #1237 #1240 #1244
 * Dynamic channel improvements #1222 #1224
 * Remove some deprecated sesman session types #1232
 * Refactoring and cleanups
 
-# Known issues
+## Known issues
 * FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
   xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
 * Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
 
 # Release notes for xrdp v0.9.8 (2018/09/25)
 

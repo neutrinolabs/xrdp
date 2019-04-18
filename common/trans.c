@@ -712,12 +712,20 @@ trans_connect(struct trans *self, const char *server, const char *port,
                 now = g_time3();
                 if (now - start_time < timeout)
                 {
-                    g_sleep(timeout / 5);
+                    g_sleep(100);
                 }
                 else
                 {
                     self->status = TRANS_STATUS_DOWN;
                     return 1;
+                }
+                if (self->is_term != NULL)
+                {
+                    if (self->is_term())
+                    {
+                        self->status = TRANS_STATUS_DOWN;
+                        return 1;
+                    }
                 }
             }
         }
@@ -748,12 +756,20 @@ trans_connect(struct trans *self, const char *server, const char *port,
                 now = g_time3();
                 if (now - start_time < timeout)
                 {
-                    g_sleep(timeout / 5);
+                    g_sleep(100);
                 }
                 else
                 {
                     self->status = TRANS_STATUS_DOWN;
                     return 1;
+                }
+                if (self->is_term != NULL)
+                {
+                    if (self->is_term())
+                    {
+                        self->status = TRANS_STATUS_DOWN;
+                        return 1;
+                    }
                 }
             }
         }

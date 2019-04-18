@@ -374,6 +374,11 @@ session_start_chansrv(char *username, int display)
                      g_cfg->env_names,
                      g_cfg->env_values);
 
+        if (g_cfg->sec.restrict_outbound_clipboard == 1)
+        {
+            g_setenv("CHANSRV_RESTRICT_OUTBOUND_CLIPBOARD", "1", 1);
+        }
+
         /* executing chansrv */
         g_execvp(exe_path, (char **) (chansrv_params->items));
         /* should not get here */

@@ -24,6 +24,8 @@
 #ifndef __IRP_H
 #define __IRP_H
 
+#include "chansrv_fuse.h"
+
 typedef struct fuse_data FUSE_DATA;
 struct fuse_data
 {
@@ -42,7 +44,11 @@ struct irp
     tui32      FileId;              /* RDP client provided unique number */
     char       completion_type;     /* describes I/O type                */
     char       pathname[256];       /* absolute pathname                 */
-    char       gen_buf[1024];       /* for general use                   */
+    union
+    {
+        char   buf[1024];           /* General character data            */
+        struct file_attr fattr;     /* Used to assemble file attributes  */
+    } gen;                          /* for general use                   */
     int        type;
     FUSE_DATA *fd_head;             /* point to first FUSE opaque object */
     FUSE_DATA *fd_tail;             /* point to last FUSE opaque object  */
