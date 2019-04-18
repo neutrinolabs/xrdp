@@ -24,6 +24,9 @@
 #ifndef __IRP_H
 #define __IRP_H
 
+#ifndef _TIME_H_
+#include <time.h>
+#endif
 #include "chansrv_fuse.h"
 
 typedef struct fuse_data FUSE_DATA;
