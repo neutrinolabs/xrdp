@@ -810,7 +810,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0); /* Update capability */
     out_uint16_le(s, 0); /* Remote unshare capability */
     out_uint16_le(s, 0); /* Compression level */
-    out_uint16_le(s, 0); /* Pad */
+    out_uint8(s, 1); /* refreshRectSupport */
+    out_uint8(s, 1); /* suppressOutputSupport */
 
     /* Output bitmap capability set */
     caps_count++;

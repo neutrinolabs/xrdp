@@ -24,7 +24,7 @@
 #include "os_calls.h"
 #include "defines.h"
 
-#define CURRENT_MOD_VER 3
+#define CURRENT_MOD_VER 4
 
 struct vnc
 {
@@ -42,8 +42,11 @@ struct vnc
   int (*mod_get_wait_objs)(struct vnc* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct vnc* v);
-  tintptr mod_dumby[100 - 9]; /* align, 100 minus the number of mod
-                                 functions above */
+  int (*mod_frame_ack)(struct vnc* v, int flags, int frame_id);
+  int (*mod_suppress_output)(struct vnc* v, int suppress,
+                             int left, int top, int right, int bottom);
+  tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
+                                  functions above */
   /* server functions */
   int (*server_begin_update)(struct vnc* v);
   int (*server_end_update)(struct vnc* v);
@@ -116,4 +119,5 @@ struct vnc
   struct trans *trans;
   int got_guid;
   tui8 guid[16];
+  int suppress_output;
 };
