@@ -3261,6 +3261,9 @@ server_draw_text(struct xrdp_mod *mod, int font,
 }
 
 /*****************************************************************************/
+
+/* Note : if this is called on a multimon setup, the client is resized
+ * to a single monitor */
 int
 server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
 {
@@ -3279,10 +3282,11 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
         return 0;
     }
 
-    /* if same, don't need to do anything */
+    /* if same (and only one monitor on client) don't need to do anything */
     if (wm->client_info->width == width &&
-            wm->client_info->height == height &&
-            wm->client_info->bpp == bpp)
+        wm->client_info->height == height &&
+        wm->client_info->bpp == bpp &&
+        (wm->client_info->monitorCount == 0 || wm->client_info->multimon == 0))
     {
         return 0;
     }
