@@ -34,6 +34,7 @@
 #include "xrdp_constants.h"
 #include "xrdp_sockets.h"
 #include "chansrv_common.h"
+#include "list.h"
 
 #if defined(XRDP_FDK_AAC)
 #include <fdk-aac/aacenc_lib.h>
@@ -72,7 +73,9 @@ static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
 static FIFO   g_in_fifo;
 static int    g_bytes_in_fifo = 0;
-static int    g_unacked_frames = 0;
+static int    g_time_diff = 0;
+static int    g_best_time_diff = 0;
+
 
 static struct stream *g_stream_inp = NULL;
 static struct stream *g_stream_incoming_packet = NULL;
@@ -84,6 +87,8 @@ static int g_sent_time[256];
 static int g_sent_flag[256];
 
 static int g_bbuf_size = 1024 * 8; /* may change later */
+
+static struct list *g_ack_time_diff = 0;
 
 struct xr_wave_format_ex
 {
@@ -340,7 +345,7 @@ sound_send_training(void)
     out_uint16_le(s, SNDC_TRAINING);
     size_ptr = s->p;
     out_uint16_le(s, 0); /* size, set later */
-    time = g_time2();
+    time = g_time3();
     g_training_sent_time = time;
     out_uint16_le(s, time);
     out_uint16_le(s, 1024);
@@ -908,11 +913,10 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     out_uint16_le(s, SNDC_WAVE);
     size_ptr = s->p;
     out_uint16_le(s, 0); /* size, set later */
-    time = g_time2();
+    time = g_time3();
     out_uint16_le(s, time);
     out_uint16_le(s, format_index); /* wFormatNo */
     g_cBlockNo++;
-    g_unacked_frames++;
     out_uint8(s, g_cBlockNo);
     g_sent_time[g_cBlockNo & 0xff] = time;
     g_sent_flag[g_cBlockNo & 0xff] = 1;
@@ -956,6 +960,13 @@ sound_send_wave_data(char *data, int data_bytes)
     int res;
 
     LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
+    if (g_time_diff > g_best_time_diff + 250)
+    {
+        data_bytes = data_bytes / 4;
+        data_bytes = data_bytes & ~3;
+        g_memset(data, 0, data_bytes);
+        g_time_diff = 0;
+    }
     data_index = 0;
     error = 0;
     while (data_bytes > 0)
@@ -1005,15 +1016,7 @@ sound_send_close(void)
 
     LOG(10, ("sound_send_close:"));
 
-    /* send any left over data */
-    if (g_buf_index)
-    {
-        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0)
-        {
-            LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
-            return 1;
-        }
-    }
+    g_best_time_diff = 0;
     g_buf_index = 0;
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
 
@@ -1040,7 +1043,7 @@ sound_process_training(struct stream *s, int size)
 {
     int time_diff;
 
-    time_diff = g_time2() - g_training_sent_time;
+    time_diff = g_time3() - g_training_sent_time;
     LOG(0, ("sound_process_training: round trip time %u", time_diff));
     return 0;
 }
@@ -1052,42 +1055,40 @@ sound_process_wave_confirm(struct stream *s, int size)
 {
     int wTimeStamp;
     int cConfirmedBlockNo;
-    int cleared_count;
     int time;
     int time_diff;
-    int block_no;
-    int block_no_clamped;
-    int found;
     int index;
+    int acc;
 
-    time = g_time2();
+    time = g_time3();
     in_uint16_le(s, wTimeStamp);
     in_uint8(s, cConfirmedBlockNo);
     time_diff = time - g_sent_time[cConfirmedBlockNo & 0xff];
-    cleared_count = 0;
-    found = 0;
-    block_no = g_cBlockNo;
-    for (index = 0; index < g_unacked_frames; index++)
-    {
-        block_no_clamped = block_no & 0xff;
-        if ((cConfirmedBlockNo == block_no_clamped) || found)
-        {
-            found = 1;
-            if (g_sent_flag[block_no_clamped] & 1)
-            {
-                LOG(10, ("sound_process_wave_confirm: clearing %d",
-                    block_no_clamped));
-                g_sent_flag[block_no_clamped] &= ~1;
-                cleared_count++;
-            }
-        }
-        block_no--;
-    }
+    g_sent_flag[cConfirmedBlockNo & 0xff] &= ~1;
+
     LOG(10, ("sound_process_wave_confirm: wTimeStamp %d, "
-        "cConfirmedBlockNo %d time diff %d cleared_count %d "
-        "g_unacked_frames %d", wTimeStamp, cConfirmedBlockNo, time_diff,
-        cleared_count, g_unacked_frames));
-    g_unacked_frames -= cleared_count;
+        "cConfirmedBlockNo %d time diff %d",
+        wTimeStamp, cConfirmedBlockNo, time_diff));
+
+    acc = 0;
+    list_add_item(g_ack_time_diff, time_diff);
+    if (g_ack_time_diff->count >= 50)
+    {
+        while (g_ack_time_diff->count > 50)
+        {
+            list_remove_item(g_ack_time_diff, 0);
+        }
+        for (index = 0; index < g_ack_time_diff->count; index++)
+        {
+            acc += list_get_item(g_ack_time_diff, index);
+        }
+        acc = acc / g_ack_time_diff->count;
+        if ((g_best_time_diff < 1) || (g_best_time_diff > acc))
+        {
+            g_best_time_diff = acc;
+        }
+    }
+    g_time_diff = acc;
     return 0;
 }
 
@@ -1241,6 +1242,12 @@ sound_init(void)
 
     g_client_does_mp3lame = 0;
     g_client_mp3lame_index = 0;
+
+    if (g_ack_time_diff == 0)
+    {
+        g_ack_time_diff = list_create();
+    }
+    list_clear(g_ack_time_diff);
 
     return 0;
 }
