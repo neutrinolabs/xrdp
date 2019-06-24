@@ -84,7 +84,6 @@ static struct stream *g_stream_incoming_packet = NULL;
 static char g_buffer[MAX_BBUF_SIZE];
 static int g_buf_index = 0;
 static int g_sent_time[256];
-static int g_sent_flag[256];
 
 static int g_bbuf_size = 1024 * 8; /* may change later */
 
@@ -888,18 +887,6 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
         return 1;
     }
 
-    LOG(20, ("sound_send_wave_data_chunk: g_sent_flag[%d] = %d",
-            g_cBlockNo + 1, g_sent_flag[(g_cBlockNo + 1) & 0xff]));
-    if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
-    {
-        LOG(10, ("sound_send_wave_data_chunk: no room"));
-        return 2;
-    }
-    else
-    {
-        LOG(10, ("sound_send_wave_data_chunk: got room"));
-    }
-
     /* compress, if available */
     format_index = g_current_client_format_index;
     data_bytes = sound_wave_compress(data, data_bytes, &format_index);
@@ -919,7 +906,6 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     g_cBlockNo++;
     out_uint8(s, g_cBlockNo);
     g_sent_time[g_cBlockNo & 0xff] = time;
-    g_sent_flag[g_cBlockNo & 0xff] = 1;
 
     LOG(10, ("sound_send_wave_data_chunk: sending time %d, g_cBlockNo %d",
              time & 0xffff, g_cBlockNo & 0xff));
@@ -1018,7 +1004,6 @@ sound_send_close(void)
 
     g_best_time_diff = 0;
     g_buf_index = 0;
-    g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
 
     /* send close msg */
     make_stream(s);
@@ -1064,7 +1049,6 @@ sound_process_wave_confirm(struct stream *s, int size)
     in_uint16_le(s, wTimeStamp);
     in_uint8(s, cConfirmedBlockNo);
     time_diff = time - g_sent_time[cConfirmedBlockNo & 0xff];
-    g_sent_flag[cConfirmedBlockNo & 0xff] &= ~1;
 
     LOG(10, ("sound_process_wave_confirm: wTimeStamp %d, "
         "cConfirmedBlockNo %d time diff %d",
@@ -1220,7 +1204,6 @@ sound_init(void)
 {
     LOG(0, ("sound_init:"));
 
-    g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
     g_stream_incoming_packet = NULL;
 
     /* init sound output */
