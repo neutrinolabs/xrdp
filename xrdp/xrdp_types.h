@@ -537,6 +537,7 @@ struct xrdp_startup_params
   int tcp_recv_buffer_bytes;
   int tcp_nodelay;
   int tcp_keepalive;
+  int use_vsock;
 };
 
 /*

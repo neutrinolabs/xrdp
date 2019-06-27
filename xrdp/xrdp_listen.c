@@ -213,6 +213,12 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
                         val = (char *)list_get_item(values, index);
                         startup_params->tcp_recv_buffer_bytes = g_atoi(val);
                     }
+
+                    if (g_strcasecmp(val, "use_vsock") == 0)
+                    {
+                        val = (char *)list_get_item(values, index);
+                        startup_params->use_vsock = g_text2bool(val);
+                    }
                 }
             }
         }
@@ -543,6 +549,23 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             str += bytes;
             lindex += bytes;
             *mode = TRANS_MODE_VSOCK;
+            *index = lindex;
+            return 0;
+        }
+        else if ((str[0] >= '0') && (str[0] <= '9'))
+        {
+            g_strncpy(address, "0.0.0.0", 127);
+            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            str += bytes;
+            lindex += bytes;
+            if (startup_params->use_vsock)
+            {
+                *mode = TRANS_MODE_VSOCK;
+            }
+            else
+            {
+                *mode = TRANS_MODE_TCP;
+            }
             *index = lindex;
             return 0;
         }
