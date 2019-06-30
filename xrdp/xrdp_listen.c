@@ -470,7 +470,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            *mode = TRANS_MODE_TCP;
+            *mode = TRANS_MODE_TCP4;
             *index = lindex;
             return 0;
         }
@@ -482,7 +482,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            *mode = TRANS_MODE_TCP;
+            *mode = TRANS_MODE_TCP4;
             *index = lindex;
             return 0;
         }
@@ -496,7 +496,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            *mode = TRANS_MODE_TCP;
+            *mode = TRANS_MODE_TCP4;
             *index = lindex;
             return 0;
         }
@@ -508,7 +508,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            *mode = TRANS_MODE_TCP;
+            *mode = TRANS_MODE_TCP6;
             *index = lindex;
             return 0;
         }
@@ -520,7 +520,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            *mode = TRANS_MODE_TCP;
+            *mode = TRANS_MODE_TCP6;
             *index = lindex;
             return 0;
         }
@@ -534,7 +534,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
             bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            *mode = TRANS_MODE_TCP;
+            *mode = TRANS_MODE_TCP6;
             *index = lindex;
             return 0;
         }

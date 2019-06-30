@@ -3823,3 +3823,132 @@ g_mirror_memcpy(void *dst, const void *src, int len)
     return 0;
 }
 
+/*****************************************************************************/
+int
+g_tcp4_socket(void)
+{
+#if defined(XRDP_ENABLE_IPV6ONLY)
+    return -1;
+#else
+    int rv;
+    int option_value;
+    socklen_t option_len;
+
+    rv = socket(AF_INET, SOCK_STREAM, 0);
+    if (rv < 0)
+    {
+        return -1;
+    }
+    option_len = sizeof(option_value);
+    if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
+                   (char *) &option_value, &option_len) == 0)
+    {
+        if (option_value == 0)
+        {
+            option_value = 1;
+            option_len = sizeof(option_value);
+            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
+                           (char *) &option_value, option_len) < 0)
+            {
+            }
+        }
+    }
+    return rv;
+#endif
+}
+
+/*****************************************************************************/
+int
+g_tcp4_bind(int sck, const char *port, const char *address)
+{
+#if defined(XRDP_ENABLE_IPV6ONLY)
+    return -1;
+#else
+    struct sockaddr_in s;
+
+    memset(&s, 0, sizeof(s));
+    s.sin_family = AF_INET;
+    s.sin_addr.s_addr = htonl(INADDR_ANY);
+    s.sin_port = htons((uint16_t) atoi(port));
+    if (bind(sck, (struct sockaddr*) &s, sizeof(s)) == 0)
+    {
+        return 0;
+    }
+    return -1;
+#endif
+}
+
+/*****************************************************************************/
+int
+g_tcp6_socket(void)
+{
+#if defined(XRDP_ENABLE_IPV6)
+    int rv;
+    int option_value;
+    socklen_t option_len;
+
+    rv = socket(AF_INET6, SOCK_STREAM, 0);
+    if (rv < 0)
+    {
+        return -1;
+    }
+    option_len = sizeof(option_value);
+    if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY,
+                   (char *) &option_value, &option_len) == 0)
+    {
+#if defined(XRDP_ENABLE_IPV6ONLY)
+        if (option_value == 0)
+        {
+            option_value = 1;
+#else
+        if (option_value != 0)
+        {
+            option_value = 0;
+#endif
+            option_len = sizeof(option_value);
+            if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY,
+                           (char *) &option_value, option_len) < 0)
+            {
+            }
+        }
+    }
+    option_len = sizeof(option_value);
+    if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
+                   (char *) &option_value, &option_len) == 0)
+    {
+        if (option_value == 0)
+        {
+            option_value = 1;
+            option_len = sizeof(option_value);
+            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
+                           (char *) &option_value, option_len) < 0)
+            {
+            }
+        }
+    }
+    return rv;
+#else
+    return -1;
+#endif
+}
+
+/*****************************************************************************/
+int
+g_tcp6_bind(int sck, const char *port, const char *address)
+{
+#if defined(XRDP_ENABLE_IPV6)
+    struct sockaddr_in6 sa;
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sin6_family = AF_INET6;
+    sa.sin6_addr = in6addr_any;
+    sa.sin6_port = htons((uint16_t) atoi(port));
+    if (bind(sck, (struct sockaddr *) &sa, sizeof(sa)) == 0)
+    {
+        return 0;
+    }
+    return -1;
+#else
+    return -1;
+#endif
+}
