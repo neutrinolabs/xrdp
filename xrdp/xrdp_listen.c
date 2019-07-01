@@ -157,6 +157,8 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
 {
     int fd;
     int index;
+    int port_override;
+    int fork_override;
     char *val;
     struct list *names;
     struct list *values;
@@ -164,6 +166,8 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
     struct xrdp_startup_params *startup_params;
 
     startup_params = self->startup_params;
+    port_override = startup_params->port[0] != 0;
+    fork_override = startup_params->fork;
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
     if (fd != -1)
@@ -181,13 +185,20 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
                 {
                     if (g_strcasecmp(val, "port") == 0)
                     {
-                        val = (char *)list_get_item(values, index);
-                        g_strncpy(startup_params->port, val, sizeof(startup_params->port) - 1);
+                        if (port_override == 0)
+                        {
+                            val = (char *) list_get_item(values, index);
+                            g_strncpy(startup_params->port, val,
+                                      sizeof(startup_params->port) - 1);
+                        }
                     }
                     if (g_strcasecmp(val, "fork") == 0)
                     {
-                        val = (char *)list_get_item(values, index);
-                        startup_params->fork = g_text2bool(val);
+                        if (fork_override == 0)
+                        {
+                            val = (char *) list_get_item(values, index);
+                            startup_params->fork = g_text2bool(val);
+                        }
                     }
 
                     if (g_strcasecmp(val, "tcp_nodelay") == 0)
@@ -591,7 +602,7 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
 static int
 xrdp_listen_process_startup_params(struct xrdp_listen *self)
 {
-    int mode; /* TRANS_MODE_TCP, TRANS_MODE_UNIX, TRANS_MODE_VSOCK */
+    int mode; /* TRANS_MODE_TCP*, TRANS_MODE_UNIX, TRANS_MODE_VSOCK */
     int error;
     int cont;
     int bytes;
@@ -631,7 +642,9 @@ xrdp_listen_process_startup_params(struct xrdp_listen *self)
             xrdp_listen_stop_all_listen(self);
             return 1;
         }
-        if (mode == TRANS_MODE_TCP)
+        if ((mode == TRANS_MODE_TCP) ||
+            (mode == TRANS_MODE_TCP4) ||
+            (mode == TRANS_MODE_TCP6))
         {
             if (startup_params->tcp_nodelay)
             {
@@ -928,7 +941,22 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
 /* returns 0 if xrdp can listen
    returns 1 if xrdp cannot listen */
 int
-xrdp_listen_test(void)
+xrdp_listen_test(struct xrdp_startup_params *startup_params)
 {
+    struct xrdp_listen *xrdp_listen;
+
+    xrdp_listen = xrdp_listen_create();
+    xrdp_listen->startup_params = startup_params;
+    if (xrdp_listen_get_startup_params(xrdp_listen) != 0)
+    {
+        xrdp_listen_delete(xrdp_listen);
+        return 1;
+    }
+    if (xrdp_listen_process_startup_params(xrdp_listen) != 0)
+    {
+        xrdp_listen_delete(xrdp_listen);
+        return 1;
+    }
+    xrdp_listen_delete(xrdp_listen);
     return 0;
 }

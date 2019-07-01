@@ -170,7 +170,7 @@ xrdp_listen_delete(struct xrdp_listen* self);
 int
 xrdp_listen_main_loop(struct xrdp_listen* self);
 int
-xrdp_listen_test(void);
+xrdp_listen_test(struct xrdp_startup_params *startup_params);
 
 /* xrdp_region.c */
 struct xrdp_region*

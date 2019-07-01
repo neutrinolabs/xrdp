@@ -575,6 +575,16 @@ main(int argc, char **argv)
 
     if (!no_daemon)
     {
+        /* if can't listen, exit with failure status */
+        if (xrdp_listen_test(startup_params) != 0)
+        {
+            log_message(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
+                                         "possibly address already in use.");
+            g_deinit();
+            /* must exit with failure status,
+               or systemd cannot detect xrdp daemon couldn't start properly */
+            g_exit(1);
+        }
         /* start of daemonizing code */
         pid = g_fork();
 
@@ -587,16 +597,6 @@ main(int argc, char **argv)
 
         if (0 != pid)
         {
-            /* if can't listen, exit with failure status */
-            if (xrdp_listen_test() != 0)
-            {
-                log_message(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
-                                             "possibly address already in use.");
-                g_deinit();
-                /* must exit with failure status,
-                   or systemd cannot detect xrdp daemon couldn't start properly */
-                g_exit(1);
-            }
             g_writeln("daemon process %d started ok", pid);
             /* exit, this is the main process */
             g_deinit();
