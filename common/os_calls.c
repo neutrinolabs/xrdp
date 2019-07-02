@@ -1041,6 +1041,25 @@ g_sck_vsock_bind(int sck, const char *port)
 #endif
 }
 
+/*****************************************************************************/
+int
+g_sck_vsock_bind_address(int sck, const char *port, const char *address)
+{
+#if defined(XRDP_ENABLE_VSOCK)
+    struct sockaddr_vm s;
+
+    g_memset(&s, 0, sizeof(struct sockaddr_vm));
+    s.svm_family = AF_VSOCK;
+    s.svm_port = atoi(port);
+    s.svm_cid = atoi(address);
+
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_vm));
+#else
+    return -1;
+#endif
+}
+
+
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* Helper function for g_tcp_bind_address.                                   */
@@ -3859,7 +3878,7 @@ g_tcp4_socket(void)
 
 /*****************************************************************************/
 int
-g_tcp4_bind(int sck, const char *port, const char *address)
+g_tcp4_bind_address(int sck, const char *port, const char *address)
 {
 #if defined(XRDP_ENABLE_IPV6ONLY)
     return -1;
@@ -3870,11 +3889,15 @@ g_tcp4_bind(int sck, const char *port, const char *address)
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_ANY);
     s.sin_port = htons((uint16_t) atoi(port));
-    if (bind(sck, (struct sockaddr*) &s, sizeof(s)) == 0)
+    if (inet_aton(address, &s.sin_addr) < 0)
     {
-        return 0;
+        return -1; /* bad address */
     }
-    return -1;
+    if (bind(sck, (struct sockaddr*) &s, sizeof(s)) < 0)
+    {
+        return -1;
+    }
+    return 0;
 #endif
 }
 
@@ -3934,20 +3957,37 @@ g_tcp6_socket(void)
 
 /*****************************************************************************/
 int
-g_tcp6_bind(int sck, const char *port, const char *address)
+g_tcp6_bind_address(int sck, const char *port, const char *address)
 {
 #if defined(XRDP_ENABLE_IPV6)
-    struct sockaddr_in6 sa;
+    int rv;
+    int error;
+    struct addrinfo hints;
+    struct addrinfo *list;
+    struct addrinfo *i;
 
-    memset(&sa, 0, sizeof(sa));
-    sa.sin6_family = AF_INET6;
-    sa.sin6_addr = in6addr_any;
-    sa.sin6_port = htons((uint16_t) atoi(port));
-    if (bind(sck, (struct sockaddr *) &sa, sizeof(sa)) == 0)
+    rv = -1;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags = 0;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    error = getaddrinfo(address, port, &hints, &list);
+    if (error == 0)
     {
-        return 0;
+        i = list;
+        while ((i != NULL) && (rv < 0))
+        {
+            rv = bind(sck, i->ai_addr, i->ai_addrlen);
+            i = i->ai_next;
+        }
+        freeaddrinfo(list);
     }
-    return -1;
+    else
+    {
+        return -1;
+    }
+    return rv;
 #else
     return -1;
 #endif

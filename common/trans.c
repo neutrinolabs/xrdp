@@ -875,7 +875,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 
         g_tcp_set_non_blocking(self->sck);
 
-        if (g_sck_vsock_bind(self->sck, port) == 0)
+        if (g_sck_vsock_bind_address(self->sck, port, address) == 0)
         {
             if (g_tcp_listen(self->sck) == 0)
             {
@@ -893,7 +893,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
             return 1;
         }
         g_tcp_set_non_blocking(self->sck);
-        if (g_tcp4_bind(self->sck, port, address) == 0)
+        if (g_tcp4_bind_address(self->sck, port, address) == 0)
         {
             if (g_tcp_listen(self->sck) == 0)
             {
@@ -911,7 +911,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
             return 1;
         }
         g_tcp_set_non_blocking(self->sck);
-        if (g_tcp6_bind(self->sck, port, address) == 0)
+        if (g_tcp6_bind_address(self->sck, port, address) == 0)
         {
             if (g_tcp_listen(self->sck) == 0)
             {

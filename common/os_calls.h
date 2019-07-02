@@ -71,6 +71,7 @@ int      g_sck_set_non_blocking(int sck);
 int      g_tcp_bind(int sck, const char *port);
 int      g_sck_local_bind(int sck, const char* port);
 int      g_sck_vsock_bind(int sck, const char* port);
+int      g_sck_vsock_bind_address(int sck, const char *port, const char *address);
 int      g_tcp_bind_address(int sck, const char* port, const char* address);
 int      g_sck_listen(int sck);
 int      g_tcp_accept(int sck);
@@ -184,9 +185,9 @@ int      g_shmdt(const void *shmaddr);
 int      g_gethostname(char *name, int len);
 int      g_mirror_memcpy(void *dst, const void *src, int len);
 int      g_tcp4_socket(void);
-int      g_tcp4_bind(int sck, const char *port, const char *address);
+int      g_tcp4_bind_address(int sck, const char *port, const char *address);
 int      g_tcp6_socket(void);
-int      g_tcp6_bind(int sck, const char *port, const char *address);
+int      g_tcp6_bind_address(int sck, const char *port, const char *address);
 
 /* glib-style wrappers */
 #define g_new(struct_type, n_structs) \

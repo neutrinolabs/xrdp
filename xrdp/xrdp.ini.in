@@ -5,18 +5,24 @@ ini_version=1
 ; fork a new process for each incoming connection
 fork=true
 
-; ports to listen on, examples
+; ports to listen on, number alone means listen on all interfaces
+; 0.0.0.0 or :: if ipv6 is configured
+; space between multiple occurrences
+; examples
+;3389
 ;unix://./tmp/xrdp.socket
-;tcp://.:3389                      (<- 127.0.0.1:3389)
-;tcp://:3389                       (<- *:3389)
-;tcp://<any ipv4 format addr>:3389 (<- 192.168.1.1:3389)
-;tcp6://.:3389
-;tcp6://:3389
-;tcp6://{<any ipv6 format addr>}:3389
+;tcp://.:3389                           127.0.0.1:3389
+;tcp://:3389                            *:3389
+;tcp://<any ipv4 format addr>:3389      192.168.1.1:3389
+;tcp6://.:3389                          ::1:3389
+;tcp6://:3389                           *:3389
+;tcp6://{<any ipv6 format addr>}:3389   {FC00:0:0:0:0:0:0:1}:3389
 ;vsock://<cid>:<port>
-port=tcp://:3389
+port=3389
 
 ; 'port' above should be connected to with vsock instead of tcp
+; use this only with number alone in port above
+; prefer use vsock://<cid>:<port> above
 use_vsock=false
 ; regulate if the listening socket use socket option tcp_nodelay
 ; no buffering will be performed in the TCP stack
