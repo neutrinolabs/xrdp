@@ -798,7 +798,6 @@ xrdp_listen_conn_in(struct trans *self, struct trans *new_self)
 int
 xrdp_listen_main_loop(struct xrdp_listen *self)
 {
-    int error;
     int robjs_count;
     int cont;
     int index;
@@ -934,7 +933,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     }
 
     self->status = -1;
-    return error;
+    return 0;
 }
 
 /*****************************************************************************/
