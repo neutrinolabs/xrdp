@@ -62,6 +62,7 @@ xrdp_listen_create(void)
     xrdp_listen_create_pro_done(self);
     self->trans_list = list_create();
     self->process_list = list_create();
+    self->fork_list = list_create();
 
     if (g_process_sem == 0)
     {
@@ -99,6 +100,7 @@ xrdp_listen_delete(struct xrdp_listen *self)
 
     g_delete_wait_obj(self->pro_done_event);
     list_delete(self->process_list);
+    list_delete(self->fork_list);
     g_free(self);
 }
 
@@ -248,6 +250,10 @@ xrdp_listen_stop_all_listen(struct xrdp_listen *self)
     int index;
     struct trans *ltrans;
 
+    if (self->trans_list == NULL)
+    {
+        return 0;
+    }
     for (index = 0; index < self->trans_list->count; index++)
     {
         ltrans = (struct trans *)
@@ -748,10 +754,11 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
         process->server_trans = server_trans;
         g_process = process;
         xrdp_process_run(0);
+        tc_sem_dec(g_process_sem);
         xrdp_process_delete(process);
         /* mark this process to exit */
         g_set_term(1);
-        return 0;
+        return 1;
     }
 
     /* parent */
@@ -771,7 +778,8 @@ xrdp_listen_conn_in(struct trans *self, struct trans *new_self)
 
     if (lis->startup_params->fork)
     {
-        return xrdp_listen_fork(lis, new_self);
+        list_add_item(lis->fork_list, (intptr_t) new_self);
+        return 0;
     }
 
     process = xrdp_process_create(lis, lis->pro_done_event);
@@ -881,6 +889,20 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             ltrans = (struct trans *)
                      list_get_item(self->trans_list, index);
             if (trans_check_wait_objs(ltrans) != 0)
+            {
+                cont = 0;
+                break;
+            }
+        }
+        if (cont == 0)
+        {
+            break;
+        }
+        while (self->fork_list->count > 0)
+        {
+            ltrans = (struct trans *) list_get_item(self->fork_list, 0);
+            list_remove_item(self->fork_list, 0);
+            if (xrdp_listen_fork(self, ltrans) != 0)
             {
                 cont = 0;
                 break;

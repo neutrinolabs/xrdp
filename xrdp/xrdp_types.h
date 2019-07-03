@@ -406,7 +406,8 @@ struct xrdp_listen
 {
   int status;
   struct list *trans_list; /* list of struct trans* */
-  struct list* process_list;
+  struct list *process_list;
+  struct list *fork_list;
   tbus pro_done_event;
   struct xrdp_startup_params* startup_params;
 };
