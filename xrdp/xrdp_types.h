@@ -405,8 +405,9 @@ struct xrdp_process
 struct xrdp_listen
 {
   int status;
-  struct trans* listen_trans; /* in tcp listen mode */
-  struct list* process_list;
+  struct list *trans_list; /* list of struct trans* */
+  struct list *process_list;
+  struct list *fork_list;
   tbus pro_done_event;
   struct xrdp_startup_params* startup_params;
 };
@@ -527,14 +528,17 @@ struct xrdp_mod_data
 
 struct xrdp_startup_params
 {
-  char port[128];
+  char port[1024];
   int kill;
   int no_daemon;
   int help;
   int version;
   int fork;
-  int send_buffer_bytes;
-  int recv_buffer_bytes;
+  int tcp_send_buffer_bytes;
+  int tcp_recv_buffer_bytes;
+  int tcp_nodelay;
+  int tcp_keepalive;
+  int use_vsock;
 };
 
 /*

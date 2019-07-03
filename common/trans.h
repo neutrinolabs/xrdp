@@ -24,9 +24,11 @@
 #include "arch.h"
 #include "parse.h"
 
-#define TRANS_MODE_TCP 1
+#define TRANS_MODE_TCP 1 /* tcp6 if defined, else tcp4 */
 #define TRANS_MODE_UNIX 2
 #define TRANS_MODE_VSOCK 3
+#define TRANS_MODE_TCP4 4 /* tcp4 only */
+#define TRANS_MODE_TCP6 6 /* tcp6 only */
 
 #define TRANS_TYPE_LISTENER 1
 #define TRANS_TYPE_SERVER 2
