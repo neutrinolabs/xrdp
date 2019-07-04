@@ -70,7 +70,9 @@ xrdp_chansrv_SOURCES = \
   sound.c \
   sound.h \
   xcommon.c \
-  xcommon.h
+  xcommon.h \
+  audin.c \
+  audin.h
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)
