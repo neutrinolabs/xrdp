@@ -369,6 +369,10 @@ static int
 audin_close_response(int chan_id)
 {
     LOG(0, ("audin_close_response:"));
+    g_audio_chanid = 0;
+    cleanup_client_formats();
+    free_stream(g_in_s);
+    g_in_s = NULL;
     return 0;
 }
 
@@ -437,8 +441,6 @@ audin_data(int chan_id, char *data, int bytes)
 int
 audin_init(void)
 {
-    int error;
-
     LOG(0, ("audin_init:"));
     g_memset(&g_audin_info, 0, sizeof(g_audin_info));
     g_audin_info.open_response = audin_open_response;
@@ -447,9 +449,38 @@ audin_init(void)
     g_audin_info.data = audin_data;
     g_audio_chanid = 0;
     g_in_s = NULL;
+    return 0;
+}
+
+/*****************************************************************************/
+int
+audin_deinit(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int
+audin_start(void)
+{
+    int error;
+
+    LOG(0, ("audin_start:"));
+    if (g_audio_chanid != 0)
+    {
+        return 1;
+    }
     error = chansrv_drdynvc_open(AUDIN_NAME, AUDIN_FLAGS,
                                  &g_audin_info, /* callback functions */
                                  &g_audio_chanid); /* chansrv chan_id */
-    LOG(0, ("audin_init: error %d", error));
+    LOG(0, ("audin_start: error %d", error));
     return error;
+}
+
+/*****************************************************************************/
+int
+audin_stop(void)
+{
+    chansrv_drdynvc_close(g_audio_chanid);
+    return 0;
 }

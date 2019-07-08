@@ -24,5 +24,11 @@
 
 int
 audin_init(void);
+int
+audin_deinit(void);
+int
+audin_start(void);
+int
+audin_stop(void);
 
 #endif
