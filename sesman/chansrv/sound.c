@@ -1563,7 +1563,10 @@ sound_process_input_formats(struct stream *s, int size)
 
     LOG(10, ("sound_process_input_formats: size=%d", size));
 
-    g_rdpsnd_can_rec = 1;
+    if (g_getenv("XRDP_NO_RDPSND_REC") == NULL)
+    {
+        g_rdpsnd_can_rec = 1;
+    }
     in_uint8s(s, 8); /* skip 8 bytes */
     in_uint16_le(s, num_formats);
     in_uint8s(s, 2); /* skip version */
