@@ -298,7 +298,7 @@ audin_process_open_reply(int chan_id, struct stream *s)
 static int
 audin_process_incoming_data(int chan_id, struct stream *s)
 {
-    LOG(0, ("audin_process_incoming_data:"));
+    LOG(10, ("audin_process_incoming_data:"));
     return 0;
 }
 
@@ -310,7 +310,7 @@ audin_process_data(int chan_id, struct stream *s)
     struct stream *ls;
 
     data_bytes = (int) (s->end - s->p);
-    LOG(0, ("audin_process_data: data_bytes %d", data_bytes));
+    LOG(10, ("audin_process_data: data_bytes %d", data_bytes));
 
     xstream_new(ls, data_bytes);
     g_memcpy(ls->data, s->p, data_bytes);
@@ -344,14 +344,14 @@ audin_process_msg(int chan_id, struct stream *s)
 {
     int code;
 
-    LOG(0, ("audin_process_msg:"));
+    LOG(10, ("audin_process_msg:"));
     if (!s_check_rem(s, 1))
     {
         LOG(0, ("audin_process_msg: parse error"));
         return 1;
     }
     in_uint8(s, code);
-    LOG(0, ("audin_process_msg: code %d", code));
+    LOG(10, ("audin_process_msg: code %d", code));
     switch (code)
     {
         case MSG_SNDIN_VERSION:
@@ -404,7 +404,7 @@ audin_data_fragment(int chan_id, char *data, int bytes)
     int rv;
     int left;
 
-    LOG(0, ("audin_data_fragment:"));
+    LOG(10, ("audin_data_fragment:"));
     if (!s_check_rem(g_in_s, bytes))
     {
         left = (int) (g_in_s->end - g_in_s->p);
@@ -427,7 +427,7 @@ audin_data_fragment(int chan_id, char *data, int bytes)
 static int
 audin_data_first(int chan_id, char *data, int bytes, int total_bytes)
 {
-    LOG(0, ("audin_data_first:"));
+    LOG(10, ("audin_data_first:"));
     if (g_in_s != NULL)
     {
         LOG(0, ("audin_data_first: warning g_in_s is not nil"));
@@ -445,7 +445,7 @@ audin_data(int chan_id, char *data, int bytes)
 {
     struct stream ls;
 
-    LOG(0, ("audin_data:"));
+    LOG(10, ("audin_data:"));
     //g_hexdump(data, bytes);
     if (g_in_s == NULL)
     {
