@@ -241,6 +241,8 @@ static struct xr_wave_format_ex *g_wave_inp_formats[] =
     0
 };
 
+static int g_rdpsnd_can_rec = 0;
+
 static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
 
@@ -1561,6 +1563,7 @@ sound_process_input_formats(struct stream *s, int size)
 
     LOG(10, ("sound_process_input_formats: size=%d", size));
 
+    g_rdpsnd_can_rec = 1;
     in_uint8s(s, 8); /* skip 8 bytes */
     in_uint16_le(s, num_formats);
     in_uint8s(s, 2); /* skip version */
@@ -1773,13 +1776,25 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     }
     else if (cmd == PA_CMD_START_REC)
     {
-        //sound_input_start_recording();
-        audin_start();
+        if (g_rdpsnd_can_rec)
+        {
+            sound_input_start_recording();
+        }
+        else
+        {
+            audin_start();
+        }
     }
     else if (cmd == PA_CMD_STOP_REC)
     {
-        //sound_input_stop_recording();
-        audin_stop();
+        if (g_rdpsnd_can_rec)
+        {
+            sound_input_stop_recording();
+        }
+        else
+        {
+            audin_stop();
+        }
     }
 
     xstream_free(s);
