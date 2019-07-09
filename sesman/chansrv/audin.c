@@ -31,6 +31,7 @@
 #include "chansrv.h"
 #include "log.h"
 #include "xrdp_constants.h"
+#include "fifo.h"
 
 #define MSG_SNDIN_VERSION       1
 #define MSG_SNDIN_FORMATS       2
@@ -44,6 +45,9 @@
 
 #define AUDIN_NAME "AUDIO_INPUT"
 #define AUDIN_FLAGS  1 /* WTS_CHANNEL_OPTION_DYNAMIC */
+
+extern FIFO g_in_fifo; /* in sound.c */
+extern int g_bytes_in_fifo; /* in sound.c */
 
 struct xr_wave_format_ex
 {
@@ -99,6 +103,7 @@ cleanup_client_formats(void)
     {
         g_free(g_client_formats[index]->data);
         g_free(g_client_formats[index]);
+        index++;
     }
     g_free(g_client_formats);
     g_client_formats = NULL;
@@ -147,17 +152,19 @@ audio_send_formats(int chan_id)
     for (index = 0; index < num_formats; index++)
     {
         wf = g_server_formats[index];
+        LOG(0, ("audio_send_formats: sending format wFormatTag 0x%4.4x "
+            "nChannels %d nSamplesPerSec %d",
+            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec));
         out_uint16_le(s, wf->wFormatTag);
         out_uint16_le(s, wf->nChannels);
         out_uint32_le(s, wf->nSamplesPerSec);
         out_uint32_le(s, wf->nAvgBytesPerSec);
         out_uint16_le(s, wf->nBlockAlign);
         out_uint16_le(s, wf->wBitsPerSample);
-        bytes = wf->cbSize;
-        out_uint16_le(s, bytes);
-        if (bytes > 0)
+        out_uint16_le(s, wf->cbSize);
+        if (wf->cbSize > 0)
         {
-            out_uint8p(s, wf->data, bytes);
+            out_uint8p(s, wf->data, wf->cbSize);
         }
     }
     s_mark_end(s);
@@ -253,6 +260,9 @@ audin_process_formats(int chan_id, struct stream *s)
         in_uint16_le(s, wf->nBlockAlign);
         in_uint16_le(s, wf->wBitsPerSample);
         in_uint16_le(s, wf->cbSize);
+        LOG(0, ("audin_process_formats: recved format wFormatTag 0x%4.4x "
+            "nChannels %d nSamplesPerSec %d",
+            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec));
         if (wf->cbSize > 0)
         {
             if (!s_check_rem(s, wf->cbSize))
@@ -280,7 +290,7 @@ audin_process_open_reply(int chan_id, struct stream *s)
         return 1;
     }
     in_uint32_le(s, result);
-    LOG(0, ("audin_process_open_reply: result %d", result));
+    LOG(0, ("audin_process_open_reply: result 0x%8.8x", result));
     return 0;
 }
 
@@ -297,9 +307,18 @@ static int
 audin_process_data(int chan_id, struct stream *s)
 {
     int data_bytes;
+    struct stream *ls;
 
     data_bytes = (int) (s->end - s->p);
     LOG(0, ("audin_process_data: data_bytes %d", data_bytes));
+
+    xstream_new(ls, data_bytes);
+    g_memcpy(ls->data, s->p, data_bytes);
+    ls->p += data_bytes;
+    s_mark_end(ls);
+    fifo_insert(&g_in_fifo, (void *) ls);
+    g_bytes_in_fifo += data_bytes;
+
     return 0;
 }
 
@@ -314,6 +333,8 @@ audin_process_format_change(int chan_id, struct stream *s)
         return 1;
     }
     in_uint32_le(s, g_current_format);
+    LOG(0, ("audin_process_format_change: g_current_format %d",
+        g_current_format));
     return 0;
 }
 
@@ -356,7 +377,7 @@ audin_process_msg(int chan_id, struct stream *s)
 static int
 audin_open_response(int chan_id, int creation_status)
 {
-    LOG(0, ("audin_open_response: creation_status %d", creation_status));
+    LOG(0, ("audin_open_response: creation_status 0x%8.8x", creation_status));
     if (creation_status == 0)
     {
         return audio_send_version(chan_id);
@@ -456,6 +477,7 @@ audin_init(void)
 int
 audin_deinit(void)
 {
+    LOG(0, ("audin_deinit:"));
     return 0;
 }
 
@@ -464,16 +486,25 @@ int
 audin_start(void)
 {
     int error;
+    struct stream* s;
 
     LOG(0, ("audin_start:"));
     if (g_audio_chanid != 0)
     {
         return 1;
     }
+
+    /* if there is any data in FIFO, discard it */
+    while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
+    {
+        xstream_free(s);
+    }
+    g_bytes_in_fifo = 0;
+
     error = chansrv_drdynvc_open(AUDIN_NAME, AUDIN_FLAGS,
                                  &g_audin_info, /* callback functions */
                                  &g_audio_chanid); /* chansrv chan_id */
-    LOG(0, ("audin_start: error %d", error));
+    LOG(0, ("audin_start: error %d g_audio_chanid %d", error, g_audio_chanid));
     return error;
 }
 
@@ -481,6 +512,7 @@ audin_start(void)
 int
 audin_stop(void)
 {
+    LOG(0, ("audin_stop:"));
     chansrv_drdynvc_close(g_audio_chanid);
     return 0;
 }
