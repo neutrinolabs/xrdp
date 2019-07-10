@@ -35,6 +35,7 @@
 #include "xrdp_sockets.h"
 #include "chansrv_common.h"
 #include "list.h"
+#include "audin.h"
 
 #if defined(XRDP_FDK_AAC)
 #include <fdk-aac/aacenc_lib.h>
@@ -71,8 +72,8 @@ static struct trans *g_audio_c_trans_in = 0;  /* connection */
 static int    g_training_sent_time = 0;
 static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
-static FIFO   g_in_fifo;
-static int    g_bytes_in_fifo = 0;
+FIFO   g_in_fifo;
+int    g_bytes_in_fifo = 0;
 static int    g_time_diff = 0;
 static int    g_best_time_diff = 0;
 
@@ -239,6 +240,8 @@ static struct xr_wave_format_ex *g_wave_inp_formats[] =
     &g_pcm_inp_22050,
     0
 };
+
+static int g_rdpsnd_can_rec = 0;
 
 static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
@@ -1560,6 +1563,10 @@ sound_process_input_formats(struct stream *s, int size)
 
     LOG(10, ("sound_process_input_formats: size=%d", size));
 
+    if (g_getenv("XRDP_NO_RDPSND_REC") == NULL)
+    {
+        g_rdpsnd_can_rec = 1;
+    }
     in_uint8s(s, 8); /* skip 8 bytes */
     in_uint16_le(s, num_formats);
     in_uint8s(s, 2); /* skip version */
@@ -1772,11 +1779,25 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     }
     else if (cmd == PA_CMD_START_REC)
     {
-        sound_input_start_recording();
+        if (g_rdpsnd_can_rec)
+        {
+            sound_input_start_recording();
+        }
+        else
+        {
+            audin_start();
+        }
     }
     else if (cmd == PA_CMD_STOP_REC)
     {
-        sound_input_stop_recording();
+        if (g_rdpsnd_can_rec)
+        {
+            sound_input_stop_recording();
+        }
+        else
+        {
+            audin_stop();
+        }
     }
 
     xstream_free(s);
