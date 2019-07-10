@@ -75,7 +75,7 @@ static struct xr_wave_format_ex g_pcm_44100 =
 };
 
 static struct chansrv_drdynvc_procs g_audin_info;
-static int g_audio_chanid;
+static int g_audin_chanid;
 static struct stream *g_in_s;
 
 static struct xr_wave_format_ex *g_server_formats[] =
@@ -112,13 +112,13 @@ cleanup_client_formats(void)
 
 /*****************************************************************************/
 static int
-audio_send_version(int chan_id)
+audin_send_version(int chan_id)
 {
     int error;
     int bytes;
     struct stream *s;
 
-    LOG(0, ("audio_send_version:"));
+    LOG(0, ("audin_send_version:"));
     make_stream(s);
     init_stream(s, 32);
     out_uint8(s, MSG_SNDIN_VERSION);
@@ -132,7 +132,7 @@ audio_send_version(int chan_id)
 
 /*****************************************************************************/
 static int
-audio_send_formats(int chan_id)
+audin_send_formats(int chan_id)
 {
     int error;
     int bytes;
@@ -141,7 +141,7 @@ audio_send_formats(int chan_id)
     struct stream *s;
     struct xr_wave_format_ex *wf;
 
-    LOG(0, ("audio_send_formats:"));
+    LOG(0, ("audin_send_formats:"));
     num_formats = sizeof(g_server_formats) /
                   sizeof(g_server_formats[0]) - 1;
     make_stream(s);
@@ -152,7 +152,7 @@ audio_send_formats(int chan_id)
     for (index = 0; index < num_formats; index++)
     {
         wf = g_server_formats[index];
-        LOG(0, ("audio_send_formats: sending format wFormatTag 0x%4.4x "
+        LOG(0, ("audin_send_formats: sending format wFormatTag 0x%4.4x "
             "nChannels %d nSamplesPerSec %d",
             wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec));
         out_uint16_le(s, wf->wFormatTag);
@@ -176,14 +176,14 @@ audio_send_formats(int chan_id)
 
 /*****************************************************************************/
 static int
-audio_send_open(int chan_id)
+audin_send_open(int chan_id)
 {
     int error;
     int bytes;
     struct stream *s;
     struct xr_wave_format_ex *wf;
 
-    LOG(0, ("audio_send_open:"));
+    LOG(0, ("audin_send_open:"));
     make_stream(s);
     init_stream(s, 8192);
     out_uint8(s, MSG_SNDIN_OPEN);
@@ -223,7 +223,7 @@ audin_process_version(int chan_id, struct stream *s)
     }
     in_uint32_le(s, version);
     LOG(0, ("audin_process_version: version %d", version));
-    return audio_send_formats(chan_id);
+    return audin_send_formats(chan_id);
 }
 
 /*****************************************************************************/
@@ -274,7 +274,7 @@ audin_process_formats(int chan_id, struct stream *s)
             in_uint8a(s, wf->data, wf->cbSize);
         }
     }
-    audio_send_open(chan_id);
+    audin_send_open(chan_id);
     return 0;
 }
 
@@ -380,7 +380,7 @@ audin_open_response(int chan_id, int creation_status)
     LOG(0, ("audin_open_response: creation_status 0x%8.8x", creation_status));
     if (creation_status == 0)
     {
-        return audio_send_version(chan_id);
+        return audin_send_version(chan_id);
     }
     return 0;
 }
@@ -390,7 +390,7 @@ static int
 audin_close_response(int chan_id)
 {
     LOG(0, ("audin_close_response:"));
-    g_audio_chanid = 0;
+    g_audin_chanid = 0;
     cleanup_client_formats();
     free_stream(g_in_s);
     g_in_s = NULL;
@@ -468,7 +468,7 @@ audin_init(void)
     g_audin_info.close_response = audin_close_response;
     g_audin_info.data_first = audin_data_first;
     g_audin_info.data = audin_data;
-    g_audio_chanid = 0;
+    g_audin_chanid = 0;
     g_in_s = NULL;
     return 0;
 }
@@ -489,7 +489,7 @@ audin_start(void)
     struct stream* s;
 
     LOG(0, ("audin_start:"));
-    if (g_audio_chanid != 0)
+    if (g_audin_chanid != 0)
     {
         return 1;
     }
@@ -503,8 +503,8 @@ audin_start(void)
 
     error = chansrv_drdynvc_open(AUDIN_NAME, AUDIN_FLAGS,
                                  &g_audin_info, /* callback functions */
-                                 &g_audio_chanid); /* chansrv chan_id */
-    LOG(0, ("audin_start: error %d g_audio_chanid %d", error, g_audio_chanid));
+                                 &g_audin_chanid); /* chansrv chan_id */
+    LOG(0, ("audin_start: error %d g_audin_chanid %d", error, g_audin_chanid));
     return error;
 }
 
@@ -513,6 +513,6 @@ int
 audin_stop(void)
 {
     LOG(0, ("audin_stop:"));
-    chansrv_drdynvc_close(g_audio_chanid);
+    chansrv_drdynvc_close(g_audin_chanid);
     return 0;
 }
