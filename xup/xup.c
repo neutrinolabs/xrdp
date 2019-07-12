@@ -226,6 +226,11 @@ lib_mod_connect(struct mod *mod)
             break;
         }
 
+        if (mod->server_is_term(mod))
+        {
+            break;
+        }
+
         i++;
 
         if (i >= 60)
