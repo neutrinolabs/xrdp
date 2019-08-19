@@ -1,4 +1,4 @@
-# Release notes for xrdp v1.9.11 (2019/08/19)
+# Release notes for xrdp v0.9.11 (2019/08/19)
 
 ## New features
 * Suppress output (do not draw screen when client window is minimized) #1330
