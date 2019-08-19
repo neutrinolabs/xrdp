@@ -15,6 +15,7 @@ min_amd64_deps: &min_amd64_deps
   - libssl-dev
   - libx11-dev
   - libxrandr-dev
+  - libxfixes-dev
 
 min_amd64_conf: &min_amd64_conf
   env:
