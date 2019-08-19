@@ -170,7 +170,7 @@ xrdp_listen_delete(struct xrdp_listen* self);
 int
 xrdp_listen_main_loop(struct xrdp_listen* self);
 int
-xrdp_listen_test(void);
+xrdp_listen_test(struct xrdp_startup_params *startup_params);
 
 /* xrdp_region.c */
 struct xrdp_region*
@@ -371,6 +371,9 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
 /* xrdp_mm.c */
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm* self);
+int
+xrdp_mm_suppress_output(struct xrdp_mm* self, int suppress,
+                        int left, int top, int right, int bottom);
 struct xrdp_mm*
 xrdp_mm_create(struct xrdp_wm* owner);
 void

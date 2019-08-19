@@ -999,6 +999,25 @@ xrdp_mm_drdynvc_up(struct xrdp_mm* self)
     return 0;
 }
 
+/******************************************************************************/
+int
+xrdp_mm_suppress_output(struct xrdp_mm* self, int suppress,
+                        int left, int top, int right, int bottom)
+{
+    LLOGLN(0, ("xrdp_mm_suppress_output: suppress %d "
+           "left %d top %d right %d bottom %d",
+           suppress, left, top, right, bottom));
+    if (self->mod != NULL)
+    {
+        if (self->mod->mod_suppress_output != NULL)
+        {
+            self->mod->mod_suppress_output(self->mod, suppress,
+                                           left, top, right, bottom);
+        }
+    }
+    return 0;
+}
+
 /*****************************************************************************/
 /* open response from client going to channel server */
 static int

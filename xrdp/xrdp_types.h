@@ -48,7 +48,9 @@ struct xrdp_mod
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct xrdp_mod* v);
   int (*mod_frame_ack)(struct xrdp_mod* v, int flags, int frame_id);
-  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+  int (*mod_suppress_output)(struct xrdp_mod* v, int suppress,
+                             int left, int top, int right, int bottom);
+  tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
                                   functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
@@ -403,8 +405,9 @@ struct xrdp_process
 struct xrdp_listen
 {
   int status;
-  struct trans* listen_trans; /* in tcp listen mode */
-  struct list* process_list;
+  struct list *trans_list; /* list of struct trans* */
+  struct list *process_list;
+  struct list *fork_list;
   tbus pro_done_event;
   struct xrdp_startup_params* startup_params;
 };
@@ -525,14 +528,17 @@ struct xrdp_mod_data
 
 struct xrdp_startup_params
 {
-  char port[128];
+  char port[1024];
   int kill;
   int no_daemon;
   int help;
   int version;
   int fork;
-  int send_buffer_bytes;
-  int recv_buffer_bytes;
+  int tcp_send_buffer_bytes;
+  int tcp_recv_buffer_bytes;
+  int tcp_nodelay;
+  int tcp_keepalive;
+  int use_vsock;
 };
 
 /*

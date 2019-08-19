@@ -58,7 +58,7 @@ struct pointer_item
     int bpp;
 };
 
-#define CURRENT_MOD_VER 3
+#define CURRENT_MOD_VER 4
 
 struct mod
 {
@@ -76,8 +76,11 @@ struct mod
     int (*mod_get_wait_objs)(struct mod *v, tbus *read_objs, int *rcount,
                              tbus *write_objs, int *wcount, int *timeout);
     int (*mod_check_wait_objs)(struct mod *v);
-    tintptr mod_dumby[100 - 9]; /* align, 100 minus the number of mod
-                                 functions above */
+    int (*mod_frame_ack)(struct mod* mod, int flags, int frame_id);
+    int (*mod_suppress_output)(struct mod* mod, int suppress,
+                             int left, int top, int right, int bottom);
+    tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
+                                    functions above */
     /* server functions */
     int (*server_begin_update)(struct mod *v);
     int (*server_end_update)(struct mod *v);

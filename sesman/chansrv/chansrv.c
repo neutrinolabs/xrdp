@@ -37,6 +37,7 @@
 #include "xcommon.h"
 #include "chansrv_fuse.h"
 #include "xrdp_sockets.h"
+#include "audin.h"
 
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;
@@ -414,6 +415,8 @@ process_message_channel_setup(struct stream *s)
     {
         rail_init();
     }
+
+    audin_init();
 
     return rv;
 }

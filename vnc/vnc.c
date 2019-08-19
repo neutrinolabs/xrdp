@@ -380,20 +380,23 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     }
     else if (msg == 200) /* invalidate */
     {
-        /* FramebufferUpdateRequest */
-        init_stream(s, 8192);
-        out_uint8(s, 3);
-        out_uint8(s, 0);
-        x = (param1 >> 16) & 0xffff;
-        out_uint16_be(s, x);
-        y = param1 & 0xffff;
-        out_uint16_be(s, y);
-        cx = (param2 >> 16) & 0xffff;
-        out_uint16_be(s, cx);
-        cy = param2 & 0xffff;
-        out_uint16_be(s, cy);
-        s_mark_end(s);
-        error = lib_send_copy(v, s);
+        if (v->suppress_output == 0)
+        {
+            /* FramebufferUpdateRequest */
+            init_stream(s, 8192);
+            out_uint8(s, 3);
+            out_uint8(s, 0);
+            x = (param1 >> 16) & 0xffff;
+            out_uint16_be(s, x);
+            y = param1 & 0xffff;
+            out_uint16_be(s, y);
+            cx = (param2 >> 16) & 0xffff;
+            out_uint16_be(s, cx);
+            cy = param2 & 0xffff;
+            out_uint16_be(s, cy);
+            s_mark_end(s);
+            error = lib_send_copy(v, s);
+        }
     }
 
     free_stream(s);
@@ -742,16 +745,19 @@ lib_framebuffer_update(struct vnc *v)
 
     if (error == 0)
     {
-        /* FramebufferUpdateRequest */
-        init_stream(s, 8192);
-        out_uint8(s, 3);
-        out_uint8(s, 1);
-        out_uint16_be(s, 0);
-        out_uint16_be(s, 0);
-        out_uint16_be(s, v->mod_width);
-        out_uint16_be(s, v->mod_height);
-        s_mark_end(s);
-        error = lib_send_copy(v, s);
+        if (v->suppress_output == 0)
+        {
+            /* FramebufferUpdateRequest */
+            init_stream(s, 8192);
+            out_uint8(s, 3);
+            out_uint8(s, 1);
+            out_uint16_be(s, 0);
+            out_uint16_be(s, 0);
+            out_uint16_be(s, v->mod_width);
+            out_uint16_be(s, v->mod_height);
+            s_mark_end(s);
+            error = lib_send_copy(v, s);
+        }
     }
 
     free_stream(s);
@@ -916,7 +922,7 @@ lib_mod_process_message(struct vnc *v, struct stream *s)
         }
         else
         {
-            g_sprintf(text, "VNC unknown in lib_mod_signal %d", type);
+            g_sprintf(text, "VNC unknown in lib_mod_process_message %d", type);
             v->server_msg(v, text, 1);
         }
     }
@@ -1340,17 +1346,20 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
-        /* FramebufferUpdateRequest */
-        init_stream(s, 8192);
-        out_uint8(s, 3);
-        out_uint8(s, 0);
-        out_uint16_be(s, 0);
-        out_uint16_be(s, 0);
-        out_uint16_be(s, v->mod_width);
-        out_uint16_be(s, v->mod_height);
-        v->server_msg(v, "VNC sending framebuffer update request", 0);
-        s_mark_end(s);
-        error = trans_force_write_s(v->trans, s);
+        if (v->suppress_output == 0)
+        {
+            /* FramebufferUpdateRequest */
+            init_stream(s, 8192);
+            out_uint8(s, 3);
+            out_uint8(s, 0);
+            out_uint16_be(s, 0);
+            out_uint16_be(s, 0);
+            out_uint16_be(s, v->mod_width);
+            out_uint16_be(s, v->mod_height);
+            v->server_msg(v, "VNC sending framebuffer update request", 0);
+            s_mark_end(s);
+            error = trans_force_write_s(v->trans, s);
+        }
     }
 
     if (error == 0)
@@ -1493,6 +1502,43 @@ lib_mod_check_wait_objs(struct vnc *v)
 }
 
 /******************************************************************************/
+/* return error */
+int
+lib_mod_frame_ack(struct vnc* v, int flags, int frame_id)
+{
+    return 0;
+}
+
+/******************************************************************************/
+/* return error */
+int
+lib_mod_suppress_output(struct vnc* v, int suppress,
+                        int left, int top, int right, int bottom)
+{
+    int error;
+    struct stream *s;
+
+    error = 0;
+    v->suppress_output = suppress;
+    if (suppress == 0)
+    {
+        /* FramebufferUpdateRequest */
+        make_stream(s);
+        init_stream(s, 8192);
+        out_uint8(s, 3);
+        out_uint8(s, 0);
+        out_uint16_be(s, 0);
+        out_uint16_be(s, 0);
+        out_uint16_be(s, v->mod_width);
+        out_uint16_be(s, v->mod_height);
+        s_mark_end(s);
+        error = lib_send_copy(v, s);
+        free_stream(s);
+    }
+    return error;
+}
+
+/******************************************************************************/
 tintptr EXPORT_CC
 mod_init(void)
 {
@@ -1511,6 +1557,8 @@ mod_init(void)
     v->mod_set_param = lib_mod_set_param;
     v->mod_get_wait_objs = lib_mod_get_wait_objs;
     v->mod_check_wait_objs = lib_mod_check_wait_objs;
+    v->mod_frame_ack = lib_mod_frame_ack;
+    v->mod_suppress_output = lib_mod_suppress_output;
     return (tintptr) v;
 }
 
