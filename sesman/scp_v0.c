@@ -96,7 +96,11 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                             s_item->pid);
             }
 
-            session_reconnect(display, s->username, data);
+            session_reconnect(display, data, s, s_item);
+
+            //Update the client ip address in the session item
+            g_strncpy(s_item->client_ip, s->client_ip, 255); 
+
         }
         else
         {

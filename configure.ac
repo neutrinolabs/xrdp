@@ -5,6 +5,7 @@ AC_INIT([xrdp], [0.9.11], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
+AC_GNU_SOURCE
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
@@ -320,6 +321,8 @@ AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
 AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
+
+AC_CHECK_HEADERS(utmp.h utmpx.h)
 
 CFLAGS="$save_CFLAGS"
 

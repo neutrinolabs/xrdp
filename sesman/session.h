@@ -109,7 +109,7 @@ session_start(long data, tui8 type, struct SCP_CONNECTION *c,
               struct SCP_SESSION *s);
 
 int
-session_reconnect(int display, char *username, long data);
+session_reconnect(int display, long data, struct SCP_SESSION *s, struct session_item * s_item);
 
 /**
  *

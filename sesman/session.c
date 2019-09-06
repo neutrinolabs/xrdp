@@ -40,6 +40,7 @@
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
+#include "sessionrecord.h"
 #include "xrdp_sockets.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
@@ -89,6 +90,17 @@ dumpItemsToString(struct list *self, char *outstr, int len)
     return outstr ;
 }
 
+int compareIpAddresses(const char *addressOne,const char *addressTwo)
+{
+    char * strippedIpOne = get_stripped_ip(addressOne);
+    char * strippedIpTwo = get_stripped_ip(addressTwo);
+
+    int compareResult = g_strcmp(strippedIpOne,strippedIpTwo);
+    g_free(strippedIpOne);
+    g_free(strippedIpTwo);
+
+    return compareResult;
+}
 
 /******************************************************************************/
 struct session_item *
@@ -525,6 +537,10 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
              */
         }
 #endif
+
+       
+        utmp_login(g_getpid(), display, s->username, s->client_ip);
+
         window_manager_pid = g_fork(); /* parent becomes X,
                              child forks wm, and waits, todo */
         if (window_manager_pid == -1)
@@ -864,7 +880,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
 /******************************************************************************/
 /* called with the main thread */
 static int
-session_reconnect_fork(int display, char *username, long data)
+session_reconnect_fork(int display, long data, struct SCP_SESSION *s,struct session_item * s_item)
 {
     int pid;
 
@@ -875,7 +891,23 @@ session_reconnect_fork(int display, char *username, long data)
     }
     else if (pid == 0)
     {
-        env_set_user(username,
+        if(compareIpAddresses(s->client_ip,s_item->client_ip) == 0)
+        {
+            log_message(LOG_LEVEL_DEBUG,
+                    "Reconnecting from existing session IP Address %s - current Ip %s",
+                    s->client_ip, s_item->client_ip);
+        }
+        else
+        {
+            log_message(LOG_LEVEL_INFO,
+                    "Reconnecting from new IP Address %s - old IP %s",
+                    s->client_ip, s_item->client_ip);
+        
+            utmp_login(s_item->pid, display, s->username, s->client_ip);
+            
+        }
+
+        env_set_user(s->username,
                      0,
                      display,
                      g_cfg->env_names,
@@ -907,9 +939,9 @@ session_start(long data, tui8 type, struct SCP_CONNECTION *c,
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
 int
-session_reconnect(int display, char *username, long data)
+session_reconnect(int display, long data, struct SCP_SESSION *s, struct session_item * s_item)
 {
-    return session_reconnect_fork(display, username, data);
+    return session_reconnect_fork(display, data ,s, s_item);
 }
 
 /******************************************************************************/
@@ -947,6 +979,9 @@ session_kill(int pid)
         {
             /* deleting the session */
             log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+
+            utmp_logout(tmp->item->pid, tmp->item->display, tmp->item->name, tmp->item->client_ip);
+
             g_free(tmp->item);
 
             if (prev == 0)
