@@ -150,6 +150,11 @@ AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
               [], [enable_rfxcodec=yes])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 
+AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
+              [Use rdpsnd audio in (default: no)]),
+              [], [enable_rdpsndaudin=no])
+AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
+
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
   with_simd=no
@@ -390,6 +395,7 @@ echo "  vsock           $enable_vsock"
 echo "  pam             $enable_pam"
 echo "  kerberos        $enable_kerberos"
 echo "  debug           $enable_xrdpdebug"
+echo "  rdpsndaudin     $enable_rdpsndaudin"
 echo ""
 echo "  strict_locations        $enable_strict_locations"
 echo "  prefix                  $prefix"
