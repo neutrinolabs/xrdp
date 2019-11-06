@@ -1430,6 +1430,14 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, const char *ip, const char *port)
 
     self->usechansrv = 1;
 
+    if (self->wm->client_info->channels_allowed == 0)
+    {
+        log_message(LOG_LEVEL_DEBUG, "%s: "
+                    "skip connecting to chansrv because all channels are disabled",
+                    __func__);
+        return 0;
+    }
+
     /* connect channel redir */
     if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
     {
