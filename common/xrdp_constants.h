@@ -543,6 +543,7 @@
 #define RDP_DATA_PDU_POINTER           27
 #define RDP_DATA_PDU_INPUT             28
 #define RDP_DATA_PDU_SYNCHRONISE       31
+#define PDUTYPE2_REFRESH_RECT          33
 #define RDP_DATA_PDU_PLAY_SOUND        34
 #define RDP_DATA_PDU_LOGON             38
 #define RDP_DATA_PDU_FONT2             39
