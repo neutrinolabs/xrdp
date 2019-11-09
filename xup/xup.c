@@ -1111,6 +1111,19 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
             amod->screen_shmem_id_mapped = 1;
         }
     }
+    else if (amod->screen_shmem_id != shmem_id)
+    {
+        amod->screen_shmem_id = shmem_id;
+        g_shmdt(amod->screen_shmem_pixels);
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+        if (amod->screen_shmem_pixels == (void*)-1)
+        {
+            /* failed */
+            amod->screen_shmem_id = 0;
+            amod->screen_shmem_pixels = 0;
+            amod->screen_shmem_id_mapped = 0;
+        }
+    }
     if (amod->screen_shmem_pixels != 0)
     {
         bmpdata = amod->screen_shmem_pixels + shmem_offset;
@@ -1247,6 +1260,19 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
             else
             {
                 amod->screen_shmem_id_mapped = 1;
+            }
+        }
+        else if (amod->screen_shmem_id != shmem_id)
+        {
+            amod->screen_shmem_id = shmem_id;
+            g_shmdt(amod->screen_shmem_pixels);
+            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+            if (amod->screen_shmem_pixels == (void*)-1)
+            {
+                /* failed */
+                amod->screen_shmem_id = 0;
+                amod->screen_shmem_pixels = 0;
+                amod->screen_shmem_id_mapped = 0;
             }
         }
         if (amod->screen_shmem_pixels != 0)
