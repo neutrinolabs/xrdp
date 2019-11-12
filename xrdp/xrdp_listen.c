@@ -358,6 +358,53 @@ xrdp_listen_parse_integer(char *strout, int strout_max,
 
 /*****************************************************************************/
 static int
+xrdp_listen_parse_vsock(char *strout, int strout_max,
+                        const char *strin, int strin_max)
+{
+    int count;
+    int in;
+    int strin_index;
+    int strout_index;
+
+    strin_index = 0;
+    strout_index = 0;
+    in = 0;
+    count = 0;
+    while ((strin_index < strin_max) && (strout_index < strout_max))
+    {
+        if (in)
+        {
+            if ((strin[strin_index] >= '0') && (strin[strin_index] <= '9'))
+            {
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+        else
+        {
+            if (((strin[strin_index] >= '0') && (strin[strin_index] <= '9')) ||
+                 (strin[strin_index] == '-'))
+            {
+                in = 1;
+                strout[strout_index++] = strin[strin_index++];
+                count++;
+                continue;
+            }
+        }
+        strin_index++;
+        count++;
+    }
+    strout[strout_index] = 0;
+    return count;
+}
+
+/*****************************************************************************/
+static int
 xrdp_listen_parse_ipv4(char *strout, int strout_max,
                        const char *strin, int strin_max)
 {
@@ -559,10 +606,10 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
         {
             str += 8;
             lindex += 8;
-            bytes = xrdp_listen_parse_integer(address, 128, str, str_end - str);
+            bytes = xrdp_listen_parse_vsock(address, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
-            bytes = xrdp_listen_parse_integer(port, 128, str, str_end - str);
+            bytes = xrdp_listen_parse_vsock(port, 128, str, str_end - str);
             str += bytes;
             lindex += bytes;
             *mode = TRANS_MODE_VSOCK;
