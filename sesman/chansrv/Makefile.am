@@ -53,6 +53,8 @@ xrdp_chansrv_SOURCES = \
   chansrv_common.h \
   chansrv_fuse.c \
   chansrv_fuse.h \
+  chansrv_xfs.c \
+  chansrv_xfs.h \
   clipboard.c \
   clipboard.h \
   clipboard_common.h \

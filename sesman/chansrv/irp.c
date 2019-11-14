@@ -105,32 +105,67 @@ IRP * devredir_irp_new(void)
 }
 
 /**
- * Clone specified IRP
+ * Create a new IRP with a copied pathname, and append to linked list.
+ *
+ * Allocation is made in such a way that the IRP can be freed with a single
+ * free() operation
  *
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_clone(IRP *irp)
+IRP * devredir_irp_with_pathname_new(const char *pathname)
 {
-    IRP *new_irp;
-    IRP *prev;
-    IRP *next;
+    unsigned int len = g_strlen(pathname);
+    IRP * irp = devredir_irp_with_pathnamelen_new(len);
+    if (irp != NULL)
+    {
+        g_strcpy(irp->pathname, pathname);
+    }
 
-    if ((new_irp = devredir_irp_new()) == NULL)
+    return irp;
+}
+
+/**
+ * Create a new IRP with space allocated for a pathname, and append to
+ * linked list.
+ *
+ * Allocation is made in such a way that the IRP can be freed with a single
+ * free() operation
+ *
+ * @return new IRP or NULL on error
+ *****************************************************************************/
+
+IRP * devredir_irp_with_pathnamelen_new(unsigned int pathnamelen)
+{
+    IRP *irp;
+    IRP *irp_last;
+
+    log_debug("entered");
+
+    /* create new IRP with space on end for the pathname and a terminator */
+    irp = (IRP *)g_malloc(sizeof(IRP) + (pathnamelen + 1), 1);
+    if (irp == NULL)
+    {
+        log_error("system out of memory!");
         return NULL;
+    }
 
-    /* save link pointers */
-    prev = new_irp->prev;
-    next = new_irp->next;
+    irp->pathname = (char *)irp + sizeof(IRP); /* Initialise pathname pointer */
 
-    /* copy all members */
-    g_memcpy(new_irp, irp, sizeof(IRP));
+    /* insert at end of linked list */
+    if ((irp_last = devredir_irp_get_last()) == NULL)
+    {
+        /* list is empty, this is the first entry */
+        g_irp_head = irp;
+    }
+    else
+    {
+        irp_last->next = irp;
+        irp->prev = irp_last;
+    }
 
-    /* restore link pointers */
-    new_irp->prev = prev;
-    new_irp->next = next;
-
-    return new_irp;
+    log_debug("new IRP=%p", irp);
+    return irp;
 }
 
 /**

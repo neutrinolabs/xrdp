@@ -29,11 +29,49 @@
 #endif
 #include "chansrv_fuse.h"
 
-typedef struct fuse_data FUSE_DATA;
-struct fuse_data
+/* Opaque data types to us */
+typedef struct xfuse_info XFUSE_INFO;
+
+enum irp_lookup_state
 {
-    void      *data_ptr;
-    FUSE_DATA *next;
+    E_LOOKUP_GET_FH = 0,
+    E_LOOKUP_CHECK_BASIC,
+    E_LOOKUP_CHECK_EOF
+} ;
+
+enum irp_setattr_state
+{
+    E_SETATTR_GET_FH = 0,
+    E_SETATTR_CHECK_BASIC,
+    E_SETATTR_CHECK_EOF
+} ;
+
+struct irp_lookup
+{
+    enum irp_lookup_state state; /* Next state to consider */
+    struct file_attr fattr;      /* Attributes to get */
+};
+
+struct irp_setattr
+{
+    enum irp_setattr_state state; /* Next state to consider */
+    tui32            to_set;      /* Bit mask for elements in use */
+    struct file_attr fattr;       /* Attributes to set */
+};
+
+struct irp_write
+{
+    tui64            offset;      /* Offset the write was made at */
+};
+
+struct irp_create
+{
+    int             creating_dir; /* We're creating a directory */
+};
+
+struct irp_rename
+{
+    char           *new_name;     /* New name for file */
 };
 
 /* An I/O Resource Packet to track I/O calls */
@@ -46,15 +84,18 @@ struct irp
     tui32      DeviceId;            /* identifies remote device          */
     tui32      FileId;              /* RDP client provided unique number */
     char       completion_type;     /* describes I/O type                */
-    char       pathname[256];       /* absolute pathname                 */
+    char       *pathname;           /* absolute pathname
+                                     * Allocate with
+                                     * devredir_irp_with_pathname_new()  */
     union
     {
-        char   buf[1024];           /* General character data            */
-        struct file_attr fattr;     /* Used to assemble file attributes  */
-    } gen;                          /* for general use                   */
-    int        type;
-    FUSE_DATA *fd_head;             /* point to first FUSE opaque object */
-    FUSE_DATA *fd_tail;             /* point to last FUSE opaque object  */
+        struct irp_lookup  lookup;  /* Used by lookup                    */
+        struct irp_setattr setattr; /* Used by setattr                   */
+        struct irp_write   write;   /* Used by write                     */
+        struct irp_create  create;  /* Used by create                    */
+        struct irp_rename  rename;  /* Use by rename                     */
+    } gen;                          /* Additional state data for some ops */
+    void      *fuse_info;           /* Fuse info pointer for FUSE calls  */
     IRP       *next;                /* point to next IRP                 */
     IRP       *prev;                /* point to previous IRP             */
     int        scard_index;         /* used to smart card to locate dev  */
@@ -65,7 +106,13 @@ struct irp
 };
 
 IRP * devredir_irp_new(void);
-IRP * devredir_irp_clone(IRP *irp);
+/* As above, but allocates sufficent space for the specified
+ * pathname, and copies it in to the pathname field */
+IRP * devredir_irp_with_pathname_new(const char *pathname);
+/* As above, but specifies a pathname length with pathname
+ * initially set to "". Use if you need to modify the pathname
+ * significantly */
+IRP * devredir_irp_with_pathnamelen_new(unsigned int pathnamelen);
 int   devredir_irp_delete(IRP *irp);
 IRP * devredir_irp_find(tui32 completion_id);
 IRP * devredir_irp_find_by_fileid(tui32 FileId);

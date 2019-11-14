@@ -407,7 +407,7 @@ process_message_channel_setup(struct stream *s)
 
     if (g_rdpdr_index >= 0)
     {
-        dev_redir_init();
+        devredir_init();
         xfuse_init();
     }
 
@@ -458,7 +458,7 @@ process_message_channel_data(struct stream *s)
         }
         else if (chan_id == g_rdpdr_chan_id)
         {
-            rv = dev_redir_data_in(s, chan_id, chan_flags, length, total_length);
+            rv = devredir_data_in(s, chan_id, chan_flags, length, total_length);
         }
         else if (chan_id == g_rail_chan_id)
         {
@@ -1412,7 +1412,7 @@ channel_thread_loop(void *in_val)
                 LOGM((LOG_LEVEL_INFO, "channel_thread_loop: g_term_event set"));
                 clipboard_deinit();
                 sound_deinit();
-                dev_redir_deinit();
+                devredir_deinit();
                 rail_deinit();
                 break;
             }
@@ -1434,7 +1434,7 @@ channel_thread_loop(void *in_val)
                           "trans_check_wait_objs error resetting"));
                     clipboard_deinit();
                     sound_deinit();
-                    dev_redir_deinit();
+                    devredir_deinit();
                     rail_deinit();
                     /* delete g_con_trans */
                     trans_delete(g_con_trans);
@@ -1460,7 +1460,7 @@ channel_thread_loop(void *in_val)
             api_con_trans_list_check_wait_objs();
             xcommon_check_wait_objs();
             sound_check_wait_objs();
-            dev_redir_check_wait_objs();
+            devredir_check_wait_objs();
             xfuse_check_wait_objs();
             timeout = -1;
             num_objs = 0;
@@ -1479,7 +1479,7 @@ channel_thread_loop(void *in_val)
                                                 &timeout);
             xcommon_get_wait_objs(objs, &num_objs, &timeout);
             sound_get_wait_objs(objs, &num_objs, &timeout);
-            dev_redir_get_wait_objs(objs, &num_objs, &timeout);
+            devredir_get_wait_objs(objs, &num_objs, &timeout);
             xfuse_get_wait_objs(objs, &num_objs, &timeout);
             get_timeout(&timeout);
         } /* end while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0) */
