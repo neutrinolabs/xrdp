@@ -164,6 +164,13 @@ xrdp_child(int sig)
 }
 
 /*****************************************************************************/
+void
+xrdp_hang_up(int sig)
+{
+    log_message(LOG_LEVEL_INFO, "caught SIGHUP, noop...");
+}
+
+/*****************************************************************************/
 /* called in child just after fork */
 int
 xrdp_child_fork(void)
@@ -644,9 +651,10 @@ main(int argc, char **argv)
     g_threadid = tc_get_threadid();
     g_listen = xrdp_listen_create();
     g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
-    g_signal_pipe(pipe_sig); /* SIGPIPE */
-    g_signal_terminate(xrdp_shutdown); /* SIGTERM */
-    g_signal_child_stop(xrdp_child); /* SIGCHLD */
+    g_signal_pipe(pipe_sig);                /* SIGPIPE */
+    g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
+    g_signal_child_stop(xrdp_child);        /* SIGCHLD */
+    g_signal_hang_up(xrdp_hang_up);         /* SIGHUP */
     g_sync_mutex = tc_mutex_create();
     g_sync1_mutex = tc_mutex_create();
     pid = g_getpid();
