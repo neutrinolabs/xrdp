@@ -1335,7 +1335,7 @@ void xfuse_devredir_cb_write_file(
     }
     else
     {
-        size_t new_size = offset + length;
+        off_t new_size = offset + length;
         fuse_reply_write(fip->req, length);
 
         /* update file size */
@@ -2535,7 +2535,8 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
 
     if ((result = xfs_get_full_path(g_xfs, parent)) != NULL)
     {
-        char * p = realloc(result, strlen(result) + 1 + strlen(name) + 1);
+        char * p = (char *) realloc(result,
+                                    strlen(result) + 1 + strlen(name) + 1);
         if (p == NULL)
         {
             free(result);

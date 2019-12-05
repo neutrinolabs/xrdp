@@ -566,7 +566,7 @@ xfs_get_full_path(struct xfs_fs *xfs, fuse_ino_t inum)
                 ++len; /* Allow for '/' prefix */
             }
 
-            result = malloc(len + 1);
+            result = (char *) malloc(len + 1);
             if (result != NULL)
             {
                 /* Construct the path from the end */

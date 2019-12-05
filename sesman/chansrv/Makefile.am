@@ -67,6 +67,10 @@ xrdp_chansrv_SOURCES = \
   irp.c \
   irp.h \
   mlog.h \
+  ms-erref.h \
+  ms-fscc.h \
+  ms-rdpefs.h \
+  ms-smb2.h \
   rail.c \
   rail.h \
   smartcard.c \

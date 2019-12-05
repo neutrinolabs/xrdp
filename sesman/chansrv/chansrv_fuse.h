@@ -27,7 +27,7 @@
 struct file_attr
 {
     tui32           mode;              /* File mode.                        */
-    size_t          size;              /* Size of file, in bytes.           */
+    off_t           size;              /* Size of file, in bytes.           */
     time_t          atime;             /* Time of last access.              */
     time_t          mtime;             /* Time of last modification.        */
 };
