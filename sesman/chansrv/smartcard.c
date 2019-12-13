@@ -871,7 +871,7 @@ scard_make_new_ioctl(IRP *irp, tui32 ioctl)
                                     irp->FileId,
                                     irp->CompletionId,
                                     IRP_MJ_DEVICE_CONTROL,
-                                    0);
+                                    IRP_MN_NONE);
 
     xstream_wr_u32_le(s, 2048);        /* OutputBufferLength               */
     s_push_layer(s, iso_hdr, 4);       /* InputBufferLength - insert later */
