@@ -946,14 +946,14 @@ void xfuse_devredir_cb_enum_dir_done(struct state_dirscan *fip,
     log_debug("fip=%p IoStatus=0x%x", fip, IoStatus);
 
     /*
-     * NT_STATUS_NO_SUCH_FILE is returned for empty directories
+     * STATUS_NO_SUCH_FILE is returned for empty directories
      */
-    if (IoStatus != NT_STATUS_SUCCESS && IoStatus != NT_STATUS_NO_SUCH_FILE)
+    if (IoStatus != STATUS_SUCCESS && IoStatus != STATUS_NO_SUCH_FILE)
     {
         int status;
         switch (IoStatus)
         {
-            case NT_STATUS_ACCESS_DENIED:
+            case STATUS_ACCESS_DENIED:
                 status = EACCES;
                 break;
             default:
@@ -994,24 +994,24 @@ void xfuse_devredir_cb_lookup_entry(struct state_lookup *fip,
 {
     XFS_INODE *xinode = NULL;
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         switch (IoStatus)
         {
-            case NT_STATUS_SHARING_VIOLATION:
+            case STATUS_SHARING_VIOLATION:
                 /* This can happen when trying to read the attributes of
                  * some system files (e.g. pagefile.sys) */
-            case NT_STATUS_ACCESS_DENIED:
+            case STATUS_ACCESS_DENIED:
                 fuse_reply_err(fip->req, EACCES);
                 break;
 
-            case NT_STATUS_UNSUCCESSFUL:
+            case STATUS_UNSUCCESSFUL:
                 /* Happens if we try to lookup an illegal filename (e.g.
                  * one with a '*' in it) */
                 fuse_reply_err(fip->req, ENOENT);
                 break;
 
-            case NT_STATUS_NO_SUCH_FILE:
+            case STATUS_NO_SUCH_FILE:
                 /* Remove our copy, if any */
                 if (fip->existing_inum  && 
                     (xinode = xfs_get(g_xfs, fip->existing_inum)) != NULL &&
@@ -1119,20 +1119,20 @@ void xfuse_devredir_cb_setattr(struct state_setattr *fip,
 {
     XFS_INODE *xinode;
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         switch (IoStatus)
         {
-            case NT_STATUS_SHARING_VIOLATION:
+            case STATUS_SHARING_VIOLATION:
                 /* This can happen when trying to read the attributes of
                  * some system files (e.g. pagefile.sys) */
-            case NT_STATUS_ACCESS_DENIED:
+            case STATUS_ACCESS_DENIED:
                 fuse_reply_err(fip->req, EACCES);
                 break;
 
-            case NT_STATUS_UNSUCCESSFUL:
+            case STATUS_UNSUCCESSFUL:
                 /* Happens if we try to lookup an illegal filename */
-            case NT_STATUS_NO_SUCH_FILE:
+            case STATUS_NO_SUCH_FILE:
                 fuse_reply_err(fip->req, ENOENT);
                 break;
 
@@ -1167,12 +1167,12 @@ void xfuse_devredir_cb_create_file(struct state_create *fip,
     {
         switch (IoStatus)
         {
-        case NT_STATUS_ACCESS_DENIED:
+        case STATUS_ACCESS_DENIED:
             fuse_reply_err(fip->req, EACCES);
             break;
 
-        case NT_STATUS_OBJECT_NAME_INVALID:
-        case NT_STATUS_OBJECT_NAME_NOT_FOUND:
+        case STATUS_OBJECT_NAME_INVALID:
+        case STATUS_OBJECT_NAME_NOT_FOUND:
             fuse_reply_err(fip->req, ENOENT);
             break;
 
@@ -1268,12 +1268,12 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
     {
         switch (IoStatus)
         {
-        case NT_STATUS_ACCESS_DENIED:
+        case STATUS_ACCESS_DENIED:
             fuse_reply_err(fip->req, EACCES);
             break;
 
-        case NT_STATUS_OBJECT_NAME_INVALID:
-        case NT_STATUS_OBJECT_NAME_NOT_FOUND:
+        case STATUS_OBJECT_NAME_INVALID:
+        case STATUS_OBJECT_NAME_NOT_FOUND:
             fuse_reply_err(fip->req, ENOENT);
             break;
 
@@ -1327,7 +1327,7 @@ void xfuse_devredir_cb_write_file(
 {
     XFS_INODE   *xinode;
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         log_error("Write NTSTATUS is %d", (int) IoStatus);
         fuse_reply_err(fip->req, EIO);
@@ -1361,14 +1361,14 @@ void xfuse_devredir_cb_rmdir_or_file(struct state_remove *fip,
 
     switch (IoStatus)
     {
-        case NT_STATUS_SUCCESS:
-        case NT_STATUS_NO_SUCH_FILE:
+        case STATUS_SUCCESS:
+        case STATUS_NO_SUCH_FILE:
             xfs_remove_entry(g_xfs, xinode->inum); /* Remove local copy */
             fuse_reply_err(fip->req, 0);
             break;
 
-        case NT_STATUS_SHARING_VIOLATION:
-        case NT_STATUS_ACCESS_DENIED:
+        case STATUS_SHARING_VIOLATION:
+        case STATUS_ACCESS_DENIED:
             fuse_reply_err(fip->req, EACCES);
             break;
 
@@ -1385,12 +1385,12 @@ void xfuse_devredir_cb_rename_file(struct state_rename *fip,
 {
     int status;
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         status =
-            (IoStatus == NT_STATUS_SHARING_VIOLATION) ? EBUSY  :
-            (IoStatus == NT_STATUS_ACCESS_DENIED)     ? EACCES :
-                /* default */                           EEXIST ;
+            (IoStatus == STATUS_SHARING_VIOLATION) ? EBUSY  :
+            (IoStatus == STATUS_ACCESS_DENIED)     ? EACCES :
+                /* default */                        EEXIST ;
     }
     else
     {

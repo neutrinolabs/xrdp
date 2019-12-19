@@ -121,5 +121,3 @@ enum IRP_MN
 
 
 #endif /* MS_RDPEFS_H */
-
-

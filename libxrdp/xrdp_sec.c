@@ -23,6 +23,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "ms-rdpbcgr.h"
 #include "log.h"
 
 #define LOG_LEVEL 1

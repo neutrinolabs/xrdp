@@ -951,9 +951,9 @@ devredir_proc_device_iocompletion(struct stream *s)
     {
         comp_type = (enum COMPLETION_TYPE) irp->completion_type;
         /* Log something about the IRP */
-        if (IoStatus == NT_STATUS_SUCCESS ||
-            IoStatus == NT_STATUS_NO_MORE_FILES ||
-            (IoStatus == NT_STATUS_NO_SUCH_FILE && comp_type == CID_LOOKUP))
+        if (IoStatus == STATUS_SUCCESS ||
+            IoStatus == STATUS_NO_MORE_FILES ||
+            (IoStatus == STATUS_NO_SUCH_FILE && comp_type == CID_LOOKUP))
         {
             /* Successes or common occurrences - debug logging only */
             log_debug("got %s", completion_type_to_str(comp_type));
@@ -971,7 +971,7 @@ devredir_proc_device_iocompletion(struct stream *s)
         switch (comp_type)
         {
         case CID_CREATE_DIR_REQ:
-            if (IoStatus != NT_STATUS_SUCCESS)
+            if (IoStatus != STATUS_SUCCESS)
             {
                 xfuse_devredir_cb_enum_dir_done(
                              (struct state_dirscan *) irp->fuse_info, IoStatus);
@@ -991,7 +991,7 @@ devredir_proc_device_iocompletion(struct stream *s)
             xfuse_devredir_cb_create_file(
                               (struct state_create *) irp->fuse_info,
                               IoStatus, DeviceId, irp->FileId);
-            if (irp->gen.create.creating_dir || IoStatus != NT_STATUS_SUCCESS)
+            if (irp->gen.create.creating_dir || IoStatus != STATUS_SUCCESS)
             {
                 devredir_irp_delete(irp);
             }
@@ -1002,7 +1002,7 @@ devredir_proc_device_iocompletion(struct stream *s)
 
             xfuse_devredir_cb_open_file((struct state_open *) irp->fuse_info,
                                         IoStatus, DeviceId, irp->FileId);
-            if (IoStatus != NT_STATUS_SUCCESS)
+            if (IoStatus != STATUS_SUCCESS)
             {
                 devredir_irp_delete(irp);
             }
@@ -1082,7 +1082,7 @@ devredir_proc_query_dir_response(IRP *irp,
     tui32 Length;
     xstream_rd_u32_le(s_in, Length);
 
-    if (IoStatus == NT_STATUS_SUCCESS)
+    if (IoStatus == STATUS_SUCCESS)
     {
         unsigned int i;
         /* process FILE_DIRECTORY_INFORMATION structures */
@@ -1134,9 +1134,9 @@ devredir_proc_query_dir_response(IRP *irp,
     }
     else
     {
-        if (IoStatus == NT_STATUS_NO_MORE_FILES)
+        if (IoStatus == STATUS_NO_MORE_FILES)
         {
-            IoStatus = NT_STATUS_SUCCESS;
+            IoStatus = STATUS_SUCCESS;
         }
         xfuse_devredir_cb_enum_dir_done((struct state_dirscan *)irp->fuse_info,
                                         IoStatus);
@@ -1605,14 +1605,14 @@ devredir_file_write(struct state_write *fusep, tui32 DeviceId, tui32 FileId,
     if ((irp = devredir_irp_find_by_fileid(FileId)) == NULL)
     {
         log_error("no IRP found with FileId = %d", FileId);
-        xfuse_devredir_cb_write_file(fusep, NT_STATUS_UNSUCCESSFUL, 0, 0);
+        xfuse_devredir_cb_write_file(fusep, STATUS_UNSUCCESSFUL, 0, 0);
         xstream_free(s);
     }
     /* create a new IRP for this request */
     else if ((new_irp = devredir_irp_new()) == NULL)
     {
         /* system out of memory */
-        xfuse_devredir_cb_write_file(fusep, NT_STATUS_UNSUCCESSFUL, 0, 0);
+        xfuse_devredir_cb_write_file(fusep, STATUS_UNSUCCESSFUL, 0, 0);
         xstream_free(s);
     }
     else
@@ -1824,7 +1824,7 @@ devredir_proc_cid_rmdir_or_file(IRP *irp, enum NTSTATUS IoStatus)
     struct stream *s;
     int            bytes;
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         xfuse_devredir_cb_rmdir_or_file((struct state_remove *) irp->fuse_info,
                                          IoStatus);
@@ -1857,7 +1857,7 @@ devredir_proc_cid_rmdir_or_file_resp(IRP *irp, enum NTSTATUS IoStatus)
     xfuse_devredir_cb_rmdir_or_file((struct state_remove *)irp->fuse_info,
                                     IoStatus);
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         devredir_irp_delete(irp);
         return;
@@ -1881,7 +1881,7 @@ devredir_proc_cid_rename_file(IRP *irp, enum NTSTATUS IoStatus)
     int            flen;  /* FileNameLength   */
 
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         log_debug("rename returned with IoStatus=0x%x", IoStatus);
 
@@ -1930,7 +1930,7 @@ devredir_proc_cid_rename_file_resp(IRP *irp, enum NTSTATUS IoStatus)
     xfuse_devredir_cb_rename_file((struct state_rename *)irp->fuse_info,
                                   IoStatus);
 
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         devredir_irp_delete(irp);
         return;
@@ -2026,7 +2026,7 @@ static void lookup_read_standard_attributes(IRP *irp, struct stream *s_in)
 /*
  * Completes a lookup request and returns status to the caller.
  *
- * Unless IoStatus is NT_STATUS_SUCCESS, the lookup has failed.
+ * Unless IoStatus is STATUS_SUCCESS, the lookup has failed.
  *****************************************************************************/
 static void lookup_done(IRP *irp, enum NTSTATUS IoStatus)
 {
@@ -2067,7 +2067,7 @@ devredir_proc_cid_lookup(IRP *irp,
     tui32 Length;
 
     log_debug("entry state is %d",irp->gen.lookup.state);
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         /* This is common to all setattr states */
         log_debug("last lookup returned with IoStatus=0x%08x", IoStatus);
@@ -2093,7 +2093,7 @@ devredir_proc_cid_lookup(IRP *irp,
                     log_error("Expected FILE_BASIC_INFORMATION length"
                               "%d, got len=%d",
                               FILE_BASIC_INFORMATION_SIZE, Length);
-                    IoStatus = NT_STATUS_UNSUCCESSFUL;
+                    IoStatus = STATUS_UNSUCCESSFUL;
                     lookup_done(irp, IoStatus);
                 }
                 else
@@ -2112,7 +2112,7 @@ devredir_proc_cid_lookup(IRP *irp,
                     log_error("Expected FILE_STD_INFORMATION length"
                               "%d, got len=%d",
                               FILE_STD_INFORMATION_SIZE, Length);
-                    IoStatus = NT_STATUS_UNSUCCESSFUL;
+                    IoStatus = STATUS_UNSUCCESSFUL;
                 }
                 else
                 {
@@ -2245,7 +2245,7 @@ devredir_proc_cid_setattr(IRP *irp,
     tui32 Length;
 
     log_debug("entry state is %d",irp->gen.setattr.state);
-    if (IoStatus != NT_STATUS_SUCCESS)
+    if (IoStatus != STATUS_SUCCESS)
     {
         /* This is common to all setattr states */
         log_debug("last setattr returned with IoStatus=0x%08x", IoStatus);

@@ -23,6 +23,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "ms-rdpbcgr.h"
 #include "log.h"
 #include "ssl_calls.h"
 

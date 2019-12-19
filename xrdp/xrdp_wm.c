@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "xrdp.h"
+#include "ms-rdpbcgr.h"
 #include "log.h"
 
 #define LLOG_LEVEL 1
