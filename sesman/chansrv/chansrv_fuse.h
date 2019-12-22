@@ -19,8 +19,10 @@
 #ifndef _CHANSRV_FUSE_H
 #define _CHANSRV_FUSE_H
 
-#include "arch.h"
+#include <sys/types.h>
+#include <time.h>
 
+#include "arch.h"
 #include "ms-erref.h"
 
 /* Used to pass file info back to chansrv_fuse from devredir */
