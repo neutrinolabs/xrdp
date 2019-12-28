@@ -30,7 +30,6 @@ default build will install the following
   startwm.sh
   xrdp.ini
   xrdp_keyboard.ini
-  xrdp.sh
 
 /etc/xrdp/pulse
   default.pa

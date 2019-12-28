@@ -1,6 +1,5 @@
 EXTRA_DIST = \
    keymap-names.txt \
-   xrdp.sh \
    xrdp-sesman.service.in \
    xrdp.service.in
 
@@ -61,7 +60,6 @@ if LINUX
 SUBDIRS += \
   pam.d \
   pulse
-dist_startscript_SCRIPTS = xrdp.sh
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = \
   xrdp-sesman.service \

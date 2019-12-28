@@ -1044,9 +1044,12 @@ xrdp_rdp_process_data_sync(struct xrdp_rdp *self)
 }
 
 /*****************************************************************************/
+/* 2.2.11.2.1 Refresh Rect PDU Data (TS_REFRESH_RECT_PDU) */
 static int
 xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
 {
+    int index;
+    int num_rects;
     int left;
     int top;
     int right;
@@ -1054,19 +1057,34 @@ xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
     int cx;
     int cy;
 
-    in_uint8s(s, 4); /* op */
-    in_uint16_le(s, left);
-    in_uint16_le(s, top);
-    in_uint16_le(s, right);
-    in_uint16_le(s, bottom);
-    cx = (right - left) + 1;
-    cy = (bottom - top) + 1;
-
-    if (self->session->callback != 0)
+    if (!s_check_rem(s, 4))
     {
-        self->session->callback(self->session->id, 0x4444, left, top, cx, cy);
+        return 1;
     }
-
+    in_uint8(s, num_rects);
+    in_uint8s(s, 3); /* pad */
+    g_writeln("xrdp_rdp_process_screen_update: num_rects %d", num_rects);
+    for (index = 0; index < num_rects; index++)
+    {
+        if (!s_check_rem(s, 8))
+        {
+            return 1;
+        }
+        /* Inclusive Rectangle (TS_RECTANGLE16) */
+        in_uint16_le(s, left);
+        in_uint16_le(s, top);
+        in_uint16_le(s, right);
+        in_uint16_le(s, bottom);
+        g_writeln("  left %d top %d right %d bottom %d",
+                  left, top, right, bottom);
+        cx = (right - left) + 1;
+        cy = (bottom - top) + 1;
+        if (self->session->callback != 0)
+        {
+            self->session->callback(self->session->id, 0x4444,
+                                    left, top, cx, cy);
+        }
+    }
     return 0;
 }
 
@@ -1307,7 +1325,7 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
         case RDP_DATA_PDU_SYNCHRONISE: /* 31(0x1f) */
             xrdp_rdp_process_data_sync(self);
             break;
-        case 33: /* 33(0x21) ?? Invalidate an area I think */
+        case PDUTYPE2_REFRESH_RECT:
             xrdp_rdp_process_screen_update(self, s);
             break;
         case 35: /* 35(0x23) PDUTYPE2_SUPPRESS_OUTPUT */

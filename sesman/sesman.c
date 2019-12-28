@@ -342,12 +342,33 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
+    log_message(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
+    log_message(LOG_LEVEL_TRACE, "    listen_address    = %s", g_cfg->listen_address);
+    log_message(LOG_LEVEL_TRACE, "    listen_port       = %s", g_cfg->listen_port);
+    log_message(LOG_LEVEL_TRACE, "    enable_user_wm    = %d", g_cfg->enable_user_wm);
+    log_message(LOG_LEVEL_TRACE, "    default_wm        = %s", g_cfg->default_wm);
+    log_message(LOG_LEVEL_TRACE, "    user_wm           = %s", g_cfg->user_wm);
+    log_message(LOG_LEVEL_TRACE, "    reconnect_sh      = %s", g_cfg->reconnect_sh);
+    log_message(LOG_LEVEL_TRACE, "    auth_file_path    = %s", g_cfg->auth_file_path);
+
     if (daemon)
     {
         /* not to spit on the console, shut up stdout/stderr before anything's logged */
         g_file_close(0);
         g_file_close(1);
         g_file_close(2);
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
     }
 
     /* libscp initialization */
@@ -372,17 +393,6 @@ main(int argc, char **argv)
             g_exit(0);
         }
 
-        if (g_file_open("/dev/null") < 0)
-        {
-        }
-
-        if (g_file_open("/dev/null") < 0)
-        {
-        }
-
-        if (g_file_open("/dev/null") < 0)
-        {
-        }
     }
 
     /* signal handling */

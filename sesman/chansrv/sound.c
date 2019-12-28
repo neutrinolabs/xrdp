@@ -1438,6 +1438,7 @@ sound_check_wait_objs(void)
 static int
 sound_send_server_input_formats(void)
 {
+#if defined(XRDP_RDPSNDAUDIN)
     struct stream *s;
     int bytes;
     int index;
@@ -1492,6 +1493,10 @@ sound_send_server_input_formats(void)
     bytes = (int)(s->end - s->data);
     send_channel_data(g_rdpsnd_chan_id, s->data, bytes);
     free_stream(s);
+#else
+    /* avoid warning */
+    (void)g_wave_inp_formats;
+#endif
     return 0;
 }
 

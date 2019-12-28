@@ -8,11 +8,17 @@ outfile="$3"
 
 service="xrdp-sesman"
 pamdir="/etc/pam.d"
+pamdir_suse="/usr/etc/pam.d"
 
 guess_rules ()
 {
   if test -s "$pamdir/password-auth"; then
     rules="redhat"
+    return
+  fi
+
+  if test -s "$pamdir_suse/common-account"; then
+    rules="suse"
     return
   fi
 

@@ -37,6 +37,10 @@ AM_CPPFLAGS += -DXRDP_MP3LAME
 CHANSRV_EXTRA_LIBS += -lmp3lame
 endif
 
+if XRDP_RDPSNDAUDIN
+AM_CPPFLAGS += -DXRDP_RDPSNDAUDIN
+endif
+
 AM_CFLAGS = $(X_CFLAGS)
 
 sbin_PROGRAMS = \
@@ -49,6 +53,8 @@ xrdp_chansrv_SOURCES = \
   chansrv_common.h \
   chansrv_fuse.c \
   chansrv_fuse.h \
+  chansrv_xfs.c \
+  chansrv_xfs.h \
   clipboard.c \
   clipboard.h \
   clipboard_common.h \
@@ -61,6 +67,10 @@ xrdp_chansrv_SOURCES = \
   irp.c \
   irp.h \
   mlog.h \
+  ms-erref.h \
+  ms-fscc.h \
+  ms-rdpefs.h \
+  ms-smb2.h \
   rail.c \
   rail.h \
   smartcard.c \

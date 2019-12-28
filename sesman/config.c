@@ -51,16 +51,6 @@ config_read(struct config_sesman *cfg)
 
     if (-1 == fd)
     {
-        //if (g_cfg->log.fd >= 0)
-        //{
-        /* logging is already active */
-        log_message(LOG_LEVEL_ALWAYS, "error opening %s in \
-                  config_read", cfg_file);
-        //}
-        //else
-        //{
-        g_printf("error opening %s in config_read", cfg_file);
-        //}
         return 1;
     }
 
@@ -211,15 +201,6 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         cf->reconnect_sh = g_strdup(buf);
         g_free(buf);
     }
-
-    log_message(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
-    log_message(LOG_LEVEL_TRACE, "    listen_address    = %s", cf->listen_address);
-    log_message(LOG_LEVEL_TRACE, "    listen_port       = %s", cf->listen_port);
-    log_message(LOG_LEVEL_TRACE, "    enable_user_wm    = %d", cf->enable_user_wm);
-    log_message(LOG_LEVEL_TRACE, "    default_wm        = %s", cf->default_wm);
-    log_message(LOG_LEVEL_TRACE, "    user_wm           = %s", cf->user_wm);
-    log_message(LOG_LEVEL_TRACE, "    reconnect_sh      = %s", cf->reconnect_sh);
-    log_message(LOG_LEVEL_TRACE, "    auth_file_path    = %s", cf->auth_file_path);
 
     return 0;
 }
