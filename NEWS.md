@@ -1,3 +1,43 @@
+# Release notes for xrdp v0.9.12 (2019/12/28)
+
+## Bug fixes
+* Fix "The log reference is NULL" error when sesman startup #1425
+* Fix behavior when shmem_id changes #1439
+* Make vsock config accept -1 for cid and port #1441
+* Cleanup refresh rect and check stream bounds #1437
+* Significant improvements in drive redirection #1449
+* Fix build on macOS Catalina #1462
+
+## Other changes
+* Proprietary microphone redirection via rdpsnd is now default off
+  RDP compatible microphone redirection is on instead #1427
+* Skip connecting to chansrv when no channels enabled #1393
+* Add openSUSE's pam rules #1442
+* Do not terminate xrdp daemon when caught SIGHUP #1319
+
+## Known issues
+* FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
+  xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+# Release notes for xrdp v0.9.11 (2019/08/19)
+
+## New features
+* Suppress output (do not draw screen when client window is minimized) #1330
+* Audio input (microphone) redirection compatible with [MS-RDPEAI](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpeai/d04ffa42-5a0f-4f80-abb1-cc26f71c9452) #1369
+* Now xrdp can listen on more than one port #1124 #1366
+
+## Bug fixes
+* Fix the issue audio redirection sometimes sounds with long delay  #1363
+* Check term event for more responsive shutdown #1372
+
+## Known issues
+* FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
+  xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
+
 # Release notes for xrdp v0.9.11 (2019/08/19)
 
 ## New features
