@@ -1,11 +1,16 @@
 FreeBSD_task:
   matrix:
+    env:
+      SSL: openssl
+    env:
+      SSL: libressl
+  matrix:
     freebsd_instance:
-      image: freebsd-12-1-release-amd64
+      image_family: freebsd-12-1
     freebsd_instance:
-      image: freebsd-11-3-stable-amd64-v20191205
+      image_family: freebsd-11-3-snap
   prepare_script:
-    - pkg install -y git openssl autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr nasm
+    - pkg install -y $SSL git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr nasm
     - git submodule update --init --recursive
   configure_script:
     - ./bootstrap
