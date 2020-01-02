@@ -5,7 +5,7 @@ FreeBSD_task:
     freebsd_instance:
       image: freebsd-11-3-stable-amd64-v20191205
   prepare_script:
-    - pkg install -y git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr nasm
+    - pkg install -y git openssl autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr nasm
     - git submodule update --init --recursive
   configure_script:
     - ./bootstrap
