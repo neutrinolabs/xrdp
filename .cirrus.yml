@@ -1,0 +1,23 @@
+FreeBSD_task:
+  matrix:
+    env:
+      SSL: openssl
+    env:
+      SSL: libressl
+  matrix:
+    freebsd_instance:
+      image_family: freebsd-12-1
+    freebsd_instance:
+      image_family: freebsd-11-3-snap
+  prepare_script:
+    - pkg install -y $SSL git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr nasm
+    - git submodule update --init --recursive
+  configure_script:
+    - ./bootstrap
+    - env CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure --localstatedir=/var --enable-strict-locations --with-pkgconfigdir=/usr/local/libdata/pkgconfig --enable-strict-locations --enable-ipv6 --enable-opus --enable-jpeg --enable-fdkaac --enable-painter --enable-pixman
+  build_script:
+    - make -j $(sysctl -n hw.ncpu || echo 4)
+  install_script:
+    - make install
+  test_script:
+    - /usr/local/sbin/xrdp -v
