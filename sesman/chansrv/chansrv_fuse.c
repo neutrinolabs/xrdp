@@ -1691,7 +1691,6 @@ static void xfuse_cb_unlink(fuse_req_t req, fuse_ino_t parent,
             log_error("system out of memory");
             fuse_reply_err(req, ENOMEM);
             free(fip);
-            free(full_path);
         }
         else
         {
