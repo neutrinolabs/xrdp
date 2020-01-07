@@ -166,6 +166,8 @@ g_deinit(void)
 #if defined(_WIN32)
     WSACleanup();
 #endif
+    fflush(stdout);
+    fflush(stderr);
     g_rm_temp_dir();
 }
 
