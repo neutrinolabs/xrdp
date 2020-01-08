@@ -3400,7 +3400,7 @@ g_getenv(const char *name)
 int
 g_exit(int exit_code)
 {
-    _exit(exit_code);
+    exit(exit_code);
     return 0;
 }
 
