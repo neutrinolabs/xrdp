@@ -166,6 +166,8 @@ g_deinit(void)
 #if defined(_WIN32)
     WSACleanup();
 #endif
+    fflush(stdout);
+    fflush(stderr);
     g_rm_temp_dir();
 }
 
@@ -3398,7 +3400,7 @@ g_getenv(const char *name)
 int
 g_exit(int exit_code)
 {
-    _exit(exit_code);
+    exit(exit_code);
     return 0;
 }
 
