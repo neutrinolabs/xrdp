@@ -231,7 +231,7 @@ xrdp_cache_reset(struct xrdp_cache *self,
 }
 
 #define COMPARE_WITH_CRC32(_b1, _b2) \
- ((_b1 != 0) && (_b2 != 0) && (_b1->crc32 == _b2->crc32) && \
+ ((_b1->crc32 == _b2->crc32) && \
   (_b1->bpp == _b2->bpp) && \
   (_b1->width == _b2->width) && (_b1->height == _b2->height))
 
@@ -368,8 +368,8 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     for (jndex = 0; jndex < ll->count; jndex++)
     {
         cache_idx = list16_get_item(ll, jndex);
-        if (COMPARE_WITH_CRC32
-                 (self->bitmap_items[cache_id][cache_idx].bitmap, bitmap))
+        lbm = self->bitmap_items[cache_id][cache_idx].bitmap;
+        if ((lbm != NULL) && COMPARE_WITH_CRC32(lbm, bitmap))
         {
             LLOGLN(10, ("found bitmap at %d %d", index, jndex));
             found = 1;
