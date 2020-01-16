@@ -185,28 +185,10 @@ devredir_init(void)
 {
     struct  stream *s;
     int     bytes;
-    int     fd;
-
-    union _u
-    {
-        tui32 clientID;
-        char buf[4];
-    } u;
+    tui32 clientID;
 
     /* get a random number that will act as a unique clientID */
-    if ((fd = open("/dev/urandom", O_RDONLY)) != -1)
-    {
-        if (read(fd, u.buf, 4) != 4)
-        {
-        }
-        close(fd);
-    }
-    else
-    {
-        /* /dev/urandom did not work - use address of struct s */
-        tui64 u64 = (tui64) (tintptr) &s;
-        u.clientID = (tui32) u64;
-    }
+    g_random((char *) &clientID, sizeof(clientID));
 
     /* setup stream */
     xstream_new(s, 1024);
@@ -216,7 +198,7 @@ devredir_init(void)
     xstream_wr_u16_le(s, PAKID_CORE_SERVER_ANNOUNCE);
     xstream_wr_u16_le(s, 0x0001);  /* server major ver                      */
     xstream_wr_u16_le(s, 0x000C);  /* server minor ver  - pretend 2 b Win 7 */
-    xstream_wr_u32_le(s, u.clientID); /* unique ClientID                    */
+    xstream_wr_u32_le(s, clientID); /* unique ClientID                      */
 
     /* send data to client */
     bytes = xstream_len(s);

@@ -2537,6 +2537,8 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
                                     strlen(result) + 1 + strlen(name) + 1);
         if (p == NULL)
         {
+            /* See cppcheck trac #9292 and #9437 */
+            /* cppcheck-suppress doubleFree symbolName=result */
             free(result);
             result = NULL;
         }
