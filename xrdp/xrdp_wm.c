@@ -1339,6 +1339,22 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3UP, x, y, 0, 0);
                 }
 
+                if (but == 8 && down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON8DOWN, x, y, 0, 0);
+                }
+                else if (but == 8 && !down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON8UP, x, y, 0, 0);
+                }
+                if (but == 9 && down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON9DOWN, x, y, 0, 0);
+                }
+                else if (but == 9 && !down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON9UP, x, y, 0, 0);
+                }
                 /* vertical scroll */
 
                 if (but == 4)
@@ -1801,22 +1817,22 @@ xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
     {
         if (device_flags & PTRXFLAGS_BUTTON1)
         {
-            xrdp_wm_mouse_click(self, x, y, 6, 1);
+            xrdp_wm_mouse_click(self, x, y, 8, 1);
         }
         else if (device_flags & PTRXFLAGS_BUTTON2)
         {
-            xrdp_wm_mouse_click(self, x, y, 7, 1);
+            xrdp_wm_mouse_click(self, x, y, 9, 1);
         }
     }
     else
     {
         if (device_flags & PTRXFLAGS_BUTTON1)
         {
-            xrdp_wm_mouse_click(self, x, y, 6, 0);
+            xrdp_wm_mouse_click(self, x, y, 8, 0);
         }
         else if (device_flags & PTRXFLAGS_BUTTON2)
         {
-            xrdp_wm_mouse_click(self, x, y, 7, 0);
+            xrdp_wm_mouse_click(self, x, y, 9, 0);
         }
     }
     return 0;
