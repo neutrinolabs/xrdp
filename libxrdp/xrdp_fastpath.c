@@ -22,6 +22,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "ms-rdpbcgr.h"
 
 /*****************************************************************************/
 struct xrdp_fastpath *

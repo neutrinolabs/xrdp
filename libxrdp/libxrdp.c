@@ -25,6 +25,8 @@
 #include "libxrdp.h"
 #include "xrdp_orders_rail.h"
 
+#include "ms-rdpbcgr.h"
+
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)

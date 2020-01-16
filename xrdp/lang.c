@@ -24,6 +24,7 @@
 #endif
 
 #include "xrdp.h"
+#include "ms-rdpbcgr.h"
 #include "log.h"
 
 /* map for rdp to x11 scancodes
