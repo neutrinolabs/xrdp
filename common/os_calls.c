@@ -1453,7 +1453,7 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 
         if (ok)
         {
-            g_snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
+            g_snprintf(ip_address, bytes, "%s:%d", addr, port);
         }
     }
 
@@ -2533,6 +2533,18 @@ g_strchr(const char* text, int c)
     }
 
     return strchr(text,c);
+}
+
+/* locates char in text reversely */
+const char *
+g_strrchr(const char* text, int c)
+{
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    return strrchr(text, c);
 }
 
 /*****************************************************************************/

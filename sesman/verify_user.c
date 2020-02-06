@@ -52,7 +52,7 @@ auth_account_disabled(struct spwd *stp);
 /******************************************************************************/
 /* returns boolean */
 long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, char *ip, int *errorcode)
 {
     const char *encr;
     const char *epass;

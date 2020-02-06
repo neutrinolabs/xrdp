@@ -32,11 +32,12 @@
  * @brief Validates user's password
  * @param user user's login name
  * @param pass user's password
+ * @param ip user's IP address
  * @return non-zero handle on success, 0 on failure
  *
  */
 long
-auth_userpass(const char *user, const char *pass, int *errorcode);
+auth_userpass(const char *user, const char *pass, char *ip, int *errorcode);
 
 /**
  *

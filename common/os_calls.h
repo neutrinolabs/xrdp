@@ -121,6 +121,7 @@ int      g_file_delete(const char* filename);
 int      g_file_get_size(const char* filename);
 int      g_strlen(const char* text);
 const char *g_strchr(const char *text, int c);
+const char *g_strrchr(const char *text, int c);
 char*    g_strcpy(char* dest, const char* src);
 char*    g_strncpy(char* dest, const char* src, int len);
 char*    g_strcat(char* dest, const char* src);

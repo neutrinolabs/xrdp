@@ -107,11 +107,16 @@ get_service_name(char *service_name)
  Stores the detailed error code in the errorcode variable*/
 
 long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, char *ip, int *errorcode)
 {
     int error;
     struct t_auth_info *auth_info;
     char service_name[256];
+    char* r_host;
+    const char* r_host_port_delim;
+
+    r_host_port_delim = g_strrchr(ip, ':');
+    r_host = r_host_port_delim ? g_strndup(ip, r_host_port_delim - ip) : g_strdup(ip);
 
     get_service_name(service_name);
     auth_info = g_new0(struct t_auth_info, 1);
@@ -139,6 +144,14 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
         g_printf("pam_set_item failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
     }
+    error = pam_set_item(auth_info->ph, PAM_RHOST, r_host);
+    if (error != PAM_SUCCESS)
+    {
+        g_printf("pam_set_item failed: %s\r\n",
+                 pam_strerror(auth_info->ph, error));
+    }
+    g_free(r_host);
+    r_host = 0;
 
     error = pam_authenticate(auth_info->ph, 0);
 

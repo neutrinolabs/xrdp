@@ -46,7 +46,7 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     int scount;
     int end = 0;
 
-    data = auth_userpass(s->username, s->password,NULL);
+    data = auth_userpass(s->username, s->password, s->client_ip, NULL);
     /*LOG_DBG("user: %s\npass: %s", s->username, s->password);*/
 
     if (!data)

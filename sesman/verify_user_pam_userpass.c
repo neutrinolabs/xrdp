@@ -38,7 +38,7 @@
 /******************************************************************************/
 /* returns boolean */
 int
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, char *ip, int *errorcode)
 {
     pam_handle_t *pamh;
     pam_userpass_t userpass;

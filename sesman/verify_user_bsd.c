@@ -48,7 +48,7 @@ extern struct config_sesman* g_cfg; /* in sesman.c */
 /******************************************************************************/
 /* returns boolean */
 long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, char *ip, int *errorcode)
 {
     int ret = auth_userokay(user, NULL, "auth-xrdp", pass);
     return ret;

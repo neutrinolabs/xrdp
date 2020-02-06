@@ -42,7 +42,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     int errorcode = 0;
     bool_t do_auth_end = 1;
 
-    data = auth_userpass(s->username, s->password, &errorcode);
+    data = auth_userpass(s->username, s->password, s->client_ip, &errorcode);
 
     if (s->type == SCP_GW_AUTHENTICATION)
     {
