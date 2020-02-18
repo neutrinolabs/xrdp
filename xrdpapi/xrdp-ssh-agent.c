@@ -267,7 +267,7 @@ handle_connection(int client_fd)
     }
     if (retlen != sizeof(rdp_fd))
     {
-        fprintf(stderr, "WTSVirtualChannelQuery() returned wrong length %d\n",
+        fprintf(stderr, "WTSVirtualChannelQuery() returned wrong length %u\n",
                 retlen);
     }
     rdp_fd = *retdata;
