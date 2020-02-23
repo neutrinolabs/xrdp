@@ -397,7 +397,8 @@ xfs_delete_xfs_fs(struct xfs_fs *xfs)
         size_t i;
         for (i = 0 ; i < xfs->inode_count; ++i)
         {
-            free(xfs->inode_table[i]);
+            if(xfs->inode_table[i] != NULL)
+                free(xfs->inode_table[i]);
         }
     }
     free(xfs->inode_table);
