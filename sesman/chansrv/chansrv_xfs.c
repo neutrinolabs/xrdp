@@ -565,7 +565,7 @@ xfs_get_full_path(struct xfs_fs *xfs, fuse_ino_t inum)
              */
             size_t len = 0;
             XFS_INODE_ALL *p;
-            for (p = xino ; p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
+            for (p = xino ; p && p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
             {
                 len += strlen(p->pub.name);
                 ++len; /* Allow for '/' prefix */
@@ -578,7 +578,7 @@ xfs_get_full_path(struct xfs_fs *xfs, fuse_ino_t inum)
                 char *end = result + len;
                 *end = '\0';
 
-                for (p = xino ; p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
+                for (p = xino ; p && p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
                 {
                     len = strlen(p->pub.name);
                     end -= (len + 1);
