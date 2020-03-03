@@ -49,9 +49,8 @@ typedef struct xfs_inode
     time_t          ctime;             /* Time of last status change.       */
     char            name[XFS_MAXFILENAMELEN + 1]; /* Short name             */
     tui32           generation;        /* Changes if inode is reused        */
-    tui32           device_id;         /* for file system redirection
-                                        * Non-redirected devices are guaranteed
-                                        * to have a device_id or zero */
+    char            is_redirected;     /* file is on redirected device      */
+    tui32           device_id;         /* device ID of redirected device    */
     int             lindex;            /* used in clipboard operations      */
 } XFS_INODE;
 
@@ -271,17 +270,15 @@ unsigned int
 xfs_get_file_open_count(struct xfs_fs *xfs, fuse_ino_t inum);
 
 /*
- * Deletes all entries with the matching device id
+ * Deletes all redirected entries with the matching device id
  *
  * Files are deleted even if they are open
- *
- * The specified device_id must be non-zero so that the root
- * filesystem is not deleted!
  *
  * @param device_id Device ID
  */
 void
-xfs_delete_entries_with_device_id(struct xfs_fs *xfs, tui32 device_id);
+xfs_delete_redirected_entries_with_device_id(struct xfs_fs *xfs,
+                                             tui32 device_id);
 
 /*
  * Check an entry move will be successful
