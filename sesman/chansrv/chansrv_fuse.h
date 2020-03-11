@@ -98,6 +98,7 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
                                  tui32 DeviceId, tui32 FileId);
 
 void xfuse_devredir_cb_read_file(struct state_read *fip,
+                                 enum NTSTATUS IoStatus,
                                  const char *buf, size_t length);
 void xfuse_devredir_cb_write_file(
                                  struct state_write *fip,

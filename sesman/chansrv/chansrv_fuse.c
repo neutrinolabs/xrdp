@@ -78,6 +78,7 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
                                  tui32 DeviceId, tui32 FileId)
    {}
 void xfuse_devredir_cb_read_file(struct state_read *fip,
+                                 enum NTSTATUS IoStatus,
                                  const char *buf, size_t length)
    {}
 void xfuse_devredir_cb_write_file(
@@ -637,6 +638,7 @@ int xfuse_create_share(tui32 device_id, const char *dirname)
         }
         else
         {
+            xinode->is_redirected = 1;
             xinode->device_id = device_id;
             result = 0;
         }
@@ -653,7 +655,7 @@ int xfuse_create_share(tui32 device_id, const char *dirname)
 
 void xfuse_delete_share(tui32 device_id)
 {
-    xfs_delete_entries_with_device_id(g_xfs, device_id);
+    xfs_delete_redirected_entries_with_device_id(g_xfs, device_id);
 }
 
 /**
@@ -1313,9 +1315,18 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
 }
 
 void xfuse_devredir_cb_read_file(struct state_read *fip,
+                                 enum NTSTATUS IoStatus,
                                  const char *buf, size_t length)
 {
-    fuse_reply_buf(fip->req, buf, length);
+    if (IoStatus != STATUS_SUCCESS)
+    {
+        log_error("Read NTSTATUS is %d", (int) IoStatus);
+        fuse_reply_err(fip->req, EIO);
+    }
+    else
+    {
+        fuse_reply_buf(fip->req, buf, length);
+    }
     free(fip);
 }
 
@@ -1438,7 +1449,7 @@ static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     }
     else
     {
-        if (parent_xinode->device_id == 0)
+        if (!parent_xinode->is_redirected)
         {
             /* File cannot be remote - we either know about it or we don't */
             if ((xinode = xfs_lookup_in_dir(g_xfs, parent, name)) != NULL)
@@ -1673,13 +1684,13 @@ static void xfuse_cb_unlink(fuse_req_t req, fuse_ino_t parent,
         fuse_reply_err(req, ENOTEMPTY);
     }
 
-    else if (xinode->device_id == 0)
+    else if (!xinode->is_redirected)
     {
         /* specified file is a local resource */
         //XFUSE_HANDLE *fh;
 
         log_debug("LK_TODO: this is still a TODO");
-        fuse_reply_err(req, EINVAL);
+        fuse_reply_err(req, EROFS);
     }
     else
     {
@@ -1744,26 +1755,27 @@ static void xfuse_cb_rename(fuse_req_t req,
     else if (!(new_parent_xinode = xfs_get(g_xfs, new_parent)))
     {
         log_error("inode %ld is not valid", new_parent);
-        fuse_reply_err(req, EINVAL);
+        fuse_reply_err(req, ENOENT);
     }
 
     else if (!xfs_check_move_entry(g_xfs, old_xinode->inum,
                                    new_parent, new_name))
     {
+        /* Catchall -see rename(2). Fix when logging is improved */
         fuse_reply_err(req, EINVAL);
     }
 
-    else if (new_parent_xinode->device_id != old_xinode->device_id)
+    else if (new_parent_xinode->is_redirected != old_xinode->is_redirected ||
+             new_parent_xinode->device_id != old_xinode->device_id)
     {
-        log_error("rename across file systems not supported");
-        fuse_reply_err(req, EINVAL);
+        fuse_reply_err(req, EXDEV);
     }
 
-    else if (old_xinode->device_id == 0)
+    else if (!old_xinode->is_redirected)
     {
         /* specified file is a local resource */
         log_debug("LK_TODO: this is still a TODO");
-        fuse_reply_err(req, EINVAL);
+        fuse_reply_err(req, EROFS);
     }
 
     else
@@ -1853,20 +1865,25 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
         }
 
         /* is parent inode valid? */
-        if (parent == FUSE_ROOT_ID ||
-            (xinode = xfs_get(g_xfs, parent)) == NULL ||
-            (xinode->mode & S_IFDIR) == 0)
+        if (parent == FUSE_ROOT_ID)
         {
-            log_error("inode %ld is not valid", parent);
+            fuse_reply_err(req, EROFS);
+        }
+        else if ((xinode = xfs_get(g_xfs, parent)) == NULL)
+        {
             fuse_reply_err(req, ENOENT);
         }
-        else if (xinode->device_id == 0)
+        else if ((xinode->mode & S_IFDIR) == 0)
+        {
+            fuse_reply_err(req, ENOTDIR);
+        }
+        else if (!xinode->is_redirected)
         {
             /* specified file is a local resource */
             //XFUSE_HANDLE *fh;
 
             log_debug("LK_TODO: this is still a TODO");
-            fuse_reply_err(req, EINVAL);
+            fuse_reply_err(req, EROFS);
         }
         else
         {
@@ -1945,13 +1962,20 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
         log_debug("Invalid access mode specified");
         fuse_reply_err(req, EINVAL);
     }
-    else if (xinode->device_id == 0)
+    else if (!xinode->is_redirected)
     {
         /* specified file is a local resource */
-        XFUSE_HANDLE *fh = g_new0(XFUSE_HANDLE, 1);
-        fh->is_loc_resource = 1;
-        fi->fh = (tintptr) fh;
-        fuse_reply_open(req, fi);
+        if ((fi->flags & O_ACCMODE) != O_RDONLY)
+        {
+            fuse_reply_err(req, EROFS);
+        }
+        else
+        {
+            XFUSE_HANDLE *fh = g_new0(XFUSE_HANDLE, 1);
+            fh->is_loc_resource = 1;
+            fi->fh = (tintptr) fh;
+            fuse_reply_open(req, fi);
+        }
     }
     else
     {
@@ -2017,7 +2041,7 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
         log_error("inode %ld is not valid", ino);
         fuse_reply_err(req, ENOENT);
     }
-    else if (xinode->device_id == 0)
+    else if (!xinode->is_redirected)
     {
         /* specified file is a local resource */
         fuse_reply_err(req, 0);
@@ -2153,7 +2177,7 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     {
         /* target file is in .clipboard dir */
         log_debug("THIS IS STILL A TODO!");
-        fuse_reply_err(req, EINVAL);
+        fuse_reply_err(req, EROFS);
     }
     else
     {
@@ -2283,7 +2307,7 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
             /* No changes have been made */
             make_fuse_attr_reply(req, xinode);
         }
-        else if (xinode->device_id == 0)
+        else if (!xinode->is_redirected)
         {
             /* Update the local fs */
             update_inode_file_attributes(&attrs, change_mask, xinode);
@@ -2349,7 +2373,7 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
         log_error("inode %ld is not valid", ino);
         fuse_reply_err(req, ENOENT);
     }
-    else if (xinode->device_id == 0)
+    else if (!xinode->is_redirected)
     {
         if ((fi->fh = (tintptr) xfs_opendir(g_xfs, ino)) == 0)
         {
