@@ -185,28 +185,10 @@ devredir_init(void)
 {
     struct  stream *s;
     int     bytes;
-    int     fd;
-
-    union _u
-    {
-        tui32 clientID;
-        char buf[4];
-    } u;
+    tui32 clientID;
 
     /* get a random number that will act as a unique clientID */
-    if ((fd = open("/dev/urandom", O_RDONLY)) != -1)
-    {
-        if (read(fd, u.buf, 4) != 4)
-        {
-        }
-        close(fd);
-    }
-    else
-    {
-        /* /dev/urandom did not work - use address of struct s */
-        tui64 u64 = (tui64) (tintptr) &s;
-        u.clientID = (tui32) u64;
-    }
+    g_random((char *) &clientID, sizeof(clientID));
 
     /* setup stream */
     xstream_new(s, 1024);
@@ -216,7 +198,7 @@ devredir_init(void)
     xstream_wr_u16_le(s, PAKID_CORE_SERVER_ANNOUNCE);
     xstream_wr_u16_le(s, 0x0001);  /* server major ver                      */
     xstream_wr_u16_le(s, 0x000C);  /* server minor ver  - pretend 2 b Win 7 */
-    xstream_wr_u32_le(s, u.clientID); /* unique ClientID                    */
+    xstream_wr_u32_le(s, clientID); /* unique ClientID                      */
 
     /* send data to client */
     bytes = xstream_len(s);
@@ -578,7 +560,8 @@ devredir_send_server_user_logged_on(void)
 }
 
 static void
-devredir_send_server_device_announce_resp(tui32 device_id)
+devredir_send_server_device_announce_resp(tui32 device_id,
+                                          enum NTSTATUS result_code)
 {
     struct stream *s;
     int            bytes;
@@ -589,7 +572,7 @@ devredir_send_server_device_announce_resp(tui32 device_id)
     xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
     xstream_wr_u16_le(s, PAKID_CORE_DEVICE_REPLY);
     xstream_wr_u32_le(s, device_id);
-    xstream_wr_u32_le(s, 0); /* ResultCode */
+    xstream_wr_u32_le(s, (tui32)result_code);
 
     /* send to client */
     bytes = xstream_len(s);
@@ -829,6 +812,7 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
     tui32 device_type;
     tui32 device_data_len;
     char  preferred_dos_name[9];
+    enum NTSTATUS response_status;
 
     /* get number of devices being announced */
     xstream_rd_u32_le(s, device_count);
@@ -839,19 +823,20 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
     {
         xstream_rd_u32_le(s, device_type);
         xstream_rd_u32_le(s, g_device_id);
+        /* get preferred DOS name
+         * DOS names that are 8 chars long are not NULL terminated */
+        for (j = 0; j < 8; j++)
+        {
+            preferred_dos_name[j] = *s->p++;
+        }
+        preferred_dos_name[8] = 0;
+
+        /* Assume this device isn't supported by us */
+        response_status = STATUS_NOT_SUPPORTED;
 
         switch (device_type)
         {
             case RDPDR_DTYP_FILESYSTEM:
-                /* get preferred DOS name */
-                for (j = 0; j < 8; j++)
-                {
-                    preferred_dos_name[j] = *s->p++;
-                }
-
-                /* DOS names that are 8 chars long are not NULL terminated */
-                preferred_dos_name[8] = 0;
-
                 /* get device data len */
                 xstream_rd_u32_le(s, device_data_len);
                 if (device_data_len)
@@ -865,7 +850,7 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                           preferred_dos_name,
                           device_data_len, g_full_name_for_filesystem);
 
-                devredir_send_server_device_announce_resp(g_device_id);
+                response_status = STATUS_SUCCESS;
 
                 /* create share directory in xrdp file system;    */
                 /* think of this as the mount point for this share */
@@ -873,31 +858,44 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                 break;
 
             case RDPDR_DTYP_SMARTCARD:
-                /* get preferred DOS name */
-                for (j = 0; j < 8; j++)
-                {
-                    preferred_dos_name[j] = *s->p++;
-                }
-
-                /* DOS names that are 8 chars long are not NULL terminated */
-                preferred_dos_name[8] = 0;
-
                 /* for smart cards, device data len always 0 */
 
                 log_debug("device_type=SMARTCARD device_id=0x%x dosname=%s",
                           g_device_id, preferred_dos_name);
 
-                devredir_send_server_device_announce_resp(g_device_id);
+                response_status = STATUS_SUCCESS;
+
                 scard_device_announce(g_device_id);
                 break;
 
-            /* we don't yet support these devices */
             case RDPDR_DTYP_SERIAL:
+                log_debug(
+                      "device_type=SERIAL device_id=0x%x dosname=%s",
+                      g_device_id, preferred_dos_name);
+                break;
+
             case RDPDR_DTYP_PARALLEL:
+                log_debug(
+                      "device_type=PARALLEL device_id=0x%x dosname=%s",
+                      g_device_id, preferred_dos_name);
+                break;
+
             case RDPDR_DTYP_PRINT:
-                log_debug("unsupported dev: 0x%x", device_type);
+                log_debug(
+                      "device_type=PRINT device_id=0x%x dosname=%s",
+                      g_device_id, preferred_dos_name);
+                break;
+
+            default:
+                log_debug(
+                      "device_type=UNKNOWN device_id=0x%x dosname=%s",
+                      g_device_id, preferred_dos_name);
                 break;
         }
+
+        /* Tell the client wheth or not we're supporting this one */
+        devredir_send_server_device_announce_resp(g_device_id,
+                                                  response_status);
     }
 }
 
@@ -1011,6 +1009,7 @@ devredir_proc_device_iocompletion(struct stream *s)
         case CID_READ:
             xstream_rd_u32_le(s, Length);
             xfuse_devredir_cb_read_file((struct state_read *) irp->fuse_info,
+                                         IoStatus,
                                          s->p, Length);
             devredir_irp_delete(irp);
             break;
@@ -1529,10 +1528,10 @@ devredir_rmdir_or_file(struct state_remove *fusep, tui32 device_id,
 /**
  * Read data from previously opened file
  *
- * @return 0 on success, -1 on failure
+ * Errors are reported via xfuse_devredir_cb_read_file()
  *****************************************************************************/
 
-int
+void
 devredir_file_read(struct state_read *fusep, tui32 DeviceId, tui32 FileId,
                    tui32 Length, tui64 Offset)
 {
@@ -1540,7 +1539,6 @@ devredir_file_read(struct state_read *fusep, tui32 DeviceId, tui32 FileId,
     IRP           *irp;
     IRP           *new_irp;
     int            bytes;
-    int            rval = -1;
 
     xstream_new(s, 1024);
 
@@ -1548,14 +1546,14 @@ devredir_file_read(struct state_read *fusep, tui32 DeviceId, tui32 FileId,
     if ((irp = devredir_irp_find_by_fileid(FileId)) == NULL)
     {
         log_error("no IRP found with FileId = %d", FileId);
-        xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        xfuse_devredir_cb_read_file(fusep, STATUS_UNSUCCESSFUL, NULL, 0);
         xstream_free(s);
     }
     /* create a new IRP for this request */
     else if ((new_irp = devredir_irp_new()) == NULL)
     {
         /* system out of memory */
-        xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        xfuse_devredir_cb_read_file(fusep, STATUS_UNSUCCESSFUL, NULL, 0);
         xstream_free(s);
     }
     else
@@ -1581,13 +1579,16 @@ devredir_file_read(struct state_read *fusep, tui32 DeviceId, tui32 FileId,
         bytes = xstream_len(s);
         send_channel_data(g_rdpdr_chan_id, s->data, bytes);
         xstream_free(s);
-        rval = 0;
     }
-
-    return rval;
 }
 
-int
+/**
+ * Read data from previously opened file
+ *
+ * Errors are reported via xfuse_devredir_cb_write_file()
+ *****************************************************************************/
+
+void
 devredir_file_write(struct state_write *fusep, tui32 DeviceId, tui32 FileId,
                     const char *buf, int Length, tui64 Offset)
 {
@@ -1595,7 +1596,6 @@ devredir_file_write(struct state_write *fusep, tui32 DeviceId, tui32 FileId,
     IRP           *irp;
     IRP           *new_irp;
     int            bytes;
-    int            rval = -1;
 
     log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
               DeviceId, FileId, Length, (long long)Offset);
@@ -1643,10 +1643,7 @@ devredir_file_write(struct state_write *fusep, tui32 DeviceId, tui32 FileId,
         bytes = xstream_len(s);
         send_channel_data(g_rdpdr_chan_id, s->data, bytes);
         xstream_free(s);
-        rval = 0;
     }
-
-    return rval;
 }
 
 

@@ -11,6 +11,7 @@ OurInterface::OurInterface(QObject *parent) :
     savedGeometry.setHeight(0);
     stream_id = 101;
     demuxMedia = 0;
+    demuxMediaThread = NULL;
     //elapsedTime = 0;
 }
 

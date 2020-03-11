@@ -37,8 +37,6 @@ int  g_rem_io_count = 0;  // bytes read from remote port
 static int g_terminated = 0;
 static char g_buf[1024 * 32];
 
-#define
-#define
 
 typedef unsigned short tui16;
 

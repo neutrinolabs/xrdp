@@ -1,3 +1,30 @@
+# Release notes for xrdp v0.9.13 (2020/03/11)
+
+This release is an intermediate bugfix release. The previous version v0.9.12 has some regressions on drive redirection.
+
+## Bug fixes (drive redirection related)
+* Fix chansrv crashes with segmentation fault (regression in #1449) #1487
+* Drive redirection now supports Guacamole client #1505 #1507
+* Prevent a coredump in the event of a corrupted file system #1507
+* Resolve double-free in `chansrv_fuse` #1469
+
+## Bug fixes (other)
+* Fix the issue `xrdp --version | less` will show empty output #1471 #1472
+* Fix some warnings found by cppcheck #1479 #1481 #1484 #1485
+
+## Other changes
+* Add FreeBSD CI test #1466
+* Move Microsoft-defined constants into separate includes #1470
+* Perform cppcheck during CI test #1493
+* Support mousex button 8/9 #1478
+
+## Known issues
+* FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
+  xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
+-----------------------
+
 # Release notes for xrdp v0.9.12 (2019/12/28)
 
 ## Bug fixes

@@ -344,6 +344,7 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
             xino1->pub.ctime = xino1->pub.atime;
             strcpy(xino1->pub.name, ".");
             xino1->pub.generation = xfs->generation;
+            xino1->pub.is_redirected = 0;
             xino1->pub.device_id = 0;
 
             /*
@@ -365,6 +366,7 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
             xino2->pub.ctime = xino2->pub.atime;
             strcpy(xino2->pub.name, ".delete-pending");
             xino2->pub.generation = xfs->generation;
+            xino2->pub.is_redirected = 0;
             xino2->pub.device_id = 0;
 
             xino2->parent = NULL;
@@ -469,6 +471,7 @@ xfs_add_entry(struct xfs_fs *xfs, fuse_ino_t parent_inum,
                 xino->pub.ctime = xino->pub.atime;
                 strcpy(xino->pub.name, name);
                 xino->pub.generation = xfs->generation;
+                xino->pub.is_redirected = parent->pub.is_redirected;
                 xino->pub.device_id = parent->pub.device_id;
                 xino->pub.lindex = 0;
 
@@ -565,7 +568,7 @@ xfs_get_full_path(struct xfs_fs *xfs, fuse_ino_t inum)
              */
             size_t len = 0;
             XFS_INODE_ALL *p;
-            for (p = xino ; p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
+            for (p = xino ; p && p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
             {
                 len += strlen(p->pub.name);
                 ++len; /* Allow for '/' prefix */
@@ -578,7 +581,7 @@ xfs_get_full_path(struct xfs_fs *xfs, fuse_ino_t inum)
                 char *end = result + len;
                 *end = '\0';
 
-                for (p = xino ; p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
+                for (p = xino ; p && p->pub.inum != FUSE_ROOT_ID ; p = p->parent)
                 {
                     len = strlen(p->pub.name);
                     end -= (len + 1);
@@ -816,35 +819,35 @@ xfs_get_file_open_count(struct xfs_fs *xfs, fuse_ino_t inum)
 
 /*  ------------------------------------------------------------------------ */
 void
-xfs_delete_entries_with_device_id(struct xfs_fs *xfs, tui32 device_id)
+xfs_delete_redirected_entries_with_device_id(struct xfs_fs *xfs,
+                                             tui32 device_id)
 {
     fuse_ino_t inum;
     XFS_INODE_ALL *xino;
 
-    if (device_id != 0)
+    /* Using xfs_remove_entry() is convenient, but it recurses
+     * in to directories. To make sure all entries are removed, set the
+     * open_count of all affected files to 0 first
+     */
+    for (inum = FUSE_ROOT_ID; inum < xfs->inode_count; ++inum)
     {
-        /* Using xfs_remove_entry() is convenient, but it recurses
-         * in to directories. To make sure all entries are removed, set the
-         * open_count of all affected files to 0 first
-         */
-        for (inum = FUSE_ROOT_ID; inum < xfs->inode_count; ++inum)
+        if ((xino = xfs->inode_table[inum]) != NULL &&
+                xino->pub.is_redirected != 0 &&
+                xino->pub.device_id == device_id &&
+                (xino->pub.mode & S_IFREG) != 0)
         {
-            if ((xino = xfs->inode_table[inum]) != NULL &&
-                    xino->pub.device_id == device_id &&
-                    (xino->pub.mode & S_IFREG) != 0)
-            {
-                xino->open_count = 0;
-            }
+            xino->open_count = 0;
         }
+    }
 
-        /* Now we can be sure everything will be deleted correctly */
-        for (inum = FUSE_ROOT_ID; inum < xfs->inode_count; ++inum)
+    /* Now we can be sure everything will be deleted correctly */
+    for (inum = FUSE_ROOT_ID; inum < xfs->inode_count; ++inum)
+    {
+        if ((xino = xfs->inode_table[inum]) != NULL &&
+                xino->pub.is_redirected != 0 &&
+                xino->pub.device_id == device_id)
         {
-            if ((xino = xfs->inode_table[inum]) != NULL &&
-                    xino->pub.device_id == device_id)
-            {
-                xfs_remove_entry(xfs, xino->pub.inum);
-            }
+            xfs_remove_entry(xfs, xino->pub.inum);
         }
     }
 }
