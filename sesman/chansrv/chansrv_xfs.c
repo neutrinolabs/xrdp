@@ -387,7 +387,12 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
 void
 xfs_delete_xfs_fs(struct xfs_fs *xfs)
 {
-    if (xfs != NULL && xfs->inode_table != NULL)
+    if (xfs == NULL)
+    {
+        return;
+    }
+
+    if (xfs->inode_table != NULL)
     {
         size_t i;
         for (i = 0 ; i < xfs->inode_count; ++i)

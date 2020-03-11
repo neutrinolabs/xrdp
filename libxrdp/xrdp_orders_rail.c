@@ -21,6 +21,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "ms-rdpegdi.h"
 #include "xrdp_rail.h"
 
 /* [MS-RDPERP]: Remote Desktop Protocol:

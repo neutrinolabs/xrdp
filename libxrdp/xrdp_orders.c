@@ -23,6 +23,8 @@
 #endif
 
 #include "libxrdp.h"
+#include "ms-rdpbcgr.h"
+#include "ms-rdpegdi.h"
 
 #if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>

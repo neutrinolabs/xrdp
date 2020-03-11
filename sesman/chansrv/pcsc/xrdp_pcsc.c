@@ -1064,10 +1064,11 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     offset += 4;
     memcpy(msg + offset, pbSendBuffer, cbSendLength);
     offset += cbSendLength;
+    got_recv_pci = (pioRecvPci != NULL) && (pioRecvPci->cbPciLength >= 8);
     // TODO figure out why recv pci does not work
-    if (1 || (pioRecvPci == 0) || (pioRecvPci->cbPciLength < 8))
+    got_recv_pci = 0;
+    if (got_recv_pci == 0)
     {
-        got_recv_pci = 0;
         SET_UINT32(msg, offset, 0); /* dwProtocol */
         offset += 4;
         SET_UINT32(msg, offset, 0); /* cbPciLength */
@@ -1077,7 +1078,6 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     }
     else
     {
-        got_recv_pci = 1;
         SET_UINT32(msg, offset, pioRecvPci->dwProtocol);
         offset += 4;
         SET_UINT32(msg, offset, pioRecvPci->cbPciLength);
@@ -1167,7 +1167,6 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     int status;
     int offset;
     int index;
-    int bytes_groups;
     int val;
     int llen;
     char reader[100];
@@ -1188,15 +1187,19 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     offset = 0;
     SET_UINT32(msg, offset, hContext);
     offset += 4;
-    bytes_groups = 0;
     if (mszGroups != 0)
     {
-        bytes_groups = strlen(mszGroups);
+        unsigned int bytes_groups = strlen(mszGroups);
+        SET_UINT32(msg, offset, bytes_groups);
+        offset += 4;
+        memcpy(msg + offset, mszGroups, bytes_groups);
+        offset += bytes_groups;
     }
-    SET_UINT32(msg, offset, bytes_groups);
-    offset += 4;
-    memcpy(msg + offset, mszGroups, bytes_groups);
-    offset += bytes_groups;
+    else
+    {
+        SET_UINT32(msg, offset, 0);
+        offset += 4;
+    }
     val = *pcchReaders;
     SET_UINT32(msg, offset, val);
     offset += 4;

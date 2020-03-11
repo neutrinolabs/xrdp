@@ -24,6 +24,7 @@
 
 #include "xrdp_encoder.h"
 #include "xrdp.h"
+#include "ms-rdpbcgr.h"
 #include "thread_calls.h"
 #include "fifo.h"
 

@@ -24,6 +24,8 @@
 #endif
 
 #include "libxrdp.h"
+#include "ms-rdpbcgr.h"
+#include "ms-rdperp.h"
 
 /*****************************************************************************/
 static int
