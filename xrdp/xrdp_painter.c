@@ -1037,8 +1037,8 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
                                              font_item->width,
                                              font_item->height);
                         xrdp_painter_add_dirty_rect(self, x, y,
-                                                    font_item->width + 1,       /* XXX - off by one? */
-                                                    font_item->height + 1,      /* XXX - off by one? */
+                                                    font_item->width,
+                                                    font_item->height,
                                                     &draw_rect);
                         x += font_item->incby;
                     }
