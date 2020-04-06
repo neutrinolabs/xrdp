@@ -143,9 +143,13 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             rfxrects[num_rfxrects].cy = rect.bottom - rect.top;
             num_rfxrects++;
 
-            for (int ty = rect.top / RFX_TILE_SQUARE; ty <= (rect.bottom - 1) / RFX_TILE_SQUARE; ty++)
+            int top_ty = rect.top / RFX_TILE_SQUARE;
+            int bot_ty = (rect.bottom - 1) / RFX_TILE_SQUARE;
+            for (int ty = top_ty; ty <= bot_ty; ty++)
             {
-                for (int tx = rect.left / RFX_TILE_SQUARE; tx <= (rect.right - 1) / RFX_TILE_SQUARE; tx++)
+                int left_tx = rect.left / RFX_TILE_SQUARE;
+                int right_tx = (rect.right - 1) / RFX_TILE_SQUARE;
+                for (int tx = left_tx; tx <= right_tx; tx++)
                 {
                     /* XXX */
                     assert(tx < tiles_wide);
@@ -159,8 +163,8 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
         }
 
-        int last_wide = (width % RFX_TILE_SQUARE) ? width % RFX_TILE_SQUARE : RFX_TILE_SQUARE;
-        int last_high = (height % RFX_TILE_SQUARE) ? height % RFX_TILE_SQUARE : RFX_TILE_SQUARE;
+        int last_wide = 1 + (width - 1) % RFX_TILE_SQUARE;
+        int last_high = 1 + (height - 1) % RFX_TILE_SQUARE;
         for (int ty = 0; ty < tiles_high; ty++)
         {
             for (int tx = 0; tx < tiles_wide; tx++)
@@ -172,8 +176,10 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
 
                     rfxtiles[num_tiles].x = tx * RFX_TILE_SQUARE;
                     rfxtiles[num_tiles].y = ty * RFX_TILE_SQUARE;
-                    rfxtiles[num_tiles].cx = (tx == tiles_wide - 1) ? last_wide : RFX_TILE_SQUARE;
-                    rfxtiles[num_tiles].cy = (ty == tiles_high - 1) ? last_high : RFX_TILE_SQUARE;
+                    int cx = (tx == tiles_wide - 1) ? last_wide : RFX_TILE_SQUARE;
+                    int cy = (ty == tiles_high - 1) ? last_high : RFX_TILE_SQUARE;
+                    rfxtiles[num_tiles].cx = cx;
+                    rfxtiles[num_tiles].cy = cy;
                     rfxtiles[num_tiles].quant_y = 0;;
                     rfxtiles[num_tiles].quant_cb = 0;;
                     rfxtiles[num_tiles].quant_cr = 0;;
@@ -195,7 +201,7 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
                                 NULL, 0);
         if (error)
         {
-            LLOGLN(0, ("xrdp_painter_send_dirty(): RFX encode fails (%d)", error));
+            LLOGLN(0, ("xrdp_painter_send_dirty: RFX encode fails (%d)", error));
             return 1;
         }
 
