@@ -384,6 +384,13 @@ struct xrdp_wm
 
   /* configuration derived from xrdp.ini */
   struct xrdp_config *xrdp_config;
+
+  /* for RemoteFX */
+  int codec_id;
+  struct xrdp_encoder *codec_handle;
+  int max_encoding_bytes;
+  char  *encoding;
+  int frame_id;
 };
 
 /* rdp process */

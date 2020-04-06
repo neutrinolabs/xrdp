@@ -28,6 +28,8 @@
 #include "ms-rdpbcgr.h"
 #include "log.h"
 
+#include "rfxcodec_encode.h"
+
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
   do \
@@ -80,6 +82,39 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     /* to store configuration from xrdp.ini */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
+
+    /* For sending window data w/ RemoteFX */
+    self->codec_id = self->client_info->rfx_codec_id;
+    if (self->codec_id)
+    {
+        self->codec_handle = rfxcodec_encode_create(self->screen->width,
+                                                    self->screen->height,
+                                                    RFX_FORMAT_BGRA, 0);
+        if (!self->codec_handle)
+        {
+            LLOGLN(0, ("xrdp_painter_create: rfxcodec_encode_create failed"));
+            self->codec_id = 0;
+        }
+        else
+        {
+            int meb = self->client_info->max_fastpath_frag_bytes & ~15;
+
+            /* XXX - Maybe supposed to add XRDP_SURCMD_PREFIX_BYTES and room
+             * for maximum possible struct rfx_tile and struct rfx_rect to
+             * above, but max_fastpath_frag_bytes is is huge already.
+             */
+
+            self->max_encoding_bytes = meb;
+            self->encoding = (char *)g_malloc(meb, 0);
+
+            /* XXX - For now anyway, just sending frameId zero in markers
+             * around painter's surface commands.  Not interested in the
+             * acks and don't want to get ahead of server module's counter.
+             */
+
+            self->frame_id = 0;
+        }
+    }
 
     return self;
 }
