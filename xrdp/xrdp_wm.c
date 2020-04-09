@@ -42,6 +42,9 @@
   } \
   while (0)
 
+#define MAX_RDP_TILES (128 * 128)       /* Per Microsoft max RDP display size  */
+#define MAX_RDP_RECTS ((1 << 16) - 1)   /* Per RDPRFX 2.2.2.3.3 TS_RFX_REGION */
+
 /*****************************************************************************/
 struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
@@ -98,20 +101,10 @@ xrdp_wm_create(struct xrdp_process *owner,
         else
         {
             int meb = self->client_info->max_fastpath_frag_bytes & ~15;
-
-            /* XXX - Maybe supposed to add XRDP_SURCMD_PREFIX_BYTES and room
-             * for maximum possible struct rfx_tile and struct rfx_rect to
-             * above, but max_fastpath_frag_bytes is is huge already.
-             */
-
+            meb += sizeof(struct rfx_tile) * MAX_RDP_TILES;
+            meb += sizeof(struct rfx_rect) * MAX_RDP_RECTS;
             self->max_encoding_bytes = meb;
             self->encoding = (char *)g_malloc(meb, 0);
-
-            /* XXX - For now anyway, just sending frameId zero in markers
-             * around painter's surface commands.  Not interested in the
-             * acks and don't want to get ahead of server module's counter.
-             */
-
             self->frame_id = 0;
         }
     }
