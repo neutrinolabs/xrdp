@@ -452,17 +452,14 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 {
     int rcvd;
 
-    if (self->status != TRANS_STATUS_UP)
+    if (self->status != TRANS_STATUS_UP ||
+        size < 0 || !s_check_rem_out(in_s, size))
     {
         return 1;
     }
+
     while (size > 0)
     {
-        /* make sure stream has room */
-        if ((in_s->end + size) > (in_s->data + in_s->size))
-        {
-            return 1;
-        }
         rcvd = self->trans_recv(self, in_s->end, size);
         if (rcvd == -1)
         {
