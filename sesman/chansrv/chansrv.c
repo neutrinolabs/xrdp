@@ -21,6 +21,8 @@
 #include <config_ac.h>
 #endif
 
+#include <limits.h>
+
 #include "arch.h"
 #include "os_calls.h"
 #include "thread_calls.h"
@@ -1067,6 +1069,11 @@ my_api_trans_data_in(struct trans *trans)
         rv = 1;
         in_uint32_le(s, channel_name_bytes);
         //g_writeln("my_api_trans_data_in: channel_name_bytes %d", channel_name_bytes);
+        if (channel_name_bytes == INT_MAX)
+        {
+            // Adding one to this will overflow
+            return 1;
+        }
         chan_name = g_new0(char, channel_name_bytes + 1);
         if (chan_name == NULL)
         {

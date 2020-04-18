@@ -25,6 +25,8 @@
 #include <config_ac.h>
 #endif
 
+#include <limits.h>
+
 #include "xrdp.h"
 #include "log.h"
 
@@ -123,6 +125,13 @@ xrdp_bitmap_create(int width, int height, int bpp,
 
     if (self->type == WND_TYPE_BITMAP || self->type == WND_TYPE_IMAGE)
     {
+        if (width > INT_MAX / Bpp / height)
+        {
+            LLOGLN(0, ("xrdp_bitmap_create: size overflow %dx%dx%d",
+                       width, height, Bpp));
+            g_free(self);
+            return NULL;
+        }
         self->data = (char *)g_malloc(width * height * Bpp, 0);
     }
 
@@ -130,6 +139,13 @@ xrdp_bitmap_create(int width, int height, int bpp,
     if (self->type == WND_TYPE_SCREEN) /* noorders */
     {
         LLOGLN(0, ("xrdp_bitmap_create: noorders"));
+        if (width > INT_MAX / Bpp / height)
+        {
+            LLOGLN(0, ("xrdp_bitmap_create: size overflow %dx%dx%d",
+                       width, height, Bpp));
+            g_free(self);
+            return NULL;
+        }
         self->data = (char *) g_malloc(width * height * Bpp, 0);
     }
 #endif

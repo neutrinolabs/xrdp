@@ -27,6 +27,8 @@
 #include <config_ac.h>
 #endif
 
+#include <limits.h>
+
 #define JAY_TODO_CONTEXT    0
 #define JAY_TODO_WIDE       1
 
@@ -597,6 +599,11 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     uds_client = (struct pcsc_uds_client *) (con->callback_data);
     in_uint32_le(in_s, hContext);
     in_uint32_le(in_s, bytes_groups);
+    if (bytes_groups == INT_MAX)
+    {
+        // Adding one to this will overflow
+        return 1;
+    }
     groups = (char *) g_malloc(bytes_groups + 1, 1);
     in_uint8a(in_s, groups, bytes_groups);
     in_uint32_le(in_s, cchReaders);
