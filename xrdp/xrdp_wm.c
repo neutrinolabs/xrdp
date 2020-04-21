@@ -1532,6 +1532,12 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
         return 0;
     }
 
+    // workaround odd shift behavior
+    // see https://github.com/neutrinolabs/xrdp/issues/397
+    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT)) {
+        return 0;
+    }
+
     if (device_flags & KBD_FLAG_UP) /* 0x8000 */
     {
         self->keys[scan_code] = 0;
