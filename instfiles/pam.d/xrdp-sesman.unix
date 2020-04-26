@@ -1,5 +1,16 @@
 #%PAM-1.0
-auth        include     system-auth
-account     include     system-auth
-password    include     system-auth
-session     include     system-auth
+#
+# Really basic authentication set when nothing else is available
+#
+# You may need to edit this to suit your system depending on the
+# required functionality.
+#
+auth       required     pam_unix.so shadow
+auth       required     pam_env.so
+
+password    required    pam_unix.so
+
+account     required    pam_unix.so
+account     required    pam_nologin.so
+
+session     required    pam_unix.so
