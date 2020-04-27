@@ -74,8 +74,11 @@
 #define CONNECTION_TYPE_LAN            0x06
 #define CONNECTION_TYPE_AUTODETECT     0x07
 
-/* Virtual channel options */
-/* Channel Definition Structure: options (2.2.1.3.4.1) */
+/* Channel definition structure CHANNEL_DEF (2.2.1.3.4.1) */
+/* This isn't explicitly named in MS-RDPBCGR */
+#define CHANNEL_NAME_LEN                7
+
+/* Oprions field */
 /* NOTE: XR_ prefixed to avoid conflict with FreeRDP */
 #define XR_CHANNEL_OPTION_INITIALIZED   0x80000000
 #define XR_CHANNEL_OPTION_ENCRYPT_RDP   0x40000000

@@ -39,7 +39,8 @@
 #include "xrdp_sockets.h"
 #include "audin.h"
 
-#define CHANNEL_NAME_BYTES 7
+#include "ms-rdpbcgr.h"
+
 #define MAX_PATH 260
 
 static struct trans *g_lis_trans = 0;
@@ -1047,10 +1048,10 @@ my_api_trans_data_in(struct trans *trans)
     int ver;
     struct chansrv_drdynvc_procs procs;
     /*
-     * Name is limited to CHANNEL_NAME_BYTES for an SVC, or MAX_PATH
+     * Name is limited to CHANNEL_NAME_LEN for an SVC, or MAX_PATH
      * bytes for a DVC
      */
-    char chan_name[MAX(CHANNEL_NAME_BYTES, MAX_PATH) + 1];
+    char chan_name[MAX(CHANNEL_NAME_LEN, MAX_PATH) + 1];
     unsigned int channel_name_bytes;
 
     //g_writeln("my_api_trans_data_in: extra_flags %d", trans->extra_flags);
