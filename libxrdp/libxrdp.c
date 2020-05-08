@@ -125,24 +125,18 @@ libxrdp_force_read(struct trans* trans)
 
     if (trans_force_read(trans, 4) != 0)
     {
-        g_writeln("libxrdp_force_read: error");
+        g_writeln("libxrdp_force_read: header read error");
         return 0;
     }
     bytes = libxrdp_get_pdu_bytes(s->data);
-    if (bytes < 1)
+    if (bytes < 4 || bytes > s->size)
     {
-        g_writeln("libxrdp_force_read: error");
+        g_writeln("libxrdp_force_read: bad header length %d", bytes);
         return 0;
     }
-    if (bytes > 32 * 1024)
-    {
-        g_writeln("libxrdp_force_read: error");
-        return 0;
-    }
-
     if (trans_force_read(trans, bytes - 4) != 0)
     {
-        g_writeln("libxrdp_force_read: error");
+        g_writeln("libxrdp_force_read: Can't read PDU");
         return 0;
     }
     return s;
