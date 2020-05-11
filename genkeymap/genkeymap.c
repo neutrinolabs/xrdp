@@ -136,7 +136,7 @@ int main(int argc, char **argv)
         fprintf(outf, "[%s]\n", sections[idx]);
         e.state = states[idx];
 
-        for (i = 8; i <= 137; i++) /* Keycodes */
+        for (i = 8; i < 137; i++) /* Keycodes */
         {
             if (is_evdev)
                 e.keycode = xfree86_to_evdev[i-8];

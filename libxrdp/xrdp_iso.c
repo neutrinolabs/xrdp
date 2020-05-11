@@ -129,6 +129,12 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
     int flags;
     int len;
 
+    if (!s_check_rem(s, 7))
+    {
+        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: unexpected end-of-record"));
+        return 1;
+    }
+
     in_uint8(s, flags);
     if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
@@ -153,13 +159,22 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
 
     return 0;
 }
-/*****************************************************************************/
-/* returns error */
+/*****************************************************************************
+ * Reads an X.224 PDU (X.224 section 13) preceded by a T.123 TPKT
+ * header (T.123 section 8)
+ *
+ * On entry, the TPKT header length field will have been inspected and used to
+ * set up the input stream.
+ *
+ * On exit, the TPKT header and the fixed part of the PDU header will have been
+ * removed from the stream.
+ *
+ * Returns error
+ *****************************************************************************/
 static int
 xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 {
     int ver;
-    int plen;
 
     *code = 0;
     *len = 0;
@@ -169,7 +184,16 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
         LLOGLN(10, ("xrdp_iso_recv_msg error logic"));
     }
 
+    /* TPKT header is 4 bytes, then first 2 bytes of the X.224 CR-TPDU */
+    if (!s_check_rem(s, 6))
+    {
+        return 1;
+    }
+
     in_uint8(s, ver);
+    in_uint8s(s, 3); /* Skip reserved field, plus length */
+    in_uint8(s, *len);
+    in_uint8(s, *code);
 
     if (ver != 3)
     {
@@ -178,24 +202,17 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
         return 1;
     }
 
-    in_uint8s(s, 1);
-    in_uint16_be(s, plen);
-
-    if (plen < 4)
+    if (*len == 255)
     {
+        /* X.224 13.2.1 - reserved value */
+        LLOGLN(10, ("xrdp_iso_recv_msg: reserved length encountered"));
+        LHEXDUMP(10, (s->data, 4));
         return 1;
     }
-
-    if (!s_check_rem(s, 2))
-    {
-        return 1;
-    }
-
-    in_uint8(s, *len);
-    in_uint8(s, *code);
 
     if (*code == ISO_PDU_DT)
     {
+        /* Data PDU : X.224 13.7 */
         if (!s_check_rem(s, 1))
         {
             return 1;
@@ -204,6 +221,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
     }
     else
     {
+        /* Other supported PDUs : X.224 13.x */
         if (!s_check_rem(s, 5))
         {
             return 1;
@@ -302,7 +320,20 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
     free_stream(s);
     return 0;
 }
-/*****************************************************************************/
+/*****************************************************************************
+ * Process an X.224 connection request PDU
+ *
+ * See MS-RDPCGR v20190923 sections 2.2.1.1 and 3.3.5.3.1.
+ *
+ * From the latter, in particular:-
+ * - The length embedded in the TPKT header MUST be examined for
+ *   consistency with the received data. If there is a discrepancy, the
+ *   connection SHOULD be dropped
+ * - If the optional routingToken field exists it MUST be ignored.
+ * - If the optional cookie field is present it MUST be ignored.
+ * - If both the routingToken and cookie fields are present, the server
+ *   SHOULD continue with the connection.
+ *****************************************************************************/
 /* returns error */
 int
 xrdp_iso_incoming(struct xrdp_iso *self)
@@ -310,16 +341,14 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     int rv = 0;
     int code;
     int len;
-    int cookie_index;
     int cc_type;
-    char text[256];
-    char *pend;
     struct stream *s;
+    int expected_pdu_len;
 
     LLOGLN(10, ("   in xrdp_iso_incoming"));
 
     s = libxrdp_force_read(self->trans);
-    if (s == 0)
+    if (s == NULL)
     {
         return 1;
     }
@@ -330,15 +359,29 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    if ((code != ISO_PDU_CR) || (len < 6))
+    if (code != ISO_PDU_CR)
     {
         return 1;
     }
 
+    /*
+     * Make sure the length indicator field extracted from the X.224
+     * connection request TPDU corresponds to the length in the TPKT header.
+     *
+     * We do this by seeing how the indicator field minus the counted
+     * octets in the TPDU header (6) compares with the space left in
+     * the stream.
+     */
+    expected_pdu_len = (s->end - s->p) + 6;
+    if (len != expected_pdu_len)
+    {
+        LLOGLN(0, ("xrdp_iso_incoming: X.224 CR-TPDU length exp %d got %d",
+                   expected_pdu_len, len));
+        return 1;
+    }
+
     /* process connection request */
-    pend = s->p + (len - 6);
-    cookie_index = 0;
-    while (s->p < pend)
+    while (s_check_rem(s, 1))
     {
         in_uint8(s, cc_type);
         switch (cc_type)
@@ -355,28 +398,30 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 break;
             case RDP_CORRELATION_INFO: /* rdpCorrelationInfo 6 */
                 // TODO
+                if (!s_check_rem(s, 1 + 2 + 16 + 16))
+                {
+                    LLOGLN(0, ("xrdp_iso_incoming: short correlation info"));
+                    return 1;
+                }
+
                 in_uint8s(s, 1 + 2 + 16 + 16);
                 break;
-            case 'C': /* Cookie routingToken */
-                while (s->p < pend)
+            case 'C': /* Cookie */
+                 /* The routingToken and cookie fields are both ASCII
+                  * strings starting with the word 'Cookie: ' and
+                  * ending with CR+LF. We ignore both, so we do
+                  * not need to distinguish them  */
+                while (s_check_rem(s, 1))
                 {
-                    text[cookie_index] = cc_type;
-                    cookie_index++;
-                    if (cookie_index > 255)
-                    {
-                        cookie_index = 255;
-                    }
-                    if ((s->p[0] == 0x0D) && (s->p[1] == 0x0A))
-                    {
-                        in_uint8s(s, 2);
-                        text[cookie_index] = 0;
-                        cookie_index = 0;
-                        if (g_strlen(text) > 0)
-                        {
-                        }
-                        break;
-                    }
                     in_uint8(s, cc_type);
+                    if (cc_type == 0x0D && s_check_rem(s, 1))
+                    {
+                        in_uint8(s, cc_type);
+                        if (cc_type == 0x0A)
+                        {
+                            break;
+                        }
+                    }
                 }
                 break;
         }

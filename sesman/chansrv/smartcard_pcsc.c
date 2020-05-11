@@ -586,9 +586,18 @@ int
 scard_process_list_readers(struct trans *con, struct stream *in_s)
 {
     int hContext;
-    int bytes_groups;
+    unsigned int bytes_groups;
     int cchReaders;
-    char *groups;
+    /*
+     * At the time of writing, the groups strings which can be sent
+     * over this interface are all small:-
+     *
+     * "SCard$AllReaders", "SCard$DefaultReaders", "SCard$LocalReaders" and
+     * "SCard$SystemReaders"
+     *
+     * We'll allow a bit extra in case the interface changes
+     */
+    char groups[256];
     struct pcsc_uds_client *uds_client;
     struct pcsc_context *lcontext;
     struct pcsc_list_readers *pcscListReaders;
@@ -597,8 +606,14 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     uds_client = (struct pcsc_uds_client *) (con->callback_data);
     in_uint32_le(in_s, hContext);
     in_uint32_le(in_s, bytes_groups);
-    groups = (char *) g_malloc(bytes_groups + 1, 1);
+    if (bytes_groups > (sizeof(groups) - 1))
+    {
+        LLOGLN(0, ("scard_process_list_readers: Unreasonable string length %u",
+                   bytes_groups));
+        return 1;
+    }
     in_uint8a(in_s, groups, bytes_groups);
+    groups[bytes_groups] = '\0';
     in_uint32_le(in_s, cchReaders);
     LLOGLN(10, ("scard_process_list_readers: hContext 0x%8.8x cchReaders %d",
            hContext, cchReaders));
@@ -615,7 +630,6 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     pcscListReaders->cchReaders = cchReaders;
     scard_send_list_readers(pcscListReaders, lcontext->context,
                             lcontext->context_bytes, groups, cchReaders, 1);
-    g_free(groups);
     return 0;
 }
 

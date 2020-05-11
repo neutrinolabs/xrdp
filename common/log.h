@@ -114,7 +114,7 @@ internal_log_lvl2str(const enum logLevels lvl, char *str);
  *
  */
 enum logLevels
-internal_log_text2level(const char *s);
+internal_log_text2level(const char *buf);
 
 /**
  * A function that init our struct that holds all state and

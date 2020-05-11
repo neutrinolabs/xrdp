@@ -39,6 +39,10 @@
 #include "xrdp_sockets.h"
 #include "audin.h"
 
+#include "ms-rdpbcgr.h"
+
+#define MAX_PATH 260
+
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;
 static struct trans *g_api_lis_trans = 0;
@@ -1042,9 +1046,13 @@ my_api_trans_data_in(struct trans *trans)
     int rv;
     int bytes;
     int ver;
-    int channel_name_bytes;
     struct chansrv_drdynvc_procs procs;
-    char *chan_name;
+    /*
+     * Name is limited to CHANNEL_NAME_LEN for an SVC, or MAX_PATH
+     * bytes for a DVC
+     */
+    char chan_name[MAX(CHANNEL_NAME_LEN, MAX_PATH) + 1];
+    unsigned int channel_name_bytes;
 
     //g_writeln("my_api_trans_data_in: extra_flags %d", trans->extra_flags);
     rv = 0;
@@ -1067,12 +1075,13 @@ my_api_trans_data_in(struct trans *trans)
         rv = 1;
         in_uint32_le(s, channel_name_bytes);
         //g_writeln("my_api_trans_data_in: channel_name_bytes %d", channel_name_bytes);
-        chan_name = g_new0(char, channel_name_bytes + 1);
-        if (chan_name == NULL)
+        if (channel_name_bytes > (sizeof(chan_name) - 1))
         {
             return 1;
         }
         in_uint8a(s, chan_name, channel_name_bytes);
+        chan_name[channel_name_bytes] = '\0';
+
         in_uint32_le(s, ad->chan_flags);
         //g_writeln("my_api_trans_data_in: chan_name %s chan_flags 0x%8.8x", chan_name, ad->chan_flags);
         if (ad->chan_flags == 0)
@@ -1132,7 +1141,6 @@ my_api_trans_data_in(struct trans *trans)
             //          "chan_id %d", rv, ad->chan_id);
             g_drdynvcs[ad->chan_id].xrdp_api_trans = trans;
         }
-        g_free(chan_name);
         init_stream(s, 0);
         trans->extra_flags = 2;
         trans->header_size = 0;
