@@ -81,9 +81,6 @@ xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
 
 #define XRDP_SURCMD_PREFIX_BYTES 256
 
-/* XXX */
-#include <assert.h>
-
 /*****************************************************************************/
 static int
 xrdp_painter_send_dirty(struct xrdp_painter *self)
@@ -134,9 +131,6 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
         error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
         while (error == 0)
         {
-            /* XXX */
-            assert(num_rfxrects <= num_dirty);
-
             rfxrects[num_rfxrects].x = rect.left;
             rfxrects[num_rfxrects].y = rect.top;;
             rfxrects[num_rfxrects].cx = rect.right - rect.left;
@@ -151,10 +145,6 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
                 int right_tx = (rect.right - 1) / RFX_TILE_SQUARE;
                 for (int tx = left_tx; tx <= right_tx; tx++)
                 {
-                    /* XXX */
-                    assert(tx < tiles_wide);
-                    assert(ty < tiles_high);
-
                     tile_map[tx][ty] = 1;
                 }
             }
@@ -171,9 +161,6 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             {
                 if (tile_map[tx][ty])
                 {
-                    /* XXX */
-                    assert(num_tiles <= tiles_wide * tiles_high);
-
                     rfxtiles[num_tiles].x = tx * RFX_TILE_SQUARE;
                     rfxtiles[num_tiles].y = ty * RFX_TILE_SQUARE;
                     int cx = (tx == tiles_wide - 1) ? last_wide : RFX_TILE_SQUARE;
