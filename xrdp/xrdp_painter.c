@@ -137,13 +137,15 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             rfxrects[num_rfxrects].cy = rect.bottom - rect.top;
             num_rfxrects++;
 
+            int ty;
             int top_ty = rect.top / RFX_TILE_SQUARE;
             int bot_ty = (rect.bottom - 1) / RFX_TILE_SQUARE;
-            for (int ty = top_ty; ty <= bot_ty; ty++)
+            for (ty = top_ty; ty <= bot_ty; ty++)
             {
+                int tx;
                 int left_tx = rect.left / RFX_TILE_SQUARE;
                 int right_tx = (rect.right - 1) / RFX_TILE_SQUARE;
-                for (int tx = left_tx; tx <= right_tx; tx++)
+                for (tx = left_tx; tx <= right_tx; tx++)
                 {
                     tile_map[tx][ty] = 1;
                 }
@@ -153,11 +155,13 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
         }
 
+        int ty;
         int last_wide = 1 + (width - 1) % RFX_TILE_SQUARE;
         int last_high = 1 + (height - 1) % RFX_TILE_SQUARE;
-        for (int ty = 0; ty < tiles_high; ty++)
+        for (ty = 0; ty < tiles_high; ty++)
         {
-            for (int tx = 0; tx < tiles_wide; tx++)
+            int tx;
+            for (tx = 0; tx < tiles_wide; tx++)
             {
                 if (tile_map[tx][ty])
                 {
