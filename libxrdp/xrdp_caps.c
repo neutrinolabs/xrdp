@@ -561,7 +561,10 @@ xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
     int MaxRequestSize;
 
     in_uint32_le(s, MaxRequestSize);
-    self->client_info.max_fastpath_frag_bytes = MaxRequestSize;
+    if (self->client_info.use_fast_path & 1)
+    {
+        self->client_info.max_fastpath_frag_bytes = MaxRequestSize;
+    }
     return 0;
 }
 
