@@ -146,7 +146,10 @@ xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
     {
         return 1;
     }
-    xrdp_fastpath_session_callback(self, 0x5556, 0, 0, 0, 0);
+    if (self->session->check_for_app_input)
+    {
+        xrdp_fastpath_session_callback(self, 0x5556, 0, 0, 0, 0);
+    }
     return 0;
 }
 
