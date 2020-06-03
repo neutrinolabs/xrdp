@@ -47,6 +47,7 @@ libxrdp_init(tbus id, struct trans *trans)
     session->rdp = xrdp_rdp_create(session, trans);
     session->orders = xrdp_orders_create(session, (struct xrdp_rdp *)session->rdp);
     session->client_info = &(((struct xrdp_rdp *)session->rdp)->client_info);
+    session->check_for_app_input = 1;
     return session;
 }
 
@@ -1078,7 +1079,12 @@ libxrdp_reset(struct xrdp_session *session,
         return 1;
     }
 
-    /* shut down the rdp client */
+    /* shut down the rdp client
+     *
+     * When resetting the lib, disable application input checks, as
+     * otherwise we can send a channel message to the other end while
+     * the channels are inactive ([MS-RDPBCGR] 3.2.5.5.1 */
+    session->check_for_app_input = 0;
     if (xrdp_rdp_send_deactivate((struct xrdp_rdp *)session->rdp) != 0)
     {
         return 1;
@@ -1089,6 +1095,9 @@ libxrdp_reset(struct xrdp_session *session,
     {
         return 1;
     }
+
+    /* Re-enable application input checks */
+    session->check_for_app_input = 1;
 
     return 0;
 }
