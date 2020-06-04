@@ -1044,29 +1044,36 @@ libxrdp_orders_send_font(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
+/* Note : if this is called on a multimon setup, the client is resized
+ * to a single monitor */
 int EXPORT_CC
 libxrdp_reset(struct xrdp_session *session,
               int width, int height, int bpp)
 {
     if (session->client_info != 0)
     {
+        struct xrdp_client_info *client_info = session->client_info;
+
         /* older client can't resize */
-        if (session->client_info->build <= 419)
+        if (client_info->build <= 419)
         {
             return 0;
         }
 
-        /* if same, don't need to do anything */
-        if (session->client_info->width == width &&
-                session->client_info->height == height &&
-                session->client_info->bpp == bpp)
+        /* if same (and only one monitor on client) don't need to do anything */
+        if (client_info->width == width &&
+            client_info->height == height &&
+            client_info->bpp == bpp &&
+            (client_info->monitorCount == 0 || client_info->multimon == 0))
         {
             return 0;
         }
 
-        session->client_info->width = width;
-        session->client_info->height = height;
-        session->client_info->bpp = bpp;
+        client_info->width = width;
+        client_info->height = height;
+        client_info->bpp = bpp;
+        client_info->monitorCount = 0;
+        client_info->multimon = 0;
     }
     else
     {
