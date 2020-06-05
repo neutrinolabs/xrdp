@@ -148,12 +148,12 @@ This works only with xorgxrdp session. Moreover, xorgxrdp must be v0.2.9 or late
 
 .TP
 \fBPolicy\fR=\fI[Default|UBD|UBI|UBC|UBDI|UBDC]\fR
-Session allocation policy. By default, a new session is created
-for the combination <User,BitPerPixel> when using Xrdp, and
-for the combination <User,BitPerPixel,DisplaySize> when using Xvnc.
-This behavior can be changed by setting session policy to:
+Session allocation policy. Used to decide when to allocate a
+new session. Set to one of the following values:
 .br
 
+.br
+\fBDefault\fR - session per <User,BitPerPixel>
 .br
 \fBUBD\fR - session per <User,BitPerPixel,DisplaySize>
 .br
@@ -168,7 +168,8 @@ This behavior can be changed by setting session policy to:
 
 .br
 Note that the \fBUser\fR and \fBBitPerPixel\fR criteria cannot be turned
-off. For Xvnc connections, \fBDisplaySize\fR is always enabled as well.
+off. \fBDisplaySize\fR refers to the initial geometry of a connection,
+as actual display sizes can change dynamically.
 .br
 
 .SH "SECURITY"

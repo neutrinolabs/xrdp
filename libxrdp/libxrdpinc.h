@@ -66,6 +66,7 @@ struct xrdp_session
     struct trans *trans;
     int (*callback)(intptr_t id, int msg, intptr_t param1, intptr_t param2,
                     intptr_t param3, intptr_t param4);
+    int check_for_app_input;
     void *rdp;
     void *orders;
     struct xrdp_client_info *client_info;

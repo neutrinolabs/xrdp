@@ -303,6 +303,14 @@ depth of the client. Only Xvnc and X11rdp use that setting. Xorg runs at
 \fI24\fR bpp.
 
 .TP
+\fBdisabled_encodings_mask\fR=\fI<number>\fR
+Set this bitmask to a non-zero value to prevent \fBxrdp\fR(8) requesting
+some features from the Xvnc server. You should only need to set this
+to  a non-zero value to work around bugs in your Xvnc server. The bit
+values supported for a particular release of \fBxrdp\fR(8) are documented in
+\fBxrdp.ini\fR.
+
+.TP
 \fBcode\fR=\fI<number>\fR|\fI0\fR
 Specifies the session type. The default, \fI0\fR, is Xvnc, \fI10\fR is
 X11rdp, and \fI20\fR is Xorg with xorgxrdp modules.
