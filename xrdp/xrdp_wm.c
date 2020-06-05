@@ -86,6 +86,8 @@ xrdp_wm_create(struct xrdp_process *owner,
     /* to store configuration from xrdp.ini */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
 
+#ifdef XRDP_RFXCODEC
+
     /* For sending window data w/ RemoteFX */
     self->codec_id = self->client_info->rfx_codec_id;
     if (self->codec_id)
@@ -108,6 +110,8 @@ xrdp_wm_create(struct xrdp_process *owner,
             self->frame_id = 0;
         }
     }
+
+#endif /* XRDP_RFXCODEC */
 
     return self;
 }

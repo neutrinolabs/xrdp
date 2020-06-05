@@ -99,15 +99,17 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
 
     LLOGLN(10, ("xrdp_painter_send_dirty:"));
 
-    int width = self->wm->screen->width;
-    int height = self->wm->screen->height;
-
     bpp = self->wm->screen->bpp;
     Bpp = (bpp + 7) / 8;
     if (Bpp == 3)
     {
         Bpp = 4;
     }
+
+#ifdef XRDP_RFXCODEC
+
+    int width = self->wm->screen->width;
+    int height = self->wm->screen->height;
 
     if (self->wm->codec_handle)
     {
@@ -207,6 +209,9 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
         libxrdp_fastpath_send_frame_marker(self->session, 1, self->wm->frame_id);
     }
     else
+
+#endif /* XRDP_RFXCODEC */
+
     {
         jndex = 0;
         error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
