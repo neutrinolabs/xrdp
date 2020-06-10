@@ -212,6 +212,129 @@ scp_v1s_mng_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s)
     return result;
 }
 
+enum SCP_SERVER_STATES_E
+scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
+{
+    struct SCP_SESSION *session;
+    tui32 ipaddr;
+    tui16 cmd;
+    tui8 sz;
+    char buf[257];
+    struct stream *in_s;
+
+    in_s = atrans->in_s;
+
+    /* reading command */
+    if (!s_check_rem(in_s, 2))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    in_uint16_be(in_s, cmd);
+
+    if (cmd != 1) /* manager login */
+    {
+        return SCP_SERVER_STATE_SEQUENCE_ERR;
+    }
+
+    session = scp_session_create();
+
+    if (0 == session)
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+
+    scp_session_set_version(session, 1);
+    scp_session_set_type(session, SCP_SESSION_TYPE_MANAGE);
+
+    /* reading username */
+    if (!s_check_rem(in_s, 1))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    in_uint8(in_s, sz);
+    if (!s_check_rem(in_s, sz))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    buf[sz] = '\0';
+    in_uint8a(in_s, buf, sz);
+
+    if (0 != scp_session_set_username(session, buf))
+    {
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+
+    /* reading password */
+    if (!s_check_rem(in_s, 1))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    in_uint8(in_s, sz);
+    if (!s_check_rem(in_s, sz))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    buf[sz] = '\0';
+    in_uint8a(in_s, buf, sz);
+
+    if (0 != scp_session_set_password(session, buf))
+    {
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+
+    /* reading remote address */
+    if (!s_check_rem(in_s, 1))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    in_uint8(in_s, sz);
+
+    if (sz == SCP_ADDRESS_TYPE_IPV4)
+    {
+        if (!s_check_rem(in_s, 4))
+        {
+            return SCP_SERVER_STATE_INTERNAL_ERR;
+        }
+        in_uint32_be(in_s, ipaddr);
+        scp_session_set_addr(session, sz, &ipaddr);
+    }
+    else if (sz == SCP_ADDRESS_TYPE_IPV6)
+    {
+        if (!s_check_rem(in_s, 16))
+        {
+            return SCP_SERVER_STATE_INTERNAL_ERR;
+        }
+        in_uint8a(in_s, buf, 16);
+        scp_session_set_addr(session, sz, buf);
+    }
+
+    /* reading hostname */
+    if (!s_check_rem(in_s, 1))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    in_uint8(in_s, sz);
+    if (!s_check_rem(in_s, sz))
+    {
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+    buf[sz] = '\0';
+    in_uint8a(in_s, buf, sz);
+
+    if (0 != scp_session_set_hostname(session, buf))
+    {
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+
+    /* returning the struct */
+    (*s) = session;
+
+    return SCP_SERVER_STATE_START_MANAGE;
+}
+
 /* 002 */
 enum SCP_SERVER_STATES_E
 scp_v1s_mng_allow_connection(struct SCP_CONNECTION *c, struct SCP_SESSION *s)

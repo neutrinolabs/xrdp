@@ -46,6 +46,18 @@ scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk);
 
 /**
  *
+ * @brief processes the stream using scp version 1
+ * @param trans connection trans
+ * @param s pointer to session descriptor pointer
+ *
+ * this function places in *s the address of a newly allocated SCP_SESSION structure
+ * that should be free()d
+ */
+enum SCP_SERVER_STATES_E
+scp_v1s_accept_msg(struct trans *atrans, struct SCP_SESSION **s);
+
+/**
+ *
  * @brief denies connection to sesman
  * @param c connection descriptor
  * @param reason pointer to a string containing the reason for denying connection

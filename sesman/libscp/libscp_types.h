@@ -31,6 +31,7 @@
 #include "parse.h"
 #include "arch.h"
 #include "log.h"
+#include "trans.h"
 
 #define SCP_SID      tui32
 #define SCP_DISPLAY  tui16

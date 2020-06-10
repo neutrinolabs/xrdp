@@ -104,6 +104,12 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     auth_end(data);
 }
 
+void
+scp_v1_mng_process_msg(struct trans *atrans, struct SCP_SESSION *s)
+{
+    // JAY TODO
+}
+
 static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
 {
     switch (e)

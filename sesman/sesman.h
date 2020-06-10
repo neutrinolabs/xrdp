@@ -41,4 +41,7 @@
 
 #include "libscp.h"
 
+int
+sesman_close_all(void);
+
 #endif
