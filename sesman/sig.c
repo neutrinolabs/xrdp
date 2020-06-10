@@ -32,7 +32,6 @@
 
 #include "sesman.h"
 
-extern int g_sck;
 extern int g_pid;
 extern struct config_sesman *g_cfg; /* in sesman.c */
 extern tbus g_term_event;

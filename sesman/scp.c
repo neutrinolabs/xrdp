@@ -36,44 +36,33 @@
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
-void *
-scp_process_start(void *sck)
+int
+scp_process(struct trans *atrans)
 {
-    struct SCP_CONNECTION scon;
-    struct SCP_SESSION *sdata = NULL;
+    struct SCP_SESSION *sdata;
 
-    scon.in_sck = (int)(tintptr)sck;
-    LOG_DBG("started scp thread on socket %d", scon.in_sck);
-
-    make_stream(scon.in_s);
-    make_stream(scon.out_s);
-
-    init_stream(scon.in_s, 8192);
-    init_stream(scon.out_s, 8192);
-
-    switch (scp_vXs_accept(&scon, &(sdata)))
+    sdata = NULL;
+    switch (scp_vXs_accept(atrans, &sdata))
     {
         case SCP_SERVER_STATE_OK:
-
             if (sdata->version == 0)
             {
                 /* starts processing an scp v0 connection */
                 LOG_DBG("accept ok, go on with scp v0");
-                scp_v0_process(&scon, sdata);
+                scp_v0_process(atrans, sdata);
             }
             else
             {
                 LOG_DBG("accept ok, go on with scp v1");
                 /*LOG_DBG("user: %s\npass: %s",sdata->username, sdata->password);*/
-                scp_v1_process(&scon, sdata);
+                scp_v1_process_msg(atrans, sdata);
             }
-
             break;
         case SCP_SERVER_STATE_START_MANAGE:
             /* starting a management session */
             log_message(LOG_LEVEL_WARNING,
                         "starting a sesman management session...");
-            scp_v1_mng_process(&scon, sdata);
+            scp_v1_mng_process_msg(atrans, sdata);
             break;
         case SCP_SERVER_STATE_VERSION_ERR:
             /* an unknown scp version was requested, so we shut down the */
@@ -95,14 +84,6 @@ scp_process_start(void *sck)
             log_message(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
             break;
     }
-
-    free_stream(scon.in_s);
-    free_stream(scon.out_s);
-
-    if (sdata)
-    {
-        scp_session_destroy(sdata);
-    }
-
     return 0;
 }
+

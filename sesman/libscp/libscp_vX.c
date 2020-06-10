@@ -30,27 +30,26 @@
 
 #include "libscp_vX.h"
 
-/* server API */
-enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s)
+/******************************************************************************/
+enum SCP_SERVER_STATES_E
+scp_vXs_accept(struct trans *atrans, struct SCP_SESSION **s)
 {
-    tui32 version;
+    struct stream *in_s;
+    int version;
 
-    /* reading version and packet size */
-    if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+    in_s = atrans->in_s;
+    if (!s_check_rem(in_s, 4))
     {
-        return SCP_SERVER_STATE_NETWORK_ERR;
+        return SCP_SERVER_STATE_INTERNAL_ERR;
     }
-
-    in_uint32_be(c->in_s, version);
-
+    in_uint32_be(in_s, version);
     if (version == 0)
     {
-        return scp_v0s_accept(c, s, 1);
+        return scp_v0s_accept(atrans, s);
     }
     else if (version == 1)
     {
-        return scp_v1s_accept(c, s, 1);
+        return scp_v1s_accept_msg(atrans, s);
     }
-
     return SCP_SERVER_STATE_VERSION_ERR;
 }

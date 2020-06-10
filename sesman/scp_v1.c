@@ -127,17 +127,17 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         if (SCP_SESSION_TYPE_XVNC == s->type)
         {
             log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
-            display = session_start(data, SESMAN_SESSION_TYPE_XVNC, c, s);
+            display = session_start(data, SESMAN_SESSION_TYPE_XVNC, s);
         }
         else if (SCP_SESSION_TYPE_XRDP == s->type)
         {
             log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
-            display = session_start(data, SESMAN_SESSION_TYPE_XRDP, c, s);
+            display = session_start(data, SESMAN_SESSION_TYPE_XRDP, s);
         }
         else if (SCP_SESSION_TYPE_XORG == s->type)
         {
             log_message(LOG_LEVEL_INFO, "starting Xorg session...");
-            display = session_start(data, SESMAN_SESSION_TYPE_XORG, c, s);
+            display = session_start(data, SESMAN_SESSION_TYPE_XORG, s);
         }
         /* if the session started up ok, auth_end will be called on
            sig child */
@@ -213,6 +213,13 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         auth_end(data);
     }
     g_free(slist);
+}
+
+/******************************************************************************/
+void
+scp_v1_process_msg(struct trans *atrans, struct SCP_SESSION* s)
+{
+    // JAY TODO
 }
 
 static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)

@@ -45,40 +45,38 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 /**
  *
  * @brief processes the stream using scp version 0
- * @param c connection descriptor
+ * @param atrans connection trans
  * @param s session descriptor
- * @param skipVchk if set to !0 skips the version control (to be used after
- *                 scp_vXs_accept() )
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);
+scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s);
 
 /**
  *
  * @brief allows the connection to TS, returning the display port
- * @param c connection descriptor
+ * @param atrans connection trans
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d, const tui8 *guid);
+scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d, const tui8 *guid);
 
 /**
  *
  * @brief denies the connection to TS
- * @param c connection descriptor
+ * @param atrans connection trans
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_deny_connection(struct SCP_CONNECTION* c);
+scp_v0s_deny_connection(struct trans *atrans);
 
 /**
  * @brief send reply to an authentication request
- * @param c connection descriptor
+ * @param atrans connection trans
  * @param value the reply code 0 means ok
  * @return
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value);
+scp_v0s_replyauthentication(struct trans *atrans, unsigned short int value);
 
 #endif

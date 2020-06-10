@@ -29,15 +29,7 @@
 
 #include "libscp.h"
 
-/**
- *
- * @brief processes the stream using scp version 0
- * @param in_sck connection socket
- * @param in_s input stream
- * @param out_s output stream
- *
- */
 void
-scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+scp_v0_process(struct trans *atrans, struct SCP_SESSION *s);
 
 #endif
