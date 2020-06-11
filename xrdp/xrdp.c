@@ -623,7 +623,7 @@ main(int argc, char **argv)
         }
         else
         {
-            g_sprintf(text, "%d", pid);
+            g_snprintf(text, "%d", pid);
             g_file_write(fd, text, g_strlen(text));
             g_file_close(fd);
         }
