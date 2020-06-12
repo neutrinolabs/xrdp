@@ -59,6 +59,10 @@
 
 #include "libscp_types_mng.h"
 
+/* Max server incoming and outgoing message size, used to stop memory
+   exhaustion attempts (CVE-2020-4044) */
+#define SCP_MAX_MESSAGE_SIZE 8192
+
 struct SCP_CONNECTION
 {
   int in_sck;

@@ -34,6 +34,65 @@
 
 extern struct log_config *s_log;
 
+/** Maximum length of a string (two bytes + len), excluding the terminator
+ *
+ * Practially this is limited by [MS-RDPBCGR] TS_INFO_PACKET
+ * */
+#define STRING16_MAX_LEN 512
+
+/**
+ * Reads a big-endian uint16 followed by a string into a buffer
+ *
+ * Buffer is null-terminated on success
+ *
+ * @param s Input stream
+ * @param [out] Output buffer (must be >= (STRING16_MAX_LEN+1) chars)
+ * @param param Parameter we're reading
+ * @param line Line number reference
+ * @return != 0 if string read OK
+ */
+static
+int in_string16(struct stream *s, char str[], const char *param, int line)
+{
+    int result;
+
+    if (!s_check_rem(s, 2))
+    {
+        log_message(LOG_LEVEL_WARNING,
+                    "[v0:%d] connection aborted: %s len missing",
+                    line, param);
+        result = 0;
+    }
+    else
+    {
+        unsigned int sz;
+
+        in_uint16_be(s, sz);
+        if (sz > STRING16_MAX_LEN)
+        {
+            log_message(LOG_LEVEL_WARNING,
+                        "[v0:%d] connection aborted: %s too long (%u chars)",
+                        line, param, sz);
+            result = 0;
+        }
+        else
+        {
+            result = s_check_rem(s, sz);
+            if (!result)
+            {
+                log_message(LOG_LEVEL_WARNING,
+                            "[v0:%d] connection aborted: %s data missing",
+                            line, param);
+            }
+            else
+            {
+                in_uint8a(s, str, sz);
+                str[sz] = '\0';
+            }
+        }
+    }
+    return result;
+}
 /* client API */
 /******************************************************************************/
 enum SCP_CLIENT_STATES_E
@@ -71,10 +130,24 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
 
     sz = g_strlen(s->username);
+    if (sz > STRING16_MAX_LEN)
+    {
+        log_message(LOG_LEVEL_WARNING,
+                    "[v0:%d] connection aborted: username too long",
+                    __LINE__);
+        return SCP_CLIENT_STATE_SIZE_ERR;
+    }
     out_uint16_be(c->out_s, sz);
     out_uint8a(c->out_s, s->username, sz);
 
     sz = g_strlen(s->password);
+    if (sz > STRING16_MAX_LEN)
+    {
+        log_message(LOG_LEVEL_WARNING,
+                    "[v0:%d] connection aborted: password too long",
+                    __LINE__);
+        return SCP_CLIENT_STATE_SIZE_ERR;
+    }
     out_uint16_be(c->out_s, sz);
     out_uint8a(c->out_s, s->password, sz);
     out_uint16_be(c->out_s, s->width);
@@ -111,20 +184,24 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
     in_uint32_be(c->in_s, size);
 
-    if (size < 14)
+    if (size < (8 + 2 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
-        log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: packet size error", __LINE__);
+        log_message(LOG_LEVEL_WARNING,
+                    "[v0:%d] connection aborted: msg size = %u",
+                    __LINE__, (unsigned int)size);
         return SCP_CLIENT_STATE_SIZE_ERR;
     }
 
     /* getting payload */
-    init_stream(c->in_s, c->in_s->size);
+    init_stream(c->in_s, size - 8);
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
     {
         log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
         return SCP_CLIENT_STATE_NETWORK_ERR;
     }
+
+    c->in_s->end = c->in_s->data + (size - 8);
 
     /* check code */
     in_uint16_be(c->in_s, sz);
@@ -151,43 +228,38 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     return SCP_CLIENT_STATE_END;
 }
 
-/* server API */
-/******************************************************************************/
-enum SCP_SERVER_STATES_E
-scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
+/**
+ * Initialises a V0 session object
+ *
+ * At the time of the call, the version has been read from the connection
+ *
+ * @param c Connection
+ * @param [out] session pre-allocated session object
+ * @return SCP_SERVER_STATE_OK for success
+ */
+static enum SCP_SERVER_STATES_E
+scp_v0s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
 {
-    tui32 version = 0;
     tui32 size;
-    struct SCP_SESSION *session = 0;
-    tui16 sz;
+    tui16 height;
+    tui16 width;
+    tui16 bpp;
     tui32 code = 0;
-    char *buf = 0;
+    char buf[STRING16_MAX_LEN + 1];
 
-    if (!skipVchk)
+    scp_session_set_version(session, 0);
+
+    /* Check for a header and a code value in the length */
+    in_uint32_be(c->in_s, size);
+    if (size < (8 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
-        LOG_DBG("[v0:%d] starting connection", __LINE__);
-
-        if (0 == scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
-        {
-            c->in_s->end = c->in_s->data + 8;
-            in_uint32_be(c->in_s, version);
-
-            if (version != 0)
-            {
-                log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: version error", __LINE__);
-                return SCP_SERVER_STATE_VERSION_ERR;
-            }
-        }
-        else
-        {
-            log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
-            return SCP_SERVER_STATE_NETWORK_ERR;
-        }
+        log_message(LOG_LEVEL_WARNING,
+                    "[v0:%d] connection aborted: msg size = %u",
+                    __LINE__, (unsigned int)size);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
 
-    in_uint32_be(c->in_s, size);
-
-    init_stream(c->in_s, 8196);
+    init_stream(c->in_s, size - 8);
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
     {
@@ -201,16 +273,6 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
 
     if (code == 0 || code == 10 || code == 20)
     {
-        session = scp_session_create();
-
-        if (0 == session)
-        {
-            log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
-            return SCP_SERVER_STATE_INTERNAL_ERR;
-        }
-
-        scp_session_set_version(session, version);
-
         if (code == 0)
         {
             scp_session_set_type(session, SCP_SESSION_TYPE_XVNC);
@@ -225,154 +287,130 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         }
 
         /* reading username */
-        in_uint16_be(c->in_s, sz);
-        buf = g_new0(char, sz + 1);
-        in_uint8a(c->in_s, buf, sz);
-        buf[sz] = '\0';
+        if (!in_string16(c->in_s, buf, "username", __LINE__))
+        {
+            return SCP_SERVER_STATE_SIZE_ERR;
+        }
         if (0 != scp_session_set_username(session, buf))
         {
-            scp_session_destroy(session);
             log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting username", __LINE__);
-            g_free(buf);
             return SCP_SERVER_STATE_INTERNAL_ERR;
         }
-        g_free(buf);
 
         /* reading password */
-        in_uint16_be(c->in_s, sz);
-        buf = g_new0(char, sz + 1);
-        in_uint8a(c->in_s, buf, sz);
-        buf[sz] = '\0';
+        if (!in_string16(c->in_s, buf, "passwd", __LINE__))
+        {
+            return SCP_SERVER_STATE_SIZE_ERR;
+        }
         if (0 != scp_session_set_password(session, buf))
         {
-            scp_session_destroy(session);
             log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__);
-            g_free(buf);
             return SCP_SERVER_STATE_INTERNAL_ERR;
         }
-        g_free(buf);
 
-        /* width */
-        in_uint16_be(c->in_s, sz);
-        scp_session_set_width(session, sz);
-        /* height */
-        in_uint16_be(c->in_s, sz);
-        scp_session_set_height(session, sz);
-        /* bpp */
-        in_uint16_be(c->in_s, sz);
-        if (0 != scp_session_set_bpp(session, (tui8)sz))
+        /* width  + height + bpp */
+        if (!s_check_rem(c->in_s, 2 + 2 + 2))
         {
-            scp_session_destroy(session);
+            log_message(LOG_LEVEL_WARNING,
+                        "[v0:%d] connection aborted: width+height+bpp missing",
+                        __LINE__);
+            return SCP_SERVER_STATE_SIZE_ERR;
+        }
+        in_uint16_be(c->in_s, width);
+        scp_session_set_width(session, width);
+        in_uint16_be(c->in_s, height);
+        scp_session_set_height(session, height);
+        in_uint16_be(c->in_s, bpp);
+        if (0 != scp_session_set_bpp(session, (tui8)bpp))
+        {
             log_message(LOG_LEVEL_WARNING,
                         "[v0:%d] connection aborted: unsupported bpp: %d",
-                        __LINE__, (tui8)sz);
+                        __LINE__, (tui8)bpp);
             return SCP_SERVER_STATE_INTERNAL_ERR;
         }
 
         if (s_check_rem(c->in_s, 2))
         {
             /* reading domain */
-            in_uint16_be(c->in_s, sz);
-
-            if (sz > 0)
+            if (!in_string16(c->in_s, buf, "domain", __LINE__))
             {
-                buf = g_new0(char, sz + 1);
-                in_uint8a(c->in_s, buf, sz);
-                buf[sz] = '\0';
+                return SCP_SERVER_STATE_SIZE_ERR;
+            }
+            if (buf[0] != '\0')
+            {
                 scp_session_set_domain(session, buf);
-                g_free(buf);
             }
         }
 
         if (s_check_rem(c->in_s, 2))
         {
             /* reading program */
-            in_uint16_be(c->in_s, sz);
-
-            if (sz > 0)
+            if (!in_string16(c->in_s, buf, "program", __LINE__))
             {
-                buf = g_new0(char, sz + 1);
-                in_uint8a(c->in_s, buf, sz);
-                buf[sz] = '\0';
+                return SCP_SERVER_STATE_SIZE_ERR;
+            }
+
+            if (buf[0] != '\0')
+            {
                 scp_session_set_program(session, buf);
-                g_free(buf);
             }
         }
 
         if (s_check_rem(c->in_s, 2))
         {
             /* reading directory */
-            in_uint16_be(c->in_s, sz);
-
-            if (sz > 0)
+            if (!in_string16(c->in_s, buf, "directory", __LINE__))
             {
-                buf = g_new0(char, sz + 1);
-                in_uint8a(c->in_s, buf, sz);
-                buf[sz] = '\0';
+                return SCP_SERVER_STATE_SIZE_ERR;
+            }
+
+            if (buf[0] != '\0')
+            {
                 scp_session_set_directory(session, buf);
-                g_free(buf);
             }
         }
 
         if (s_check_rem(c->in_s, 2))
         {
             /* reading client IP address */
-            in_uint16_be(c->in_s, sz);
-
-            if (sz > 0)
+            if (!in_string16(c->in_s, buf, "client IP", __LINE__))
             {
-                buf = g_new0(char, sz + 1);
-                in_uint8a(c->in_s, buf, sz);
-                buf[sz] = '\0';
+                return SCP_SERVER_STATE_SIZE_ERR;
+            }
+            if (buf[0] != '\0')
+            {
                 scp_session_set_client_ip(session, buf);
-                g_free(buf);
             }
         }
     }
     else if (code == SCP_GW_AUTHENTICATION)
     {
-        /* g_writeln("Command is SCP_GW_AUTHENTICATION"); */
-        session = scp_session_create();
-
-        if (0 == session)
-        {
-            /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error",      __LINE__);*/
-            return SCP_SERVER_STATE_INTERNAL_ERR;
-        }
-
-        scp_session_set_version(session, version);
         scp_session_set_type(session, SCP_GW_AUTHENTICATION);
         /* reading username */
-        in_uint16_be(c->in_s, sz);
-        buf = g_new0(char, sz + 1);
-        in_uint8a(c->in_s, buf, sz);
-        buf[sz] = '\0';
+        if (!in_string16(c->in_s, buf, "username", __LINE__))
+        {
+            return SCP_SERVER_STATE_SIZE_ERR;
+        }
 
         /* g_writeln("Received user name: %s",buf); */
         if (0 != scp_session_set_username(session, buf))
         {
-            scp_session_destroy(session);
             /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting        username", __LINE__);*/
-            g_free(buf);
             return SCP_SERVER_STATE_INTERNAL_ERR;
         }
-        g_free(buf);
 
         /* reading password */
-        in_uint16_be(c->in_s, sz);
-        buf = g_new0(char, sz + 1);
-        in_uint8a(c->in_s, buf, sz);
-        buf[sz] = '\0';
+        if (!in_string16(c->in_s, buf, "passwd", __LINE__))
+        {
+            return SCP_SERVER_STATE_SIZE_ERR;
+        }
 
         /* g_writeln("Received password: %s",buf); */
         if (0 != scp_session_set_password(session, buf))
         {
-            scp_session_destroy(session);
             /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__); */
-            g_free(buf);
             return SCP_SERVER_STATE_INTERNAL_ERR;
         }
-        g_free(buf);
     }
     else
     {
@@ -380,8 +418,65 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
-    (*s) = session;
     return SCP_SERVER_STATE_OK;
+}
+
+
+/* server API */
+/******************************************************************************/
+enum SCP_SERVER_STATES_E
+scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
+{
+    enum SCP_SERVER_STATES_E result = SCP_SERVER_STATE_OK;
+    struct SCP_SESSION *session = NULL;
+    tui32 version = 0;
+
+    if (!skipVchk)
+    {
+        LOG_DBG("[v0:%d] starting connection", __LINE__);
+
+        if (0 == scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+        {
+            c->in_s->end = c->in_s->data + 8;
+            in_uint32_be(c->in_s, version);
+
+            if (version != 0)
+            {
+                log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: version error", __LINE__);
+                result = SCP_SERVER_STATE_VERSION_ERR;
+            }
+        }
+        else
+        {
+            log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+            result = SCP_SERVER_STATE_NETWORK_ERR;
+        }
+    }
+
+    if (result == SCP_SERVER_STATE_OK)
+    {
+        session = scp_session_create();
+        if (NULL == session)
+        {
+            log_message(LOG_LEVEL_WARNING,
+                        "[v0:%d] connection aborted: no memory",
+                        __LINE__);
+            result = SCP_SERVER_STATE_INTERNAL_ERR;
+        }
+        else
+        {
+            result = scp_v0s_init_session(c, session);
+            if (result != SCP_SERVER_STATE_OK)
+            {
+                scp_session_destroy(session);
+                session = NULL;
+            }
+        }
+    }
+
+    (*s) = session;
+
+    return result;
 }
 
 /******************************************************************************/
