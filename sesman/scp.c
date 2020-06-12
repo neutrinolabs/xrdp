@@ -48,8 +48,8 @@ scp_process_start(void *sck)
     make_stream(scon.in_s);
     make_stream(scon.out_s);
 
-    init_stream(scon.in_s, 8192);
-    init_stream(scon.out_s, 8192);
+    init_stream(scon.in_s, SCP_MAX_MESSAGE_SIZE);
+    init_stream(scon.out_s, SCP_MAX_MESSAGE_SIZE);
 
     switch (scp_vXs_accept(&scon, &(sdata)))
     {
@@ -76,10 +76,12 @@ scp_process_start(void *sck)
             scp_v1_mng_process(&scon, sdata);
             break;
         case SCP_SERVER_STATE_VERSION_ERR:
-            /* an unknown scp version was requested, so we shut down the */
-            /* connection (and log the fact)                             */
+        case SCP_SERVER_STATE_SIZE_ERR:
+            /* an unknown scp version was requested, or the message sizes
+               are inconsistent. Shut down the connection and log the
+               fact */
             log_message(LOG_LEVEL_WARNING,
-                        "unknown protocol version specified. connection refused.");
+                        "protocol violation. connection refused.");
             break;
         case SCP_SERVER_STATE_NETWORK_ERR:
             log_message(LOG_LEVEL_WARNING, "libscp network error.");
