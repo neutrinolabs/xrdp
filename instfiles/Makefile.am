@@ -50,7 +50,8 @@ dist_startscript_DATA = \
   km-00000813.ini \
   km-00000816.ini \
   km-0000100c.ini \
-  km-00010409.ini
+  km-00010409.ini \
+  km-19360409.ini
 
 #
 # platform specific files

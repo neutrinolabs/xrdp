@@ -15,6 +15,12 @@ setxkbmap -model pc104 -layout us
 setxkbmap -model pc104 -layout dvorak
 ./xrdp-genkeymap ../instfiles/km-00010409.ini
 
+# English - US 'dvp' 0x19360409
+OLD_SETTINGS=$(setxkbmap -query -verbose 4 | sed "s/^\([a-z]\+\):\s*\(.*\)$/-\1 \2/;s/^-options/-option \"\" -option/;s/,/ -option /g" | xargs -d \\n)
+setxkbmap -rules xfree86 -model pc105 -layout us -variant dvp -option "" -option compose:102 -option caps:shift -option numpad:sg -option numpad:shift3 -option keypad:hex -option keypad:atm -option kpdl:semi -option lv3:ralt_alt
+./xrdp-genkeymap ../instfiles/km-19360409.ini
+setxkbmap ${OLD_SETTINGS}
+
 # English - UK 'en-GB' 0x00000809
 setxkbmap -model pc105 -layout gb
 ./xrdp-genkeymap ../instfiles/km-00000809.ini
