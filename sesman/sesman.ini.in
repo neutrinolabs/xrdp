@@ -85,6 +85,8 @@ SyslogLevel=DEBUG
 ;
 param=Xorg
 ; Leave the rest paramaters as-is unless you understand what will happen.
+param=-config
+param=xrdp/xorg.conf
 param=-configdir
 param=xrdp
 param=-noreset
