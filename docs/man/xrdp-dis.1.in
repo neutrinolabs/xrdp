@@ -17,11 +17,11 @@ to get the default host and display number.
 .SH FILES
 .TP
 .I @socketdir@/xrdp_disconnect_display_*
-UNIX socket used to communicate with the \fBxrdp\fP(8) session manager.
+UNIX socket used to communicate the disconnect request to xorgxrdp.
 
 .SH KNOWN ISSUES
 .TP
-This utility doesn't support disconnecting xorgxrdp sessions so far.
+This utility doesn't support disconnecting Xvnc sessions so far.
 
 .SH SEE ALSO
 .BR xrdp (8).
