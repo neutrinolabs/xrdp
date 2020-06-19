@@ -83,6 +83,12 @@
 #define GOOD_RECT(rect) ((rect)->x1 < (rect)->x2 && (rect)->y1 < (rect)->y2)
 #define BAD_RECT(rect) ((rect)->x1 > (rect)->x2 || (rect)->y1 > (rect)->y2)
 
+/* This file is included by pixman-region16.c which defines PREFIX(x).
+ * This check allows cppcheck 2.x to scan this file separately */
+#ifndef PREFIX
+#define PREFIX(x) pixman_region##x
+#endif
+
 #ifdef XRDP_DEBUG
 
 #define GOOD(reg)                                                       \

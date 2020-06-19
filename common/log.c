@@ -569,6 +569,7 @@ log_message(const enum logLevels lvl, const char *msg, ...)
     if (len > LOG_BUFFER_SIZE)
     {
         log_message(LOG_LEVEL_WARNING, "next message will be truncated");
+        len = LOG_BUFFER_SIZE;
     }
 
     /* forcing the end of message string */
