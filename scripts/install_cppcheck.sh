@@ -48,6 +48,45 @@ call_make()
     return $status
 }
 
+
+# ----------------------------------------------------------------------------
+# C R E A T E   Z 3   V E R S I O N   H
+#
+# Older versions of libz3-dev do not come packaged with z3_version.h. This
+# function uses the z3 command to create a copy of this file in the
+# cppcheck i#externalsi# directory.
+# ----------------------------------------------------------------------------
+create_z3_version_h()
+{
+    set -- `z3 --version`
+    if [ $# != 3 -o "$1/$2" != Z3/version ]; then
+        echo "** Unexpected output from z3 command '$*'" >&2
+        false
+    else
+        z3ver=$3 ; # e.g. 4.4.3
+        set -- `echo $z3ver | tr '.' ' '`
+        if [ $# != 3 ]; then
+            echo "** Unable to determine Z3 version from '$z3ver'" >&2
+            false
+        else
+            {
+                echo "#ifndef Z3_MAJOR_VERSION"
+                echo "#define Z3_MAJOR_VERSION $1"
+                echo "#endif"
+                echo
+                echo "#ifndef Z3_MINOR_VERSION"
+                echo "#define Z3_MINOR_VERSION $2"
+                echo "#endif"
+                echo
+                echo "#ifndef Z3_BUILD_NUMBER"
+                echo "#define Z3_BUILD_NUMBER $3"
+                echo "#endif"
+            } >externals/z3_version.h
+            echo "  - Created z3_version.h for $1.$2.$3"
+        fi
+    fi
+}
+
 # ----------------------------------------------------------------------------
 # M A I N
 # ----------------------------------------------------------------------------
@@ -78,14 +117,23 @@ fi
     # Put everything in this directory
     FILESDIR=$INSTALL_ROOT/$CPPCHECK_VER
 
-    # CFGDIR is needed for cppcheck before 1.86
-    make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR CFGDIR=$FILESDIR"
-
     # See https://stackoverflow.com/questions/
     #     791959/download-a-specific-tag-with-git
     git clone -b $CPPCHECK_VER --depth 1 $REPO_URL $workdir
 
     cd $workdir
+
+    case "$CPPCHECK_VER" in
+        1.*)
+            # CFGDIR is needed for cppcheck before 1.86
+            make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR CFGDIR=$FILESDIR"
+            ;;
+        *)  make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR USE_Z3=yes"
+            if [ ! -f /usr/include/z3_version.h ]; then
+                create_z3_version_h
+            fi
+    esac
+
     echo "Making cppcheck..."
     # CFGDIR is needed for cppcheck before 1.86
     call_make $make_args
