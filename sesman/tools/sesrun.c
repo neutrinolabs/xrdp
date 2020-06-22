@@ -35,13 +35,13 @@
 #define PACKAGE_VERSION "???"
 #endif
 
-struct config_sesman g_cfg; /* config.h */
+struct config_sesman *g_cfg; /* config.h */
 
 /******************************************************************************/
 int
 main(int argc, char **argv)
 {
-    int sck;
+    int sck = -1;
     int code;
     int i;
     int size;
@@ -56,21 +56,38 @@ main(int argc, char **argv)
     char *username;
     char *password;
     long data;
+    const char *sesman_ini;
+    char default_sesman_ini[256];
+    int status = 1;
 
-    if (0 != config_read(&g_cfg))
+    /* User specified a different config file?  */
+    if (argc > 2 && (g_strcmp(argv[1], "-C") == 0))
     {
-        g_printf("sesrun: error reading config. quitting.\n");
-        return 1;
+        sesman_ini = argv[2];
+        argv += 2;
+        argc -= 2;
+    }
+    else
+    {
+        g_snprintf(default_sesman_ini, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+        sesman_ini = default_sesman_ini;
     }
 
-    if (argc == 1)
+    if (argc != 8)
     {
         g_printf("xrdp session starter v" PACKAGE_VERSION "\n");
         g_printf("\nusage:\n");
-        g_printf("sesrun <server> <username> <password> <width> <height> <bpp> <session_code>\n");
+        g_printf("xrdp-sesrun [-C /path/to/sesman.ini] <server> "
+                 "<username> <password> "
+                 "<width> <height> <bpp> <session_code>\n");
         g_printf("session code 0 for Xvnc, 10 for X11RDP, 20 for Xorg\n");
     }
-    else if (argc == 8)
+    else if ((g_cfg = config_read(sesman_ini)) == NULL)
+    {
+        g_printf("xrdp-sesrun: error reading config %s. quitting.\n",
+                  sesman_ini);
+    }
+    else
     {
         username = argv[2];
         password = argv[3];
@@ -86,10 +103,13 @@ main(int argc, char **argv)
         sck = g_tcp_socket();
         if (sck < 0)
         {
-            return 1;
+            g_printf("socket error\n");
         }
-
-        if (g_tcp_connect(sck, argv[1], g_cfg.listen_port) == 0)
+        else if (g_tcp_connect(sck, argv[1], g_cfg->listen_port) != 0)
+        {
+            g_printf("connect error\n");
+        }
+        else
         {
             s_push_layer(out_s, channel_hdr, 8);
             out_uint16_be(out_s, session_code); /* code */
@@ -125,20 +145,22 @@ main(int argc, char **argv)
                             in_uint16_be(in_s, data);
                             in_uint16_be(in_s, display);
                             g_printf("ok %d display %d\n", (int)data, display);
+                            status = 0;
                         }
                     }
                 }
             }
         }
-        else
-        {
-            g_printf("connect error\n");
-        }
 
-        g_tcp_close(sck);
+        if (sck >= 0)
+        {
+            g_tcp_close(sck);
+        }
         free_stream(in_s);
         free_stream(out_s);
     }
 
-    return 0;
+    config_free(g_cfg);
+
+    return status;
 }
