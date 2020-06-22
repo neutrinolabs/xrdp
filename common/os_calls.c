@@ -2896,6 +2896,12 @@ g_strtrim(char *str, int trim_flags)
 
     text = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
     text1 = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
+    if (text == NULL || text1 == NULL)
+    {
+        free(text);
+        free(text1);
+        return 1;
+    }
     text1_index = 0;
     mbstowcs(text, str, len + 1);
 
