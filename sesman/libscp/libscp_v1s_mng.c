@@ -381,7 +381,7 @@ static enum SCP_SERVER_STATES_E
 _scp_v1s_mng_check_response(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 {
     tui32 version;
-    tui32 size;
+    int size;
     tui16 cmd;
     //   tui8 dim;
     //   char buf[257];

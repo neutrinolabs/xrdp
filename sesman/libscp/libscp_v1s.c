@@ -218,7 +218,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     enum SCP_SERVER_STATES_E result;
     struct SCP_SESSION *session;
     tui32 version;
-    tui32 size;
+    int size;
     tui16 cmdset;
     tui16 cmd;
 
@@ -354,7 +354,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
                          const char *reason)
 {
     tui32 version;
-    tui32 size;
+    int size;
     tui16 cmdset;
     tui16 cmd;
     int rlen;
@@ -539,7 +539,7 @@ enum SCP_SERVER_STATES_E
 scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNECTED_SESSION *ds, SCP_SID *sid)
 {
     tui32 version = 1;
-    tui32 size = 12;
+    int size = 12;
     tui16 cmd = 40;
     int pktcnt;
     int idx;

@@ -99,7 +99,7 @@ enum SCP_CLIENT_STATES_E
 scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 {
     tui32 version;
-    tui32 size;
+    int size;
     tui16 sz;
 
     init_stream(c->in_s, c->in_s->size);
@@ -187,8 +187,8 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     if (size < (8 + 2 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
         log_message(LOG_LEVEL_WARNING,
-                    "[v0:%d] connection aborted: msg size = %u",
-                    __LINE__, (unsigned int)size);
+                    "[v0:%d] connection aborted: msg size = %d",
+                    __LINE__, size);
         return SCP_CLIENT_STATE_SIZE_ERR;
     }
 
@@ -240,7 +240,7 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 static enum SCP_SERVER_STATES_E
 scp_v0s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
 {
-    tui32 size;
+    int size;
     tui16 height;
     tui16 width;
     tui16 bpp;
@@ -254,8 +254,8 @@ scp_v0s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
     if (size < (8 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
         log_message(LOG_LEVEL_WARNING,
-                    "[v0:%d] connection aborted: msg size = %u",
-                    __LINE__, (unsigned int)size);
+                    "[v0:%d] connection aborted: msg size = %d",
+                    __LINE__, size);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
