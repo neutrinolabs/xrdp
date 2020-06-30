@@ -1,3 +1,17 @@
+# Release notes for xrdp v0.9.13.1 (2020/06/30)
+
+This is a security fix release that includes fixes for the following local buffer overflow vulnerability.
+
+* [CVE-2022-4044: Local users can perform a buffer overflow attack against the xrdp-sesman service and then impersonate it](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-4044)
+
+This update is recommended for all xrdp users.
+
+## Special thanks
+
+Thanks to [Ashley Newson](https://github.com/ashleynewson) reporting the vulnerability and reviewing fix.
+
+-----------------------
+
 # Release notes for xrdp v0.9.13 (2020/03/11)
 
 This release is an intermediate bugfix release. The previous version v0.9.12 has some regressions on drive redirection.
@@ -111,7 +125,7 @@ Thank you for matt335672 contributing to lots of improvements in drive redirecti
 
 -----------------------
 
-## Release notes for xrdp v0.9.9 (2018/12/25)
+# Release notes for xrdp v0.9.9 (2018/12/25)
 
 ## Release cycle
 From the next release, release cycle will be changed from quarterly to every
