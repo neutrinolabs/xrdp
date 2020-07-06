@@ -121,6 +121,7 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
 #include "clipboard_file.h"
 #include "chansrv_fuse.h"
 #include "chansrv_xfs.h"
+#include "chansrv_config.h"
 #include "devredir.h"
 #include "list.h"
 #include "file.h"
@@ -310,8 +311,7 @@ struct req_list_item
     int size;
 };
 
-static char g_fuse_mount_name[256] = "xrdp_client";
-static mode_t g_umask = 077; /* Umask for files in fs */
+extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 static struct list *g_req_list = 0;
 static struct xfs_fs *g_xfs;                 /* an inst of xrdp file system */
@@ -404,35 +404,6 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name);
 int
 load_fuse_config(void)
 {
-    int index;
-    char cfg_file[256];
-    struct list *items;
-    struct list *values;
-    char *item;
-    char *value;
-
-    items = list_create();
-    items->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-    g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
-    file_by_name_read_section(cfg_file, "Chansrv", items, values);
-    for (index = 0; index < items->count; index++)
-    {
-        item = (char *)list_get_item(items, index);
-        value = (char *)list_get_item(values, index);
-        if (g_strcasecmp(item, "FuseMountName") == 0)
-        {
-            g_strncpy(g_fuse_mount_name, value, 255);
-        }
-        else if (g_strcasecmp(item, "FileUmask") == 0)
-        {
-            g_umask = strtol(value, NULL, 0);
-            log_info("g_umask set to 0%o", g_umask);
-        }
-    }
-    list_delete(items);
-    list_delete(values);
     return 0;
 }
 
@@ -469,7 +440,7 @@ xfuse_init(void)
     load_fuse_config();
 
     /* define FUSE mount point to ~/xrdp_client, ~/thinclient_drives */
-    g_snprintf(g_fuse_root_path, 255, "%s/%s", g_getenv("HOME"), g_fuse_mount_name);
+    g_snprintf(g_fuse_root_path, 255, "%s/%s", g_getenv("HOME"), g_cfg->fuse_mount_name);
     g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
 
     /* if FUSE mount point does not exist, create it */
@@ -1561,7 +1532,7 @@ static int xfuse_dirbuf_add1(fuse_req_t req, struct dirbuf1 *b,
 
     memset(&stbuf, 0, sizeof(stbuf));
     stbuf.st_ino = xinode->inum;
-    stbuf.st_mode = xinode->mode & ~g_umask;
+    stbuf.st_mode = xinode->mode & ~g_cfg->file_umask;
 
     /*
      * Try to add the entry. From the docs for fuse_add_direntry():-
@@ -2453,7 +2424,7 @@ static void xfs_inode_to_fuse_entry_param(const XFS_INODE *xinode,
     e->attr_timeout = XFUSE_ATTR_TIMEOUT;
     e->entry_timeout = XFUSE_ENTRY_TIMEOUT;
     e->attr.st_ino = xinode->inum;
-    e->attr.st_mode = xinode->mode & ~g_umask;
+    e->attr.st_mode = xinode->mode & ~g_cfg->file_umask;
     e->attr.st_nlink = 1;
     e->attr.st_uid = xinode->uid;
     e->attr.st_gid = xinode->gid;
@@ -2477,7 +2448,7 @@ static void make_fuse_attr_reply(fuse_req_t req, const XFS_INODE *xinode)
 
     memset(&st, 0, sizeof(st));
     st.st_ino = xinode->inum;
-    st.st_mode = xinode->mode & ~g_umask;
+    st.st_mode = xinode->mode & ~g_cfg->file_umask;
     st.st_nlink = 1;
     st.st_uid = xinode->uid;
     st.st_gid = xinode->gid;

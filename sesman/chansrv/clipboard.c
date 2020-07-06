@@ -170,6 +170,7 @@ x-special/gnome-copied-files
 #include "parse.h"
 #include "os_calls.h"
 #include "chansrv.h"
+#include "chansrv_config.h"
 #include "clipboard.h"
 #include "clipboard_file.h"
 #include "clipboard_common.h"
@@ -235,7 +236,7 @@ extern tbus g_x_wait_obj;       /* in xcommon.c */
 extern Screen *g_screen;        /* in xcommon.c */
 extern int g_screen_num;        /* in xcommon.c */
 
-extern int g_restrict_outbound_clipboard; /* in chansrv.c */
+extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 int g_clip_up = 0;
 
@@ -2499,7 +2500,7 @@ clipboard_xevent(void *xevent)
     switch (lxevent->type)
     {
         case SelectionNotify:
-            if (g_restrict_outbound_clipboard == 0)
+            if (g_cfg->restrict_outbound_clipboard == 0)
             {
                 clipboard_event_selection_notify(lxevent);
             }
