@@ -91,6 +91,8 @@
 
 #ifdef XRDP_DEBUG
 
+pixman_bool_t PREFIX(_selfcheck) (region_type_t *reg);
+
 #define GOOD(reg)                                                       \
     do                                                                  \
     {                                                                   \

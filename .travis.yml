@@ -53,6 +53,17 @@ max_amd64_conf: &max_amd64_conf
       packages:
         - *max_amd64_deps
 
+max_debug_amd64_conf: &max_debug_amd64_conf
+  env:
+    - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --enable-pixman --enable-xrdpdebug"
+    - DISTCHECK=1
+  addons:
+    apt:
+      packages:
+        - *max_amd64_deps
+
 max_x86_deps: &max_x86_deps
   - *common_deps
   - g++-multilib
@@ -123,6 +134,10 @@ matrix:
   - compiler: clang
     << : *max_amd64_conf
 
+  # Maximal debug amd64 build
+  - compiler: gcc
+    << : *max_debug_amd64_conf
+    
   # Maximal x86 build
   - compiler: gcc
     << : *max_x86_conf
@@ -139,5 +154,5 @@ matrix:
 script:
   - ./bootstrap
   - ./configure $CONF_FLAGS
-  - make CFLAGS="$CFLAGS -O2 -Wall -Wwrite-strings -Werror"
+  - make CFLAGS="$CFLAGS"
   - test -z "$DISTCHECK" || make distcheck
