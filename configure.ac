@@ -243,9 +243,12 @@ then
     [AC_MSG_ERROR([please install libjpeg-dev or libjpeg-devel])])
 fi
 
+CFLAGS="-Wall -Wwrite-strings -Werror"
 if test "x$enable_xrdpdebug" = "xyes"
 then
-  CFLAGS="-g -O0"
+  CFLAGS="-g -O0 $CFLAGS"
+else
+  CFLAGS="-O2 $CFLAGS"
 fi
 
 # checking for fuse
