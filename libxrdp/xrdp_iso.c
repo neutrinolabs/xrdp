@@ -36,11 +36,11 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
 {
     struct xrdp_iso *self;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "   in xrdp_iso_create");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "   in xrdp_iso_create");
     self = (struct xrdp_iso *) g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
     self->trans = trans;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_create");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "   out xrdp_iso_create");
     return self;
 }
 
@@ -452,7 +452,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
 {
     int len;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "   in xrdp_iso_send");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "   in xrdp_iso_send");
     s_pop_layer(s, iso_hdr);
     len = (int) (s->end - s->p);
     out_uint8(s, 3);
@@ -467,6 +467,6 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_send");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "   out xrdp_iso_send");
     return 0;
 }

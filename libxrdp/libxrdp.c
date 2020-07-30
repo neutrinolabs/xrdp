@@ -239,7 +239,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             case PDUTYPE_DATAPDU:
                 if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
-                    LOG(LOG_LEVEL_ERROR, "libxrdp_process_data returned non zero");
+                    LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: xrdp_rdp_process_data failed");
                     cont = 0;
                     term = 1;
                 }
@@ -247,13 +247,13 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             case 2: /* FASTPATH_INPUT_EVENT */
                 if (xrdp_fastpath_process_input_event(rdp->sec_layer->fastpath_layer, s) != 0)
                 {
-                    LOG(LOG_LEVEL_ERROR, "libxrdp_process_data returned non zero");
+                    LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: xrdp_fastpath_process_input_event failed");
                     cont = 0;
                     term = 1;
                 }
                 break;
             default:
-                LOG(LOG_LEVEL_ERROR, "unknown in libxrdp_process_data: code= %d", code);
+                LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: unknown code = %d", code);
                 dead_lock_counter++;
                 break;
         }
@@ -262,8 +262,10 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         {
             /*This situation can happen and this is a workaround*/
             cont = 0;
-            LOG(LOG_LEVEL_ERROR, "Serious programming error: we were locked in a deadly loop");
-            LOG(LOG_LEVEL_ERROR, "Remaining: %d", (int) (s->end - s->next_packet));
+            LOG(LOG_LEVEL_ERROR, 
+                "libxrdp_process_data: Serious programming error: "
+                "we were locked in a deadly loop. "
+                "Remaining bytes: %d", (int) (s->end - s->next_packet));
             s->next_packet = 0;
         }
 

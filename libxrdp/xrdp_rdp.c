@@ -419,7 +419,14 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* returns error */
+/* 
+  Receives and parses pdu code from next packet.
+  
+  @param self
+  @param (in/out) s: the stream to read from. Upon return the stream is ?
+  @param (out) code: the pdu code from the packet
+  returns error
+  */
 int
 xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 {
@@ -429,7 +436,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     int chan = 0;
     const tui8 *header;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_rdp_recv");
+
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
         /* check for fastpath first */
@@ -438,11 +445,12 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         {
             if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
             {
+                LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_rdp_recv: xrdp_sec_recv_fastpath failed");
                 return 1;
             }
             /* next_packet gets set in xrdp_sec_recv_fastpath */
             *code = 2; // special code for fastpath input
-            LOG_DEVEL(LOG_LEVEL_TRACE, "out (fastpath) xrdp_rdp_recv");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: out code 2 (fastpath)");
             return 0;
         }
 
@@ -454,13 +462,13 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         {
             s->next_packet = 0;
             *code = -1;
-            LOG_DEVEL(LOG_LEVEL_TRACE, "out (1) xrdp_rdp_recv");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: out code -1 (send demand active)");
             return 0;
         }
 
         if (error != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_recv error");
+            LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: xrdp_sec_recv failed");
             return 1;
         }
 
@@ -470,20 +478,23 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             {
                 if (xrdp_channel_process(self->sec_layer->chan_layer, s, chan) != 0)
                 {
-                    LOG(LOG_LEVEL_ERROR, "xrdp_channel_process returned unhandled error") ;
+                    LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: xrdp_channel_process failed");
                 }
             }
             else
             {
                 if (chan != 1)
                 {
-                    LOG(LOG_LEVEL_ERROR, "Wrong channel Id to be handled by xrdp_channel_process %d", chan);
+                    LOG(LOG_LEVEL_WARNING, 
+                                "xrdp_rdp_recv: Wrong channel Id to be handled "
+                                "by xrdp_channel_process, channel id %d", chan);
                 }
             }
 
             s->next_packet = 0;
             *code = 0;
-            LOG_DEVEL(LOG_LEVEL_TRACE, "out (2) xrdp_rdp_recv");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: out code 0 (skip data) "
+                    "data processed by channel id %d", chan);
             return 0;
         }
 
@@ -491,7 +502,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv stream not touched");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: stream not touched");
         s->p = s->next_packet;
     }
 
@@ -500,18 +511,19 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         s->next_packet = 0;
         *code = 0;
         len = (int)(s->end - s->p);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out (3) xrdp_rdp_recv: bad RDP packet, length [%d]", len);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: out code 0 (skip data) "
+                "bad RDP packet, length [%d]", len);
         return 0;
     }
     else
     {
         in_uint16_le(s, len);
-        /*LOG_DEVEL(LOG_LEVEL_TRACE, "New len received : %d next packet: %d s_end: %d",len,s->next_packet,s->end); */
+
         in_uint16_le(s, pdu_code);
         *code = pdu_code & 0xf;
         in_uint8s(s, 2); /* mcs user id */
         s->next_packet += len;
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out (4) xrdp_rdp_recv");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: out code %d (pdu code) packet length %d", *code, len);
         return 0;
     }
 }
@@ -855,6 +867,7 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
 
     if (xrdp_sec_incoming(self->sec_layer) != 0)
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_rdp_incoming: xrdp_sec_incoming failed");
         return 1;
     }
     self->mcs_channel = self->sec_layer->mcs_layer->userid +
@@ -1029,7 +1042,7 @@ xrdp_rdp_process_data_control(struct xrdp_rdp *self, struct stream *s)
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_process_data_control unknown action");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_process_data_control unknown action %d", action);
     }
 
     return 0;

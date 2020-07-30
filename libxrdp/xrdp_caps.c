@@ -771,10 +771,10 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     make_stream(s);
     init_stream(s, 8192);
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_caps_send_demand_active");
 
     if (xrdp_rdp_init(self, s) != 0)
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: xrdp_rdp_init failed");
         free_stream(s);
         return 1;
     }
@@ -797,7 +797,10 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, CAPSTYPE_SHARE_LEN);
     out_uint16_le(s, self->mcs_channel);
     out_uint16_be(s, 0xb5e2); /* 0x73e1 */
-
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_SHARE "
+            "channel ID = 0x%x", self->mcs_channel);
+            
     /* Output general capability set */
     caps_count++;
     out_uint16_le(s, CAPSTYPE_GENERAL);
@@ -820,7 +823,9 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0); /* Compression level */
     out_uint8(s, 1); /* refreshRectSupport */
     out_uint8(s, 1); /* suppressOutputSupport */
-
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_GENERAL TODO");
+            
     /* Output bitmap capability set */
     caps_count++;
     out_uint16_le(s, CAPSTYPE_BITMAP);
@@ -837,12 +842,16 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0); /* unknown */
     out_uint16_le(s, 0); /* unknown */
     out_uint16_le(s, 0); /* pad */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_BITMAP TODO");
 
     /* Output font capability set */
     caps_count++;
     out_uint16_le(s, CAPSTYPE_FONT);
     out_uint16_le(s, CAPSTYPE_FONT_LEN);
-
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_FONT");
+            
     /* Output order capability set */
     caps_count++;
     out_uint16_le(s, CAPSTYPE_ORDER);
@@ -895,6 +904,9 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint32_le(s, 0x0f4240); /* desk save */
     out_uint32_le(s, 1); /* ? */
     out_uint32_le(s, 0); /* ? */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_ORDER "
+            "TODO");
 
     /* Output bmpcodecs capability set */
     caps_count++;
@@ -912,6 +924,11 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint8(s, 0x01); /* fAllowDynamicFidelity */
     out_uint8(s, 0x01); /* fAllowSubsampling */
     out_uint8(s, 0x03); /* colorLossLevel */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "NSCODEC "
+            "fAllowDynamicFidelity = 0x01,"
+            "fAllowSubsampling = 0x01,"
+            "colorLossLevel = 0x03");
 #if defined(XRDP_RFXCODEC) || defined(XRDP_NEUTRINORDP)
     /* remotefx */
     codec_caps_count++;
@@ -919,12 +936,16 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint8(s, 0); /* codec id, client sets */
     out_uint16_le(s, 4); /* codecPropertiesLength */
     out_uint32_le(s, 0); /* reserved */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "REMOTEFX");
     /* image remotefx */
     codec_caps_count++;
     out_uint8a(s, XR_CODEC_GUID_IMAGE_REMOTEFX, 16);
     out_uint8(s, 0); /* codec id, client sets */
     out_uint16_le(s, 4); /* codecPropertiesLength */
     out_uint32_le(s, 0); /* reserved */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "IMAGE_REMOTEFX");
 #endif
     /* jpeg */
     codec_caps_count++;
@@ -932,6 +953,9 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint8(s, 0); /* codec id, client sets */
     out_uint16_le(s, 1); /* codecPropertiesLength */
     out_uint8(s, 75); /* jpeg compression ratio */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "JPEG: "
+            "jpeg compression ratio = 75");
     /* calculate and set size and count */
     codec_caps_size = (int)(s->p - codec_caps_size_ptr);
     codec_caps_size += 2; /* 2 bytes for CAPSTYPE_BMPCODECS above */
@@ -945,6 +969,9 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, CAPSTYPE_COLORCACHE_LEN);
     out_uint16_le(s, 6); /* cache size */
     out_uint16_le(s, 0); /* pad */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_COLORCACHE: "
+            "colorTableCacheSize = 6");
 
     /* Output pointer capability set */
     caps_count++;
@@ -953,8 +980,14 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 1); /* Colour pointer */
     out_uint16_le(s, 0x19); /* Cache size */
     out_uint16_le(s, 0x19); /* Cache size */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_POINTER: "
+            "colorPointerFlag = true"
+            "colorPointerCacheSize = 0x19"
+            "pointerCacheSize = 0x19");
 
     /* Output input capability set */
+    /* https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpbcgr/b3bc76ae-9ee5-454f-b197-ede845ca69cc */
     caps_count++;
     out_uint16_le(s, CAPSTYPE_INPUT);
     out_uint16_le(s, CAPSTYPE_INPUT_LEN);
@@ -970,6 +1003,9 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     }
     out_uint16_le(s, flags);
     out_uint8s(s, 82);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "CAPSTYPE_INPUT: "
+            "inputFlags = 0x%x", flags);
 
     if (self->client_info.rail_enable) /* MS-RDPERP 3.3.5.1.4 */
     {
@@ -980,7 +1016,11 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         out_uint32_le(s, 3); /* See: https://msdn.microsoft.com/en-us/library/cc242518.aspx
                                 TS_RAIL_LEVEL_SUPPORTED
                                 TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED */
-
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+                "CAPSTYPE_RAIL: "
+                "RailSupportLevel = "
+                "TS_RAIL_LEVEL_SUPPORTED | TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED");
+                
         /* Window List Capability Set */
         caps_count++;
         out_uint16_le(s, CAPSTYPE_WINDOW);
@@ -988,6 +1028,11 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         out_uint32_le(s, TS_WINDOW_LEVEL_SUPPORTED_EX);
         out_uint8(s, 3); /* NumIconCaches */
         out_uint16_le(s, 12); /* NumIconCacheEntries */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+                "CAPSTYPE_WINDOW: "
+                "WndSupportLevel = TS_WINDOW_LEVEL_SUPPORTED_EX, "
+                "NumIconCaches = 3,"
+                "NumIconCacheEntries = 12");
     }
 
     /* 6 - bitmap cache v3 codecid */
@@ -995,6 +1040,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0x0006);
     out_uint16_le(s, 5);
     out_uint8(s, 0); /* client sets */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+            "0x0006 = 0");
 
     if (self->client_info.use_fast_path & FASTPATH_OUTPUT_SUPPORTED) /* fastpath output on */
     {
@@ -1003,13 +1050,17 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE);
         out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE_LEN);
         out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+                "CAPSSETTYPE_MULTIFRAGMENTUPDATE = 3MB");
 
         /* frame acks */
         caps_count++;
         out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE);
         out_uint16_le(s, CAPSTYPE_FRAME_ACKNOWLEDGE_LEN);
         out_uint32_le(s, 2); /* 2 frames in flight */
-
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+                "CAPSTYPE_FRAME_ACKNOWLEDGE = 2 frames");
+                
         /* surface commands */
         caps_count++;
         out_uint16_le(s, CAPSETTYPE_SURFACE_COMMANDS);
@@ -1018,6 +1069,9 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
                           SURFCMDS_FRAMEMARKER |
                           SURFCMDS_STREAMSUFRACEBITS)); /* cmdFlags */
         out_uint32_le(s, 0); /* reserved */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+                "CAPSETTYPE_SURFACE_COMMANDS = "
+                "SURFCMDS_SETSURFACEBITS | SURFCMDS_FRAMEMARKER | SURFCMDS_STREAMSUFRACEBITS");
     }
 
     out_uint8s(s, 4); /* pad */
@@ -1033,13 +1087,15 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     caps_count_ptr[2] = caps_count >> 16;
     caps_count_ptr[3] = caps_count >> 24;
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending PDUTYPE_DEMANDACTIVEPDU "
+            "message with the server's capabilities");
     if (xrdp_rdp_send(self, s, PDUTYPE_DEMANDACTIVEPDU) != 0)
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: xrdp_rdp_send failed");
         free_stream(s);
         return 1;
     }
-    LOG_DEVEL(LOG_LEVEL_TRACE, "out (1) xrdp_caps_send_demand_active");
-
+    
     /* send Monitor Layout PDU for dual monitor */
     if (self->client_info.monitorCount > 0 &&
             self->client_info.multimon == 1)

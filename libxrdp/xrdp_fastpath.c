@@ -63,14 +63,15 @@ int
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 {
     int fp_hdr;
-    int len = 0; /* unused */
+    int len = 0;
     int byte;
     char *holdp;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "   in xrdp_fastpath_recv");
+
     holdp = s->p;
     if (!s_check_rem(s, 2))
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_fastpath_recv: ERROR the stream does not contain enough bytes");
         return 1;
     }
     in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
@@ -86,6 +87,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 
         if (!s_check_rem(s, 1))
         {
+            LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_fastpath_recv: ERROR the stream does not contain enough bytes");
             return 1;
         }
         in_uint8(s, byte); /* length 2 (1 byte) */
@@ -97,7 +99,8 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
         len = byte;
     }
     s->next_packet = holdp + len;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_fastpath_recv");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_fastpath_recv: numEvents %d secFlags 0x%x length %d", 
+            self->numEvents, self->secFlags, len);
     return 0;
 }
 
@@ -367,8 +370,8 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                 }
                 break;
             default:
-                LOG(LOG_LEVEL_WARNING, "xrdp_fastpath_process_input_event: unknown "
-                    "eventCode %d", eventCode);
+                LOG(LOG_LEVEL_ERROR, "xrdp_fastpath_process_input_event: "
+                    "unknown eventCode %d", eventCode);
                 break;
         }
     }
