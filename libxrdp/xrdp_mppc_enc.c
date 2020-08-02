@@ -24,14 +24,6 @@
 
 #include "libxrdp.h"
 
-#define MPPC_ENC_DEBUG 0
-
-#if MPPC_ENC_DEBUG
-#define DLOG(_args) g_printf _args
-#else
-#define DLOG(_args) do { } while (0)
-#endif
-
 /* local defines */
 
 #define RDP_40_HIST_BUF_LEN (1024 * 8) /* RDP 4.0 uses 8K history buf */
@@ -606,7 +598,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
         for (x = 0; x < 2; x++)
         {
             data = *(historyPointer + x);
-            DLOG(("%.2x ", (tui8) data));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "%.2x ", (tui8) data);
             if (data & 0x80)
             {
                 /* insert encoded literal */
@@ -684,7 +676,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
             /* no match found; encode literal byte */
             data = *cptr1;
 
-            DLOG(("%.2x ", data));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "%.2x ", data);
             if (data < 0x80)
             {
                 /* literal byte < 0x80 */
@@ -710,8 +702,8 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
             lom++;
         }
         saved_ctr = ctr + lom;
-        DLOG(("<%d: %ld,%d> ",  (historyPointer + ctr) - hbuf_start,
-              copy_offset, lom));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "<%ld: %u,%d> ",  (historyPointer + ctr) - hbuf_start,
+              copy_offset, lom);
 
         /* compute CRC for matching segment and store in hash table */
 
@@ -951,7 +943,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     while (len - ctr > 0)
     {
         data = srcData[ctr];
-        DLOG(("%.2x ", data));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "%.2x ", data);
         if (data < 0x80)
         {
             /* literal byte < 0x80 */
@@ -990,9 +982,9 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     enc->flags |= enc->flagsHold;
     enc->flagsHold = 0;
 
-    DLOG(("\n"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "\n");
 
-    //g_writeln("compression ratio: %f", (float) len / (float) enc->bytes_in_opb);
+      LOG_DEVEL(LOG_LEVEL_TRACE, "compression ratio: %f", (float) len / (float) enc->bytes_in_opb);
 
     return 1;
 }

@@ -29,6 +29,7 @@
 #include "os_calls.h"
 #include "ssl_calls.h"
 #include "list.h"
+#include "log.h"
 #include "file.h"
 #include "libxrdpinc.h"
 #include "xrdp_client_info.h"

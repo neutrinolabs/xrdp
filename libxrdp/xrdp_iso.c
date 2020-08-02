@@ -27,13 +27,7 @@
 #include "ms-rdpbcgr.h"
 #include "log.h"
 
-#define LOG_LEVEL 1
-#define LLOG(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
-#define LLOGLN(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
-#define LHEXDUMP(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_hexdump _args ; } } while (0)
+
 
 
 /*****************************************************************************/
@@ -42,11 +36,11 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
 {
     struct xrdp_iso *self;
 
-    LLOGLN(10, ("   in xrdp_iso_create"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   in xrdp_iso_create");
     self = (struct xrdp_iso *) g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
     self->trans = trans;
-    LLOGLN(10, ("   out xrdp_iso_create"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_create");
     return self;
 }
 
@@ -83,7 +77,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
                     !g_file_readable(client_info->key_file))
                 {
                     /* certificate or privkey is not readable */
-                    log_message(LOG_LEVEL_DEBUG, "No readable certificates or "
+                    LOG(LOG_LEVEL_DEBUG, "No readable certificates or "
                                 "private keys, cannot accept TLS connections");
                     self->failureCode = SSL_CERT_NOT_ON_SERVER;
                     rv = 1; /* error */
@@ -116,7 +110,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
             break;
     }
 
-    log_message(LOG_LEVEL_DEBUG, "Security layer: requested %d, selected %d",
+    LOG(LOG_LEVEL_DEBUG, "Security layer: requested %d, selected %d",
                 self->requestedProtocol, self->selectedProtocol);
     return rv;
 }
@@ -131,29 +125,29 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
 
     if (!s_check_rem(s, 7))
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: unexpected end-of-record"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: unexpected end-of-record");
         return 1;
     }
 
     in_uint8(s, flags);
     if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: error, flags: %x",flags));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, flags: %x",flags);
         return 1;
     }
 
     in_uint16_le(s, len);
     if (len != 8)
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: error, length: %x",len));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, length: %x",len);
         return 1;
     }
 
     in_uint32_le(s, self->requestedProtocol);
     if (self->requestedProtocol > 0xb)
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: error, requestedProtocol: %x",
-                self->requestedProtocol));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, requestedProtocol: %x",
+                self->requestedProtocol);
         return 1;
     }
 
@@ -181,7 +175,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 
     if (s != self->trans->in_s)
     {
-        LLOGLN(10, ("xrdp_iso_recv_msg error logic"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_recv_msg error logic");
     }
 
     /* TPKT header is 4 bytes, then first 2 bytes of the X.224 CR-TPDU */
@@ -197,16 +191,16 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 
     if (ver != 3)
     {
-        LLOGLN(10, ("xrdp_iso_recv_msg: bad ver"));
-        LHEXDUMP(10, (s->data, 4));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_recv_msg: bad ver");
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "header", s->data, 4);
         return 1;
     }
 
     if (*len == 255)
     {
         /* X.224 13.2.1 - reserved value */
-        LLOGLN(10, ("xrdp_iso_recv_msg: reserved length encountered"));
-        LHEXDUMP(10, (s->data, 4));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_recv_msg: reserved length encountered");
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "header", s->data, 4);
         return 1;
     }
 
@@ -240,21 +234,21 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
     int code;
     int len;
 
-    LLOGLN(10, ("   in xrdp_iso_recv"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   in xrdp_iso_recv");
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
-        LLOGLN(10, ("   out xrdp_iso_recv xrdp_iso_recv_msg return non zero"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_recv xrdp_iso_recv_msg return non zero");
         return 1;
     }
 
     if (code != ISO_PDU_DT || len != 2)
     {
-        LLOGLN(10, ("   out xrdp_iso_recv code != ISO_PDU_DT or length != 2"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_recv code != ISO_PDU_DT or length != 2");
         return 1;
     }
 
-    LLOGLN(10, ("   out xrdp_iso_recv"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_recv");
     return 0;
 }
 /*****************************************************************************/
@@ -345,7 +339,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     struct stream *s;
     int expected_pdu_len;
 
-    LLOGLN(10, ("   in xrdp_iso_incoming"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   in xrdp_iso_incoming");
 
     s = libxrdp_force_read(self->trans);
     if (s == NULL)
@@ -355,7 +349,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
-        LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_recv_msg returned non zero"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_iso_incoming: xrdp_iso_recv_msg returned non zero");
         return 1;
     }
 
@@ -375,8 +369,8 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     expected_pdu_len = (s->end - s->p) + 6;
     if (len != expected_pdu_len)
     {
-        LLOGLN(0, ("xrdp_iso_incoming: X.224 CR-TPDU length exp %d got %d",
-                   expected_pdu_len, len));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_iso_incoming: X.224 CR-TPDU length exp %d got %d",
+                   expected_pdu_len, len);
         return 1;
     }
 
@@ -392,7 +386,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 self->rdpNegData = 1;
                 if (xrdp_iso_process_rdp_neg_req(self, s) != 0)
                 {
-                    LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero"));
+                    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero");
                     return 1;
                 }
                 break;
@@ -400,7 +394,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 // TODO
                 if (!s_check_rem(s, 1 + 2 + 16 + 16))
                 {
-                    LLOGLN(0, ("xrdp_iso_incoming: short correlation info"));
+                    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_iso_incoming: short correlation info");
                     return 1;
                 }
 
@@ -433,11 +427,11 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     /* send connection confirm back to client */
     if (xrdp_iso_send_cc(self) != 0)
     {
-        LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_send_cc returned non zero"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_iso_incoming: xrdp_iso_send_cc returned non zero");
         return 1;
     }
 
-    LLOGLN(10, ("   out xrdp_iso_incoming"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_incoming");
     return rv;
 }
 
@@ -458,7 +452,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
 {
     int len;
 
-    LLOGLN(10, ("   in xrdp_iso_send"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   in xrdp_iso_send");
     s_pop_layer(s, iso_hdr);
     len = (int) (s->end - s->p);
     out_uint8(s, 3);
@@ -473,6 +467,6 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
         return 1;
     }
 
-    LLOGLN(10, ("   out xrdp_iso_send"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "   out xrdp_iso_send");
     return 0;
 }

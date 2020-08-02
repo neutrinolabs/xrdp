@@ -30,12 +30,12 @@ xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
 {
     struct xrdp_fastpath *self;
 
-    DEBUG(("  in xrdp_fastpath_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_fastpath_create");
     self = (struct xrdp_fastpath *)g_malloc(sizeof(struct xrdp_fastpath), 1);
     self->sec_layer = owner;
     self->trans = trans;
     self->session = owner->rdp_layer->session;
-    DEBUG(("  out xrdp_fastpath_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_fastpath_create");
     return self;
 }
 
@@ -67,7 +67,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     int byte;
     char *holdp;
 
-    DEBUG(("   in xrdp_fastpath_recv"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "   in xrdp_fastpath_recv");
     holdp = s->p;
     if (!s_check_rem(s, 2))
     {
@@ -97,7 +97,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
         len = byte;
     }
     s->next_packet = holdp + len;
-    DEBUG(("  out xrdp_fastpath_recv"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_fastpath_recv");
     return 0;
 }
 
@@ -365,7 +365,7 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                 }
                 break;
             default:
-                g_writeln("xrdp_fastpath_process_input_event: unknown "
+                LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_fastpath_process_input_event: unknown "
                           "eventCode %d", eventCode);
                 break;
         }

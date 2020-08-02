@@ -33,11 +33,7 @@ http://msdn.microsoft.com/en-us/library/cc241877.aspx
 #define FLAGS_RLE     0x10
 #define FLAGS_NOALPHA 0x20
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-  do { if (_level < LLOG_LEVEL) { g_writeln _args ; } } while (0)
-#define LHEXDUMP(_level, _args) \
-  do { if (_level < LLOG_LEVEL) { g_hexdump _args ; } } while (0)
+
 
 /*****************************************************************************/
 /* split RGB */
@@ -258,7 +254,7 @@ fout(int collen, int replen, char *colptr, struct stream *s)
     int lreplen;
     int cont;
 
-    LLOGLN(10, ("fout: collen %d replen %d", collen, replen));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "fout: collen %d replen %d", collen, replen);
     cont = collen > 13;
     while (cont)
     {
@@ -285,7 +281,7 @@ fout(int collen, int replen, char *colptr, struct stream *s)
             {
                 lreplen = 47;
             }
-            LLOGLN(10, ("fout: big run lreplen %d", lreplen));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "fout: big run lreplen %d", lreplen);
             replen -= lreplen;
             code = ((lreplen & 0xF) << 4) | ((lreplen & 0xF0) >> 4);
             out_uint8(s, code);
@@ -326,13 +322,13 @@ fpack(char *plane, int cx, int cy, struct stream *s)
     int collen;
     int replen;
 
-    LLOGLN(10, ("fpack:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "fpack:");
     holdp = s->p;
     for (jndex = 0; jndex < cy; jndex++)
     {
-        LLOGLN(10, ("line start line %d cx %d cy %d", jndex, cx, cy));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "line start line %d cx %d cy %d", jndex, cx, cy);
         ptr8 = plane + jndex * cx;
-        LHEXDUMP(10, (ptr8, cx));
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "line content", ptr8, cx);
         lend = ptr8 + (cx - 1);
         colptr = ptr8;
         if (colptr[0] == 0)
@@ -437,7 +433,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     int total_bytes;
     int header;
 
-    LLOGLN(10, ("xrdp_bitmap32_compress:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_bitmap32_compress:");
     max_bytes = 4 * 1024;
     /* need max 8, 4K planes for work */
     if (max_bytes * 8 > temp_s->size)
