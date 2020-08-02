@@ -28,6 +28,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "ssl_calls.h"
+#include "log.h"
 
 #define MAX_SBYTES 0
 
@@ -979,13 +980,13 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
     self->tls = ssl_tls_create(self, key, cert);
     if (self->tls == NULL)
     {
-        g_writeln("trans_set_tls_mode: ssl_tls_create malloc error");
+        LOG(LOG_LEVEL_ERROR, "trans_set_tls_mode: ssl_tls_create malloc error");
         return 1;
     }
 
     if (ssl_tls_accept(self->tls, ssl_protocols, tls_ciphers) != 0)
     {
-        g_writeln("trans_set_tls_mode: ssl_tls_accept failed");
+        LOG(LOG_LEVEL_ERROR, "trans_set_tls_mode: ssl_tls_accept failed");
         return 1;
     }
 
