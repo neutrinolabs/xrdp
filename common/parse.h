@@ -66,6 +66,9 @@ struct stream
 #define s_check_end(s) ((s)->p == (s)->end)
 
 /******************************************************************************/
+#define s_rem(s) ((int) ((s)->end - (s)->p))
+
+/******************************************************************************/
 #define make_stream(s) \
     (s) = (struct stream*)g_malloc(sizeof(struct stream), 1)
 
