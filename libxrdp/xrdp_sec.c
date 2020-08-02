@@ -1287,7 +1287,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     int pad;
 
 #ifndef XRDP_DEBUG
-    /* TODO: remove UNUSED_VAR once the `var` variable is used for more than
+    /* TODO: remove UNUSED_VAR once the `ver` variable is used for more than 
     logging in debug mode */
     UNUSED_VAR(ver);
 #endif
