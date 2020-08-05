@@ -24,6 +24,7 @@
 #include "defines.h"
 #include "xrdp_rail.h"
 #include "xrdp_client_info.h"
+#include "xrdp_constants.h"
 
 /* this is the freerdp main header */
 #include <freerdp/freerdp.h>
@@ -196,9 +197,9 @@ struct mod
     int vmaj;
     int vmin;
     int vrev;
-    char username[256];
-    char password[256];
-    char domain[256];
+    char username[INFO_CLIENT_MAX_CB_LEN];
+    char password[INFO_CLIENT_MAX_CB_LEN];
+    char domain[INFO_CLIENT_MAX_CB_LEN];
     int bool_keyBoardSynced ; /* Numlock can be out of sync, we hold state here to resolve */
     int keyBoardLockInfo ; /* Holds initial numlock capslock state */
 

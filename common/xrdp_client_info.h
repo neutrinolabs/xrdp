@@ -18,6 +18,8 @@
  * xrdp / xserver info / caps
  */
 
+#include "xrdp_constants.h"
+
 #if !defined(XRDP_CLIENT_INFO_H)
 #define XRDP_CLIENT_INFO_H
 
@@ -57,11 +59,11 @@ struct xrdp_client_info
   char hostname[32];
   int build;
   int keylayout;
-  char username[256];
-  char password[256];
-  char domain[256];
-  char program[256];
-  char directory[256];
+  char username[INFO_CLIENT_MAX_CB_LEN];
+  char password[INFO_CLIENT_MAX_CB_LEN];
+  char domain[INFO_CLIENT_MAX_CB_LEN];
+  char program[INFO_CLIENT_MAX_CB_LEN];
+  char directory[INFO_CLIENT_MAX_CB_LEN];
   int rdp_compression;
   int rdp_autologin;
   int crypt_level; /* 1, 2, 3 = low, medium, high */

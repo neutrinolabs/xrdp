@@ -38,6 +38,7 @@
  ******************************************************************************/
 
 #define INFO_CLIENT_NAME_BYTES  32
+#define INFO_CLIENT_MAX_CB_LEN  512
 
 #define XRDP_MAX_BITMAP_CACHE_ID  3
 #define XRDP_MAX_BITMAP_CACHE_IDX 2000

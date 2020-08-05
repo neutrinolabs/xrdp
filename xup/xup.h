@@ -24,6 +24,7 @@
 #include "os_calls.h"
 #include "defines.h"
 #include "xrdp_client_info.h"
+#include "xrdp_constants.h"
 #include "xrdp_rail.h"
 
 #define CURRENT_MOD_VER 4
@@ -154,8 +155,8 @@ struct mod
   int height;
   int bpp;
   int sck_closed;
-  char username[256];
-  char password[256];
+  char username[INFO_CLIENT_MAX_CB_LEN];
+  char password[INFO_CLIENT_MAX_CB_LEN];
   char ip[256];
   char port[256];
   int shift_state;
