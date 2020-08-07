@@ -35,79 +35,68 @@
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
-static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f);
+static void
+parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f);
 
 /******************************************************************************/
-void
-scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
+static enum SCP_SERVER_STATES_E
+scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
 {
-    long data;
     int display = 0;
-    int retries;
-    int current_try;
+    int scount;
+    long data;
     enum SCP_SERVER_STATES_E e;
     struct SCP_DISCONNECTED_SESSION *slist;
-    struct session_item *sitem;
-    int scount;
-    SCP_SID sid;
     bool_t do_auth_end = 1;
 
-    retries = g_cfg->sec.login_retry;
-    current_try = retries;
-
+    s->retries = g_cfg->sec.login_retry;
+    s->current_try = s->retries;
     data = auth_userpass(s->username, s->password, NULL);
-    /*LOG_DEVEL(LOG_LEVEL_DEBUG, "user: %s\npass: %s", s->username, s->password);*/
-
-    while ((!data) && ((retries == 0) || (current_try > 0)))
+    if (data == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "data %ld - retry %d - currenttry %d - expr %d",
-                  data, retries, current_try,
-                  ((!data) && ((retries == 0) || (current_try > 0))));
-
-        e = scp_v1s_request_password(c, s, "Wrong username and/or password");
-
-        switch (e)
+        if ((s->retries == 0) || (s->current_try > 0))
         {
-            case SCP_SERVER_STATE_OK:
-                /* all ok, we got new username and password */
-                data = auth_userpass(s->username, s->password, NULL);
-
-                /* one try less */
-                if (current_try > 0)
-                {
-                    current_try--;
-                }
-
-                break;
-            default:
-                /* we check the other errors */
-                parseCommonStates(e, "scp_v1s_list_sessions()");
-                return;
-                //break;
+            e = scp_v1s_request_password(t, s, "Wrong username and/or "
+                                         "password");
+            switch (e)
+            {
+                case SCP_SERVER_STATE_OK:
+                    /* one try less */
+                    if (s->current_try > 0)
+                    {
+                        s->current_try--;
+                    }
+                    break;
+                default:
+                    /* we check the other errors */
+                    parseCommonStates(e, "scp_v1s_list_sessions()");
+                    break;
+            }
         }
-    }
-
-    if (!data)
-    {
-        scp_v1s_deny_connection(c, "Login failed");
-        LOG( LOG_LEVEL_INFO,
-             "Login failed for user %s. Connection terminated", s->username);
-        return;
+        else
+        {
+            scp_v1s_deny_connection(t, "Login failed");
+            LOG(LOG_LEVEL_INFO, "Login failed for user %s. "
+                "Connection terminated", s->username);
+            return 1;
+        }
+        return 0;
     }
 
     /* testing if login is allowed*/
     if (0 == access_login_allowed(s->username))
     {
-        scp_v1s_deny_connection(c, "Access to Terminal Server not allowed.");
-        LOG(LOG_LEVEL_INFO,
-            "User %s not allowed on TS. Connection terminated", s->username);
-        return;
+        scp_v1s_deny_connection(t, "Access to Terminal Server not allowed.");
+        LOG(LOG_LEVEL_INFO, "User %s not allowed on TS. "
+            "Connection terminated", s->username);
+        return 0;
     }
 
     //check if we need password change
 
     /* list disconnected sessions */
-    slist = session_get_byuser(s->username, &scount, SESMAN_SESSION_STATUS_DISCONNECTED);
+    slist = session_get_byuser(s->username, &scount,
+                               SESMAN_SESSION_STATUS_DISCONNECTED);
 
     if (scount == 0)
     {
@@ -117,11 +106,13 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
         if (0 != s->client_ip)
         {
-            LOG(LOG_LEVEL_INFO, "++ created session (access granted): username %s, ip %s", s->username, s->client_ip);
+            LOG(LOG_LEVEL_INFO, "++ created session (access granted): "
+                "username %s, ip %s", s->username, s->client_ip);
         }
         else
         {
-            LOG(LOG_LEVEL_INFO, "++ created session (access granted): username %s", s->username);
+            LOG(LOG_LEVEL_INFO, "++ created session (access granted): "
+                "username %s", s->username);
         }
 
         if (SCP_SESSION_TYPE_XVNC == s->type)
@@ -142,7 +133,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         /* if the session started up ok, auth_end will be called on
            sig child */
         do_auth_end = display == 0;
-        e = scp_v1s_connect_new_session(c, display);
+        e = scp_v1s_connect_new_session(t, display);
         switch (e)
         {
             case SCP_SERVER_STATE_OK:
@@ -156,55 +147,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
     else
     {
-        /* one or more disconnected sessions - listing */
-        e = scp_v1s_list_sessions(c, scount, slist, &sid);
-
-        switch (e)
-        {
-            /*case SCP_SERVER_STATE_FORCE_NEW:*/
-            /* we should check for MaxSessions */
-            case SCP_SERVER_STATE_SELECTION_CANCEL:
-                LOG( LOG_LEVEL_INFO, "Connection cancelled after session listing");
-                break;
-            case SCP_SERVER_STATE_OK:
-                /* ok, reconnecting... */
-                sitem = session_get_bypid(sid);
-
-                if (0 == sitem)
-                {
-                    e = scp_v1s_connection_error(c, "Internal error");
-                    LOG(LOG_LEVEL_INFO, "Cannot find session item on the chain");
-                }
-                else
-                {
-                    display = sitem->display;
-                    /*e=scp_v1s_reconnect_session(c, sitem, display);*/
-                    e = scp_v1s_reconnect_session(c, display);
-
-                    if (0 != s->client_ip)
-                    {
-                        LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, sitem->pid, s->client_ip);
-                    }
-                    else
-                    {
-                        LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d", s->username, display, sitem->pid);
-                    }
-
-                    g_free(sitem);
-                }
-
-                break;
-            default:
-                /* we check the other errors */
-                parseCommonStates(e, "scp_v1s_list_sessions()");
-                break;
-        }
-    }
-
-    /* resource management */
-    if ((e == SCP_SERVER_STATE_OK) && (s->rsr))
-    {
-        /* here goes scp resource sharing code */
+        e = scp_v1s_list_sessions40(t);
     }
 
     /* cleanup */
@@ -213,16 +156,116 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         auth_end(data);
     }
     g_free(slist);
+    return 0;
 }
 
 /******************************************************************************/
-void
-scp_v1_process_msg(struct trans *atrans, struct SCP_SESSION *s)
+static enum SCP_SERVER_STATES_E
+scp_v1_process4(struct trans *t, struct SCP_SESSION *s)
 {
-    // JAY TODO
+    return 0;
 }
 
-static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
+/******************************************************************************/
+static enum SCP_SERVER_STATES_E
+scp_v1_process41(struct trans *t, struct SCP_SESSION *s)
+{
+    int scount;
+    enum SCP_SERVER_STATES_E e;
+    struct SCP_DISCONNECTED_SESSION *slist;
+
+    /* list disconnected sessions */
+    slist = session_get_byuser(s->username, &scount,
+                               SESMAN_SESSION_STATUS_DISCONNECTED);
+
+    if (scount == 0)
+    {
+        /* */
+        return 1;
+    }
+
+    e = scp_v1s_list_sessions42(t, scount, slist);
+    if (SCP_SERVER_STATE_OK != e)
+    {
+        LOG(LOG_LEVEL_ERROR, "scp_v1s_list_sessions42 failed");
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+static enum SCP_SERVER_STATES_E
+scp_v1_process43(struct trans *t, struct SCP_SESSION *s)
+{
+    struct session_item *sitem;
+    enum SCP_SERVER_STATES_E e;
+    int display;
+
+    sitem = session_get_bypid(s->return_sid);
+    if (0 == sitem)
+    {
+        e = scp_v1s_connection_error(t, "Internal error");
+        LOG(LOG_LEVEL_INFO, "Cannot find session item on the chain");
+    }
+    else
+    {
+        display = sitem->display;
+        e = scp_v1s_reconnect_session(t, display);
+        if (SCP_SERVER_STATE_OK != e)
+        {
+            LOG(LOG_LEVEL_ERROR, "scp_v1s_reconnect_session failed");
+        }
+        if (0 != s->client_ip)
+        {
+            LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, sitem->pid, s->client_ip);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d", s->username, display, sitem->pid);
+        }
+        g_free(sitem);
+    }
+    return e;
+}
+
+/******************************************************************************/
+static enum SCP_SERVER_STATES_E
+scp_v1_process44(struct trans *t, struct SCP_SESSION *s)
+{
+    return SCP_SERVER_STATE_OK;
+}
+
+/******************************************************************************/
+static enum SCP_SERVER_STATES_E
+scp_v1_process45(struct trans *t, struct SCP_SESSION *s)
+{
+    return SCP_SERVER_STATE_OK;
+}
+
+/******************************************************************************/
+enum SCP_SERVER_STATES_E
+scp_v1_process(struct trans *t, struct SCP_SESSION *s)
+{
+    switch (s->current_cmd)
+    {
+        case 1:
+                    return scp_v1_process1(t, s);
+        case 4:
+            return scp_v1_process4(t, s);
+        case 41:
+            return scp_v1_process41(t, s);
+        case 43:
+            return scp_v1_process43(t, s);
+        case 44:
+            return scp_v1_process44(t, s);
+        case 45:
+            return scp_v1_process45(t, s);
+    }
+    return SCP_SERVER_STATE_END;
+}
+
+static void
+parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
 {
     switch (e)
     {

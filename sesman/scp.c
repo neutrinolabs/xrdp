@@ -36,25 +36,25 @@
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
-int
-scp_process(struct trans *atrans)
+enum SCP_SERVER_STATES_E
+scp_process(struct trans *t)
 {
     struct SCP_SESSION *sdata;
 
     sdata = NULL;
-    switch (scp_vXs_accept(atrans, &sdata))
+    switch (scp_vXs_accept(t, &sdata))
     {
         case SCP_SERVER_STATE_OK:
             if (sdata->version == 0)
             {
                 /* starts processing an scp v0 connection */
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "accept ok, go on with scp v0");
-                scp_v0_process(atrans, sdata);
+                scp_v0_process(t, sdata);
             }
             else
             {
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "accept ok, go on with scp v1");
-                scp_v1_process_msg(atrans, sdata);
+                scp_v1_process(t, sdata);
             }
             break;
         case SCP_SERVER_STATE_START_MANAGE:

@@ -244,7 +244,7 @@ scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
 
     if (!s_check_rem(in_s, 6))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     in_uint8s(in_s, 4); /* size */
     in_uint16_be(in_s, code);
@@ -310,6 +310,7 @@ scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
             {
                 return SCP_SERVER_STATE_SIZE_ERR;
             }
+
             if (buf[0] != '\0')
             {
                 scp_session_set_domain(session, buf);

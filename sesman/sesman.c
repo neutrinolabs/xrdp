@@ -197,7 +197,7 @@ sesman_close_all(void)
     int index;
     struct trans *con_trans;
 
-    log_message(LOG_LEVEL_DEBUG, "sesman_close_all:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "sesman_close_all:");
     trans_delete(g_list_trans);
     for (index = 0; index < g_con_list->count; index++)
     {
@@ -220,7 +220,7 @@ sesman_data_in(struct trans *self)
         in_uint32_be(self->in_s, size);
         if (size > self->in_s->size)
         {
-            log_message(LOG_LEVEL_ERROR, "sesman_data_in: bad message size");
+            LOG(LOG_LEVEL_ERROR, "sesman_data_in: bad message size");
             return 1;
         }
         self->header_size = size;
@@ -232,8 +232,7 @@ sesman_data_in(struct trans *self)
         self->in_s->p = self->in_s->data;
         if (scp_process(self) != 0)
         {
-            log_message(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg "
-                        "failed");
+            LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
             return 1;
         }
         /* reset for next message */
@@ -258,8 +257,8 @@ sesman_listen_conn_in(struct trans *self, struct trans *new_self)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "sesman_data_in: error, too many "
-                    "connections, rejecting");
+        LOG(LOG_LEVEL_ERROR, "sesman_data_in: error, too many "
+            "connections, rejecting");
         trans_delete(new_self);
     }
     return 0;
@@ -287,13 +286,13 @@ sesman_main_loop(void)
     g_con_list = list_create();
     if (g_con_list == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "sesman_main_loop: list_create failed");
+        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: list_create failed");
         return 1;
     }
     g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
     if (g_list_trans == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "sesman_main_loop: trans_create failed");
+        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: trans_create failed");
         list_delete(g_con_list);
         return 1;
     }
@@ -304,8 +303,8 @@ sesman_main_loop(void)
                                  g_cfg->listen_address);
     if (error != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "sesman_main_loop: trans_listen_address "
-                    "failed");
+        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: trans_listen_address "
+            "failed");
         trans_delete(g_list_trans);
         list_delete(g_con_list);
         return 1;
@@ -327,8 +326,8 @@ sesman_main_loop(void)
                                                wobjs, &wobjs_count, &timeout);
                 if (error != 0)
                 {
-                    log_message(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                                "trans_get_wait_objs_rw failed");
+                    LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                        "trans_get_wait_objs_rw failed");
                     break;
                 }
             }
@@ -341,8 +340,8 @@ sesman_main_loop(void)
                                        wobjs, &wobjs_count, &timeout);
         if (error != 0)
         {
-            log_message(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                        "trans_get_wait_objs_rw failed");
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "trans_get_wait_objs_rw failed");
             break;
         }
 
@@ -366,8 +365,8 @@ sesman_main_loop(void)
                 error = trans_check_wait_objs(con_trans);
                 if (error != 0)
                 {
-                    log_message(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                                "trans_check_wait_objs failed, removing trans");
+                    LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                        "trans_check_wait_objs failed, removing trans");
                     trans_delete(con_trans);
                     list_remove_item(g_con_list, index);
                     index--;
@@ -378,8 +377,8 @@ sesman_main_loop(void)
         error = trans_check_wait_objs(g_list_trans);
         if (error != 0)
         {
-            log_message(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                        "trans_check_wait_objs failed");
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "trans_check_wait_objs failed");
             break;
         }
     }

@@ -33,20 +33,6 @@
 /**
  *
  * @brief processes the stream using scp version 1
- * @param c connection descriptor
- * @param s pointer to session descriptor pointer
- * @param skipVchk if set to !0 skips the version control (to be used after
- *                 scp_vXs_accept() )
- *
- * this function places in *s the address of a newly allocated SCP_SESSION structure
- * that should be free()d
- */
-enum SCP_SERVER_STATES_E
-scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk);
-
-/**
- *
- * @brief processes the stream using scp version 1
  * @param trans connection trans
  * @param s pointer to session descriptor pointer
  *
@@ -54,7 +40,7 @@ scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk);
  * that should be free()d
  */
 enum SCP_SERVER_STATES_E
-scp_v1s_accept_msg(struct trans *atrans, struct SCP_SESSION **s);
+scp_v1s_accept(struct trans *t, struct SCP_SESSION **s);
 
 /**
  *
@@ -65,35 +51,47 @@ scp_v1s_accept_msg(struct trans *atrans, struct SCP_SESSION **s);
  */
 /* 002 */
 enum SCP_SERVER_STATES_E
-scp_v1s_deny_connection(struct SCP_CONNECTION *c, const char *reason);
+scp_v1s_deny_connection(struct trans *t, const char *reason);
 
 enum SCP_SERVER_STATES_E
-scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
+scp_v1s_request_password(struct trans *t, struct SCP_SESSION *s,
                          const char *reason);
+
+enum SCP_SERVER_STATES_E
+scp_v1s_accept_password_reply(int cmd, struct trans *t);
+
+enum SCP_SERVER_STATES_E
+scp_v1s_accept_list_sessions_reply(int cmd, struct trans *t);
 
 /* 020 */
 enum SCP_SERVER_STATES_E
-scp_v1s_request_pwd_change(struct SCP_CONNECTION *c, char *reason, char *npw);
+scp_v1s_request_pwd_change(struct trans *t, char *reason, char *npw);
 
 /* 023 */
 enum SCP_SERVER_STATES_E
-scp_v1s_pwd_change_error(struct SCP_CONNECTION *c, char *error, int retry, char *npw);
+scp_v1s_pwd_change_error(struct trans *t, char *error, int retry, char *npw);
 
 /* 030 */
 enum SCP_SERVER_STATES_E
-scp_v1s_connect_new_session(struct SCP_CONNECTION *c, SCP_DISPLAY d);
+scp_v1s_connect_new_session(struct trans *t, SCP_DISPLAY d);
 
 /* 032 */
 enum SCP_SERVER_STATES_E
-scp_v1s_connection_error(struct SCP_CONNECTION *c, const char *error);
+scp_v1s_connection_error(struct trans *t, const char *error);
 
 /* 040 */
 enum SCP_SERVER_STATES_E
 scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt,
                       struct SCP_DISCONNECTED_SESSION *ds, SCP_SID *sid);
 
+enum SCP_SERVER_STATES_E
+scp_v1s_list_sessions40(struct trans *t);
+
+enum SCP_SERVER_STATES_E
+scp_v1s_list_sessions42(struct trans *t, int sescnt, struct SCP_DISCONNECTED_SESSION *ds);
+
 /* 046 was: 031 struct SCP_DISCONNECTED_SESSION* ds, */
 enum SCP_SERVER_STATES_E
-scp_v1s_reconnect_session(struct SCP_CONNECTION *c, SCP_DISPLAY d);
+scp_v1s_reconnect_session(struct trans *t, SCP_DISPLAY d);
 
 #endif

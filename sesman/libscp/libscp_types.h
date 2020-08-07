@@ -94,6 +94,11 @@ struct SCP_SESSION
     char *directory;
     char *client_ip;
     tui8 guid[16];
+    /* added for state */
+    int current_cmd;
+    int return_sid;
+    int retries;
+    int current_try;
 };
 
 struct SCP_DISCONNECTED_SESSION
