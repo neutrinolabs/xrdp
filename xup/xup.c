@@ -149,7 +149,6 @@ lib_mod_connect(struct mod *mod)
     int use_uds;
     struct stream *s;
     char con_port[256];
-    struct source_info *si;
 
     LIB_DEBUG(mod, "in lib_mod_connect");
 
@@ -203,8 +202,7 @@ lib_mod_connect(struct mod *mod)
         }
     }
 
-    si = (struct source_info *) (mod->si);
-    mod->trans->si = si;
+    mod->trans->si = mod->si;
     mod->trans->my_source = XRDP_SOURCE_MOD;
 
     while (1)

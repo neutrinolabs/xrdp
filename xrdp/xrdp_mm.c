@@ -471,7 +471,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_composite = server_composite;
             self->mod->server_paint_rects = server_paint_rects;
             self->mod->server_session_info = server_session_info;
-            self->mod->si = (tintptr) &(self->wm->session->si);
+            self->mod->si = &(self->wm->session->si);
         }
     }
 
