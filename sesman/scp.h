@@ -39,7 +39,7 @@
  * @param atrans the connection trans
  *
  */
-int
-scp_process(struct trans *atrans);
+enum SCP_SERVER_STATES_E
+scp_process(struct trans *t);
 
 #endif

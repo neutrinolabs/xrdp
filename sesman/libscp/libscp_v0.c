@@ -165,7 +165,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
     in_s = atrans->in_s;
     if (!s_check_rem(in_s, 6))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     in_uint8s(in_s, 4); /* size */
     in_uint16_be(in_s, code);
@@ -194,12 +194,14 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
         /* reading username */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         if (!s_check_rem(in_s, sz))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         buf = g_new0(char, sz + 1);
         in_uint8a(in_s, buf, sz);
@@ -216,12 +218,14 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
         /* reading password */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         if (!s_check_rem(in_s, sz))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         buf = g_new0(char, sz + 1);
         in_uint8a(in_s, buf, sz);
@@ -238,21 +242,24 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
         /* width */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         scp_session_set_width(session, sz);
         /* height */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         scp_session_set_height(session, sz);
         /* bpp */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         if (0 != scp_session_set_bpp(session, (tui8)sz))
@@ -270,7 +277,8 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
             in_uint16_be(in_s, sz);
             if (!s_check_rem(in_s, sz))
             {
-                return SCP_SERVER_STATE_INTERNAL_ERR;
+                scp_session_destroy(session);
+                return SCP_SERVER_STATE_SIZE_ERR;
             }
             if (sz > 0)
             {
@@ -288,7 +296,8 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
             in_uint16_be(in_s, sz);
             if (!s_check_rem(in_s, sz))
             {
-                return SCP_SERVER_STATE_INTERNAL_ERR;
+                scp_session_destroy(session);
+                return SCP_SERVER_STATE_SIZE_ERR;
             }
             if (sz > 0)
             {
@@ -306,7 +315,8 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
             in_uint16_be(in_s, sz);
             if (!s_check_rem(in_s, sz))
             {
-                return SCP_SERVER_STATE_INTERNAL_ERR;
+                scp_session_destroy(session);
+                return SCP_SERVER_STATE_SIZE_ERR;
             }
             if (sz > 0)
             {
@@ -324,7 +334,8 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
             in_uint16_be(in_s, sz);
             if (!s_check_rem(in_s, sz))
             {
-                return SCP_SERVER_STATE_INTERNAL_ERR;
+                scp_session_destroy(session);
+                return SCP_SERVER_STATE_SIZE_ERR;
             }
             if (sz > 0)
             {
@@ -352,12 +363,14 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
         /* reading username */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         if (!s_check_rem(in_s, sz))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         buf = g_new0(char, sz + 1);
         in_uint8a(in_s, buf, sz);
@@ -376,12 +389,14 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
         /* reading password */
         if (!s_check_rem(in_s, 2))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint16_be(in_s, sz);
         if (!s_check_rem(in_s, sz))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         buf = g_new0(char, sz + 1);
         in_uint8a(in_s, buf, sz);

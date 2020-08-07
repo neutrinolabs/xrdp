@@ -39,88 +39,9 @@ static enum SCP_SERVER_STATES_E
 _scp_v1s_mng_check_response(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
 
 /* server API */
-enum SCP_SERVER_STATES_E
-scp_v1s_mng_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s)
-{
-    struct SCP_SESSION *session;
-    tui32 ipaddr;
-    tui16 cmd;
-    tui8 sz;
-    char buf[257];
-
-    /* reading command */
-    in_uint16_be(c->in_s, cmd);
-
-    if (cmd != 1) /* manager login */
-    {
-        return SCP_SERVER_STATE_SEQUENCE_ERR;
-    }
-
-    session = scp_session_create();
-
-    if (0 == session)
-    {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
-    }
-
-    scp_session_set_version(session, 1);
-    scp_session_set_type(session, SCP_SESSION_TYPE_MANAGE);
-
-    /* reading username */
-    in_uint8(c->in_s, sz);
-    buf[sz] = '\0';
-    in_uint8a(c->in_s, buf, sz);
-
-    if (0 != scp_session_set_username(session, buf))
-    {
-        scp_session_destroy(session);
-        return SCP_SERVER_STATE_INTERNAL_ERR;
-    }
-
-    /* reading password */
-    in_uint8(c->in_s, sz);
-    buf[sz] = '\0';
-    in_uint8a(c->in_s, buf, sz);
-
-    if (0 != scp_session_set_password(session, buf))
-    {
-        scp_session_destroy(session);
-        return SCP_SERVER_STATE_INTERNAL_ERR;
-    }
-
-    /* reading remote address */
-    in_uint8(c->in_s, sz);
-
-    if (sz == SCP_ADDRESS_TYPE_IPV4)
-    {
-        in_uint32_be(c->in_s, ipaddr);
-        scp_session_set_addr(session, sz, &ipaddr);
-    }
-    else if (sz == SCP_ADDRESS_TYPE_IPV6)
-    {
-        in_uint8a(c->in_s, buf, 16);
-        scp_session_set_addr(session, sz, buf);
-    }
-
-    /* reading hostname */
-    in_uint8(c->in_s, sz);
-    buf[sz] = '\0';
-    in_uint8a(c->in_s, buf, sz);
-
-    if (0 != scp_session_set_hostname(session, buf))
-    {
-        scp_session_destroy(session);
-        return SCP_SERVER_STATE_INTERNAL_ERR;
-    }
-
-    /* returning the struct */
-    (*s) = session;
-
-    return SCP_SERVER_STATE_START_MANAGE;
-}
 
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
+scp_v1s_mng_accept(struct trans *atrans, struct SCP_SESSION **s)
 {
     struct SCP_SESSION *session;
     tui32 ipaddr;
@@ -132,10 +53,6 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     in_s = atrans->in_s;
 
     /* reading command */
-    if (!s_check_rem(in_s, 2))
-    {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
-    }
     in_uint16_be(in_s, cmd);
 
     if (cmd != 1) /* manager login */
@@ -156,12 +73,14 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     /* reading username */
     if (!s_check_rem(in_s, 1))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     in_uint8(in_s, sz);
     if (!s_check_rem(in_s, sz))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     buf[sz] = '\0';
     in_uint8a(in_s, buf, sz);
@@ -175,12 +94,14 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     /* reading password */
     if (!s_check_rem(in_s, 1))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     in_uint8(in_s, sz);
     if (!s_check_rem(in_s, sz))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     buf[sz] = '\0';
     in_uint8a(in_s, buf, sz);
@@ -194,7 +115,8 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     /* reading remote address */
     if (!s_check_rem(in_s, 1))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     in_uint8(in_s, sz);
 
@@ -202,7 +124,8 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     {
         if (!s_check_rem(in_s, 4))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint32_be(in_s, ipaddr);
         scp_session_set_addr(session, sz, &ipaddr);
@@ -211,7 +134,8 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     {
         if (!s_check_rem(in_s, 16))
         {
-            return SCP_SERVER_STATE_INTERNAL_ERR;
+            scp_session_destroy(session);
+            return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint8a(in_s, buf, 16);
         scp_session_set_addr(session, sz, buf);
@@ -220,12 +144,14 @@ scp_v1s_mng_accept_msg(struct trans *atrans, struct SCP_SESSION **s)
     /* reading hostname */
     if (!s_check_rem(in_s, 1))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     in_uint8(in_s, sz);
     if (!s_check_rem(in_s, sz))
     {
-        return SCP_SERVER_STATE_INTERNAL_ERR;
+        scp_session_destroy(session);
+        return SCP_SERVER_STATE_SIZE_ERR;
     }
     buf[sz] = '\0';
     in_uint8a(in_s, buf, sz);

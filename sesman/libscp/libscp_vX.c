@@ -49,7 +49,7 @@ scp_vXs_accept(struct trans *atrans, struct SCP_SESSION **s)
     }
     else if (version == 1)
     {
-        return scp_v1s_accept_msg(atrans, s);
+        return scp_v1s_accept(atrans, s);
     }
     return SCP_SERVER_STATE_VERSION_ERR;
 }

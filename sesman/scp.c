@@ -36,33 +36,33 @@
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
-int
-scp_process(struct trans *atrans)
+enum SCP_SERVER_STATES_E
+scp_process(struct trans *t)
 {
     struct SCP_SESSION *sdata;
 
     sdata = NULL;
-    switch (scp_vXs_accept(atrans, &sdata))
+    switch (scp_vXs_accept(t, &sdata))
     {
         case SCP_SERVER_STATE_OK:
             if (sdata->version == 0)
             {
                 /* starts processing an scp v0 connection */
                 LOG_DBG("accept ok, go on with scp v0");
-                scp_v0_process(atrans, sdata);
+                return scp_v0_process(t, sdata);
             }
             else
             {
                 LOG_DBG("accept ok, go on with scp v1");
                 /*LOG_DBG("user: %s\npass: %s",sdata->username, sdata->password);*/
-                scp_v1_process_msg(atrans, sdata);
+                return scp_v1_process(t, sdata);
             }
             break;
         case SCP_SERVER_STATE_START_MANAGE:
             /* starting a management session */
             log_message(LOG_LEVEL_WARNING,
                         "starting a sesman management session...");
-            scp_v1_mng_process_msg(atrans, sdata);
+            scp_v1_mng_process_msg(t, sdata);
             break;
         case SCP_SERVER_STATE_VERSION_ERR:
             /* an unknown scp version was requested, so we shut down the */
