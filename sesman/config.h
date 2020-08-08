@@ -195,7 +195,7 @@ struct config_sesman
    * @var listen_port
    * @brief Listening port
    */
-  char listen_port[16];
+  char listen_port[256];
   /**
    * @var enable_user_wm
    * @brief Flag that enables user specific wm

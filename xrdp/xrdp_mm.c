@@ -1621,7 +1621,6 @@ static int
 xrdp_mm_get_sesman_port(char *port, int port_bytes)
 {
     int fd;
-    int error;
     int index;
     char *val;
     char cfg_file[256];
@@ -1653,13 +1652,7 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
                     if (g_strcasecmp(val, "ListenPort") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        error = g_atoi(val);
-
-                        if ((error > 0) && (error < 65000))
-                        {
-                            g_strncpy(port, val, port_bytes - 1);
-                        }
-
+                        g_strncpy(port, val, port_bytes - 1);
                         break;
                     }
                 }
@@ -1794,7 +1787,7 @@ access_control(char *username, char *password, char *srv)
     unsigned long size;
     int index;
     int socket = g_tcp_socket();
-    char port[8];
+    char port[256];
 
     if (socket != -1)
     {
@@ -2169,7 +2162,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     char *name;
     char *value;
     char ip[256];
-    char port[8];
+    char port[256];
     char chansrvport[256];
 #ifndef USE_NOPAM
     int use_pam_auth = 0;
@@ -2286,9 +2279,16 @@ xrdp_mm_connect(struct xrdp_mm *self)
     {
         ok = 0;
         trans_delete(self->sesman_trans);
-        self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-        self->sesman_trans->is_term = g_is_term;
         xrdp_mm_get_sesman_port(port, sizeof(port));
+        if (port[0] == '/')
+        {
+            self->sesman_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+        }
+        else
+        {
+            self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+        }
+        self->sesman_trans->is_term = g_is_term;
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                         "connecting to sesman ip %s port %s", ip, port);
         /* xrdp_mm_sesman_data_in is the callback that is called when data arrives */

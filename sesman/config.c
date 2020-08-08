@@ -128,7 +128,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_PORT))
         {
-            g_strncpy(cf->listen_port, (char *)list_get_item(param_v, i), 15);
+            g_strncpy(cf->listen_port, (char *)list_get_item(param_v, i), 255);
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_ADDRESS))
         {

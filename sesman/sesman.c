@@ -87,7 +87,7 @@ sesman_close_all(void)
     struct trans *con_trans;
 
     log_message(LOG_LEVEL_DEBUG, "sesman_close_all:");
-    trans_delete(g_list_trans);
+    trans_delete_from_child(g_list_trans);
     for (index = 0; index < g_con_list->count; index++)
     {
         con_trans = (struct trans *) list_get_item(g_con_list, index);
@@ -179,7 +179,14 @@ sesman_main_loop(void)
         log_message(LOG_LEVEL_ERROR, "sesman_main_loop: list_create failed");
         return 1;
     }
-    g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    if (g_cfg->listen_port[0] == '/')
+    {
+        g_list_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+    }
+    else
+    {
+        g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    }
     if (g_list_trans == NULL)
     {
         log_message(LOG_LEVEL_ERROR, "sesman_main_loop: trans_create failed");
