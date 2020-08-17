@@ -369,6 +369,15 @@
 #define PDUTYPE_DATAPDU                0x7
 #define PDUTYPE_SERVER_REDIR_PKT       0xA
 
+#define PDUTYPE_TO_STR(pdu_type) \
+    ((pdu_type) == PDUTYPE_DEMANDACTIVEPDU ? "PDUTYPE_DEMANDACTIVEPDU" : \
+     (pdu_type) == PDUTYPE_CONFIRMACTIVEPDU ? "PDUTYPE_CONFIRMACTIVEPDU" : \
+     (pdu_type) == PDUTYPE_DEACTIVATEALLPDU ? "PDUTYPE_DEACTIVATEALLPDU" : \
+     (pdu_type) == PDUTYPE_DATAPDU ? "PDUTYPE_DATAPDU" : \
+     (pdu_type) == PDUTYPE_SERVER_REDIR_PKT ? "PDUTYPE_SERVER_REDIR_PKT" : \
+     "unknown" \
+     )
+
 /* Share Data Header: pduType2 (2.2.8.1.1.1.2) */
 /* TODO: to be renamed */
 #define RDP_DATA_PDU_UPDATE            2   /* PDUTYPE2_UPDATE */
@@ -378,6 +387,9 @@
 #define RDP_DATA_PDU_SYNCHRONISE       31
 #define PDUTYPE2_REFRESH_RECT          33
 #define RDP_DATA_PDU_PLAY_SOUND        34
+#define PDUTYPE2_SUPPRESS_OUTPUT       35
+#define PDUTYPE2_SHUTDOWN_REQUEST      36
+#define PDUTYPE2_SHUTDOWN_DENIED       37
 #define RDP_DATA_PDU_LOGON             38
 #define RDP_DATA_PDU_FONT2             39
 #define RDP_DATA_PDU_DISCONNECT        47
@@ -456,6 +468,14 @@
 #define RDP_UPDATE_BITMAP              1
 #define RDP_UPDATE_PALETTE             2
 #define RDP_UPDATE_SYNCHRONIZE         3
+
+#define GRAPHICS_UPDATE_TYPE_TO_STR(type) \
+    ((type) == RDP_UPDATE_ORDERS ? "RDP_UPDATE_ORDERS" : \
+     (type) == RDP_UPDATE_BITMAP ? "RDP_UPDATE_BITMAP" : \
+     (type) == RDP_UPDATE_PALETTE ? "RDP_UPDATE_PALETTE" : \
+     (type) == RDP_UPDATE_SYNCHRONIZE ? "RDP_UPDATE_SYNCHRONIZE" : \
+     "unknown" \
+     )
 
 /* Server Pointer Update PDU: messageType (2.2.9.1.1.4) */
 /* TODO: to be renamed */
