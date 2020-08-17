@@ -969,6 +969,10 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     {
         /* compressed data longer than uncompressed data */
         /* give up */
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "Compression algorithim produced a compressed "
+              "buffer which is larger than the uncompressed buffer. "
+              "compression ratio %f, flags 0x%x", 
+              (float) len / (float) opb_index, enc->flags);
         enc->historyOffset = 0;
         g_memset(hash_table, 0, enc->buf_len * 2);
         g_memset(enc->historyBuffer, 0, enc->buf_len);
@@ -982,10 +986,10 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     enc->flags |= enc->flagsHold;
     enc->flagsHold = 0;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "\n");
-
-    LOG_DEVEL(LOG_LEVEL_TRACE, "compression ratio: %f", (float) len / (float) enc->bytes_in_opb);
-
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Compression successful. compression ratio %f, "
+              "flags 0x%x, bytes_in_opb %d, historyOffset %d, uncompressed len %d",
+              (float) len / (float) enc->bytes_in_opb, enc->flags, 
+              enc->bytes_in_opb, enc->historyOffset, len);
     return 1;
 }
 
