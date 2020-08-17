@@ -69,6 +69,9 @@ struct stream
 #define s_rem(s) ((int) ((s)->end - (s)->p))
 
 /******************************************************************************/
+#define s_rem_out(s) ((int) ((s)->data + (s)->size - (s)->p))
+
+/******************************************************************************/
 #define make_stream(s) \
     (s) = (struct stream*)g_malloc(sizeof(struct stream), 1)
 
