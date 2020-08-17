@@ -12,3 +12,4 @@ as possible.
 Our email eddress for security report is:
 
 * [xrdp-core@googlegroups.com](mailto:xrdp-core@googlegroups.com)
+

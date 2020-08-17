@@ -144,6 +144,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->require_credentials = g_text2bool(value);
         }
+        else if (g_strcasecmp(item, "enable_token_login") == 0)
+        {
+            client_info->enable_token_login = g_text2bool(value);
+        }
         else if (g_strcasecmp(item, "use_fastpath") == 0)
         {
             if (g_strcasecmp(value, "output") == 0)

@@ -76,6 +76,8 @@ new_cursors=true
 use_fastpath=both
 ; when true, userid/password *must* be passed on cmd line
 #require_credentials=true
+; when true, the userid will be used to try to authenticate
+#enable_token_login=true
 ; You can set the PAM error text in a gateway setup (MAX 256 chars)
 #pamerrortxt=change your password according to policy at http://url
 
