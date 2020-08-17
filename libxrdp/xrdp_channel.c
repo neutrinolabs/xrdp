@@ -116,15 +116,17 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
 
     if (channel == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_channel_send: ERROR no such channel");
+        LOG(LOG_LEVEL_ERROR, 
+            "Request to send a message to non-existent channel_id %d", 
+            channel_id);
         return 1;
     }
 
     if (channel->disabled)
     {
-        LOG(LOG_LEVEL_WARNING, "xrdp_channel_process: "
-                    "request to send a message to the disabled channel %s (%4.4x)", 
-                    channel->name, channel_id);
+        LOG(LOG_LEVEL_WARNING,
+            "Request to send a message to the disabled channel %s (%d)", 
+            channel->name, channel_id);
         return 0; /* not an error */
     }
 
@@ -148,6 +150,8 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
     //    }
 
     out_uint32_le(s, flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] CHANNEL_PDU_HEADER "
+              "length %d, flags 0x%8.8x", total_data_len, flags);
 
     if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
     {
@@ -634,7 +638,7 @@ xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
 }
 
 /*****************************************************************************/
-/* drdynvc */
+/* Send a [MS-RDPEDYC] DYNVC_CAPS_VERSION2 message */
 static int
 xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
 {
@@ -649,12 +653,13 @@ xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
     init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_channel_drdynvc_send_capability_request: xrdp_channel_init failed");
+        LOG_DEVEL(LOG_LEVEL_ERROR, 
+                  "xrdp_channel_drdynvc_send_capability_request: xrdp_channel_init failed");
         free_stream(s);
         return 1;
     }
     phold = s->p;
-    out_uint8(s, 0x50);         /* insert cmd       */
+    out_uint8(s, 0x50);         /* insert cbId (2 bits), Sp (2 bits), cmd (4 bits) */
     out_uint8(s, 0x00);         /* insert padding   */
     out_uint16_le(s, 2);        /* insert version   */
     /* channel priority unused for now              */
@@ -667,12 +672,13 @@ xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
     total_data_len = (int) (s->end - phold);
     flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
     channel_id = self->drdynvc_channel_id;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_drdynvc_send_capability_request: "
-            "channel_id 0x%x flags 0x%x total_data_len %d",
-            channel_id, flags, total_data_len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CAPS_VERSION2 "
+              "cbId 0, Sp 0, Cmd 0x05, Version 2, PriorityCharge0 0, "
+              "PriorityCharge1 0, PriorityCharge2 0, PriorityCharge3 0");
     if (xrdp_channel_send(self, s, channel_id, total_data_len, flags) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_channel_drdynvc_send_capability_request: xrdp_channel_send failed");
+        LOG_DEVEL(LOG_LEVEL_ERROR, 
+                  "xrdp_channel_drdynvc_send_capability_request: xrdp_channel_send failed");
         free_stream(s);
         return 1;
     }
@@ -707,13 +713,16 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
     if (dci != NULL)
     {
         self->drdynvc_channel_id = (dci->chanid - MCS_GLOBAL_CHANNEL) - 1;
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_drdynvc_start: channel id 0x%x", 
-                self->drdynvc_channel_id);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, 
+                  "Initializing Dynamic Virtual Channel with channel id %d", 
+                  self->drdynvc_channel_id);
         xrdp_channel_drdynvc_send_capability_request(self);
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_channel_drdynvc_start: channel named 'drdynvc' not found");
+        LOG_DEVEL(LOG_LEVEL_WARNING, 
+                  "Dynamic Virtual Channel named 'drdynvc' not found, "
+                  "channel not initialized");
     }
     return 0;
 }
