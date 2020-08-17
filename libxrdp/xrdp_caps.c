@@ -77,7 +77,8 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 10 + 2)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_general: error");
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 12, remaining %d", len);
         return 1;
     }
 
@@ -103,6 +104,9 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
+/*
+ * Process [MS-RDPBCGR] TS_ORDER_CAPABILITYSET (2.2.7.1.3) message.
+ */
 static int
 xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
                         int len)
@@ -112,10 +116,10 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     int ex_flags;
     int cap_flags;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "order capabilities");
     if (len < 20 + 2 + 2 + 2 + 2 + 2 + 2 + 32 + 2 + 2 + 4 + 4 + 4 + 4)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_order: error");
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 84, remaining %d", len);
         return 1;
     }
     in_uint8s(s, 20); /* Terminal desc, pad */
@@ -127,33 +131,53 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     in_uint16_le(s, cap_flags); /* Capability flags */
     in_uint8a(s, order_caps, 32); /* Orders supported */
     g_memcpy(self->client_info.orders, order_caps, 32);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "dest blt-0 %d", order_caps[0]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "pat blt-1 %d", order_caps[1]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "screen blt-2 %d", order_caps[2]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "memblt-3-13 %d %d", order_caps[3], order_caps[13]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "triblt-4-14 %d %d", order_caps[4], order_caps[14]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "line-8 %d", order_caps[8]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "line-9 %d", order_caps[9]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "rect-10 %d", order_caps[10]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "desksave-11 %d", order_caps[11]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "polygon-20 %d", order_caps[20]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "polygon2-21 %d", order_caps[21]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "polyline-22 %d", order_caps[22]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "ellipse-25 %d", order_caps[25]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "ellipse2-26 %d", order_caps[26]);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "text2-27 %d", order_caps[27]);
-    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "order_caps dump", order_caps, 32);
+     
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: terminalDescriptor (ignored as per protocol spec)");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: desktopSaveXGranularity (ignored as per protocol spec)");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: desktopSaveYGranularity (ignored as per protocol spec)");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: maximumOrderLevel (ignored as per protocol spec)");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: numberFonts (ignored as per protocol spec)");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderFlags 0x%4.4x", cap_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 0: DstBlt %d", order_caps[0]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 1: PatBlt %d", order_caps[1]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 2: ScrBlt %d", order_caps[2]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 3,13: MemBlt %d %d", order_caps[3], order_caps[13]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 4,14: Mem3Blt %d %d", order_caps[4], order_caps[14]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 5-6: unused index");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 7: DrawNineGrid %d", order_caps[7]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 8: LineTo %d", order_caps[8]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 9: MultiDrawNineGrid %d", order_caps[9]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 10: unused index");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 11: SaveBitmap %d", order_caps[11]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 12-14: unused index");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 15: MultiDstBlt %d", order_caps[15]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 16: MultiPatBlt %d", order_caps[16]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 17: MultiScrBlt %d", order_caps[17]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 18: MultiOpaqueRect %d", order_caps[18]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 19: FastIndex %d", order_caps[19]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 20: PolygonSC %d", order_caps[20]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 21: PolygonCB %d", order_caps[21]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 22: Polyline %d", order_caps[22]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 23: unused index");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 24: FastGlyph %d", order_caps[24]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 25: EllipseSC %d", order_caps[25]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 26: EllipseCB %d", order_caps[26]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 27: GlyphIndex %d", order_caps[27]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupport index 28-31: unused index");
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: order_caps", order_caps, 32);
 
     in_uint8s(s, 2); /* Text capability flags */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: textFlags (ignored as per protocol spec)");
     /* read extended order support flags */
     in_uint16_le(s, ex_flags); /* Ex flags */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: orderSupportExFlags 0x%4.4x", ex_flags);
 
     if (cap_flags & 0x80) /* ORDER_FLAGS_EXTRA_SUPPORT */
     {
         self->client_info.order_flags_ex = ex_flags;
         if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_order: bitmap cache v3 supported");
+            LOG_DEVEL(LOG_LEVEL_INFO, "Client Capability: bitmap cache v3 supported");
             self->client_info.bitmap_cache_version |= 4;
         }
     }
@@ -161,15 +185,15 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
 
     in_uint32_le(s, i); /* desktop cache size, usually 0x38400 */
     self->client_info.desktop_cache = i;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "desktop cache size %d", i);
-    in_uint8s(s, 4); /* Unknown */
-    in_uint8s(s, 4); /* Unknown */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: desktopSaveSize %d", i);
+    in_uint8s(s, 4); /* Pad */
+    in_uint8s(s, 4); /* Pad */
 
     /* check if libpainter should be used for drawing, instead of orders */
     if (!(order_caps[TS_NEG_DSTBLT_INDEX] && order_caps[TS_NEG_PATBLT_INDEX] &&
             order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_order: not enough orders supported by client, using painter.");
+        LOG_DEVEL(LOG_LEVEL_INFO, "Client Capability: not enough orders supported by client, using painter.");
         self->client_info.no_orders_supported = 1;
     }
 
@@ -186,7 +210,8 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 24 + 2 + 2 + 2 + 2 + 2 + 2)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_bmpcache: error");
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 36, remaining %d", len);
         return 1;
     }
     self->client_info.bitmap_cache_version |= 1;
@@ -229,7 +254,8 @@ xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 2 + 2 + 4 + 4 + 4)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_bmpcache2: error");
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 16, remaining %d", len);
         return 1;
     }
     self->client_info.bitmap_cache_version |= 2;
@@ -271,7 +297,8 @@ xrdp_caps_process_cache_v3_codec_id(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 1)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_cache_v3_codec_id: error");
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 1, remaining %d", len);
         return 1;
     }
     in_uint8(s, codec_id);
@@ -421,13 +448,24 @@ xrdp_caps_process_rail(struct xrdp_rdp *self, struct stream *s, int len)
 
     if (len < 4)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_rail: error");
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 4, remaining %d", len);
         return 1;
     }
     in_uint32_le(s, i32);
     self->client_info.rail_support_level = i32;
-    LOG(LOG_LEVEL_INFO, "xrdp_process_capset_rail: rail_support_level %d",
-        self->client_info.rail_support_level);
+    LOG(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - CAPSTYPE_RAIL "
+              "RailSupportLevel 0x%8.8x (%s%s%s%s%s%s%s%s)",
+              self->client_info.rail_support_level,
+              (self->client_info.rail_support_level & 0x01) ? "TS_RAIL_LEVEL_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x02) ? "TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x04) ? "TS_RAIL_LEVEL_SHELL_INTEGRATION_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x08) ? "TS_RAIL_LEVEL_LANGUAGE_IME_SYNC_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x10) ? "TS_RAIL_LEVEL_SERVER_TO_CLIENT_IME_SYNC_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x20) ? "TS_RAIL_LEVEL_HIDE_MINIMIZED_APPS_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x40) ? "TS_RAIL_LEVEL_WINDOW_CLOAKING_SUPPORTED " : "",
+              (self->client_info.rail_support_level & 0x80) ? "TS_RAIL_LEVEL_HANDSHAKE_EX_SUPPORTED " : ""
+              );
     return 0;
 }
 
@@ -448,8 +486,8 @@ xrdp_caps_process_window(struct xrdp_rdp *self, struct stream *s, int len)
     self->client_info.wnd_num_icon_caches = i32;
     in_uint16_le(s, i32);
     self->client_info.wnd_num_icon_cache_entries = i32;
-    LOG(LOG_LEVEL_INFO, "xrdp_process_capset_window wnd_support_level %d "
-        "wnd_num_icon_caches %d wnd_num_icon_cache_entries %d",
+    LOG(LOG_LEVEL_INFO, "xrdp_process_capset_window wnd_support_level %d, "
+        "wnd_num_icon_caches %d, wnd_num_icon_cache_entries %d",
         self->client_info.wnd_support_level,
         self->client_info.wnd_num_icon_caches,
         self->client_info.wnd_num_icon_cache_entries);
@@ -601,6 +639,9 @@ xrdp_caps_process_surface_cmds(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
+/*
+ * Process a [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU (2.2.1.13.2.1) message.
+ */
 int
 xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
 {
@@ -612,7 +653,6 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     int len;
     char *p;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_caps_process_confirm_active");
     in_uint8s(s, 4); /* rdp_shareid */
     in_uint8s(s, 2); /* userid */
     in_uint16_le(s, source_len); /* sizeof RDP_SOURCE */
@@ -620,9 +660,16 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     in_uint8s(s, source_len);
     in_uint16_le(s, num_caps);
     in_uint8s(s, 2); /* pad */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU "
+              "shareID (ignored), originatorID (ignored), lengthSourceDescriptor %d, "
+              "lengthCombinedCapabilities  %d, sourceDescriptor (ignored), "
+              "numberCapabilities %d", source_len, cap_len, num_caps);
 
     if ((cap_len < 0) || (cap_len > 1024 * 1024))
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU "
+                  "lengthCombinedCapabilities %d is too long (> %d)", 
+                  cap_len, 1024 * 1024);
         return 1;
     }
 
@@ -631,107 +678,146 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         p = s->p;
         if (!s_check_rem(s, 4))
         {
-            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_confirm_active: error 1");
+            LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+                "len 4, remaining %d", s_rem(s));
             return 1;
         }
         in_uint16_le(s, type);
         in_uint16_le(s, len);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                  "capabilitySetType %d, lengthCapability %d", type, len);
         if ((len < 4) || !s_check_rem(s, len - 4))
         {
-            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_confirm_active: error: len %d, "
-                "remaining %d", len, (int) (s->end - s->p));
+            LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+                "len %d, remaining %d", (len - 4), s_rem(s));
             return 1;
         }
         len -= 4;
         switch (type)
         {
             case CAPSTYPE_GENERAL:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_GENERAL");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_GENERAL");
                 xrdp_caps_process_general(self, s, len);
                 break;
             case CAPSTYPE_BITMAP:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_BITMAP");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_BITMAP - Ignored");
                 break;
             case CAPSTYPE_ORDER:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_ORDER");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_ORDER");
                 xrdp_caps_process_order(self, s, len);
                 break;
             case CAPSTYPE_BITMAPCACHE:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_BMPCACHE");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_BITMAPCACHE");
                 xrdp_caps_process_bmpcache(self, s, len);
                 break;
             case CAPSTYPE_CONTROL:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_CONTROL");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_CONTROL - Ignored");
                 break;
             case 6:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = 6");
                 xrdp_caps_process_cache_v3_codec_id(self, s, len);
                 break;
             case CAPSTYPE_ACTIVATION:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_ACTIVAION");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_ACTIVATION - Ignored");
                 break;
             case CAPSTYPE_POINTER:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_POINTER");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_POINTER");
                 xrdp_caps_process_pointer(self, s, len);
                 break;
             case CAPSTYPE_SHARE:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_SHARE");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_SHARE - Ignored");
                 break;
             case CAPSTYPE_COLORCACHE:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_COLORCACHE");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_COLORCACHE - Ignored");
                 break;
             case CAPSTYPE_SOUND:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_SOUND");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_SOUND - Ignored");
                 break;
             case CAPSTYPE_INPUT:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_INPUT");
                 xrdp_caps_process_input(self, s, len);
                 break;
             case CAPSTYPE_FONT:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_FONT");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_FONT - Ignored");
                 break;
             case CAPSTYPE_BRUSH:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_BRUSH");
                 xrdp_caps_process_brushcache(self, s, len);
                 break;
             case CAPSTYPE_GLYPHCACHE:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_GLYPHCACHE");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_GLYPHCACHE");
                 xrdp_caps_process_glyphcache(self, s, len);
                 break;
             case CAPSTYPE_OFFSCREENCACHE:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_OFFSCREENCACHE");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_OFFSCREENCACHE");
                 xrdp_caps_process_offscreen_bmpcache(self, s, len);
                 break;
             case CAPSTYPE_BITMAPCACHE_REV2:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_BITMAPCACHE_REV2");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_BITMAPCACHE_REV2");
                 xrdp_caps_process_bmpcache2(self, s, len);
                 break;
             case CAPSTYPE_VIRTUALCHANNEL:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_VIRTUALCHANNEL");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_VIRTUALCHANNEL - Ignored");
                 break;
             case CAPSTYPE_DRAWNINGRIDCACHE:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_DRAWNINGRIDCACHE");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_DRAWNINGRIDCACHE - Ignored");
                 break;
             case CAPSTYPE_DRAWGDIPLUS:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_DRAWGDIPLUS");
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_DRAWGDIPLUS - Ignored");
                 break;
             case CAPSTYPE_RAIL:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_RAIL");
                 xrdp_caps_process_rail(self, s, len);
                 break;
             case CAPSTYPE_WINDOW:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_WINDOW");
                 xrdp_caps_process_window(self, s, len);
                 break;
             case CAPSSETTYPE_MULTIFRAGMENTUPDATE:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSSETTYPE_MULTIFRAGMENTUPDATE");
                 xrdp_caps_process_multifragmentupdate(self, s, len);
                 break;
             case CAPSETTYPE_SURFACE_COMMANDS:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSETTYPE_SURFACE_COMMANDS");
                 xrdp_caps_process_surface_cmds(self, s, len);
                 break;
             case CAPSSETTYPE_BITMAP_CODECS:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSSETTYPE_BITMAP_CODECS");
                 xrdp_caps_process_codecs(self, s, len);
                 break;
             case CAPSTYPE_FRAME_ACKNOWLEDGE:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSTYPE_FRAME_ACKNOWLEDGE");
                 xrdp_caps_process_frame_ack(self, s, len);
                 break;
             default:
-                LOG(LOG_LEVEL_WARNING, "unknown in xrdp_caps_process_confirm_active %d", type);
+                LOG(LOG_LEVEL_WARNING, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = %d is unknown - Ignored", type);
                 break;
         }
 
@@ -741,15 +827,15 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     if (self->client_info.no_orders_supported &&
             (self->client_info.offscreen_support_level != 0))
     {
-        LOG(LOG_LEVEL_WARNING, "xrdp_caps_process_confirm_active: not enough orders "
-            "supported by client, client wants off screen bitmap but "
-            "offscreen bitmaps disabled");
+        LOG(LOG_LEVEL_WARNING, "Client Capability: not enough orders "
+                  "supported by client, client wants off screen bitmap but "
+                  "offscreen bitmaps disabled");
         self->client_info.offscreen_support_level = 0;
         self->client_info.offscreen_cache_size = 0;
         self->client_info.offscreen_cache_entries = 0;
     }
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_caps_process_confirm_active");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Completed processing received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU");
     return 0;
 }
 /*****************************************************************************/
