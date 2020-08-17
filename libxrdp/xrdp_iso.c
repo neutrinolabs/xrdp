@@ -18,9 +18,10 @@
  *
  * iso layer
  * 
- * Note: The [ITU-T X.224] and [ISO/IEC 8073] are essentially two specifications 
- * of the same protocol. The RDP protocol specification [MS-RDPBCGR] makes 
- * reference to the [ITU-T X.224] specificaiton.
+ * Note: [ITU-T X.224] and [ISO/IEC 8073] are essentially two specifications 
+ * of the same protocol (see [ITU-T X.224] Appendix I – Differences between 
+ * ITU-T Rec. X.224 (1993) and ISO/IEC 8073:1992). The RDP protocol 
+ * specification [MS-RDPBCGR] makes reference to the [ITU-T X.224] specificaiton.
  */
 
 #if defined(HAVE_CONFIG_H)
@@ -411,6 +412,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     struct stream *s;
     int expected_pdu_len;
 
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "X.224 Connection Sequence: receive connection request");
     s = libxrdp_force_read(self->trans);
     if (s == NULL)
     {
@@ -513,12 +515,14 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     rv = xrdp_iso_negotiate_security(self);
 
     /* send connection confirm back to client */
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "X.224 Connection Sequence: send connection confirmation");
     if (xrdp_iso_send_cc(self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_iso_incoming: xrdp_iso_send_cc failed");
         return 1;
     }
 
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "X.224 Connection Sequence: completed");
     return rv;
 }
 
