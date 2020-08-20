@@ -89,6 +89,25 @@ dumpItemsToString(struct list *self, char *outstr, int len)
     return outstr ;
 }
 
+/* compare two strings containing ip-addresses and ports but ignore the latter */
+static int
+is_equal_ip_ignoring_port(const char *ip1, const char *ip2, const size_t n)
+{
+    int last_colon_ip1 = g_last_ch_pos(ip1, ':', n);
+    int last_colon_ip2 = g_last_ch_pos(ip2, ':', n);
+
+    if (last_colon_ip1 != last_colon_ip2)
+    {
+        return 0;
+    }
+
+    if (last_colon_ip1 == -1)
+    {
+        last_colon_ip1 = n;
+    }
+
+    return g_strncmp(ip1, ip2, last_colon_ip1) == 0;
+}
 
 /******************************************************************************/
 struct session_item *
@@ -138,7 +157,7 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
             (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
              (tmp->item->width == width && tmp->item->height == height)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-             (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
+             is_equal_ip_ignoring_port(client_ip, tmp->item->client_ip, 255)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
              (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
             tmp->item->bpp == bpp &&
