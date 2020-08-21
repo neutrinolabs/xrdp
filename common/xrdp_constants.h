@@ -39,7 +39,7 @@
 
 #define INFO_CLIENT_NAME_BYTES  32
 /**
- * Maximum length of a string (two bytes + len), excluding the terminator
+ * Maximum length of a string including the mandatory null terminator
  * [MS-RDPBCGR] TS_INFO_PACKET(2.2.1.11.1.1)
  */
 #define INFO_CLIENT_MAX_CB_LEN  512
