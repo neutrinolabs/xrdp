@@ -54,11 +54,12 @@ libcommon_la_SOURCES = \
   log.h \
   os_calls.c \
   os_calls.h \
-  os_calls.h \
   parse.h \
   rail.h \
   ssl_calls.c \
   ssl_calls.h \
+  string_calls.c \
+  string_calls.h \
   thread_calls.c \
   thread_calls.h \
   trans.c \

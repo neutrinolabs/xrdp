@@ -23,6 +23,7 @@
 #endif
 #include "xrdp.h"
 #include "log.h"
+#include "string_calls.h"
 
 #ifndef USE_NOPAM
 #if defined(HAVE__PAM_TYPES_H)

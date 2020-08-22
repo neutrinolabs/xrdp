@@ -31,10 +31,12 @@
 #include "os_calls.h"
 
 #include "chansrv_config.h"
+#include "string_calls.h"
 
 /* Default settings */
 #define DEFAULT_USE_UNIX_SOCKET             0
 #define DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD 0
+#define DEFAULT_ENABLE_FUSE_MOUNT           1
 #define DEFAULT_FUSE_MOUNT_NAME             "xrdp-client"
 #define DEFAULT_FILE_UMASK                  077
 
@@ -155,6 +157,10 @@ read_config_chansrv(log_func_t logmsg,
         const char *name = (const char *)list_get_item(names, index);
         const char *value = (const char *)list_get_item(values, index);
 
+        if (g_strcasecmp(name, "EnableFuseMount") == 0)
+        {
+            cfg->enable_fuse_mount = g_text2bool(value);
+        }
         if (g_strcasecmp(name, "FuseMountName") == 0)
         {
             g_free(cfg->fuse_mount_name);
@@ -196,6 +202,7 @@ new_config(void)
     else
     {
         cfg->use_unix_socket = DEFAULT_USE_UNIX_SOCKET;
+        cfg->enable_fuse_mount = DEFAULT_ENABLE_FUSE_MOUNT;
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
         cfg->fuse_mount_name = fuse_mount_name;
         cfg->file_umask = DEFAULT_FILE_UMASK;
@@ -271,13 +278,16 @@ void
 config_dump(struct config_chansrv *config)
 {
     g_writeln("Global configuration:");
-    g_writeln("    UseUnixSocket (derived):   %d", config->use_unix_socket);
+    g_writeln("    UseUnixSocket (derived):   %s",
+              g_bool2text(config->use_unix_socket));
 
     g_writeln("\nSecurity configuration:");
-    g_writeln("    RestrictOutboundClipboard: %d",
-              config->restrict_outbound_clipboard);
+    g_writeln("    RestrictOutboundClipboard: %s",
+              g_bool2text(config->restrict_outbound_clipboard));
 
     g_writeln("\nChansrv configuration:");
+    g_writeln("    EnableFuseMount            %s",
+              g_bool2text(config->enable_fuse_mount));
     g_writeln("    FuseMountName:             %s", config->fuse_mount_name);
     g_writeln("    FileMask:                  0%o", config->file_umask);
 }

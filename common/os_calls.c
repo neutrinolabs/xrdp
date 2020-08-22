@@ -3309,6 +3309,17 @@ g_setsid(void)
 
 /*****************************************************************************/
 int
+g_getlogin(char *name, unsigned int len)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return getlogin_r(name, len);
+#endif
+}
+
+/*****************************************************************************/
+int
 g_setlogin(const char *name)
 {
 #ifdef BSD
@@ -3757,21 +3768,6 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
         g_writeln("g_save_to_bpp: unimp");
     }
     close(fd);
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns boolean */
-int
-g_text2bool(const char *s)
-{
-    if ( (g_atoi(s) != 0) ||
-         (0 == g_strcasecmp(s, "true")) ||
-         (0 == g_strcasecmp(s, "on")) ||
-         (0 == g_strcasecmp(s, "yes")))
-    {
-        return 1;
-    }
     return 0;
 }
 

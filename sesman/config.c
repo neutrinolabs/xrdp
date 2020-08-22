@@ -33,6 +33,7 @@
 #include "file.h"
 #include "sesman.h"
 #include "log.h"
+#include "string_calls.h"
 
 /***************************************************************************//**
  *

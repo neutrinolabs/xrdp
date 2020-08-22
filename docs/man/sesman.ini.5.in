@@ -246,8 +246,27 @@ Following parameters can be used in the \fB[Chansrv]\fR section.
 
 .TP
 \fBFuseMountName\fR=\fIstring\fR
-Directory for drive redirection, relative to the user home directory.
+Directory for drive redirection.
 Created if it doesn't exist. If not specified, defaults to \fIxrdp_client\fR.
+If first character is not a '/', this is relative to $HOME.
+.P
+.RS
+If first character is a '/' this is an absolute path. The following
+substitutions are made in this string:-
+    %U - Username
+    %u - Numeric UID
+    %% - Percent character
+.P
+If this format is used:-
+.HP 3
+1) The directory path permissions MUST be configured correctly by
+the system administrator or the system itself - xrdp-chansrv will not
+do this for you (although it will create the final directories owned by
+the user).
+.HP 3
+2) The desktop may not automatically display a link for the redirected
+drive. To fix this, consult the docs for your chosen desktop.
+.RE
 
 .TP
 \fBFileUmask\fR=\fImode\fR
@@ -256,6 +275,21 @@ The default value of 077 prevents other users on the system from reading
 files on your redirected drives. This may not be approprate for all
 environents, and so you can change this value to allow other users to
 access your remote files if required.
+
+.TP
+\fBEnableFuseMount\fR=\fI[true|false]\fR
+Defaults to \fItrue\fR.
+Set to \fIfalse\fR to disable xrdp-chansrv's use of the FUSE system
+feature, even if it has been built with this feature enabled.
+.P
+.RS
+Setting this value to \fIfalse\fR will disable the following application
+features:-
+.P
+-  drive redirection
+.P
+-  copying-and-pasting of files
+.RE
 
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as

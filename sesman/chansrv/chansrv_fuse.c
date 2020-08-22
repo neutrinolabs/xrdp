@@ -144,6 +144,7 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "clipboard_file.h"
 #include "chansrv_fuse.h"
 #include "chansrv_xfs.h"
@@ -392,6 +393,8 @@ static const char *filename_on_device(const char *full_path);
 static void update_inode_file_attributes(const struct file_attr *fattr,
         tui32 change_mask, XFS_INODE *xinode);
 static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name);
+static unsigned int format_user_info(char *dest, unsigned int len,
+                                     const char *format);
 
 /*****************************************************************************/
 int
@@ -446,7 +449,7 @@ xfuse_handle_from_fuse_handle(uint64_t handle)
 /**
  * Initialize FUSE subsystem
  *
- * @return 0 on success, -1 on failure
+ * @return 0 on success, -1 on failure, 1 for feature disabled
  *****************************************************************************/
 
 int
@@ -458,6 +461,21 @@ xfuse_init(void)
     if (g_xfuse_inited)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "already inited");
+        return 0;
+    }
+
+    /* This feature may be disabled */
+    if (!g_cfg->enable_fuse_mount)
+    {
+        /*
+         * Only log the 'disabled mounts' message one time
+         */
+        static int disabled_mounts_msg_shown = 0;
+        if (!disabled_mounts_msg_shown)
+        {
+            LOG(LOG_LEVEL_INFO, "FUSE mounts are disabled by config");
+            disabled_mounts_msg_shown = 1;
+        }
         return 1;
     }
 
@@ -469,13 +487,27 @@ xfuse_init(void)
 
     load_fuse_config();
 
-    /* define FUSE mount point to ~/xrdp_client, ~/thinclient_drives */
-    g_snprintf(g_fuse_root_path, 255, "%s/%s", g_getenv("HOME"), g_cfg->fuse_mount_name);
+    /* define FUSE mount point */
+    if (g_cfg->fuse_mount_name[0] == '/')
+    {
+        /* String is an absolute path to the mount point containing
+         * %u or %U characters */
+        format_user_info(g_fuse_root_path, sizeof(g_fuse_root_path),
+                         g_cfg->fuse_mount_name);
+    }
+    else
+    {
+        /* mount_name is relative to $HOME, e.g. ~/xrdp_client,
+         * or ~/thinclient_drives */
+        g_snprintf(g_fuse_root_path, sizeof(g_fuse_root_path), "%s/%s",
+                   g_getenv("HOME"), g_cfg->fuse_mount_name);
+    }
     g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
 
     /* if FUSE mount point does not exist, create it */
     if (!g_directory_exist(g_fuse_root_path))
     {
+        (void)g_create_path(g_fuse_root_path);
         if (!g_create_dir(g_fuse_root_path))
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "mkdir %s failed. If %s is already mounted, you must "
@@ -748,23 +780,38 @@ xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)
 int
 xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex)
 {
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "entered: filename=%s flags=%d size=%d lindex=%d",
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "entered: filename=%s flags=%d size=%d lindex=%d",
               filename, flags, size, lindex);
 
-    /* add entry to xrdp_fs */
-    XFS_INODE *xinode = xfs_add_entry( g_xfs,
-                                       g_clipboard_inum,    /* parent inode */
-                                       filename,
-                                       (0666 | S_IFREG));
-    if (xinode == NULL)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "failed to create file in xrdp filesystem");
-        return -1;
-    }
-    xinode->size = size;
-    xinode->lindex = lindex;
+    int result = -1;
 
-    return 0;
+    if (g_xfs == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "xfuse_add_clip_dir_item() called with no filesystem")
+    }
+    else
+    {
+        /* add entry to xrdp_fs */
+        XFS_INODE *xinode = xfs_add_entry( g_xfs,
+                                           g_clipboard_inum, /* parent inode */
+                                           filename,
+                                           (0666 | S_IFREG));
+        if (xinode == NULL)
+        {
+            LOG(LOG_LEVEL_INFO, 
+                "failed to create file %s in xrdp filesystem", filename);
+        }
+        else
+        {
+            xinode->size = size;
+            xinode->lindex = lindex;
+            result = 0;
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -2607,6 +2654,32 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
     }
 
     return result;
+}
+
+/*
+ * Scans a user-provided string substituting %u/%U for UID/username
+ */
+static unsigned int format_user_info(char *dest, unsigned int len,
+                                     const char *format)
+{
+    char uidstr[64];
+    char username[64];
+    const struct info_string_tag map[] =
+    {
+        {'u', uidstr},
+        {'U', username},
+        INFO_STRING_END_OF_LIST
+    };
+
+    int uid = g_getuid();
+    g_snprintf(uidstr, sizeof(uidstr), "%d", uid);
+    if (g_getlogin(username, sizeof(username)) != 0)
+    {
+        /* Fall back to UID */
+        g_strncpy(username, uidstr, sizeof(username) - 1);
+    }
+
+    return g_format_info_string(dest, len, format, map);
 }
 
 #endif /* end else #ifndef XRDP_FUSE */

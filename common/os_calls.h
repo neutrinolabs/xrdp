@@ -162,6 +162,7 @@ int      g_getuid(void);
 int      g_getgid(void);
 int      g_setuid(int pid);
 int      g_setsid(void);
+int      g_getlogin(char *name, unsigned int len);
 int      g_setlogin(const char *name);
 int      g_waitchild(void);
 int      g_waitpid(int pid);
@@ -180,7 +181,6 @@ int      g_time2(void);
 int      g_time3(void);
 int      g_save_to_bmp(const char* filename, char* data, int stride_bytes,
                               int width, int height, int depth, int bits_per_pixel);
-int      g_text2bool(const char *s);
 void *   g_shmat(int shmid);
 int      g_shmdt(const void *shmaddr);
 int      g_gethostname(char *name, int len);

@@ -27,6 +27,7 @@
 #include "xrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
+#include "string_calls.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
