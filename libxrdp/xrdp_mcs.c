@@ -35,7 +35,6 @@ xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
 {
     struct xrdp_mcs *self;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_create");
     self = (struct xrdp_mcs *)g_malloc(sizeof(struct xrdp_mcs), 1);
     self->sec_layer = owner;
     self->userid = 1;
@@ -44,7 +43,7 @@ xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
     self->server_mcs_data = server_mcs_data;
     self->iso_layer = xrdp_iso_create(self, trans);
     self->channel_list = list_create();
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_create");
+
     return self;
 }
 
@@ -110,6 +109,9 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     out_uint16_be(s, chanid); /* channelId (OPTIONAL) */
     s_mark_end(s);
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sening [ITU-T T.125] ChannelJoinConfirm "
+                      "result SUCCESS, initiator %d, requested %d, "
+                      "channelId %d",  userid, chanid, chanid);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
@@ -118,9 +120,6 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     }
 
     free_stream(s);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sent [ITU-T T.125] ChannelJoinConfirm "
-                      "result SUCCESS, initiator %d, requested %d, "
-                      "channelId %d",  userid, chanid, chanid);
     return 0;
 }
 
@@ -600,7 +599,6 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ErectDomainRequest "
               "subHeight (ignored), subInterval (ignored), "
               "nonStandard (%s)", 
-              (opcode >> 2),
               (opcode & 2) ? "present" : "not present");
               
     /*
@@ -700,7 +698,6 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
               "choice index %d (AttachUserRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] AttachUserRequest "
               "nonStandard (%s)", 
-              (opcode >> 2),
               (opcode & 2) ? "present" : "not present");
     return 0;
 }
@@ -823,11 +820,10 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
-              "choice index %d (AttachUserRequest)", (opcode >> 2));
+              "choice index %d (ChannelJoinRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
-              "initiator (ignored), channelId (ignored)"
+              "initiator (ignored), channelId (ignored), "
               "nonStandard (%s)", 
-              (opcode >> 2),
               (opcode & 2) ? "present" : "not present");
     return 0;
 }
@@ -1045,7 +1041,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
             channel = MCS_GLOBAL_CHANNEL + (index + 1);
             out_uint16_le(s, channel); /* channelIdArray[index] (channel allocated) */
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_NET channelIdArray[%d] "
-                      "channelId %d", channel);
+                      "channelId %d", index, channel);
         }
         else
         {
@@ -1106,7 +1102,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
                   "serverCertificate.PublicKeyBlob.wSignatureBlobLen %d, "
                   "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ", 
                   self->crypt_method, self->crypt_level, SEC_TAG_PUBKEY,
-                  00x005c, SEC_RSA_MAGIC, 0x0048, 0x00020000, 0x3f000000,
+                  0x005c, SEC_RSA_MAGIC, 0x0048, 0x00020000, 0x3f000000,
                   SEC_TAG_KEYSIG, 72);
     }
     else if (self->rsa_key_bytes == 256)
