@@ -521,13 +521,13 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     }
     else
     {
-        in_uint16_le(s, len);
+        in_uint16_le(s, len);      /* totalLength */
 
-        in_uint16_le(s, pdu_code);
+        in_uint16_le(s, pdu_code); /* pduType */
         *code = pdu_code & 0xf;
-        in_uint8s(s, 2); /* pduSource */
+        in_uint8s(s, 2);           /* pduSource */
         s->next_packet += len;
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_SHARECONTROLHEADER "
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
                   "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
                   "pduSource (ignored)", len, PDUTYPE_TO_STR(*code), *code, 
                   ((pdu_code & 0xfff0) >> 4));
