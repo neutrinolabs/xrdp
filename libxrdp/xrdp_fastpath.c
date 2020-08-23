@@ -30,12 +30,11 @@ xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
 {
     struct xrdp_fastpath *self;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_fastpath_create");
     self = (struct xrdp_fastpath *)g_malloc(sizeof(struct xrdp_fastpath), 1);
     self->sec_layer = owner;
     self->trans = trans;
     self->session = owner->rdp_layer->session;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_fastpath_create");
+
     return self;
 }
 
