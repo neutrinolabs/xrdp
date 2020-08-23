@@ -463,6 +463,10 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
     {
         case 0:
             length = (int) (s->end - s->p);
+            if (!s_check_rem_out(self->s, length))
+            {
+                return 1;
+            }
             out_uint8a(self->s, s->p, length);
             in_uint8s(s, length);
             return 0;
@@ -471,11 +475,19 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
             make_stream(self->s);
             init_stream(self->s, total_length);
             length = (int) (s->end - s->p);
+            if (!s_check_rem_out(self->s, length))
+            {
+                return 1;
+            }
             out_uint8a(self->s, s->p, length);
             in_uint8s(s, length);
             return 0;
         case 2:
             length = (int) (s->end - s->p);
+            if (!s_check_rem_out(self->s, length))
+            {
+                return 1;
+            }
             out_uint8a(self->s, s->p, length);
             in_uint8s(s, length);
             ls = self->s;
