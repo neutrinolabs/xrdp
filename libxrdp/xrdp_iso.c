@@ -563,7 +563,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
               "version 3, length %d", len);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [ITU-T X.224] DT-TPDU (Data) "
               "length indicator 2, TPDU code 0x%2.2x, EOT 1, TPDU-NR 0x00", 
-              len, ISO_PDU_DT);
+              ISO_PDU_DT);
     
     if (trans_write_copy_s(self->trans, s) != 0)
     {
