@@ -443,7 +443,6 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
 {
     struct xrdp_sec *self;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_create");
     self = (struct xrdp_sec *) g_malloc(sizeof(struct xrdp_sec), 1);
     self->rdp_layer = owner;
     self->crypt_method = CRYPT_METHOD_NONE; /* set later */
@@ -453,7 +452,6 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     self->is_security_header_present = 1;
-    LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_create");
 
     return self;
 }
