@@ -1546,11 +1546,11 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {
-        g_strncpy(mod->username, value, 255);
+        g_strncpy(mod->username, value, INFO_CLIENT_MAX_CB_LEN-1);
     }
     else if (g_strcasecmp(name, "password") == 0)
     {
-        g_strncpy(mod->password, value, 255);
+        g_strncpy(mod->password, value, INFO_CLIENT_MAX_CB_LEN-1);
     }
     else if (g_strcasecmp(name, "ip") == 0)
     {
