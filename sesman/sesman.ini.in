@@ -55,7 +55,7 @@ IdleTimeLimit=0
 
 ;; Policy - session allocation policy
 ; Type: enum [ "Default" | "UBD" | "UBI" | "UBC" | "UBDI" | "UBDC" ]
-; Default: Xrdp:<User,BitPerPixel> and Xvnc:<User,BitPerPixel,DisplaySize>
+; "Default" session per <User,BitPerPixel>
 ; "UBD" session per <User,BitPerPixel,DisplaySize>
 ; "UBI" session per <User,BitPerPixel,IPAddr>
 ; "UBC" session per <User,BitPerPixel,Connection>
