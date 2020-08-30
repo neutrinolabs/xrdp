@@ -161,6 +161,7 @@ struct xrdp_client_info
   int suppress_output;
 
   int enable_token_login;
+  char domain_user_separator[16];
 };
 
 #endif

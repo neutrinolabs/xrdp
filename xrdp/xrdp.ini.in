@@ -58,6 +58,10 @@ ssl_protocols=TLSv1.2, TLSv1.3
 ; set TLS cipher suites
 #tls_ciphers=HIGH
 
+; concats the domain name to the user if set for authentication with the separator
+; for example when the server is multi homed with SSSd
+#domain_user_separator=@
+
 ; Section name to use for automatic login if the client sends username
 ; and password. If empty, the domain name sent by the client is used.
 ; If empty and no domain name is given, the first suitable section in

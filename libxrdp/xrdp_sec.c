@@ -738,7 +738,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_domain >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -760,7 +760,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_user >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -772,7 +772,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_password >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -784,7 +784,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_program >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -796,7 +796,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_directory >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -841,6 +841,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             g_writeln("xrdp_sec_process_logon_info: credentials on cmd line is mandatory");
             return 1; /* credentials on cmd line is mandatory */
         }
+    }
+    if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
+        && self->rdp_layer->client_info.domain[0] != '\0')
+    {
+        int size = sizeof(self->rdp_layer->client_info.username);
+        g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain_user_separator, size - 1 - g_strlen(self->rdp_layer->client_info.domain_user_separator));
+        g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
     }
     DEBUG(("username %s", self->rdp_layer->client_info.username));
 
