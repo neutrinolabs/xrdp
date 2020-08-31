@@ -55,7 +55,7 @@ IdleTimeLimit=0
 
 ;; Policy - session allocation policy
 ; Type: enum [ "Default" | "UBD" | "UBI" | "UBC" | "UBDI" | "UBDC" ]
-; Default: Xrdp:<User,BitPerPixel> and Xvnc:<User,BitPerPixel,DisplaySize>
+; "Default" session per <User,BitPerPixel>
 ; "UBD" session per <User,BitPerPixel,DisplaySize>
 ; "UBI" session per <User,BitPerPixel,IPAddr>
 ; "UBC" session per <User,BitPerPixel,Connection>
@@ -75,13 +75,15 @@ SyslogLevel=DEBUG
 
 [Xorg]
 ; Specify the path of non-suid Xorg executable. It might differ depending
-; on your distribution and version. The typical path is shown as follows:
+; on your distribution and version. Find out the appropreate path for your
+; environment. The typical path is known as follows:
 ;
 ; Fedora 26 or later    :  param=/usr/libexec/Xorg
 ; Debian 9 or later     :  param=/usr/lib/xorg/Xorg
 ; Ubuntu 16.04 or later :  param=/usr/lib/xorg/Xorg
-; Arch Linux            :  param=/usr/lib/xorg-server/Xorg
+; Arch Linux            :  param=/usr/lib/Xorg
 ; CentOS 7              :  param=/usr/bin/Xorg or param=Xorg
+; CentOS 8              :  param=/usr/libexec/Xorg
 ;
 param=Xorg
 ; Leave the rest paramaters as-is unless you understand what will happen.

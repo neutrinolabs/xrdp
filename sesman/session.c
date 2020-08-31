@@ -105,9 +105,6 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
     {
         case SCP_SESSION_TYPE_XVNC: /* 0 */
             type = SESMAN_SESSION_TYPE_XVNC; /* 2 */
-            /* Xvnc cannot resize */
-            policy = (enum SESMAN_CFG_SESS_POLICY)
-                     (policy | SESMAN_CFG_SESS_POLICY_D);
             break;
         case SCP_SESSION_TYPE_XRDP: /* 1 */
             type = SESMAN_SESSION_TYPE_XRDP; /* 1 */

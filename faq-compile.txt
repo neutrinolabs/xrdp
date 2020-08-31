@@ -32,3 +32,25 @@ Q.  I get an error: "rail.c:31:35: fatal error: X11/extensions/Xrandr.h: No such
 A.  You need to install the Xrandr development package.
     For Debian / Ubuntu this package is called libxrandr-dev.
     For SUSE / openSUSE this package is called libXrandr-devel.
+
+Q.  How do I configure the same continuous integration bulids for my XRDP fork as the official XRDP repository?
+
+A.  The XRDP project uses both Travis-CI.org and Cirrus-CI.com for continuous integration.
+    Both of these services are free for open source projects (both the official 
+    repository and forks), and these services integrate with Github to build any 
+    changes pushed to public Github repositories.
+
+    To configure Travis CI for your XRDP fork on github:
+    1. Follow Travis CI instructions for connecting your github account to Travis CI
+        https://docs.travis-ci.com/user/tutorial/#to-get-started-with-travis-ci-using-github
+    2. In the Travis CI dashboard setting page select your XRDP fork repository for building pushed branches.
+    3. Push a commit to a branch in your XRDP fork on github and Travis CI should 
+        start building the branch because the XRDP repository already contain a .travis.yml file.
+    
+    To configure Cirrus CI for your XRDP fork on github:
+    1. Follow Cirrus CI instructions for connecting your github account to Cirrus CI
+        https://cirrus-ci.org/guide/quick-start/
+    2. In the Github setting page for the Cirrus CI application, enable Cirrus CI 
+        access to your XRDP fork repository.
+    3. Push a commit to a branch in your XRDP fork on github and Cirrus CI should 
+        start building the branch because the XRDP repository already contain a .cirrus.yml file.

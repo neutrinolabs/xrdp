@@ -913,7 +913,7 @@ xrdp_wm_xor_pat(struct xrdp_wm *self, int x, int y, int cx, int cy)
     self->painter->brush.pattern[6] = 0xaa;
     self->painter->brush.pattern[7] = 0x55;
     self->painter->brush.x_origin = 0;
-    self->painter->brush.x_origin = 0;
+    self->painter->brush.y_origin = 0;
     self->painter->brush.style = 3;
     self->painter->bg_color = self->black;
     self->painter->fg_color = self->white;
@@ -1529,6 +1529,12 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
     if (self->popup_wnd != 0)
     {
         xrdp_wm_clear_popup(self);
+        return 0;
+    }
+
+    // workaround odd shift behavior
+    // see https://github.com/neutrinolabs/xrdp/issues/397
+    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT)) {
         return 0;
     }
 

@@ -10,51 +10,87 @@ service="xrdp-sesman"
 pamdir="/etc/pam.d"
 pamdir_suse="/usr/etc/pam.d"
 
+# Modules needed by xrdp-sesman.unix, if we get to that
+unix_modules_needed="pam_unix.so pam_env.so pam_nologin.so"
+
+# Directories where pam modules might be installed
+# Add to this list as platforms are added
+pam_module_dir_searchpath="/lib*/security /usr/lib*/security /lib/*/security /usr/lib/*/security"
+
+find_pam_module_dir()
+{
+  # Looks for the pam security module directory
+  set -- $pam_module_dir_searchpath
+  for d in "$@"; do
+    if [ -s $d/pam_unix.so ]; then
+      echo $d
+      break
+    fi
+  done
+}
+
+can_apply_unix_config()
+{
+  result=0
+  module_dir="$1"
+  for m in $unix_modules_needed; do
+    if [ ! -s $module_dir/$m ]; then
+      echo "  ** $m not found" >&2
+      result=1
+    fi
+  done
+
+  return $result
+}
+
 guess_rules ()
 {
-  if test -s "$pamdir/password-auth"; then
+  rules=
+  if [ -s "$pamdir/password-auth" ]; then
     rules="redhat"
-    return
-  fi
 
-  if test -s "$pamdir_suse/common-account"; then
+  elif [ -s "$pamdir_suse/common-account" ]; then
     rules="suse"
-    return
-  fi
 
-  if test -s "$pamdir/common-account"; then
+  elif [ -s "$pamdir/common-account" ]; then
     if grep "^@include" "$pamdir/passwd" >/dev/null 2>&1; then
       rules="debian"
     else
       rules="suse"
     fi
-    return
-  fi
 
-  if test ! -f "$pamdir/system-auth" -a -s "$pamdir/system"; then
+  elif [ ! -f "$pamdir/system-auth" -a -s "$pamdir/system" ]; then
     rules="freebsd"
-    return
-  fi
 
-  if test -s "$pamdir/authorization"; then
+  elif [ -s "$pamdir/authorization" ]; then
     rules="macos"
-    return
-  fi
 
-  if test -s "$pamdir/system-remote-login"; then
+  elif [ -s "$pamdir/system-remote-login" ]; then
     rules="arch"
-    return
-  fi
 
-  rules="unix"
-  return
+  elif [ -s "$pamdir/system-auth" ]; then
+    rules="system"
+
+  else
+    module_dir=`find_pam_module_dir`
+    if [ -d "$module_dir" ]; then
+      #echo "- Found pam modules in $module_dir" >&2
+      if can_apply_unix_config "$module_dir" ; then
+        rules="unix"
+      fi
+    fi
+  fi
 }
 
-if test "$rules" = "auto"; then
+if [ "$rules" = "auto" ]; then
   guess_rules
+  if [ -z "$rules" ]; then
+    echo "** Can't guess PAM rules for this system"
+    exit 1
+  fi
 fi
 
-if test -s "$srcdir/$service.$rules"; then
+if [ -s "$srcdir/$service.$rules" ]; then
   ln -nsf "$srcdir/$service.$rules" "$outfile"
 else
   echo "Cannot find $srcdir/$service.$rules"

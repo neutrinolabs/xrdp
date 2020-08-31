@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.65)
-AC_INIT([xrdp], [0.9.13.1], [xrdp-devel@googlegroups.com])
+AC_INIT([xrdp], [0.9.14], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
@@ -18,11 +18,6 @@ AC_CONFIG_SUBDIRS([libpainter librfxcodec])
 
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-
-AX_CFLAGS_WARN_ALL
-AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
-AX_GCC_FUNC_ATTRIBUTE([format])
-AX_TYPE_SOCKLEN_T
 
 case $host_os in
 	*linux*)
@@ -155,6 +150,19 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
+# configure compiler options and CFLAGS
+AX_GCC_FUNC_ATTRIBUTE([format])
+AX_TYPE_SOCKLEN_T
+AX_CFLAGS_WARN_ALL
+AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
+
+AM_COND_IF([LINUX],
+  [AX_APPEND_COMPILE_FLAGS([-Werror])]) # bsd has warnings that have not been fixed yet
+
+AM_COND_IF([XRDP_DEBUG],
+  [AX_APPEND_COMPILE_FLAGS([-g -O0])],
+  [AX_APPEND_COMPILE_FLAGS([-O2])])
+
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
   with_simd=no
@@ -241,11 +249,6 @@ if test "x$enable_jpeg" = "xyes"
 then
   AC_CHECK_HEADER([jpeglib.h], [],
     [AC_MSG_ERROR([please install libjpeg-dev or libjpeg-devel])])
-fi
-
-if test "x$enable_xrdpdebug" = "xyes"
-then
-  CFLAGS="-g -O0"
 fi
 
 # checking for fuse

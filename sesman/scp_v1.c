@@ -60,7 +60,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
     while ((!data) && ((retries == 0) || (current_try > 0)))
     {
-        LOG_DBG("data %d - retry %d - currenttry %d - expr %d",
+        LOG_DBG("data %ld - retry %d - currenttry %d - expr %d",
                 data, retries, current_try,
                 ((!data) && ((retries == 0) || (current_try > 0))));
 

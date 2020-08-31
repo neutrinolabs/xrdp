@@ -31,6 +31,10 @@
 #include "sesman.h"
 #include "tcp.h"
 
+#if !defined(PACKAGE_VERSION)
+#define PACKAGE_VERSION "???"
+#endif
+
 struct config_sesman g_cfg; /* config.h */
 
 /******************************************************************************/
@@ -61,9 +65,9 @@ main(int argc, char **argv)
 
     if (argc == 1)
     {
-        g_printf("xrdp session starter v0.1\n");
+        g_printf("xrdp session starter v" PACKAGE_VERSION "\n");
         g_printf("\nusage:\n");
-        g_printf("sesrun <server> <username> <password> <width> <height> <bpp> <session_cod>\n");
+        g_printf("sesrun <server> <username> <password> <width> <height> <bpp> <session_code>\n");
         g_printf("session code 0 for Xvnc, 10 for X11RDP, 20 for Xorg\n");
     }
     else if (argc == 8)

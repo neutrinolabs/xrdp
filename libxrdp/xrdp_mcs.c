@@ -997,8 +997,11 @@ xrdp_mcs_call_callback(struct xrdp_mcs *self)
     {
         if (session->callback != 0)
         {
-            /* in xrdp_wm.c */
-            rv = session->callback(session->id, 0x5556, 0, 0, 0, 0);
+            if (session->check_for_app_input)
+            {
+                /* in xrdp_wm.c */
+                rv = session->callback(session->id, 0x5556, 0, 0, 0, 0);
+            }
         }
         else
         {

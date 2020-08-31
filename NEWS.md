@@ -1,3 +1,34 @@
+# Release notes for xrdp v0.9.14 (2020/08/31)
+
+## New features
+* VNC multi-monitor support if you are using a suitable Xvnc server #1343
+* VNC sessions now resize by default on reconnection if you are using a suitable Xvnc server #1343
+* Support Slackware for PAM #1558 #1560
+* Support Programmer Dvorak Keyboard #1663
+
+**[HEADS UP]** The VNC changes are significant. They described in more detail on the following wiki page.
+* [Xvnc backend : Multi monitor and resize support](https://github.com/neutrinolabs/xrdp/wiki/Xvnc-backend-:-Multi-monitor-and-resize-support)
+
+## Bug fixes
+* Fix odd shift key behavior (workaround) #397 #1522
+* Fix Xorg path in the document for Arch Linux #1448 #1529
+* Fix Xorg path in the document for CentOS 8 #1646 #1647
+* Fix internal username/password buffer is smaller than RDP protocol specification #1648 #1653
+* Fix possible memory out-of-bounds accesses #1549
+* Fix memory allocation overflow #1557
+* Prevent chansrv input channels being scanned during a server reset #1595
+* Ignore TS_MULTIFRAGMENTUPDATE_CAPABILITYSET from client if fp disabled #1593
+* Minor manpage fixes #1611
+
+## Other changes
+* CI error fixes 
+* Introduce cppcheck
+
+## Known issues
+* FreeRDP 2.0.0-rc4 or later might not able to connect to xrdp due to
+  xrdp's bad-mannered behaviour, add `+glyph-cache` option to FreeRDP to connect #1266
+* Audio redirection by MP3 codec doesn't sound with some client, use AAC instead #965
+
 # Release notes for xrdp v0.9.13.1 (2020/06/30)
 
 This is a security fix release that includes fixes for the following local buffer overflow vulnerability.

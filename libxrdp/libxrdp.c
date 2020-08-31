@@ -47,6 +47,7 @@ libxrdp_init(tbus id, struct trans *trans)
     session->rdp = xrdp_rdp_create(session, trans);
     session->orders = xrdp_orders_create(session, (struct xrdp_rdp *)session->rdp);
     session->client_info = &(((struct xrdp_rdp *)session->rdp)->client_info);
+    session->check_for_app_input = 1;
     return session;
 }
 
@@ -125,24 +126,18 @@ libxrdp_force_read(struct trans* trans)
 
     if (trans_force_read(trans, 4) != 0)
     {
-        g_writeln("libxrdp_force_read: error");
+        g_writeln("libxrdp_force_read: header read error");
         return 0;
     }
     bytes = libxrdp_get_pdu_bytes(s->data);
-    if (bytes < 1)
+    if (bytes < 4 || bytes > s->size)
     {
-        g_writeln("libxrdp_force_read: error");
+        g_writeln("libxrdp_force_read: bad header length %d", bytes);
         return 0;
     }
-    if (bytes > 32 * 1024)
-    {
-        g_writeln("libxrdp_force_read: error");
-        return 0;
-    }
-
     if (trans_force_read(trans, bytes - 4) != 0)
     {
-        g_writeln("libxrdp_force_read: error");
+        g_writeln("libxrdp_force_read: Can't read PDU");
         return 0;
     }
     return s;
@@ -1049,29 +1044,36 @@ libxrdp_orders_send_font(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
+/* Note : if this is called on a multimon setup, the client is resized
+ * to a single monitor */
 int EXPORT_CC
 libxrdp_reset(struct xrdp_session *session,
               int width, int height, int bpp)
 {
     if (session->client_info != 0)
     {
+        struct xrdp_client_info *client_info = session->client_info;
+
         /* older client can't resize */
-        if (session->client_info->build <= 419)
+        if (client_info->build <= 419)
         {
             return 0;
         }
 
-        /* if same, don't need to do anything */
-        if (session->client_info->width == width &&
-                session->client_info->height == height &&
-                session->client_info->bpp == bpp)
+        /* if same (and only one monitor on client) don't need to do anything */
+        if (client_info->width == width &&
+            client_info->height == height &&
+            client_info->bpp == bpp &&
+            (client_info->monitorCount == 0 || client_info->multimon == 0))
         {
             return 0;
         }
 
-        session->client_info->width = width;
-        session->client_info->height = height;
-        session->client_info->bpp = bpp;
+        client_info->width = width;
+        client_info->height = height;
+        client_info->bpp = bpp;
+        client_info->monitorCount = 0;
+        client_info->multimon = 0;
     }
     else
     {
@@ -1084,7 +1086,12 @@ libxrdp_reset(struct xrdp_session *session,
         return 1;
     }
 
-    /* shut down the rdp client */
+    /* shut down the rdp client
+     *
+     * When resetting the lib, disable application input checks, as
+     * otherwise we can send a channel message to the other end while
+     * the channels are inactive ([MS-RDPBCGR] 3.2.5.5.1 */
+    session->check_for_app_input = 0;
     if (xrdp_rdp_send_deactivate((struct xrdp_rdp *)session->rdp) != 0)
     {
         return 1;
@@ -1095,6 +1102,9 @@ libxrdp_reset(struct xrdp_session *session,
     {
         return 1;
     }
+
+    /* Re-enable application input checks */
+    session->check_for_app_input = 1;
 
     return 0;
 }

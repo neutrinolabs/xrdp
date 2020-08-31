@@ -133,27 +133,30 @@ Sets the maximum number of simultaneous sessions. If not set or set to
 \fBKillDisconnected\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
 within 60 seconds after the user disconnects.
+This setting currently only works with xorgxrdp sessions.
 
 .TP
 \fBDisconnectedTimeLimit\fR=\fInumber\fR
-Sets the time limit (in seconds) before a disconnected session is killed.
-If set to \fI0\fR, automatic killing is disabled.
+Sets the time limit for \fBKillDisconnected\fR to a value greater than 60.
+Values less than 60 cannot be set. You do not actually have to specify
+\fBKillDisconnected\fR if you set this value.
+This setting currently only works with xorgxrdp sessions.
 
 .TP
 \fBIdleTimeLimit\fR=\fInumber\fR
 Sets the time limit (in seconds) before an idle session is disconnected.
 Idle means no keyboard inputs and no mouse moves/clicks here.
 If set to \fI0\fR, idle sessions will never be disconnected by timeout.
-This works only with xorgxrdp session. Moreover, xorgxrdp must be v0.2.9 or later.
+This works only with xorgxrdp sessions. Moreover, xorgxrdp must be v0.2.9 or later.
 
 .TP
 \fBPolicy\fR=\fI[Default|UBD|UBI|UBC|UBDI|UBDC]\fR
-Session allocation policy. By default, a new session is created
-for the combination <User,BitPerPixel> when using Xrdp, and
-for the combination <User,BitPerPixel,DisplaySize> when using Xvnc.
-This behavior can be changed by setting session policy to:
+Session allocation policy. Used to decide when to allocate a
+new session. Set to one of the following values:
 .br
 
+.br
+\fBDefault\fR - session per <User,BitPerPixel>
 .br
 \fBUBD\fR - session per <User,BitPerPixel,DisplaySize>
 .br
@@ -168,7 +171,8 @@ This behavior can be changed by setting session policy to:
 
 .br
 Note that the \fBUser\fR and \fBBitPerPixel\fR criteria cannot be turned
-off. For Xvnc connections, \fBDisplaySize\fR is always enabled as well.
+off. \fBDisplaySize\fR refers to the initial geometry of a connection,
+as actual display sizes can change dynamically.
 .br
 
 .SH "SECURITY"

@@ -83,7 +83,7 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             case SCP_SERVER_STATE_MNG_LISTREQ:
                 /* list disconnected sessions */
                 slist = session_get_byuser(NULL, &scount, SESMAN_SESSION_STATUS_ALL);
-                LOG_DBG("sessions on TS: %d (slist: %x)", scount, slist);
+                LOG_DBG("sessions on TS: %d (slist: %p)", scount, slist);
                 if (0 == slist)
                 {
                     log_message(LOG_LEVEL_INFO, "No sessions on Terminal Server");

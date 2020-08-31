@@ -38,6 +38,11 @@
  ******************************************************************************/
 
 #define INFO_CLIENT_NAME_BYTES  32
+/**
+ * Maximum length of a string including the mandatory null terminator
+ * [MS-RDPBCGR] TS_INFO_PACKET(2.2.1.11.1.1)
+ */
+#define INFO_CLIENT_MAX_CB_LEN  512
 
 #define XRDP_MAX_BITMAP_CACHE_ID  3
 #define XRDP_MAX_BITMAP_CACHE_IDX 2000

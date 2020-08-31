@@ -735,7 +735,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint16_le(s, len_domain);
 
-    if (len_domain > 511)
+    if (len_domain >= INFO_CLIENT_MAX_CB_LEN)
     {
         DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain > 511"));
         return 1;
@@ -757,7 +757,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         self->rdp_layer->client_info.rdp_autologin = 0;
     }
 
-    if (len_user > 511)
+    if (len_user >= INFO_CLIENT_MAX_CB_LEN)
     {
         DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user > 511"));
         return 1;
@@ -769,7 +769,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint16_le(s, len_password);
 
-    if (len_password > 511)
+    if (len_password >= INFO_CLIENT_MAX_CB_LEN)
     {
         DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password > 511"));
         return 1;
@@ -781,7 +781,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint16_le(s, len_program);
 
-    if (len_program > 511)
+    if (len_program >= INFO_CLIENT_MAX_CB_LEN)
     {
         DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program > 511"));
         return 1;
@@ -793,7 +793,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint16_le(s, len_directory);
 
-    if (len_directory > 511)
+    if (len_directory >= INFO_CLIENT_MAX_CB_LEN)
     {
         DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory > 511"));
         return 1;

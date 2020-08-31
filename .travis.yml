@@ -12,7 +12,7 @@ addons:
 # This is required to use a version of cppcheck other than that
 # suplied with the operating system
 cppcheck_defs: &cppcheck_defs
-  - CPPCHECK_VER=1.90
+  - CPPCHECK_VER=2.1
   - CPPCHECK_REPO=https://github.com/danmar/cppcheck.git
 
 min_amd64_deps: &min_amd64_deps
@@ -47,6 +47,17 @@ max_amd64_conf: &max_amd64_conf
     - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
                   --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
                   --enable-pixman"
+    - DISTCHECK=1
+  addons:
+    apt:
+      packages:
+        - *max_amd64_deps
+
+max_debug_amd64_conf: &max_debug_amd64_conf
+  env:
+    - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --enable-pixman --enable-xrdpdebug"
     - DISTCHECK=1
   addons:
     apt:
@@ -92,10 +103,11 @@ cppcheck_conf: &cppcheck_conf
   env:
     - *cppcheck_defs
 
-#  addons:
-#    apt:
-#      packages:
-#        - cppcheck
+  addons:
+    apt:
+      packages:
+        - libz3-dev
+        - z3
 
   script:
     - ./bootstrap
@@ -122,6 +134,10 @@ matrix:
   - compiler: clang
     << : *max_amd64_conf
 
+  # Maximal debug amd64 build
+  - compiler: gcc
+    << : *max_debug_amd64_conf
+    
   # Maximal x86 build
   - compiler: gcc
     << : *max_x86_conf
@@ -138,5 +154,5 @@ matrix:
 script:
   - ./bootstrap
   - ./configure $CONF_FLAGS
-  - make CFLAGS="$CFLAGS -O2 -Wall -Wwrite-strings -Werror"
+  - make CFLAGS="$CFLAGS"
   - test -z "$DISTCHECK" || make distcheck
