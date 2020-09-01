@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <signal.h>
 #include <sys/un.h>
 
