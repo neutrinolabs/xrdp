@@ -1394,7 +1394,7 @@ static void
 lfreerdp_polygon_sc(rdpContext *context, POLYGON_SC_ORDER *polygon_sc)
 {
     struct mod *mod;
-    int i, npoints;
+    int i;
     struct {
         short x, y;
     } points[4];
@@ -1448,8 +1448,11 @@ lfreerdp_polygon_sc(rdpContext *context, POLYGON_SC_ORDER *polygon_sc)
 static void
 lfreerdp_synchronize(rdpContext *context)
 {
+    /* Uncomment these two lines when needed */
+#if 0
     struct mod *mod;
     mod = ((struct mod_context *)context)->modi;
+#endif
     LLOGLN(12, ("lfreerdp_synchronize received - not handled"));
 }
 
