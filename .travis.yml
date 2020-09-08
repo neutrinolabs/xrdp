@@ -82,17 +82,17 @@ max_x86_deps: &max_x86_deps
   - libxrandr-dev:i386
   - libxrender-dev:i386
   - openssl:i386
+  - libfuse-dev:i386
 
 # No --enable-pixman to allow testing the replacement code
-# No --enable-fuse due to failing libfuse-dev:i386 package install
 max_x86_conf: &max_x86_conf
   env:
-    - CONF_FLAGS="--enable-ipv6 --enable-jpeg --disable-fuse --enable-mp3lame
+    - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
                   --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
                   --disable-pixman --host=i686-linux"
     - PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
-    - CFLAGS=-m32
-    - LDFLAGS=-m32
+    - CFLAGS="-m32"
+    - LDFLAGS="-m32"
   addons:
     apt:
       packages:
@@ -154,5 +154,5 @@ matrix:
 script:
   - ./bootstrap
   - ./configure $CONF_FLAGS
-  - make CFLAGS="$CFLAGS"
+  - make
   - test -z "$DISTCHECK" || make distcheck
