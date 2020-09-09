@@ -1,5 +1,6 @@
 sudo: false # use new container
 language: c
+dist: focal
 
 branches:
   except: /^(gh-pages|v0\.[0-8].*)/
@@ -118,37 +119,45 @@ cppcheck_conf: &cppcheck_conf
 matrix:
   include:
 
-  # Minimal amd64 build
-  - compiler: gcc
+  # Minimal 64-bit arch build
+  - name: Min features with GCC
+    compiler: gcc
     << : *min_amd64_conf
-  - compiler: g++
+  - name: Min features with G++
+    compiler: g++
     << : *min_amd64_conf
-  - compiler: clang
+  - name: Min features with Clang
+    compiler: clang
     << : *min_amd64_conf
 
-  # Maximal amd64 build
-  - compiler: gcc
+  # Maximal 64-bit arch build
+  - name: Max features with GCC
+    compiler: gcc
     << : *max_amd64_conf
-  - compiler: g++
+  - name: Max features with G++
+    compiler: g++
     << : *max_amd64_conf
-  - compiler: clang
+  - name: Max features with Clang
+    compiler: clang
     << : *max_amd64_conf
 
-  # Maximal debug amd64 build
-  - compiler: gcc
+  # Maximal debug 64-bit arch build
+  - name: Max debug feature with GCC
+    compiler: gcc
     << : *max_debug_amd64_conf
     
-  # Maximal debug amd64 on latest version of linux
-  - compiler: gcc
-    dist: focal
-    << : *max_debug_amd64_conf
-    
-  # Maximal x86 build
-  - compiler: gcc
+  # Maximal 32-bit arch build
+  - name: Max features for 32-bit arch with GCC (legacy OS)
+    compiler: gcc
+    dist: xenial
     << : *max_x86_conf
-  - compiler: g++
+  - name: Max features for 32-bit arch with G++ (legacy OS)
+    compiler: g++
+    dist: xenial
     << : *max_x86_conf
-  - compiler: clang
+  - name: Max features for 32-bit arch with Clang (legacy OS)
+    compiler: clang
+    dist: xenial
     << : *max_x86_conf
 
   # cppcheck
