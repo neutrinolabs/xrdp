@@ -1001,6 +1001,11 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
         else if (g_strncmp(n, "allow_multimon", 64) == 0)
             globals->allow_multimon = g_text2bool(v);
 
+        else if (g_strncmp(n, "enable_token_login", 64) == 0) {
+            log_message(LOG_LEVEL_DEBUG, "Token login detection enabled x");
+            globals->enable_token_login = g_text2bool(v);
+        }
+
         /* login screen values */
         else if (g_strncmp(n, "ls_top_window_bg_color", 64) == 0)
             globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
@@ -1109,12 +1114,13 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
     g_writeln("new_cursors:             %d", globals->new_cursors);
     g_writeln("nego_sec_layer:          %d", globals->nego_sec_layer);
     g_writeln("allow_multimon:          %d", globals->allow_multimon);
+    g_writeln("enable_token_login:      %d", globals->enable_token_login)
 
     g_writeln("ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
     g_writeln("ls_width:                %d", globals->ls_width);
     g_writeln("ls_height:               %d", globals->ls_height);
     g_writeln("ls_bg_color:             %x", globals->ls_bg_color);
-    g_writeln("ls_title:            %s", globals->ls_title);
+    g_writeln("ls_title:                %s", globals->ls_title);
     g_writeln("ls_logo_filename:        %s", globals->ls_logo_filename);
     g_writeln("ls_logo_x_pos:           %d", globals->ls_logo_x_pos);
     g_writeln("ls_logo_y_pos:           %d", globals->ls_logo_y_pos);

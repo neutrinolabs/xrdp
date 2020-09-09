@@ -675,6 +675,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     int len_ip = 0;
     int len_dll = 0;
     char tmpdata[256];
+    const char *sep;
 
     /* initialize (zero out) local variables */
     g_memset(tmpdata, 0, sizeof(char) * 256);
@@ -737,7 +738,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_domain >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -759,7 +760,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_user >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -771,7 +772,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_password >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -783,7 +784,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_program >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -795,7 +796,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_directory >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory > 511"));
+        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory >= %d", INFO_CLIENT_MAX_CB_LEN));
         return 1;
     }
 
@@ -808,7 +809,6 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     {
         return 1;
     }
-    DEBUG(("username %s", self->rdp_layer->client_info.username));
 
     if (flags & RDP_LOGON_AUTO)
     {
@@ -817,6 +817,17 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         DEBUG(("flag RDP_LOGON_AUTO found"));
+    }
+    else if (self->rdp_layer->client_info.enable_token_login
+             && len_user > 0
+             && len_password == 0
+             && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
+    {
+        DEBUG(("Logon token detected"));
+        g_strncpy(self->rdp_layer->client_info.password, sep + 1,
+                  sizeof(self->rdp_layer->client_info.password) - 1);
+        self->rdp_layer->client_info.username[sep - self->rdp_layer->client_info.username] = '\0';
+        self->rdp_layer->client_info.rdp_autologin = 1;
     }
     else
     {
@@ -831,6 +842,14 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1; /* credentials on cmd line is mandatory */
         }
     }
+    if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
+        && self->rdp_layer->client_info.domain[0] != '\0')
+    {
+        int size = sizeof(self->rdp_layer->client_info.username);
+        g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain_user_separator, size - 1 - g_strlen(self->rdp_layer->client_info.domain_user_separator));
+        g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
+    }
+    DEBUG(("username %s", self->rdp_layer->client_info.username));
 
     if (unicode_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program) - 1) != 0)
     {

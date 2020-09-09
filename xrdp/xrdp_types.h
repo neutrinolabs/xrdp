@@ -566,6 +566,7 @@ struct xrdp_cfg_globals
     int  new_cursors;
     int  nego_sec_layer;
     int  allow_multimon;
+    int  enable_token_login;
 
     /* colors */
 

@@ -2591,6 +2591,19 @@ g_strcat(char *dest, const char *src)
 }
 
 /*****************************************************************************/
+/* returns dest */
+char *
+g_strncat(char *dest, const char *src, int len)
+{
+    if (dest == 0 || src == 0)
+    {
+        return dest;
+    }
+
+    return strncat(dest, src, len);
+}
+
+/*****************************************************************************/
 /* if in = 0, return 0 else return newly alloced copy of in */
 char *
 g_strdup(const char *in)

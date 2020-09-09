@@ -144,6 +144,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->require_credentials = g_text2bool(value);
         }
+        else if (g_strcasecmp(item, "enable_token_login") == 0)
+        {
+            client_info->enable_token_login = g_text2bool(value);
+        }
         else if (g_strcasecmp(item, "use_fastpath") == 0)
         {
             if (g_strcasecmp(value, "output") == 0)
@@ -276,7 +280,11 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                             client_info->key_file, g_get_strerror());
             }
         }
-
+        else if (g_strcasecmp(item, "domain_user_separator") == 0
+                 && g_strlen(value) > 0)
+        {
+            g_strncpy(client_info->domain_user_separator, value, sizeof(client_info->domain_user_separator) - 1);
+        }
     }
 
     list_delete(items);
