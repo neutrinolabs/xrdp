@@ -1607,7 +1607,7 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
         log_error("inode %ld is not valid", ino);
         fuse_reply_err(req, ENOENT);
     }
-    else if ((dh = (struct xfs_dir_handle *) fi->fh) == NULL)
+    else if ((dh = (struct xfs_dir_handle *) (tintptr) fi->fh) == NULL)
     {
         /* something seriously wrong somewhere! */
         fuse_reply_buf(req, 0, 0);
@@ -2095,7 +2095,7 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 
     log_debug("want_bytes %zd bytes at off %lld", size, (long long) off);
 
-    if ((fh = (XFUSE_HANDLE *)fi->fh) == NULL)
+    if ((fh = (XFUSE_HANDLE *) (tintptr) fi->fh) == NULL)
     {
         fuse_reply_err(req, EINVAL);
     }
@@ -2168,7 +2168,7 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     log_debug("write %zd bytes at off %lld to inode=%ld",
               size, (long long) off, ino);
 
-    if ((fh = (XFUSE_HANDLE *)fi->fh) == NULL)
+    if ((fh = (XFUSE_HANDLE *) (tintptr) fi->fh) == NULL)
     {
         log_error("file handle fi->fh is NULL");
         fuse_reply_err(req, EINVAL);
@@ -2436,7 +2436,7 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
 static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
                                 struct fuse_file_info *fi)
 {
-    struct xfs_dir_handle *dh = (struct xfs_dir_handle *) fi->fh;
+    struct xfs_dir_handle *dh = (struct xfs_dir_handle *) (tintptr) fi->fh;
     xfs_closedir(g_xfs, dh);
     fuse_reply_err(req, 0);
 }
