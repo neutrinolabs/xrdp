@@ -51,6 +51,8 @@ xrdp_chansrv_SOURCES = \
   chansrv.h \
   chansrv_common.c \
   chansrv_common.h \
+  chansrv_config.c \
+  chansrv_config.h \
   chansrv_fuse.c \
   chansrv_fuse.h \
   chansrv_xfs.c \

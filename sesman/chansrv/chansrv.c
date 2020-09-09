@@ -36,6 +36,7 @@
 #include "rail.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
+#include "chansrv_config.h"
 #include "xrdp_sockets.h"
 #include "audin.h"
 
@@ -57,17 +58,16 @@ static int g_rail_index = -1;
 static tbus g_term_event = 0;
 static tbus g_thread_done_event = 0;
 
-static int g_use_unix_socket = 0;
+struct config_chansrv *g_cfg = NULL;
 
 int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
 int g_rdpdr_chan_id = -1;   /* rdpdr   */
 int g_rail_chan_id = -1;    /* rail    */
-int g_restrict_outbound_clipboard = 0;
 
 char *g_exec_name;
-tbus g_exec_event;
+tbus g_exec_event = 0;
 tbus g_exec_mutex;
 tbus g_exec_sem;
 int g_exec_pid = 0;
@@ -1244,7 +1244,7 @@ setup_listen(void)
         trans_delete(g_lis_trans);
     }
 
-    if (g_use_unix_socket)
+    if (g_cfg->use_unix_socket)
     {
         g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
         g_lis_trans->is_term = g_is_term;
@@ -1623,52 +1623,23 @@ get_display_num_from_display(char *display_text)
 int
 main_cleanup(void)
 {
-    g_delete_wait_obj(g_term_event);
-    g_delete_wait_obj(g_thread_done_event);
-    g_delete_wait_obj(g_exec_event);
-    tc_mutex_delete(g_exec_mutex);
-    g_deinit(); /* os_calls */
-    return 0;
-}
-
-/*****************************************************************************/
-static int
-read_ini(void)
-{
-    char filename[256];
-    struct list *names;
-    struct list *values;
-    char *name;
-    char *value;
-    int index;
-
-    g_memset(filename, 0, (sizeof(char) * 256));
-    names = list_create();
-    names->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-    g_use_unix_socket = 0;
-    g_snprintf(filename, 255, "%s/sesman.ini", XRDP_CFG_PATH);
-
-    if (file_by_name_read_section(filename, "Globals", names, values) == 0)
+    if (g_term_event != 0)
     {
-        for (index = 0; index < names->count; index++)
-        {
-            name = (char *)list_get_item(names, index);
-            value = (char *)list_get_item(values, index);
-
-            if (g_strcasecmp(name, "ListenAddress") == 0)
-            {
-                if (g_strcasecmp(value, "127.0.0.1") == 0)
-                {
-                    g_use_unix_socket = 1;
-                }
-            }
-        }
+        g_delete_wait_obj(g_term_event);
     }
-
-    list_delete(names);
-    list_delete(values);
+    if (g_thread_done_event != 0)
+    {
+        g_delete_wait_obj(g_thread_done_event);
+    }
+    if (g_exec_event != 0)
+    {
+        g_delete_wait_obj(g_exec_event);
+        tc_mutex_delete(g_exec_mutex);
+        tc_sem_delete(g_exec_sem);
+    }
+    log_end();
+    config_free(g_cfg);
+    g_deinit(); /* os_calls */
     return 0;
 }
 
@@ -1792,32 +1763,33 @@ main(int argc, char **argv)
     enum logReturns error;
     struct log_config logconfig;
     enum logLevels log_level;
-    char *restrict_outbound_clipboard_env;
     g_init("xrdp-chansrv"); /* os_calls */
+
 
     log_path[255] = 0;
     if (get_log_path(log_path, 255) != 0)
     {
         g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
-        g_deinit();
+        main_cleanup();
         return 1;
     }
 
-    restrict_outbound_clipboard_env = g_getenv("CHANSRV_RESTRICT_OUTBOUND_CLIPBOARD");
-    if (restrict_outbound_clipboard_env != 0)
+    /*
+     * The user is unable at present to override the sysadmin-provided
+     * sesman.ini location */
+    if ((g_cfg = config_read(0, XRDP_CFG_PATH "/sesman.ini")) == NULL)
     {
-        if (g_strcmp(restrict_outbound_clipboard_env, "1") == 0)
-        {
-            g_restrict_outbound_clipboard = 1;
-        }
+        main_cleanup();
+        return 1;
     }
+    config_dump(g_cfg);
 
-    read_ini();
     pid = g_getpid();
     display_text = g_getenv("DISPLAY");
-
-    if (display_text)
+    if (display_text != NULL)
+    {
         get_display_num_from_display(display_text);
+    }
 
     log_level = get_log_level(g_getenv("CHANSRV_LOG_LEVEL"), LOG_LEVEL_INFO);
 
@@ -1857,7 +1829,7 @@ main(int argc, char **argv)
                 break;
         }
 
-        g_deinit();
+        main_cleanup();
         return 1;
     }
 
@@ -1877,7 +1849,7 @@ main(int argc, char **argv)
     if (g_display_num == 0)
     {
         LOGM((LOG_LEVEL_ERROR, "main: error, display is zero"));
-        g_deinit();
+        main_cleanup();
         return 1;
     }
 
@@ -1928,7 +1900,6 @@ main(int argc, char **argv)
     /* cleanup */
     main_cleanup();
     LOGM((LOG_LEVEL_INFO, "main: app exiting pid %d(0x%8.8x)", pid, pid));
-    g_deinit();
     return 0;
 }
 
