@@ -4,6 +4,9 @@
 
 *Current Version:* 0.9.14
 
+[![Packages](https://repology.org/badge/latest-versions/xrdp.svg)](https://repology.org/metapackage/xrdp/versions)
+[![Packages](https://repology.org/badge/tiny-repos/xrdp.svg)](https://repology.org/metapackage/xrdp/versions)
+
 # xrdp - an open source RDP server
 
 ## Overview
