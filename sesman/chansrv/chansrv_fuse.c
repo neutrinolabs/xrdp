@@ -298,6 +298,14 @@ struct xfuse_handle
     tui32 DeviceId;
     tui32 FileId;
     int   is_loc_resource; /* this is not a redirected resource */
+    
+    /* a directory handle, if this xfuse_handle represents a directory.
+     * NULL, if this xfuse_handle represents a file.
+     *
+     * Note: when this xfuse_handle represents a directory, then the other 
+     *       fields of this structure contain invalid values.
+     */
+    struct xfs_dir_handle *dir_handle;
 };
 typedef struct xfuse_handle XFUSE_HANDLE;
 
@@ -405,6 +413,43 @@ int
 load_fuse_config(void)
 {
     return 0;
+}
+
+/*****************************************************************************/
+XFUSE_HANDLE*
+xfuse_handle_create()
+{
+    return g_new0(XFUSE_HANDLE, 1);
+}
+
+/*****************************************************************************/
+void
+xfuse_handle_delete(XFUSE_HANDLE *self)
+{
+    if (self == NULL)
+    {
+        return;
+    }
+    
+    if (self->dir_handle != NULL)
+    {
+        free(self->dir_handle);
+    }
+    free(self);
+}
+
+/*****************************************************************************/
+uint64_t
+xfuse_handle_to_fuse_handle(XFUSE_HANDLE *self)
+{
+    return (uint64_t) (tintptr) self;
+}
+
+/*****************************************************************************/
+XFUSE_HANDLE*
+xfuse_handle_from_fuse_handle(uint64_t handle)
+{
+    return (XFUSE_HANDLE *) (tintptr) handle;
 }
 
 /*****************************************************************************
@@ -942,13 +987,17 @@ void xfuse_devredir_cb_enum_dir_done(struct state_dirscan *fip,
     else
     {
         struct fuse_file_info *fi = &fip->fi;
-
-        if ((fi->fh = (tintptr) xfs_opendir(g_xfs, fip->pinum)) == 0)
+        XFUSE_HANDLE *xhandle = xfuse_handle_create();
+        
+        if (xhandle == NULL
+            || (xhandle->dir_handle = xfs_opendir(g_xfs, fip->pinum)) == NULL)
         {
+            xfuse_handle_delete(xhandle);
             fuse_reply_err(fip->req, ENOMEM);
         }
         else
         {
+            fi->fh = xfuse_handle_to_fuse_handle(xhandle);
             fuse_reply_open(fip->req, &fip->fi);
         }
     }
@@ -1160,13 +1209,13 @@ void xfuse_devredir_cb_create_file(struct state_create *fip,
         {
             /* We've created a regular file */
             /* Allocate an XFUSE_HANDLE for future file operations */
-            if ((fh = g_new0(XFUSE_HANDLE, 1)) != NULL)
+            if ((fh = xfuse_handle_create()) != NULL)
             {
                 /* save file handle for later use */
                 fh->DeviceId = DeviceId;
                 fh->FileId = FileId;
 
-                fip->fi.fh = (tintptr) fh;
+                fip->fi.fh = xfuse_handle_to_fuse_handle(fh);
             }
         }
 
@@ -1258,7 +1307,7 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
     else
     {
         /* Allocate an XFUSE_HANDLE for future file operations */
-        if ((fh = g_new0(XFUSE_HANDLE, 1)) == NULL)
+        if ((fh = xfuse_handle_create()) == NULL)
         {
             log_error("system out of memory");
             fuse_reply_err(fip->req, ENOMEM);
@@ -1269,7 +1318,7 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
             fh->DeviceId = DeviceId;
             fh->FileId = FileId;
 
-            fip->fi.fh = (tintptr) fh;
+            fip->fi.fh = xfuse_handle_to_fuse_handle(fh);
 
             log_debug("sending fuse_reply_open(); "
                       "DeviceId=%d FileId=%d req=%p",
@@ -1567,6 +1616,7 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
                              off_t off, struct fuse_file_info *fi)
 {
     XFS_INODE      *xinode;
+    XFUSE_HANDLE   *xhandle;
     struct xfs_dir_handle *dh;
     struct dirbuf1   b;
 
@@ -1578,7 +1628,8 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
         log_error("inode %ld is not valid", ino);
         fuse_reply_err(req, ENOENT);
     }
-    else if ((dh = (struct xfs_dir_handle *) (tintptr) fi->fh) == NULL)
+    else if ((xhandle = xfuse_handle_from_fuse_handle(fi->fh)) == NULL
+              || (dh = xhandle->dir_handle) == NULL)
     {
         /* something seriously wrong somewhere! */
         fuse_reply_buf(req, 0, 0);
@@ -1942,9 +1993,9 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
         }
         else
         {
-            XFUSE_HANDLE *fh = g_new0(XFUSE_HANDLE, 1);
+            XFUSE_HANDLE *fh = xfuse_handle_create();
             fh->is_loc_resource = 1;
-            fi->fh = (tintptr) fh;
+            fi->fh = xfuse_handle_to_fuse_handle(fh);
             fuse_reply_open(req, fi);
         }
     }
@@ -2002,7 +2053,7 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
 {
     XFS_INODE   *xinode;
 
-    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) (tintptr) (fi->fh);
+    XFUSE_HANDLE *handle = xfuse_handle_from_fuse_handle(fi->fh);
 
     log_debug("entered: ino=%ld fi=%p fi->fh=0x%llx", ino, fi,
               (long long) fi->fh);
@@ -2033,7 +2084,7 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
         fip->inum = ino;
         fip->fi = *fi;
 
-        fi->fh = 0;
+        fi->fh = xfuse_handle_to_fuse_handle(NULL);
 
         /*
          * If this call succeeds, further request processing happens in
@@ -2046,7 +2097,7 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
             free(fip);
         }
 
-        free(handle);
+        xfuse_handle_delete(handle);
     }
 }
 
@@ -2066,7 +2117,7 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 
     log_debug("want_bytes %zd bytes at off %lld", size, (long long) off);
 
-    if ((fh = (XFUSE_HANDLE *) (tintptr) fi->fh) == NULL)
+    if ((fh = xfuse_handle_from_fuse_handle(fi->fh)) == NULL)
     {
         fuse_reply_err(req, EINVAL);
     }
@@ -2139,7 +2190,7 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     log_debug("write %zd bytes at off %lld to inode=%ld",
               size, (long long) off, ino);
 
-    if ((fh = (XFUSE_HANDLE *) (tintptr) fi->fh) == NULL)
+    if ((fh = xfuse_handle_from_fuse_handle(fi->fh)) == NULL)
     {
         log_error("file handle fi->fh is NULL");
         fuse_reply_err(req, EINVAL);
@@ -2336,6 +2387,7 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
                                   struct fuse_file_info *fi)
 {
     XFS_INODE      *xinode;
+    XFUSE_HANDLE   *xhandle;
 
     log_debug("inode=%ld", ino);
 
@@ -2346,13 +2398,22 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
     }
     else if (!xinode->is_redirected)
     {
-        if ((fi->fh = (tintptr) xfs_opendir(g_xfs, ino)) == 0)
+        if ((xhandle = xfuse_handle_create()) == NULL)
         {
             fuse_reply_err(req, ENOMEM);
         }
         else
         {
-            fuse_reply_open(req, fi);
+            if ((xhandle->dir_handle = xfs_opendir(g_xfs, ino)) == NULL)
+            {
+                xfuse_handle_delete(xhandle);
+                fuse_reply_err(req, ENOMEM);
+            }
+            else
+            {
+                fi->fh = xfuse_handle_to_fuse_handle(xhandle);
+                fuse_reply_open(req, fi);
+            }
         }
     }
     else
@@ -2407,8 +2468,10 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
 static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
                                 struct fuse_file_info *fi)
 {
-    struct xfs_dir_handle *dh = (struct xfs_dir_handle *) (tintptr) fi->fh;
-    xfs_closedir(g_xfs, dh);
+    XFUSE_HANDLE *xhandle = xfuse_handle_from_fuse_handle(fi->fh);
+    xfs_closedir(g_xfs, xhandle->dir_handle);
+    xhandle->dir_handle = NULL;
+    xfuse_handle_delete(xhandle);
     fuse_reply_err(req, 0);
 }
 
