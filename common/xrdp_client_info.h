@@ -23,6 +23,9 @@
 #if !defined(XRDP_CLIENT_INFO_H)
 #define XRDP_CLIENT_INFO_H
 
+/* 2.2.1.3.6.1 Monitor Definition (TS_MONITOR_DEF)
+ * 2.2.1.3.9.1 Monitor Attributes (TS_MONITOR_ATTRIBUTES)
+ */
 struct monitor_info
 {
   int left;
@@ -30,6 +33,11 @@ struct monitor_info
   int right;
   int bottom;
   int is_primary;
+  int physical_width;
+  int physical_height;
+  int orientation;
+  int desktop_scale_factor;
+  int device_scale_factor;
 };
 
 struct xrdp_client_info
@@ -162,6 +170,12 @@ struct xrdp_client_info
 
   int enable_token_login;
   char domain_user_separator[16];
+
+  int physical_width;
+  int physical_height;
+  int orientation;
+  int desktop_scale_factor;
+  int device_scale_factor;
 };
 
 #endif
