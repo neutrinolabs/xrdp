@@ -64,10 +64,19 @@ IdleTimeLimit=0
 Policy=Default
 
 [Logging]
+; Note: Log levels can be any of: core, error, warning, info, debug, or trace
 LogFile=xrdp-sesman.log
-LogLevel=DEBUG
-EnableSyslog=1
-SyslogLevel=DEBUG
+LogLevel=INFO
+EnableSyslog=true
+#SyslogLevel=INFO
+#EnableConsole=false
+#ConsoleLevel=INFO
+#EnableProcessId=false
+
+[LoggingPerLogger]
+; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+#sesman.c=INFO
+#main()=INFO
 
 ;
 ; Session definitions - startup command-line parameters for each session type
@@ -110,6 +119,24 @@ FuseMountName=thinclient_drives
 ; this value allows only the user to acess their own mapped drives.
 ; Make this more permissive (e.g. 022) if required.
 FileUmask=077
+
+[ChansrvLogging]
+; Note: one log file is created per display and the LogFile config value 
+; is ignored. The channel server log file names follow the naming convention: 
+; xrdp-chansrv.${DISPLAY}.log
+;
+; Note: Log levels can be any of: core, error, warning, info, debug, or trace
+LogLevel=INFO
+EnableSyslog=true
+#SyslogLevel=INFO
+#EnableConsole=false
+#ConsoleLevel=INFO
+#EnableProcessId=false
+
+[ChansrvLoggingPerLogger]
+; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+#chansrv.c=INFO
+#main()=INFO
 
 [SessionVariables]
 PULSE_SCRIPT=@sesmansysconfdir@/pulse/default.pa

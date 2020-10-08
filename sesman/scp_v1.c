@@ -56,11 +56,11 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     current_try = retries;
 
     data = auth_userpass(s->username, s->password,NULL);
-    /*LOG_DBG("user: %s\npass: %s", s->username, s->password);*/
+    /*LOG_DEVEL(LOG_LEVEL_DEBUG, "user: %s\npass: %s", s->username, s->password);*/
 
     while ((!data) && ((retries == 0) || (current_try > 0)))
     {
-        LOG_DBG("data %ld - retry %d - currenttry %d - expr %d",
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "data %ld - retry %d - currenttry %d - expr %d",
                 data, retries, current_try,
                 ((!data) && ((retries == 0) || (current_try > 0))));
 
@@ -220,7 +220,7 @@ static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
     switch (e)
     {
         case SCP_SERVER_STATE_VERSION_ERR:
-            LOG_DBG("version error")
+            log_message(LOG_LEVEL_WARNING, "version error");
         case SCP_SERVER_STATE_SIZE_ERR:
             /* an unknown scp version was requested, so we shut down the */
             /* connection (and log the fact)                             */

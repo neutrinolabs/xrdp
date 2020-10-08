@@ -98,7 +98,7 @@ scp_lock_fork_release(void)
 void
 scp_lock_fork_critical_section_end(int blocking)
 {
-    //LOG_DBG("lock_fork_critical_section_end()",0);
+    //LOG_DEVEL(LOG_LEVEL_DEBUG, "lock_fork_critical_section_end()",0);
     /* lock mutex */
     pthread_mutex_lock(&lock_fork);
 
@@ -121,7 +121,7 @@ scp_lock_fork_critical_section_end(int blocking)
 int
 scp_lock_fork_critical_section_start(void)
 {
-    //LOG_DBG("lock_fork_critical_section_start()",0);
+    //LOG_DEVEL(LOG_LEVEL_DEBUG, "lock_fork_critical_section_start()",0);
     do
     {
         pthread_mutex_lock(&lock_fork);

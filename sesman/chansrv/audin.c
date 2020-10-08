@@ -118,7 +118,7 @@ audin_send_version(int chan_id)
     int bytes;
     struct stream *s;
 
-    LOG(0, ("audin_send_version:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_version:");
     make_stream(s);
     init_stream(s, 32);
     out_uint8(s, MSG_SNDIN_VERSION);
@@ -141,7 +141,7 @@ audin_send_formats(int chan_id)
     struct stream *s;
     struct xr_wave_format_ex *wf;
 
-    LOG(0, ("audin_send_formats:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_formats:");
     num_formats = sizeof(g_server_formats) /
                   sizeof(g_server_formats[0]) - 1;
     make_stream(s);
@@ -152,9 +152,9 @@ audin_send_formats(int chan_id)
     for (index = 0; index < num_formats; index++)
     {
         wf = g_server_formats[index];
-        LOG(0, ("audin_send_formats: sending format wFormatTag 0x%4.4x "
+        LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_formats: sending format wFormatTag 0x%4.4x "
             "nChannels %d nSamplesPerSec %d",
-            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec));
+            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
         out_uint16_le(s, wf->wFormatTag);
         out_uint16_le(s, wf->nChannels);
         out_uint32_le(s, wf->nSamplesPerSec);
@@ -183,7 +183,7 @@ audin_send_open(int chan_id)
     struct stream *s;
     struct xr_wave_format_ex *wf;
 
-    LOG(0, ("audin_send_open:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_open:");
     make_stream(s);
     init_stream(s, 8192);
     out_uint8(s, MSG_SNDIN_OPEN);
@@ -215,14 +215,14 @@ audin_process_version(int chan_id, struct stream *s)
 {
     int version;
 
-    LOG(0, ("audin_process_version:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_version:");
     if (!s_check_rem(s, 4))
     {
-        LOG(0, ("audin_process_version: parse error"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_version: parse error");
         return 1;
     }
     in_uint32_le(s, version);
-    LOG(0, ("audin_process_version: version %d", version));
+    LOG(LOG_LEVEL_INFO, "audin_process_version: version %d", version);
     return audin_send_formats(chan_id);
 }
 
@@ -234,11 +234,11 @@ audin_process_formats(int chan_id, struct stream *s)
     int num_formats;
     struct xr_wave_format_ex *wf;
 
-    LOG(0, ("audin_process_formats:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_formats:");
     cleanup_client_formats();
     if (!s_check_rem(s, 8))
     {
-        LOG(0, ("audin_process_formats: parse error"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_formats: parse error");
         return 1;
     }
     in_uint32_le(s, num_formats);
@@ -248,7 +248,7 @@ audin_process_formats(int chan_id, struct stream *s)
     {
         if (!s_check_rem(s, 18))
         {
-            LOG(0, ("audin_process_formats: parse error"));
+            LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_formats: parse error");
             return 1;
         }
         wf = g_new0(struct xr_wave_format_ex, 1);
@@ -260,14 +260,14 @@ audin_process_formats(int chan_id, struct stream *s)
         in_uint16_le(s, wf->nBlockAlign);
         in_uint16_le(s, wf->wBitsPerSample);
         in_uint16_le(s, wf->cbSize);
-        LOG(0, ("audin_process_formats: recved format wFormatTag 0x%4.4x "
+        LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_formats: recved format wFormatTag 0x%4.4x "
             "nChannels %d nSamplesPerSec %d",
-            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec));
+            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
         if (wf->cbSize > 0)
         {
             if (!s_check_rem(s, wf->cbSize))
             {
-                LOG(0, ("audin_process_formats: parse error"));
+                LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_formats: parse error");
                 return 1;
             }
             wf->data = g_new0(uint8_t, wf->cbSize);
@@ -286,11 +286,11 @@ audin_process_open_reply(int chan_id, struct stream *s)
 
     if (!s_check_rem(s, 4))
     {
-        LOG(0, ("audin_process_open_reply: parse error"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_open_reply: parse error");
         return 1;
     }
     in_uint32_le(s, result);
-    LOG(0, ("audin_process_open_reply: result 0x%8.8x", result));
+    LOG(LOG_LEVEL_INFO, "audin_process_open_reply: result 0x%8.8x", result);
     return 0;
 }
 
@@ -298,7 +298,7 @@ audin_process_open_reply(int chan_id, struct stream *s)
 static int
 audin_process_incoming_data(int chan_id, struct stream *s)
 {
-    LOG(10, ("audin_process_incoming_data:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_process_incoming_data:");
     return 0;
 }
 
@@ -310,7 +310,7 @@ audin_process_data(int chan_id, struct stream *s)
     struct stream *ls;
 
     data_bytes = (int) (s->end - s->p);
-    LOG(10, ("audin_process_data: data_bytes %d", data_bytes));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_process_data: data_bytes %d", data_bytes);
 
     xstream_new(ls, data_bytes);
     g_memcpy(ls->data, s->p, data_bytes);
@@ -326,15 +326,15 @@ audin_process_data(int chan_id, struct stream *s)
 static int
 audin_process_format_change(int chan_id, struct stream *s)
 {
-    LOG(0, ("audin_process_format_change:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_format_change:");
     if (!s_check_rem(s, 4))
     {
-        LOG(0, ("audin_process_format_change: parse error"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_format_change: parse error");
         return 1;
     }
     in_uint32_le(s, g_current_format);
-    LOG(0, ("audin_process_format_change: g_current_format %d",
-        g_current_format));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_format_change: g_current_format %d",
+        g_current_format);
     return 0;
 }
 
@@ -344,14 +344,14 @@ audin_process_msg(int chan_id, struct stream *s)
 {
     int code;
 
-    LOG(10, ("audin_process_msg:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_process_msg:");
     if (!s_check_rem(s, 1))
     {
-        LOG(0, ("audin_process_msg: parse error"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_msg: parse error");
         return 1;
     }
     in_uint8(s, code);
-    LOG(10, ("audin_process_msg: code %d", code));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_process_msg: code %d", code);
     switch (code)
     {
         case MSG_SNDIN_VERSION:
@@ -367,7 +367,7 @@ audin_process_msg(int chan_id, struct stream *s)
         case MSG_SNDIN_FORMATCHANGE:
             return audin_process_format_change(chan_id, s);
         default:
-            LOG(0, ("audin_process_msg: unprocessed code %d", code));
+            LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_msg: unprocessed code %d", code);
             break;
     }
     return 0;
@@ -377,7 +377,7 @@ audin_process_msg(int chan_id, struct stream *s)
 static int
 audin_open_response(int chan_id, int creation_status)
 {
-    LOG(0, ("audin_open_response: creation_status 0x%8.8x", creation_status));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_open_response: creation_status 0x%8.8x", creation_status);
     if (creation_status == 0)
     {
         return audin_send_version(chan_id);
@@ -389,7 +389,7 @@ audin_open_response(int chan_id, int creation_status)
 static int
 audin_close_response(int chan_id)
 {
-    LOG(0, ("audin_close_response:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_close_response:");
     g_audin_chanid = 0;
     cleanup_client_formats();
     free_stream(g_in_s);
@@ -402,13 +402,12 @@ static int
 audin_data_fragment(int chan_id, char *data, int bytes)
 {
     int rv;
-    int left;
 
-    LOG(10, ("audin_data_fragment:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_fragment:");
     if (!s_check_rem(g_in_s, bytes))
     {
-        left = (int) (g_in_s->end - g_in_s->p);
-        LOG(0, ("audin_data_fragment: error bytes %d left %d", bytes, left));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_data_fragment: error bytes %d left %d", 
+                bytes, (int) (g_in_s->end - g_in_s->p));
         return 1;
     }
     out_uint8a(g_in_s, data, bytes);
@@ -427,10 +426,10 @@ audin_data_fragment(int chan_id, char *data, int bytes)
 static int
 audin_data_first(int chan_id, char *data, int bytes, int total_bytes)
 {
-    LOG(10, ("audin_data_first:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_first:");
     if (g_in_s != NULL)
     {
-        LOG(0, ("audin_data_first: warning g_in_s is not nil"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_data_first: warning g_in_s is not nil");
         free_stream(g_in_s);
     }
     make_stream(g_in_s);
@@ -445,7 +444,7 @@ audin_data(int chan_id, char *data, int bytes)
 {
     struct stream ls;
 
-    LOG(10, ("audin_data:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data:");
     //g_hexdump(data, bytes);
     if (g_in_s == NULL)
     {
@@ -462,7 +461,7 @@ audin_data(int chan_id, char *data, int bytes)
 int
 audin_init(void)
 {
-    LOG(0, ("audin_init:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_init:");
     g_memset(&g_audin_info, 0, sizeof(g_audin_info));
     g_audin_info.open_response = audin_open_response;
     g_audin_info.close_response = audin_close_response;
@@ -477,7 +476,7 @@ audin_init(void)
 int
 audin_deinit(void)
 {
-    LOG(0, ("audin_deinit:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_deinit:");
     return 0;
 }
 
@@ -488,7 +487,7 @@ audin_start(void)
     int error;
     struct stream* s;
 
-    LOG(0, ("audin_start:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_start:");
     if (g_audin_chanid != 0)
     {
         return 1;
@@ -504,7 +503,7 @@ audin_start(void)
     error = chansrv_drdynvc_open(AUDIN_NAME, AUDIN_FLAGS,
                                  &g_audin_info, /* callback functions */
                                  &g_audin_chanid); /* chansrv chan_id */
-    LOG(0, ("audin_start: error %d g_audin_chanid %d", error, g_audin_chanid));
+    LOG_DEVEL(LOG_LEVEL_ERROR, "audin_start: error %d g_audin_chanid %d", error, g_audin_chanid);
     return error;
 }
 
@@ -512,7 +511,7 @@ audin_start(void)
 int
 audin_stop(void)
 {
-    LOG(0, ("audin_stop:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "audin_stop:");
     chansrv_drdynvc_close(g_audin_chanid);
     return 0;
 }

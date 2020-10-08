@@ -33,6 +33,10 @@ X11 server settings for supported servers
 Settings for xrdp-chansrv(8)
 
 .TP
+\fB[Chansrv_Logging]\fR
+Logging settings for xrdp-chansrv(8)
+
+.TP
 \fB[SessionVariables]\fR
 Environment variables for the session
 
@@ -81,12 +85,15 @@ relative path to \fI@xrdpconfdir@\fR. If not specified, defaults to
 \fI@xrdpconfdir@/reconnectwm.sh\fR.
 
 .SH "LOGGING"
-Following parameters can be used in the \fB[Logging]\fR section.
+Following parameters can be used in the \fB[Logging]\fR and \fB[ChansrvLogging]\fR 
+sections.
 
 .TP
 \fBLogFile\fR=\fIfilename\fR
 Log file path. It can be either absolute or relative. If not specified,
-defaults to \fI./sesman.log\fR
+defaults to \fI./sesman.log\fR It is ignored in the [ChansrvLogging] section
+since the channel server creates one log file per display and instead uses the
+following log file naming convention \fIxrdp-chansrv.${DISPLAY}.log\fR
 
 .TP
 \fBLogLevel\fR=\fIlevel\fR
@@ -112,8 +119,22 @@ syslog.
 .TP
 \fBSyslogLevel\fR=\fIlevel\fR
 Logging level for syslog. It can have the same values as \fBLogLevel\fR.
-If \fBSyslogLevel\fR and \fBLogLevel\fR differ, the least verbose setting
-takes effect for syslog.
+Defaults to \fBDEBUG\fR.
+
+.TP
+\fBEnableConsole\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to
+the console (ie. stdout).
+
+.TP
+\fBConsoleLevel\fR=\fIlevel\fR
+Logging level for the console. It can have the same values as \fBLogLevel\fR.
+Defaults to \fBDEBUG\fR.
+
+.TP
+\fBEnableProcessId\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging the
+process id in all log messages. Defaults to \fBfalse\fR.
 
 .SH "SESSIONS"
 Following parameters can be used in the \fB[Sessions]\fR section.

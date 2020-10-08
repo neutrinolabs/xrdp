@@ -243,6 +243,18 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog
 \fBSyslogLevel\fR=\fIlevel\fR
 This option sets the logging level for syslog. It can have the same values of \fBLogLevel\fR. If \fBSyslogLevel\fR is greater than \fBLogLevel\fR, its value is lowered to that of \fBLogLevel\fR.
 
+.TP
+\fBEnableConsole\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to the console (ie. stdout).
+
+.TP
+\fBConsoleLevel\fR=\fIlevel\fR
+Logging level for the console. It can have the same values as \fBLogLevel\fR. Defaults to \fBDEBUG\fR.
+
+.TP
+\fBEnableProcessId\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging the process id in all log messages. Defaults to \fBfalse\fR.
+
 .SH "CHANNELS"
 The Remote Desktop Protocol supports several channels, which are used to transfer additional data like sound, clipboard data and others.
 Channel names not listed here will be blocked by \fBxrdp\fP.

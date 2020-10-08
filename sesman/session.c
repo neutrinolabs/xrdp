@@ -1046,11 +1046,11 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
 
     while (tmp != 0)
     {
-        LOG_DBG("user: %s", user);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "user: %s", user);
 
         if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
         {
-            LOG_DBG("session_get_byuser: status=%d, flags=%d, "
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "session_get_byuser: status=%d, flags=%d, "
                     "result=%d", (tmp->item->status), flags,
                     ((tmp->item->status) & flags));
 

@@ -43,7 +43,7 @@ scp_process_start(void *sck)
     struct SCP_SESSION *sdata = NULL;
 
     scon.in_sck = (int)(tintptr)sck;
-    LOG_DBG("started scp thread on socket %d", scon.in_sck);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "started scp thread on socket %d", scon.in_sck);
 
     make_stream(scon.in_s);
     make_stream(scon.out_s);
@@ -58,13 +58,13 @@ scp_process_start(void *sck)
             if (sdata->version == 0)
             {
                 /* starts processing an scp v0 connection */
-                LOG_DBG("accept ok, go on with scp v0");
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "accept ok, go on with scp v0");
                 scp_v0_process(&scon, sdata);
             }
             else
             {
-                LOG_DBG("accept ok, go on with scp v1");
-                /*LOG_DBG("user: %s\npass: %s",sdata->username, sdata->password);*/
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "accept ok, go on with scp v1");
+                /*LOG_DEVEL(LOG_LEVEL_DEBUG, "user: %s\npass: %s",sdata->username, sdata->password);*/
                 scp_v1_process(&scon, sdata);
             }
 

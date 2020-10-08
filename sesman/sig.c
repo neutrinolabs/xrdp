@@ -47,11 +47,11 @@ sig_sesman_shutdown(int sig)
 
     if (g_getpid() != g_pid)
     {
-        LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
         return;
     }
 
-    LOG_DBG(" - getting signal %d pid %d", sig, g_getpid());
+    LOG_DEVEL(LOG_LEVEL_DEBUG, " - getting signal %d pid %d", sig, g_getpid());
 
     g_set_wait_obj(g_term_event);
 
@@ -73,7 +73,7 @@ sig_sesman_reload_cfg(int sig)
 
     if (g_getpid() != g_pid)
     {
-        LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
         return;
     }
 
@@ -171,7 +171,7 @@ sig_handler_thread(void *arg)
 
     do
     {
-        LOG_DBG("calling sigwait()");
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "calling sigwait()");
         sigwait(&waitmask, &recv_signal);
 
         switch (recv_signal)
@@ -179,22 +179,22 @@ sig_handler_thread(void *arg)
             case SIGHUP:
                 //reload cfg
                 //we must stop & restart logging, or copy logging cfg!!!!
-                LOG_DBG("sesman received SIGHUP");
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGHUP");
                 //return 0;
                 break;
             case SIGCHLD:
                 /* a session died */
-                LOG_DBG("sesman received SIGCHLD");
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGCHLD");
                 sig_sesman_session_end(SIGCHLD);
                 break;
             case SIGINT:
                 /* we die */
-                LOG_DBG("sesman received SIGINT");
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGINT");
                 sig_sesman_shutdown(recv_signal);
                 break;
             case SIGTERM:
                 /* we die */
-                LOG_DBG("sesman received SIGTERM");
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGTERM");
                 sig_sesman_shutdown(recv_signal);
                 break;
         }
