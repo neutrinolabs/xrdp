@@ -37,6 +37,10 @@
 #include <sys/prctl.h>
 #endif
 
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
