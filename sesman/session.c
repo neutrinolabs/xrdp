@@ -547,44 +547,20 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                         g_set_current_dir(s->directory);
                     }
                 }
+                for(int i=strlen(s->program)-1; i >= 0 && s->program[i] == ' '; i--)
+                {
+                    s->program[i]= '\0';
+                }
                 if (s->program != 0)
                 {
                     if (s->program[0] != 0)
                     {
                         //g_execlp3(s->program, s->program, 0); // old start call
-                        int len=256, counter=0;
-                        char *tmp=0, *buf=malloc(len), *last_delim=0, **arg_array=0;
-                        strncpy(buf,s->program,len-1);
-                        buf[len-1]='\0';
-                        //count space char in execution string
-                        tmp=buf;
-                        for(counter=0;*tmp;tmp++)
+                        if(strchr(s->program, ' '))
                         {
-                                if(' '==*tmp)
-                                {
-                                        counter++;
-                                        last_delim=tmp;
-                                }
-                        }
-                        counter += last_delim < (buf + len - 1);
-                        counter++; // add on to trailing zero element
-                        // create and fill array of string for execvp call
-                        arg_array = malloc(sizeof(char*) * counter);
-                        if (arg_array)
-                        {
-                                size_t idx  = 0;
-                                char* token = strtok(buf, " ");
-                                while (token)
-                                {
-                                        *(arg_array + idx++) = strdup(token);
-                                        token = strtok(0, " ");
-                                }
-                                *(arg_array + idx) = 0;
-                        }
-
-                        if(arg_array && strlen(s->program)>0 && counter > 1) {
-                           log_message(LOG_LEVEL_DEBUG, "starting program with %d parameres: %s ",counter-2,s->program);
-                           g_execvp(arg_array[0],arg_array);
+                           log_message(LOG_LEVEL_DEBUG, "starting program with parameres: %s ", s->program);
+			   char *params[] = { "sh", "-c", s->program, NULL};
+                           g_execvp("/bin/sh", params);
                         }
                         else{
                            log_message(LOG_LEVEL_DEBUG, "starting program without parameters: %s ",s->program);
