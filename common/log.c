@@ -279,7 +279,7 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
         return ret;
     }
 
-    fd = g_file_open(inFilename);
+    fd = g_file_open_ex(inFilename, 1, 0, 0, 0);
 
     if (-1 == fd)
     {

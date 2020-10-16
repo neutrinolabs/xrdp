@@ -3,7 +3,17 @@
 \fBxrdp\fR \- a Remote Desktop Protocol (RDP) server
 
 .SH "SYNTAX"
-xrdp [ \-\-nodaemon | \-\-kill | \-\-help ]
+.B xrdp
+\-\-kill
+.br
+.B xrdp
+\-\-help
+.br
+.B xrdp
+\-\-version
+.br
+.B xrdp
+[ \-\-nodaemon ] [ --port port ] [ --fork ] [ --config /path/to/xrdp.ini ]
 
 .SH "DESCRIPTION"
 \fBxrdp\fR is a Remote Desktop Protocol (RDP) Server.
@@ -14,14 +24,17 @@ It can also be used as a VNC\->RDP bridge.
 
 .SH "OPTIONS"
 .TP
-\fB\-n\fR, \fB\-\-nodaemon\fR
-Start \fBxrdp\fR in foreground instead of starting it as a daemon.
-.TP
 \fB\-k\fR, \fB\-\-kill\fR
 Kill running \fBxrdp\fR daemon.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+Output version information and exit.
+.TP
+\fB\-n\fR, \fB\-\-nodaemon\fR
+Start \fBxrdp\fR in foreground instead of starting it as a daemon.
 .TP
 \fB\-p\fR, \fB\-\-port\fR
 Specify TCP port to listen to. This overrides \fIport\fR setting in
@@ -31,6 +44,11 @@ Specify TCP port to listen to. This overrides \fIport\fR setting in
 Fork a new process on a new connection. If not enabled, use a new thread
 for every connection. This overrides \fIfork\fR setting in
 \fIxrdp.ini\fR file.
+.TP
+\fB\-c\fR, \fB\-\-config\fR
+Specify a path to a different \fIxrdp.ini\fR file. This option is intended
+to be used primarily for testing or for unusual configurations.
+
 
 .SH "FILES"
 @bindir@/xrdp

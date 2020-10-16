@@ -40,6 +40,8 @@ long
 g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             long sync_param2);
 int
+xrdp_child_fork(void);
+int
 g_is_term(void);
 void
 g_set_term(int in_val);
@@ -49,10 +51,6 @@ tbus
 g_get_sync_event(void);
 void
 g_process_waiting_function(void);
-void
-print_version(void);
-void
-print_help(void);
 
 /* xrdp_cache.c */
 struct xrdp_cache*
@@ -359,7 +357,7 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap);
 int
 xrdp_login_wnd_create(struct xrdp_wm* self);
 int
-load_xrdp_config(struct xrdp_config *config, int bpp);
+load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp);
 
 /* xrdp_bitmap_compress.c */
 int
@@ -434,8 +432,6 @@ int
 server_msg(struct xrdp_mod* mod, char* msg, int code);
 int
 server_is_term(struct xrdp_mod* mod);
-int
-xrdp_child_fork(void);
 int
 server_set_clip(struct xrdp_mod* mod, int x, int y, int cx, int cy);
 int

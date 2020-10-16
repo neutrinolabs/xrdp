@@ -528,6 +528,8 @@ struct xrdp_mod_data
 
 struct xrdp_startup_params
 {
+  /* xrdp_ini is not malloc'd and has at least the same lifetime as main() */
+  const char *xrdp_ini;
   char port[1024];
   int kill;
   int no_daemon;

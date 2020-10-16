@@ -559,8 +559,8 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
     char *q;
     char *r;
     char name[256];
-    char cfg_file[256];
     struct xrdp_mod_data *mod_data;
+    const char *xrdp_ini = self->session->xrdp_ini;
 
     sections = list_create();
     sections->auto_free = 1;
@@ -568,12 +568,12 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
     section_names->auto_free = 1;
     section_values = list_create();
     section_values->auto_free = 1;
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    fd = g_file_open(cfg_file); /* xrdp.ini */
+    fd = g_file_open(xrdp_ini);
 
     if (fd < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "Could not read xrdp ini file %s", cfg_file);
+        log_message(LOG_LEVEL_ERROR, "Could not read xrdp ini file %s",
+                    xrdp_ini);
         list_delete(sections);
         list_delete(section_names);
         list_delete(section_values);
@@ -829,10 +829,14 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 /**
  * Load configuration from xrdp.ini file
  *
+ * @param config XRDP configuration to initialise
+ * @param xrdp_ini Path to xrdp.ini
+ * @param bpp bits-per-pixel for this connection
+ *
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 int
-load_xrdp_config(struct xrdp_config *config, int bpp)
+load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
 {
     struct xrdp_cfg_globals  *globals;
 
@@ -841,7 +845,6 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
 
     char *n;
     char *v;
-    char  buf[256];
     int   fd;
     int   i;
 
@@ -873,11 +876,10 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
     globals->ls_btn_cancel_height = 30;
 
     /* open xrdp.ini file */
-    g_snprintf(buf, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    if ((fd = g_file_open(buf)) < 0)
+    if ((fd = g_file_open(xrdp_ini)) < 0)
     {
         log_message(LOG_LEVEL_ERROR,"load_config: Could not read "
-                    "xrdp.ini file %s", buf);
+                    "xrdp.ini file %s", xrdp_ini);
         return -1;
 
     }
@@ -893,7 +895,7 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
         list_delete(values);
         g_file_close(fd);
         log_message(LOG_LEVEL_ERROR,"load_config: Could not read globals "
-                    "section from xrdp.ini file %s", buf);
+                    "section from xrdp.ini file %s", xrdp_ini);
         return -1;
     }
 
