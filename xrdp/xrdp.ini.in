@@ -8,6 +8,7 @@ fork=true
 ; ports to listen on, number alone means listen on all interfaces
 ; 0.0.0.0 or :: if ipv6 is configured
 ; space between multiple occurrences
+; ALL specified interfaces must be UP when xrdp starts, otherwise xrdp will fail to start
 ;
 ; Examples:
 ;   port=3389
