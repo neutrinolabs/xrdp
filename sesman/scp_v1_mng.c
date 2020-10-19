@@ -47,7 +47,7 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     int end = 0;
 
     data = auth_userpass(s->username, s->password,NULL);
-    /*LOG_DBG("user: %s\npass: %s", s->username, s->password);*/
+    /*LOG_DEVEL(LOG_LEVEL_DEBUG, "user: %s\npass: %s", s->username, s->password);*/
 
     if (!data)
     {
@@ -83,7 +83,7 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             case SCP_SERVER_STATE_MNG_LISTREQ:
                 /* list disconnected sessions */
                 slist = session_get_byuser(NULL, &scount, SESMAN_SESSION_STATUS_ALL);
-                LOG_DBG("sessions on TS: %d (slist: %p)", scount, slist);
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "sessions on TS: %d (slist: %p)", scount, slist);
                 if (0 == slist)
                 {
                     log_message(LOG_LEVEL_INFO, "No sessions on Terminal Server");
@@ -109,7 +109,7 @@ static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
     switch (e)
     {
         case SCP_SERVER_STATE_VERSION_ERR:
-            LOG_DBG("version error")
+            log_message(LOG_LEVEL_WARNING, "version error");
         case SCP_SERVER_STATE_SIZE_ERR:
             /* an unknown scp version was requested, so we shut down the */
             /* connection (and log the fact)                             */

@@ -31,30 +31,6 @@ Dynamic Virtual Channel
 
 .SH ENVIRONMENT
 .TP
-.I CHANSRV_LOG_LEVEL
-Logging level for chansrv. Case-insensitive. Takes one of these string values:
-.RS 8
-.TP
-.B LOG_LEVEL_ALWAYS
-Only log essential messages
-.TP
-.B LOG_LEVEL_ERROR
-Log errors and above
-.TP
-.B LOG_LEVEL_WARNING
-Log warnings and above
-.TP
-.B LOG_LEVEL_INFO
-Log info and above. This is the default if nothing is specified
-.TP
-.B LOG_LEVEL_DEBUG
-Log debug and above
-.TP
-.B LOG_LEVEL_TRACE
-Log everything
-.TP
-.RE
-.TP
 .I CHANSRV_LOG_PATH
 Path to the location where the log file is stored. If not specified,
 $\fBXDG_DATA_HOME/xrdp\fP or \fB$HOME/.local/share/xrdp\fP is used instead.

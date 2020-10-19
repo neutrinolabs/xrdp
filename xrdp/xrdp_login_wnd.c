@@ -589,7 +589,8 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 
         if ((g_strncasecmp(p, "globals", 255) == 0)
                 || (g_strncasecmp(p, "channels", 255) == 0)
-                || (g_strncasecmp(p, "Logging", 255) == 0))
+                || (g_strncasecmp(p, "Logging", 255) == 0)
+                || (g_strncasecmp(p, "LoggingPerLogger", 255) == 0))
         {
         }
         else

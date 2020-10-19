@@ -150,7 +150,7 @@ sesman_main_loop(void)
                     else
                     {
                         /* we've got a connection, so we pass it to scp code */
-                        LOG_DBG("new connection");
+                        LOG_DEVEL(LOG_LEVEL_DEBUG, "new connection");
                         scp_process_start((void*)(tintptr)in_sck);
                         g_sck_close(in_sck);
                     }

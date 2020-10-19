@@ -205,7 +205,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
                 (*scount) = sescnt;
                 (*s) = NULL;
 
-                LOG_DBG("[v1c_mng] end list - no session on TS");
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "[v1c_mng] end list - no session on TS");
                 return SCP_CLIENT_STATE_LIST_OK;
             }
 
@@ -262,7 +262,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
     (*scount) = sescnt;
     (*s) = ds;
 
-    LOG_DBG("[v1c_mng] end list");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[v1c_mng] end list");
     return SCP_CLIENT_STATE_LIST_OK;
 }
 

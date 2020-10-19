@@ -100,7 +100,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         }
         else
         {
-            LOG_DBG("pre auth");
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "pre auth");
 
             if (1 == access_login_allowed(s->username))
             {

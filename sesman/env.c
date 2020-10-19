@@ -219,7 +219,7 @@ env_set_user(const char *username, char **passwd_file, int display,
 
                 if (*passwd_file != NULL)
                 {
-                    LOG_DBG("pass file: %s", *passwd_file);
+                    LOG_DEVEL(LOG_LEVEL_DEBUG, "pass file: %s", *passwd_file);
                 }
             }
 
