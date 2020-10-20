@@ -37,10 +37,6 @@
 #include <sys/prctl.h>
 #endif
 
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
 #include "sesman.h"
 #include "libscp_types.h"
 #include "xauth.h"
@@ -547,29 +543,25 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                         g_set_current_dir(s->directory);
                     }
                 }
-                for(int i=strlen(s->program)-1; i >= 0 && s->program[i] == ' '; i--)
-                {
-                    s->program[i]= '\0';
-                }
                 if (s->program != 0)
                 {
                     if (s->program[0] != 0)
                     {
                         //g_execlp3(s->program, s->program, 0); // old start call
-                        if(g_strchr(s->program, ' '))
+                        log_message(LOG_LEVEL_DEBUG, "starting program with parameters: %s ",
+                                    s->program);
+                        if(g_strchr(s->program, ' ') != 0 || g_strchr(s->program, '\t') != 0)
                         {
-                           log_message(LOG_LEVEL_DEBUG, "starting program with parameters: %s ", s->program);
-			   char *params[] = { "sh", "-c", s->program, NULL};
-                           g_execvp("/bin/sh", params);
+                            char *params[] = { "sh", "-c", s->program, NULL};
+                            g_execvp("/bin/sh", params);
                         }
-                        else{
-                           log_message(LOG_LEVEL_DEBUG, "starting program without parameters: %s ",s->program);
-                            g_execlp3(s->program, s->program, 0);
+                        else
+                        {
+                           g_execlp3(s->program, s->program, 0);
                         }
                         log_message(LOG_LEVEL_ALWAYS,
                                     "error starting program %s for user %s - pid %d",
                                     s->program, s->username, g_getpid());
-
                     }
                 }
                 /* try to execute user window manager if enabled */
