@@ -24,10 +24,6 @@ All options and values (except for file names and paths) are case insensitive, a
 The options to be specified in the \fB[Globals]\fR section are the following:
 
 .TP
-\fBaddress\fP=\fIip address\fP
-Specify xrdp listening address. If not specified, defaults to 0.0.0.0 (all interfaces).
-
-.TP
 \fBautorun\fP=\fIsession_name\fP
 Section name for automatic login. If set and the client supplies valid
 username and password, the user will be logged in automatically using the
@@ -115,8 +111,11 @@ Specify text passed to PAM when authentication failed. The maximum length is \fB
 
 .TP
 \fBport\fP=\fIport\fP
-Specify TCP port to listen on for incoming connections.
-The default for RDP is \fB3389\fP.
+Specify TCP port and interface to listen on for incoming connections.
+Specifying only the port means that xrdp will listen on all interfaces.
+The default port for RDP is \fB3389\fP.
+Multiple address:port instances must be separated by spaces or commas. Check the .ini file for examples.
+Specifying interfaces requires said interfaces to be UP before xrdp starts.
 
 .TP
 \fBrequire_credentials\fP=\fI[true|false]\fP
