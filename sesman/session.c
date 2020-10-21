@@ -547,13 +547,13 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 {
                     if (s->program[0] != 0)
                     {
-                        //g_execlp3(s->program, s->program, 0); // old start call
-                        log_message(LOG_LEVEL_DEBUG, "starting program with parameters: %s ",
+                        log_message(LOG_LEVEL_DEBUG, 
+                                    "starting program with parameters: %s ",
                                     s->program);
                         if(g_strchr(s->program, ' ') != 0 || g_strchr(s->program, '\t') != 0)
                         {
-                            char *params[] = { "sh", "-c", s->program, NULL};
-                            g_execvp("/bin/sh", params);
+                            const char *params[] = {"sh", "-c", s->program, NULL};
+                            g_execvp("/bin/sh", (char **)params);
                         }
                         else
                         {
