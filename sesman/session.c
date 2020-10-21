@@ -45,7 +45,6 @@
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
 #endif
-#include <string.h>
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
