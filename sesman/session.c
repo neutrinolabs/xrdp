@@ -46,7 +46,6 @@
 #define PR_SET_NO_NEW_PRIVS 38
 #endif
 
-
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
 extern int g_sck; /* in sesman.c */
@@ -544,7 +543,18 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 {
                     if (s->program[0] != 0)
                     {
-                        g_execlp3(s->program, s->program, 0);
+                        log_message(LOG_LEVEL_DEBUG, 
+                                    "starting program with parameters: %s ",
+                                    s->program);
+                        if(g_strchr(s->program, ' ') != 0 || g_strchr(s->program, '\t') != 0)
+                        {
+                            const char *params[] = {"sh", "-c", s->program, NULL};
+                            g_execvp("/bin/sh", (char **)params);
+                        }
+                        else
+                        {
+                           g_execlp3(s->program, s->program, 0);
+                        }
                         log_message(LOG_LEVEL_ALWAYS,
                                     "error starting program %s for user %s - pid %d",
                                     s->program, s->username, g_getpid());
