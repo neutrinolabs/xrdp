@@ -150,13 +150,6 @@ internal_log_start(struct log_config *l_cfg)
         return ret;
     }
 
-    /* if logfile is NULL, we return error */
-    if (0 == l_cfg->log_file)
-    {
-        g_writeln("log_file not properly assigned");
-        return ret;
-    }
-
     /* if progname is NULL, we return error */
     if (0 == l_cfg->program_name)
     {
@@ -164,14 +157,20 @@ internal_log_start(struct log_config *l_cfg)
         return ret;
     }
 
-    internal_log_config_dump(l_cfg);
+    if (l_cfg->dump_on_start)
+    {
+        internal_log_config_dump(l_cfg);
+    }
 
     /* open file */
-    l_cfg->fd = internal_log_file_open(l_cfg->log_file);
-
-    if (-1 == l_cfg->fd)
+    if (l_cfg->log_file != NULL)
     {
-        return LOG_ERROR_FILE_OPEN;
+        l_cfg->fd = internal_log_file_open(l_cfg->log_file);
+
+        if (-1 == l_cfg->fd)
+        {
+            return LOG_ERROR_FILE_OPEN;
+        }
     }
 
     /* if syslog is enabled, open it */
@@ -304,6 +303,7 @@ internal_config_read_logging(int file,
     lc->console_level = LOG_LEVEL_INFO;
     lc->enable_syslog = 0;
     lc->syslog_level = LOG_LEVEL_INFO;
+    lc->dump_on_start = 1;
     lc->enable_pid = 0;
 
     g_snprintf(section_name, 511, "%s%s", section_prefix, SESMAN_CFG_LOGGING);
@@ -409,21 +409,40 @@ internal_log_config_dump(struct log_config *config)
 {
     char str_level[20];
 #ifdef LOG_PER_LOGGER_LEVEL
-    struct log_logger_level* logger;
+    struct log_logger_level *logger;
     int i;
 #endif
 
     g_printf("logging configuration:\r\n");
-    internal_log_lvl2str(config->log_level, str_level);
-    g_printf("\tLogFile:       %s\r\n", config->log_file);
-    g_printf("\tLogLevel:      %s\r\n", str_level);
+    if (config->log_file)
+    {
+        internal_log_lvl2str(config->log_level, str_level);
+        g_printf("\tLogFile:       %s\r\n", config->log_file);
+        g_printf("\tLogLevel:      %s\r\n", str_level);
+    }
+    else
+    {
+        g_printf("\tLogFile:       %s\r\n", "<disabled>");
+    }
 
-    internal_log_lvl2str(config->console_level, str_level);
-    g_printf("\tEnableConsole: %s\r\n", (config->enable_console ? "true" : "false"));
+    if (config->enable_console)
+    {
+        internal_log_lvl2str(config->console_level, str_level);
+    }
+    else
+    {
+        g_strcpy(str_level, "<disabled>");
+    }
     g_printf("\tConsoleLevel:  %s\r\n", str_level);
 
-    internal_log_lvl2str(config->syslog_level, str_level);
-    g_printf("\tEnableSyslog:  %s\r\n", (config->enable_syslog ? "true" : "false"));
+    if (config->enable_syslog)
+    {
+        internal_log_lvl2str(config->syslog_level, str_level);
+    }
+    else
+    {
+        g_strcpy(str_level, "<disabled>");
+    }
     g_printf("\tSyslogLevel:   %s\r\n", str_level);
 
 #ifdef LOG_PER_LOGGER_LEVEL
@@ -487,6 +506,7 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
     dest->enable_console = src->enable_console;
     dest->console_level = src->console_level;
     dest->enable_pid = src->enable_pid;
+    dest->dump_on_start = src->dump_on_start;
     for (i = 0; i < src->per_logger_level->count; ++i)
     {
         struct log_logger_level *dst_logger =
@@ -550,6 +570,22 @@ internal_log_location_overrides_level(const char *function_name,
 /*
  * Here below the public functions
  */
+
+struct log_config *
+log_config_init_for_console(enum logLevels lvl)
+{
+    struct log_config *config = internalInitAndAllocStruct();
+
+    if (config != NULL)
+    {
+        config->program_name = "<null>";
+        config->enable_console = 1;
+        config->console_level = lvl;
+        config->dump_on_start = 0; /* Don't need dump for console only */
+    }
+    return config;
+}
+
 
 struct log_config *
 log_config_init_from_config(const char *iniFilename,
@@ -755,12 +791,12 @@ log_hexdump_with_location(const char *function_name,
     dump_buffer = (char *)g_malloc(dump_length, 1);
     if (dump_buffer == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_WARNING, 
-                  "Failed to allocate buffer for hex dump of size %d", 
+        LOG_DEVEL(LOG_LEVEL_WARNING,
+                  "Failed to allocate buffer for hex dump of size %d",
                   dump_length);
         return LOG_ERROR_MALLOC;
     }
-    
+
     line = (unsigned char *)src;
     offset = 0;
 
@@ -981,23 +1017,23 @@ internal_log_message(const enum logLevels lvl,
     if (override_destination_level || lvl <= g_staticLogConfig->log_level)
     {
         /* log to application logfile */
-#ifdef LOG_ENABLE_THREAD
-        pthread_mutex_lock(&(g_staticLogConfig->log_lock));
-#endif
-
         if (g_staticLogConfig->fd >= 0)
         {
+#ifdef LOG_ENABLE_THREAD
+            pthread_mutex_lock(&(g_staticLogConfig->log_lock));
+#endif
+
             writereply = g_file_write(g_staticLogConfig->fd, buff, g_strlen(buff));
 
             if (writereply <= 0)
             {
                 rv = LOG_ERROR_NULL_FILE;
             }
-        }
 
 #ifdef LOG_ENABLE_THREAD
-        pthread_mutex_unlock(&(g_staticLogConfig->log_lock));
+            pthread_mutex_unlock(&(g_staticLogConfig->log_lock));
 #endif
+        }
     }
 
     return rv;

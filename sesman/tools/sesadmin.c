@@ -37,8 +37,6 @@ char cmnd[257];
 char serv[257];
 char port[257];
 
-struct log_config logging;
-
 void cmndList(struct SCP_CONNECTION *c);
 void cmndKill(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
 void cmndHelp(void);
@@ -56,6 +54,7 @@ int main(int argc, char **argv)
     //int sel;
     int sock;
     char *pwd;
+    struct log_config *logging;
 
     user[0] = '\0';
     pass[0] = '\0';
@@ -63,11 +62,9 @@ int main(int argc, char **argv)
     serv[0] = '\0';
     port[0] = '\0';
 
-    logging.program_name = "sesadmin";
-    logging.log_file = g_strdup("xrdp-sesadmin.log");
-    logging.log_level = LOG_LEVEL_DEBUG;
-    logging.enable_syslog = 0;
-    log_start_from_param(&logging);
+    logging = log_config_init_for_console(LOG_LEVEL_INFO);
+    log_start_from_param(logging);
+    log_config_free(logging);
 
     for (idx = 0; idx < argc; idx++)
     {
