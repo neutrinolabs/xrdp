@@ -818,6 +818,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                             "auth_end from pid %d", g_getpid());
                 auth_stop_session(data);
                 auth_end(data);
+                g_sleep(2000);
                 g_sigterm(display_pid);
                 g_sigterm(chansrv_pid);
                 cleanup_sockets(display);
