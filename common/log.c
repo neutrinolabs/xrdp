@@ -406,6 +406,7 @@ internal_log_config_dump(struct log_config *config)
 {
     char str_level[20];
     struct log_logger_level* logger;
+    int i;
 
     g_printf("logging configuration:\r\n");
     internal_log_lvl2str(config->log_level, str_level);
@@ -421,13 +422,13 @@ internal_log_config_dump(struct log_config *config)
     g_printf("\tSyslogLevel:   %s\r\n", str_level);
     
     g_printf("per logger configuration:\r\n");
-    for (int i = 0; i < config->per_logger_level->count; i++)
+    for (i = 0; i < config->per_logger_level->count; i++)
     {
         logger = (struct log_logger_level*)list_get_item(config->per_logger_level, i);
         internal_log_lvl2str(logger->log_level, str_level);
         g_printf("\t%-*s: %s\r\n", LOGGER_NAME_SIZE, logger->logger_name, str_level);
     }
-    if(config->per_logger_level->count == 0)
+    if (config->per_logger_level->count == 0)
     {
         g_printf("\tNone\r\n");
     }
@@ -465,6 +466,8 @@ internalInitAndAllocStruct(void)
 void
 internal_log_config_copy(struct log_config *dest, const struct log_config *src)
 {
+    int i;
+
     dest->enable_syslog = src->enable_syslog;
     dest->fd = src->fd;
     dest->log_file = g_strdup(src->log_file);
@@ -477,7 +480,7 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
     dest->enable_console = src->enable_console;
     dest->console_level = src->console_level;
     dest->enable_pid = src->enable_pid;
-    for (int i = 0; i < src->per_logger_level->count; ++i)
+    for (i = 0; i < src->per_logger_level->count; ++i)
     {
         struct log_logger_level *dst_logger = 
                 (struct log_logger_level*)g_malloc(sizeof(struct log_logger_level), 1);
