@@ -26,6 +26,8 @@
 
 #define CURRENT_MOD_VER 3
 
+struct source_info;
+
 struct mod
 {
   int size; /* size of this struct */
@@ -91,7 +93,7 @@ struct mod
   tintptr handle; /* pointer to self as long */
   tintptr wm;
   tintptr painter;
-  tintptr si;
+  struct source_info *si;
   /* mod data */
   int sck;
   int width;

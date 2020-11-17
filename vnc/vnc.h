@@ -56,6 +56,8 @@ enum vnc_resize_status
     VRS_DONE
 };
 
+struct source_info;
+
 struct vnc
 {
     int size; /* size of this struct */
@@ -124,7 +126,7 @@ struct vnc
     tintptr handle; /* pointer to self as long */
     tintptr wm;
     tintptr painter;
-    tintptr si;
+    struct source_info *si;
     /* mod data */
     int server_width;
     int server_height;

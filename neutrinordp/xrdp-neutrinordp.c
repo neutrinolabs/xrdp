@@ -24,6 +24,7 @@
 #include "xrdp-neutrinordp.h"
 #include "xrdp-color.h"
 #include "xrdp_rail.h"
+#include "trans.h"
 #include "log.h"
 #include <freerdp/settings.h>
 
@@ -38,6 +39,9 @@
 #else
 #define LOG_LEVEL 1
 #endif
+
+/* Max amount of buffered output data before we stop generating more */
+#define MAX_QUEUED_MODULE_OUTPUT_DATA 50000
 
 #define LLOG(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
@@ -66,6 +70,13 @@ verifyColorMap(struct mod *mod)
     }
 
     LLOGLN(0, ("The colormap is all NULL"));
+}
+
+/*****************************************************************************/
+static int
+get_queued_module_output_data(struct mod *mod)
+{
+    return (mod->si != NULL) ? mod->si->source[XRDP_SOURCE_MOD] : 0;
 }
 
 /*****************************************************************************/
@@ -516,14 +527,26 @@ lxrdp_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
     boolean ok;
 
     LLOGLN(12, ("lxrdp_get_wait_objs:"));
-    rfds = (void **)read_objs;
-    wfds = (void **)write_objs;
-    ok = freerdp_get_fds(mod->inst, rfds, rcount, wfds, wcount);
-
-    if (!ok)
+    /*
+     * Don't check this module for activity if our queued output data
+     * has already reached the limit
+     */
+    if (get_queued_module_output_data(mod) > MAX_QUEUED_MODULE_OUTPUT_DATA)
     {
-        LLOGLN(0, ("lxrdp_get_wait_objs: freerdp_get_fds failed"));
-        return 1;
+        *rcount = 0;
+        *wcount = 0;
+    }
+    else
+    {
+        rfds = (void **)read_objs;
+        wfds = (void **)write_objs;
+        ok = freerdp_get_fds(mod->inst, rfds, rcount, wfds, wcount);
+
+        if (!ok)
+        {
+            LLOGLN(0, ("lxrdp_get_wait_objs: freerdp_get_fds failed"));
+            return 1;
+        }
     }
 
     return 0;
@@ -536,12 +559,32 @@ lxrdp_check_wait_objs(struct mod *mod)
     boolean ok;
 
     LLOGLN(12, ("lxrdp_check_wait_objs:"));
-    ok = freerdp_check_fds(mod->inst);
-
-    if (!ok)
+    /*
+     * Only process the freerdp file descriptors if our queued output data
+     * has not reached the limit
+     */
+    if (get_queued_module_output_data(mod) <= MAX_QUEUED_MODULE_OUTPUT_DATA)
     {
-        LLOGLN(0, ("lxrdp_check_wait_objs: freerdp_check_fds failed"));
-        return 1;
+        /*
+         * Before checking the file descriptors, set the source info
+         * current source, so any data queued on output trans objects
+         * gets attributed to this module
+         */
+        if (mod->si)
+        {
+            mod->si->cur_source = XRDP_SOURCE_MOD;
+        }
+        ok = freerdp_check_fds(mod->inst);
+        if (mod->si)
+        {
+            mod->si->cur_source = XRDP_SOURCE_NONE;
+        }
+
+        if (!ok)
+        {
+            LLOGLN(0, ("lxrdp_check_wait_objs: freerdp_check_fds failed"));
+            return 1;
+        }
     }
 
     return 0;

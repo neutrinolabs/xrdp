@@ -30,6 +30,9 @@
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
+
+struct source_info;
+
 /* lib */
 struct xrdp_mod
 {
@@ -156,7 +159,7 @@ struct xrdp_mod
   tintptr handle; /* pointer to self as int */
   tintptr wm; /* struct xrdp_wm* */
   tintptr painter;
-  tintptr si;
+  struct source_info *si;
 };
 
 /* header for bmp file */
