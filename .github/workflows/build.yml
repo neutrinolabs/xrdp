@@ -131,6 +131,13 @@ jobs:
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
       - uses: actions/checkout@v2
+      - name: Cache cppcheck
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-cppcheck
+        with:
+          path: ~/cppcheck.local
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
       - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh
       - run: ./bootstrap
       - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
