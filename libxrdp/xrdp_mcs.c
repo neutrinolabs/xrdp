@@ -616,6 +616,8 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
         }
         in_uint16_be(s, self->userid); /* NonStandardParameter.key 
                                           NonStandardParameter.data */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
+              "choice index %d (ErectDomainRequest)", (opcode >> 2));
     }
 
     if (!(s_check_end(s)))

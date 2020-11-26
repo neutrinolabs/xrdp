@@ -1275,6 +1275,8 @@ libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
     /* here we make a copy of the data */
     out_uint8a(s, data, data_len);
     s_mark_end(s);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] Virtual Channel PDU "
+            "data <omitted from log>");
 
     if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
     {

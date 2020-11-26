@@ -538,7 +538,7 @@ drdynvc_process_data(struct xrdp_channel *self,
     bytes = (int) (s->end - s->p);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPEDYC] DYNVC_DATA "
              "ChannelId %d, (re-assembled) Length %d, Data (omitted from the log)",
-             chan_id, total_bytes);
+             chan_id, bytes);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
@@ -948,8 +948,8 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
     total_data_len = (int) (s->end - cmd_ptr);
     
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CLOSE "
-              "cbId %d, Pri %d, Cmd 0x%2.2x, ChannelId %d",
-              cbChId, chan_pri, CMD_DVC_OPEN_CHANNEL, ChId);
+              "cbId %d, Sp 0, Cmd 0x%2.2x, ChannelId %d",
+              cbChId, CMD_DVC_OPEN_CHANNEL, ChId);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {
@@ -1023,7 +1023,7 @@ xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_DATA_FIRST "
               "cbId %d, Len %d, Cmd 0x%2.2x, ChannelId %d, Length %d",
-              cbChId, cbTotalDataSize, CMD_DVC_DATA_FIRST, ChId, total_data_len);
+              cbChId, cbTotalDataSize, CMD_DVC_DATA_FIRST, ChId, total_data_bytes);
     total_data_len = (int) (s->end - cmd_ptr);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
