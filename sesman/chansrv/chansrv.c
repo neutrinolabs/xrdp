@@ -263,8 +263,8 @@ send_channel_data(int chan_id, const char *data, int size)
     struct stream *s;
 
     if ((chan_id < 0) || (chan_id > 31) ||
-        (data == NULL) ||
-        (size < 1) || (size > MAX_CHANNEL_BYTES))
+            (data == NULL) ||
+            (size < 1) || (size > MAX_CHANNEL_BYTES))
     {
         /* bad param */
         return 1;
@@ -308,11 +308,11 @@ send_channel_data(int chan_id, const char *data, int size)
 /*****************************************************************************/
 /* returns error */
 int
-send_rail_drawing_orders(char* data, int size)
+send_rail_drawing_orders(char *data, int size)
 {
     LOG_DEVEL(LOG_LEVEL_DEBUG, "chansrv::send_rail_drawing_orders: size %d", size);
 
-    struct stream* s;
+    struct stream *s;
     int error;
 
     s = trans_get_out_s(g_con_trans, 8192);
@@ -352,7 +352,7 @@ process_message_channel_setup(struct stream *s)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_setup:");
     in_uint16_le(s, num_chans);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_setup: num_chans %d",
-          num_chans);
+              num_chans);
 
     for (index = 0; index < num_chans; index++)
     {
@@ -362,7 +362,7 @@ process_message_channel_setup(struct stream *s)
         in_uint16_le(s, ci->id);
         in_uint16_le(s, ci->flags);
         LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
-              "id %d flags %8.8x", ci->name, ci->id, ci->flags);
+                  "id %d flags %8.8x", ci->name, ci->id, ci->flags);
 
         if (g_strcasecmp(ci->name, "cliprdr") == 0)
         {
@@ -443,7 +443,7 @@ process_message_channel_data(struct stream *s)
     in_uint16_le(s, length);
     in_uint32_le(s, total_length);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_data: chan_id %d "
-          "chan_flags %d", chan_id, chan_flags);
+              "chan_flags %d", chan_id, chan_flags);
     rv = 0;
 
     if (rv == 0)
@@ -1259,7 +1259,7 @@ setup_listen(void)
     if (error != 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "setup_listen: trans_listen failed for port %s",
-              port);
+                  port);
         return 1;
     }
 
@@ -1282,7 +1282,7 @@ setup_api_listen(void)
     if (error != 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "setup_api_listen: trans_listen failed for port %s",
-              port);
+                  port);
         return 1;
     }
 
@@ -1299,11 +1299,11 @@ api_con_trans_list_get_wait_objs_rw(intptr_t *robjs, int *rcount,
     struct trans *ltran;
 
     for (api_con_index = g_api_con_trans_list->count - 1;
-         api_con_index >= 0;
-         api_con_index--)
+            api_con_index >= 0;
+            api_con_index--)
     {
         ltran = (struct trans *)
-            list_get_item(g_api_con_trans_list, api_con_index);
+                list_get_item(g_api_con_trans_list, api_con_index);
         if (ltran != NULL)
         {
             trans_get_wait_objs_rw(ltran, robjs, rcount, wobjs, wcount,
@@ -1323,11 +1323,11 @@ api_con_trans_list_check_wait_objs(void)
     struct xrdp_api_data *ad;
 
     for (api_con_index = g_api_con_trans_list->count - 1;
-         api_con_index >= 0;
-         api_con_index--)
+            api_con_index >= 0;
+            api_con_index--)
     {
         ltran = (struct trans *)
-            list_get_item(g_api_con_trans_list, api_con_index);
+                list_get_item(g_api_con_trans_list, api_con_index);
         if (ltran != NULL)
         {
             if (trans_check_wait_objs(ltran) != 0)
@@ -1340,8 +1340,8 @@ api_con_trans_list_check_wait_objs(void)
                     chansrv_drdynvc_close(ad->chan_id);
                 }
                 for (drdynvc_index = 0;
-                     drdynvc_index < (int) ARRAYSIZE(g_drdynvcs);
-                     drdynvc_index++)
+                        drdynvc_index < (int) ARRAYSIZE(g_drdynvcs);
+                        drdynvc_index++)
                 {
                     if (g_drdynvcs[drdynvc_index].xrdp_api_trans == ltran)
                     {
@@ -1364,11 +1364,11 @@ api_con_trans_list_remove_all(void)
     struct trans *ltran;
 
     for (api_con_index = g_api_con_trans_list->count - 1;
-         api_con_index >= 0;
-         api_con_index--)
+            api_con_index >= 0;
+            api_con_index--)
     {
         ltran = (struct trans *)
-            list_get_item(g_api_con_trans_list, api_con_index);
+                list_get_item(g_api_con_trans_list, api_con_index);
         if (ltran != NULL)
         {
             list_remove_item(g_api_con_trans_list, api_con_index);
@@ -1426,7 +1426,7 @@ channel_thread_loop(void *in_val)
                 if (trans_check_wait_objs(g_lis_trans) != 0)
                 {
                     LOG_DEVEL(LOG_LEVEL_INFO, "channel_thread_loop: "
-                          "trans_check_wait_objs error");
+                              "trans_check_wait_objs error");
                 }
             }
 
@@ -1435,7 +1435,7 @@ channel_thread_loop(void *in_val)
                 if (trans_check_wait_objs(g_con_trans) != 0)
                 {
                     LOG_DEVEL(LOG_LEVEL_INFO, "channel_thread_loop: "
-                          "trans_check_wait_objs error resetting");
+                              "trans_check_wait_objs error resetting");
                     clipboard_deinit();
                     sound_deinit();
                     devredir_deinit();
@@ -1643,7 +1643,7 @@ main_cleanup(void)
 static int
 get_log_path(char *path, int bytes)
 {
-    char* log_path;
+    char *log_path;
     int rv;
 
     rv = 1;
@@ -1778,7 +1778,7 @@ main(int argc, char **argv)
     logconfig->log_file = NULL;
     log_config_free(logconfig);
     logconfig = NULL;
-    
+
     if (error != LOG_STARTUP_OK)
     {
         switch (error)

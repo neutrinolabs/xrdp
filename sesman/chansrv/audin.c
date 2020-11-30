@@ -153,8 +153,8 @@ audin_send_formats(int chan_id)
     {
         wf = g_server_formats[index];
         LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_formats: sending format wFormatTag 0x%4.4x "
-            "nChannels %d nSamplesPerSec %d",
-            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
+                  "nChannels %d nSamplesPerSec %d",
+                  wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
         out_uint16_le(s, wf->wFormatTag);
         out_uint16_le(s, wf->nChannels);
         out_uint32_le(s, wf->nSamplesPerSec);
@@ -261,8 +261,8 @@ audin_process_formats(int chan_id, struct stream *s)
         in_uint16_le(s, wf->wBitsPerSample);
         in_uint16_le(s, wf->cbSize);
         LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_formats: recved format wFormatTag 0x%4.4x "
-            "nChannels %d nSamplesPerSec %d",
-            wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
+                  "nChannels %d nSamplesPerSec %d",
+                  wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
         if (wf->cbSize > 0)
         {
             if (!s_check_rem(s, wf->cbSize))
@@ -334,7 +334,7 @@ audin_process_format_change(int chan_id, struct stream *s)
     }
     in_uint32_le(s, g_current_format);
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_format_change: g_current_format %d",
-        g_current_format);
+              g_current_format);
     return 0;
 }
 
@@ -406,8 +406,8 @@ audin_data_fragment(int chan_id, char *data, int bytes)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_fragment:");
     if (!s_check_rem(g_in_s, bytes))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_data_fragment: error bytes %d left %d", 
-                bytes, (int) (g_in_s->end - g_in_s->p));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_data_fragment: error bytes %d left %d",
+                  bytes, (int) (g_in_s->end - g_in_s->p));
         return 1;
     }
     out_uint8a(g_in_s, data, bytes);
@@ -444,8 +444,7 @@ audin_data(int chan_id, char *data, int bytes)
 {
     struct stream ls;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data:");
-    //g_hexdump(data, bytes);
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "audin_data:", data, bytes);
     if (g_in_s == NULL)
     {
         g_memset(&ls, 0, sizeof(ls));
@@ -485,7 +484,7 @@ int
 audin_start(void)
 {
     int error;
-    struct stream* s;
+    struct stream *s;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_start:");
     if (g_audin_chanid != 0)

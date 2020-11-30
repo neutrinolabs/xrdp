@@ -78,7 +78,7 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
         if (1 == auth_account_disabled(stp))
         {
-            log_message(LOG_LEVEL_INFO, "account %s is disabled", user);
+            LOG(LOG_LEVEL_INFO, "account %s is disabled", user);
             return 0;
         }
 
@@ -326,9 +326,9 @@ auth_account_disabled(struct spwd *stp)
     }
 
     if ((stp->sp_max >= 0) &&
-        (stp->sp_inact >= 0) &&
-        (stp->sp_lstchg > 0) &&
-        (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
+            (stp->sp_inact >= 0) &&
+            (stp->sp_lstchg > 0) &&
+            (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
     {
         return 1;
     }

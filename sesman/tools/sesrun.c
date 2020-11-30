@@ -85,7 +85,9 @@ main(int argc, char **argv)
 
         sck = g_tcp_socket();
         if (sck < 0)
+        {
             return 1;
+        }
 
         if (g_tcp_connect(sck, argv[1], g_cfg.listen_port) == 0)
         {

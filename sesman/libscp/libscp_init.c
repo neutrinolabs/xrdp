@@ -47,7 +47,7 @@ scp_init(void)
 
     scp_lock_init();
 
-    log_message(LOG_LEVEL_DEBUG, "libscp initialized");
+    LOG(LOG_LEVEL_DEBUG, "libscp initialized");
 
     return 0;
 }

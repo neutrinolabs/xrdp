@@ -268,32 +268,30 @@ internal_log_text2level(const char *buf)
 }
 
 /******************************************************************************/
-struct log_config*
-internal_config_read_logging(int file, 
-                             const char *applicationName, 
+struct log_config *
+internal_config_read_logging(int file,
+                             const char *applicationName,
                              const char *section_prefix)
 {
     int i;
     char *buf;
     char *temp_buf;
     char section_name[512];
-    int len;
-    struct log_logger_level* logger;
     struct log_config *lc;
     struct list *param_n;
     struct list *param_v;
-    
+
     lc = internalInitAndAllocStruct();
     if (lc == NULL)
     {
         return NULL;
     }
-    
+
     param_n = list_create();
     param_n->auto_free = 1;
     param_v = list_create();
     param_v->auto_free = 1;
-    
+
     list_clear(param_v);
     list_clear(param_n);
 
@@ -345,17 +343,17 @@ internal_config_read_logging(int file,
         {
             lc->syslog_level = internal_log_text2level((char *)list_get_item(param_v, i));
         }
-        
+
         if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_CONSOLE))
         {
             lc->enable_console = g_text2bool((char *)list_get_item(param_v, i));
         }
-        
+
         if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_CONSOLE_LEVEL))
         {
             lc->console_level = internal_log_text2level((char *)list_get_item(param_v, i));
         }
-        
+
         if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_PID))
         {
             lc->enable_pid = g_text2bool((char *)list_get_item(param_v, i));
@@ -370,31 +368,36 @@ internal_config_read_logging(int file,
     /* try to create path if not exist */
     g_create_path(lc->log_file);
 
+#ifdef LOG_PER_LOGGER_LEVEL
+    int len;
+    struct log_logger_level *logger;
+
     list_clear(param_v);
     list_clear(param_n);
     g_snprintf(section_name, 511, "%s%s", section_prefix, SESMAN_CFG_LOGGING_LOGGER);
     file_read_section(file, section_name, param_n, param_v);
     for (i = 0; i < param_n->count; i++)
     {
-        logger = (struct log_logger_level*)g_malloc(sizeof(struct log_logger_level), 1);
+        logger = (struct log_logger_level *)g_malloc(sizeof(struct log_logger_level), 1);
         list_add_item(lc->per_logger_level, (tbus) logger);
         logger->log_level = internal_log_text2level((char *)list_get_item(param_v, i));
 
         g_strncpy(logger->logger_name, (char *)list_get_item(param_n, i), LOGGER_NAME_SIZE);
         logger->logger_name[LOGGER_NAME_SIZE] = '\0';
         len = g_strlen(logger->logger_name);
-        if(len >= 2 
-                && logger->logger_name[len-2] == '(' 
-                && logger->logger_name[len-1] == ')' )
+        if (len >= 2
+                && logger->logger_name[len - 2] == '('
+                && logger->logger_name[len - 1] == ')' )
         {
             logger->logger_type = LOG_TYPE_FUNCTION;
-            logger->logger_name[len-2] = '\0';
+            logger->logger_name[len - 2] = '\0';
         }
         else
         {
             logger->logger_type = LOG_TYPE_FILE;
         }
     }
+#endif
 
     list_delete(param_v);
     list_delete(param_n);
@@ -405,26 +408,29 @@ void
 internal_log_config_dump(struct log_config *config)
 {
     char str_level[20];
+#ifdef LOG_PER_LOGGER_LEVEL
     struct log_logger_level* logger;
     int i;
+#endif
 
     g_printf("logging configuration:\r\n");
     internal_log_lvl2str(config->log_level, str_level);
     g_printf("\tLogFile:       %s\r\n", config->log_file);
     g_printf("\tLogLevel:      %s\r\n", str_level);
-    
+
     internal_log_lvl2str(config->console_level, str_level);
     g_printf("\tEnableConsole: %s\r\n", (config->enable_console ? "true" : "false"));
     g_printf("\tConsoleLevel:  %s\r\n", str_level);
-    
+
     internal_log_lvl2str(config->syslog_level, str_level);
     g_printf("\tEnableSyslog:  %s\r\n", (config->enable_syslog ? "true" : "false"));
     g_printf("\tSyslogLevel:   %s\r\n", str_level);
-    
+
+#ifdef LOG_PER_LOGGER_LEVEL
     g_printf("per logger configuration:\r\n");
     for (i = 0; i < config->per_logger_level->count; i++)
     {
-        logger = (struct log_logger_level*)list_get_item(config->per_logger_level, i);
+        logger = (struct log_logger_level *)list_get_item(config->per_logger_level, i);
         internal_log_lvl2str(logger->log_level, str_level);
         g_printf("\t%-*s: %s\r\n", LOGGER_NAME_SIZE, logger->logger_name, str_level);
     }
@@ -432,9 +438,10 @@ internal_log_config_dump(struct log_config *config)
     {
         g_printf("\tNone\r\n");
     }
+#endif
 }
 
-struct log_config*
+struct log_config *
 internalInitAndAllocStruct(void)
 {
     struct log_config *ret = g_new0(struct log_config, 1);
@@ -482,35 +489,82 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
     dest->enable_pid = src->enable_pid;
     for (i = 0; i < src->per_logger_level->count; ++i)
     {
-        struct log_logger_level *dst_logger = 
-                (struct log_logger_level*)g_malloc(sizeof(struct log_logger_level), 1);
-        
-        g_memcpy(dst_logger, 
-                 (struct log_logger_level*) list_get_item(src->per_logger_level, i), 
+        struct log_logger_level *dst_logger =
+            (struct log_logger_level *)g_malloc(sizeof(struct log_logger_level), 1);
+
+        g_memcpy(dst_logger,
+                 (struct log_logger_level *) list_get_item(src->per_logger_level, i),
                  sizeof(struct log_logger_level));
-                 
+
         list_add_item(dest->per_logger_level, (tbus) dst_logger);
     }
+}
+
+bool_t
+internal_log_is_enabled_for_level(const enum logLevels log_level,
+                                  const bool_t override_destination_level)
+{
+    /* Is log initialized? */
+    if (g_staticLogConfig == NULL)
+    {
+        return 0;
+    }
+
+    /* Is there at least one log destination which will accept the message based on the log level? */
+    return (g_staticLogConfig->fd >= 0
+            && (override_destination_level || log_level <= g_staticLogConfig->log_level))
+           || (g_staticLogConfig->enable_syslog
+               && (override_destination_level || log_level <= g_staticLogConfig->syslog_level))
+           || (g_staticLogConfig->enable_console
+               && (override_destination_level || log_level <= g_staticLogConfig->console_level));
+}
+
+bool_t
+internal_log_location_overrides_level(const char *function_name,
+                                      const char *file_name,
+                                      const enum logLevels log_level)
+{
+    struct log_logger_level *logger = NULL;
+    int i;
+
+    if (g_staticLogConfig == NULL)
+    {
+        return 0;
+    }
+    for (i = 0; i < g_staticLogConfig->per_logger_level->count; i++)
+    {
+        logger = (struct log_logger_level *)list_get_item(g_staticLogConfig->per_logger_level, i);
+
+        if ((logger->logger_type == LOG_TYPE_FILE
+                && 0 == g_strncmp(logger->logger_name, file_name, LOGGER_NAME_SIZE))
+                || (logger->logger_type == LOG_TYPE_FUNCTION
+                    && 0 == g_strncmp(logger->logger_name, function_name, LOGGER_NAME_SIZE)))
+        {
+            return (log_level <= logger->log_level);
+        }
+    }
+
+    return 0;
 }
 
 /*
  * Here below the public functions
  */
 
-struct log_config*
-log_config_init_from_config(const char *iniFilename, 
-                            const char *applicationName, 
+struct log_config *
+log_config_init_from_config(const char *iniFilename,
+                            const char *applicationName,
                             const char *section_prefix)
 {
     int fd;
-    struct log_config* config;
+    struct log_config *config;
 
     if (applicationName == NULL)
     {
         g_writeln("Programming error your application name cannot be null");
         return NULL;
     }
-    
+
     if (iniFilename == NULL)
     {
         g_writeln("The inifile is null to log_config_init_from_config!");
@@ -534,7 +588,7 @@ log_config_init_from_config(const char *iniFilename,
 }
 
 enum logReturns
-log_config_free(struct log_config* config)
+log_config_free(struct log_config *config)
 {
     if (config != NULL)
     {
@@ -574,7 +628,7 @@ log_start_from_param(const struct log_config *src_log_config)
             return LOG_ERROR_MALLOC;
         }
         internal_log_config_copy(g_staticLogConfig, src_log_config);
-        
+
         ret = internal_log_start(g_staticLogConfig);
         if (ret != LOG_STARTUP_OK)
         {
@@ -637,51 +691,196 @@ log_end(void)
     return ret;
 }
 
+/*****************************************************************************/
+/* produce a hex dump */
 enum logReturns
-log_message_with_location(const char *function_name, 
-                          const char *file_name, 
-                          const int line_number, 
-                          const enum logLevels level, 
-                          const char *msg, 
+log_hexdump_with_location(const char *function_name,
+                          const char *file_name,
+                          const int line_number,
+                          const enum logLevels log_level,
+                          const char *message,
+                          const char *src,
+                          int len)
+{
+    unsigned char *line;
+    int i;
+    int dump_number_lines;
+    int dump_line_length;
+    int dump_length;
+    int dump_offset;
+    int thisline;
+    int offset;
+    char *dump_buffer;
+    enum logReturns rv;
+    bool_t override_destination_level = 0;
+
+    /* Start the dump on a new line so that the first line of the dump is
+       aligned to the first column instead of to after the log message
+       preamble (eg. time, log level, ...)
+    */
+#define HEX_DUMP_SOURCE_BYTES_PER_LINE (16)
+#ifdef _WIN32
+#define HEX_DUMP_HEADER ("%s Hex Dump:\r\n")
+#define HEX_DUMP_NEWLINE_SIZE (2)
+#else
+#ifdef _MACOS
+#define HEX_DUMP_HEADER ("%s Hex Dump:\r")
+#define HEX_DUMP_NEWLINE_SIZE (1)
+#else
+#define HEX_DUMP_HEADER ("%s Hex Dump:\n")
+#define HEX_DUMP_NEWLINE_SIZE (1)
+#endif
+#endif
+#define HEX_DUMP_HEADER_SIZE (sizeof(HEX_DUMP_HEADER) - 1)
+
+    override_destination_level = internal_log_location_overrides_level(
+        function_name,
+        file_name,
+        log_level);
+    if (!internal_log_is_enabled_for_level(log_level, override_destination_level))
+    {
+        return LOG_STARTUP_OK;
+    }
+
+    dump_line_length = (4 + 3             /* = 4 offset + 3 space */
+                        + ((2 + 1) * HEX_DUMP_SOURCE_BYTES_PER_LINE)  /* + (2 hex char + 1 space) per source byte */
+                        + 2 /* + 2 space */
+                        + HEX_DUMP_SOURCE_BYTES_PER_LINE
+                        + HEX_DUMP_NEWLINE_SIZE);
+
+    dump_number_lines = (len / HEX_DUMP_SOURCE_BYTES_PER_LINE) + 1; /* +1 to round up */
+    dump_length = (dump_number_lines *dump_line_length    /* hex dump lines */
+                   + HEX_DUMP_HEADER_SIZE
+                   + 1);    /* terminating NULL */
+    dump_buffer = (char *)g_malloc(dump_length, 1);
+    if (dump_buffer == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_WARNING, 
+                  "Failed to allocate buffer for hex dump of size %d", 
+                  dump_length);
+        return LOG_ERROR_MALLOC;
+    }
+    
+    line = (unsigned char *)src;
+    offset = 0;
+
+    g_memcpy(dump_buffer, HEX_DUMP_HEADER, HEX_DUMP_HEADER_SIZE);
+    dump_offset = HEX_DUMP_HEADER_SIZE;
+
+    while (offset < len)
+    {
+        g_sprintf(dump_buffer + dump_offset, "%04x   ", offset);
+        dump_offset += 7;
+        thisline = len - offset;
+
+        if (thisline > HEX_DUMP_SOURCE_BYTES_PER_LINE)
+        {
+            thisline = HEX_DUMP_SOURCE_BYTES_PER_LINE;
+        }
+
+        for (i = 0; i < thisline; i++)
+        {
+            g_sprintf(dump_buffer + dump_offset, "%02x ", line[i]);
+            dump_offset += 3;
+        }
+
+        for (; i < HEX_DUMP_SOURCE_BYTES_PER_LINE; i++)
+        {
+            dump_buffer[dump_offset++] = ' ';
+            dump_buffer[dump_offset++] = ' ';
+            dump_buffer[dump_offset++] = ' ';
+        }
+
+        dump_buffer[dump_offset++] = ' ';
+        dump_buffer[dump_offset++] = ' ';
+
+        for (i = 0; i < thisline; i++)
+        {
+            dump_buffer[dump_offset++] = (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.';
+        }
+
+        for (; i < HEX_DUMP_SOURCE_BYTES_PER_LINE; i++)
+        {
+            dump_buffer[dump_offset++] = ' ';
+        }
+
+#ifdef _WIN32
+        dump_buffer[dump_offset++] = '\r';
+        dump_buffer[dump_offset++] = '\n';
+#else
+#ifdef _MACOS
+        dump_buffer[dump_offset++] = '\r';
+#else
+        dump_buffer[dump_offset++] = '\n';
+#endif
+#endif
+        offset += thisline;
+        line += thisline;
+
+
+        if ((dump_offset - HEX_DUMP_HEADER_SIZE) % dump_line_length != 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_ERROR,
+                      "BUG: dump_offset (%d) at the end of a line is not a "
+                      "multiple of the line length (%d)",
+                      dump_offset, dump_line_length);
+        }
+
+    }
+    if (dump_offset > dump_length)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "BUG: dump_offset (%d) is larger than the dump_buffer length (%d)",
+                  dump_offset, dump_length);
+        g_free(dump_buffer);
+        return LOG_GENERAL_ERROR;
+    }
+
+    /* replace the last new line with the end of the string since log_message
+       will add a new line */
+    dump_buffer[dump_offset - HEX_DUMP_NEWLINE_SIZE] = '\0';
+
+    rv = log_message_with_location(function_name, file_name, line_number,
+                                   log_level, dump_buffer, message);
+    g_free(dump_buffer);
+    return rv;
+}
+
+enum logReturns
+log_message_with_location(const char *function_name,
+                          const char *file_name,
+                          const int line_number,
+                          const enum logLevels level,
+                          const char *msg,
                           ...)
 {
     va_list ap;
     enum logReturns rv;
     char buff[LOG_BUFFER_SIZE];
-    struct log_logger_level *logger;
-    int i;
-    bool_t force_log = 0;
-    
+    bool_t override_destination_level = 0;
+
     if (g_staticLogConfig == NULL)
     {
         g_writeln("The log reference is NULL - log not initialized properly "
-                  "when called from [%s(%s:%d)]", 
+                  "when called from [%s(%s:%d)]",
                   function_name, file_name, line_number);
         return LOG_ERROR_NO_CFG;
     }
-    for (i = 0; i < g_staticLogConfig->per_logger_level->count; i++)
-    {
-        logger = (struct log_logger_level *)list_get_item(g_staticLogConfig->per_logger_level, i);
 
-        if ((logger->logger_type == LOG_TYPE_FILE
-                && 0 == g_strncmp(logger->logger_name, file_name, LOGGER_NAME_SIZE))
-            || (logger->logger_type == LOG_TYPE_FUNCTION
-                && 0 == g_strncmp(logger->logger_name, function_name, LOGGER_NAME_SIZE)))
-        {
-            if(logger->log_level < level)
-            {
-                return LOG_STARTUP_OK;
-            }
-            force_log = 1;
-            break;
-        }
+    override_destination_level = internal_log_location_overrides_level(
+        function_name,
+        file_name,
+        level);
+    if (!internal_log_is_enabled_for_level(level, override_destination_level))
+    {
+        return LOG_STARTUP_OK;
     }
-    
-    g_snprintf(buff, LOG_BUFFER_SIZE, "[%s(%s:%d)] %s", 
+
+    g_snprintf(buff, LOG_BUFFER_SIZE, "[%s(%s:%d)] %s",
                function_name, file_name, line_number, msg);
 
     va_start(ap, msg);
-    rv = internal_log_message(level, force_log, buff, ap);
+    rv = internal_log_message(level, override_destination_level, buff, ap);
     va_end(ap);
     return rv;
 }
@@ -691,7 +890,7 @@ log_message(const enum logLevels lvl, const char *msg, ...)
 {
     va_list ap;
     enum logReturns rv;
-    
+
     va_start(ap, msg);
     rv = internal_log_message(lvl, 0, msg, ap);
     va_end(ap);
@@ -699,7 +898,10 @@ log_message(const enum logLevels lvl, const char *msg, ...)
 }
 
 enum logReturns
-internal_log_message(const enum logLevels lvl, bool_t force_log, const char *msg, va_list ap)
+internal_log_message(const enum logLevels lvl,
+                     bool_t override_destination_level,
+                     const char *msg,
+                     va_list ap)
 {
     char buff[LOG_BUFFER_SIZE + 31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
     int len = 0;
@@ -714,16 +916,14 @@ internal_log_message(const enum logLevels lvl, bool_t force_log, const char *msg
         return LOG_ERROR_NO_CFG;
     }
 
-    if (0 > g_staticLogConfig->fd 
+    if (0 > g_staticLogConfig->fd
             && g_staticLogConfig->enable_syslog == 0
             && g_staticLogConfig->enable_console == 0)
     {
         return LOG_ERROR_FILE_NOT_OPEN;
     }
 
-    if (!((g_staticLogConfig->fd >= 0 && (force_log || lvl <= g_staticLogConfig->log_level))
-            || (g_staticLogConfig->enable_syslog && (force_log || lvl <= g_staticLogConfig->syslog_level))
-            || (g_staticLogConfig->enable_console && (force_log || lvl <= g_staticLogConfig->console_level))))
+    if (!internal_log_is_enabled_for_level(lvl, override_destination_level))
     {
         return LOG_STARTUP_OK;
     }
@@ -737,7 +937,7 @@ internal_log_message(const enum logLevels lvl, bool_t force_log, const char *msg
 
     if (g_staticLogConfig->enable_pid)
     {
-        g_snprintf(buff + 28, LOG_BUFFER_SIZE, "[pid:%d tid:%lld] ", 
+        g_snprintf(buff + 28, LOG_BUFFER_SIZE, "[pid:%d tid:%lld] ",
                    g_getpid(), (long long) tc_get_threadid());
         len = g_strlen(buff + 28);
     }
@@ -765,20 +965,20 @@ internal_log_message(const enum logLevels lvl, bool_t force_log, const char *msg
 #endif
 #endif
 
-    if (g_staticLogConfig->enable_syslog && (force_log || lvl <= g_staticLogConfig->syslog_level))
+    if (g_staticLogConfig->enable_syslog && (override_destination_level || lvl <= g_staticLogConfig->syslog_level))
     {
         /* log to syslog*/
         /* %s fix compiler warning 'not a string literal' */
         syslog(internal_log_xrdp2syslog(lvl), "%s", buff + 20);
     }
 
-    if (g_staticLogConfig->enable_console && (force_log || lvl <= g_staticLogConfig->console_level))
+    if (g_staticLogConfig->enable_console && (override_destination_level || lvl <= g_staticLogConfig->console_level))
     {
         /* log to console */
         g_printf("%s", buff);
     }
 
-    if (force_log || lvl <= g_staticLogConfig->log_level)
+    if (override_destination_level || lvl <= g_staticLogConfig->log_level)
     {
         /* log to application logfile */
 #ifdef LOG_ENABLE_THREAD

@@ -57,8 +57,8 @@ xcommon_error_handler(Display *dis, XErrorEvent *xer)
 
     XGetErrorText(dis, xer->error_code, text, 255);
     LOG_DEVEL(LOG_LEVEL_ERROR, "X error [%s](%d) opcodes %d/%d "
-          "resource 0x%lx", text, xer->error_code,
-          xer->request_code, xer->minor_code, xer->resourceid);
+              "resource 0x%lx", text, xer->error_code,
+              xer->request_code, xer->minor_code, xer->resourceid);
     return 0;
 }
 
@@ -186,7 +186,7 @@ xcommon_check_wait_objs(void)
         if ((clip_rv == 1) && (rail_rv == 1))
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xcommon_check_wait_objs unknown xevent type %d",
-                     xevent.type);
+                      xevent.type);
         }
     }
     return 0;

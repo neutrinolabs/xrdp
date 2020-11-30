@@ -56,7 +56,9 @@ int main(int argc, char **argv)
 
     sock = g_tcp_socket();
     if (sock < 0)
+    {
         return 1;
+    }
 
     s = scp_session_create();
     c = scp_connection_create(sock);

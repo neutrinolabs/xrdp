@@ -43,7 +43,7 @@ sig_sesman_shutdown(int sig)
 {
     char pid_file[256];
 
-    log_message(LOG_LEVEL_INFO, "shutting down sesman %d", 1);
+    LOG(LOG_LEVEL_INFO, "shutting down sesman %d", 1);
 
     if (g_getpid() != g_pid)
     {
@@ -69,7 +69,7 @@ sig_sesman_reload_cfg(int sig)
     struct config_sesman *cfg;
     char cfg_file[256];
 
-    log_message(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
+    LOG(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
 
     if (g_getpid() != g_pid)
     {
@@ -81,13 +81,13 @@ sig_sesman_reload_cfg(int sig)
 
     if (0 == cfg)
     {
-        log_message(LOG_LEVEL_ERROR, "error creating new config:  - keeping old cfg");
+        LOG(LOG_LEVEL_ERROR, "error creating new config:  - keeping old cfg");
         return;
     }
 
     if (config_read(cfg) != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
+        LOG(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
         g_free(cfg);
         return;
     }
@@ -121,7 +121,7 @@ sig_sesman_reload_cfg(int sig)
         }
     }
 
-    log_message(LOG_LEVEL_INFO, "configuration reloaded, log subsystem restarted");
+    LOG(LOG_LEVEL_INFO, "configuration reloaded, log subsystem restarted");
 }
 
 /******************************************************************************/

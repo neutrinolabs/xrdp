@@ -68,7 +68,7 @@ int in_string16(struct stream *s, char str[], const char *param)
         if (sz > STRING16_MAX_LEN)
         {
             LOG(LOG_LEVEL_WARNING,
-                        "connection aborted: %s too long (%u chars)",  param, sz);
+                "connection aborted: %s too long (%u chars)",  param, sz);
             result = 0;
         }
         else
@@ -308,7 +308,7 @@ scp_v0s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
         if (0 != scp_session_set_bpp(session, (tui8)bpp))
         {
             LOG(LOG_LEVEL_WARNING,
-                        "connection aborted: unsupported bpp: %d", (tui8)bpp);
+                "connection aborted: unsupported bpp: %d", (tui8)bpp);
             return SCP_SERVER_STATE_INTERNAL_ERR;
         }
 

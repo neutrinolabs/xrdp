@@ -25,7 +25,7 @@
 #include "list.h"
 
 /* logging buffer size */
-#define LOG_BUFFER_SIZE      1024
+#define LOG_BUFFER_SIZE      8192
 #define LOGGER_NAME_SIZE     50
 
 /* logging levels */
@@ -65,6 +65,8 @@ enum logReturns
 /*#define LOG_ENABLE_THREAD*/
 
 #ifdef XRDP_DEBUG
+
+#define LOG_PER_LOGGER_LEVEL
 
 /**
  * @brief Logging macro for messages that are for an XRDP developper to 
@@ -107,9 +109,26 @@ enum logReturns
  */
 #define LOG(log_level, args...) \
         log_message_with_location(__func__, __FILE__, __LINE__, log_level, args);
+
+/**
+ * @brief Logging macro for logging the contents of a byte array using a hex 
+ * dump format.
+ * 
+ * Note: the logging function calls are removed when XRDP_DEBUG is NOT defined.
+ * 
+ * @param log_level, the log level
+ * @param message, a message prefix for the hex dump. Note: no printf like
+ *          formatting is done to this message.
+ * @param buffer, a pointer to the byte array to log as a hex dump
+ * @param length, the length of the byte array to log
+ */
+#define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)  \
+        log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length);
+
 #else
 #define LOG_DEVEL(log_level, args...)
 #define LOG(log_level, args...) log_message(log_level, args);
+#define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)
 #endif
 
 enum log_logger_type
@@ -205,6 +224,26 @@ internal_log_config_dump(struct log_config *config);
 enum logReturns
 internal_log_message(const enum logLevels lvl, bool_t force_log, const char *msg, va_list args);
 
+/**
+ * @param log_level, the log level
+ * @param override_destination_level, if true then the destinatino log level is ignored.
+ * @return true if at least one log destination will accept a message logged at the given level.
+ */
+bool_t
+internal_log_is_enabled_for_level(const enum logLevels log_level,
+                                  const bool_t override_destination_level);
+   
+/**
+ * @param function_name, the function name (typicaly the __func__ macro)
+ * @param file_name, the file name (typicaly the __FILE__ macro)
+ * @param log_level, the log level
+ * @return true if the logger location overrides the destination log levels
+ */
+bool_t
+internal_log_location_overrides_level(const char *function_name, 
+                                      const char *file_name,
+                                      const enum logLevels log_level);
+
 /*End of internal functions*/
 #endif
 
@@ -289,6 +328,15 @@ log_message_with_location(const char *function_name,
                           const enum logLevels lvl, 
                           const char *msg, 
                           ...) printflike(5, 6);
+
+enum logReturns
+log_hexdump_with_location(const char *function_name, 
+                          const char *file_name, 
+                          const int line_number, 
+                          const enum logLevels log_level, 
+                          const char *msg, 
+                          const char *p, 
+                          int len);
 
 /**
  * This function returns the configured file name for the logfile

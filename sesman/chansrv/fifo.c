@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
- /* FIFO implementation to store a pointer to a user struct */
+/* FIFO implementation to store a pointer to a user struct */
 
 /* module based logging */
 #if defined(HAVE_CONFIG_H)
@@ -39,7 +39,7 @@
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 int
-fifo_init(FIFO* fp, int num_entries)
+fifo_init(FIFO *fp, int num_entries)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "entered");
 
@@ -51,7 +51,9 @@ fifo_init(FIFO* fp, int num_entries)
     }
 
     if (num_entries < 1)
+    {
         num_entries = 10;
+    }
 
     fp->rd_ptr = 0;
     fp->wr_ptr = 0;
@@ -61,7 +63,7 @@ fifo_init(FIFO* fp, int num_entries)
     {
         fp->entries = num_entries;
         LOG_DEVEL(LOG_LEVEL_DEBUG, "FIFO created; rd_ptr=%d wr_ptr=%d entries=%d",
-                      fp->rd_ptr, fp->wr_ptr, fp->entries);
+                  fp->rd_ptr, fp->wr_ptr, fp->entries);
         return 0;
     }
     else
@@ -80,7 +82,7 @@ fifo_init(FIFO* fp, int num_entries)
  * @return 0 on success, -1 on error
  *****************************************************************************/
 int
-fifo_deinit(FIFO* fp)
+fifo_deinit(FIFO *fp)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "entered");
 
@@ -110,7 +112,7 @@ fifo_deinit(FIFO* fp)
  * @return 1 if FIFO is empty, 0 otherwise
  *****************************************************************************/
 int
-fifo_is_empty(FIFO* fp)
+fifo_is_empty(FIFO *fp)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "entered");
 
@@ -133,9 +135,9 @@ fifo_is_empty(FIFO* fp)
  *****************************************************************************/
 
 int
-fifo_insert(FIFO* fp, void* data)
+fifo_insert(FIFO *fp, void *data)
 {
-    long* lp;
+    long *lp;
     int   next_val; /* next value for wr_ptr */
     int   i;
 
@@ -149,7 +151,9 @@ fifo_insert(FIFO* fp, void* data)
 
     next_val = fp->wr_ptr + 1;
     if (next_val >= fp->entries)
+    {
         next_val = 0;
+    }
 
     if (next_val == fp->rd_ptr)
     {
@@ -168,7 +172,9 @@ fifo_insert(FIFO* fp, void* data)
         {
             lp[i] = fp->user_data[fp->rd_ptr++];
             if (fp->rd_ptr >= fp->entries)
+            {
                 fp->rd_ptr = 0;
+            }
         }
 
         /* update pointers */
@@ -197,8 +203,8 @@ fifo_insert(FIFO* fp, void* data)
  *
  * @param data on success, NULL on error
  *****************************************************************************/
-void*
-fifo_remove(FIFO* fp)
+void *
+fifo_remove(FIFO *fp)
 {
     long data;
 
@@ -236,8 +242,8 @@ fifo_remove(FIFO* fp)
  *
  * @param data on success, NULL on error
  *****************************************************************************/
-void*
-fifo_peek(FIFO* fp)
+void *
+fifo_peek(FIFO *fp)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "entered");
 
