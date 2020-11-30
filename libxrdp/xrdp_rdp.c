@@ -99,8 +99,8 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             }
             else
             {
-                LOG(LOG_LEVEL_ALWAYS,"Warning: Your configured crypt level is "
-                          "undefined, 'high' will be used");
+                LOG(LOG_LEVEL_ALWAYS, "Warning: Your configured crypt level is "
+                    "undefined, 'high' will be used");
                 client_info->crypt_level = 3;
             }
         }
@@ -109,17 +109,17 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             client_info->channels_allowed = g_text2bool(value);
             if (client_info->channels_allowed == 0)
             {
-                LOG(LOG_LEVEL_DEBUG,"Info - All channels are disabled");
+                LOG(LOG_LEVEL_DEBUG, "Info - All channels are disabled");
             }
         }
         else if (g_strcasecmp(item, "allow_multimon") == 0)
-                {
-                    client_info->multimon = g_text2bool(value);
-                    if (client_info->multimon == 0)
-                    {
-                        LOG(LOG_LEVEL_DEBUG,"Info - Multi monitor server support disabled");
-                    }
-                }
+        {
+            client_info->multimon = g_text2bool(value);
+            if (client_info->multimon == 0)
+            {
+                LOG(LOG_LEVEL_DEBUG, "Info - Multi monitor server support disabled");
+            }
+        }
         else if (g_strcasecmp(item, "max_bpp") == 0)
         {
             client_info->max_bpp = g_atoi(value);
@@ -160,8 +160,8 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             }
             else
             {
-                LOG(LOG_LEVEL_ALWAYS,"Warning: Your configured fastpath level is "
-                          "undefined, fastpath will not be used");
+                LOG(LOG_LEVEL_ALWAYS, "Warning: Your configured fastpath level is "
+                    "undefined, fastpath will not be used");
                 client_info->use_fast_path = 0;
             }
         }
@@ -205,8 +205,8 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             else
             {
                 LOG(LOG_LEVEL_ERROR, "security_layer=%s is not "
-                            "recognized, will use security_layer=negotiate",
-                            value);
+                    "recognized, will use security_layer=negotiate",
+                    value);
                 client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
             }
         }
@@ -218,8 +218,8 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 /* default certificate path */
                 g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
                 LOG(LOG_LEVEL_INFO,
-                            "Using default X.509 certificate: %s",
-                            client_info->certificate);
+                    "Using default X.509 certificate: %s",
+                    client_info->certificate);
 
             }
             else if (value[0] != '/')
@@ -227,8 +227,8 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 /* default certificate path */
                 g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
                 LOG(LOG_LEVEL_WARNING,
-                            "X.509 certificate should use absolute path, using "
-                            "default instead: %s", client_info->certificate);
+                    "X.509 certificate should use absolute path, using "
+                    "default instead: %s", client_info->certificate);
             }
             else
             {
@@ -236,10 +236,10 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 g_strncpy(client_info->certificate, value, 1023);
             }
 
-	    if (!g_file_readable(client_info->certificate))
+            if (!g_file_readable(client_info->certificate))
             {
                 LOG(LOG_LEVEL_ERROR, "Cannot read certificate file %s: %s",
-                            client_info->certificate, g_get_strerror());
+                    client_info->certificate, g_get_strerror());
             }
         }
         else if (g_strcasecmp(item, "key_file") == 0)
@@ -250,15 +250,15 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 /* default key_file path */
                 g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
                 LOG(LOG_LEVEL_INFO, "Using default X.509 key file: %s",
-                            client_info->key_file);
+                    client_info->key_file);
             }
             else if (value[0] != '/')
             {
                 /* default key_file path */
                 g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
                 LOG(LOG_LEVEL_WARNING,
-                            "X.509 key file should use absolute path, using "
-                            "default instead: %s", client_info->key_file);
+                    "X.509 key file should use absolute path, using "
+                    "default instead: %s", client_info->key_file);
             }
             else
             {
@@ -269,7 +269,7 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             if (!g_file_readable(client_info->key_file))
             {
                 LOG(LOG_LEVEL_ERROR, "Cannot read private key file %s: %s",
-                            client_info->key_file, g_get_strerror());
+                    client_info->key_file, g_get_strerror());
             }
         }
         else if (g_strcasecmp(item, "domain_user_separator") == 0
@@ -304,9 +304,9 @@ cpuid(tui32 info, tui32 *eax, tui32 *ebx, tui32 *ecx, tui32 *edx)
         "cpuid;"
         "xchg %%rbx, %%rsi;"
 #endif
-    : "=a" (*eax), "=S" (*ebx), "=c" (*ecx), "=d" (*edx)
-            : "0" (info)
-        );
+        : "=a" (*eax), "=S" (*ebx), "=c" (*ecx), "=d" (*edx)
+        : "0" (info)
+    );
 #endif
 #endif
 }
@@ -575,8 +575,8 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         if (compress_rdp(mppc_enc, (tui8 *)(s->p + 18), tocomplen))
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "mppc_encode ok flags 0x%x bytes_in_opb %d historyOffset %d "
-                   "tocomplen %d", mppc_enc->flags, mppc_enc->bytes_in_opb,
-                   mppc_enc->historyOffset, tocomplen);
+                      "tocomplen %d", mppc_enc->flags, mppc_enc->bytes_in_opb,
+                      mppc_enc->historyOffset, tocomplen);
 
             clen = mppc_enc->bytes_in_opb + 18;
             pdulen = clen;
@@ -602,8 +602,8 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         else
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_rdp_send_data: mppc_encode not ok "
-                   "type %d flags %d", mppc_enc->protocol_type,
-                   mppc_enc->flags);
+                      "type %d flags %d", mppc_enc->protocol_type,
+                      mppc_enc->flags);
         }
     }
 
@@ -731,7 +731,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
         }
         send_len = no_comp_len;
         LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_rdp_send_fastpath: no_comp_len %d fragmentation %d",
-               no_comp_len, fragmentation);
+                  no_comp_len, fragmentation);
         if ((compression != 0) && (no_comp_len > header_bytes + 16))
         {
             to_comp_len = no_comp_len - header_bytes;
@@ -741,13 +741,13 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
             {
                 comp_len = mppc_enc->bytes_in_opb + header_bytes;
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_rdp_send_fastpath: no_comp_len %d "
-                       "comp_len %d", no_comp_len, comp_len);
+                          "comp_len %d", no_comp_len, comp_len);
                 send_len = comp_len;
                 comp_type = mppc_enc->flags;
                 /* outputBuffer has 64 bytes preceding it */
                 g_memset(&comp_s, 0, sizeof(comp_s));
                 comp_s.data = mppc_enc->outputBuffer -
-                                         (rdp_offset + header_bytes);
+                              (rdp_offset + header_bytes);
                 comp_s.p = comp_s.data + rdp_offset;
                 comp_s.end = comp_s.p + send_len;
                 comp_s.size = send_len;
@@ -758,13 +758,13 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
             else
             {
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_rdp_send_fastpath: mppc_encode not ok "
-                       "type %d flags %d", mppc_enc->protocol_type,
-                       mppc_enc->flags);
+                          "type %d flags %d", mppc_enc->protocol_type,
+                          mppc_enc->flags);
             }
         }
         updateHeader = (updateCode & 15) |
-                      ((fragmentation & 3) << 4) |
-                      ((compression & 3) << 6);
+                       ((fragmentation & 3) << 4) |
+                       ((compression & 3) << 6);
         out_uint8(&send_s, updateHeader);
         if (compression != 0)
         {
@@ -870,20 +870,20 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         LOG(LOG_LEVEL_INFO,
-                    "TLS connection established from %s port %s: %s with cipher %s",
-                    self->client_info.client_addr,
-                    self->client_info.client_port,
-                    iso->trans->ssl_protocol,
-                    iso->trans->cipher_name);
+            "TLS connection established from %s port %s: %s with cipher %s",
+            self->client_info.client_addr,
+            self->client_info.client_port,
+            iso->trans->ssl_protocol,
+            iso->trans->cipher_name);
     }
     /* log non-TLS connections */
     else
     {
         LOG(LOG_LEVEL_INFO,
-                    "Non-TLS connection established from %s port %s: "
-                    "encrypted with standard RDP security",
-                    self->client_info.client_addr,
-                    self->client_info.client_port);
+            "Non-TLS connection established from %s port %s: "
+            "encrypted with standard RDP security",
+            self->client_info.client_addr,
+            self->client_info.client_port);
     }
 
     return 0;
@@ -929,7 +929,7 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
         in_sint16_le(s, param1);
         in_sint16_le(s, param2);
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_process_data_input event %4.4x flags %4.4x param1 %d "
-               "param2 %d time %d", msg_type, device_flags, param1, param2, time);
+                  "param2 %d time %d", msg_type, device_flags, param1, param2, time);
 
         if (self->session->callback != 0)
         {
@@ -1216,9 +1216,9 @@ xrdp_rdp_process_frame_ack(struct xrdp_rdp *self, struct stream *s)
 {
     int frame_id;
 
-      LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_process_frame_ack:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_process_frame_ack:");
     in_uint32_le(s, frame_id);
-      LOG_DEVEL(LOG_LEVEL_TRACE, "  frame_id %d", frame_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  frame_id %d", frame_id);
     if (self->session->callback != 0)
     {
         /* call to xrdp_wm.c : callback */
@@ -1412,7 +1412,7 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
 
     if (s_check_rem_out(s, data_bytes))
     {
-        out_uint8a(s, data, data_bytes); 
+        out_uint8a(s, data, data_bytes);
     }
     else
     {

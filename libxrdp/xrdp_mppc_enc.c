@@ -41,7 +41,7 @@
 
 #define CRC_INIT 0xFFFF
 #define CRC(_crcval, _newchar) _crcval = \
-    ((_crcval) >> 8) ^ g_crc_table[((_crcval) ^ (_newchar)) & 0x00ff]
+        ((_crcval) >> 8) ^ g_crc_table[((_crcval) ^ (_newchar)) & 0x00ff]
 
 /* CRC16 defs */
 static const tui16 g_crc_table[256] =
@@ -84,336 +84,336 @@ static const tui16 g_crc_table[256] =
                      insert 2 bits into outputBuffer
 ******************************************************************************/
 #define insert_2_bits(_data) \
-do \
-{ \
-    if ((bits_left >= 3) && (bits_left <= 8)) \
+    do \
     { \
-        i = bits_left - 2; \
-        outputBuffer[opb_index] |= _data << i; \
-        bits_left = i; \
-    } \
-    else \
-    { \
-        i = 2 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= _data >> i; \
-        outputBuffer[opb_index] |= _data << j; \
-        bits_left = j; \
-    } \
-} while (0)
+        if ((bits_left >= 3) && (bits_left <= 8)) \
+        { \
+            i = bits_left - 2; \
+            outputBuffer[opb_index] |= _data << i; \
+            bits_left = i; \
+        } \
+        else \
+        { \
+            i = 2 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= _data >> i; \
+            outputBuffer[opb_index] |= _data << j; \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 3 bits into outputBuffer
 ******************************************************************************/
 #define insert_3_bits(_data) \
-do \
-{ \
-    if ((bits_left >= 4) && (bits_left <= 8)) \
+    do \
     { \
-        i = bits_left - 3; \
-        outputBuffer[opb_index] |= _data << i; \
-        bits_left = i; \
-    } \
-    else \
-    { \
-        i = 3 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= _data >> i; \
-        outputBuffer[opb_index] |= _data << j; \
-        bits_left = j; \
-    } \
-} while (0)
+        if ((bits_left >= 4) && (bits_left <= 8)) \
+        { \
+            i = bits_left - 3; \
+            outputBuffer[opb_index] |= _data << i; \
+            bits_left = i; \
+        } \
+        else \
+        { \
+            i = 3 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= _data >> i; \
+            outputBuffer[opb_index] |= _data << j; \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 4 bits into outputBuffer
 ******************************************************************************/
 #define insert_4_bits(_data) \
-do \
-{ \
-    if ((bits_left >= 5) && (bits_left <= 8)) \
+    do \
     { \
-        i = bits_left - 4; \
-        outputBuffer[opb_index] |= _data << i; \
-        bits_left = i; \
-    } \
-    else \
-    { \
-        i = 4 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= _data >> i; \
-        outputBuffer[opb_index] |= _data << j; \
-        bits_left = j; \
-    } \
-} while (0)
+        if ((bits_left >= 5) && (bits_left <= 8)) \
+        { \
+            i = bits_left - 4; \
+            outputBuffer[opb_index] |= _data << i; \
+            bits_left = i; \
+        } \
+        else \
+        { \
+            i = 4 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= _data >> i; \
+            outputBuffer[opb_index] |= _data << j; \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 5 bits into outputBuffer
 ******************************************************************************/
 #define insert_5_bits(_data) \
-do \
-{ \
-    if ((bits_left >= 6) && (bits_left <= 8)) \
+    do \
     { \
-        i = bits_left - 5; \
-        outputBuffer[opb_index] |= _data << i; \
-        bits_left = i; \
-    } \
-    else \
-    { \
-        i = 5 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= _data >> i; \
-        outputBuffer[opb_index] |= _data << j; \
-        bits_left = j; \
-    } \
-} while (0)
+        if ((bits_left >= 6) && (bits_left <= 8)) \
+        { \
+            i = bits_left - 5; \
+            outputBuffer[opb_index] |= _data << i; \
+            bits_left = i; \
+        } \
+        else \
+        { \
+            i = 5 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= _data >> i; \
+            outputBuffer[opb_index] |= _data << j; \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 6 bits into outputBuffer
 ******************************************************************************/
 #define insert_6_bits(_data) \
-do \
-{ \
-    if ((bits_left >= 7) && (bits_left <= 8)) \
+    do \
     { \
-        i = bits_left - 6; \
-        outputBuffer[opb_index] |= (_data << i); \
-        bits_left = i; \
-    } \
-    else \
-    { \
-        i = 6 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (_data >> i); \
-        outputBuffer[opb_index] |= (_data << j); \
-        bits_left = j; \
-    } \
-} while (0)
+        if ((bits_left >= 7) && (bits_left <= 8)) \
+        { \
+            i = bits_left - 6; \
+            outputBuffer[opb_index] |= (_data << i); \
+            bits_left = i; \
+        } \
+        else \
+        { \
+            i = 6 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (_data >> i); \
+            outputBuffer[opb_index] |= (_data << j); \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 7 bits into outputBuffer
 ******************************************************************************/
 #define insert_7_bits(_data) \
-do \
-{ \
-    if (bits_left == 8) \
+    do \
     { \
-        outputBuffer[opb_index] |= _data << 1; \
-        bits_left = 1; \
-    } \
-    else \
-    { \
-        i = 7 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= _data >> i; \
-        outputBuffer[opb_index] |= _data << j; \
-        bits_left = j; \
-    } \
-} while (0)
+        if (bits_left == 8) \
+        { \
+            outputBuffer[opb_index] |= _data << 1; \
+            bits_left = 1; \
+        } \
+        else \
+        { \
+            i = 7 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= _data >> i; \
+            outputBuffer[opb_index] |= _data << j; \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 8 bits into outputBuffer
 ******************************************************************************/
 #define insert_8_bits(_data) \
-do \
-{ \
-    if (bits_left == 8) \
+    do \
     { \
-        outputBuffer[opb_index++] |= _data; \
-        bits_left = 8; \
-    } \
-    else \
-    { \
-        i = 8 - bits_left; \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= _data >> i; \
-        outputBuffer[opb_index] |= _data << j; \
-        bits_left = j; \
-    } \
-} while (0)
+        if (bits_left == 8) \
+        { \
+            outputBuffer[opb_index++] |= _data; \
+            bits_left = 8; \
+        } \
+        else \
+        { \
+            i = 8 - bits_left; \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= _data >> i; \
+            outputBuffer[opb_index] |= _data << j; \
+            bits_left = j; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 9 bits into outputBuffer
 ******************************************************************************/
 #define insert_9_bits(_data16) \
-do \
-{ \
-    i = 9 - bits_left; \
-    j = 8 - i; \
-    outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-    outputBuffer[opb_index] |= (char) (_data16 << j); \
-    bits_left = j; \
-    if (bits_left == 0) \
+    do \
     { \
-        opb_index++; \
-        bits_left = 8; \
-    } \
-} while (0)
+        i = 9 - bits_left; \
+        j = 8 - i; \
+        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+        outputBuffer[opb_index] |= (char) (_data16 << j); \
+        bits_left = j; \
+        if (bits_left == 0) \
+        { \
+            opb_index++; \
+            bits_left = 8; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 10 bits into outputBuffer
 ******************************************************************************/
 #define insert_10_bits(_data16) \
-do \
-{ \
-    i = 10 - bits_left; \
-    if ((bits_left >= 3) && (bits_left <= 8)) \
+    do \
     { \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index] |= (char) (_data16 << j); \
-        bits_left = j; \
-    } \
-    else \
-    { \
-        j = i - 8; \
-        k = 8 - j; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index++] |= (char) (_data16 >> j); \
-        outputBuffer[opb_index] |= (char) (_data16 << k); \
-        bits_left = k; \
-    } \
-} while (0)
+        i = 10 - bits_left; \
+        if ((bits_left >= 3) && (bits_left <= 8)) \
+        { \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index] |= (char) (_data16 << j); \
+            bits_left = j; \
+        } \
+        else \
+        { \
+            j = i - 8; \
+            k = 8 - j; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index++] |= (char) (_data16 >> j); \
+            outputBuffer[opb_index] |= (char) (_data16 << k); \
+            bits_left = k; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 11 bits into outputBuffer
 ******************************************************************************/
 #define insert_11_bits(_data16) \
-do \
-{ \
-    i = 11 - bits_left; \
-    if ((bits_left >= 4) && (bits_left <= 8)) \
+    do \
     { \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index] |= (char) (_data16 << j); \
-        bits_left = j; \
-    } \
-    else \
-    { \
-        j = i - 8;                                \
-        k = 8 - j; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index++] |= (char) (_data16 >> j); \
-        outputBuffer[opb_index] |= (char) (_data16 << k); \
-        bits_left = k; \
-    } \
-} while (0)
+        i = 11 - bits_left; \
+        if ((bits_left >= 4) && (bits_left <= 8)) \
+        { \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index] |= (char) (_data16 << j); \
+            bits_left = j; \
+        } \
+        else \
+        { \
+            j = i - 8;                                \
+            k = 8 - j; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index++] |= (char) (_data16 >> j); \
+            outputBuffer[opb_index] |= (char) (_data16 << k); \
+            bits_left = k; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 12 bits into outputBuffer
 ******************************************************************************/
 #define insert_12_bits(_data16) \
-do \
-{ \
-    i = 12 - bits_left; \
-    if ((bits_left >= 5) && (bits_left <= 8)) \
+    do \
     { \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index] |= (char) (_data16 << j); \
-        bits_left = j; \
-    } \
-    else \
-    { \
-        j = i - 8; \
-        k = 8 - j; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index++] |= (char) (_data16 >> j); \
-        outputBuffer[opb_index] |= (char) (_data16 << k); \
-        bits_left = k; \
-    } \
-} while (0)
+        i = 12 - bits_left; \
+        if ((bits_left >= 5) && (bits_left <= 8)) \
+        { \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index] |= (char) (_data16 << j); \
+            bits_left = j; \
+        } \
+        else \
+        { \
+            j = i - 8; \
+            k = 8 - j; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index++] |= (char) (_data16 >> j); \
+            outputBuffer[opb_index] |= (char) (_data16 << k); \
+            bits_left = k; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 13 bits into outputBuffer
 ******************************************************************************/
 #define insert_13_bits(_data16) \
-do \
-{ \
-    i = 13 - bits_left; \
-    if ((bits_left >= 6) && (bits_left <= 8)) \
+    do \
     { \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index] |= (char) (_data16 << j); \
-        bits_left = j; \
-    } \
-    else \
-    { \
-        j = i - 8; \
-        k = 8 - j; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index++] |= (char) (_data16 >> j); \
-        outputBuffer[opb_index] |= (char) (_data16 << k); \
-        bits_left = k; \
-    } \
-} while (0)
+        i = 13 - bits_left; \
+        if ((bits_left >= 6) && (bits_left <= 8)) \
+        { \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index] |= (char) (_data16 << j); \
+            bits_left = j; \
+        } \
+        else \
+        { \
+            j = i - 8; \
+            k = 8 - j; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index++] |= (char) (_data16 >> j); \
+            outputBuffer[opb_index] |= (char) (_data16 << k); \
+            bits_left = k; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 14 bits into outputBuffer
 ******************************************************************************/
 #define insert_14_bits(_data16) \
-do \
-{ \
-    i = 14 - bits_left; \
-    if ((bits_left >= 7) && (bits_left <= 8)) \
+    do \
     { \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index] |= (char) (_data16 << j); \
-        bits_left = j; \
-    } \
-    else \
-    { \
-        j = i - 8; \
-        k = 8 - j; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index++] |= (char) (_data16 >> j); \
-        outputBuffer[opb_index] |= (char) (_data16 << k); \
-        bits_left = k; \
-    } \
-} while (0)
+        i = 14 - bits_left; \
+        if ((bits_left >= 7) && (bits_left <= 8)) \
+        { \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index] |= (char) (_data16 << j); \
+            bits_left = j; \
+        } \
+        else \
+        { \
+            j = i - 8; \
+            k = 8 - j; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index++] |= (char) (_data16 >> j); \
+            outputBuffer[opb_index] |= (char) (_data16 << k); \
+            bits_left = k; \
+        } \
+    } while (0)
 
 /*****************************************************************************
                      insert 15 bits into outputBuffer
 ******************************************************************************/
 #define insert_15_bits(_data16) \
-do \
-{ \
-    i = 15 - bits_left; \
-    if (bits_left == 8) \
+    do \
     { \
-        j = 8 - i; \
-        outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-        outputBuffer[opb_index] |= (char) (_data16 << j); \
-        bits_left = j; \
-    } \
-    else \
+        i = 15 - bits_left; \
+        if (bits_left == 8) \
+        { \
+            j = 8 - i; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index] |= (char) (_data16 << j); \
+            bits_left = j; \
+        } \
+        else \
+        { \
+            j = i - 8; \
+            k = 8 - j; \
+            outputBuffer[opb_index++] |= (char) (_data16 >> i); \
+            outputBuffer[opb_index++] |= (char) (_data16 >> j); \
+            outputBuffer[opb_index] |= (char) (_data16 << k); \
+            bits_left = k; \
+        } \
+    } while (0)
+
+/*****************************************************************************
+                     insert 16 bits into outputBuffer
+******************************************************************************/
+#define insert_16_bits(_data16) \
+    do \
     { \
+        i = 16 - bits_left; \
         j = i - 8; \
         k = 8 - j; \
         outputBuffer[opb_index++] |= (char) (_data16 >> i); \
         outputBuffer[opb_index++] |= (char) (_data16 >> j); \
         outputBuffer[opb_index] |= (char) (_data16 << k); \
         bits_left = k; \
-    } \
-} while (0)
-
-/*****************************************************************************
-                     insert 16 bits into outputBuffer
-******************************************************************************/
-#define insert_16_bits(_data16) \
-do \
-{ \
-    i = 16 - bits_left; \
-    j = i - 8; \
-    k = 8 - j; \
-    outputBuffer[opb_index++] |= (char) (_data16 >> i); \
-    outputBuffer[opb_index++] |= (char) (_data16 >> j); \
-    outputBuffer[opb_index] |= (char) (_data16 << k); \
-    bits_left = k; \
-} while (0)
+    } while (0)
 
 /**
  * Initialize mppc_enc structure
@@ -670,8 +670,8 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 
         /* double check that we have a pattern match */
         if ((*cptr1 != *cptr2) ||
-            (*(cptr1 + 1) != *(cptr2 + 1)) ||
-            (*(cptr1 + 2) != *(cptr2 + 2)))
+                (*(cptr1 + 1) != *(cptr2 + 1)) ||
+                (*(cptr1 + 2) != *(cptr2 + 2)))
         {
             /* no match found; encode literal byte */
             data = *cptr1;
@@ -703,7 +703,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
         }
         saved_ctr = ctr + lom;
         LOG_DEVEL(LOG_LEVEL_TRACE, "<%ld: %u,%d> ",  (historyPointer + ctr) - hbuf_start,
-              copy_offset, lom);
+                  copy_offset, lom);
 
         /* compute CRC for matching segment and store in hash table */
 
@@ -984,7 +984,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "\n");
 
-      LOG_DEVEL(LOG_LEVEL_TRACE, "compression ratio: %f", (float) len / (float) enc->bytes_in_opb);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "compression ratio: %f", (float) len / (float) enc->bytes_in_opb);
 
     return 1;
 }

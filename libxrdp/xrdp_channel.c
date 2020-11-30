@@ -138,10 +138,10 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
      *
      *   That's flag makes MSTSC crash when using RAIL channel.
      */
-//    if (channel->flags & XR_CHANNEL_OPTION_SHOW_PROTOCOL)
-//    {
-//        flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
-//    }
+    //    if (channel->flags & XR_CHANNEL_OPTION_SHOW_PROTOCOL)
+    //    {
+    //        flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+    //    }
 
     out_uint32_le(s, flags);
 
@@ -301,7 +301,7 @@ drdynvc_process_open_channel_response(struct xrdp_channel *self,
     }
     in_uint32_le(s, creation_status);
     LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_open_channel_response: chan_id 0x%x "
-             "creation_status %d", chan_id, creation_status);
+              "creation_status %d", chan_id, creation_status);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
@@ -336,7 +336,7 @@ drdynvc_process_close_channel_response(struct xrdp_channel *self,
     {
         return 1;
     }
-      LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_close_channel_response: chan_id 0x%x", chan_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_close_channel_response: chan_id 0x%x", chan_id);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
@@ -393,7 +393,7 @@ drdynvc_process_data_first(struct xrdp_channel *self,
         in_uint32_le(s, total_bytes);
     }
     bytes = (int) (s->end - s->p);
-      LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_data_first: bytes %d total_bytes %d", bytes, total_bytes);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_data_first: bytes %d total_bytes %d", bytes, total_bytes);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
@@ -423,7 +423,7 @@ drdynvc_process_data(struct xrdp_channel *self,
         return 1;
     }
     bytes = (int) (s->end - s->p);
-      LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_data: bytes %d", bytes);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_data: bytes %d", bytes);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
@@ -457,7 +457,7 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
     in_uint32_le(s, total_length);
     in_uint32_le(s, flags);
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: total_length %d flags 0x%8.8x",
-             total_length, flags);
+              total_length, flags);
     ls = NULL;
     switch (flags & 3)
     {
@@ -504,7 +504,7 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
         return 1;
     }
     in_uint8(ls, cmd); /* read command */
-      LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: cmd 0x%x", cmd);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: cmd 0x%x", cmd);
     rv = 1;
     switch (cmd & 0xf0)
     {
@@ -528,7 +528,7 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
                       "command 0x%x", cmd);
             break;
     }
-      LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: rv %d", rv);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: rv %d", rv);
     return rv;
 }
 
@@ -726,7 +726,7 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
         return 1;
     }
     if ((self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN) &&
-        (self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN_SENT))
+            (self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN_SENT))
     {
         /* not open */
         return 1;

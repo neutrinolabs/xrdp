@@ -74,11 +74,11 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
             if (self->requestedProtocol & PROTOCOL_SSL)
             {
                 if (!g_file_readable(client_info->certificate) ||
-                    !g_file_readable(client_info->key_file))
+                        !g_file_readable(client_info->key_file))
                 {
                     /* certificate or privkey is not readable */
                     LOG(LOG_LEVEL_DEBUG, "No readable certificates or "
-                                "private keys, cannot accept TLS connections");
+                        "private keys, cannot accept TLS connections");
                     self->failureCode = SSL_CERT_NOT_ON_SERVER;
                     rv = 1; /* error */
                 }
@@ -97,8 +97,8 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         case PROTOCOL_HYBRID_EX:
         default:
             if ((self->requestedProtocol & PROTOCOL_SSL) &&
-                g_file_readable(client_info->certificate) &&
-                g_file_readable(client_info->key_file))
+                    g_file_readable(client_info->certificate) &&
+                    g_file_readable(client_info->key_file))
             {
                 /* that's a patch since we don't support CredSSP for now */
                 self->selectedProtocol = PROTOCOL_SSL;
@@ -111,7 +111,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
     }
 
     LOG(LOG_LEVEL_DEBUG, "Security layer: requested %d, selected %d",
-                self->requestedProtocol, self->selectedProtocol);
+        self->requestedProtocol, self->selectedProtocol);
     return rv;
 }
 
@@ -132,14 +132,14 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
     in_uint8(s, flags);
     if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, flags: %x",flags);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, flags: %x", flags);
         return 1;
     }
 
     in_uint16_le(s, len);
     if (len != 8)
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, length: %x",len);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, length: %x", len);
         return 1;
     }
 
@@ -147,7 +147,7 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
     if (self->requestedProtocol > 0xb)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_iso_process_rdpNegReq: error, requestedProtocol: %x",
-                self->requestedProtocol);
+                  self->requestedProtocol);
         return 1;
     }
 
@@ -370,7 +370,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     if (len != expected_pdu_len)
     {
         LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_iso_incoming: X.224 CR-TPDU length exp %d got %d",
-                   expected_pdu_len, len);
+                  expected_pdu_len, len);
         return 1;
     }
 
@@ -401,10 +401,10 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 in_uint8s(s, 1 + 2 + 16 + 16);
                 break;
             case 'C': /* Cookie */
-                 /* The routingToken and cookie fields are both ASCII
-                  * strings starting with the word 'Cookie: ' and
-                  * ending with CR+LF. We ignore both, so we do
-                  * not need to distinguish them  */
+                /* The routingToken and cookie fields are both ASCII
+                 * strings starting with the word 'Cookie: ' and
+                 * ending with CR+LF. We ignore both, so we do
+                 * not need to distinguish them  */
                 while (s_check_rem(s, 1))
                 {
                     in_uint8(s, cc_type);

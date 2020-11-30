@@ -167,7 +167,7 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
 
     /* check if libpainter should be used for drawing, instead of orders */
     if (!(order_caps[TS_NEG_DSTBLT_INDEX] && order_caps[TS_NEG_PATBLT_INDEX] &&
-          order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
+            order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_order: not enough orders supported by client, using painter.");
         self->client_info.no_orders_supported = 1;
@@ -210,11 +210,11 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
     self->client_info.cache3_entries = i;
     in_uint16_le(s, self->client_info.cache3_size);
     LOG_DEVEL(LOG_LEVEL_TRACE, "cache1 entries %d size %d", self->client_info.cache1_entries,
-           self->client_info.cache1_size);
+              self->client_info.cache1_size);
     LOG_DEVEL(LOG_LEVEL_TRACE, "cache2 entries %d size %d", self->client_info.cache2_entries,
-           self->client_info.cache2_size);
+              self->client_info.cache2_size);
     LOG_DEVEL(LOG_LEVEL_TRACE, "cache3 entries %d size %d", self->client_info.cache3_entries,
-           self->client_info.cache3_size);
+              self->client_info.cache3_size);
     return 0;
 }
 
@@ -254,11 +254,11 @@ xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
     self->client_info.cache3_entries = i;
     self->client_info.cache3_size = 4096 * Bpp;
     LOG_DEVEL(LOG_LEVEL_TRACE, "cache1 entries %d size %d", self->client_info.cache1_entries,
-           self->client_info.cache1_size);
+              self->client_info.cache1_size);
     LOG_DEVEL(LOG_LEVEL_TRACE, "cache2 entries %d size %d", self->client_info.cache2_entries,
-           self->client_info.cache2_size);
+              self->client_info.cache2_size);
     LOG_DEVEL(LOG_LEVEL_TRACE, "cache3 entries %d size %d", self->client_info.cache3_entries,
-           self->client_info.cache3_size);
+              self->client_info.cache3_size);
     return 0;
 }
 
@@ -566,7 +566,7 @@ xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
     return 0;
 }
 
- /*****************************************************************************/
+/*****************************************************************************/
 static int
 xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 {
@@ -739,7 +739,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     }
 
     if (self->client_info.no_orders_supported &&
-        (self->client_info.offscreen_support_level != 0))
+            (self->client_info.offscreen_support_level != 0))
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_confirm_active: not enough orders "
                   "supported by client, client wants off screen bitmap but "
@@ -1042,12 +1042,12 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     /* send Monitor Layout PDU for dual monitor */
     if (self->client_info.monitorCount > 0 &&
-        self->client_info.multimon == 1)
+            self->client_info.multimon == 1)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending monitor layout pdu");
         if (xrdp_caps_send_monitorlayout(self) != 0)
         {
-          LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: error sending monitor layout pdu");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: error sending monitor layout pdu");
         }
     }
 

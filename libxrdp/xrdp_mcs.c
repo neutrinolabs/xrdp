@@ -164,12 +164,12 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
             in_uint16_be(s, userid);
             in_uint16_be(s, chanid);
-            LOG(LOG_LEVEL_DEBUG,"MCS_CJRQ - channel join request received");
+            LOG(LOG_LEVEL_DEBUG, "MCS_CJRQ - channel join request received");
             LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_recv  adding channel %4.4x", chanid);
 
             if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
             {
-                LOG(LOG_LEVEL_ERROR,"Non handled error from xrdp_mcs_send_cjcf") ;
+                LOG(LOG_LEVEL_ERROR, "Non handled error from xrdp_mcs_send_cjcf") ;
             }
 
             s = libxrdp_force_read(self->iso_layer->trans);
@@ -188,7 +188,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         }
         else
         {
-            LOG(LOG_LEVEL_DEBUG,"Received an unhandled appid:%d",appid);
+            LOG(LOG_LEVEL_DEBUG, "Received an unhandled appid:%d", appid);
         }
 
         break;
@@ -722,8 +722,8 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     int index;
     int channel;
     int gcc_size;
-    char* gcc_size_ptr;
-    char* ud_ptr;
+    char *gcc_size_ptr;
+    char *ud_ptr;
 
     num_channels = self->mcs_layer->channel_list->count;
     num_channels_even = num_channels + (num_channels & 1);
@@ -766,7 +766,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
-         /* RequestedProtocol */
+        /* RequestedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol);
     }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
@@ -883,7 +883,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     xrdp_iso_init(self->iso_layer, s);
     //TODO: we should calculate the whole length include MCS_CONNECT_RESPONSE
     xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE,
-            data_len > 0x80 ? data_len + 38 : data_len + 36);
+                            data_len > 0x80 ? data_len + 38 : data_len + 36);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_RESULT, 1);
     out_uint8(s, 0);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 1);
@@ -959,7 +959,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         }
 
         if (xrdp_mcs_send_cjcf(self, self->userid,
-                      self->userid + MCS_USERCHANNEL_BASE + index) != 0)
+                               self->userid + MCS_USERCHANNEL_BASE + index) != 0)
         {
             return 1;
         }

@@ -179,7 +179,9 @@ xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self,
     }
 
     if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED))
+    {
         flags |= KBD_FLAG_EXT;
+    }
 
     xrdp_fastpath_session_callback(self, RDP_INPUT_SCANCODE,
                                    code, 0, flags, 0);
@@ -253,13 +255,13 @@ static int
 xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self,
                                  int eventFlags, struct stream *s)
 {
-   /*
-    * The eventCode bitfield (3 bits in size) MUST be set to
-    * FASTPATH_INPUT_EVENT_SYNC (3).
-    * The eventFlags bitfield (5 bits in size) contains flags
-    * indicating the "on"
-    * status of the keyboard toggle keys.
-    */
+    /*
+     * The eventCode bitfield (3 bits in size) MUST be set to
+     * FASTPATH_INPUT_EVENT_SYNC (3).
+     * The eventFlags bitfield (5 bits in size) contains flags
+     * indicating the "on"
+     * status of the keyboard toggle keys.
+     */
 
     xrdp_fastpath_session_callback(self, RDP_INPUT_SYNCHRONIZE,
                                    eventFlags, 0, 0, 0);
@@ -326,8 +328,8 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
         {
             case FASTPATH_INPUT_EVENT_SCANCODE:
                 if (xrdp_fastpath_process_EVENT_SCANCODE(self,
-                                                         eventFlags,
-                                                         s) != 0)
+                        eventFlags,
+                        s) != 0)
                 {
                     return 1;
                 }

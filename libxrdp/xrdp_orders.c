@@ -1640,20 +1640,20 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
 /*****************************************************************************/
 /* returns error */
 int
-xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
-                          int srcwidth, int srcrepeat, int* srctransform,
+xrdp_orders_composite_blt(struct xrdp_orders *self, int srcidx, int srcformat,
+                          int srcwidth, int srcrepeat, int *srctransform,
                           int mskflags, int mskidx, int mskformat,
                           int mskwidth, int mskrepeat, int op,
                           int srcx, int srcy, int mskx, int msky,
                           int dstx, int dsty, int width, int height,
                           int dstformat,
-                          struct xrdp_rect* rect)
+                          struct xrdp_rect *rect)
 {
     int order_flags;
     int vals[20];
     int present;
-    char* present_ptr;
-    char* order_flags_ptr;
+    char *present_ptr;
+    char *order_flags_ptr;
 
     if (xrdp_orders_check(self, 80) != 0)
     {
@@ -1670,7 +1670,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     {
         /* if clip is present, still check if it's needed */
         if (dstx < rect->left || dsty < rect->top ||
-            dstx + width > rect->right || dsty + height > rect->bottom)
+                dstx + width > rect->right || dsty + height > rect->bottom)
         {
             order_flags |= TS_BOUNDS;
             if (xrdp_orders_last_bounds(self, rect))
@@ -1717,7 +1717,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 3);
     if ((order_flags & TS_BOUNDS) &&
-        !(order_flags & TS_ZERO_BOUNDS_DELTAS))
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -2482,7 +2482,7 @@ xrdp_orders_cache_glyph(struct xrdp_orders *self,
 
 /*****************************************************************************/
 /* returns error */
-static int write_2byte_signed(struct stream * s, int value)
+static int write_2byte_signed(struct stream *s, int value)
 {
     unsigned char byte;
     int negative = 0;
@@ -2528,7 +2528,7 @@ static int write_2byte_signed(struct stream * s, int value)
 
 /*****************************************************************************/
 /* returns error */
-static int write_2byte_unsigned(struct stream * s, unsigned int value)
+static int write_2byte_unsigned(struct stream *s, unsigned int value)
 {
     unsigned char byte;
 
@@ -2594,9 +2594,9 @@ xrdp_orders_cache_glyph_v2(struct xrdp_orders *self,
 
     out_uint8(self->out_s, char_index);
     if (write_2byte_signed(self->out_s, font_char->offset) ||
-        write_2byte_signed(self->out_s, font_char->baseline) ||
-        write_2byte_unsigned(self->out_s, font_char->width) ||
-        write_2byte_unsigned(self->out_s, font_char->height))
+            write_2byte_signed(self->out_s, font_char->baseline) ||
+            write_2byte_unsigned(self->out_s, font_char->width) ||
+            write_2byte_unsigned(self->out_s, font_char->height))
     {
         return 1;
     }
@@ -2887,7 +2887,7 @@ xrdp_orders_send_as_rfx(struct xrdp_orders *self,
     }
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "width %d height %d rfx_min_pixel %d", width, height,
-                self->rfx_min_pixel);
+              self->rfx_min_pixel);
     if (width * height < self->rfx_min_pixel)
     {
         return 0;

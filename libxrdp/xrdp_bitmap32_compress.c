@@ -81,9 +81,9 @@ fsplit3(char *in_data, int start_line, int width, int e,
             rp |= (pixel <<  8) & 0xff000000;
             gp |= (pixel << 16) & 0xff000000;
             bp |= (pixel << 24) & 0xff000000;
-            *((int*)(r_data + out_index)) = rp;
-            *((int*)(g_data + out_index)) = gp;
-            *((int*)(b_data + out_index)) = bp;
+            *((int *)(r_data + out_index)) = rp;
+            *((int *)(g_data + out_index)) = gp;
+            *((int *)(b_data + out_index)) = bp;
             out_index += 4;
             index += 4;
         }
@@ -166,10 +166,10 @@ fsplit4(char *in_data, int start_line, int width, int e,
             rp |= (pixel <<  8) & 0xff000000;
             gp |= (pixel << 16) & 0xff000000;
             bp |= (pixel << 24) & 0xff000000;
-            *((int*)(a_data + out_index)) = ap;
-            *((int*)(r_data + out_index)) = rp;
-            *((int*)(g_data + out_index)) = gp;
-            *((int*)(b_data + out_index)) = bp;
+            *((int *)(a_data + out_index)) = ap;
+            *((int *)(r_data + out_index)) = rp;
+            *((int *)(g_data + out_index)) = gp;
+            *((int *)(b_data + out_index)) = bp;
             out_index += 4;
             index += 4;
         }
@@ -205,13 +205,13 @@ fsplit4(char *in_data, int start_line, int width, int e,
 
 /*****************************************************************************/
 #define DELTA_ONE \
-do { \
-    delta = src8[cx] - src8[0]; \
-    is_neg = (delta >> 7) & 1; \
-    dst8[cx] = (((delta ^ -is_neg) + is_neg) << 1) - is_neg; \
-    src8++; \
-    dst8++; \
-} while (0)
+    do { \
+        delta = src8[cx] - src8[0]; \
+        is_neg = (delta >> 7) & 1; \
+        dst8[cx] = (((delta ^ -is_neg) + is_neg) << 1) - is_neg; \
+        src8++; \
+        dst8++; \
+    } while (0)
 
 /*****************************************************************************/
 static int

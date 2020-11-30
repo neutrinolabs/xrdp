@@ -70,7 +70,7 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
     temp_buf = 0;
     if (e == 0)
     {
-        src_buf = (unsigned char*)in_data;
+        src_buf = (unsigned char *)in_data;
     }
     else
     {
@@ -97,15 +97,15 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
         }
         src_buf = (unsigned char *) temp_buf;
     }
-    dst_buf = (unsigned char*)(s->p);
+    dst_buf = (unsigned char *)(s->p);
     error = tjCompress(tj_han, src_buf, width + e, (width + e) * 4, height,
                        TJPF_XBGR, dst_buf, &cdata_bytes,
                        TJSAMP_420, quality, 0);
     if (error != 0)
     {
         LOG(LOG_LEVEL_ERROR,
-                    "xrdp_jpeg_compress: tjCompress error: %s",
-                    tjGetErrorStr());
+            "xrdp_jpeg_compress: tjCompress error: %s",
+            tjGetErrorStr());
     }
 
     s->p += cdata_bytes;
@@ -132,8 +132,8 @@ xrdp_codec_jpeg_compress(void *handle,
                          int   quality,  /* higher numbers compress less */
                          char *out_data, /* dest for jpg image */
                          int  *io_len    /* length of out_data and on return */
-                                         /* len of compressed data */
-                         )
+                         /* len of compressed data */
+                        )
 {
     tjhandle       tj_han;
     int            error;
@@ -185,12 +185,12 @@ xrdp_codec_jpeg_compress(void *handle,
                        TJSAMP_420, /* jpeg sub sample */
                        quality,    /* jpeg quality */
                        0           /* flags */
-                       );
+                      );
     if (error != 0)
     {
         LOG(LOG_LEVEL_ERROR,
-                    "xrdp_codec_jpeg_compress: tjCompress error: %s",
-                    tjGetErrorStr());
+            "xrdp_codec_jpeg_compress: tjCompress error: %s",
+            tjGetErrorStr());
     }
 
     *io_len = lio_len;
@@ -303,7 +303,7 @@ jp_do_compress(JOCTET *data, int width, int height, int bpp, int quality,
     jpeg_create_compress(&cinfo);
     memset(&md, 0, sizeof(md));
     md.cb = comp_data,
-       md.cb_bytes = *comp_data_bytes;
+    md.cb_bytes = *comp_data_bytes;
     cinfo.client_data = &md;
     memset(&dst_mgr, 0, sizeof(dst_mgr));
     dst_mgr.init_destination = my_init_destination;
