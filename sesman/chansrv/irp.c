@@ -38,7 +38,7 @@ IRP *g_irp_head = NULL;
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_new(void)
+IRP *devredir_irp_new(void)
 {
     IRP *irp;
     IRP *irp_last;
@@ -78,10 +78,10 @@ IRP * devredir_irp_new(void)
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_with_pathname_new(const char *pathname)
+IRP *devredir_irp_with_pathname_new(const char *pathname)
 {
     unsigned int len = g_strlen(pathname);
-    IRP * irp = devredir_irp_with_pathnamelen_new(len);
+    IRP *irp = devredir_irp_with_pathnamelen_new(len);
     if (irp != NULL)
     {
         g_strcpy(irp->pathname, pathname);
@@ -100,7 +100,7 @@ IRP * devredir_irp_with_pathname_new(const char *pathname)
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_with_pathnamelen_new(unsigned int pathnamelen)
+IRP *devredir_irp_with_pathnamelen_new(unsigned int pathnamelen)
 {
     IRP *irp;
     IRP *irp_last;
@@ -144,7 +144,9 @@ int devredir_irp_delete(IRP *irp)
     IRP *lirp = g_irp_head;
 
     if ((irp == NULL) || (lirp == NULL))
+    {
         return -1;
+    }
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "irp=%p completion_id=%d type=%d",
               irp, irp->CompletionId, irp->completion_type);
@@ -154,13 +156,17 @@ int devredir_irp_delete(IRP *irp)
     while (lirp)
     {
         if (lirp == irp)
+        {
             break;
+        }
 
         lirp = lirp->next;
     }
 
     if (lirp == NULL)
-        return -1; /* did not find specified irp */
+    {
+        return -1;    /* did not find specified irp */
+    }
 
     if (lirp->prev == NULL)
     {
@@ -220,7 +226,7 @@ IRP *devredir_irp_find(tui32 completion_id)
     return NULL;
 }
 
-IRP * devredir_irp_find_by_fileid(tui32 FileId)
+IRP *devredir_irp_find_by_fileid(tui32 FileId)
 {
     IRP *irp = g_irp_head;
 
@@ -243,14 +249,16 @@ IRP * devredir_irp_find_by_fileid(tui32 FileId)
  * Return last IRP in linked list
  *****************************************************************************/
 
-IRP * devredir_irp_get_last(void)
+IRP *devredir_irp_get_last(void)
 {
     IRP *irp = g_irp_head;
 
     while (irp)
     {
         if (irp->next == NULL)
+        {
             break;
+        }
 
         irp = irp->next;
     }

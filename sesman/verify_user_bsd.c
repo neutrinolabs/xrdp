@@ -43,7 +43,7 @@
 #define SECS_PER_DAY (24L*3600L)
 #endif
 
-extern struct config_sesman* g_cfg; /* in sesman.c */
+extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 /* returns boolean */
@@ -116,7 +116,7 @@ auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
  *
  */
 static int
-auth_account_disabled(struct spwd* stp)
+auth_account_disabled(struct spwd *stp)
 {
     return 0;
 }

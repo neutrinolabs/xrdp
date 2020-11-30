@@ -50,8 +50,8 @@ int sesman_listen_test(struct config_sesman *cfg)
         return 1;
     }
 
-    log_message(LOG_LEVEL_DEBUG, "Testing if xrdp-sesman can listen on %s port %s.",
-                                 cfg->listen_address, cfg->listen_port);
+    LOG(LOG_LEVEL_DEBUG, "Testing if xrdp-sesman can listen on %s port %s.",
+        cfg->listen_address, cfg->listen_port);
     g_tcp_set_non_blocking(sck);
     error = scp_tcp_bind(sck, cfg->listen_address, cfg->listen_port);
     if (error == 0)
@@ -96,7 +96,7 @@ sesman_main_loop(void)
     g_sck = g_tcp_socket();
     if (g_sck < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "error opening socket, g_tcp_socket() failed...");
+        LOG(LOG_LEVEL_ERROR, "error opening socket, g_tcp_socket() failed...");
         return 1;
     }
 
@@ -109,8 +109,8 @@ sesman_main_loop(void)
 
         if (error == 0)
         {
-            log_message(LOG_LEVEL_INFO, "listening to port %s on %s",
-                        g_cfg->listen_port, g_cfg->listen_address);
+            LOG(LOG_LEVEL_INFO, "listening to port %s on %s",
+                g_cfg->listen_port, g_cfg->listen_address);
             sck_obj = g_create_wait_obj_from_socket(g_sck, 0);
             cont = 1;
 
@@ -151,7 +151,7 @@ sesman_main_loop(void)
                     {
                         /* we've got a connection, so we pass it to scp code */
                         LOG_DEVEL(LOG_LEVEL_DEBUG, "new connection");
-                        scp_process_start((void*)(tintptr)in_sck);
+                        scp_process_start((void *)(tintptr)in_sck);
                         g_sck_close(in_sck);
                     }
                 }
@@ -161,16 +161,16 @@ sesman_main_loop(void)
         }
         else
         {
-            log_message(LOG_LEVEL_ERROR, "listen error %d (%s)",
-                        g_get_errno(), g_get_strerror());
+            LOG(LOG_LEVEL_ERROR, "listen error %d (%s)",
+                g_get_errno(), g_get_strerror());
             rv = 1;
         }
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "bind error on "
-                    "port '%s': %d (%s)", g_cfg->listen_port,
-                    g_get_errno(), g_get_strerror());
+        LOG(LOG_LEVEL_ERROR, "bind error on "
+            "port '%s': %d (%s)", g_cfg->listen_port,
+            g_get_errno(), g_get_strerror());
         rv = 1;
     }
     g_tcp_close(g_sck);
@@ -342,14 +342,14 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-    log_message(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
-    log_message(LOG_LEVEL_TRACE, "    listen_address    = %s", g_cfg->listen_address);
-    log_message(LOG_LEVEL_TRACE, "    listen_port       = %s", g_cfg->listen_port);
-    log_message(LOG_LEVEL_TRACE, "    enable_user_wm    = %d", g_cfg->enable_user_wm);
-    log_message(LOG_LEVEL_TRACE, "    default_wm        = %s", g_cfg->default_wm);
-    log_message(LOG_LEVEL_TRACE, "    user_wm           = %s", g_cfg->user_wm);
-    log_message(LOG_LEVEL_TRACE, "    reconnect_sh      = %s", g_cfg->reconnect_sh);
-    log_message(LOG_LEVEL_TRACE, "    auth_file_path    = %s", g_cfg->auth_file_path);
+    LOG(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
+    LOG(LOG_LEVEL_TRACE, "    listen_address    = %s", g_cfg->listen_address);
+    LOG(LOG_LEVEL_TRACE, "    listen_port       = %s", g_cfg->listen_port);
+    LOG(LOG_LEVEL_TRACE, "    enable_user_wm    = %d", g_cfg->enable_user_wm);
+    LOG(LOG_LEVEL_TRACE, "    default_wm        = %s", g_cfg->default_wm);
+    LOG(LOG_LEVEL_TRACE, "    user_wm           = %s", g_cfg->user_wm);
+    LOG(LOG_LEVEL_TRACE, "    reconnect_sh      = %s", g_cfg->reconnect_sh);
+    LOG(LOG_LEVEL_TRACE, "    auth_file_path    = %s", g_cfg->auth_file_path);
 
     if (daemon)
     {
@@ -381,8 +381,8 @@ main(int argc, char **argv)
         if (sesman_listen_test(g_cfg) != 0)
         {
 
-            log_message(LOG_LEVEL_ERROR, "Failed to start xrdp-sesman daemon, "
-                                         "possibly address already in use.");
+            LOG(LOG_LEVEL_ERROR, "Failed to start xrdp-sesman daemon, "
+                "possibly address already in use.");
             g_deinit();
             g_exit(1);
         }
@@ -419,9 +419,9 @@ main(int argc, char **argv)
 
         if (-1 == fd)
         {
-            log_message(LOG_LEVEL_ERROR,
-                        "error opening pid file[%s]: %s",
-                        pid_file, g_get_strerror());
+            LOG(LOG_LEVEL_ERROR,
+                "error opening pid file[%s]: %s",
+                pid_file, g_get_strerror());
             log_end();
             g_deinit();
             g_exit(1);
@@ -433,8 +433,8 @@ main(int argc, char **argv)
     }
 
     /* start program main loop */
-    log_message(LOG_LEVEL_INFO,
-                "starting xrdp-sesman with pid %d", g_pid);
+    LOG(LOG_LEVEL_INFO,
+        "starting xrdp-sesman with pid %d", g_pid);
 
     /* make sure the socket directory exists */
     g_mk_socket_path("xrdp-sesman");
@@ -444,7 +444,7 @@ main(int argc, char **argv)
     {
         if (!g_create_dir("/tmp/.X11-unix"))
         {
-            log_message(LOG_LEVEL_ERROR,
+            LOG(LOG_LEVEL_ERROR,
                 "sesman.c: error creating dir /tmp/.X11-unix");
         }
         g_chmod_hex("/tmp/.X11-unix", 0x1777);

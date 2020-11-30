@@ -71,8 +71,8 @@ scp_process_start(void *sck)
             break;
         case SCP_SERVER_STATE_START_MANAGE:
             /* starting a management session */
-            log_message(LOG_LEVEL_WARNING,
-                        "starting a sesman management session...");
+            LOG(LOG_LEVEL_WARNING,
+                "starting a sesman management session...");
             scp_v1_mng_process(&scon, sdata);
             break;
         case SCP_SERVER_STATE_VERSION_ERR:
@@ -80,21 +80,21 @@ scp_process_start(void *sck)
             /* an unknown scp version was requested, or the message sizes
                are inconsistent. Shut down the connection and log the
                fact */
-            log_message(LOG_LEVEL_WARNING,
-                        "protocol violation. connection refused.");
+            LOG(LOG_LEVEL_WARNING,
+                "protocol violation. connection refused.");
             break;
         case SCP_SERVER_STATE_NETWORK_ERR:
-            log_message(LOG_LEVEL_WARNING, "libscp network error.");
+            LOG(LOG_LEVEL_WARNING, "libscp network error.");
             break;
         case SCP_SERVER_STATE_SEQUENCE_ERR:
-            log_message(LOG_LEVEL_WARNING, "libscp sequence error.");
+            LOG(LOG_LEVEL_WARNING, "libscp sequence error.");
             break;
         case SCP_SERVER_STATE_INTERNAL_ERR:
             /* internal error occurred (eg. malloc() error, ecc.) */
-            log_message(LOG_LEVEL_ERROR, "libscp internal error occurred.");
+            LOG(LOG_LEVEL_ERROR, "libscp internal error occurred.");
             break;
         default:
-            log_message(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
+            LOG(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
             break;
     }
 

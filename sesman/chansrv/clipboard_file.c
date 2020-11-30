@@ -170,19 +170,19 @@ clipboard_get_file(const char *file, int bytes)
     if (g_directory_exist(full_fn))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] is a directory, "
-                   "not supported", full_fn);
+                  "not supported", full_fn);
         flags |= CB_FILE_ATTRIBUTE_DIRECTORY;
         return 1;
     }
     if (!g_file_exist(full_fn))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] does not exist",
-                   full_fn);
+                  full_fn);
         return 1;
     }
     else
     {
-        cfi = (struct cb_file_info*)g_malloc(sizeof(struct cb_file_info), 1);
+        cfi = (struct cb_file_info *)g_malloc(sizeof(struct cb_file_info), 1);
         list_add_item(g_files_list, (tintptr)cfi);
         g_strcpy(cfi->filename, filename);
         g_strcpy(cfi->pathname, pathname);
@@ -190,7 +190,7 @@ clipboard_get_file(const char *file, int bytes)
         cfi->flags = flags;
         cfi->time = (g_time1() + CB_EPOCH_DIFF) * 10000000LL;
         LOG_DEVEL(LOG_LEVEL_DEBUG, "ok filename [%s] pathname [%s] size [%d]",
-                    cfi->filename, cfi->pathname, cfi->size);
+                  cfi->filename, cfi->pathname, cfi->size);
     }
     return 0;
 }
@@ -253,8 +253,8 @@ clipboard_send_data_response_for_file(const char *data, int data_size)
     struct cb_file_info *cfi;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_file: data_size %d",
-                data_size);
-    //g_hexdump(data, data_size);
+              data_size);
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", data, data_size);
     if (g_files_list == 0)
     {
         g_files_list = list_create();
@@ -326,7 +326,7 @@ clipboard_send_file_size(int streamId, int lindex)
     }
     file_size = cfi->size;
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_file_size: streamId %d file_size %d",
-                streamId, file_size);
+              streamId, file_size);
     make_stream(s);
     init_stream(s, 8192);
     out_uint16_le(s, CB_FILECONTENTS_RESPONSE); /* 9 */
@@ -356,7 +356,7 @@ clipboard_request_file_size(int stream_id, int lindex)
     if (g_file_request_sent_type != 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_request_file_size: warning, still waiting "
-                   "for CB_FILECONTENTS_RESPONSE");
+                  "for CB_FILECONTENTS_RESPONSE");
     }
     make_stream(s);
     init_stream(s, 8192);
@@ -404,20 +404,20 @@ clipboard_send_file_data(int streamId, int lindex,
         return 1;
     }
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_file_data: streamId %d lindex %d "
-                "nPositionLow %d cbRequested %d", streamId, lindex,
-                nPositionLow, cbRequested);
+              "nPositionLow %d cbRequested %d", streamId, lindex,
+              nPositionLow, cbRequested);
     g_snprintf(full_fn, 255, "%s/%s", cfi->pathname, cfi->filename);
     fd = g_file_open_ex(full_fn, 1, 0, 0, 0);
     if (fd == -1)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: file open [%s] failed",
-                   full_fn);
+                  full_fn);
         return 1;
     }
     if (g_file_seek(fd, nPositionLow) < 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
-            "in file: %s", full_fn);
+                  "in file: %s", full_fn);
         g_file_close(fd);
         return 1;
     }
@@ -427,7 +427,7 @@ clipboard_send_file_data(int streamId, int lindex,
     if (size < 1)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: read error, want %d got %d",
-                   cbRequested, size);
+                  cbRequested, size);
         free_stream(s);
         g_file_close(fd);
         return 1;
@@ -457,12 +457,12 @@ clipboard_request_file_data(int stream_id, int lindex, int offset,
     int rv;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_request_file_data: stream_id=%d lindex=%d off=%d request_bytes=%d",
-               stream_id, lindex, offset, request_bytes);
+              stream_id, lindex, offset, request_bytes);
 
     if (g_file_request_sent_type != 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_request_file_data: warning, still waiting "
-                   "for CB_FILECONTENTS_RESPONSE");
+                  "for CB_FILECONTENTS_RESPONSE");
     }
     make_stream(s);
     init_stream(s, 8192);
@@ -500,7 +500,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     //int clipDataId;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_file_request:");
-    //g_hexdump(s->p, clip_msg_len);
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", s->p, clip_msg_len);
     in_uint32_le(s, streamId);
     in_uint32_le(s, lindex);
     in_uint32_le(s, dwFlags);
@@ -536,7 +536,7 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
         in_uint32_le(s, streamId);
         in_uint32_le(s, file_size);
         LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_file_response: streamId %d "
-                   "file_size %d", streamId, file_size);
+                  "file_size %d", streamId, file_size);
         xfuse_file_contents_size(streamId, file_size);
     }
     else if (g_file_request_sent_type == CB_FILECONTENTS_RANGE)
@@ -579,9 +579,9 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  flags 0x%8.8x", cfd->flags);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  fileAttributes 0x%8.8x", cfd->fileAttributes);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  lastWriteTime 0x%8.8x%8.8x", cfd->lastWriteTimeHigh,
-                cfd->lastWriteTimeLow);
+              cfd->lastWriteTimeLow);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  fileSize 0x%8.8x%8.8x", cfd->fileSizeHigh,
-                cfd->fileSizeLow);
+              cfd->fileSizeLow);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  num_chars %d cFileName [%s]", num_chars, cfd->cFileName);
     return 0;
 }
@@ -619,10 +619,10 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         g_memset(cfd, 0, sizeof(struct clip_file_desc));
         clipboard_c2s_in_file_info(s, cfd);
         if ((g_pos(cfd->cFileName, "\\") >= 0) ||
-            (cfd->fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
+                (cfd->fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: skipping directory not "
-                       "supported [%s]", cfd->cFileName);
+                      "supported [%s]", cfd->cFileName);
             continue;
         }
         if (xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex) == -1)

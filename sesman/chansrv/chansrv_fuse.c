@@ -41,60 +41,86 @@ char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 #include "chansrv_xfs.h"
 
 /* dummy calls when XRDP_FUSE is not defined */
-int xfuse_init(void)            { return 0; }
-int xfuse_deinit(void)          { return 0; }
-int xfuse_check_wait_objs(void) { return 0; }
-int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout) { return 0; }
-int xfuse_create_share(tui32 device_id, const char *dirname)                       { return 0; }
+int xfuse_init(void)
+{
+    return 0;
+}
+int xfuse_deinit(void)
+{
+    return 0;
+}
+int xfuse_check_wait_objs(void)
+{
+    return 0;
+}
+int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout)
+{
+    return 0;
+}
+int xfuse_create_share(tui32 device_id, const char *dirname)
+{
+    return 0;
+}
 void xfuse_delete_share(tui32 share_id) {}
-int xfuse_clear_clip_dir(void)  { return 0; }
-int xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)     { return 0; }
+int xfuse_clear_clip_dir(void)
+{
+    return 0;
+}
+int xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)
+{
+    return 0;
+}
 int xfuse_file_contents_size(int stream_id, int file_size)
-   { return 0; }
+{
+    return 0;
+}
 int xfuse_add_clip_dir_item(const char *filename,
-                            int flags, int size, int lindex) { return 0; }
+                            int flags, int size, int lindex)
+{
+    return 0;
+}
 
 void xfuse_devredir_cb_enum_dir_add_entry(
-                                 struct state_dirscan *fip,
-                                 const char *name,
-                                 const struct file_attr *fattr)
-   {}
+    struct state_dirscan *fip,
+    const char *name,
+    const struct file_attr *fattr)
+{}
 void xfuse_devredir_cb_enum_dir_done(struct state_dirscan *fip,
                                      enum NTSTATUS IoStatus)
-   {}
+{}
 void xfuse_devredir_cb_lookup_entry(struct state_lookup *fip,
                                     enum NTSTATUS IoStatus,
                                     const struct file_attr *file_info)
-   {}
+{}
 void xfuse_devredir_cb_setattr(struct state_setattr *fip,
                                enum NTSTATUS IoStatus)
-   {}
+{}
 void xfuse_devredir_cb_create_file(struct state_create *fip,
                                    enum NTSTATUS IoStatus,
                                    tui32 DeviceId, tui32 FileId)
-   {}
+{}
 void xfuse_devredir_cb_open_file(struct state_open *fip,
                                  enum NTSTATUS IoStatus,
                                  tui32 DeviceId, tui32 FileId)
-   {}
+{}
 void xfuse_devredir_cb_read_file(struct state_read *fip,
                                  enum NTSTATUS IoStatus,
                                  const char *buf, size_t length)
-   {}
+{}
 void xfuse_devredir_cb_write_file(
-                                 struct state_write *fip,
-                                 enum NTSTATUS IoStatus,
-                                 off_t offset,
-                                 size_t length)
-   {}
+    struct state_write *fip,
+    enum NTSTATUS IoStatus,
+    off_t offset,
+    size_t length)
+{}
 void xfuse_devredir_cb_rmdir_or_file(struct state_remove *fip,
                                      enum NTSTATUS IoStatus)
-   {}
+{}
 void xfuse_devredir_cb_rename_file(struct state_rename *fip,
                                    enum NTSTATUS IoStatus)
-   {}
+{}
 void xfuse_devredir_cb_file_close(struct state_close *fip)
-   {}
+{}
 
 #else
 
@@ -161,11 +187,11 @@ struct state_lookup
     fuse_req_t        req;        /* Original FUSE request from lookup  */
     fuse_ino_t        pinum;      /* inum of parent directory           */
     char              name[XFS_MAXFILENAMELEN];
-                                  /* Name to look up                    */
+    /* Name to look up                    */
     fuse_ino_t        existing_inum;
-                                  /* inum of an existing entry          */
+    /* inum of an existing entry          */
     tui32             existing_generation;
-                                  /* generation of the above            */
+    /* generation of the above            */
 };
 
 /*
@@ -200,7 +226,7 @@ struct state_create
     struct fuse_file_info fi;     /* File info struct passed to open    */
     fuse_ino_t        pinum;      /* inum of parent directory           */
     char              name[XFS_MAXFILENAMELEN];
-                                  /* Name of file in parent directory   */
+    /* Name of file in parent directory   */
     mode_t            mode;       /* Mode of file to create             */
 };
 
@@ -239,7 +265,7 @@ struct state_rename
     fuse_ino_t        pinum;      /* inum of parent of file             */
     fuse_ino_t        new_pinum;  /* inum of new parent of file         */
     char              name[XFS_MAXFILENAMELEN];
-                                  /* New name of file in new parent dir */
+    /* New name of file in new parent dir */
 };
 
 /*
@@ -257,11 +283,11 @@ struct xfuse_handle
     tui32 DeviceId;
     tui32 FileId;
     int   is_loc_resource; /* this is not a redirected resource */
-    
+
     /* a directory handle, if this xfuse_handle represents a directory.
      * NULL, if this xfuse_handle represents a file.
      *
-     * Note: when this xfuse_handle represents a directory, then the other 
+     * Note: when this xfuse_handle represents a directory, then the other
      *       fields of this structure contain invalid values.
      */
     struct xfs_dir_handle *dir_handle;
@@ -359,12 +385,12 @@ static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
 
 /* miscellaneous functions */
 static void xfs_inode_to_fuse_entry_param(const XFS_INODE *xinode,
-                                          struct fuse_entry_param *e);
+        struct fuse_entry_param *e);
 static void make_fuse_entry_reply(fuse_req_t req, const XFS_INODE *xinode);
 static void make_fuse_attr_reply(fuse_req_t req, const XFS_INODE *xinode);
 static const char *filename_on_device(const char *full_path);
 static void update_inode_file_attributes(const struct file_attr *fattr,
-                                         tui32 change_mask, XFS_INODE *xinode);
+        tui32 change_mask, XFS_INODE *xinode);
 static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name);
 
 /*****************************************************************************/
@@ -375,7 +401,7 @@ load_fuse_config(void)
 }
 
 /*****************************************************************************/
-XFUSE_HANDLE*
+XFUSE_HANDLE *
 xfuse_handle_create()
 {
     return g_new0(XFUSE_HANDLE, 1);
@@ -389,7 +415,7 @@ xfuse_handle_delete(XFUSE_HANDLE *self)
     {
         return;
     }
-    
+
     if (self->dir_handle != NULL)
     {
         free(self->dir_handle);
@@ -405,7 +431,7 @@ xfuse_handle_to_fuse_handle(XFUSE_HANDLE *self)
 }
 
 /*****************************************************************************/
-XFUSE_HANDLE*
+XFUSE_HANDLE *
 xfuse_handle_from_fuse_handle(uint64_t handle)
 {
     return (XFUSE_HANDLE *) (tintptr) handle;
@@ -460,7 +486,9 @@ xfuse_init(void)
 
     /* setup xrdp file system */
     if (xfuse_init_xrdp_fs())
+    {
         return -1;
+    }
 
     /* setup FUSE callbacks */
     g_memset(&g_xfuse_ops, 0, sizeof(g_xfuse_ops));
@@ -547,7 +575,9 @@ int xfuse_check_wait_objs(void)
     int               rval;
 
     if (g_ch == 0)
+    {
         return 0;
+    }
 
     if (g_tcp_select(g_fd, 0) & 1)
     {
@@ -555,13 +585,19 @@ int xfuse_check_wait_objs(void)
 
         rval = fuse_chan_recv(&tmpch, g_buffer, g_bufsize);
         if (rval == -EINTR)
+        {
             return -1;
+        }
 
         if (rval == -ENODEV)
+        {
             return -1;
+        }
 
         if (rval <= 0)
+        {
             return -1;
+        }
 
         fuse_session_process(g_se, g_buffer, rval, tmpch);
     }
@@ -580,7 +616,9 @@ int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout)
     int lcount;
 
     if (g_ch == 0)
+    {
         return 0;
+    }
 
     lcount = *count;
     objs[lcount] = g_fd;
@@ -604,7 +642,7 @@ int xfuse_create_share(tui32 device_id, const char *dirname)
     XFS_INODE  *xinode;
 
     if (dirname != NULL && strlen(dirname) > 0 &&
-        xfuse_init_xrdp_fs() == 0)
+            xfuse_init_xrdp_fs() == 0)
     {
         xinode = xfs_add_entry(g_xfs, FUSE_ROOT_ID, dirname, (0777 | S_IFDIR));
         if (xinode == NULL)
@@ -694,7 +732,7 @@ xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "requesting clipboard file data");
 
     clipboard_request_file_data(rli->stream_id, rli->lindex,
-                                    rli->off, rli->size);
+                                rli->off, rli->size);
 
     return 0;
 }
@@ -828,7 +866,7 @@ static int xfuse_init_xrdp_fs(void)
         {
             g_clipboard_inum = xino->inum;
             result = 0;
-         }
+        }
     }
     return result;
 }
@@ -863,9 +901,9 @@ static int xfuse_deinit_xrdp_fs(void)
  *****************************************************************************/
 
 void xfuse_devredir_cb_enum_dir_add_entry(
-                                 struct state_dirscan *fip,
-                                 const char *name,
-                                 const struct file_attr *fattr)
+    struct state_dirscan *fip,
+    const char *name,
+    const struct file_attr *fattr)
 {
     XFS_INODE *xinode = NULL;
 
@@ -947,9 +985,9 @@ void xfuse_devredir_cb_enum_dir_done(struct state_dirscan *fip,
     {
         struct fuse_file_info *fi = &fip->fi;
         XFUSE_HANDLE *xhandle = xfuse_handle_create();
-        
+
         if (xhandle == NULL
-            || (xhandle->dir_handle = xfs_opendir(g_xfs, fip->pinum)) == NULL)
+                || (xhandle->dir_handle = xfs_opendir(g_xfs, fip->pinum)) == NULL)
         {
             xfuse_handle_delete(xhandle);
             fuse_reply_err(fip->req, ENOMEM);
@@ -965,7 +1003,7 @@ void xfuse_devredir_cb_enum_dir_done(struct state_dirscan *fip,
 }
 
 /**
- * This routine is caused as a result of a devredir remote lookup 
+ * This routine is caused as a result of a devredir remote lookup
  * instigated by xfuse_cb_lookup()
  *****************************************************************************/
 
@@ -980,8 +1018,8 @@ void xfuse_devredir_cb_lookup_entry(struct state_lookup *fip,
         switch (IoStatus)
         {
             case STATUS_SHARING_VIOLATION:
-                /* This can happen when trying to read the attributes of
-                 * some system files (e.g. pagefile.sys) */
+            /* This can happen when trying to read the attributes of
+             * some system files (e.g. pagefile.sys) */
             case STATUS_ACCESS_DENIED:
                 fuse_reply_err(fip->req, EACCES);
                 break;
@@ -994,10 +1032,10 @@ void xfuse_devredir_cb_lookup_entry(struct state_lookup *fip,
 
             case STATUS_NO_SUCH_FILE:
                 /* Remove our copy, if any */
-                if (fip->existing_inum  && 
-                    (xinode = xfs_get(g_xfs, fip->existing_inum)) != NULL &&
-                     xinode->generation == fip->existing_generation)
-                { 
+                if (fip->existing_inum  &&
+                        (xinode = xfs_get(g_xfs, fip->existing_inum)) != NULL &&
+                        xinode->generation == fip->existing_generation)
+                {
                     xfs_remove_entry(g_xfs, fip->existing_inum);
                 }
                 fuse_reply_err(fip->req, ENOENT);
@@ -1024,7 +1062,7 @@ void xfuse_devredir_cb_lookup_entry(struct state_lookup *fip,
         {
             /* Is the existing file the same type ? */
             if ((xinode->mode & (S_IFREG | S_IFDIR)) ==
-                (file_info->mode & (S_IFREG | S_IFDIR)))
+                    (file_info->mode & (S_IFREG | S_IFDIR)))
             {
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "inode=%ld name=%s already exists in xrdp_fs as %ld",
                           fip->pinum, fip->name, xinode->inum);
@@ -1105,14 +1143,14 @@ void xfuse_devredir_cb_setattr(struct state_setattr *fip,
         switch (IoStatus)
         {
             case STATUS_SHARING_VIOLATION:
-                /* This can happen when trying to read the attributes of
-                 * some system files (e.g. pagefile.sys) */
+            /* This can happen when trying to read the attributes of
+             * some system files (e.g. pagefile.sys) */
             case STATUS_ACCESS_DENIED:
                 fuse_reply_err(fip->req, EACCES);
                 break;
 
             case STATUS_UNSUCCESSFUL:
-                /* Happens if we try to lookup an illegal filename */
+            /* Happens if we try to lookup an illegal filename */
             case STATUS_NO_SUCH_FILE:
                 fuse_reply_err(fip->req, ENOENT);
                 break;
@@ -1148,18 +1186,18 @@ void xfuse_devredir_cb_create_file(struct state_create *fip,
     {
         switch (IoStatus)
         {
-        case STATUS_ACCESS_DENIED:
-            fuse_reply_err(fip->req, EACCES);
-            break;
+            case STATUS_ACCESS_DENIED:
+                fuse_reply_err(fip->req, EACCES);
+                break;
 
-        case STATUS_OBJECT_NAME_INVALID:
-        case STATUS_OBJECT_NAME_NOT_FOUND:
-            fuse_reply_err(fip->req, ENOENT);
-            break;
+            case STATUS_OBJECT_NAME_INVALID:
+            case STATUS_OBJECT_NAME_NOT_FOUND:
+                fuse_reply_err(fip->req, ENOENT);
+                break;
 
-        default:
-            fuse_reply_err(fip->req, EIO);
-            break;
+            default:
+                fuse_reply_err(fip->req, EIO);
+                break;
         }
     }
     else
@@ -1250,18 +1288,18 @@ void xfuse_devredir_cb_open_file(struct state_open *fip,
     {
         switch (IoStatus)
         {
-        case STATUS_ACCESS_DENIED:
-            fuse_reply_err(fip->req, EACCES);
-            break;
+            case STATUS_ACCESS_DENIED:
+                fuse_reply_err(fip->req, EACCES);
+                break;
 
-        case STATUS_OBJECT_NAME_INVALID:
-        case STATUS_OBJECT_NAME_NOT_FOUND:
-            fuse_reply_err(fip->req, ENOENT);
-            break;
+            case STATUS_OBJECT_NAME_INVALID:
+            case STATUS_OBJECT_NAME_NOT_FOUND:
+                fuse_reply_err(fip->req, ENOENT);
+                break;
 
-        default:
-            fuse_reply_err(fip->req, EIO);
-            break;
+            default:
+                fuse_reply_err(fip->req, EIO);
+                break;
         }
     }
     else
@@ -1311,10 +1349,10 @@ void xfuse_devredir_cb_read_file(struct state_read *fip,
 }
 
 void xfuse_devredir_cb_write_file(
-                                 struct state_write *fip,
-                                 enum NTSTATUS IoStatus,
-                                 off_t offset,
-                                 size_t length)
+    struct state_write *fip,
+    enum NTSTATUS IoStatus,
+    off_t offset,
+    size_t length)
 {
     XFS_INODE   *xinode;
 
@@ -1381,7 +1419,7 @@ void xfuse_devredir_cb_rename_file(struct state_rename *fip,
         status =
             (IoStatus == STATUS_SHARING_VIOLATION) ? EBUSY  :
             (IoStatus == STATUS_ACCESS_DENIED)     ? EACCES :
-                /* default */                        EEXIST ;
+            /* default */                        EEXIST ;
     }
     else
     {
@@ -1480,7 +1518,7 @@ static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
                     fip->existing_generation = xinode->generation;
                 }
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "Looking up %s in %s on %d", name, cptr,
-                                                      parent_xinode->device_id);
+                          parent_xinode->device_id);
                 /*
                  * If this call succeeds, further request processing happens in
                  * xfuse_devredir_cb_lookup_entry()
@@ -1505,7 +1543,7 @@ static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
  *****************************************************************************/
 
 static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
-                            struct fuse_file_info *fi)
+                             struct fuse_file_info *fi)
 {
     XFS_INODE *xino;
 
@@ -1550,12 +1588,12 @@ static int xfuse_dirbuf_add1(fuse_req_t req, struct dirbuf1 *b,
      *    still returned."
      */
     len = fuse_add_direntry(req,
-                      &b->buf[b->len], /* index where new entry will be added to buf */
-                      sizeof(b->buf) - b->len,  /* Space left */
-                      xinode->name,             /* name of entry */
-                      &stbuf,                   /* file attributes */
-                      offset                    /* offset of next entry */
-                     );
+                            &b->buf[b->len], /* index where new entry will be added to buf */
+                            sizeof(b->buf) - b->len,  /* Space left */
+                            xinode->name,             /* name of entry */
+                            &stbuf,                   /* file attributes */
+                            offset                    /* offset of next entry */
+                           );
     if (len + b->len <= sizeof(b->buf))
     {
         /* Entry fitted in OK */
@@ -1589,7 +1627,7 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
         fuse_reply_err(req, ENOENT);
     }
     else if ((xhandle = xfuse_handle_from_fuse_handle(fi->fh)) == NULL
-              || (dh = xhandle->dir_handle) == NULL)
+             || (dh = xhandle->dir_handle) == NULL)
     {
         /* something seriously wrong somewhere! */
         fuse_reply_buf(req, 0, 0);
@@ -1723,7 +1761,7 @@ static void xfuse_cb_rename(fuse_req_t req,
               old_parent, old_name, new_parent, new_name);
 
     if (strlen(old_name) > XFS_MAXFILENAMELEN ||
-        strlen(new_name) > XFS_MAXFILENAMELEN)
+            strlen(new_name) > XFS_MAXFILENAMELEN)
     {
         fuse_reply_err(req, ENAMETOOLONG);
     }
@@ -1766,7 +1804,7 @@ static void xfuse_cb_rename(fuse_req_t req,
         struct state_rename *fip = g_new0(struct state_rename, 1);
         char *old_full_path = xfs_get_full_path(g_xfs, old_xinode->inum);
         char *new_full_path = get_name_for_entry_in_parent(new_parent,
-                                                           new_name);
+                              new_name);
 
         if (!old_full_path || !new_full_path || !fip)
         {
@@ -1967,10 +2005,10 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
 
         if (!full_path || !fip)
         {
-           LOG_DEVEL(LOG_LEVEL_ERROR, "system out of memory");
-           fuse_reply_err(req, ENOMEM);
-           free(fip);
-           free(full_path);
+            LOG_DEVEL(LOG_LEVEL_ERROR, "system out of memory");
+            fuse_reply_err(req, ENOMEM);
+            free(fip);
+            free(full_path);
         }
         else
         {
@@ -2201,7 +2239,7 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
     LOG_DEVEL(LOG_LEVEL_DEBUG, "entered: parent_inode=%ld, name=%s fi=%p",
               parent, name, fi);
 
-    xfuse_create_dir_or_file(req, parent, name, mode & ~S_IFDIR , fi);
+    xfuse_create_dir_or_file(req, parent, name, mode & ~S_IFDIR, fi);
 }
 
 /**
@@ -2249,13 +2287,13 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
         fuse_reply_err(req, EPERM);
     }
     else if ((to_set & FUSE_SET_ATTR_MODE) &&
-              (attr->st_mode & ~(0777 | S_IFDIR | S_IFREG)) != 0)
+             (attr->st_mode & ~(0777 | S_IFDIR | S_IFREG)) != 0)
     {
         /* We only support standard mode bits and S_IFDIR / S_IFREG */
         LOG_DEVEL(LOG_LEVEL_ERROR, "Asking for invalid mode bits 0%o to be set", attr->st_mode);
         fuse_reply_err(req, EINVAL);
     }
-    else    
+    else
     {
         struct file_attr attrs = {0};
         tui32 change_mask = 0;
@@ -2344,7 +2382,7 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
  *          to reply to FUSE immediately
  *****************************************************************************/
 static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
-                                  struct fuse_file_info *fi)
+                             struct fuse_file_info *fi)
 {
     XFS_INODE      *xinode;
     XFUSE_HANDLE   *xhandle;
@@ -2440,7 +2478,7 @@ static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
  *****************************************************************************/
 
 static void xfs_inode_to_fuse_entry_param(const XFS_INODE *xinode,
-                                          struct fuse_entry_param *e)
+        struct fuse_entry_param *e)
 {
     memset(e, 0, sizeof(*e));
     e->ino = xinode->inum;
@@ -2508,7 +2546,7 @@ static const char *filename_on_device(const char *full_path)
  * setattr devredir call
  */
 static void update_inode_file_attributes(const struct file_attr *fattr,
-                                         tui32 change_mask, XFS_INODE *xinode)
+        tui32 change_mask, XFS_INODE *xinode)
 {
     int updated = 0;
 
@@ -2551,8 +2589,8 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
 
     if ((result = xfs_get_full_path(g_xfs, parent)) != NULL)
     {
-        char * p = (char *) realloc(result,
-                                    strlen(result) + 1 + strlen(name) + 1);
+        char *p = (char *) realloc(result,
+                                   strlen(result) + 1 + strlen(name) + 1);
         if (p == NULL)
         {
             /* See cppcheck trac #9292 and #9437 */
