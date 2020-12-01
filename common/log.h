@@ -155,6 +155,7 @@ struct log_config
     int enable_syslog;
     enum logLevels syslog_level;
     struct list *per_logger_level;
+    int dump_on_start;
     int enable_pid;
     pthread_mutex_t log_lock;
     pthread_mutexattr_t log_lock_attr;
@@ -267,6 +268,16 @@ log_start(const char *iniFile, const char *applicationName);
  */
 enum logReturns
 log_start_from_param(const struct log_config *src_log_config);
+
+/**
+ * Sets up a suitable log config for writing to the console only
+ * (i.e. for a utility)
+ *
+ * The config can be customised by the caller before calling
+ * log_start_from_param()
+ */
+struct log_config*
+log_config_init_for_console(enum logLevels lvl);
 
 /**
  * Read configuration from a file and store the values in the returned 
