@@ -572,7 +572,7 @@ internal_log_location_overrides_level(const char *function_name,
  */
 
 struct log_config *
-log_config_init_for_console(enum logLevels lvl)
+log_config_init_for_console(enum logLevels lvl, const char *override_name)
 {
     struct log_config *config = internalInitAndAllocStruct();
 
@@ -580,7 +580,14 @@ log_config_init_for_console(enum logLevels lvl)
     {
         config->program_name = "<null>";
         config->enable_console = 1;
-        config->console_level = lvl;
+        if (override_name != NULL && override_name[0] != '\0')
+        {
+            config->console_level = internal_log_text2level(override_name);
+        }
+        else
+        {
+            config->console_level = lvl;
+        }
         config->dump_on_start = 0; /* Don't need dump for console only */
     }
     return config;

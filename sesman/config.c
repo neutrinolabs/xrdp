@@ -471,7 +471,7 @@ config_read(const char *sesman_ini)
         if ((cfg->sesman_ini = g_strdup(sesman_ini)) != NULL)
         {
             int fd;
-            if ((fd = g_file_open(cfg->sesman_ini)) != -1)
+            if ((fd = g_file_open_ex(cfg->sesman_ini, 1, 0, 0, 0)) != -1)
             {
                 struct list *sec;
                 struct list *param_n;

@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     serv[0] = '\0';
     port[0] = '\0';
 
-    logging = log_config_init_for_console(LOG_LEVEL_INFO);
+    logging = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
     log_start_from_param(logging);
     log_config_free(logging);
 
