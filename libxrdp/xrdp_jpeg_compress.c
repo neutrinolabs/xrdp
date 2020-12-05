@@ -55,12 +55,12 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
 
     if (bpp != 24)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_jpeg_compress: bpp wrong %d", bpp);
+        LOG(LOG_LEVEL_WARNING, "xrdp_jpeg_compress: bpp wrong %d", bpp);
         return height;
     }
     if (handle == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_jpeg_compress: handle is nil");
+        LOG(LOG_LEVEL_WARNING, "xrdp_jpeg_compress: handle is nil");
         return height;
     }
     tj_han = (tjhandle) handle;
@@ -147,7 +147,7 @@ xrdp_codec_jpeg_compress(void *handle,
 
     if (handle == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_codec_jpeg_compress: handle is nil");
+        LOG(LOG_LEVEL_WARNING, "xrdp_codec_jpeg_compress: handle is nil");
         return height;
     }
 
@@ -400,7 +400,7 @@ jpeg_compress(char *in_data, int width, int height,
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "bpp wrong %d", bpp);
+        LOG(LOG_LEVEL_WARNING, "bpp wrong %d", bpp);
     }
 
     cdata_bytes = byte_limit;

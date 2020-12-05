@@ -367,8 +367,8 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                 }
                 break;
             default:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_fastpath_process_input_event: unknown "
-                          "eventCode %d", eventCode);
+                LOG(LOG_LEVEL_WARNING, "xrdp_fastpath_process_input_event: unknown "
+                    "eventCode %d", eventCode);
                 break;
         }
     }

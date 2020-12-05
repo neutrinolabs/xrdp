@@ -111,7 +111,7 @@ xrdp_surface_send_surface_bits(struct xrdp_surface *self, int bpp, char *data,
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "bpp = %d is not supported\n", bpp);
+        LOG(LOG_LEVEL_ERROR, "bpp = %d is not supported\n", bpp);
         return 1;
     }
 

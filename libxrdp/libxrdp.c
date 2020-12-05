@@ -131,18 +131,18 @@ libxrdp_force_read(struct trans *trans)
 
     if (trans_force_read(trans, 4) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_force_read: header read error");
+        LOG(LOG_LEVEL_WARNING, "libxrdp_force_read: header read error");
         return 0;
     }
     bytes = libxrdp_get_pdu_bytes(s->data);
     if (bytes < 4 || bytes > s->size)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_force_read: bad header length %d", bytes);
+        LOG(LOG_LEVEL_WARNING, "libxrdp_force_read: bad header length %d", bytes);
         return 0;
     }
     if (trans_force_read(trans, bytes - 4) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_force_read: Can't read PDU");
+        LOG(LOG_LEVEL_WARNING, "libxrdp_force_read: Can't read PDU");
         return 0;
     }
     return s;
@@ -163,12 +163,12 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
     do_read = s == 0;
     if (do_read && session->up_and_running)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_data: error logic");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: error logic");
         return 1;
     }
     if (session->in_process_data != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_data: error reentry");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: error reentry");
         return 1;
     }
     session->in_process_data++;
@@ -208,7 +208,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             }
             if (s == 0)
             {
-                LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_data: libxrdp_force_read failed");
+                LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: libxrdp_force_read failed");
                 rv = 1;
                 break;
             }
@@ -216,7 +216,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 
         if (xrdp_rdp_recv(rdp, s, &code) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_data: xrdp_rdp_recv failed");
+            LOG(LOG_LEVEL_ERROR, "libxrdp_process_data: xrdp_rdp_recv failed");
             rv = 1;
             break;
         }
@@ -238,7 +238,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             case PDUTYPE_DATAPDU:
                 if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_data returned non zero");
+                    LOG(LOG_LEVEL_ERROR, "libxrdp_process_data returned non zero");
                     cont = 0;
                     term = 1;
                 }
@@ -246,13 +246,13 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             case 2: /* FASTPATH_INPUT_EVENT */
                 if (xrdp_fastpath_process_input_event(rdp->sec_layer->fastpath_layer, s) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_data returned non zero");
+                    LOG(LOG_LEVEL_ERROR, "libxrdp_process_data returned non zero");
                     cont = 0;
                     term = 1;
                 }
                 break;
             default:
-                LOG_DEVEL(LOG_LEVEL_TRACE, "unknown in libxrdp_process_data: code= %d", code);
+                LOG(LOG_LEVEL_ERROR, "unknown in libxrdp_process_data: code= %d", code);
                 dead_lock_counter++;
                 break;
         }
@@ -261,8 +261,8 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         {
             /*This situation can happen and this is a workaround*/
             cont = 0;
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Serious programming error: we were locked in a deadly loop");
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Remaining: %d", (int) (s->end - s->next_packet));
+            LOG(LOG_LEVEL_ERROR, "Serious programming error: we were locked in a deadly loop");
+            LOG(LOG_LEVEL_ERROR, "Remaining: %d", (int) (s->end - s->next_packet));
             s->next_packet = 0;
         }
 
@@ -542,14 +542,14 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 if (j > MAX_BITMAP_BUF_SIZE)
                 {
-                    LOG_DEVEL(LOG_LEVEL_INFO, "libxrdp_send_bitmap: error, decompressed "
-                              "size too big: %d bytes", j);
+                    LOG(LOG_LEVEL_WARNING, "libxrdp_send_bitmap: error, decompressed "
+                        "size too big: %d bytes", j);
                 }
 
                 if (bufsize > MAX_BITMAP_BUF_SIZE)
                 {
-                    LOG_DEVEL(LOG_LEVEL_INFO, "libxrdp_send_bitmap: error, compressed size "
-                              "too big: %d bytes", bufsize);
+                    LOG(LOG_LEVEL_WARNING, "libxrdp_send_bitmap: error, compressed size "
+                        "too big: %d bytes", bufsize);
                 }
 
                 s->p = s->end;
@@ -566,8 +566,8 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
             if (total_bufsize > MAX_BITMAP_BUF_SIZE)
             {
-                LOG_DEVEL(LOG_LEVEL_INFO, "libxrdp_send_bitmap: error, total compressed "
-                          "size too big: %d bytes", total_bufsize);
+                LOG(LOG_LEVEL_WARNING, "libxrdp_send_bitmap: error, total compressed "
+                    "size too big: %d bytes", total_bufsize);
             }
         }
 
@@ -594,7 +594,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 if (lines_sending == 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_INFO, "libxrdp_send_bitmap: error, lines_sending == zero");
+                    LOG(LOG_LEVEL_WARNING, "libxrdp_send_bitmap: error, lines_sending == zero");
                     break;
                 }
 
@@ -699,14 +699,14 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     {
         if (bpp != 24)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_send_pointer: error client does not support "
-                      "new cursors and bpp is %d", bpp);
+            LOG(LOG_LEVEL_ERROR, "libxrdp_send_pointer: error client does not support "
+                "new cursors and bpp is %d", bpp);
             return 1;
         }
     }
     if ((bpp == 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_send_pointer: error");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_send_pointer: error");
         return 1;
     }
     make_stream(s);
@@ -1167,7 +1167,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 
     if (mcs->channel_list == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_query_channel - No channel initialized");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_query_channel - No channel initialized");
         return 1 ;
     }
 
@@ -1175,7 +1175,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 
     if (index < 0 || index >= count)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_query_channel - Channel out of range %d", index);
+        LOG(LOG_LEVEL_ERROR, "libxrdp_query_channel - Channel out of range %d", index);
         return 1;
     }
 
@@ -1185,14 +1185,14 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
     if (channel_item == 0)
     {
         /* this should not happen */
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_query_channel - channel item is 0");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_query_channel - channel item is 0");
         return 1;
     }
 
     if (channel_name != 0)
     {
         g_strncpy(channel_name, channel_item->name, 8);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_query_channel - Channel %d name %s", index, channel_name);
+        LOG(LOG_LEVEL_ERROR, "libxrdp_query_channel - Channel %d name %s", index, channel_name);
     }
 
     if (channel_flags != 0)
@@ -1220,7 +1220,7 @@ libxrdp_get_channel_id(struct xrdp_session *session, const char *name)
 
     if (mcs->channel_list == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_get_channel_id No channel initialized");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_get_channel_id No channel initialized");
         return -1 ;
     }
 
@@ -1272,7 +1272,7 @@ libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
 
     if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_send_to_channel: error, server channel data NOT sent to client channel");
+        LOG(LOG_LEVEL_ERROR, "libxrdp_send_to_channel: error, server channel data NOT sent to client channel");
         free_stream(s);
         return 1;
     }

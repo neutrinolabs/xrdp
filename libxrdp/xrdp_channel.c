@@ -51,7 +51,7 @@ xrdp_channel_get_item(struct xrdp_channel *self, int channel_id)
 
     if (self->mcs_layer->channel_list == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_get_item - No channel initialized");
+        LOG(LOG_LEVEL_ERROR, "xrdp_channel_get_item - No channel initialized");
         return NULL ;
     }
 
@@ -114,13 +114,13 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
 
     if (channel == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_send - no such channel");
+        LOG(LOG_LEVEL_ERROR, "xrdp_channel_send - no such channel");
         return 1;
     }
 
     if (channel->disabled)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_send, channel disabled");
+        LOG(LOG_LEVEL_WARNING, "xrdp_channel_send, channel disabled");
         return 0; /* not an error */
     }
 
@@ -147,7 +147,7 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
 
     if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_send - failure sending data");
+        LOG(LOG_LEVEL_ERROR, "xrdp_channel_send - failure sending data");
         return 1;
     }
 
@@ -182,12 +182,12 @@ xrdp_channel_call_callback(struct xrdp_channel *self, struct stream *s,
         }
         else
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_channel_call_callback, session->callback is nil");
+            LOG(LOG_LEVEL_TRACE, "in xrdp_channel_call_callback, session->callback is nil");
         }
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_channel_call_callback, session is nil");
+        LOG(LOG_LEVEL_TRACE, "in xrdp_channel_call_callback, session is nil");
     }
 
     return rv;
@@ -269,12 +269,12 @@ drdynvc_process_capability_response(struct xrdp_channel *self,
     in_uint16_le(s, cap_version);
     if ((cap_version != 2) && (cap_version != 3))
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_capability_response: incompatible DVC "
-                  "version %d detected", cap_version);
+        LOG(LOG_LEVEL_ERROR, "drdynvc_process_capability_response: incompatible DVC "
+            "version %d detected", cap_version);
         return 1;
     }
-    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_capability_response: DVC version %d selected",
-              cap_version);
+    LOG(LOG_LEVEL_INFO, "drdynvc_process_capability_response: DVC version %d selected",
+        cap_version);
     self->drdynvc_state = 1;
     session = self->sec_layer->rdp_layer->session;
     rv = session->callback(session->id, 0x5558, 0, 0, 0, 0);
@@ -496,7 +496,7 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
             ls = s;
             break;
         default:
-            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: error");
+            LOG(LOG_LEVEL_ERROR, "xrdp_channel_process_drdynvc: error");
             return 1;
     }
     if (ls == NULL)
@@ -556,12 +556,12 @@ xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
     channel = xrdp_channel_get_item(self, channel_id);
     if (channel == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process, channel not found");
+        LOG(LOG_LEVEL_ERROR, "xrdp_channel_process, channel not found");
         return 1;
     }
     if (channel->disabled)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process, channel disabled");
+        LOG(LOG_LEVEL_WARNING, "xrdp_channel_process, channel disabled");
         return 0; /* not an error */
     }
     if (channel_id == self->drdynvc_channel_id)

@@ -237,7 +237,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
     size = (int)(self->out_s->p - self->order_count_ptr);
     if (size < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error in xrdp_orders_check, size too small: %d bytes", size);
+        LOG(LOG_LEVEL_ERROR, "error in xrdp_orders_check, size too small: %d bytes", size);
         return 1;
     }
     if (size > max_order_size)
@@ -245,7 +245,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         /* this suggests someone calls this function without passing the
            correct max_size so we end up putting more into the buffer
            than we indicate we can */
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error in xrdp_orders_check, size too big: %d bytes", size);
+        LOG(LOG_LEVEL_WARNING, "error in xrdp_orders_check, size too big: %d bytes", size);
         /* We where getting called with size already greater than
            max_order_size
            Which I suspect was because the sending of text did not include
@@ -2219,13 +2219,13 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2345,13 +2345,13 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2645,13 +2645,13 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2773,13 +2773,13 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -3008,7 +3008,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
 
         if (!xrdp_orders_send_as_jpeg(self, width, height, bpp, hints))
         {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_send_bitmap3: jpeg skipped");
+            LOG(LOG_LEVEL_ERROR, "xrdp_orders_send_bitmap3: jpeg skipped");
             return 2;
         }
 
@@ -3040,7 +3040,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_orders_send_bitmap3: todo unknown codec");
+        LOG(LOG_LEVEL_ERROR, "xrdp_orders_send_bitmap3: todo unknown codec");
         return 1;
     }
 

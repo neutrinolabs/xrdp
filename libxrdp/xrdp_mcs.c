@@ -94,7 +94,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_cjcf error");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_cjcf error");
         return 1;
     }
 
@@ -108,7 +108,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_cjcf error");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_cjcf error");
         return 1;
     }
 
@@ -133,8 +133,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     {
         if (xrdp_iso_recv(self->iso_layer, s) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "   out xrdp_mcs_recv, xrdp_iso_recv return non zero");
-            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_recv: xrdp_iso_recv failed");
+            LOG(LOG_LEVEL_ERROR, "   out xrdp_mcs_recv, xrdp_iso_recv return non zero");
+            LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: xrdp_iso_recv failed");
             return 1;
         }
 
@@ -148,8 +148,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
         if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "received Disconnect Provider Ultimatum");
-            LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_recv appid != MCS_DPUM");
+            LOG(LOG_LEVEL_ERROR, "received Disconnect Provider Ultimatum");
+            LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_recv appid != MCS_DPUM");
             return 1;
         }
 
@@ -175,7 +175,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
             s = libxrdp_force_read(self->iso_layer->trans);
             if (s == 0)
             {
-                LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_recv: libxrdp_force_read failed");
+                LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: libxrdp_force_read failed");
                 return 1;
             }
 
@@ -196,7 +196,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
     if (appid != MCS_SDRQ)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ", appid);
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ", appid);
         return 1;
     }
 
@@ -553,7 +553,7 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_aucf error");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_aucf error");
         return 1;
     }
 
@@ -565,7 +565,7 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_aucf error");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_aucf error");
         return 1;
     }
 
@@ -789,7 +789,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 
     if (self->rsa_key_bytes == 64)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_out_mcs_data: using 512 bit RSA key");
+        LOG(LOG_LEVEL_DEBUG, "xrdp_sec_out_mcs_data: using 512 bit RSA key");
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);
         out_uint16_le(s, 0x00ec); /* len is 236 */
         out_uint32_le(s, self->crypt_method);
@@ -819,7 +819,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else if (self->rsa_key_bytes == 256)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_out_mcs_data: using 2048 bit RSA key");
+        LOG(LOG_LEVEL_DEBUG, "xrdp_sec_out_mcs_data: using 2048 bit RSA key");
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);
         out_uint16_le(s, 0x01ac); /* len is 428 */
         out_uint32_le(s, self->crypt_method);
@@ -849,7 +849,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else if (self->rsa_key_bytes == 0) /* no security */
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_out_mcs_data: using no security");
+        LOG(LOG_LEVEL_DEBUG, "xrdp_sec_out_mcs_data: using no security");
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);
         out_uint16_le(s, 12); /* len is 12 */
         out_uint32_le(s, self->crypt_method);
@@ -857,7 +857,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_out_mcs_data: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_out_mcs_data: error");
     }
     /* end certificate */
     s_mark_end(s);
@@ -897,7 +897,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_connect_response error");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_connect_response error");
         return 1;
     }
 
@@ -1031,7 +1031,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
     if (len > 8192 * 2)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "error in xrdp_mcs_send, size too big: %d bytes", len);
+        LOG(LOG_LEVEL_WARNING, "error in xrdp_mcs_send, size too big: %d bytes", len);
     }
 
     //if (len > max_len)
@@ -1068,7 +1068,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send error");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send error");
         return 1;
     }
 
@@ -1119,7 +1119,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     {
         free_stream(s);
         close_rdp_socket(self);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_disconnect error - 1");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_disconnect error - 1");
         return 1;
     }
 
@@ -1131,7 +1131,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     {
         free_stream(s);
         close_rdp_socket(self);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_disconnect error - 2");
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_disconnect error - 2");
         return 1;
     }
 

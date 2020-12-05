@@ -459,8 +459,8 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 
         if (error != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_recv error");
-            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: xrdp_sec_recv failed");
+            LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_recv error");
+            LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: xrdp_sec_recv failed");
             return 1;
         }
 
@@ -470,14 +470,14 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             {
                 if (xrdp_channel_process(self->sec_layer->chan_layer, s, chan) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process returned unhandled error") ;
+                    LOG(LOG_LEVEL_ERROR, "xrdp_channel_process returned unhandled error") ;
                 }
             }
             else
             {
                 if (chan != 1)
                 {
-                    LOG_DEVEL(LOG_LEVEL_TRACE, "Wrong channel Id to be handled by xrdp_channel_process %d", chan);
+                    LOG(LOG_LEVEL_ERROR, "Wrong channel Id to be handled by xrdp_channel_process %d", chan);
                 }
             }
 
@@ -532,7 +532,7 @@ xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type)
 
     if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_send error");
+        LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_send error");
         return 1;
     }
 
@@ -620,7 +620,7 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
 
     if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_send_data error");
+        LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_send_data error");
         return 1;
     }
 
@@ -775,7 +775,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
         send_s.end = send_s.p + send_len;
         if (xrdp_sec_send_fastpath(self->sec_layer, &send_s) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_rdp_send_fastpath: xrdp_fastpath_send failed");
+            LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send_fastpath: xrdp_fastpath_send failed");
             return 1;
         }
         frag_s.p += no_comp_len;
@@ -810,7 +810,7 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
     {
         if (xrdp_rdp_init_data(self, s) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_send_data_update_sync error");
+            LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_send_data_update_sync error");
             free_stream(s);
             return 1;
         }
@@ -833,7 +833,7 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
     {
         if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_UPDATE) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_send_data_update_sync error");
+            LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_send_data_update_sync error");
             free_stream(s);
             return 1;
         }
@@ -1375,7 +1375,7 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
     if (xrdp_rdp_init(self, s) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_send_deactivate error");
+        LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_send_deactivate error");
         return 1;
     }
 
@@ -1384,7 +1384,7 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
     if (xrdp_rdp_send(self, s, PDUTYPE_DEACTIVATEALLPDU) != 0)
     {
         free_stream(s);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_send_deactivate error");
+        LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_send_deactivate error");
         return 1;
     }
 
