@@ -1,10 +1,10 @@
 .TH "xrdp\-sesrun" "8" "@PACKAGE_VERSION@" "xrdp team" ""
 .SH "NAME"
-xrdp\-sesrun \- \fBsesman\fR(8) session launcher
+xrdp\-sesrun \- \fBxrdp-sesman\fR(8) session launcher
 
 .SH "SYNTAX"
 .B xrdp\-sesrun
-.I server username password width height bpp
+.I [ -C /path/to/sesman.ini ] server username password width height bpp code
 
 .SH "DESCRIPTION"
 \fBxrdp\-sesrun\fR starts a session using \fBxrdp\-sesman\fR(8).
@@ -12,6 +12,10 @@ xrdp\-sesrun \- \fBsesman\fR(8) session launcher
 This is a tool useful for testing, it simply behaves like xrdp when some user logs in a new session and authenticates, thus starting a new session.
 
 .SH "OPTIONS"
+.TP
+.I \-\-config
+(Optional) Specify a path to a different \fIsesman.ini\fR file.
+
 .TP
 .I server
 Server on which sesman is running
@@ -30,11 +34,16 @@ Screen height
 .TP
 .I bpp
 Session color depth
+.TP
+.I code
+Session type (0 for Xvnc, 10 for X11RDP, 20 for Xorg)
 
 .SH "FILES"
 @bindir@/xrdp\-sesman
 .br
 @bindir@/xrdp\-sesrun
+.br
+@sysconfdir@/xrdp/sesman.ini
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>
