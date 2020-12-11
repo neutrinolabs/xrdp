@@ -39,19 +39,6 @@ int send_rail_drawing_orders(char* data, int size);
 int main_cleanup(void);
 int add_timeout(int msoffset, void (*callback)(void* data), void* data);
 
-#define LOG_LEVEL 5
-
-#define LOG(_a, _params) \
-    { \
-        if (_a < LOG_LEVEL) \
-        { \
-            g_write("xrdp-chansrv [%10.10u]: ", g_time3()); \
-            g_writeln _params ; \
-        } \
-    }
-
-#define LOGM(_args) do { log_message _args ; } while (0)
-
 #ifndef GSET_UINT8
 #define GSET_UINT8(_ptr, _offset, _data) \
     *((unsigned char*) (((unsigned char*)(_ptr)) + (_offset))) = (unsigned char)(_data)

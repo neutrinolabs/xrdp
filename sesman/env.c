@@ -76,9 +76,9 @@ env_check_password_file(const char *filename, const char *passwd)
     fd = g_file_open_ex(filename, 0, 1, 1, 1);
     if (fd == -1)
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "Cannot write VNC password hash to file %s: %s",
-                    filename, g_get_strerror());
+        LOG(LOG_LEVEL_WARNING,
+            "Cannot write VNC password hash to file %s: %s",
+            filename, g_get_strerror());
         return 1;
     }
     g_file_write(fd, encryptedPasswd, 8);
@@ -151,7 +151,7 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_IN_BASE_STR, display);
             g_setenv("XRDP_PULSE_SOURCE_SOCKET", text, 1);
             if ((env_names != 0) && (env_values != 0) &&
-                (env_names->count == env_values->count))
+                    (env_names->count == env_values->count))
             {
                 for (index = 0; index < env_names->count; index++)
                 {
@@ -172,9 +172,9 @@ env_set_user(const char *username, char **passwd_file, int display,
                     {
                         if (g_mkdir(".vnc") < 0)
                         {
-                            log_message(LOG_LEVEL_ERROR,
-                                        "Error creating .vnc directory: %s",
-                                        g_get_strerror());
+                            LOG(LOG_LEVEL_ERROR,
+                                "Error creating .vnc directory: %s",
+                                g_get_strerror());
                         }
                     }
 
@@ -189,16 +189,16 @@ env_set_user(const char *username, char **passwd_file, int display,
                                   pw_dir, username, display);
                         if (g_file_exist(*passwd_file))
                         {
-                            log_message(LOG_LEVEL_WARNING, "Removing old "
-                                        "password file %s", *passwd_file);
+                            LOG(LOG_LEVEL_WARNING, "Removing old "
+                                "password file %s", *passwd_file);
                             g_file_delete(*passwd_file);
                         }
                         g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd",
                                   pw_dir, username);
                         if (g_file_exist(*passwd_file))
                         {
-                            log_message(LOG_LEVEL_WARNING, "Removing insecure "
-                                        "password file %s", *passwd_file);
+                            LOG(LOG_LEVEL_WARNING, "Removing insecure "
+                                "password file %s", *passwd_file);
                             g_file_delete(*passwd_file);
                         }
                         g_sprintf(*passwd_file, "%s/.vnc/sesman_passwd-%s@%s:%d",
@@ -219,7 +219,7 @@ env_set_user(const char *username, char **passwd_file, int display,
 
                 if (*passwd_file != NULL)
                 {
-                    LOG_DBG("pass file: %s", *passwd_file);
+                    LOG_DEVEL(LOG_LEVEL_DEBUG, "pass file: %s", *passwd_file);
                 }
             }
 
@@ -229,9 +229,9 @@ env_set_user(const char *username, char **passwd_file, int display,
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,
-                    "error getting user info for user %s",
-                    username);
+        LOG(LOG_LEVEL_ERROR,
+            "error getting user info for user %s",
+            username);
     }
 
     return error;

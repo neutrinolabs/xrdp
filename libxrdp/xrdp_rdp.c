@@ -42,28 +42,24 @@
 
 /*****************************************************************************/
 static int
-xrdp_rdp_read_config(struct xrdp_client_info *client_info)
+xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
 {
     int index = 0;
     struct list *items = (struct list *)NULL;
     struct list *values = (struct list *)NULL;
     char *item = NULL;
     char *value = NULL;
-    char cfg_file[256];
     int pos;
     char *tmp = NULL;
     int tmp_length = 0;
 
     /* initialize (zero out) local variables: */
-    g_memset(cfg_file, 0, sizeof(char) * 256);
-
     items = list_create();
     items->auto_free = 1;
     values = list_create();
     values->auto_free = 1;
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    DEBUG(("cfg_file %s", cfg_file));
-    file_by_name_read_section(cfg_file, "globals", items, values);
+    DEBUG(("xrdp_ini %s", xrdp_ini));
+    file_by_name_read_section(xrdp_ini, "globals", items, values);
 
     for (index = 0; index < items->count; index++)
     {
@@ -143,6 +139,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         else if (g_strcasecmp(item, "require_credentials") == 0)
         {
             client_info->require_credentials = g_text2bool(value);
+        }
+        else if (g_strcasecmp(item, "enable_token_login") == 0)
+        {
+            client_info->enable_token_login = g_text2bool(value);
         }
         else if (g_strcasecmp(item, "use_fastpath") == 0)
         {
@@ -276,7 +276,11 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                             client_info->key_file, g_get_strerror());
             }
         }
-
+        else if (g_strcasecmp(item, "domain_user_separator") == 0
+                 && g_strlen(value) > 0)
+        {
+            g_strncpy(client_info->domain_user_separator, value, sizeof(client_info->domain_user_separator) - 1);
+        }
     }
 
     list_delete(items);
@@ -350,7 +354,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     self->session = session;
     self->share_id = 66538;
     /* read ini settings */
-    xrdp_rdp_read_config(&self->client_info);
+    xrdp_rdp_read_config(session->xrdp_ini, &self->client_info);
     /* create sec layer */
     self->sec_layer = xrdp_sec_create(self, trans);
     /* default 8 bit v1 color bitmap cache entries and size */

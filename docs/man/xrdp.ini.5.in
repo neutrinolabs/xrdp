@@ -24,10 +24,6 @@ All options and values (except for file names and paths) are case insensitive, a
 The options to be specified in the \fB[Globals]\fR section are the following:
 
 .TP
-\fBaddress\fP=\fIip address\fP
-Specify xrdp listening address. If not specified, defaults to 0.0.0.0 (all interfaces).
-
-.TP
 \fBautorun\fP=\fIsession_name\fP
 Section name for automatic login. If set and the client supplies valid
 username and password, the user will be logged in automatically using the
@@ -115,11 +111,26 @@ Specify text passed to PAM when authentication failed. The maximum length is \fB
 
 .TP
 \fBport\fP=\fIport\fP
-Specify TCP port to listen on for incoming connections.
-The default for RDP is \fB3389\fP.
+Specify TCP port and interface to listen on for incoming connections.
+Specifying only the port means that xrdp will listen on all interfaces.
+The default port for RDP is \fB3389\fP.
+Multiple address:port instances must be separated by spaces or commas. Check the .ini file for examples.
+Specifying interfaces requires said interfaces to be UP before xrdp starts.
 
 .TP
 \fBrequire_credentials\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will scan the user name provided by the
+client for the ASCII field separator character (0x1F). It will then copy over what is after the
+separator as the password supplied by the user and treats it as autologon. If not specified,
+defaults to \fBfalse\fP.
+
+.TP
+\domain_user_separator\fP=\separator\fP
+If specified the domain name supplied by the client is appended to the username separated
+by \fBseparator\fP.
+
+.TP
+\enable_token_login\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
 password initial connection phase. In other words, xrdp doesn't allow clients to show login
 screen if set to true. If not specified, defaults to \fBfalse\fP.
@@ -230,6 +241,18 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog
 .TP
 \fBSyslogLevel\fR=\fIlevel\fR
 This option sets the logging level for syslog. It can have the same values of \fBLogLevel\fR. If \fBSyslogLevel\fR is greater than \fBLogLevel\fR, its value is lowered to that of \fBLogLevel\fR.
+
+.TP
+\fBEnableConsole\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to the console (ie. stdout).
+
+.TP
+\fBConsoleLevel\fR=\fIlevel\fR
+Logging level for the console. It can have the same values as \fBLogLevel\fR. Defaults to \fBDEBUG\fR.
+
+.TP
+\fBEnableProcessId\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging the process id in all log messages. Defaults to \fBfalse\fR.
 
 .SH "CHANNELS"
 The Remote Desktop Protocol supports several channels, which are used to transfer additional data like sound, clipboard data and others.

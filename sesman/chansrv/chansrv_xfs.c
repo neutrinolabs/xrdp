@@ -27,6 +27,7 @@
 #endif
 
 #include "os_calls.h"
+#include "log.h"
 
 #include "chansrv_xfs.h"
 
@@ -113,47 +114,6 @@ struct xfs_dir_handle
     tui32       generation;
 };
 
-/* module based logging */
-#define LOG_ERROR   0
-#define LOG_INFO    1
-#define LOG_DEBUG   2
-#ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_ERROR
-#endif
-
-#define log_error(_params...)                           \
-    {                                                       \
-        g_write("[%10.10u]: XFS        %s: %d : ERROR: ",   \
-                g_time3(), __func__, __LINE__);             \
-        g_writeln (_params);                                \
-    }
-
-#define log_always(_params...)                          \
-    {                                                       \
-        g_write("[%10.10u]: XFS        %s: %d : ALWAYS: ",  \
-                g_time3(), __func__, __LINE__);             \
-        g_writeln (_params);                                \
-    }
-
-#define log_info(_params...)                            \
-    {                                                       \
-        if (LOG_INFO <= LOG_LEVEL)                          \
-        {                                                   \
-            g_write("[%10.10u]: XFS        %s: %d : ",      \
-                    g_time3(), __func__, __LINE__);         \
-            g_writeln (_params);                            \
-        }                                                   \
-    }
-
-#define log_debug(_params...)                           \
-    {                                                       \
-        if (LOG_DEBUG <= LOG_LEVEL)                         \
-        {                                                   \
-            g_write("[%10.10u]: XFS        %s: %d : ",      \
-                    g_time3(), __func__, __LINE__);         \
-            g_writeln (_params);                            \
-        }                                                   \
-    }
 
 /*  ------------------------------------------------------------------------ */
 static int
@@ -450,7 +410,7 @@ xfs_add_entry(struct xfs_fs *xfs, fuse_ino_t parent_inum,
                 fuse_ino_t inum = xfs->free_list[--xfs->free_count];
                 if (xfs->inode_table[inum] != NULL)
                 {
-                    log_error("Unexpected non-NULL value in inode table "
+                    LOG_DEVEL(LOG_LEVEL_ERROR, "Unexpected non-NULL value in inode table "
                               "entry %ld", inum);
                 }
                 xfs->inode_table[inum] = xino;
@@ -820,7 +780,7 @@ xfs_get_file_open_count(struct xfs_fs *xfs, fuse_ino_t inum)
 /*  ------------------------------------------------------------------------ */
 void
 xfs_delete_redirected_entries_with_device_id(struct xfs_fs *xfs,
-                                             tui32 device_id)
+        tui32 device_id)
 {
     fuse_ino_t inum;
     XFS_INODE_ALL *xino;

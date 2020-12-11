@@ -124,6 +124,7 @@ const char *g_strchr(const char *text, int c);
 char*    g_strcpy(char* dest, const char* src);
 char*    g_strncpy(char* dest, const char* src, int len);
 char*    g_strcat(char* dest, const char* src);
+char*    g_strncat(char* dest, const char* src, int len);
 char*    g_strdup(const char* in);
 char*    g_strndup(const char* in, const unsigned int maxlen);
 int      g_strcmp(const char* c1, const char* c2);

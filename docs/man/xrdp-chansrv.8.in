@@ -7,10 +7,11 @@
 
 .SH "DESCRIPTION"
 \fBxrdp\-chansrv\fR is the \fBxrdp\fR(8) channel server, which manages the Remote Desktop Protocol (RDP) sub-channels.
+.PP
 This program is only forked internally by \fBxrdp\-sesman\fP(8).
-.br
+.PP
 Currently \fBxrdp\-chansrv\fP knows about the following channels:
-.RE 8
+.RS 8
 .TP
 .B cliprdr
 Clipboard Redirection
@@ -26,9 +27,21 @@ Remote Applications Integrated Locally
 .TP
 .B drdynvc
 Dynamic Virtual Channel
-.RS
+.RE
+
+.SH ENVIRONMENT
+.TP
+.I CHANSRV_LOG_PATH
+Path to the location where the log file is stored. If not specified,
+$\fBXDG_DATA_HOME/xrdp\fP or \fB$HOME/.local/share/xrdp\fP is used instead.
+.TP
+.I DISPLAY
+X11 display number. Must be specified.
 
 .SH FILES
+.TP
+.I @sysconfdir@/xrdp/sesman.ini
+Contains some settings for this program.
 .TP
 .I @socketdir@/xrdp_chansrv_socket_*
 UNIX socket used by external programs to implement channels.
@@ -36,8 +49,9 @@ UNIX socket used by external programs to implement channels.
 .I @socketdir@/xrdp_api_*
 UNIX socket used by \fBxrdp\-chansrv\fP to communicate with \fBxrdp\-sesman\fP.
 .TP
-.I $XDG_DATA_HOME/xrdp/xrdp-chansrv.%s.log
-Log file used by \fBxrdp\-chansrv\fP(8). \fB%s\fP is display number.
+.I xrdp-chansrv.%s.log
+Log file used by \fBxrdp\-chansrv\fP(8). \fB%s\fP is display number. See the
+description of \fBCHANSRV_LOG_PATH\fP above for the file's location.
 
 .SH "SEE ALSO"
 .BR xrdp\-sesman (8),

@@ -63,9 +63,9 @@ PCSC_API SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_RAW, 8 };
 
 #define LLOG_LEVEL 5
 #define LLOGLN(_level, _args) \
-  do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
+    do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
 #define LHEXDUMP(_level, _args) \
-  do { if  (_level < LLOG_LEVEL) { lhexdump _args ; } } while (0)
+    do { if  (_level < LLOG_LEVEL) { lhexdump _args ; } } while (0)
 
 #define SCARD_ESTABLISH_CONTEXT  0x01
 #define SCARD_RELEASE_CONTEXT    0x02
@@ -88,16 +88,16 @@ PCSC_API SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_RAW, 8 };
 #define SCARD_F_INTERNAL_ERROR ((LONG)0x80100001)
 
 #define SET_UINT32(_data, _offset, _val) do { \
-  (((BYTE*)(_data)) + (_offset))[0] = ((_val) >> 0)  & 0xff; \
-  (((BYTE*)(_data)) + (_offset))[1] = ((_val) >> 8)  & 0xff; \
-  (((BYTE*)(_data)) + (_offset))[2] = ((_val) >> 16) & 0xff; \
-  (((BYTE*)(_data)) + (_offset))[3] = ((_val) >> 24) & 0xff; } while (0)
+        (((BYTE*)(_data)) + (_offset))[0] = ((_val) >> 0)  & 0xff; \
+        (((BYTE*)(_data)) + (_offset))[1] = ((_val) >> 8)  & 0xff; \
+        (((BYTE*)(_data)) + (_offset))[2] = ((_val) >> 16) & 0xff; \
+        (((BYTE*)(_data)) + (_offset))[3] = ((_val) >> 24) & 0xff; } while (0)
 
 #define GET_UINT32(_data, _offset) \
-  ((((BYTE*)(_data)) + (_offset))[0] << 0)  | \
-  ((((BYTE*)(_data)) + (_offset))[1] << 8)  | \
-  ((((BYTE*)(_data)) + (_offset))[2] << 16) | \
-  ((((BYTE*)(_data)) + (_offset))[3] << 24)
+    ((((BYTE*)(_data)) + (_offset))[0] << 0)  | \
+    ((((BYTE*)(_data)) + (_offset))[1] << 8)  | \
+    ((((BYTE*)(_data)) + (_offset))[2] << 16) | \
+    ((((BYTE*)(_data)) + (_offset))[3] << 24)
 
 #define LMIN(_val1, _val2) (_val1) < (_val2) ? (_val1) : (_val2)
 #define LMAX(_val1, _val2) (_val1) > (_val2) ? (_val1) : (_val2)
@@ -208,7 +208,7 @@ get_display_num_from_display(const char *display_text)
     disp[disp_index] = 0;
     scre[scre_index] = 0;
     LLOGLN(10, ("get_display_num_from_display: host [%s] disp [%s] scre [%s]",
-           host, disp, scre));
+                host, disp, scre));
     rv = atoi(disp);
     return rv;
 }
@@ -359,7 +359,7 @@ get_message(int *code, char *data, int *bytes)
                     else
                     {
                         LLOGLN(10, ("get_message: lcode %d *code %d",
-                               lcode, *code));
+                                    lcode, *code));
                     }
                 }
                 else if (recv_rv == 0)
@@ -421,7 +421,7 @@ SCardEstablishContext(DWORD dwScope, LPCVOID pvReserved1, LPCVOID pvReserved2,
         if (connect_to_chansrv() != 0)
         {
             LLOGLN(0, ("SCardEstablishContext: error, can not connect "
-                   "to chansrv"));
+                       "to chansrv"));
             return SCARD_F_INTERNAL_ERROR;
         }
     }
@@ -515,8 +515,8 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
 
     LLOGLN(10, ("SCardConnect:"));
     LLOGLN(10, ("SCardConnect: hContext 0x%8.8x szReader %s dwShareMode %d "
-           "dwPreferredProtocols %d",
-           (int)hContext, szReader, (int)dwShareMode, (int)dwPreferredProtocols));
+                "dwPreferredProtocols %d",
+                (int)hContext, szReader, (int)dwShareMode, (int)dwPreferredProtocols));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardConnect: error, not connected"));
@@ -559,8 +559,8 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     *pdwActiveProtocol = GET_UINT32(msg, 4);
     status = GET_UINT32(msg, 8);
     LLOGLN(10, ("SCardConnect: got status 0x%8.8x hCard 0x%8.8x "
-           "dwActiveProtocol %d",
-           status, (int)*phCard, (int)*pdwActiveProtocol));
+                "dwActiveProtocol %d",
+                status, (int)*phCard, (int)*pdwActiveProtocol));
     return status;
 }
 
@@ -589,7 +589,7 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
     int status;
 
     LLOGLN(10, ("SCardDisconnect: hCard 0x%8.8x dwDisposition %d",
-           (int)hCard, (int)dwDisposition));
+                (int)hCard, (int)dwDisposition));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardDisconnect: error, not connected"));
@@ -1051,10 +1051,10 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     offset += 4;
     SET_UINT32(msg, offset, pioSendPci->dwProtocol);
     offset += 4;
-/*  SET_UINT32(msg, offset, pioSendPci->cbPciLength); */
+    /*  SET_UINT32(msg, offset, pioSendPci->cbPciLength); */
     SET_UINT32(msg, offset, 8);
     offset += 4;
-/*  extra_len = pioSendPci->cbPciLength - 8;  */
+    /*  extra_len = pioSendPci->cbPciLength - 8;  */
     extra_len = 0;
     SET_UINT32(msg, offset, extra_len);
     offset += 4;
@@ -1158,8 +1158,8 @@ PCSC_API LONG
 SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
                  LPDWORD pcchReaders)
 {
-    char* msg;
-    char* reader_names;
+    char *msg;
+    char *reader_names;
     int reader_names_index;
     int code;
     int bytes;
@@ -1229,7 +1229,7 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     num_readers = GET_UINT32(msg, offset);
     offset += 4;
     LLOGLN(10, ("SCardListReaders: mszReaders %p pcchReaders %p num_readers %d",
-           mszReaders, pcchReaders, num_readers));
+                mszReaders, pcchReaders, num_readers));
     reader_names = (char *) malloc(8192);
     reader_names_index = 0;
     for (index = 0; index < num_readers; index++)

@@ -78,7 +78,7 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
         if (1 == auth_account_disabled(stp))
         {
-            log_message(LOG_LEVEL_INFO, "account %s is disabled", user);
+            LOG(LOG_LEVEL_INFO, "account %s is disabled", user);
             return 0;
         }
 
@@ -312,13 +312,13 @@ auth_account_disabled(struct spwd *stp)
 
     today = g_time1() / SECS_PER_DAY;
 
-    LOG_DBG("last   %d", stp->sp_lstchg);
-    LOG_DBG("min    %d", stp->sp_min);
-    LOG_DBG("max    %d", stp->sp_max);
-    LOG_DBG("inact  %d", stp->sp_inact);
-    LOG_DBG("warn   %d", stp->sp_warn);
-    LOG_DBG("expire %d", stp->sp_expire);
-    LOG_DBG("today  %d", today);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "last   %ld", stp->sp_lstchg);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "min    %ld", stp->sp_min);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "max    %ld", stp->sp_max);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "inact  %ld", stp->sp_inact);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "warn   %ld", stp->sp_warn);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "expire %ld", stp->sp_expire);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "today  %d", today);
 
     if ((stp->sp_expire != -1) && (today >= stp->sp_expire))
     {
@@ -326,9 +326,9 @@ auth_account_disabled(struct spwd *stp)
     }
 
     if ((stp->sp_max >= 0) &&
-        (stp->sp_inact >= 0) &&
-        (stp->sp_lstchg > 0) &&
-        (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
+            (stp->sp_inact >= 0) &&
+            (stp->sp_lstchg > 0) &&
+            (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
     {
         return 1;
     }

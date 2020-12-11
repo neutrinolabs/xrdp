@@ -26,6 +26,8 @@
 
 #define CURRENT_MOD_VER 3
 
+struct source_info;
+
 struct mod
 {
   int size; /* size of this struct */
@@ -54,7 +56,7 @@ struct mod
                            char* data, int width, int height, int srcx, int srcy);
   int (*server_set_cursor)(struct mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct mod* v, int* palette);
-  int (*server_msg)(struct mod* v, char* msg, int code);
+  int (*server_msg)(struct mod* v, const char* msg, int code);
   int (*server_is_term)(struct mod* v);
   int (*server_set_clip)(struct mod* v, int x, int y, int cx, int cy);
   int (*server_reset_clip)(struct mod* v);
@@ -91,7 +93,7 @@ struct mod
   tintptr handle; /* pointer to self as long */
   tintptr wm;
   tintptr painter;
-  tintptr si;
+  struct source_info *si;
   /* mod data */
   int sck;
   int width;

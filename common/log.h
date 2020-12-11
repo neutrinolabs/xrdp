@@ -22,19 +22,21 @@
 #include <pthread.h>
 
 #include "arch.h"
+#include "list.h"
 
 /* logging buffer size */
-#define LOG_BUFFER_SIZE      1024
+#define LOG_BUFFER_SIZE      8192
+#define LOGGER_NAME_SIZE     50
 
 /* logging levels */
 enum logLevels
 {
     LOG_LEVEL_ALWAYS = 0,
-    LOG_LEVEL_ERROR,
-    LOG_LEVEL_WARNING,
-    LOG_LEVEL_INFO,
-    LOG_LEVEL_DEBUG,
-    LOG_LEVEL_TRACE
+    LOG_LEVEL_ERROR,     /* for describing non-recoverable error states in a request or method */
+    LOG_LEVEL_WARNING,   /* for describing recoverable error states in a request or method */
+    LOG_LEVEL_INFO,      /* for low verbosity and high level descriptions of normal operations */
+    LOG_LEVEL_DEBUG,     /* for medium verbosity and low level descriptions of normal operations */
+    LOG_LEVEL_TRACE      /* for high verbosity and low level descriptions of normal operations (eg. method or wire tracing) */
 };
 
 /* startup return values */
@@ -49,20 +51,98 @@ enum logReturns
     LOG_GENERAL_ERROR
 };
 
-#define SESMAN_CFG_LOGGING           "Logging"
-#define SESMAN_CFG_LOG_FILE          "LogFile"
-#define SESMAN_CFG_LOG_LEVEL         "LogLevel"
-#define SESMAN_CFG_LOG_ENABLE_SYSLOG "EnableSyslog"
-#define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
+#define SESMAN_CFG_LOGGING            "Logging"
+#define SESMAN_CFG_LOGGING_LOGGER     "LoggingPerLogger"
+#define SESMAN_CFG_LOG_FILE           "LogFile"
+#define SESMAN_CFG_LOG_LEVEL          "LogLevel"
+#define SESMAN_CFG_LOG_ENABLE_CONSOLE "EnableConsole"
+#define SESMAN_CFG_LOG_CONSOLE_LEVEL  "ConsoleLevel"
+#define SESMAN_CFG_LOG_ENABLE_SYSLOG  "EnableSyslog"
+#define SESMAN_CFG_LOG_SYSLOG_LEVEL   "SyslogLevel"
+#define SESMAN_CFG_LOG_ENABLE_PID     "EnableProcessId"
 
 /* enable threading */
 /*#define LOG_ENABLE_THREAD*/
 
 #ifdef XRDP_DEBUG
-#define LOG_DBG(args...) log_message(LOG_LEVEL_DEBUG, args);
+
+#define LOG_PER_LOGGER_LEVEL
+
+/**
+ * @brief Logging macro for messages that are for an XRDP developper to 
+ * understand and debug XRDP code.
+ * 
+ * Note: all log levels are relavant to help a developper understand XRDP at 
+ *      different levels of granularity.
+ * 
+ * Note: the logging function calls are removed when XRDP_DEBUG is NOT defined.
+ * 
+ * Note: when the build is configured with --enable-xrdpdebug, then 
+ *      the log level can be configured per the source file name or method name 
+ *      (with the suffix "()") in the [LoggingPerLogger]
+ *      section of the configuration file.
+ * 
+ *      For example:
+ *      ```     
+ *      [LoggingPerLogger]
+ *      xrdp.c=DEBUG
+ *      main()=WARNING
+ *      ```
+ * 
+ * @param lvl, the log level
+ * @param msg, the log text as a printf format c-string
+ * @param ... the arguments for the printf format c-string
+ */
+#define LOG_DEVEL(log_level, args...) \
+        log_message_with_location(__func__, __FILE__, __LINE__, log_level, args);
+
+/**
+ * @brief Logging macro for messages that are for a systeam administrator to
+ * configure and run XRDP on their machine.
+ * 
+ * Note: the logging function calls contain additional code location info when 
+ *      XRDP_DEBUG is defined.
+ * 
+ * @param lvl, the log level
+ * @param msg, the log text as a printf format c-string
+ * @param ... the arguments for the printf format c-string
+ */
+#define LOG(log_level, args...) \
+        log_message_with_location(__func__, __FILE__, __LINE__, log_level, args);
+
+/**
+ * @brief Logging macro for logging the contents of a byte array using a hex 
+ * dump format.
+ * 
+ * Note: the logging function calls are removed when XRDP_DEBUG is NOT defined.
+ * 
+ * @param log_level, the log level
+ * @param message, a message prefix for the hex dump. Note: no printf like
+ *          formatting is done to this message.
+ * @param buffer, a pointer to the byte array to log as a hex dump
+ * @param length, the length of the byte array to log
+ */
+#define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)  \
+        log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length);
+
 #else
-#define LOG_DBG(args...)
+#define LOG_DEVEL(log_level, args...)
+#define LOG(log_level, args...) log_message(log_level, args);
+#define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)
 #endif
+
+enum log_logger_type
+{
+    LOG_TYPE_FILE = 0,
+    LOG_TYPE_FUNCTION,
+};
+
+struct log_logger_level
+{
+    enum logLevels log_level;
+    enum log_logger_type logger_type;
+    char logger_name[LOGGER_NAME_SIZE + 1];
+};
 
 struct log_config
 {
@@ -70,8 +150,13 @@ struct log_config
     char *log_file;
     int fd;
     enum logLevels log_level;
+    int enable_console;
+    enum logLevels console_level;
     int enable_syslog;
     enum logLevels syslog_level;
+    struct list *per_logger_level;
+    int dump_on_start;
+    int enable_pid;
     pthread_mutex_t log_lock;
     pthread_mutexattr_t log_lock_attr;
 };
@@ -121,25 +206,48 @@ internal_log_text2level(const char *buf);
  * also init its content.
  * @return  LOG_STARTUP_OK or LOG_ERROR_MALLOC
  */
-enum logReturns
+struct log_config*
 internalInitAndAllocStruct(void);
 
 /**
- * Read configuration from a file and store the values in lists.
- * @param file
- * @param lc
- * @param param_n
- * @param param_v
- * @param applicationName, the application name used in the log events.
+ * Print the contents of the logging config to stdout.
+ */
+void
+internal_log_config_dump(struct log_config *config);
+
+/**
+ * the log function that all files use to log an event.
+ * @param lvl, the loglevel
+ * @param msg, the logtext.
+ * @param ...
  * @return
  */
 enum logReturns
-internal_config_read_logging(int file, struct log_config *lc,
-                             struct list *param_n,
-                             struct list *param_v,
-                             const char *applicationName);
+internal_log_message(const enum logLevels lvl, bool_t force_log, const char *msg, va_list args);
+
+/**
+ * @param log_level, the log level
+ * @param override_destination_level, if true then the destinatino log level is ignored.
+ * @return true if at least one log destination will accept a message logged at the given level.
+ */
+bool_t
+internal_log_is_enabled_for_level(const enum logLevels log_level,
+                                  const bool_t override_destination_level);
+   
+/**
+ * @param function_name, the function name (typicaly the __func__ macro)
+ * @param file_name, the file name (typicaly the __FILE__ macro)
+ * @param log_level, the log level
+ * @return true if the logger location overrides the destination log levels
+ */
+bool_t
+internal_log_location_overrides_level(const char *function_name, 
+                                      const char *file_name,
+                                      const enum logLevels log_level);
+
 /*End of internal functions*/
 #endif
+
 /**
  * This function initialize the log facilities according to the configuration
  * file, that is described by the in parameter.
@@ -152,11 +260,44 @@ log_start(const char *iniFile, const char *applicationName);
 
 /**
  * An alternative log_start where the caller gives the params directly.
- * @param iniParams
+ * @param config
  * @return
+ * 
+ * @post to avoid memory leaks, the config argument must be free'ed using 
+ * `log_config_free()`
  */
 enum logReturns
-log_start_from_param(const struct log_config *iniParams);
+log_start_from_param(const struct log_config *src_log_config);
+
+/**
+ * Sets up a suitable log config for writing to the console only
+ * (i.e. for a utility)
+ *
+ * The config can be customised by the caller before calling
+ * log_start_from_param()
+ */
+struct log_config*
+log_config_init_for_console(enum logLevels lvl);
+
+/**
+ * Read configuration from a file and store the values in the returned 
+ * log_config.
+ * @param file
+ * @param applicationName, the application name used in the log events.
+ * @param section_prefix, prefix for the logging sections to parse
+ * @return
+ */
+struct log_config*
+log_config_init_from_config(const char *iniFilename, 
+                            const char *applicationName, 
+                            const char *section_prefix);
+
+/**
+ * Free the memory for the log_config struct.
+ */
+enum logReturns
+log_config_free(struct log_config* config);
+
 /**
  * Function that terminates all logging
  * @return
@@ -166,6 +307,9 @@ log_end(void);
 
 /**
  * the log function that all files use to log an event.
+ * 
+ * Please prefer to use the LOG and LOG_DEVEL macros instead of this function directly.
+ * 
  * @param lvl, the loglevel
  * @param msg, the logtext.
  * @param ...
@@ -173,6 +317,37 @@ log_end(void);
  */
 enum logReturns
 log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
+
+/**
+ * the log function that all files use to log an event, 
+ * with the function name and file line.
+ *
+ * Please prefer to use the LOG and LOG_DEVEL macros instead of this function directly.
+ * 
+ * @param function_name, the function name (typicaly the __func__ macro)
+ * @param file_name, the file name (typicaly the __FILE__ macro)
+ * @param line_number, the line number in the file (typicaly the __LINE__ macro)
+ * @param lvl, the loglevel
+ * @param msg, the logtext.
+ * @param ...
+ * @return
+ */
+enum logReturns
+log_message_with_location(const char *function_name, 
+                          const char *file_name, 
+                          const int line_number, 
+                          const enum logLevels lvl, 
+                          const char *msg, 
+                          ...) printflike(5, 6);
+
+enum logReturns
+log_hexdump_with_location(const char *function_name, 
+                          const char *file_name, 
+                          const int line_number, 
+                          const enum logLevels log_level, 
+                          const char *msg, 
+                          const char *p, 
+                          int len);
 
 /**
  * This function returns the configured file name for the logfile

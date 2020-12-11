@@ -2591,6 +2591,19 @@ g_strcat(char *dest, const char *src)
 }
 
 /*****************************************************************************/
+/* returns dest */
+char *
+g_strncat(char *dest, const char *src, int len)
+{
+    if (dest == 0 || src == 0)
+    {
+        return dest;
+    }
+
+    return strncat(dest, src, len);
+}
+
+/*****************************************************************************/
 /* if in = 0, return 0 else return newly alloced copy of in */
 char *
 g_strdup(const char *in)
@@ -2896,6 +2909,12 @@ g_strtrim(char *str, int trim_flags)
 
     text = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
     text1 = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
+    if (text == NULL || text1 == NULL)
+    {
+        free(text);
+        free(text1);
+        return 1;
+    }
     text1_index = 0;
     mbstowcs(text, str, len + 1);
 
