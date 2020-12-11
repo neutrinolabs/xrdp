@@ -28,7 +28,9 @@
 #include "ms-rdpbcgr.h"
 #include "log.h"
 
+#ifdef XRDP_RFXCODEC
 #include "rfxcodec_encode.h"
+#endif
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -92,7 +94,8 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->codec_id = self->client_info->rfx_codec_id;
     if (self->codec_id)
     {
-        self->codec_handle = rfxcodec_encode_create(self->screen->width,
+        self->codec_handle = (struct xrdp_encoder *)rfxcodec_encode_create(
+                                                    self->screen->width,
                                                     self->screen->height,
                                                     RFX_FORMAT_BGRA, 0);
         if (!self->codec_handle)
