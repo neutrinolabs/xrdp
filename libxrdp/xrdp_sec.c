@@ -685,7 +685,6 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
     {
         /* must be or error */
-        LOG(LOG_LEVEL_ERROR, "xrdp_sec_process_logon_info: flags wrong, major error");
         LOG(LOG_LEVEL_ERROR, "xrdp_sec_process_logon_info: flags wrong, likely decrypt "
             "not working");
         return 1;
@@ -1253,7 +1252,6 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
         LOG(LOG_LEVEL_ERROR, " out xrdp_sec_recv : error");
-        LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_mcs_recv failed");
         return 1;
     }
 

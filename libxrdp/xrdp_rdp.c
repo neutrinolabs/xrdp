@@ -460,7 +460,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         if (error != 0)
         {
             LOG(LOG_LEVEL_ERROR, "out xrdp_rdp_recv error");
-            LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: xrdp_sec_recv failed");
             return 1;
         }
 
@@ -499,9 +498,8 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     {
         s->next_packet = 0;
         *code = 0;
-        LOG_DEVEL(LOG_LEVEL_TRACE, "out (3) xrdp_rdp_recv");
         len = (int)(s->end - s->p);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_rdp_recv: bad RDP packet, length [%d]", len);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "out (3) xrdp_rdp_recv: bad RDP packet, length [%d]", len);
         return 0;
     }
     else
