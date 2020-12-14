@@ -79,7 +79,7 @@ AC_ARG_ENABLE(ipv6only, AS_HELP_STRING([--enable-ipv6only],
               [Build IPv6-only (default: no)]),
               [], [enable_ipv6only=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
-              [Build kerberos support (default: no)]),
+              [Build kerberos support (prefer PAM if available) (default: no)]),
               [], [enable_kerberos=no])
 AC_ARG_ENABLE(bsd, AS_HELP_STRING([--enable-bsd],
               [Build BSD auth support (default: no)]),

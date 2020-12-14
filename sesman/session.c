@@ -807,15 +807,33 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             }
             else
             {
+                int wm_wait_time;
                 wait_for_xserver(display);
                 chansrv_pid = session_start_chansrv(s->username, display);
-                LOG(LOG_LEVEL_ALWAYS, "waiting for window manager "
+
+                /* Monitor the amount of time we wait for the
+                 * window manager. This is approximately how long the window
+                 * manager was running for */
+                LOG(LOG_LEVEL_INFO, "waiting for window manager "
                     "(pid %d) to exit", window_manager_pid);
+                wm_wait_time = g_time1();
                 g_waitpid(window_manager_pid);
-                LOG(LOG_LEVEL_ALWAYS, "window manager (pid %d) did "
-                    "exit, cleaning up session", window_manager_pid);
-                LOG(LOG_LEVEL_INFO, "calling auth_stop_session and "
-                    "auth_end from pid %d", g_getpid());
+                wm_wait_time = g_time1() - wm_wait_time;
+                if (wm_wait_time < 10)
+                {
+                    /* This could be a config issue. Log a significant error */
+                    LOG(LOG_LEVEL_ALWAYS, "window manager exited quickly "
+                        "(%d secs). Window manager config problem?",
+                        wm_wait_time);
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_INFO, "window manager (pid %d) was running "
+                        "for approximately %d seconds.",
+                        window_manager_pid, wm_wait_time);
+                }
+                LOG(LOG_LEVEL_INFO, "Cleaning up session. Calling "
+                    "auth_stop_session and auth_end from pid %d", g_getpid());
                 auth_stop_session(data);
                 auth_end(data);
                 g_sigterm(display_pid);
