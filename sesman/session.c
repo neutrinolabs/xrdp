@@ -820,6 +820,11 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 auth_end(data);
                 g_sigterm(display_pid);
                 g_sigterm(chansrv_pid);
+
+                /* make sure socket cleanup happen after child process exit */
+                g_waitpid(display_pid);
+                g_waitpid(chansrv_pid);
+
                 cleanup_sockets(display);
                 g_deinit();
                 g_exit(0);
@@ -1188,6 +1193,33 @@ cleanup_sockets(int display)
     }
 
     g_snprintf(file, 255, CHANSRV_API_STR, display);
+    if (g_file_exist(file))
+    {
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
+    /* the following files should be deleted by xorgxrdp
+     * but just in case the deletion failed */
+
+    g_snprintf(file, 255, XRDP_X11RDP_STR, display);
+    if (g_file_exist(file))
+    {
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "cleanup_sockets: failed to delete %s", file);
+            error++;
+        }
+    }
+
+    g_snprintf(file, 255, XRDP_DISCONNECT_STR, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
