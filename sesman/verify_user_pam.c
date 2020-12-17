@@ -77,6 +77,9 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
                 reply[i].resp = g_strdup(user_pass->pass);
                 reply[i].resp_retcode = PAM_SUCCESS;
                 break;
+            case PAM_TEXT_INFO:
+                g_memset(&reply[i], 0, sizeof(struct pam_response));
+                break;
             default:
                 g_printf("unknown in verify_pam_conv\r\n");
                 g_free(reply);
