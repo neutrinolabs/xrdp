@@ -153,14 +153,13 @@ Sets the maximum number of simultaneous sessions. If not set or set to
 .TP
 \fBKillDisconnected\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
-within 60 seconds after the user disconnects.
+within \fBDisconnectedTimeLimit\fR seconds after the user disconnects.
 This setting currently only works with xorgxrdp sessions.
 
 .TP
 \fBDisconnectedTimeLimit\fR=\fInumber\fR
 Sets the time limit for \fBKillDisconnected\fR to a value greater than 60.
-Values less than 60 cannot be set. You do not actually have to specify
-\fBKillDisconnected\fR if you set this value.
+Values less than 60 are to be overridden with 60.
 This setting currently only works with xorgxrdp sessions.
 
 .TP

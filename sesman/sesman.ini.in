@@ -37,17 +37,17 @@ MaxSessions=50
 ;; KillDisconnected - kill disconnected sessions
 ; Type: boolean
 ; Default: false
-; if 1, true, or yes, kill session after 60 seconds
+; if 1, true, or yes, every session will be killed within DisconnectedTimeLimit
+; seconds after the user disconnects
 KillDisconnected=false
 
-;; DisconnectedTimeLimit - when to kill idle sessions
+;; DisconnectedTimeLimit (seconds) - wait before kill disconnected sessions
 ; Type: integer
 ; Default: 0
-; if not zero, the seconds before a disconnected session is killed
-; min 60 seconds
+; if KillDisconnected is set to false, this value is ignored
 DisconnectedTimeLimit=0
 
-;; IdleTimeLimit (specify in second) - wait before disconnect idle sessions
+;; IdleTimeLimit (seconds) - wait before disconnect idle sessions
 ; Type: integer
 ; Default: 0
 ; Set to 0 to disable idle disconnection.
