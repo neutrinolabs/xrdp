@@ -1162,8 +1162,9 @@ cleanup_sockets(int display)
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            LOG(LOG_LEVEL_DEBUG,
-                "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1174,8 +1175,9 @@ cleanup_sockets(int display)
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            LOG(LOG_LEVEL_DEBUG,
-                "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1186,8 +1188,9 @@ cleanup_sockets(int display)
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            LOG(LOG_LEVEL_DEBUG,
-                "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1198,8 +1201,9 @@ cleanup_sockets(int display)
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            LOG(LOG_LEVEL_DEBUG,
-                "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1213,8 +1217,9 @@ cleanup_sockets(int display)
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            LOG(LOG_LEVEL_DEBUG,
-                "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1225,8 +1230,9 @@ cleanup_sockets(int display)
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            LOG(LOG_LEVEL_DEBUG,
-                "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
