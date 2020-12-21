@@ -1799,7 +1799,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_ALWAYS, "main: app started pid %d(0x%8.8x)", pid, pid);
+    LOG_DEVEL(LOG_LEVEL_INFO, "main: app started pid %d(0x%8.8x)", pid, pid);
     /*  set up signal handler  */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
