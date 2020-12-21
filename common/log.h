@@ -275,9 +275,16 @@ log_start_from_param(const struct log_config *src_log_config);
  *
  * The config can be customised by the caller before calling
  * log_start_from_param()
+ *
+ * @param Default log level
+ * @param Log level name, or NULL. This can be used to provide an
+ *        override to the default log level, by environment variable or
+ *        argument.
+ *
+ * @return pointer to struct log_config.
  */
 struct log_config*
-log_config_init_for_console(enum logLevels lvl);
+log_config_init_for_console(enum logLevels lvl, const char *override_name);
 
 /**
  * Read configuration from a file and store the values in the returned 

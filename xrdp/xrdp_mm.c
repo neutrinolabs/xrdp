@@ -161,6 +161,9 @@ xrdp_mm_delete(struct xrdp_mm *self)
 
 /*****************************************************************************/
 /* Send login information to sesman */
+/* FIXME : This code duplicates functionality in the sesman tools sesrun.c.
+ * When SCP is reworked, a common library function should be used */
+
 static int
 xrdp_mm_send_login(struct xrdp_mm *self)
 {
@@ -1553,6 +1556,8 @@ xrdp_mm_update_allowed_channels(struct xrdp_mm *self)
 }
 
 /*****************************************************************************/
+/* FIXME : This code duplicates functionality in the sesman tools sesrun.c.
+ * When SCP is reworked, a common library function should be used */
 static int
 xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
 {
