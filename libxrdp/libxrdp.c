@@ -23,6 +23,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "string_calls.h"
 #include "xrdp_orders_rail.h"
 
 #include "ms-rdpbcgr.h"

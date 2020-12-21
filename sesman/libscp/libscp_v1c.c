@@ -29,6 +29,7 @@
 #endif
 
 #include "libscp_v1c.h"
+#include "string_calls.h"
 
 #include <stdlib.h>
 #include <stdio.h>

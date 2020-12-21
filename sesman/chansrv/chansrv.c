@@ -23,6 +23,7 @@
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "thread_calls.h"
 #include "trans.h"
 #include "chansrv.h"

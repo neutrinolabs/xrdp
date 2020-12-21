@@ -29,6 +29,7 @@
 #endif
 
 #include "libscp_session.h"
+#include "string_calls.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

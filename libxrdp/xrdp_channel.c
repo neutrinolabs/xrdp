@@ -23,6 +23,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "string_calls.h"
 
 /* todo, move these to constants.h */
 //#define CHANNEL_CHUNK_LENGTH 1600 /* todo, why is this so small? */

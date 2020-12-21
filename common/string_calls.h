@@ -21,6 +21,8 @@
 #if !defined(STRING_CALLS_H)
 #define STRING_CALLS_H
 
+#include "arch.h"
+
 /**
  * Map a character to a string value
  *
@@ -55,9 +57,9 @@ struct info_string_tag
  * the buffer length (as in snprintf())
  */
 unsigned int
-g_format_info_string(char* dest, unsigned int len,
-                      const char* format,
-                      const struct info_string_tag map[]);
+g_format_info_string(char *dest, unsigned int len,
+                     const char *format,
+                     const struct info_string_tag map[]);
 
 
 /**
@@ -78,4 +80,25 @@ g_bool2text(int value);
 int
 g_text2bool(const char *s);
 
+int      g_strlen(const char *text);
+const char *g_strchr(const char *text, int c);
+char    *g_strcpy(char *dest, const char *src);
+char    *g_strncpy(char *dest, const char *src, int len);
+char    *g_strcat(char *dest, const char *src);
+char    *g_strncat(char *dest, const char *src, int len);
+char    *g_strdup(const char *in);
+char    *g_strndup(const char *in, const unsigned int maxlen);
+int      g_strcmp(const char *c1, const char *c2);
+int      g_strncmp(const char *c1, const char *c2, int len);
+int      g_strncmp_d(const char *c1, const char *c2, const char delim, int len);
+int      g_strcasecmp(const char *c1, const char *c2);
+int      g_strncasecmp(const char *c1, const char *c2, int len);
+int      g_atoi(const char *str);
+int      g_htoi(char *str);
+int      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
+                           int bytes_out_str);
+int      g_pos(const char *str, const char *to_find);
+int      g_mbstowcs(twchar *dest, const char *src, int n);
+int      g_wcstombs(char *dest, const twchar *src, int n);
+int      g_strtrim(char *str, int trim_flags);
 #endif

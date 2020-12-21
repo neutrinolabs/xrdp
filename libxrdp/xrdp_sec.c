@@ -25,6 +25,7 @@
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
+#include "string_calls.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \

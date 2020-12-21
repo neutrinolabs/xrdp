@@ -26,6 +26,7 @@
 #include "xrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
+#include "string_calls.h"
 
 /* map for rdp to x11 scancodes
    code1 is regular scancode, code2 is extended scancode */

@@ -33,6 +33,7 @@
 #define PCSC_STANDIN 1
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "smartcard.h"
 #include "log.h"
 #include "irp.h"

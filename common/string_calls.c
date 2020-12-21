@@ -18,16 +18,20 @@
  * generic string handling calls
  */
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
 
 #include "string_calls.h"
+#include "os_calls.h"
 
 unsigned int
-g_format_info_string(char* dest, unsigned int len,
-                      const char* format,
-                      const struct info_string_tag map[])
+g_format_info_string(char *dest, unsigned int len,
+                     const char *format,
+                     const struct info_string_tag map[])
 {
     unsigned int result = 0;
     const char *copy_from;  /* Data to add to output */
@@ -40,26 +44,26 @@ g_format_info_string(char* dest, unsigned int len,
     {
         if (*format == '%')
         {
-            char ch= *(format + 1);
-            if (ch== '%')
+            char ch = *(format + 1);
+            if (ch == '%')
             {
                 /* '%%' in format - replace with single '%' */
                 copy_from = format;
-                copy_len= 1;
+                copy_len = 1;
                 skip = 2;
             }
-            else if (ch== '\0')
+            else if (ch == '\0')
             {
                 /* Percent at end of string - ignore */
                 copy_from = NULL;
-                copy_len= 0;
+                copy_len = 0;
                 skip = 1;
             }
             else
             {
                 /* Look up the character in the map, assuming failure */
                 copy_from = NULL;
-                copy_len= 0;
+                copy_len = 0;
                 skip = 2;
 
                 for (m = map ; m->ch != '\0' ; ++m)
@@ -125,12 +129,525 @@ g_bool2text(int value)
 int
 g_text2bool(const char *s)
 {
-    if ( (atoi(s) != 0) ||
-         (0 == strcasecmp(s, "true")) ||
-         (0 == strcasecmp(s, "on")) ||
-         (0 == strcasecmp(s, "yes")))
+    if ( (g_atoi(s) != 0) ||
+            (0 == g_strcasecmp(s, "true")) ||
+            (0 == g_strcasecmp(s, "on")) ||
+            (0 == g_strcasecmp(s, "yes")))
     {
         return 1;
     }
     return 0;
 }
+
+/*****************************************************************************/
+/* returns length of text */
+int
+g_strlen(const char *text)
+{
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    return strlen(text);
+}
+
+/*****************************************************************************/
+/* locates char in text */
+const char *
+g_strchr(const char *text, int c)
+{
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    return strchr(text, c);
+}
+
+/*****************************************************************************/
+/* returns dest */
+char *
+g_strcpy(char *dest, const char *src)
+{
+    if (src == 0 && dest != 0)
+    {
+        dest[0] = 0;
+        return dest;
+    }
+
+    if (dest == 0 || src == 0)
+    {
+        return 0;
+    }
+
+    return strcpy(dest, src);
+}
+
+/*****************************************************************************/
+/* returns dest */
+char *
+g_strncpy(char *dest, const char *src, int len)
+{
+    char *rv;
+
+    if (src == 0 && dest != 0)
+    {
+        dest[0] = 0;
+        return dest;
+    }
+
+    if (dest == 0 || src == 0)
+    {
+        return 0;
+    }
+
+    rv = strncpy(dest, src, len);
+    dest[len] = 0;
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns dest */
+char *
+g_strcat(char *dest, const char *src)
+{
+    if (dest == 0 || src == 0)
+    {
+        return dest;
+    }
+
+    return strcat(dest, src);
+}
+
+/*****************************************************************************/
+/* returns dest */
+char *
+g_strncat(char *dest, const char *src, int len)
+{
+    if (dest == 0 || src == 0)
+    {
+        return dest;
+    }
+
+    return strncat(dest, src, len);
+}
+
+/*****************************************************************************/
+/* if in = 0, return 0 else return newly alloced copy of in */
+char *
+g_strdup(const char *in)
+{
+    int len;
+    char *p;
+
+    if (in == 0)
+    {
+        return 0;
+    }
+
+    len = g_strlen(in);
+    p = (char *)g_malloc(len + 1, 0);
+
+    if (p != NULL)
+    {
+        g_strcpy(p, in);
+    }
+
+    return p;
+}
+
+/*****************************************************************************/
+/* if in = 0, return 0 else return newly alloced copy of input string
+ * if the input string is larger than maxlen the returned string will be
+ * truncated. All strings returned will include null termination*/
+char *
+g_strndup(const char *in, const unsigned int maxlen)
+{
+    unsigned int len;
+    char *p;
+
+    if (in == 0)
+    {
+        return 0;
+    }
+
+    len = g_strlen(in);
+
+    if (len > maxlen)
+    {
+        len = maxlen - 1;
+    }
+
+    p = (char *)g_malloc(len + 2, 0);
+
+    if (p != NULL)
+    {
+        g_strncpy(p, in, len + 1);
+    }
+
+    return p;
+}
+
+/*****************************************************************************/
+int
+g_strcmp(const char *c1, const char *c2)
+{
+    return strcmp(c1, c2);
+}
+
+/*****************************************************************************/
+int
+g_strncmp(const char *c1, const char *c2, int len)
+{
+    return strncmp(c1, c2, len);
+}
+
+/*****************************************************************************/
+/* compare up to delim */
+int
+g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
+{
+    char c1;
+    char c2;
+
+    c1 = 0;
+    c2 = 0;
+    while (n > 0)
+    {
+        c1 = *(s1++);
+        c2 = *(s2++);
+        if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
+        {
+            return c1 - c2;
+        }
+        n--;
+    }
+    return c1 - c2;
+}
+
+/*****************************************************************************/
+int
+g_strcasecmp(const char *c1, const char *c2)
+{
+#if defined(_WIN32)
+    return stricmp(c1, c2);
+#else
+    return strcasecmp(c1, c2);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_strncasecmp(const char *c1, const char *c2, int len)
+{
+#if defined(_WIN32)
+    return strnicmp(c1, c2, len);
+#else
+    return strncasecmp(c1, c2, len);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_atoi(const char *str)
+{
+    if (str == 0)
+    {
+        return 0;
+    }
+
+    return atoi(str);
+}
+
+/*****************************************************************************/
+int
+g_htoi(char *str)
+{
+    int len;
+    int index;
+    int rv;
+    int val;
+    int shift;
+
+    rv = 0;
+    len = strlen(str);
+    index = len - 1;
+    shift = 0;
+
+    while (index >= 0)
+    {
+        val = 0;
+
+        switch (str[index])
+        {
+            case '1':
+                val = 1;
+                break;
+            case '2':
+                val = 2;
+                break;
+            case '3':
+                val = 3;
+                break;
+            case '4':
+                val = 4;
+                break;
+            case '5':
+                val = 5;
+                break;
+            case '6':
+                val = 6;
+                break;
+            case '7':
+                val = 7;
+                break;
+            case '8':
+                val = 8;
+                break;
+            case '9':
+                val = 9;
+                break;
+            case 'a':
+            case 'A':
+                val = 10;
+                break;
+            case 'b':
+            case 'B':
+                val = 11;
+                break;
+            case 'c':
+            case 'C':
+                val = 12;
+                break;
+            case 'd':
+            case 'D':
+                val = 13;
+                break;
+            case 'e':
+            case 'E':
+                val = 14;
+                break;
+            case 'f':
+            case 'F':
+                val = 15;
+                break;
+        }
+
+        rv = rv | (val << shift);
+        index--;
+        shift += 4;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns number of bytes copied into out_str */
+int
+g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
+                  int bytes_out_str)
+{
+    int rv;
+    int index;
+    char *lout_str;
+    const tui8 *lbytes;
+
+    rv = 0;
+    lbytes = (const tui8 *) bytes;
+    lout_str = out_str;
+    for (index = 0; index < num_bytes; index++)
+    {
+        if (bytes_out_str < 3)
+        {
+            break;
+        }
+        g_snprintf(lout_str, bytes_out_str, "%2.2x", lbytes[index]);
+        lout_str += 2;
+        bytes_out_str -= 2;
+        rv += 2;
+    }
+    return rv;
+}
+
+/*****************************************************************************/
+int
+g_pos(const char *str, const char *to_find)
+{
+    const char *pp;
+
+    pp = strstr(str, to_find);
+
+    if (pp == 0)
+    {
+        return -1;
+    }
+
+    return (pp - str);
+}
+
+/*****************************************************************************/
+int
+g_mbstowcs(twchar *dest, const char *src, int n)
+{
+    wchar_t *ldest;
+    int rv;
+
+    ldest = (wchar_t *)dest;
+    rv = mbstowcs(ldest, src, n);
+    return rv;
+}
+
+/*****************************************************************************/
+int
+g_wcstombs(char *dest, const twchar *src, int n)
+{
+    const wchar_t *lsrc;
+    int rv;
+
+    lsrc = (const wchar_t *)src;
+    rv = wcstombs(dest, lsrc, n);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* trim spaces and tabs, anything <= space */
+/* trim_flags 1 trim left, 2 trim right, 3 trim both, 4 trim through */
+/* this will always shorten the string or not change it */
+int
+g_strtrim(char *str, int trim_flags)
+{
+    int index;
+    int len;
+    int text1_index;
+    int got_char;
+    wchar_t *text;
+    wchar_t *text1;
+
+    len = mbstowcs(0, str, 0);
+
+    if (len < 1)
+    {
+        return 0;
+    }
+
+    if ((trim_flags < 1) || (trim_flags > 4))
+    {
+        return 1;
+    }
+
+    text = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
+    text1 = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
+    if (text == NULL || text1 == NULL)
+    {
+        free(text);
+        free(text1);
+        return 1;
+    }
+    text1_index = 0;
+    mbstowcs(text, str, len + 1);
+
+    switch (trim_flags)
+    {
+        case 4: /* trim through */
+
+            for (index = 0; index < len; index++)
+            {
+                if (text[index] > 32)
+                {
+                    text1[text1_index] = text[index];
+                    text1_index++;
+                }
+            }
+
+            text1[text1_index] = 0;
+            break;
+        case 3: /* trim both */
+            got_char = 0;
+
+            for (index = 0; index < len; index++)
+            {
+                if (got_char)
+                {
+                    text1[text1_index] = text[index];
+                    text1_index++;
+                }
+                else
+                {
+                    if (text[index] > 32)
+                    {
+                        text1[text1_index] = text[index];
+                        text1_index++;
+                        got_char = 1;
+                    }
+                }
+            }
+
+            text1[text1_index] = 0;
+            len = text1_index;
+
+            /* trim right */
+            for (index = len - 1; index >= 0; index--)
+            {
+                if (text1[index] > 32)
+                {
+                    break;
+                }
+            }
+
+            text1_index = index + 1;
+            text1[text1_index] = 0;
+            break;
+        case 2: /* trim right */
+
+            /* copy it */
+            for (index = 0; index < len; index++)
+            {
+                text1[text1_index] = text[index];
+                text1_index++;
+            }
+
+            /* trim right */
+            for (index = len - 1; index >= 0; index--)
+            {
+                if (text1[index] > 32)
+                {
+                    break;
+                }
+            }
+
+            text1_index = index + 1;
+            text1[text1_index] = 0;
+            break;
+        case 1: /* trim left */
+            got_char = 0;
+
+            for (index = 0; index < len; index++)
+            {
+                if (got_char)
+                {
+                    text1[text1_index] = text[index];
+                    text1_index++;
+                }
+                else
+                {
+                    if (text[index] > 32)
+                    {
+                        text1[text1_index] = text[index];
+                        text1_index++;
+                        got_char = 1;
+                    }
+                }
+            }
+
+            text1[text1_index] = 0;
+            break;
+    }
+
+    wcstombs(str, text1, text1_index + 1);
+    free(text);
+    free(text1);
+    return 0;
+}
+

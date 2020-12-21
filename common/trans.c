@@ -23,6 +23,7 @@
 #endif
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "trans.h"
 #include "arch.h"
 #include "parse.h"

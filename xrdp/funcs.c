@@ -23,6 +23,7 @@
 #endif
 
 #include "xrdp.h"
+#include "string_calls.h"
 
 /*****************************************************************************/
 /* returns boolean */

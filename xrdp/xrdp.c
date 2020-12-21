@@ -27,6 +27,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "xrdp_configure_options.h"
+#include "string_calls.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
