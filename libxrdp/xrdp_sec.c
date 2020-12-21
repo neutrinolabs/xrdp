@@ -1744,19 +1744,31 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     {
         return 0;
     }
-    in_uint8s(s, 4); /* desktopPhysicalWidth */
+    in_uint32_le(s, self->rdp_layer->client_info.physical_width); /* desktopPhysicalWidth */
 
     if (!s_check_rem(s, 4))
     {
         return 0;
     }
-    in_uint8s(s, 4); /* desktopPhysicalHeight */
+    in_uint32_le(s, self->rdp_layer->client_info.physical_height); /* desktopPhysicalHeight */
 
     if (!s_check_rem(s, 2))
     {
         return 0;
     }
-    in_uint8s(s, 2); /* reserved */
+    in_uint16_le(s, self->rdp_layer->client_info.orientation); /* desktopOrientation */
+    
+    if (!s_check_rem(s, 4))
+    {
+        return 0;
+    }
+    in_uint32_le(s, self->rdp_layer->client_info.desktop_scale_factor);
+    
+    if (!s_check_rem(s, 4))
+    {
+        return 0;
+    }
+    in_uint32_le(s, self->rdp_layer->client_info.device_scale_factor);
 
     return 0;
 }
@@ -2046,6 +2058,79 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     return 0;
 }
 
+static int
+xrdp_sec_process_msc_data_monitorex(struct xrdp_sec *self, struct stream* s)
+{
+    uint32_t flags;
+    uint32_t size;
+    uint32_t count;
+    uint32_t index;
+    struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
+
+    if (client_info->multimon != 1) {
+        LLOGLN(0, ("[INFO] xrdp_sec_process_msc_data_monitorex: multimon is not "
+               "allowed, skipping"));
+        return 0;
+    }
+    in_uint32_le(s, flags);
+    if (flags != 0) {
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_msc_data_monitorex: flags MUST be "
+               "zero, detected: 0x%x", flags));
+        return 1;
+    }
+    in_uint32_le(s, size);
+    if (size != 20) {
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_msc_data_monitorex: monitorAttributeSize MUST be "
+               "20, detected: %u", size));
+        return 1;
+    }
+    in_uint32_le(s, count);
+    if (count > 16)
+    {
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_msc_data_monitorex: max allowed "
+               "monitors is 16, detected: %d", count));
+        return 1;
+    }
+
+    for (index = 0; index < count; index++)
+    {
+        in_uint32_le(s, client_info->minfo[index].physical_width);
+        if (client_info->minfo[index].physical_width < 10 ||
+                client_info->minfo[index].physical_width > 10000) {
+            LLOGLN(0, ("[INFO] xrdp_sec_process_msc_data_monitorex: ignore "
+                    "invalid physical_width: %d",
+                    client_info->minfo[index].physical_width));
+            client_info->minfo[index].physical_width = 0;
+        }
+        in_uint32_le(s, client_info->minfo[index].physical_height);
+        if (client_info->minfo[index].physical_height < 10 ||
+                client_info->minfo[index].physical_height > 10000) {
+            LLOGLN(0, ("[INFO] xrdp_sec_process_msc_data_monitorex: ignore "
+                    "invalid physical_height: %d",
+                    client_info->minfo[index].physical_height));
+            client_info->minfo[index].physical_height = 0;
+        }
+        in_uint32_le(s, client_info->minfo[index].orientation);
+        switch (client_info->minfo[index].orientation) {
+            case 0:
+            case 90:
+            case 180:
+            case 270:
+                break;
+            default:
+                LLOGLN(0, ("[INFO] xrdp_sec_process_msc_data_monitorex: ignore "
+                        "invalid orientation: %d",
+                        client_info->minfo[index].orientation));
+                client_info->minfo[index].orientation = 0;
+                break;
+        }
+        in_uint32_le(s, client_info->minfo[index].desktop_scale_factor);
+        in_uint32_le(s, client_info->minfo[index].device_scale_factor);
+    }
+
+    return 0;
+}
+
 /*****************************************************************************/
 /* process client mcs data, we need some things in here to create the server
    mcs data */
@@ -2109,8 +2194,13 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
                     return 1;
                 }
                 break;
+            case SEC_TAG_CLI_MONITOR_EX:
+                if (xrdp_sec_process_msc_data_monitorex(self, s) != 0)
+                {
+                    return 1;
+                }
+                break;
                                        /* CS_MCS_MSGCHANNEL 0xC006
-                                          CS_MONITOR_EX     0xC008
                                           CS_MULTITRANSPORT 0xC00A
                                           SC_CORE           0x0C01
                                           SC_SECURITY       0x0C02
