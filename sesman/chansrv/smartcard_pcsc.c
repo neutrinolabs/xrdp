@@ -47,6 +47,9 @@
 #if PCSC_STANDIN
 
 
+#define MAX_ATR_SIZE 33
+#define MAX_READERS 32
+
 extern int g_display_num; /* in chansrv.c */
 
 static int g_autoinc = 0; /* general purpose autoinc */
@@ -64,7 +67,7 @@ typedef struct pubReaderStatesList
     tui32 eventCounter;
     tui32 readerState;
     tui32 readerSharing;
-    tui8 cardAtr[36];
+    tui8 cardAtr[MAX_ATR_SIZE];
     tui32 cardAtrLength;
     tui32 cardProtocol;
 } PCSC_READER_STATE;
@@ -90,11 +93,9 @@ struct pcsc_uds_client
     int state;
     int pad1;
 
-    /* should be 2944 bytes */
-    /* 128 + 4 + 4 + 4 + 36 + 4 + 4 = 186, 186 * 16 = 2944 */
-    PCSC_READER_STATE readerStates[16];
-    tui32 current_states[16];
-    tui32 event_states[16];
+    PCSC_READER_STATE readerStates[MAX_READERS];
+    tui32 current_states[MAX_READERS];
+    tui32 event_states[MAX_READERS];
     int numReaders;
     int waiting;
     int something_changed;
@@ -751,7 +752,7 @@ scard_readers_to_list(struct pcsc_uds_client *uds_client,
                 uds_client->readerStates[reader_index].eventCounter = 0;
                 uds_client->readerStates[reader_index].readerState = 0;
                 uds_client->readerStates[reader_index].readerSharing = 0;
-                g_memset(uds_client->readerStates[reader_index].cardAtr, 0, 36);
+                g_memset(uds_client->readerStates[reader_index].cardAtr, 0, MAX_ATR_SIZE);
                 uds_client->readerStates[reader_index].cardAtrLength = 0;
                 uds_client->readerStates[reader_index].cardProtocol = 0;
                 uds_client->current_states[reader_index] = 0;
@@ -759,7 +760,7 @@ scard_readers_to_list(struct pcsc_uds_client *uds_client,
             }
             reader_index++; 
             hold_reader = uds_client->readerStates[reader_index];
-            if (reader_index > 15)
+            if (reader_index > (MAX_READERS - 1))
             {
                 return 0;
             }
@@ -774,7 +775,7 @@ scard_readers_to_list(struct pcsc_uds_client *uds_client,
     }
     uds_client->numReaders = reader_index;
     /* clear the rest */
-    while (reader_index < 16)
+    while (reader_index < MAX_READERS)
     {
         g_memset(uds_client->readerStates + reader_index, 0, sizeof(PCSC_READER_STATE));
         uds_client->current_states[reader_index] = 0;
@@ -1400,11 +1401,46 @@ scard_function_transmit_return(void *user_data,
 }
 
 /*****************************************************************************/
-/* returns error */
+struct pcsc_control_struct
+{
+    int hCard;
+    tui32 dwControlCode;
+    tui32 cbSendLength;
+    tui32 cbRecvLength;
+    tui32 dwBytesReturned;
+    tui32 rv;
+};
+
+#define SCARD_E_UNSUPPORTED_FEATURE 0x8010001F
+/*****************************************************************************/
+/* process but return not supported*/
 int
 scard_process_control(struct trans *con, struct stream *in_s)
 {
-    return 0;
+    struct pcsc_control_struct pcscCtl;
+    char* sentBuffer;
+    int rv;
+    struct stream *out_s;
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_process_control:");
+    rv = 0;
+    in_uint8a(in_s, &pcscCtl, sizeof(pcscCtl));
+    sentBuffer = g_new0(char, pcscCtl.cbSendLength);
+    in_uint8a(in_s, sentBuffer, pcscCtl.cbSendLength);
+
+    pcscCtl.cbRecvLength = pcscCtl.cbSendLength;
+    pcscCtl.dwBytesReturned = 0;
+    pcscCtl.rv = SCARD_E_UNSUPPORTED_FEATURE;
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_process_control: return SCARD_E_UNSUPPORTED_FEATURE");
+    out_s = con->out_s;
+    init_stream(out_s, 0);
+    out_uint8a(out_s, &pcscCtl, sizeof(pcscCtl));
+    s_mark_end(out_s);
+    rv = trans_write_copy(con);
+    
+    g_free(sentBuffer);
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1459,7 +1495,7 @@ scard_process_status(struct trans *con, struct stream *in_s)
         scard_send_status(pcscStatus, 0,
                           lcontext->context, lcontext->context_bytes,
                           lcard->card, lcard->card_bytes,
-                          128, 36, 0);
+                          128, MAX_ATR_SIZE, 0);
     }
     else
     {
@@ -1509,7 +1545,7 @@ scard_function_status_return(void *user_data,
     int dwProtocol;
     int dwAtrLen;
     int return_code;
-    char attr[36];
+    char attr[MAX_ATR_SIZE];
     char reader_name[128];
     int rv;
     struct stream *out_s;
@@ -1769,7 +1805,7 @@ scard_function_get_status_change_return(void *user_data,
                     uds_client->send_status = 1;
                 }
                 in_uint32_le(in_s, uds_client->readerStates[index].cardAtrLength);
-                in_uint8a(in_s, uds_client->readerStates[index].cardAtr, 36);
+                in_uint8a(in_s, uds_client->readerStates[index].cardAtr, MAX_ATR_SIZE);
                 uds_client->readerStates[index].eventCounter = (event_state >> 16) & 0xFFFF;
             }
         }
