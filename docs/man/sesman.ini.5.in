@@ -33,7 +33,7 @@ X11 server settings for supported servers
 Settings for xrdp-chansrv(8)
 
 .TP
-\fB[Chansrv_Logging]\fR
+\fB[ChansrvLogging]\fR
 Logging settings for xrdp-chansrv(8)
 
 .TP
