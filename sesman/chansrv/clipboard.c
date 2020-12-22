@@ -169,6 +169,7 @@ x-special/gnome-copied-files
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "chansrv.h"
 #include "chansrv_config.h"
 #include "clipboard.h"

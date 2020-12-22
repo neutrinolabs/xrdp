@@ -30,6 +30,7 @@
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 
 #include <stdio.h>
 #include <security/pam_appl.h>

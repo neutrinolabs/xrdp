@@ -34,6 +34,7 @@
 #include "log.h"
 #include "trans.h"
 #include "ssl_calls.h"
+#include "string_calls.h"
 #include "xrdp_client_info.h"
 
 #define LLOG_LEVEL 1

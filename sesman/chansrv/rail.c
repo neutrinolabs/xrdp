@@ -39,6 +39,7 @@
 #include "xcommon.h"
 #include "log.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "thread_calls.h"
 #include "list.h"
 

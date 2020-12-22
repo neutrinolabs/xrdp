@@ -114,11 +114,16 @@ param=-dpi
 param=96
 
 [Chansrv]
-; drive redirection, defaults to xrdp_client if not set
+; drive redirection
+; See sesman.ini(5) for the format of this parameter
+#FuseMountName=/run/user/%u/thinclient_drives
+#FuseMountName=/media/thinclient_drives/%U/thinclient_drives
 FuseMountName=thinclient_drives
 ; this value allows only the user to acess their own mapped drives.
 ; Make this more permissive (e.g. 022) if required.
 FileUmask=077
+; Can be used to disable FUSE functionality - see sesman.ini(5)
+#EnableFuseMount=false
 
 [ChansrvLogging]
 ; Note: one log file is created per display and the LogFile config value 

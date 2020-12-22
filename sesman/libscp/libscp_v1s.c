@@ -32,6 +32,7 @@
 #define LIBSCP_V1S_C
 
 #include "libscp_v1s.h"
+#include "string_calls.h"
 
 //extern struct log_config* s_log;
 

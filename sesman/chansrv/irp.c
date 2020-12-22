@@ -28,6 +28,7 @@
 #include "chansrv.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "irp.h"
 
 IRP *g_irp_head = NULL;

@@ -26,6 +26,9 @@ struct config_chansrv
     /** Whether to use a UNIX socket for chansrv */
     int use_unix_socket;
 
+    /** Whether the FUSE mount is enabled or not */
+    int enable_fuse_mount;
+
     /** RestrictOutboundClipboard setting from sesman.ini */
     int restrict_outbound_clipboard;
 

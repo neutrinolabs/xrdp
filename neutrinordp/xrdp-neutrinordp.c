@@ -26,6 +26,7 @@
 #include "xrdp_rail.h"
 #include "trans.h"
 #include "log.h"
+#include "string_calls.h"
 #include <freerdp/settings.h>
 
 #if defined(VERSION_STRUCT_RDP_FREERDP)

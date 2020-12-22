@@ -25,6 +25,7 @@
 #include "base64.h"
 #include "xrdp.h"
 #include "log.h"
+#include "string_calls.h"
 
 #define ASK "ask"
 #define ASK_LEN g_strlen(ASK)

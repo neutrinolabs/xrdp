@@ -33,6 +33,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "list.h"
 #include "chansrv.h"
 #include "clipboard.h"

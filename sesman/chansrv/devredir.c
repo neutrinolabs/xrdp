@@ -49,6 +49,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "log.h"
 #include "chansrv.h"
 #include "chansrv_fuse.h"

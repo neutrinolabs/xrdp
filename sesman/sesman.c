@@ -32,6 +32,7 @@
 
 #include "sesman.h"
 #include "xrdp_configure_options.h"
+#include "string_calls.h"
 
 struct sesman_startup_params
 {

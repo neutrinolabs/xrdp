@@ -31,6 +31,7 @@
 #include "libscp_v0.h"
 
 #include "os_calls.h"
+#include "string_calls.h"
 
 extern struct log_config *s_log;
 

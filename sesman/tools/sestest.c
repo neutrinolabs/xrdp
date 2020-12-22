@@ -26,6 +26,7 @@
 #include "libscp.h"
 #include "parse.h"
 #include "log.h"
+#include "string_calls.h"
 
 #include <stdio.h>
 

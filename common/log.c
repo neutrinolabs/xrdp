@@ -31,6 +31,7 @@
 #include "file.h"
 #include "os_calls.h"
 #include "thread_calls.h"
+#include "string_calls.h"
 
 /* Add a define here so that the log.h will hold more information
  * when compiled from this C file.
