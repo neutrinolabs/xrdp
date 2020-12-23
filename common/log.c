@@ -523,27 +523,53 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
 
 bool_t
 internal_log_is_enabled_for_level(const enum logLevels log_level,
-                                  const bool_t override_destination_level)
+                                  const bool_t override_destination_level,
+                                  const enum logLevels override_log_level)
 {
     /* Is log initialized? */
     if (g_staticLogConfig == NULL)
     {
         return 0;
     }
-
-    /* Is there at least one log destination which will accept the message based on the log level? */
-    return (g_staticLogConfig->fd >= 0
-            && (override_destination_level || log_level <= g_staticLogConfig->log_level))
-           || (g_staticLogConfig->enable_syslog
-               && (override_destination_level || log_level <= g_staticLogConfig->syslog_level))
-           || (g_staticLogConfig->enable_console
-               && (override_destination_level || log_level <= g_staticLogConfig->console_level));
+    else if (g_staticLogConfig->fd < 0
+             && !g_staticLogConfig->enable_syslog
+             && !g_staticLogConfig->enable_console)
+    {
+        /* all logging outputs are disabled */
+        return 0;
+    }
+    else if (override_destination_level)
+    {
+        /* Override is enabled - should the message should be logged? */
+        return log_level <= override_log_level;
+    }
+    /* Override is disabled - Is there at least one log destination
+     * which will accept the message based on the log level? */
+    else if (g_staticLogConfig->fd >= 0
+             && log_level <= g_staticLogConfig->log_level)
+    {
+        return 1;
+    }
+    else if (g_staticLogConfig->enable_syslog
+             && log_level <= g_staticLogConfig->syslog_level)
+    {
+        return 1;
+    }
+    else if (g_staticLogConfig->enable_console
+             && log_level <= g_staticLogConfig->console_level)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 bool_t
 internal_log_location_overrides_level(const char *function_name,
                                       const char *file_name,
-                                      const enum logLevels log_level)
+                                      enum logLevels *log_level_return)
 {
     struct log_logger_level *logger = NULL;
     int i;
@@ -561,7 +587,8 @@ internal_log_location_overrides_level(const char *function_name,
                 || (logger->logger_type == LOG_TYPE_FUNCTION
                     && 0 == g_strncmp(logger->logger_name, function_name, LOGGER_NAME_SIZE)))
         {
-            return (log_level <= logger->log_level);
+            *log_level_return = logger->log_level;
+            return 1;
         }
     }
 
@@ -756,6 +783,7 @@ log_hexdump_with_location(const char *function_name,
     int offset;
     char *dump_buffer;
     enum logReturns rv;
+    enum logLevels override_log_level;
     bool_t override_destination_level = 0;
 
     /* Start the dump on a new line so that the first line of the dump is
@@ -780,8 +808,8 @@ log_hexdump_with_location(const char *function_name,
     override_destination_level = internal_log_location_overrides_level(
         function_name,
         file_name,
-        log_level);
-    if (!internal_log_is_enabled_for_level(log_level, override_destination_level))
+        &override_log_level);
+    if (!internal_log_is_enabled_for_level(log_level, override_destination_level, override_log_level))
     {
         return LOG_STARTUP_OK;
     }
@@ -901,21 +929,24 @@ log_message_with_location(const char *function_name,
     va_list ap;
     enum logReturns rv;
     char buff[LOG_BUFFER_SIZE];
+    enum logLevels override_log_level = LOG_LEVEL_NEVER;
     bool_t override_destination_level = 0;
 
     if (g_staticLogConfig == NULL)
     {
         g_writeln("The log reference is NULL - log not initialized properly "
                   "when called from [%s(%s:%d)]",
-                  function_name, file_name, line_number);
+                  (function_name != NULL ? function_name : "unknown_function"),
+                  (file_name != NULL ? file_name : "unknown_file"),
+                  line_number);
         return LOG_ERROR_NO_CFG;
     }
 
     override_destination_level = internal_log_location_overrides_level(
         function_name,
         file_name,
-        level);
-    if (!internal_log_is_enabled_for_level(level, override_destination_level))
+        &override_log_level);
+    if (!internal_log_is_enabled_for_level(level, override_destination_level, override_log_level))
     {
         return LOG_STARTUP_OK;
     }
@@ -924,7 +955,7 @@ log_message_with_location(const char *function_name,
                function_name, file_name, line_number, msg);
 
     va_start(ap, msg);
-    rv = internal_log_message(level, override_destination_level, buff, ap);
+    rv = internal_log_message(level, override_destination_level, override_log_level, buff, ap);
     va_end(ap);
     return rv;
 }
@@ -936,14 +967,15 @@ log_message(const enum logLevels lvl, const char *msg, ...)
     enum logReturns rv;
 
     va_start(ap, msg);
-    rv = internal_log_message(lvl, 0, msg, ap);
+    rv = internal_log_message(lvl, 0, LOG_LEVEL_NEVER, msg, ap);
     va_end(ap);
     return rv;
 }
 
 enum logReturns
 internal_log_message(const enum logLevels lvl,
-                     bool_t override_destination_level,
+                     const bool_t override_destination_level,
+                     const enum logLevels override_log_level,
                      const char *msg,
                      va_list ap)
 {
@@ -967,7 +999,7 @@ internal_log_message(const enum logLevels lvl,
         return LOG_ERROR_FILE_NOT_OPEN;
     }
 
-    if (!internal_log_is_enabled_for_level(lvl, override_destination_level))
+    if (!internal_log_is_enabled_for_level(lvl, override_destination_level, override_log_level))
     {
         return LOG_STARTUP_OK;
     }
@@ -1009,20 +1041,25 @@ internal_log_message(const enum logLevels lvl,
 #endif
 #endif
 
-    if (g_staticLogConfig->enable_syslog && (override_destination_level || lvl <= g_staticLogConfig->syslog_level))
+    if (g_staticLogConfig->enable_syslog
+            && ((override_destination_level && lvl <= override_log_level)
+                || (!override_destination_level && lvl <= g_staticLogConfig->syslog_level)))
     {
         /* log to syslog*/
         /* %s fix compiler warning 'not a string literal' */
         syslog(internal_log_xrdp2syslog(lvl), "%s", buff + 20);
     }
 
-    if (g_staticLogConfig->enable_console && (override_destination_level || lvl <= g_staticLogConfig->console_level))
+    if (g_staticLogConfig->enable_console
+            && ((override_destination_level && lvl <= override_log_level)
+                || (!override_destination_level && lvl <= g_staticLogConfig->console_level)))
     {
         /* log to console */
         g_printf("%s", buff);
     }
 
-    if (override_destination_level || lvl <= g_staticLogConfig->log_level)
+    if ((override_destination_level && lvl <= override_log_level)
+            || (!override_destination_level && lvl <= g_staticLogConfig->log_level))
     {
         /* log to application logfile */
         if (g_staticLogConfig->fd >= 0)
