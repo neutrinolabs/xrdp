@@ -30,15 +30,7 @@
 #include <freerdp/codec/rfx.h>
 #endif
 
-#define LLOG_LEVEL 2
-#define LLOGLN(_log_level, _params) \
-    { \
-        if (_log_level < LLOG_LEVEL) \
-        { \
-            g_write("xrdp_orders.c [%10.10u]: ", g_time3()); \
-            g_writeln _params ; \
-        } \
-    }
+
 
 #define MAX_ORDERS_SIZE(_client_info) \
     (MAX((_client_info)->max_fastpath_frag_bytes, 16 * 1024) - 256);
@@ -114,7 +106,7 @@ xrdp_orders_init(struct xrdp_orders *self)
         self->order_count = 0;
         if (self->rdp_layer->client_info.use_fast_path & 1)
         {
-            LLOGLN(10, ("xrdp_orders_init: fastpath"));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_init: fastpath");
             if (xrdp_rdp_init_fastpath(self->rdp_layer, self->out_s) != 0)
             {
                 return 1;
@@ -124,7 +116,7 @@ xrdp_orders_init(struct xrdp_orders *self)
         }
         else
         {
-            LLOGLN(10, ("xrdp_orders_init: slowpath"));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_init: slowpath");
             if (xrdp_rdp_init_data(self->rdp_layer, self->out_s) != 0)
             {
                 return 1;
@@ -153,7 +145,7 @@ xrdp_orders_send(struct xrdp_orders *self)
         if ((self->order_level == 0) && (self->order_count > 0))
         {
             s_mark_end(self->out_s);
-            DEBUG(("xrdp_orders_send sending %d orders", self->order_count));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_orders_send sending %d orders", self->order_count);
             self->order_count_ptr[0] = self->order_count;
             self->order_count_ptr[1] = self->order_count >> 8;
             self->order_count = 0;
@@ -190,7 +182,7 @@ xrdp_orders_force_send(struct xrdp_orders *self)
     if ((self->order_level > 0) && (self->order_count > 0))
     {
         s_mark_end(self->out_s);
-        DEBUG(("xrdp_orders_force_send sending %d orders", self->order_count));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_orders_force_send sending %d orders", self->order_count);
         self->order_count_ptr[0] = self->order_count;
         self->order_count_ptr[1] = self->order_count >> 8;
         if (self->rdp_layer->client_info.use_fast_path & 1)
@@ -245,7 +237,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
     size = (int)(self->out_s->p - self->order_count_ptr);
     if (size < 0)
     {
-        g_writeln("error in xrdp_orders_check, size too small: %d bytes", size);
+        LOG(LOG_LEVEL_ERROR, "error in xrdp_orders_check, size too small: %d bytes", size);
         return 1;
     }
     if (size > max_order_size)
@@ -253,7 +245,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         /* this suggests someone calls this function without passing the
            correct max_size so we end up putting more into the buffer
            than we indicate we can */
-        g_writeln("error in xrdp_orders_check, size too big: %d bytes", size);
+        LOG(LOG_LEVEL_WARNING, "error in xrdp_orders_check, size too big: %d bytes", size);
         /* We where getting called with size already greater than
            max_order_size
            Which I suspect was because the sending of text did not include
@@ -1648,20 +1640,20 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
 /*****************************************************************************/
 /* returns error */
 int
-xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
-                          int srcwidth, int srcrepeat, int* srctransform,
+xrdp_orders_composite_blt(struct xrdp_orders *self, int srcidx, int srcformat,
+                          int srcwidth, int srcrepeat, int *srctransform,
                           int mskflags, int mskidx, int mskformat,
                           int mskwidth, int mskrepeat, int op,
                           int srcx, int srcy, int mskx, int msky,
                           int dstx, int dsty, int width, int height,
                           int dstformat,
-                          struct xrdp_rect* rect)
+                          struct xrdp_rect *rect)
 {
     int order_flags;
     int vals[20];
     int present;
-    char* present_ptr;
-    char* order_flags_ptr;
+    char *present_ptr;
+    char *order_flags_ptr;
 
     if (xrdp_orders_check(self, 80) != 0)
     {
@@ -1678,7 +1670,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     {
         /* if clip is present, still check if it's needed */
         if (dstx < rect->left || dsty < rect->top ||
-            dstx + width > rect->right || dsty + height > rect->bottom)
+                dstx + width > rect->right || dsty + height > rect->bottom)
         {
             order_flags |= TS_BOUNDS;
             if (xrdp_orders_last_bounds(self, rect))
@@ -1725,7 +1717,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     present_ptr = self->out_s->p;
     out_uint8s(self->out_s, 3);
     if ((order_flags & TS_BOUNDS) &&
-        !(order_flags & TS_ZERO_BOUNDS_DELTAS))
+            !(order_flags & TS_ZERO_BOUNDS_DELTAS))
     {
         xrdp_orders_out_bounds(self, rect);
     }
@@ -2227,13 +2219,13 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        g_writeln("error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        g_writeln("error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2353,13 +2345,13 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        g_writeln("error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        g_writeln("error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2490,7 +2482,7 @@ xrdp_orders_cache_glyph(struct xrdp_orders *self,
 
 /*****************************************************************************/
 /* returns error */
-static int write_2byte_signed(struct stream * s, int value)
+static int write_2byte_signed(struct stream *s, int value)
 {
     unsigned char byte;
     int negative = 0;
@@ -2536,7 +2528,7 @@ static int write_2byte_signed(struct stream * s, int value)
 
 /*****************************************************************************/
 /* returns error */
-static int write_2byte_unsigned(struct stream * s, unsigned int value)
+static int write_2byte_unsigned(struct stream *s, unsigned int value)
 {
     unsigned char byte;
 
@@ -2602,9 +2594,9 @@ xrdp_orders_cache_glyph_v2(struct xrdp_orders *self,
 
     out_uint8(self->out_s, char_index);
     if (write_2byte_signed(self->out_s, font_char->offset) ||
-        write_2byte_signed(self->out_s, font_char->baseline) ||
-        write_2byte_unsigned(self->out_s, font_char->width) ||
-        write_2byte_unsigned(self->out_s, font_char->height))
+            write_2byte_signed(self->out_s, font_char->baseline) ||
+            write_2byte_unsigned(self->out_s, font_char->width) ||
+            write_2byte_unsigned(self->out_s, font_char->height))
     {
         return 1;
     }
@@ -2653,13 +2645,13 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        g_writeln("error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        g_writeln("error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2781,13 +2773,13 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
 
     if (width > 64)
     {
-        g_writeln("error, width > 64");
+        LOG(LOG_LEVEL_ERROR, "error, width > 64");
         return 1;
     }
 
     if (height > 64)
     {
-        g_writeln("error, height > 64");
+        LOG(LOG_LEVEL_ERROR, "error, height > 64");
         return 1;
     }
 
@@ -2894,8 +2886,8 @@ xrdp_orders_send_as_rfx(struct xrdp_orders *self,
         return 0;
     }
 
-    LLOGLN(10, ("width %d height %d rfx_min_pixel %d", width, height,
-                self->rfx_min_pixel));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "width %d height %d rfx_min_pixel %d", width, height,
+              self->rfx_min_pixel);
     if (width * height < self->rfx_min_pixel)
     {
         return 0;
@@ -2987,7 +2979,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
             return 2;
         }
 
-        LLOGLN(10, ("xrdp_orders_send_bitmap3: rfx"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_send_bitmap3: rfx");
         context = (RFX_CONTEXT *)(self->rdp_layer->rfx_enc);
         make_stream(xr_s);
         init_stream(xr_s, 16384);
@@ -3016,11 +3008,11 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
 
         if (!xrdp_orders_send_as_jpeg(self, width, height, bpp, hints))
         {
-            LLOGLN(10, ("xrdp_orders_send_bitmap3: jpeg skipped"));
+            LOG(LOG_LEVEL_ERROR, "xrdp_orders_send_bitmap3: jpeg skipped");
             return 2;
         }
 
-        LLOGLN(10, ("xrdp_orders_send_bitmap3: jpeg"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_send_bitmap3: jpeg");
         e = width % 4;
 
         if (e != 0)
@@ -3048,7 +3040,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
     }
     else
     {
-        g_writeln("xrdp_orders_send_bitmap3: todo unknown codec");
+        LOG(LOG_LEVEL_ERROR, "xrdp_orders_send_bitmap3: todo unknown codec");
         return 1;
     }
 
@@ -3119,7 +3111,7 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders *self, int id,
     order_flags |= 1 << 2; /* type RDP_ORDER_ALTSEC_CREATE_OFFSCR_BITMAP */
     out_uint8(self->out_s, order_flags);
     cache_id = id & 0x7fff;
-    LLOGLN(10, ("xrdp_orders_send_create_os_surface: cache_id %d", cache_id));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_send_create_os_surface: cache_id %d", cache_id);
     flags = cache_id;
 
     if (num_del_list > 0)

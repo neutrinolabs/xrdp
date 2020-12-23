@@ -27,13 +27,7 @@
 #include "log.h"
 #include "string_calls.h"
 
-#define LOG_LEVEL 1
-#define LLOG(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
-#define LLOGLN(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
-#define LHEXDUMP(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_hexdump _args ; } } while (0)
+
 
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
@@ -242,8 +236,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
-    LLOGLN(0, ("xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
-               client_info->keyboard_type, client_info->keyboard_subtype));
+    LOG(LOG_LEVEL_INFO, "xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
+        client_info->keyboard_type, client_info->keyboard_subtype);
 
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
@@ -263,7 +257,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     }
 
     g_snprintf(keyboard_cfg_file, 255, "%s/xrdp_keyboard.ini", XRDP_CFG_PATH);
-    LLOGLN(10, ("keyboard_cfg_file %s", keyboard_cfg_file));
+    LOG(LOG_LEVEL_DEBUG, "keyboard_cfg_file %s", keyboard_cfg_file);
 
     fd = g_file_open(keyboard_cfg_file);
 
@@ -294,8 +288,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                 {
                     item = (char *)list_get_item(items, i);
                     value = (char *)list_get_item(values, i);
-                    LLOGLN(10, ("xrdp_load_keyboard_layout: item %s value %s",
-                           item, value));
+                    LOG(LOG_LEVEL_DEBUG, "xrdp_load_keyboard_layout: item %s value %s",
+                        item, value);
                     if (g_strcasecmp(item, "keyboard_type") == 0)
                     {
                         int v = g_atoi(value);
@@ -308,7 +302,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                     {
                         int v = g_atoi(value);
                         if (v != client_info->keyboard_subtype &&
-                            section_found == index)
+                                section_found == index)
                         {
                             section_found = -1;
                             break;
@@ -361,9 +355,9 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                          * mixing items from different sections will result in
                          * skipping over current section.
                          */
-                        LLOGLN(10, ("xrdp_load_keyboard_layout: skipping "
-                               "configuration item - %s, continuing to next "
-                               "section", item));
+                        LOG(LOG_LEVEL_DEBUG, "xrdp_load_keyboard_layout: skipping "
+                            "configuration item - %s, continuing to next "
+                            "section", item);
                         break;
                     }
                 }
@@ -429,15 +423,15 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         list_delete(items);
         list_delete(values);
 
-        LLOGLN(0, ("xrdp_load_keyboard_layout: model [%s] variant [%s] "
-               "layout [%s] options [%s]", client_info->model,
-               client_info->variant, client_info->layout, client_info->options));
+        LOG(LOG_LEVEL_INFO, "xrdp_load_keyboard_layout: model [%s] variant [%s] "
+            "layout [%s] options [%s]", client_info->model,
+            client_info->variant, client_info->layout, client_info->options);
         g_file_close(fd);
     }
     else
     {
-        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %s",
-               keyboard_cfg_file));
+        LOG(LOG_LEVEL_ERROR, "xrdp_load_keyboard_layout: error opening %s",
+            keyboard_cfg_file);
     }
 }
 
@@ -447,7 +441,7 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
 {
     struct xrdp_sec *self;
 
-    DEBUG((" in xrdp_sec_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_create");
     self = (struct xrdp_sec *) g_malloc(sizeof(struct xrdp_sec), 1);
     self->rdp_layer = owner;
     self->crypt_method = CRYPT_METHOD_NONE; /* set later */
@@ -457,7 +451,7 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     self->is_security_header_present = 1;
-    DEBUG((" out xrdp_sec_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_create");
 
     return self;
 }
@@ -468,7 +462,7 @@ xrdp_sec_delete(struct xrdp_sec *self)
 {
     if (self == 0)
     {
-        g_writeln("xrdp_sec_delete: self is null");
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_delete: self is null");
         return;
     }
 
@@ -568,7 +562,7 @@ xrdp_sec_update(char *key, char *update_key, int key_len)
 static void
 xrdp_sec_fips_decrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_fips_decrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_fips_decrypt:");
     ssl_des3_decrypt(self->decrypt_fips_info, len, data, data);
     self->decrypt_use_count++;
 }
@@ -577,7 +571,7 @@ xrdp_sec_fips_decrypt(struct xrdp_sec *self, char *data, int len)
 static void
 xrdp_sec_decrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_decrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_decrypt:");
     if (self->decrypt_use_count == 4096)
     {
         xrdp_sec_update(self->decrypt_key, self->decrypt_update_key,
@@ -594,7 +588,7 @@ xrdp_sec_decrypt(struct xrdp_sec *self, char *data, int len)
 static void
 xrdp_sec_fips_encrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_fips_encrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_fips_encrypt:");
     ssl_des3_encrypt(self->encrypt_fips_info, len, data, data);
     self->encrypt_use_count++;
 }
@@ -603,7 +597,7 @@ xrdp_sec_fips_encrypt(struct xrdp_sec *self, char *data, int len)
 static void
 xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_encrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_encrypt:");
     if (self->encrypt_use_count == 4096)
     {
         xrdp_sec_update(self->encrypt_key, self->encrypt_update_key,
@@ -629,7 +623,7 @@ unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
     int i;
     int bytes;
 
-    LLOGLN(10, ("unicode_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "unicode_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len);
     if (src_bytes == 0)
     {
         if (!s_check_rem(s, 2))
@@ -656,7 +650,7 @@ unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
     {
         g_memset(dst, '\0', dst_len);
     }
-    LLOGLN(10, ("unicode_utf16_in: num_chars %d, dst %s", num_chars, dst));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "unicode_utf16_in: num_chars %d, dst %s", num_chars, dst);
     g_free(src);
 
     return 0;
@@ -686,48 +680,47 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint8s(s, 4);
     in_uint32_le(s, flags);
-    DEBUG(("in xrdp_sec_process_logon_info flags $%x", flags));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_sec_process_logon_info flags $%x", flags);
 
     /* this is the first test that the decrypt is working */
     if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
     {
         /* must be or error */
-        DEBUG(("xrdp_sec_process_logon_info: flags wrong, major error"));
-        LLOGLN(0, ("xrdp_sec_process_logon_info: flags wrong, likely decrypt "
-               "not working"));
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_process_logon_info: flags wrong, likely decrypt "
+            "not working");
         return 1;
     }
 
     if (flags & RDP_LOGON_LEAVE_AUDIO)
     {
         self->rdp_layer->client_info.sound_code = 1;
-        DEBUG(("flag RDP_LOGON_LEAVE_AUDIO found"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_LOGON_LEAVE_AUDIO found");
     }
 
     if (flags & RDP_LOGON_RAIL)
     {
         self->rdp_layer->client_info.rail_enable = 1;
-        DEBUG(("flag RDP_LOGON_RAIL found"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_LOGON_RAIL found");
     }
 
     if ((flags & RDP_LOGON_AUTO) && (!self->rdp_layer->client_info.is_mce))
         /* todo, for now not allowing autologon and mce both */
     {
         self->rdp_layer->client_info.rdp_autologin = 1;
-        DEBUG(("flag RDP_LOGON_AUTO found"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_LOGON_AUTO found");
     }
 
     if (flags & RDP_COMPRESSION)
     {
-        DEBUG(("flag RDP_COMPRESSION found"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_COMPRESSION found");
         if (self->rdp_layer->client_info.use_bulk_comp)
         {
-            DEBUG(("flag RDP_COMPRESSION set"));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_COMPRESSION set");
             self->rdp_layer->client_info.rdp_compression = 1;
         }
         else
         {
-            DEBUG(("flag RDP_COMPRESSION not set"));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_COMPRESSION not set");
         }
     }
 
@@ -739,7 +732,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_domain >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR, "ERROR [xrdp_sec_process_logon_info()]: len_domain >= %d", INFO_CLIENT_MAX_CB_LEN);
         return 1;
     }
 
@@ -761,7 +754,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_user >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR, "ERROR [xrdp_sec_process_logon_info()]: len_user >= %d", INFO_CLIENT_MAX_CB_LEN);
         return 1;
     }
 
@@ -773,7 +766,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_password >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR, "ERROR [xrdp_sec_process_logon_info()]: len_password >= %d", INFO_CLIENT_MAX_CB_LEN);
         return 1;
     }
 
@@ -785,7 +778,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_program >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR, "ERROR [xrdp_sec_process_logon_info()]: len_program >= %d", INFO_CLIENT_MAX_CB_LEN);
         return 1;
     }
 
@@ -797,7 +790,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_directory >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR, "ERROR [xrdp_sec_process_logon_info()]: len_directory >= %d", INFO_CLIENT_MAX_CB_LEN);
         return 1;
     }
 
@@ -805,11 +798,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     {
         return 1;
     }
-    DEBUG(("domain %s", self->rdp_layer->client_info.domain));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "domain %s", self->rdp_layer->client_info.domain);
     if (unicode_utf16_in(s, len_user, self->rdp_layer->client_info.username, sizeof(self->rdp_layer->client_info.username) - 1) != 0)
     {
         return 1;
     }
+
 
     if (flags & RDP_LOGON_AUTO)
     {
@@ -817,14 +811,14 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         {
             return 1;
         }
-        DEBUG(("flag RDP_LOGON_AUTO found"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "flag RDP_LOGON_AUTO found");
     }
     else if (self->rdp_layer->client_info.enable_token_login
              && len_user > 0
              && len_password == 0
              && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
     {
-        DEBUG(("Logon token detected"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Logon token detected");
         g_strncpy(self->rdp_layer->client_info.password, sep + 1,
                   sizeof(self->rdp_layer->client_info.password) - 1);
         self->rdp_layer->client_info.username[sep - self->rdp_layer->client_info.username] = '\0';
@@ -839,29 +833,29 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         in_uint8s(s, len_password + 2);
         if (self->rdp_layer->client_info.require_credentials)
         {
-            g_writeln("xrdp_sec_process_logon_info: credentials on cmd line is mandatory");
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_process_logon_info: credentials on cmd line is mandatory");
             return 1; /* credentials on cmd line is mandatory */
         }
     }
     if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
-        && self->rdp_layer->client_info.domain[0] != '\0')
+            && self->rdp_layer->client_info.domain[0] != '\0')
     {
         int size = sizeof(self->rdp_layer->client_info.username);
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain_user_separator, size - 1 - g_strlen(self->rdp_layer->client_info.domain_user_separator));
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
     }
-    DEBUG(("username %s", self->rdp_layer->client_info.username));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "username %s", self->rdp_layer->client_info.username);
 
     if (unicode_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program) - 1) != 0)
     {
         return 1;
     }
-    DEBUG(("program %s", self->rdp_layer->client_info.program));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "program %s", self->rdp_layer->client_info.program);
     if (unicode_utf16_in(s, len_directory, self->rdp_layer->client_info.directory, sizeof(self->rdp_layer->client_info.directory) - 1) != 0)
     {
         return 1;
     }
-    DEBUG(("directory %s", self->rdp_layer->client_info.directory));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "directory %s", self->rdp_layer->client_info.directory);
 
     if (flags & RDP_LOGON_BLOB)
     {
@@ -896,7 +890,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         in_uint32_le(s, self->rdp_layer->client_info.rdp5_performanceflags);
     }
 
-    DEBUG(("out xrdp_sec_process_logon_info"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_sec_process_logon_info");
     return 0;
 }
 
@@ -907,7 +901,7 @@ xrdp_sec_send_lic_initial(struct xrdp_sec *self)
 {
     struct stream *s;
 
-    LLOGLN(10, ("xrdp_sec_send_lic_initial:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_lic_initial:");
     make_stream(s);
     init_stream(s, 8192);
 
@@ -1100,7 +1094,7 @@ xrdp_sec_fips_establish_keys(struct xrdp_sec *self)
     const char *fips_ivec;
     void *sha1;
 
-    LLOGLN(0, ("xrdp_sec_fips_establish_keys:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_sec_fips_establish_keys:");
 
     sha1 = ssl_sha1_info_create();
     ssl_sha1_clear(sha1);
@@ -1130,9 +1124,9 @@ xrdp_sec_fips_establish_keys(struct xrdp_sec *self)
 
     fips_ivec = (const char *) g_fips_ivec;
     self->encrypt_fips_info =
-          ssl_des3_encrypt_info_create(self->fips_encrypt_key, fips_ivec);
+        ssl_des3_encrypt_info_create(self->fips_encrypt_key, fips_ivec);
     self->decrypt_fips_info =
-          ssl_des3_decrypt_info_create(self->fips_decrypt_key, fips_ivec);
+        ssl_des3_decrypt_info_create(self->fips_decrypt_key, fips_ivec);
     self->sign_fips_info = ssl_hmac_info_create();
 }
 
@@ -1144,7 +1138,7 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
     char temp_hash[48];
     char input[48];
 
-    LLOGLN(0, ("xrdp_sec_establish_keys:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_sec_establish_keys:");
 
     g_memcpy(input, self->client_random, 24);
     g_memcpy(input + 24, self->server_random, 24);
@@ -1185,7 +1179,13 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     int len;
     int pad;
 
-    LLOGLN(10, ("xrdp_sec_recv_fastpath:"));
+#ifndef XRDP_DEBUG
+    /* TODO: remove UNUSED_VAR once the `var` variable is used for more than
+    logging in debug mode */
+    UNUSED_VAR(ver);
+#endif
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv_fastpath:");
     if (xrdp_fastpath_recv(self->fastpath_layer, s) != 0)
     {
         return 1;
@@ -1206,9 +1206,9 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
                 return 1;
             }
             in_uint8(s, pad);
-            LLOGLN(10, ("xrdp_sec_recv_fastpath: len %d ver %d pad %d", len, ver, pad));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv_fastpath: len %d ver %d pad %d", len, ver, pad);
             in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
-            LLOGLN(10, ("xrdp_sec_recv_fastpath: data len %d", (int)(s->end - s->p)));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv_fastpath: data len %d", (int)(s->end - s->p));
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
         }
@@ -1248,12 +1248,11 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     int ver;
     int pad;
 
-    DEBUG((" in xrdp_sec_recv"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_recv");
 
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
-        DEBUG((" out xrdp_sec_recv : error"));
-        g_writeln("xrdp_sec_recv: xrdp_mcs_recv failed");
+        LOG(LOG_LEVEL_ERROR, " out xrdp_sec_recv : error");
         return 1;
     }
 
@@ -1269,7 +1268,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     }
 
     in_uint32_le(s, flags);
-    DEBUG((" in xrdp_sec_recv flags $%x", flags));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_recv flags $%x", flags);
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
@@ -1286,9 +1285,9 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
                 return 1;
             }
             in_uint8(s, pad);
-            LLOGLN(10, ("xrdp_sec_recv: len %d ver %d pad %d", len, ver, pad));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: len %d ver %d pad %d", len, ver, pad);
             in_uint8s(s, 8); /* signature(8) */
-            LLOGLN(10, ("xrdp_sec_recv: data len %d", (int)(s->end - s->p)));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: data len %d", (int)(s->end - s->p));
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
         }
@@ -1322,9 +1321,9 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         in_uint8a(s, self->client_crypt_random, len - 8);
         xrdp_sec_rsa_op(self, self->client_random, self->client_crypt_random,
                         len - 8, self->pub_mod, self->pri_exp);
-        LLOGLN(10, ("xrdp_sec_recv: client random - len %d", len));
-        LHEXDUMP(10, (self->client_random, 256));
-        LHEXDUMP(10, (self->client_crypt_random, len - 8));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: client random - len %d", len);
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "client random", self->client_random, 256);
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "client crypt random", self->client_crypt_random, len - 8);
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
             xrdp_sec_fips_establish_keys(self);
@@ -1334,7 +1333,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             xrdp_sec_establish_keys(self);
         }
         *chan = 1; /* just set a non existing channel and exit */
-        DEBUG((" out xrdp_sec_recv"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_recv");
         return 0;
     }
 
@@ -1342,7 +1341,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     {
         if (xrdp_sec_process_logon_info(self, s) != 0)
         {
-            DEBUG((" out xrdp_sec_recv error"));
+            LOG(LOG_LEVEL_ERROR, " out xrdp_sec_recv error");
             return 1;
         }
 
@@ -1350,22 +1349,22 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         {
             if (xrdp_sec_send_media_lic_response(self) != 0)
             {
-                DEBUG((" out xrdp_sec_recv error"));
+                LOG(LOG_LEVEL_ERROR, " out xrdp_sec_recv error");
                 return 1;
             }
 
-            DEBUG((" out xrdp_sec_recv"));
+            LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_recv");
             return -1; /* special error that means send demand active */
         }
 
         if (xrdp_sec_send_lic_initial(self) != 0)
         {
-            DEBUG((" out xrdp_sec_recv error"));
+            LOG(LOG_LEVEL_ERROR, " out xrdp_sec_recv error");
             return 1;
         }
 
         *chan = 1; /* just set a non existing channel and exit */
-        DEBUG((" out xrdp_sec_recv"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_recv");
         return 0;
     }
 
@@ -1373,7 +1372,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     {
         if (xrdp_sec_send_lic_response(self) != 0)
         {
-            DEBUG((" out xrdp_sec_recv error"));
+            LOG(LOG_LEVEL_ERROR, " out xrdp_sec_recv error");
             return 1;
         }
 
@@ -1384,11 +1383,11 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             self->is_security_header_present = 0;
         }
 
-        DEBUG((" out xrdp_sec_recv"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_recv");
         return -1; /* special error that means send demand active */
     }
 
-    DEBUG((" out xrdp_sec_recv"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_recv");
     return 0;
 }
 
@@ -1459,15 +1458,15 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
     int datalen;
     int pad;
 
-    LLOGLN(10, ("xrdp_sec_send:"));
-    DEBUG((" in xrdp_sec_send"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_send");
     s_pop_layer(s, sec_hdr);
 
     if (self->crypt_level > CRYPT_LEVEL_NONE)
     {
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
-            LLOGLN(10, ("xrdp_sec_send: fips"));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send: fips");
             out_uint32_le(s, SEC_ENCRYPT);
             datalen = (int)((s->end - s->p) - 12);
             out_uint16_le(s, 16); /* crypto header size */
@@ -1497,7 +1496,7 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
         return 1;
     }
 
-    DEBUG((" out xrdp_sec_send"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_send");
     return 0;
 }
 
@@ -1556,12 +1555,12 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
     int error;
     char save[8];
 
-    LLOGLN(10, ("xrdp_sec_send_fastpath:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath:");
     error = 0;
     s_pop_layer(s, sec_hdr);
     if (self->crypt_level == CRYPT_LEVEL_FIPS)
     {
-        LLOGLN(10, ("xrdp_sec_send_fastpath: fips"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: fips");
         pdulen = (int)(s->end - s->p);
         datalen = pdulen - 15;
         pad = (8 - (datalen % 8)) & 7;
@@ -1584,7 +1583,7 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
     }
     else if (self->crypt_level > CRYPT_LEVEL_LOW)
     {
-        LLOGLN(10, ("xrdp_sec_send_fastpath: crypt"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: crypt");
         pdulen = (int)(s->end - s->p);
         datalen = pdulen - 11;
         secFlags = 0x2;
@@ -1598,9 +1597,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
     }
     else
     {
-        LLOGLN(10, ("xrdp_sec_send_fastpath: no crypt"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: no crypt");
         pdulen = (int)(s->end - s->p);
-        LLOGLN(10, ("xrdp_sec_send_fastpath: pdulen %d", pdulen));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: pdulen %d", pdulen);
         secFlags = 0x0;
         fpOutputHeader = secFlags << 6;
         out_uint8(s, fpOutputHeader);
@@ -1619,7 +1618,7 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
 /* http://msdn.microsoft.com/en-us/library/cc240510.aspx
    2.2.1.3.2 Client Core Data (TS_UD_CS_CORE) */
 static int
-xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
+xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 {
     int colorDepth;
     int postBeta2ColorDepth;
@@ -1632,7 +1631,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     in_uint16_le(s, self->rdp_layer->client_info.width);
     in_uint16_le(s, self->rdp_layer->client_info.height);
     in_uint16_le(s, colorDepth);
-    g_writeln("colorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp)", colorDepth);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "colorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp)", colorDepth);
     switch (colorDepth)
     {
         case RNS_UD_COLOR_4BPP:
@@ -1646,13 +1645,13 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     in_uint8s(s, 4); /* keyboardLayout */
     in_uint8s(s, 4); /* clientBuild */
     unicode_utf16_in(s, INFO_CLIENT_NAME_BYTES - 2, clientName, sizeof(clientName) - 1);  /* clientName */
-    log_message(LOG_LEVEL_INFO, "connected client computer name: %s", clientName);
+    LOG(LOG_LEVEL_INFO, "connected client computer name: %s", clientName);
     in_uint8s(s, 4); /* keyboardType */
     in_uint8s(s, 4); /* keyboardSubType */
     in_uint8s(s, 4); /* keyboardFunctionKey */
     in_uint8s(s, 64); /* imeFileName */
     in_uint16_le(s, postBeta2ColorDepth);
-    g_writeln("postBeta2ColorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp "
+    LOG_DEVEL(LOG_LEVEL_TRACE, "postBeta2ColorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp "
               "0xca02 15bpp 0xca03 16bpp 0xca04 24bpp)", postBeta2ColorDepth);
 
     switch (postBeta2ColorDepth)
@@ -1690,7 +1689,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
         return 0;
     }
     in_uint16_le(s, highColorDepth);
-    g_writeln("highColorDepth 0x%4.4x (0x0004 4bpp 0x0008 8bpp 0x000f 15bpp "
+    LOG_DEVEL(LOG_LEVEL_TRACE, "highColorDepth 0x%4.4x (0x0004 4bpp 0x0008 8bpp 0x000f 15bpp "
               "0x0010 16 bpp 0x0018 24bpp)", highColorDepth);
     self->rdp_layer->client_info.bpp = highColorDepth;
 
@@ -1699,7 +1698,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
         return 0;
     }
     in_uint16_le(s, supportedColorDepths);
-    g_writeln("supportedColorDepths 0x%4.4x (0x0001 24bpp 0x0002 16bpp "
+    LOG_DEVEL(LOG_LEVEL_TRACE, "supportedColorDepths 0x%4.4x (0x0001 24bpp 0x0002 16bpp "
               "0x0004 15bpp 0x0008 32bpp)", supportedColorDepths);
 
     if (!s_check_rem(s, 2))
@@ -1708,7 +1707,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     }
     in_uint16_le(s, earlyCapabilityFlags);
     self->rdp_layer->client_info.mcs_early_capability_flags = earlyCapabilityFlags;
-    g_writeln("earlyCapabilityFlags 0x%4.4x (0x0002 want32)",
+    LOG_DEVEL(LOG_LEVEL_TRACE, "earlyCapabilityFlags 0x%4.4x (0x0002 want32)",
               earlyCapabilityFlags);
     if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
     {
@@ -1726,7 +1725,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
         return 0;
     }
     in_uint8(s, self->rdp_layer->client_info.mcs_connection_type); /* connectionType */
-    g_writeln("got client client connection type 0x%8.8x",
+    LOG_DEVEL(LOG_LEVEL_TRACE, "got client client connection type 0x%8.8x",
               self->rdp_layer->client_info.mcs_connection_type);
 
     if (!s_check_rem(s, 1))
@@ -1764,98 +1763,98 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
 
 /*****************************************************************************/
 static int
-xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream* s)
+xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream *s)
 {
     int crypt_method;
     int found;
 
-    g_writeln("xrdp_sec_process_mcs_data_CS_SECURITY:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_CS_SECURITY:");
     in_uint32_le(s, crypt_method);
     if (crypt_method & CRYPT_METHOD_40BIT)
     {
-        g_writeln("  client supports 40 bit encryption");
+        LOG(LOG_LEVEL_INFO, "  client supports 40 bit encryption");
     }
     if (crypt_method & CRYPT_METHOD_128BIT)
     {
-        g_writeln("  client supports 128 bit encryption");
+        LOG(LOG_LEVEL_INFO, "  client supports 128 bit encryption");
     }
     if (crypt_method & CRYPT_METHOD_56BIT)
     {
-        g_writeln("  client supports 56 bit encryption");
+        LOG(LOG_LEVEL_INFO, "  client supports 56 bit encryption");
     }
     if (crypt_method & CRYPT_METHOD_FIPS)
     {
-        g_writeln("  client supports fips encryption");
+        LOG(LOG_LEVEL_INFO, "  client supports fips encryption");
     }
     found = 0;
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_FIPS) &&
-        (self->crypt_level == CRYPT_LEVEL_FIPS))
+            (self->crypt_method & CRYPT_METHOD_FIPS) &&
+            (self->crypt_level == CRYPT_LEVEL_FIPS))
     {
         if (crypt_method & CRYPT_METHOD_FIPS)
         {
-            g_writeln("  client and server support fips, using fips");
+            LOG(LOG_LEVEL_INFO, "  client and server support fips, using fips");
             self->crypt_method = CRYPT_METHOD_FIPS;
             self->crypt_level = CRYPT_LEVEL_FIPS;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_128BIT) &&
-        (self->crypt_level == CRYPT_LEVEL_HIGH))
+            (self->crypt_method & CRYPT_METHOD_128BIT) &&
+            (self->crypt_level == CRYPT_LEVEL_HIGH))
     {
         if (crypt_method & CRYPT_METHOD_128BIT)
         {
-            g_writeln("  client and server support high crypt, using "
-                      "high crypt");
+            LOG(LOG_LEVEL_INFO, "  client and server support high crypt, using "
+                "high crypt");
             self->crypt_method = CRYPT_METHOD_128BIT;
             self->crypt_level = CRYPT_LEVEL_HIGH;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_40BIT) &&
-        (self->crypt_level == CRYPT_LEVEL_CLIENT_COMPATIBLE))
+            (self->crypt_method & CRYPT_METHOD_40BIT) &&
+            (self->crypt_level == CRYPT_LEVEL_CLIENT_COMPATIBLE))
     {
         if (crypt_method & CRYPT_METHOD_40BIT)
         {
-            g_writeln("  client and server support medium crypt, using "
-                      "medium crypt");
+            LOG(LOG_LEVEL_INFO, "  client and server support medium crypt, using "
+                "medium crypt");
             self->crypt_method = CRYPT_METHOD_40BIT;
             self->crypt_level = CRYPT_LEVEL_CLIENT_COMPATIBLE;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_40BIT) &&
-        (self->crypt_level == CRYPT_LEVEL_LOW))
+            (self->crypt_method & CRYPT_METHOD_40BIT) &&
+            (self->crypt_level == CRYPT_LEVEL_LOW))
     {
         if (crypt_method & CRYPT_METHOD_40BIT)
         {
-            g_writeln("  client and server support low crypt, using "
-                      "low crypt");
+            LOG(LOG_LEVEL_INFO, "  client and server support low crypt, using "
+                "low crypt");
             self->crypt_method = CRYPT_METHOD_40BIT;
             self->crypt_level = CRYPT_LEVEL_LOW;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_level == CRYPT_LEVEL_NONE))
+            (self->crypt_level == CRYPT_LEVEL_NONE))
     {
         if (crypt_method == CRYPT_METHOD_NONE)
         {
-            g_writeln("  client and server support none crypt, using "
-                      "none crypt");
+            LOG(LOG_LEVEL_INFO, "  client and server support none crypt, using "
+                "none crypt");
             self->crypt_method = CRYPT_METHOD_NONE;
             self->crypt_level = CRYPT_LEVEL_NONE;
             found = 1;
         }
     }
-//    if (found == 0)
-//    {
-//        g_writeln("  can not find client / server agreed encryption method");
-//        return 1;
-//    }
+    //    if (found == 0)
+    //    {
+    //        LOG_DEVEL(LOG_LEVEL_TRACE, "  can not find client / server agreed encryption method");
+    //        return 1;
+    //    }
     return 0;
 }
 
@@ -1871,13 +1870,13 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     struct mcs_channel_item *channel_item;
 
     client_info = &(self->rdp_layer->client_info);
-    DEBUG(("processing channels, channels_allowed is %d",
-           client_info->channels_allowed));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "processing channels, channels_allowed is %d",
+              client_info->channels_allowed);
     /* this is an option set in xrdp.ini */
     if (client_info->channels_allowed == 0) /* are channels on? */
     {
-        log_message(LOG_LEVEL_INFO, "all channels are disabled by "
-                    "configuration");
+        LOG(LOG_LEVEL_INFO, "all channels are disabled by "
+            "configuration");
         return 0;
     }
     if (!s_check_rem(s, 4))
@@ -1902,13 +1901,13 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
         if (g_strlen(channel_item->name) > 0)
         {
             channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-            log_message(LOG_LEVEL_INFO, "adding channel item name %s chan_id "
-                        "%d flags 0x%8.8x", channel_item->name,
-                        channel_item->chanid, channel_item->flags);
+            LOG(LOG_LEVEL_INFO, "adding channel item name %s chan_id "
+                "%d flags 0x%8.8x", channel_item->name,
+                channel_item->chanid, channel_item->flags);
             list_add_item(self->mcs_layer->channel_list,
                           (intptr_t) channel_item);
-            DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
-                   channel_item->name));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "got channel flags %8.8x name %s", channel_item->flags,
+                      channel_item->name);
         }
         else
         {
@@ -1935,32 +1934,32 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 
     client_info = &(self->rdp_layer->client_info);
 
-    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: processing monitors data, allow_multimon is %d", client_info->multimon));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_process_mcs_data_monitors: processing monitors data, allow_multimon is %d", client_info->multimon);
     /* this is an option set in xrdp.ini */
     if (client_info->multimon != 1) /* are multi-monitors allowed ? */
     {
-        LLOGLN(0, ("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
-               "allowed, skipping"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
+                  "allowed, skipping");
         return 0;
     }
     in_uint32_le(s, flags); /* flags */
     //verify flags - must be 0x0
     if (flags != 0)
     {
-        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
-               "zero, detected: %d", flags));
+        LOG(LOG_LEVEL_ERROR, "[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
+            "zero, detected: %d", flags);
         return 1;
     }
     in_uint32_le(s, monitorCount);
     //verify monitorCount - max 16
     if (monitorCount > 16)
     {
-        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
-               "monitors is 16, detected: %d", monitorCount));
+        LOG(LOG_LEVEL_ERROR, "[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
+            "monitors is 16, detected: %d", monitorCount);
         return 1;
     }
 
-    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: monitorCount= %d", monitorCount));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_process_mcs_data_monitors: monitorCount= %d", monitorCount);
 
     client_info->monitorCount = monitorCount;
 
@@ -1997,13 +1996,13 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
             got_primary = 1;
         }
 
-        LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: got a monitor [%d]: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d",
-                index,
-                client_info->minfo[index].left,
-                client_info->minfo[index].top,
-                client_info->minfo[index].right,
-                client_info->minfo[index].bottom,
-                client_info->minfo[index].is_primary));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_process_mcs_data_monitors: got a monitor [%d]: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d",
+                  index,
+                  client_info->minfo[index].left,
+                  client_info->minfo[index].top,
+                  client_info->minfo[index].right,
+                  client_info->minfo[index].bottom,
+                  client_info->minfo[index].is_primary);
     }
 
     if (!got_primary)
@@ -2028,9 +2027,9 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     }
     /* make sure virtual desktop size is ok */
     if (client_info->width > 0x7FFE || client_info->width < 0xC8 ||
-        client_info->height > 0x7FFE || client_info->height < 0xC8)
+            client_info->height > 0x7FFE || client_info->height < 0xC8)
     {
-        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: error, virtual desktop width / height is too large"));
+        LOG(LOG_LEVEL_ERROR, "[ERROR] xrdp_sec_process_mcs_data_monitors: error, virtual desktop width / height is too large");
         return 1; /* error */
     }
 
@@ -2076,12 +2075,12 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
 
         if ((size < 4) || (!s_check_rem(s, size - 4)))
         {
-            LLOGLN(0, ("error in xrdp_sec_process_mcs_data tag %d size %d",
-                   tag, size));
+            LOG(LOG_LEVEL_ERROR, "error in xrdp_sec_process_mcs_data tag %d size %d",
+                tag, size);
             break;
         }
 
-        LLOGLN(10, ("xrdp_sec_process_mcs_data: 0x%8.8x", tag));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_process_mcs_data: 0x%8.8x", tag);
         switch (tag)
         {
             case SEC_TAG_CLI_INFO:     /* CS_CORE           0xC001 */
@@ -2110,17 +2109,17 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
                     return 1;
                 }
                 break;
-                                       /* CS_MCS_MSGCHANNEL 0xC006
-                                          CS_MONITOR_EX     0xC008
-                                          CS_MULTITRANSPORT 0xC00A
-                                          SC_CORE           0x0C01
-                                          SC_SECURITY       0x0C02
-                                          SC_NET            0x0C03
-                                          SC_MCS_MSGCHANNEL 0x0C04
-                                          SC_MULTITRANSPORT 0x0C08 */
+            /* CS_MCS_MSGCHANNEL 0xC006
+               CS_MONITOR_EX     0xC008
+               CS_MULTITRANSPORT 0xC00A
+               SC_CORE           0x0C01
+               SC_SECURITY       0x0C02
+               SC_NET            0x0C03
+               SC_MCS_MSGCHANNEL 0x0C04
+               SC_MULTITRANSPORT 0x0C08 */
             default:
-                LLOGLN(0, ("error unknown xrdp_sec_process_mcs_data "
-                       "tag 0x%4.4x size %d", tag, size));
+                LOG(LOG_LEVEL_ERROR, "error unknown xrdp_sec_process_mcs_data "
+                    "tag 0x%4.4x size %d", tag, size);
                 break;
         }
 
@@ -2130,14 +2129,14 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
     if (self->rdp_layer->client_info.max_bpp > 0)
     {
         if (self->rdp_layer->client_info.bpp >
-            self->rdp_layer->client_info.max_bpp)
+                self->rdp_layer->client_info.max_bpp)
         {
-            LLOGLN(0, ("xrdp_rdp_parse_client_mcs_data: client asked "
-                   "for %dbpp connection but configuration is limited "
-                   "to %dbpp", self->rdp_layer->client_info.bpp,
-                   self->rdp_layer->client_info.max_bpp));
+            LOG(LOG_LEVEL_INFO, "xrdp_rdp_parse_client_mcs_data: client asked "
+                "for %dbpp connection but configuration is limited "
+                "to %dbpp", self->rdp_layer->client_info.bpp,
+                self->rdp_layer->client_info.max_bpp);
             self->rdp_layer->client_info.bpp =
-                         self->rdp_layer->client_info.max_bpp;
+                self->rdp_layer->client_info.max_bpp;
         }
     }
 
@@ -2238,13 +2237,13 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
             self->crypt_level = CRYPT_LEVEL_FIPS;
             break;
         default:
-            g_writeln("Fatal : Illegal crypt_level");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Fatal : Illegal crypt_level");
             break ;
     }
 
     if (self->decrypt_rc4_info != NULL)
     {
-        g_writeln("xrdp_sec_init_rdp_security: decrypt_rc4_info already created !!!");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_init_rdp_security: decrypt_rc4_info already created !!!");
     }
     else
     {
@@ -2253,7 +2252,7 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
 
     if (self->encrypt_rc4_info != NULL)
     {
-        g_writeln("xrdp_sec_init_rdp_security: encrypt_rc4_info already created !!!");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_init_rdp_security: encrypt_rc4_info already created !!!");
     }
     else
     {
@@ -2275,13 +2274,13 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     char *value = NULL;
     char key_file[256];
 
-    DEBUG((" in xrdp_sec_incoming:"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_incoming:");
     iso = self->mcs_layer->iso_layer;
 
     /* negotiate security layer */
     if (xrdp_iso_incoming(iso) != 0)
     {
-        DEBUG(("xrdp_sec_incoming: xrdp_iso_incoming failed"));
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: xrdp_iso_incoming failed");
         return 1;
     }
 
@@ -2289,15 +2288,15 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         /* init tls security */
-        DEBUG((" in xrdp_sec_incoming: init tls security"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_incoming: init tls security");
 
         if (trans_set_tls_mode(self->mcs_layer->iso_layer->trans,
-                self->rdp_layer->client_info.key_file,
-                self->rdp_layer->client_info.certificate,
-                self->rdp_layer->client_info.ssl_protocols,
-                self->rdp_layer->client_info.tls_ciphers) != 0)
+                               self->rdp_layer->client_info.key_file,
+                               self->rdp_layer->client_info.certificate,
+                               self->rdp_layer->client_info.ssl_protocols,
+                               self->rdp_layer->client_info.tls_ciphers) != 0)
         {
-            g_writeln("xrdp_sec_incoming: trans_set_tls_mode failed");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_incoming: trans_set_tls_mode failed");
             return 1;
         }
 
@@ -2309,10 +2308,10 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     else
     {
         /* init rdp security */
-        DEBUG((" in xrdp_sec_incoming: init rdp security"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_incoming: init rdp security");
         if (xrdp_sec_init_rdp_security(self) != 0)
         {
-            DEBUG(("xrdp_sec_incoming: xrdp_sec_init_rdp_security failed"));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_incoming: xrdp_sec_init_rdp_security failed");
             return 1;
         }
         if (self->crypt_method != CRYPT_METHOD_NONE)
@@ -2328,8 +2327,8 @@ xrdp_sec_incoming(struct xrdp_sec *self)
             if (file_by_name_read_section(key_file, "keys", items, values) != 0)
             {
                 /* this is a show stopper */
-                log_message(LOG_LEVEL_ALWAYS, "XRDP cannot read file: %s "
-                            "(check permissions)", key_file);
+                LOG(LOG_LEVEL_ALWAYS, "XRDP cannot read file: %s "
+                    "(check permissions)", key_file);
                 list_delete(items);
                 list_delete(values);
                 return 1;
@@ -2347,7 +2346,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
                 else if (g_strcasecmp(item, "pub_mod") == 0)
                 {
                     self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
-                    g_writeln("pub_mod bytes %d", self->rsa_key_bytes);
+                    LOG_DEVEL(LOG_LEVEL_TRACE, "pub_mod bytes %d", self->rsa_key_bytes);
                     hex_str_to_bin(value, self->pub_mod, self->rsa_key_bytes);
                 }
                 else if (g_strcasecmp(item, "pub_sig") == 0)
@@ -2357,17 +2356,17 @@ xrdp_sec_incoming(struct xrdp_sec *self)
                 else if (g_strcasecmp(item, "pri_exp") == 0)
                 {
                     self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
-                    g_writeln("pri_exp %d", self->rsa_key_bytes);
+                    LOG_DEVEL(LOG_LEVEL_TRACE, "pri_exp %d", self->rsa_key_bytes);
                     hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
                 }
             }
 
             if (self->rsa_key_bytes <= 64)
             {
-                g_writeln("warning, RSA key len 512 "
+                LOG_DEVEL(LOG_LEVEL_TRACE, "warning, RSA key len 512 "
                           "bits or less, consider creating a 2048 bit key");
-                log_message(LOG_LEVEL_WARNING, "warning, RSA key len 512 "
-                            "bits or less, consider creating a 2048 bit key");
+                LOG(LOG_LEVEL_WARNING, "warning, RSA key len 512 "
+                    "bits or less, consider creating a 2048 bit key");
             }
 
             list_delete(items);
@@ -2381,21 +2380,17 @@ xrdp_sec_incoming(struct xrdp_sec *self)
         return 1;
     }
 
-#ifdef XRDP_DEBUG
-    g_writeln("client mcs data received");
-    g_hexdump(self->client_mcs_data.data,
-              (int)(self->client_mcs_data.end - self->client_mcs_data.data));
-    g_writeln("server mcs data sent");
-    g_hexdump(self->server_mcs_data.data,
-              (int)(self->server_mcs_data.end - self->server_mcs_data.data));
-#endif
-    DEBUG((" out xrdp_sec_incoming"));
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "client mcs data received", self->client_mcs_data.data,
+                      (int)(self->client_mcs_data.end - self->client_mcs_data.data));
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "server mcs data sent", self->server_mcs_data.data,
+                      (int)(self->server_mcs_data.end - self->server_mcs_data.data));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_incoming");
     if (xrdp_sec_in_mcs_data(self) != 0)
     {
         return 1;
     }
 
-    LLOGLN(10, ("xrdp_sec_incoming: out"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_incoming: out");
     return 0;
 }
 
@@ -2405,8 +2400,8 @@ xrdp_sec_disconnect(struct xrdp_sec *self)
 {
     int rv;
 
-    DEBUG((" in xrdp_sec_disconnect"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " in xrdp_sec_disconnect");
     rv = xrdp_mcs_disconnect(self->mcs_layer);
-    DEBUG((" out xrdp_sec_disconnect"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, " out xrdp_sec_disconnect");
     return rv;
 }
