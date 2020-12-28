@@ -36,6 +36,7 @@
 #include <openssl/crypto.h>
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "arch.h"
 #include "ssl_calls.h"
 #include "trans.h"
@@ -720,7 +721,10 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     DH_free(dh); // ok to free, copied into ctx by SSL_CTX_set_tmp_dh()
 
 #if defined(SSL_CTX_set_ecdh_auto)
-    SSL_CTX_set_ecdh_auto(self->ctx, 1);
+    if(!SSL_CTX_set_ecdh_auto(self->ctx, 1))
+    {
+        LOG(LOG_LEVEL_WARNING, "TLS ecdh auto failed to be enabled");
+    }
 #endif
 
     if (g_strlen(tls_ciphers) > 1)

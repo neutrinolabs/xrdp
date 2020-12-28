@@ -24,6 +24,7 @@
 
 #include "xrdp.h"
 #include "log.h"
+#include "string_calls.h"
 
 /* 'g_process' is protected by the semaphore 'g_process_sem'.  One thread sets
    g_process and waits for the other to process it */
@@ -164,14 +165,12 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
     char *val;
     struct list *names;
     struct list *values;
-    char cfg_file[256];
     struct xrdp_startup_params *startup_params;
 
     startup_params = self->startup_params;
     port_override = startup_params->port[0] != 0;
     fork_override = startup_params->fork;
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    fd = g_file_open(cfg_file);
+    fd = g_file_open(startup_params->xrdp_ini);
     if (fd != -1)
     {
         names = list_create();

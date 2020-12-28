@@ -29,6 +29,7 @@
 #endif
 
 #include "libscp_v1c.h"
+#include "string_calls.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -47,8 +48,8 @@ scp_v1c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     init_stream(c->out_s, c->out_s->size);
     init_stream(c->in_s, c->in_s->size);
 
-    size = 19 + 17 + 4 + g_strlen(s->hostname) + g_strlen(s->username) +
-           g_strlen(s->password);
+    size = (19 + 17 + 4 + g_strlen(s->hostname) + g_strlen(s->username) +
+            g_strlen(s->password));
 
     if (s->addr_type == SCP_ADDRESS_TYPE_IPV4)
     {

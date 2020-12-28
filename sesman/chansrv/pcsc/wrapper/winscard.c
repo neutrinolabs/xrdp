@@ -73,7 +73,7 @@ static int g_true = 1;
 
 /*****************************************************************************/
 static int
-writeln(const char* format, ...)
+writeln(const char *format, ...)
 {
     va_list ap;
     char text[256];
@@ -86,13 +86,13 @@ writeln(const char* format, ...)
 }
 
 #define LLOAD(_func, _type, _name) \
-do { \
-    _func = (_type) GetProcAddress(lib, _name); \
-    if (_func == 0) \
-    { \
-        writeln("LLOAD error %s", _name); \
-    } \
-} while (0)
+    do { \
+        _func = (_type) GetProcAddress(lib, _name); \
+        if (_func == 0) \
+        { \
+            writeln("LLOAD error %s", _name); \
+        } \
+    } while (0)
 
 static int g_funcs_loaded = 0;
 

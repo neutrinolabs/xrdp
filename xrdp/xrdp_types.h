@@ -30,6 +30,9 @@
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
+
+struct source_info;
+
 /* lib */
 struct xrdp_mod
 {
@@ -156,7 +159,7 @@ struct xrdp_mod
   tintptr handle; /* pointer to self as int */
   tintptr wm; /* struct xrdp_wm* */
   tintptr painter;
-  tintptr si;
+  struct source_info *si;
 };
 
 /* header for bmp file */
@@ -528,6 +531,8 @@ struct xrdp_mod_data
 
 struct xrdp_startup_params
 {
+  /* xrdp_ini is not malloc'd and has at least the same lifetime as main() */
+  const char *xrdp_ini;
   char port[1024];
   int kill;
   int no_daemon;
@@ -566,6 +571,7 @@ struct xrdp_cfg_globals
     int  new_cursors;
     int  nego_sec_layer;
     int  allow_multimon;
+    int  enable_token_login;
 
     /* colors */
 

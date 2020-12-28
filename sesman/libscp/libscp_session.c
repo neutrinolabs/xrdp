@@ -29,6 +29,7 @@
 #endif
 
 #include "libscp_session.h"
+#include "string_calls.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -46,7 +47,7 @@ scp_session_create(void)
 
     if (0 == s)
     {
-        log_message(LOG_LEVEL_ERROR, "[session:%d] session create: malloc error", __LINE__);
+        LOG(LOG_LEVEL_ERROR, "[session:%d] session create: malloc error", __LINE__);
         return 0;
     }
 
@@ -81,14 +82,14 @@ scp_session_set_type(struct SCP_SESSION *s, tui8 type)
 
             if (NULL == s->mng)
             {
-                log_message(LOG_LEVEL_ERROR, "[session:%d] set_type: internal error", __LINE__);
+                LOG(LOG_LEVEL_ERROR, "[session:%d] set_type: internal error", __LINE__);
                 return 1;
             }
 
             break;
 
         default:
-            log_message(LOG_LEVEL_WARNING, "[session:%d] set_type: unknown type", __LINE__);
+            LOG(LOG_LEVEL_WARNING, "[session:%d] set_type: unknown type", __LINE__);
             return 1;
     }
 
@@ -108,7 +109,7 @@ scp_session_set_version(struct SCP_SESSION *s, tui32 version)
             s->version = 1;
             break;
         default:
-            log_message(LOG_LEVEL_WARNING, "[session:%d] set_version: unknown version", __LINE__);
+            LOG(LOG_LEVEL_WARNING, "[session:%d] set_version: unknown version", __LINE__);
             return 1;
     }
 
@@ -172,7 +173,7 @@ scp_session_set_locale(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_locale: null locale", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_locale: null locale", __LINE__);
         s->locale[0] = '\0';
         return 1;
     }
@@ -188,7 +189,7 @@ scp_session_set_username(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_username: null username", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_username: null username", __LINE__);
         return 1;
     }
 
@@ -201,7 +202,7 @@ scp_session_set_username(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->username)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_username: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_username: strdup error", __LINE__);
         return 1;
     }
 
@@ -214,7 +215,7 @@ scp_session_set_password(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_password: null password", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_password: null password", __LINE__);
         return 1;
     }
 
@@ -227,7 +228,7 @@ scp_session_set_password(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->password)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_password: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_password: strdup error", __LINE__);
         return 1;
     }
 
@@ -240,7 +241,7 @@ scp_session_set_domain(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_domain: null domain", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_domain: null domain", __LINE__);
         return 1;
     }
 
@@ -253,7 +254,7 @@ scp_session_set_domain(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->domain)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_domain: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_domain: strdup error", __LINE__);
         return 1;
     }
 
@@ -266,7 +267,7 @@ scp_session_set_program(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_program: null program", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_program: null program", __LINE__);
         return 1;
     }
 
@@ -279,7 +280,7 @@ scp_session_set_program(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->program)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_program: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_program: strdup error", __LINE__);
         return 1;
     }
 
@@ -292,7 +293,7 @@ scp_session_set_directory(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_directory: null directory", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_directory: null directory", __LINE__);
         return 1;
     }
 
@@ -305,7 +306,7 @@ scp_session_set_directory(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->directory)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_directory: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_directory: strdup error", __LINE__);
         return 1;
     }
 
@@ -318,7 +319,7 @@ scp_session_set_client_ip(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_client_ip: null ip", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_client_ip: null ip", __LINE__);
         return 1;
     }
 
@@ -331,7 +332,7 @@ scp_session_set_client_ip(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->client_ip)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_client_ip: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_client_ip: strdup error", __LINE__);
         return 1;
     }
 
@@ -344,7 +345,7 @@ scp_session_set_hostname(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_hostname: null hostname", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_hostname: null hostname", __LINE__);
         return 1;
     }
 
@@ -357,7 +358,7 @@ scp_session_set_hostname(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->hostname)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_hostname: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_hostname: strdup error", __LINE__);
         return 1;
     }
 
@@ -370,7 +371,7 @@ scp_session_set_errstr(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_errstr: null string", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_errstr: null string", __LINE__);
         return 1;
     }
 
@@ -383,7 +384,7 @@ scp_session_set_errstr(struct SCP_SESSION *s, const char *str)
 
     if (0 == s->errstr)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_errstr: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_errstr: strdup error", __LINE__);
         return 1;
     }
 
@@ -425,7 +426,7 @@ scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
 {
     if (0 == guid)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] set_guid: null guid", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_guid: null guid", __LINE__);
         return 1;
     }
 

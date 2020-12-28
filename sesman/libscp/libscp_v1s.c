@@ -32,6 +32,7 @@
 #define LIBSCP_V1S_C
 
 #include "libscp_v1s.h"
+#include "string_calls.h"
 
 //extern struct log_config* s_log;
 
@@ -57,9 +58,9 @@ int in_string8(struct stream *s, char str[], const char *param, int line)
 
     if (!s_check_rem(s, 1))
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "[v1s:%d] connection aborted: %s len missing",
-                    line, param);
+        LOG(LOG_LEVEL_WARNING,
+            "[v1s:%d] connection aborted: %s len missing",
+            line, param);
         result = 0;
     }
     else
@@ -70,9 +71,9 @@ int in_string8(struct stream *s, char str[], const char *param, int line)
         result = s_check_rem(s, sz);
         if (!result)
         {
-            log_message(LOG_LEVEL_WARNING,
-                        "[v1s:%d] connection aborted: %s data missing",
-                        line, param);
+            LOG(LOG_LEVEL_WARNING,
+                "[v1s:%d] connection aborted: %s data missing",
+                line, param);
         }
         else
         {
@@ -109,9 +110,9 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
      * bpp, the resource sharing indicator and the locale */
     if (!s_check_rem(c->in_s, 1 + 2 + 2 + 1 + 1 + 17))
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "[v1s:%d] connection aborted: short packet",
-                    __LINE__);
+        LOG(LOG_LEVEL_WARNING,
+            "[v1s:%d] connection aborted: short packet",
+            __LINE__);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
@@ -119,7 +120,7 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
 
     if ((type != SCP_SESSION_TYPE_XVNC) && (type != SCP_SESSION_TYPE_XRDP))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: unknown session type", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: unknown session type", __LINE__);
         return SCP_SERVER_STATE_SESSION_TYPE_ERR;
     }
 
@@ -132,9 +133,9 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
     in_uint8(c->in_s, bpp);
     if (0 != scp_session_set_bpp(session, bpp))
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "[v1s:%d] connection aborted: unsupported bpp: %d",
-                    __LINE__, bpp);
+        LOG(LOG_LEVEL_WARNING,
+            "[v1s:%d] connection aborted: unsupported bpp: %d",
+            __LINE__, bpp);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
     in_uint8(c->in_s, sz);
@@ -146,9 +147,9 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
     /* Check there's enough data left for at least an IPv4 address (+len) */
     if (!s_check_rem(c->in_s, 1 + 4))
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "[v1s:%d] connection aborted: IP addr len missing",
-                    __LINE__);
+        LOG(LOG_LEVEL_WARNING,
+            "[v1s:%d] connection aborted: IP addr len missing",
+            __LINE__);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
@@ -164,9 +165,9 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
     {
         if (!s_check_rem(c->in_s, 16))
         {
-            log_message(LOG_LEVEL_WARNING,
-                        "[v1s:%d] connection aborted: IP addr missing",
-                        __LINE__);
+            LOG(LOG_LEVEL_WARNING,
+                "[v1s:%d] connection aborted: IP addr missing",
+                __LINE__);
             return SCP_SERVER_STATE_SIZE_ERR;
         }
         in_uint8a(c->in_s, buf, 16);
@@ -181,7 +182,7 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
 
     if (0 != scp_session_set_hostname(session, buf))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -193,7 +194,7 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
 
     if (0 != scp_session_set_username(session, buf))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -205,7 +206,7 @@ scp_v1s_init_session(struct SCP_CONNECTION *c, struct SCP_SESSION *session)
 
     if (0 != scp_session_set_password(session, buf))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -233,13 +234,13 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
 
             if (version != 1)
             {
-                log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
+                LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
                 return SCP_SERVER_STATE_VERSION_ERR;
             }
         }
         else
         {
-            log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+            LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
             return SCP_SERVER_STATE_NETWORK_ERR;
         }
     }
@@ -250,7 +251,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
      * the command (but not too big) */
     if (size < (8 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
@@ -258,7 +259,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, (size - 8)))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -270,7 +271,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     /* if we are starting a management session */
     if (cmdset == SCP_COMMAND_SET_MANAGE)
     {
-        log_message(LOG_LEVEL_DEBUG, "[v1s:%d] requested management connection", __LINE__);
+        LOG(LOG_LEVEL_DEBUG, "[v1s:%d] requested management connection", __LINE__);
         /* should return SCP_SERVER_STATE_START_MANAGE */
         return scp_v1s_mng_accept(c, s);
     }
@@ -278,7 +279,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     /* if we started with resource sharing... */
     if (cmdset == SCP_COMMAND_SET_RSR)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -287,7 +288,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
 
     if (cmd != 1)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -295,9 +296,9 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
 
     if (NULL == session)
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "[v1s:%d] connection aborted: internal error "
-                    "(malloc returned NULL)", __LINE__);
+        LOG(LOG_LEVEL_WARNING,
+            "[v1s:%d] connection aborted: internal error "
+            "(malloc returned NULL)", __LINE__);
         result = SCP_SERVER_STATE_INTERNAL_ERR;
     }
     else
@@ -342,7 +343,7 @@ scp_v1s_deny_connection(struct SCP_CONNECTION *c, const char *reason)
 
     if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, rlen + 14))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -385,14 +386,14 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, 14 + rlen))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
     /* receive password & username */
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -400,7 +401,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (version != 1)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
         return SCP_SERVER_STATE_VERSION_ERR;
     }
 
@@ -410,9 +411,9 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
      * the command (but not too big) */
     if (size < (8 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
-        log_message(LOG_LEVEL_WARNING,
-                    "[v1s:%d] connection aborted: size error",
-                    __LINE__);
+        LOG(LOG_LEVEL_WARNING,
+            "[v1s:%d] connection aborted: size error",
+            __LINE__);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
@@ -420,7 +421,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, (size - 8)))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -430,7 +431,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (cmdset != SCP_COMMAND_SET_DEFAULT)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -438,7 +439,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (cmd != 4)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -450,7 +451,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (0 != scp_session_set_username(s, buf))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -462,7 +463,7 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (0 != scp_session_set_password(s, buf))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -503,7 +504,7 @@ scp_v1s_connect_new_session(struct SCP_CONNECTION *c, SCP_DISPLAY d)
 
     if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, 14))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -557,7 +558,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -571,7 +572,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -579,7 +580,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (version != 1)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
         return SCP_SERVER_STATE_VERSION_ERR;
     }
 
@@ -589,7 +590,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
      * the command (but not too big) */
     if (size < (8 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
@@ -597,7 +598,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, (size - 8)))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -607,7 +608,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (cmd != SCP_COMMAND_SET_DEFAULT)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -615,7 +616,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (cmd != 41)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -703,7 +704,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
         if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
         {
-            log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+            LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
             return SCP_SERVER_STATE_NETWORK_ERR;
         }
     }
@@ -713,7 +714,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, (8)))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -721,7 +722,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (version != 1)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
         return SCP_SERVER_STATE_VERSION_ERR;
     }
 
@@ -731,7 +732,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
      * the command (but not too big) */
     if (size < (8 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
         return SCP_SERVER_STATE_SIZE_ERR;
     }
 
@@ -740,7 +741,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, (size - 8)))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 
@@ -750,7 +751,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
     if (cmd != SCP_COMMAND_SET_DEFAULT)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -760,7 +761,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
     {
         if (!s_check_rem(c->in_s, 4))
         {
-            log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: missing session", __LINE__);
+            LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: missing session", __LINE__);
             return SCP_SERVER_STATE_SIZE_ERR;
         }
         /* select session */
@@ -779,7 +780,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
 
         /* if we got here, the requested sid wasn't one from the list we sent */
         /* we should kill the connection                                      */
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (no such session in list)", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (no such session in list)", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
     else if (cmd == 44)
@@ -795,7 +796,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
     else
     {
         /* wrong response */
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
         return SCP_SERVER_STATE_SEQUENCE_ERR;
     }
 
@@ -832,7 +833,7 @@ scp_v1s_reconnect_session(struct SCP_CONNECTION *c, SCP_DISPLAY d)
 
     if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
 

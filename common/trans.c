@@ -23,6 +23,7 @@
 #endif
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "trans.h"
 #include "arch.h"
 #include "parse.h"
@@ -302,7 +303,7 @@ trans_check_wait_objs(struct trans *self)
     int to_read = 0;
     int read_so_far = 0;
     int rv = 0;
-    int cur_source;
+    enum xrdp_source cur_source;
 
     if (self == 0)
     {
@@ -371,7 +372,7 @@ trans_check_wait_objs(struct trans *self)
         }
         else if (self->trans_can_recv(self, self->sck, 0))
         {
-            cur_source = 0;
+            cur_source = XRDP_SOURCE_NONE;
             if (self->si != 0)
             {
                 cur_source = self->si->cur_source;
@@ -633,7 +634,7 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
     init_stream(wait_s, size);
     if (self->si != 0)
     {
-        if ((self->si->cur_source != 0) &&
+        if ((self->si->cur_source != XRDP_SOURCE_NONE) &&
             (self->si->cur_source != self->my_source))
         {
             self->si->source[self->si->cur_source] += size;

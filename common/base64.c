@@ -22,7 +22,7 @@
 #include <config_ac.h>
 #endif
 
-#include "os_calls.h"
+#include "string_calls.h"
 
 #include <openssl/bio.h>
 #include <openssl/evp.h>

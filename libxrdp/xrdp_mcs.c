@@ -34,7 +34,7 @@ xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
 {
     struct xrdp_mcs *self;
 
-    DEBUG(("  in xrdp_mcs_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_create");
     self = (struct xrdp_mcs *)g_malloc(sizeof(struct xrdp_mcs), 1);
     self->sec_layer = owner;
     self->userid = 1;
@@ -43,7 +43,7 @@ xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
     self->server_mcs_data = server_mcs_data;
     self->iso_layer = xrdp_iso_create(self, trans);
     self->channel_list = list_create();
-    DEBUG(("  out xrdp_mcs_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_create");
     return self;
 }
 
@@ -74,7 +74,7 @@ xrdp_mcs_delete(struct xrdp_mcs *self)
 
     xrdp_iso_delete(self->iso_layer);
     /* make sure we get null pointer exception if struct is used again. */
-    DEBUG(("xrdp_mcs_delete processed"))
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_delete processed");
     g_memset(self, 0, sizeof(struct xrdp_mcs)) ;
     g_free(self);
 }
@@ -87,14 +87,14 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
 {
     struct stream *s;
 
-    DEBUG(("  in xrdp_mcs_send_cjcf"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_send_cjcf");
     make_stream(s);
     init_stream(s, 8192);
 
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_send_cjcf error"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_cjcf error");
         return 1;
     }
 
@@ -108,12 +108,12 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_send_cjcf error"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_cjcf error");
         return 1;
     }
 
     free_stream(s);
-    DEBUG(("  out xrdp_mcs_send_cjcf"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_cjcf");
     return 0;
 }
 
@@ -127,14 +127,14 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     int len;
     int userid;
     int chanid;
-    DEBUG(("  in xrdp_mcs_recv"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_recv");
 
     while (1)
     {
         if (xrdp_iso_recv(self->iso_layer, s) != 0)
         {
-            DEBUG(("   out xrdp_mcs_recv, xrdp_iso_recv return non zero"));
-            g_writeln("xrdp_mcs_recv: xrdp_iso_recv failed");
+            LOG(LOG_LEVEL_ERROR, "   out xrdp_mcs_recv, xrdp_iso_recv return non zero");
+            LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: xrdp_iso_recv failed");
             return 1;
         }
 
@@ -148,8 +148,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
         if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
         {
-            g_writeln("received Disconnect Provider Ultimatum");
-            DEBUG(("  out xrdp_mcs_recv appid != MCS_DPUM"));
+            LOG(LOG_LEVEL_ERROR, "received Disconnect Provider Ultimatum");
+            LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_recv appid != MCS_DPUM");
             return 1;
         }
 
@@ -164,18 +164,18 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
             in_uint16_be(s, userid);
             in_uint16_be(s, chanid);
-            log_message(LOG_LEVEL_DEBUG,"MCS_CJRQ - channel join request received");
-            DEBUG(("xrdp_mcs_recv  adding channel %4.4x", chanid));
+            LOG(LOG_LEVEL_DEBUG, "MCS_CJRQ - channel join request received");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_recv  adding channel %4.4x", chanid);
 
             if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
             {
-                log_message(LOG_LEVEL_ERROR,"Non handled error from xrdp_mcs_send_cjcf") ;
+                LOG(LOG_LEVEL_ERROR, "Non handled error from xrdp_mcs_send_cjcf") ;
             }
 
             s = libxrdp_force_read(self->iso_layer->trans);
             if (s == 0)
             {
-                g_writeln("xrdp_mcs_recv: libxrdp_force_read failed");
+                LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: libxrdp_force_read failed");
                 return 1;
             }
 
@@ -188,7 +188,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         }
         else
         {
-            log_message(LOG_LEVEL_DEBUG,"Received an unhandled appid:%d",appid);
+            LOG(LOG_LEVEL_DEBUG, "Received an unhandled appid:%d", appid);
         }
 
         break;
@@ -196,7 +196,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
     if (appid != MCS_SDRQ)
     {
-        DEBUG(("  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ", appid));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ", appid);
         return 1;
     }
 
@@ -219,7 +219,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         in_uint8s(s, 1);
     }
 
-    DEBUG(("  out xrdp_mcs_recv"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_recv");
     return 0;
 }
 
@@ -437,7 +437,7 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     int opcode;
     struct stream *s;
 
-    DEBUG(("    in xrdp_mcs_recv_edrq"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "    in xrdp_mcs_recv_edrq");
 
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
@@ -484,7 +484,7 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
         return 1;
     }
 
-    DEBUG(("    out xrdp_mcs_recv_edrq"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "    out xrdp_mcs_recv_edrq");
     return 0;
 }
 
@@ -496,7 +496,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     int opcode;
     struct stream *s;
 
-    DEBUG(("    in xrdp_mcs_recv_aurq"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "    in xrdp_mcs_recv_aurq");
 
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
@@ -535,7 +535,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
         return 1;
     }
 
-    DEBUG(("    out xrdp_mcs_recv_aurq"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "    out xrdp_mcs_recv_aurq");
     return 0;
 }
 
@@ -546,14 +546,14 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
 {
     struct stream *s;
 
-    DEBUG(("  in xrdp_mcs_send_aucf"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_send_aucf");
     make_stream(s);
     init_stream(s, 8192);
 
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_send_aucf error"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_aucf error");
         return 1;
     }
 
@@ -565,12 +565,12 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_send_aucf error"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_aucf error");
         return 1;
     }
 
     free_stream(s);
-    DEBUG(("  out xrdp_mcs_send_aucf"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_aucf");
     return 0;
 }
 
@@ -722,8 +722,8 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     int index;
     int channel;
     int gcc_size;
-    char* gcc_size_ptr;
-    char* ud_ptr;
+    char *gcc_size_ptr;
+    char *ud_ptr;
 
     num_channels = self->mcs_layer->channel_list->count;
     num_channels_even = num_channels + (num_channels & 1);
@@ -766,7 +766,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
-         /* RequestedProtocol */
+        /* RequestedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol);
     }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
@@ -789,7 +789,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 
     if (self->rsa_key_bytes == 64)
     {
-        g_writeln("xrdp_sec_out_mcs_data: using 512 bit RSA key");
+        LOG(LOG_LEVEL_DEBUG, "xrdp_sec_out_mcs_data: using 512 bit RSA key");
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);
         out_uint16_le(s, 0x00ec); /* len is 236 */
         out_uint32_le(s, self->crypt_method);
@@ -819,7 +819,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else if (self->rsa_key_bytes == 256)
     {
-        g_writeln("xrdp_sec_out_mcs_data: using 2048 bit RSA key");
+        LOG(LOG_LEVEL_DEBUG, "xrdp_sec_out_mcs_data: using 2048 bit RSA key");
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);
         out_uint16_le(s, 0x01ac); /* len is 428 */
         out_uint32_le(s, self->crypt_method);
@@ -849,7 +849,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else if (self->rsa_key_bytes == 0) /* no security */
     {
-        g_writeln("xrdp_sec_out_mcs_data: using no security");
+        LOG(LOG_LEVEL_DEBUG, "xrdp_sec_out_mcs_data: using no security");
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);
         out_uint16_le(s, 12); /* len is 12 */
         out_uint32_le(s, self->crypt_method);
@@ -857,7 +857,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else
     {
-        g_writeln("xrdp_sec_out_mcs_data: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_out_mcs_data: error");
     }
     /* end certificate */
     s_mark_end(s);
@@ -876,14 +876,14 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     int data_len;
     struct stream *s;
 
-    DEBUG(("  in xrdp_mcs_send_connect_response"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_send_connect_response");
     make_stream(s);
     init_stream(s, 8192);
     data_len = (int) (self->server_mcs_data->end - self->server_mcs_data->data);
     xrdp_iso_init(self->iso_layer, s);
     //TODO: we should calculate the whole length include MCS_CONNECT_RESPONSE
     xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE,
-            data_len > 0x80 ? data_len + 38 : data_len + 36);
+                            data_len > 0x80 ? data_len + 38 : data_len + 36);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_RESULT, 1);
     out_uint8(s, 0);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 1);
@@ -897,12 +897,12 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_send_connect_response error"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send_connect_response error");
         return 1;
     }
 
     free_stream(s);
-    DEBUG(("  out xrdp_mcs_send_connect_response"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send_connect_response");
     return 0;
 }
 
@@ -913,7 +913,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
     int index;
 
-    DEBUG(("  in xrdp_mcs_incoming"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_incoming");
 
     if (xrdp_mcs_recv_connect_initial(self) != 0)
     {
@@ -959,13 +959,13 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         }
 
         if (xrdp_mcs_send_cjcf(self, self->userid,
-                      self->userid + MCS_USERCHANNEL_BASE + index) != 0)
+                               self->userid + MCS_USERCHANNEL_BASE + index) != 0)
         {
             return 1;
         }
     }
 
-    DEBUG(("  out xrdp_mcs_incoming"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_incoming");
     return 0;
 }
 
@@ -1005,12 +1005,12 @@ xrdp_mcs_call_callback(struct xrdp_mcs *self)
         }
         else
         {
-            g_writeln("in xrdp_mcs_send, session->callback is nil");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_mcs_send, session->callback is nil");
         }
     }
     else
     {
-        g_writeln("in xrdp_mcs_send, session is nil");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_mcs_send, session is nil");
     }
 
     return rv;
@@ -1025,13 +1025,13 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
     char *lp;
     //static int max_len = 0;
 
-    DEBUG(("  in xrdp_mcs_send"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_send");
     s_pop_layer(s, mcs_hdr);
     len = (s->end - s->p) - 8;
 
     if (len > 8192 * 2)
     {
-        g_writeln("error in xrdp_mcs_send, size too big: %d bytes", len);
+        LOG(LOG_LEVEL_WARNING, "error in xrdp_mcs_send, size too big: %d bytes", len);
     }
 
     //if (len > max_len)
@@ -1068,7 +1068,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
-        DEBUG(("  out xrdp_mcs_send error"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_send error");
         return 1;
     }
 
@@ -1079,7 +1079,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
         xrdp_mcs_call_callback(self);
     }
 
-    DEBUG(("  out xrdp_mcs_send"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_mcs_send");
     return 0;
 }
 
@@ -1097,11 +1097,11 @@ close_rdp_socket(struct xrdp_mcs *self)
             trans_shutdown_tls_mode(self->iso_layer->trans);
             g_tcp_close(self->iso_layer->trans->sck);
             self->iso_layer->trans->sck = 0 ;
-            g_writeln("xrdp_mcs_disconnect - socket closed");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_disconnect - socket closed");
             return;
         }
     }
-    g_writeln("Failed to close socket");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Failed to close socket");
 }
 
 /*****************************************************************************/
@@ -1111,7 +1111,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
 {
     struct stream *s;
 
-    DEBUG(("  in xrdp_mcs_disconnect"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_mcs_disconnect");
     make_stream(s);
     init_stream(s, 8192);
 
@@ -1119,7 +1119,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     {
         free_stream(s);
         close_rdp_socket(self);
-        DEBUG(("  out xrdp_mcs_disconnect error - 1"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_disconnect error - 1");
         return 1;
     }
 
@@ -1131,12 +1131,12 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     {
         free_stream(s);
         close_rdp_socket(self);
-        DEBUG(("  out xrdp_mcs_disconnect error - 2"));
+        LOG(LOG_LEVEL_ERROR, "  out xrdp_mcs_disconnect error - 2");
         return 1;
     }
 
     free_stream(s);
     close_rdp_socket(self);
-    DEBUG(("xrdp_mcs_disconnect - close sent"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mcs_disconnect - close sent");
     return 0;
 }

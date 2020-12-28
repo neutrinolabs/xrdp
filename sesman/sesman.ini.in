@@ -37,17 +37,17 @@ MaxSessions=50
 ;; KillDisconnected - kill disconnected sessions
 ; Type: boolean
 ; Default: false
-; if 1, true, or yes, kill session after 60 seconds
+; if 1, true, or yes, every session will be killed within DisconnectedTimeLimit
+; seconds after the user disconnects
 KillDisconnected=false
 
-;; DisconnectedTimeLimit - when to kill idle sessions
+;; DisconnectedTimeLimit (seconds) - wait before kill disconnected sessions
 ; Type: integer
 ; Default: 0
-; if not zero, the seconds before a disconnected session is killed
-; min 60 seconds
+; if KillDisconnected is set to false, this value is ignored
 DisconnectedTimeLimit=0
 
-;; IdleTimeLimit (specify in second) - wait before disconnect idle sessions
+;; IdleTimeLimit (seconds) - wait before disconnect idle sessions
 ; Type: integer
 ; Default: 0
 ; Set to 0 to disable idle disconnection.
@@ -64,10 +64,19 @@ IdleTimeLimit=0
 Policy=Default
 
 [Logging]
+; Note: Log levels can be any of: core, error, warning, info, debug, or trace
 LogFile=xrdp-sesman.log
-LogLevel=DEBUG
-EnableSyslog=1
-SyslogLevel=DEBUG
+LogLevel=INFO
+EnableSyslog=true
+#SyslogLevel=INFO
+#EnableConsole=false
+#ConsoleLevel=INFO
+#EnableProcessId=false
+
+[LoggingPerLogger]
+; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+#sesman.c=INFO
+#main()=INFO
 
 ;
 ; Session definitions - startup command-line parameters for each session type
@@ -105,11 +114,34 @@ param=-dpi
 param=96
 
 [Chansrv]
-; drive redirection, defaults to xrdp_client if not set
+; drive redirection
+; See sesman.ini(5) for the format of this parameter
+#FuseMountName=/run/user/%u/thinclient_drives
+#FuseMountName=/media/thinclient_drives/%U/thinclient_drives
 FuseMountName=thinclient_drives
 ; this value allows only the user to acess their own mapped drives.
 ; Make this more permissive (e.g. 022) if required.
 FileUmask=077
+; Can be used to disable FUSE functionality - see sesman.ini(5)
+#EnableFuseMount=false
+
+[ChansrvLogging]
+; Note: one log file is created per display and the LogFile config value 
+; is ignored. The channel server log file names follow the naming convention: 
+; xrdp-chansrv.${DISPLAY}.log
+;
+; Note: Log levels can be any of: core, error, warning, info, debug, or trace
+LogLevel=INFO
+EnableSyslog=true
+#SyslogLevel=INFO
+#EnableConsole=false
+#ConsoleLevel=INFO
+#EnableProcessId=false
+
+[ChansrvLoggingPerLogger]
+; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+#chansrv.c=INFO
+#main()=INFO
 
 [SessionVariables]
 PULSE_SCRIPT=@sesmansysconfdir@/pulse/default.pa

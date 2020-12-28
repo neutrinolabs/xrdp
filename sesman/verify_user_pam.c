@@ -30,6 +30,7 @@
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 
 #include <stdio.h>
 #include <security/pam_appl.h>
@@ -77,6 +78,9 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
                 reply[i].resp = g_strdup(user_pass->pass);
                 reply[i].resp_retcode = PAM_SUCCESS;
                 break;
+            case PAM_TEXT_INFO:
+                g_memset(&reply[i], 0, sizeof(struct pam_response));
+                break;
             default:
                 g_printf("unknown in verify_pam_conv\r\n");
                 g_free(reply);
@@ -95,7 +99,7 @@ get_service_name(char *service_name)
     service_name[0] = 0;
 
     if (g_file_exist("/etc/pam.d/xrdp-sesman") ||
-        g_file_exist(XRDP_SYSCONF_PATH "/pam.d/xrdp-sesman"))
+            g_file_exist(XRDP_SYSCONF_PATH "/pam.d/xrdp-sesman"))
     {
         g_strncpy(service_name, "xrdp-sesman", 255);
     }

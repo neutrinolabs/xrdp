@@ -1,0 +1,145 @@
+name: build and test
+on:
+  push:
+    branches-ignore:
+      - "gh-pages"
+    tags-ignore:
+      - "v0.[0-8]**"
+  pull_request:
+    branches-ignore:
+      - "gh-pages"
+
+jobs:
+  build_and_test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        
+          # Minimal 64-bit arch builds
+          - CC: gcc
+            feature_set: min
+            arch: amd64
+            os: ubuntu-latest
+
+          - CC: g++
+            feature_set: min
+            arch: amd64
+            os: ubuntu-latest
+
+          - CC: clang
+            feature_set: min
+            arch: amd64
+            os: ubuntu-latest
+
+          # Maximal 64-bit arch builds
+          - CC: gcc
+            feature_set: max
+            arch: amd64
+            os: ubuntu-latest
+            DISTCHECK: true
+          
+          - CC: g++
+            feature_set: max
+            arch: amd64
+            os: ubuntu-latest
+            DISTCHECK: true
+          
+          - CC: clang
+            feature_set: max
+            arch: amd64
+            os: ubuntu-latest
+            DISTCHECK: true
+          
+          # Maximal debug 64-bit arch builds
+          - CC: gcc
+            feature_set: max
+            arch: amd64
+            os: ubuntu-latest
+            name_extra: and DEBUG
+            CONF_FLAGS_EXTRA: "--enable-xrdpdebug"
+            
+          # Maximal 32-bit arch builds
+          - CC: gcc
+            feature_set: max
+            arch: i386
+            os: ubuntu-16.04
+            name_extra: for 32-bit arch (legacy OS)
+
+          - CC: g++
+            feature_set: max
+            arch: i386
+            os: ubuntu-16.04
+            name_extra: for 32-bit arch (legacy OS)
+
+          - CC: clang
+            feature_set: max
+            arch: i386
+            os: ubuntu-16.04
+            name_extra: for 32-bit arch (legacy OS)
+
+    name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
+    runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.CC }}
+      
+      # HACK (2020-11-16): github actions dosen't support YAML anchors/aliases to 
+      # avoid repeating long config values. So instead the config values are defined 
+      # as environment variables using a naming convention with fields that come from 
+      # the job config. These environment variables are then referenced as regualr 
+      # environment variables via the naming convention in the "define env" step to 
+      # define the stardard environment variable used in the rest of the steps.
+      CONF_FLAGS_amd64_min: "--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
+                  --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
+                  --disable-pixman"
+      CONF_FLAGS_amd64_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --enable-pixman"
+      CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --disable-pixman --host=i686-linux"
+      
+      PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
+      CFLAGS_i386: "-m32"
+      LDFLAGS_i386: "-m32"
+    steps:
+      - name: Define feature and arch dependent environment variables
+        # Note: any "variable=value" written to the $GITHUB_ENV file will be 
+        # defined as an environment variable for all future steps in this job
+        # See: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
+        run: |
+          echo "CONF_FLAGS=$CONF_FLAGS_${{ matrix.arch }}_${{ matrix.feature_set }} ${{ matrix.CONF_FLAGS_EXTRA }}" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+      - run: sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
+      - run: ./bootstrap
+      - run: ./configure $CONF_FLAGS
+      - run: make
+      - if: ${{ matrix.DISTCHECK }}
+        run: make distcheck
+        
+  cppcheck:
+    name: cppcheck
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc
+      # This is required to use a version of cppcheck other than that
+      # suplied with the operating system
+      CPPCHECK_VER: 2.1
+      CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cppcheck
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-cppcheck
+        with:
+          path: ~/cppcheck.local
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
+      - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh
+      - run: ./bootstrap
+      - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
+      - run: scripts/run_cppcheck.sh -v $CPPCHECK_VER
+      

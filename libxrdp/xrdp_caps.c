@@ -77,7 +77,7 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 10 + 2)
     {
-        g_writeln("xrdp_caps_process_general: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_general: error");
         return 1;
     }
 
@@ -112,10 +112,10 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     int ex_flags;
     int cap_flags;
 
-    DEBUG(("order capabilities"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "order capabilities");
     if (len < 20 + 2 + 2 + 2 + 2 + 2 + 2 + 32 + 2 + 2 + 4 + 4 + 4 + 4)
     {
-        g_writeln("xrdp_caps_process_order: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_order: error");
         return 1;
     }
     in_uint8s(s, 20); /* Terminal desc, pad */
@@ -127,25 +127,23 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     in_uint16_le(s, cap_flags); /* Capability flags */
     in_uint8a(s, order_caps, 32); /* Orders supported */
     g_memcpy(self->client_info.orders, order_caps, 32);
-    DEBUG(("dest blt-0 %d", order_caps[0]));
-    DEBUG(("pat blt-1 %d", order_caps[1]));
-    DEBUG(("screen blt-2 %d", order_caps[2]));
-    DEBUG(("memblt-3-13 %d %d", order_caps[3], order_caps[13]));
-    DEBUG(("triblt-4-14 %d %d", order_caps[4], order_caps[14]));
-    DEBUG(("line-8 %d", order_caps[8]));
-    DEBUG(("line-9 %d", order_caps[9]));
-    DEBUG(("rect-10 %d", order_caps[10]));
-    DEBUG(("desksave-11 %d", order_caps[11]));
-    DEBUG(("polygon-20 %d", order_caps[20]));
-    DEBUG(("polygon2-21 %d", order_caps[21]));
-    DEBUG(("polyline-22 %d", order_caps[22]));
-    DEBUG(("ellipse-25 %d", order_caps[25]));
-    DEBUG(("ellipse2-26 %d", order_caps[26]));
-    DEBUG(("text2-27 %d", order_caps[27]));
-    DEBUG(("order_caps dump"));
-#if defined(XRDP_DEBUG)
-    g_hexdump(order_caps, 32);
-#endif
+    LOG_DEVEL(LOG_LEVEL_TRACE, "dest blt-0 %d", order_caps[0]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "pat blt-1 %d", order_caps[1]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "screen blt-2 %d", order_caps[2]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "memblt-3-13 %d %d", order_caps[3], order_caps[13]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "triblt-4-14 %d %d", order_caps[4], order_caps[14]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "line-8 %d", order_caps[8]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "line-9 %d", order_caps[9]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "rect-10 %d", order_caps[10]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "desksave-11 %d", order_caps[11]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "polygon-20 %d", order_caps[20]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "polygon2-21 %d", order_caps[21]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "polyline-22 %d", order_caps[22]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "ellipse-25 %d", order_caps[25]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "ellipse2-26 %d", order_caps[26]);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "text2-27 %d", order_caps[27]);
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "order_caps dump", order_caps, 32);
+
     in_uint8s(s, 2); /* Text capability flags */
     /* read extended order support flags */
     in_uint16_le(s, ex_flags); /* Ex flags */
@@ -155,7 +153,7 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
         self->client_info.order_flags_ex = ex_flags;
         if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
         {
-            g_writeln("xrdp_caps_process_order: bitmap cache v3 supported");
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_order: bitmap cache v3 supported");
             self->client_info.bitmap_cache_version |= 4;
         }
     }
@@ -163,15 +161,15 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
 
     in_uint32_le(s, i); /* desktop cache size, usually 0x38400 */
     self->client_info.desktop_cache = i;
-    DEBUG(("desktop cache size %d", i));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "desktop cache size %d", i);
     in_uint8s(s, 4); /* Unknown */
     in_uint8s(s, 4); /* Unknown */
 
     /* check if libpainter should be used for drawing, instead of orders */
     if (!(order_caps[TS_NEG_DSTBLT_INDEX] && order_caps[TS_NEG_PATBLT_INDEX] &&
-          order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
+            order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
     {
-        g_writeln("xrdp_caps_process_order: not enough orders supported by client, using painter.");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_order: not enough orders supported by client, using painter.");
         self->client_info.no_orders_supported = 1;
     }
 
@@ -188,7 +186,7 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 24 + 2 + 2 + 2 + 2 + 2 + 2)
     {
-        g_writeln("xrdp_caps_process_bmpcache: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_bmpcache: error");
         return 1;
     }
     self->client_info.bitmap_cache_version |= 1;
@@ -211,12 +209,12 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
     i = MAX(i, 0);
     self->client_info.cache3_entries = i;
     in_uint16_le(s, self->client_info.cache3_size);
-    DEBUG(("cache1 entries %d size %d", self->client_info.cache1_entries,
-           self->client_info.cache1_size));
-    DEBUG(("cache2 entries %d size %d", self->client_info.cache2_entries,
-           self->client_info.cache2_size));
-    DEBUG(("cache3 entries %d size %d", self->client_info.cache3_entries,
-           self->client_info.cache3_size));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "cache1 entries %d size %d", self->client_info.cache1_entries,
+              self->client_info.cache1_size);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "cache2 entries %d size %d", self->client_info.cache2_entries,
+              self->client_info.cache2_size);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "cache3 entries %d size %d", self->client_info.cache3_entries,
+              self->client_info.cache3_size);
     return 0;
 }
 
@@ -231,7 +229,7 @@ xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 2 + 2 + 4 + 4 + 4)
     {
-        g_writeln("xrdp_caps_process_bmpcache2: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_bmpcache2: error");
         return 1;
     }
     self->client_info.bitmap_cache_version |= 2;
@@ -255,12 +253,12 @@ xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
     i = MAX(i, 0);
     self->client_info.cache3_entries = i;
     self->client_info.cache3_size = 4096 * Bpp;
-    DEBUG(("cache1 entries %d size %d", self->client_info.cache1_entries,
-           self->client_info.cache1_size));
-    DEBUG(("cache2 entries %d size %d", self->client_info.cache2_entries,
-           self->client_info.cache2_size));
-    DEBUG(("cache3 entries %d size %d", self->client_info.cache3_entries,
-           self->client_info.cache3_size));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "cache1 entries %d size %d", self->client_info.cache1_entries,
+              self->client_info.cache1_size);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "cache2 entries %d size %d", self->client_info.cache2_entries,
+              self->client_info.cache2_size);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "cache3 entries %d size %d", self->client_info.cache3_entries,
+              self->client_info.cache3_size);
     return 0;
 }
 
@@ -273,11 +271,11 @@ xrdp_caps_process_cache_v3_codec_id(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 1)
     {
-        g_writeln("xrdp_caps_process_cache_v3_codec_id: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_cache_v3_codec_id: error");
         return 1;
     }
     in_uint8(s, codec_id);
-    g_writeln("xrdp_caps_process_cache_v3_codec_id: cache_v3_codec_id %d",
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_cache_v3_codec_id: cache_v3_codec_id %d",
               codec_id);
     self->client_info.v3_codec_id = codec_id;
     return 0;
@@ -295,7 +293,7 @@ xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 2 + 2 + 2)
     {
-        g_writeln("xrdp_caps_process_pointer: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_pointer: error");
         return 1;
     }
     no_new_cursor = self->client_info.pointer_flags & 2;
@@ -306,21 +304,21 @@ xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
     self->client_info.pointer_cache_entries = i;
     if (colorPointerFlag & 1)
     {
-        g_writeln("xrdp_caps_process_pointer: client supports "
-                  "new(color) cursor");
+        LOG(LOG_LEVEL_INFO, "xrdp_caps_process_pointer: client supports "
+            "new(color) cursor");
         in_uint16_le(s, i);
         i = MIN(i, 32);
         self->client_info.pointer_cache_entries = i;
     }
     else
     {
-        g_writeln("xrdp_caps_process_pointer: client does not support "
-                  "new(color) cursor");
+        LOG(LOG_LEVEL_INFO, "xrdp_caps_process_pointer: client does not support "
+            "new(color) cursor");
     }
     if (no_new_cursor)
     {
-        g_writeln("xrdp_caps_process_pointer: new(color) cursor is "
-                  "disabled by config");
+        LOG(LOG_LEVEL_INFO, "xrdp_caps_process_pointer: new(color) cursor is "
+            "disabled by config");
         self->client_info.pointer_flags = 0;
     }
     return 0;
@@ -354,7 +352,7 @@ xrdp_caps_process_brushcache(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 4)
     {
-        g_writeln("xrdp_caps_process_brushcache: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_brushcache: error");
         return 1;
     }
     in_uint32_le(s, code);
@@ -371,7 +369,7 @@ xrdp_caps_process_glyphcache(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 40 + 4 + 2 + 2) /* MS-RDPBCGR 2.2.7.1.8 */
     {
-        g_writeln("xrdp_caps_process_glyphcache: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_glyphcache: error");
         return 1;
     }
 
@@ -384,7 +382,7 @@ xrdp_caps_process_glyphcache(struct xrdp_rdp *self, struct stream *s,
     {
         self->client_info.use_cache_glyph_v2 = 1;
     }
-    g_writeln("xrdp_caps_process_glyphcache: support level %d ",
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_glyphcache: support level %d ",
               glyph_support_level);
     return 0;
 }
@@ -398,7 +396,7 @@ xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 4 + 2 + 2)
     {
-        g_writeln("xrdp_caps_process_offscreen_bmpcache: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_offscreen_bmpcache: error");
         return 1;
     }
     in_uint32_le(s, i32);
@@ -407,11 +405,11 @@ xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
     self->client_info.offscreen_cache_size = i32 * 1024;
     in_uint16_le(s, i32);
     self->client_info.offscreen_cache_entries = i32;
-    g_writeln("xrdp_process_offscreen_bmpcache: support level %d "
-              "cache size %d MB cache entries %d",
-              self->client_info.offscreen_support_level,
-              self->client_info.offscreen_cache_size,
-              self->client_info.offscreen_cache_entries);
+    LOG(LOG_LEVEL_INFO, "xrdp_process_offscreen_bmpcache: support level %d "
+        "cache size %d MB cache entries %d",
+        self->client_info.offscreen_support_level,
+        self->client_info.offscreen_cache_size,
+        self->client_info.offscreen_cache_entries);
     return 0;
 }
 
@@ -423,13 +421,13 @@ xrdp_caps_process_rail(struct xrdp_rdp *self, struct stream *s, int len)
 
     if (len < 4)
     {
-        g_writeln("xrdp_caps_process_rail: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_rail: error");
         return 1;
     }
     in_uint32_le(s, i32);
     self->client_info.rail_support_level = i32;
-    g_writeln("xrdp_process_capset_rail: rail_support_level %d",
-              self->client_info.rail_support_level);
+    LOG(LOG_LEVEL_INFO, "xrdp_process_capset_rail: rail_support_level %d",
+        self->client_info.rail_support_level);
     return 0;
 }
 
@@ -441,7 +439,7 @@ xrdp_caps_process_window(struct xrdp_rdp *self, struct stream *s, int len)
 
     if (len < 4 + 1 + 2)
     {
-        g_writeln("xrdp_caps_process_window: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_window: error");
         return 1;
     }
     in_uint32_le(s, i32);
@@ -450,11 +448,11 @@ xrdp_caps_process_window(struct xrdp_rdp *self, struct stream *s, int len)
     self->client_info.wnd_num_icon_caches = i32;
     in_uint16_le(s, i32);
     self->client_info.wnd_num_icon_cache_entries = i32;
-    g_writeln("xrdp_process_capset_window wnd_support_level %d "
-              "wnd_num_icon_caches %d wnd_num_icon_cache_entries %d",
-              self->client_info.wnd_support_level,
-              self->client_info.wnd_num_icon_caches,
-              self->client_info.wnd_num_icon_cache_entries);
+    LOG(LOG_LEVEL_INFO, "xrdp_process_capset_window wnd_support_level %d "
+        "wnd_num_icon_caches %d wnd_num_icon_cache_entries %d",
+        self->client_info.wnd_support_level,
+        self->client_info.wnd_num_icon_caches,
+        self->client_info.wnd_num_icon_cache_entries);
     return 0;
 }
 
@@ -472,7 +470,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 
     if (len < 1)
     {
-        g_writeln("xrdp_caps_process_codecs: error");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_codecs: error");
         return 1;
     }
     in_uint8(s, codec_count);
@@ -483,7 +481,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         codec_guid = s->p;
         if (len < 16 + 1 + 2)
         {
-            g_writeln("xrdp_caps_process_codecs: error");
+            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_codecs: error");
             return 1;
         }
         in_uint8s(s, 16);
@@ -492,7 +490,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         len -= 16 + 1 + 2;
         if (len < codec_properties_length)
         {
-            g_writeln("xrdp_caps_process_codecs: error");
+            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_codecs: error");
             return 1;
         }
         len -= codec_properties_length;
@@ -500,8 +498,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 
         if (g_memcmp(codec_guid, XR_CODEC_GUID_NSCODEC, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: nscodec, codec id %d, properties len %d",
-                      codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: nscodec, codec id %d, properties len %d",
+                codec_id, codec_properties_length);
             self->client_info.ns_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.ns_prop, s->p, i1);
@@ -509,8 +507,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: RemoteFX, codec id %d, properties len %d",
-                      codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: RemoteFX, codec id %d, properties len %d",
+                codec_id, codec_properties_length);
             self->client_info.rfx_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.rfx_prop, s->p, i1);
@@ -518,8 +516,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: jpeg, codec id %d, properties len %d",
-                      codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: jpeg, codec id %d, properties len %d",
+                codec_id, codec_properties_length);
             self->client_info.jpeg_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.jpeg_prop, s->p, i1);
@@ -527,16 +525,16 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             /* make sure that requested quality is  between 0 to 100 */
             if (self->client_info.jpeg_prop[0] < 0 || self->client_info.jpeg_prop[0] > 100)
             {
-                g_writeln("  Warning: the requested jpeg quality (%d) is invalid,"
-                          " falling back to default", self->client_info.jpeg_prop[0]);
+                LOG(LOG_LEVEL_WARNING, "  Warning: the requested jpeg quality (%d) is invalid, "
+                    "falling back to default", self->client_info.jpeg_prop[0]);
                 self->client_info.jpeg_prop[0] = 75; /* use default */
             }
-            g_writeln("  jpeg quality set to %d", self->client_info.jpeg_prop[0]);
+            LOG(LOG_LEVEL_INFO, "  jpeg quality set to %d", self->client_info.jpeg_prop[0]);
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_H264, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: h264, codec id %d, properties len %d",
-                      codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: h264, codec id %d, properties len %d",
+                codec_id, codec_properties_length);
             self->client_info.h264_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.h264_prop, s->p, i1);
@@ -544,7 +542,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else
         {
-            g_writeln("xrdp_caps_process_codecs: unknown codec id %d", codec_id);
+            LOG(LOG_LEVEL_WARNING, "xrdp_caps_process_codecs: unknown codec id %d", codec_id);
         }
 
         s->p = next_guid;
@@ -568,20 +566,20 @@ xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
     return 0;
 }
 
- /*****************************************************************************/
+/*****************************************************************************/
 static int
 xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 {
-    g_writeln("xrdp_caps_process_frame_ack:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_frame_ack:");
     self->client_info.use_frame_acks = 1;
     in_uint32_le(s, self->client_info.max_unacknowledged_frame_count);
     if (self->client_info.max_unacknowledged_frame_count < 0)
     {
-        g_writeln("  invalid max_unacknowledged_frame_count value (%d), setting to 0",
-                  self->client_info.max_unacknowledged_frame_count);
+        LOG(LOG_LEVEL_WARNING, "  invalid max_unacknowledged_frame_count value (%d), setting to 0",
+            self->client_info.max_unacknowledged_frame_count);
         self->client_info.max_unacknowledged_frame_count = 0;
     }
-    g_writeln("  max_unacknowledged_frame_count %d", self->client_info.max_unacknowledged_frame_count);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  max_unacknowledged_frame_count %d", self->client_info.max_unacknowledged_frame_count);
     return 0;
 }
 
@@ -590,10 +588,15 @@ static int
 xrdp_caps_process_surface_cmds(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int cmdFlags;
-    g_writeln("xrdp_caps_process_surface_cmds:");
+#ifndef XRDP_DEBUG
+    /* TODO: remove UNUSED_VAR once the `cmdFlags` variable is used for more than
+    logging in debug mode */
+    UNUSED_VAR(cmdFlags);
+#endif
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_surface_cmds:");
     in_uint32_le(s, cmdFlags);
     in_uint8s(s, 4); /* reserved */
-    g_writeln("  cmdFlags 0x%08x", cmdFlags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "  cmdFlags 0x%08x", cmdFlags);
     return 0;
 }
 
@@ -609,7 +612,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     int len;
     char *p;
 
-    DEBUG(("in xrdp_caps_process_confirm_active"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_caps_process_confirm_active");
     in_uint8s(s, 4); /* rdp_shareid */
     in_uint8s(s, 2); /* userid */
     in_uint16_le(s, source_len); /* sizeof RDP_SOURCE */
@@ -628,86 +631,86 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         p = s->p;
         if (!s_check_rem(s, 4))
         {
-            g_writeln("xrdp_caps_process_confirm_active: error 1");
+            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_confirm_active: error 1");
             return 1;
         }
         in_uint16_le(s, type);
         in_uint16_le(s, len);
         if ((len < 4) || !s_check_rem(s, len - 4))
         {
-            g_writeln("xrdp_caps_process_confirm_active: error: len %d, "
-                      "remaining %d", len, (int) (s->end - s->p));
+            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_confirm_active: error: len %d, "
+                "remaining %d", len, (int) (s->end - s->p));
             return 1;
         }
         len -= 4;
         switch (type)
         {
             case CAPSTYPE_GENERAL:
-                DEBUG(("CAPSTYPE_GENERAL"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_GENERAL");
                 xrdp_caps_process_general(self, s, len);
                 break;
             case CAPSTYPE_BITMAP:
-                DEBUG(("CAPSTYPE_BITMAP"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_BITMAP");
                 break;
             case CAPSTYPE_ORDER:
-                DEBUG(("CAPSTYPE_ORDER"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_ORDER");
                 xrdp_caps_process_order(self, s, len);
                 break;
             case CAPSTYPE_BITMAPCACHE:
-                DEBUG(("CAPSTYPE_BMPCACHE"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_BMPCACHE");
                 xrdp_caps_process_bmpcache(self, s, len);
                 break;
             case CAPSTYPE_CONTROL:
-                DEBUG(("CAPSTYPE_CONTROL"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_CONTROL");
                 break;
             case 6:
                 xrdp_caps_process_cache_v3_codec_id(self, s, len);
                 break;
             case CAPSTYPE_ACTIVATION:
-                DEBUG(("CAPSTYPE_ACTIVAION"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_ACTIVAION");
                 break;
             case CAPSTYPE_POINTER:
-                DEBUG(("CAPSTYPE_POINTER"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_POINTER");
                 xrdp_caps_process_pointer(self, s, len);
                 break;
             case CAPSTYPE_SHARE:
-                DEBUG(("CAPSTYPE_SHARE"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_SHARE");
                 break;
             case CAPSTYPE_COLORCACHE:
-                DEBUG(("CAPSTYPE_COLORCACHE"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_COLORCACHE");
                 break;
             case CAPSTYPE_SOUND:
-                DEBUG(("CAPSTYPE_SOUND"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_SOUND");
                 break;
             case CAPSTYPE_INPUT:
                 xrdp_caps_process_input(self, s, len);
                 break;
             case CAPSTYPE_FONT:
-                DEBUG(("CAPSTYPE_FONT"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_FONT");
                 break;
             case CAPSTYPE_BRUSH:
                 xrdp_caps_process_brushcache(self, s, len);
                 break;
             case CAPSTYPE_GLYPHCACHE:
-                DEBUG(("CAPSTYPE_GLYPHCACHE"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_GLYPHCACHE");
                 xrdp_caps_process_glyphcache(self, s, len);
                 break;
             case CAPSTYPE_OFFSCREENCACHE:
-                DEBUG(("CAPSTYPE_OFFSCREENCACHE"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_OFFSCREENCACHE");
                 xrdp_caps_process_offscreen_bmpcache(self, s, len);
                 break;
             case CAPSTYPE_BITMAPCACHE_REV2:
-                DEBUG(("CAPSTYPE_BITMAPCACHE_REV2"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_BITMAPCACHE_REV2");
                 xrdp_caps_process_bmpcache2(self, s, len);
                 break;
             case CAPSTYPE_VIRTUALCHANNEL:
-                DEBUG(("CAPSTYPE_VIRTUALCHANNEL"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_VIRTUALCHANNEL");
                 break;
             case CAPSTYPE_DRAWNINGRIDCACHE:
-                DEBUG(("CAPSTYPE_DRAWNINGRIDCACHE"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_DRAWNINGRIDCACHE");
                 break;
             case CAPSTYPE_DRAWGDIPLUS:
-                DEBUG(("CAPSTYPE_DRAWGDIPLUS"));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "CAPSTYPE_DRAWGDIPLUS");
                 break;
             case CAPSTYPE_RAIL:
                 xrdp_caps_process_rail(self, s, len);
@@ -728,7 +731,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 xrdp_caps_process_frame_ack(self, s, len);
                 break;
             default:
-                g_writeln("unknown in xrdp_caps_process_confirm_active %d", type);
+                LOG(LOG_LEVEL_WARNING, "unknown in xrdp_caps_process_confirm_active %d", type);
                 break;
         }
 
@@ -736,17 +739,17 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     }
 
     if (self->client_info.no_orders_supported &&
-        (self->client_info.offscreen_support_level != 0))
+            (self->client_info.offscreen_support_level != 0))
     {
-        g_writeln("xrdp_caps_process_confirm_active: not enough orders "
-                  "supported by client, client wants off screen bitmap but "
-                  "offscreen bitmaps disabled");
+        LOG(LOG_LEVEL_WARNING, "xrdp_caps_process_confirm_active: not enough orders "
+            "supported by client, client wants off screen bitmap but "
+            "offscreen bitmaps disabled");
         self->client_info.offscreen_support_level = 0;
         self->client_info.offscreen_cache_size = 0;
         self->client_info.offscreen_cache_entries = 0;
     }
 
-    DEBUG(("out xrdp_caps_process_confirm_active"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_caps_process_confirm_active");
     return 0;
 }
 /*****************************************************************************/
@@ -768,7 +771,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     make_stream(s);
     init_stream(s, 8192);
 
-    DEBUG(("in xrdp_caps_send_demand_active"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_caps_send_demand_active");
 
     if (xrdp_rdp_init(self, s) != 0)
     {
@@ -1035,16 +1038,16 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         free_stream(s);
         return 1;
     }
-    DEBUG(("out (1) xrdp_caps_send_demand_active"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out (1) xrdp_caps_send_demand_active");
 
     /* send Monitor Layout PDU for dual monitor */
     if (self->client_info.monitorCount > 0 &&
-        self->client_info.multimon == 1)
+            self->client_info.multimon == 1)
     {
-        DEBUG(("xrdp_caps_send_demand_active: sending monitor layout pdu"));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending monitor layout pdu");
         if (xrdp_caps_send_monitorlayout(self) != 0)
         {
-          g_writeln("xrdp_caps_send_demand_active: error sending monitor layout pdu");
+            LOG(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: error sending monitor layout pdu");
         }
     }
 

@@ -23,6 +23,7 @@
 #endif
 
 #include "xrdp.h"
+#include "string_calls.h"
 
 #if defined(XRDP_PAINTER)
 #include <painter.h> /* libpainter */

@@ -25,45 +25,11 @@
 #include <config_ac.h>
 #endif
 
+#include "chansrv.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "irp.h"
-
-/* module based logging */
-#define LOG_ERROR   0
-#define LOG_INFO    1
-#define LOG_DEBUG   2
-
-#ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_ERROR
-#endif
-
-#define log_error(_params...)                           \
-{                                                       \
-    g_write("[%10.10u]: IRP        %s: %d : ERROR: ",   \
-            g_time3(), __func__, __LINE__);             \
-    g_writeln (_params);                                \
-}
-
-#define log_info(_params...)                            \
-{                                                       \
-    if (LOG_INFO <= LOG_LEVEL)                          \
-    {                                                   \
-        g_write("[%10.10u]: IRP        %s: %d : ",      \
-                g_time3(), __func__, __LINE__);         \
-        g_writeln (_params);                            \
-    }                                                   \
-}
-
-#define log_debug(_params...)                           \
-{                                                       \
-    if (LOG_DEBUG <= LOG_LEVEL)                         \
-    {                                                   \
-        g_write("[%10.10u]: IRP        %s: %d : ",      \
-                g_time3(), __func__, __LINE__);         \
-        g_writeln (_params);                            \
-    }                                                   \
-}
 
 IRP *g_irp_head = NULL;
 
@@ -73,18 +39,18 @@ IRP *g_irp_head = NULL;
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_new(void)
+IRP *devredir_irp_new(void)
 {
     IRP *irp;
     IRP *irp_last;
 
-    log_debug("entered");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "entered");
 
     /* create new IRP */
     irp = g_new0(IRP, 1);
     if (irp == NULL)
     {
-        log_error("system out of memory!");
+        LOG_DEVEL(LOG_LEVEL_ERROR, "system out of memory!");
         return NULL;
     }
 
@@ -100,7 +66,7 @@ IRP * devredir_irp_new(void)
         irp->prev = irp_last;
     }
 
-    log_debug("new IRP=%p", irp);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "new IRP=%p", irp);
     return irp;
 }
 
@@ -113,10 +79,10 @@ IRP * devredir_irp_new(void)
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_with_pathname_new(const char *pathname)
+IRP *devredir_irp_with_pathname_new(const char *pathname)
 {
     unsigned int len = g_strlen(pathname);
-    IRP * irp = devredir_irp_with_pathnamelen_new(len);
+    IRP *irp = devredir_irp_with_pathnamelen_new(len);
     if (irp != NULL)
     {
         g_strcpy(irp->pathname, pathname);
@@ -135,18 +101,18 @@ IRP * devredir_irp_with_pathname_new(const char *pathname)
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_with_pathnamelen_new(unsigned int pathnamelen)
+IRP *devredir_irp_with_pathnamelen_new(unsigned int pathnamelen)
 {
     IRP *irp;
     IRP *irp_last;
 
-    log_debug("entered");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "entered");
 
     /* create new IRP with space on end for the pathname and a terminator */
     irp = (IRP *)g_malloc(sizeof(IRP) + (pathnamelen + 1), 1);
     if (irp == NULL)
     {
-        log_error("system out of memory!");
+        LOG_DEVEL(LOG_LEVEL_ERROR, "system out of memory!");
         return NULL;
     }
 
@@ -164,7 +130,7 @@ IRP * devredir_irp_with_pathnamelen_new(unsigned int pathnamelen)
         irp->prev = irp_last;
     }
 
-    log_debug("new IRP=%p", irp);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "new IRP=%p", irp);
     return irp;
 }
 
@@ -179,9 +145,11 @@ int devredir_irp_delete(IRP *irp)
     IRP *lirp = g_irp_head;
 
     if ((irp == NULL) || (lirp == NULL))
+    {
         return -1;
+    }
 
-    log_debug("irp=%p completion_id=%d type=%d",
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "irp=%p completion_id=%d type=%d",
               irp, irp->CompletionId, irp->completion_type);
 
     devredir_irp_dump(); // LK_TODO
@@ -189,13 +157,17 @@ int devredir_irp_delete(IRP *irp)
     while (lirp)
     {
         if (lirp == irp)
+        {
             break;
+        }
 
         lirp = lirp->next;
     }
 
     if (lirp == NULL)
-        return -1; /* did not find specified irp */
+    {
+        return -1;    /* did not find specified irp */
+    }
 
     if (lirp->prev == NULL)
     {
@@ -244,18 +216,18 @@ IRP *devredir_irp_find(tui32 completion_id)
     {
         if (irp->CompletionId == completion_id)
         {
-            log_debug("returning irp=%p", irp);
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "returning irp=%p", irp);
             return irp;
         }
 
         irp = irp->next;
     }
 
-    log_debug("returning irp=NULL");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "returning irp=NULL");
     return NULL;
 }
 
-IRP * devredir_irp_find_by_fileid(tui32 FileId)
+IRP *devredir_irp_find_by_fileid(tui32 FileId)
 {
     IRP *irp = g_irp_head;
 
@@ -263,14 +235,14 @@ IRP * devredir_irp_find_by_fileid(tui32 FileId)
     {
         if (irp->FileId == FileId)
         {
-            log_debug("returning irp=%p", irp);
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "returning irp=%p", irp);
             return irp;
         }
 
         irp = irp->next;
     }
 
-    log_debug("returning irp=NULL");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "returning irp=NULL");
     return NULL;
 }
 
@@ -278,19 +250,21 @@ IRP * devredir_irp_find_by_fileid(tui32 FileId)
  * Return last IRP in linked list
  *****************************************************************************/
 
-IRP * devredir_irp_get_last(void)
+IRP *devredir_irp_get_last(void)
 {
     IRP *irp = g_irp_head;
 
     while (irp)
     {
         if (irp->next == NULL)
+        {
             break;
+        }
 
         irp = irp->next;
     }
 
-    log_debug("returning irp=%p", irp);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "returning irp=%p", irp);
     return irp;
 }
 
@@ -298,13 +272,13 @@ void devredir_irp_dump(void)
 {
     IRP *irp = g_irp_head;
 
-    log_debug("------- dumping IRPs --------");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "------- dumping IRPs --------");
     while (irp)
     {
-        log_debug("        completion_id=%d\tcompletion_type=%d\tFileId=%d",
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "        completion_id=%d\tcompletion_type=%d\tFileId=%d",
                   irp->CompletionId, irp->completion_type, irp->FileId);
 
         irp = irp->next;
     }
-    log_debug("------- dumping IRPs done ---");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "------- dumping IRPs done ---");
 }

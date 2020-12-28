@@ -8,6 +8,7 @@ fork=true
 ; ports to listen on, number alone means listen on all interfaces
 ; 0.0.0.0 or :: if ipv6 is configured
 ; space between multiple occurrences
+; ALL specified interfaces must be UP when xrdp starts, otherwise xrdp will fail to start
 ;
 ; Examples:
 ;   port=3389
@@ -58,6 +59,10 @@ ssl_protocols=TLSv1.2, TLSv1.3
 ; set TLS cipher suites
 #tls_ciphers=HIGH
 
+; concats the domain name to the user if set for authentication with the separator
+; for example when the server is multi homed with SSSd
+#domain_user_separator=@
+
 ; Section name to use for automatic login if the client sends username
 ; and password. If empty, the domain name sent by the client is used.
 ; If empty and no domain name is given, the first suitable section in
@@ -76,6 +81,8 @@ new_cursors=true
 use_fastpath=both
 ; when true, userid/password *must* be passed on cmd line
 #require_credentials=true
+; when true, the userid will be used to try to authenticate
+#enable_token_login=true
 ; You can set the PAM error text in a gateway setup (MAX 256 chars)
 #pamerrortxt=change your password according to policy at http://url
 
@@ -143,11 +150,19 @@ ls_btn_cancel_width=85
 ls_btn_cancel_height=30
 
 [Logging]
+; Note: Log levels can be any of: core, error, warning, info, debug, or trace
 LogFile=xrdp.log
-LogLevel=DEBUG
+LogLevel=INFO
 EnableSyslog=true
-SyslogLevel=DEBUG
-; LogLevel and SysLogLevel could by any of: core, error, warning, info or debug
+#SyslogLevel=INFO
+#EnableConsole=false
+#ConsoleLevel=INFO
+#EnableProcessId=false
+
+[LoggingPerLogger]
+; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+#xrdp.c=INFO
+#main()=INFO
 
 [Channels]
 ; Channel names not listed here will be blocked by XRDP.

@@ -33,6 +33,10 @@ X11 server settings for supported servers
 Settings for xrdp-chansrv(8)
 
 .TP
+\fB[ChansrvLogging]\fR
+Logging settings for xrdp-chansrv(8)
+
+.TP
 \fB[SessionVariables]\fR
 Environment variables for the session
 
@@ -81,12 +85,15 @@ relative path to \fI@xrdpconfdir@\fR. If not specified, defaults to
 \fI@xrdpconfdir@/reconnectwm.sh\fR.
 
 .SH "LOGGING"
-Following parameters can be used in the \fB[Logging]\fR section.
+Following parameters can be used in the \fB[Logging]\fR and \fB[ChansrvLogging]\fR 
+sections.
 
 .TP
 \fBLogFile\fR=\fIfilename\fR
 Log file path. It can be either absolute or relative. If not specified,
-defaults to \fI./sesman.log\fR
+defaults to \fI./sesman.log\fR It is ignored in the [ChansrvLogging] section
+since the channel server creates one log file per display and instead uses the
+following log file naming convention \fIxrdp-chansrv.${DISPLAY}.log\fR
 
 .TP
 \fBLogLevel\fR=\fIlevel\fR
@@ -112,8 +119,22 @@ syslog.
 .TP
 \fBSyslogLevel\fR=\fIlevel\fR
 Logging level for syslog. It can have the same values as \fBLogLevel\fR.
-If \fBSyslogLevel\fR and \fBLogLevel\fR differ, the least verbose setting
-takes effect for syslog.
+Defaults to \fBDEBUG\fR.
+
+.TP
+\fBEnableConsole\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to
+the console (ie. stdout).
+
+.TP
+\fBConsoleLevel\fR=\fIlevel\fR
+Logging level for the console. It can have the same values as \fBLogLevel\fR.
+Defaults to \fBDEBUG\fR.
+
+.TP
+\fBEnableProcessId\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging the
+process id in all log messages. Defaults to \fBfalse\fR.
 
 .SH "SESSIONS"
 Following parameters can be used in the \fB[Sessions]\fR section.
@@ -132,14 +153,13 @@ Sets the maximum number of simultaneous sessions. If not set or set to
 .TP
 \fBKillDisconnected\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
-within 60 seconds after the user disconnects.
+within \fBDisconnectedTimeLimit\fR seconds after the user disconnects.
 This setting currently only works with xorgxrdp sessions.
 
 .TP
 \fBDisconnectedTimeLimit\fR=\fInumber\fR
 Sets the time limit for \fBKillDisconnected\fR to a value greater than 60.
-Values less than 60 cannot be set. You do not actually have to specify
-\fBKillDisconnected\fR if you set this value.
+Values less than 60 are to be overridden with 60.
 This setting currently only works with xorgxrdp sessions.
 
 .TP
@@ -226,8 +246,27 @@ Following parameters can be used in the \fB[Chansrv]\fR section.
 
 .TP
 \fBFuseMountName\fR=\fIstring\fR
-Directory for drive redirection, relative to the user home directory.
+Directory for drive redirection.
 Created if it doesn't exist. If not specified, defaults to \fIxrdp_client\fR.
+If first character is not a '/', this is relative to $HOME.
+.P
+.RS
+If first character is a '/' this is an absolute path. The following
+substitutions are made in this string:-
+    %U - Username
+    %u - Numeric UID
+    %% - Percent character
+.P
+If this format is used:-
+.HP 3
+1) The directory path permissions MUST be configured correctly by
+the system administrator or the system itself - xrdp-chansrv will not
+do this for you (although it will create the final directories owned by
+the user).
+.HP 3
+2) The desktop may not automatically display a link for the redirected
+drive. To fix this, consult the docs for your chosen desktop.
+.RE
 
 .TP
 \fBFileUmask\fR=\fImode\fR
@@ -236,6 +275,21 @@ The default value of 077 prevents other users on the system from reading
 files on your redirected drives. This may not be approprate for all
 environents, and so you can change this value to allow other users to
 access your remote files if required.
+
+.TP
+\fBEnableFuseMount\fR=\fI[true|false]\fR
+Defaults to \fItrue\fR.
+Set to \fIfalse\fR to disable xrdp-chansrv's use of the FUSE system
+feature, even if it has been built with this feature enabled.
+.P
+.RS
+Setting this value to \fIfalse\fR will disable the following application
+features:-
+.P
+-  drive redirection
+.P
+-  copying-and-pasting of files
+.RE
 
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as

@@ -41,11 +41,11 @@
 #include "libscp_types.h"
 #include "xauth.h"
 #include "xrdp_sockets.h"
+#include "string_calls.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
 #endif
-
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
@@ -71,7 +71,7 @@ dumpItemsToString(struct list *self, char *outstr, int len)
     g_memset(outstr, 0, len);
     if (self->count == 0)
     {
-        g_writeln("List is empty");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "List is empty");
     }
 
     for (index = 0; index < self->count; index++)
@@ -117,15 +117,15 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
     }
 
 #if 0
-    log_message(LOG_LEVEL_INFO,
-            "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
-            policy, name, width, height, bpp, type, client_ip);
+    LOG(LOG_LEVEL_INFO,
+        "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
+        policy, name, width, height, bpp, type, client_ip);
 #endif
 
     while (tmp != 0)
     {
 #if 0
-        log_message(LOG_LEVEL_INFO,
+        LOG(LOG_LEVEL_INFO,
             "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
             tmp->item,
             tmp->item->name,
@@ -135,14 +135,14 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
 #endif
 
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-            (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
-             (tmp->item->width == width && tmp->item->height == height)) &&
-            (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-             (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
-            (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
-             (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
-            tmp->item->bpp == bpp &&
-            tmp->item->type == type)
+                (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
+                 (tmp->item->width == width && tmp->item->height == height)) &&
+                (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
+                 (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
+                (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
+                 (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
+                tmp->item->bpp == bpp &&
+                tmp->item->type == type)
         {
             return tmp->item;
         }
@@ -314,7 +314,7 @@ session_get_avail_display_from_chain(void)
         display++;
     }
 
-    log_message(LOG_LEVEL_ERROR, "X server -- no display in range is available");
+    LOG(LOG_LEVEL_ERROR, "X server -- no display in range is available");
     return 0;
 }
 
@@ -334,9 +334,9 @@ wait_for_xserver(int display)
 
         if (i > 40)
         {
-            log_message(LOG_LEVEL_ERROR,
-                        "X server for display %d startup timeout",
-                        display);
+            LOG(LOG_LEVEL_ERROR,
+                "X server for display %d startup timeout",
+                display);
             break;
         }
 
@@ -371,16 +371,11 @@ session_start_chansrv(char *username, int display)
                      g_cfg->env_names,
                      g_cfg->env_values);
 
-        if (g_cfg->sec.restrict_outbound_clipboard == 1)
-        {
-            g_setenv("CHANSRV_RESTRICT_OUTBOUND_CLIPBOARD", "1", 1);
-        }
-
         /* executing chansrv */
         g_execvp(exe_path, (char **) (chansrv_params->items));
         /* should not get here */
-        log_message(LOG_LEVEL_ALWAYS, "error starting chansrv "
-                    "- user %s - pid %d", username, g_getpid());
+        LOG(LOG_LEVEL_ALWAYS, "error starting chansrv "
+            "- user %s - pid %d", username, g_getpid());
         list_delete(chansrv_params);
         g_exit(1);
     }
@@ -426,8 +421,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     /* check to limit concurrent sessions */
     if (g_session_count >= g_cfg->sess.max_sessions)
     {
-        log_message(LOG_LEVEL_INFO, "max concurrent session limit "
-                    "exceeded. login for user %s denied", s->username);
+        LOG(LOG_LEVEL_INFO, "max concurrent session limit "
+            "exceeded. login for user %s denied", s->username);
         return 0;
     }
 
@@ -435,8 +430,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
 
     if (temp == 0)
     {
-        log_message(LOG_LEVEL_ERROR, "cannot create new chain "
-                    "element - user %s", s->username);
+        LOG(LOG_LEVEL_ERROR, "cannot create new chain "
+            "element - user %s", s->username);
         return 0;
     }
 
@@ -445,8 +440,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     if (temp->item == 0)
     {
         g_free(temp);
-        log_message(LOG_LEVEL_ERROR, "cannot create new session "
-                    "item - user %s", s->username);
+        LOG(LOG_LEVEL_ERROR, "cannot create new session "
+            "item - user %s", s->username);
         return 0;
     }
 
@@ -467,8 +462,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     }
     else if (pid == 0)
     {
-        log_message(LOG_LEVEL_INFO, "calling auth_start_session from pid %d",
-                    g_getpid());
+        LOG(LOG_LEVEL_INFO, "calling auth_start_session from pid %d",
+            g_getpid());
         auth_start_session(data, display);
         g_delete_wait_obj(g_term_event);
         g_tcp_close(g_sck);
@@ -499,15 +494,15 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
              */
             if (g_setsid() < 0)
             {
-                log_message(LOG_LEVEL_ERROR,
-                            "setsid failed - pid %d", g_getpid());
+                LOG(LOG_LEVEL_ERROR,
+                    "setsid failed - pid %d", g_getpid());
             }
 
             if (g_setlogin(s->username) < 0)
             {
-                log_message(LOG_LEVEL_ERROR,
-                            "setlogin failed for user %s - pid %d", s->username,
-                            g_getpid());
+                LOG(LOG_LEVEL_ERROR,
+                    "setlogin failed for user %s - pid %d", s->username,
+                    g_getpid());
             }
         }
 
@@ -549,10 +544,21 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 {
                     if (s->program[0] != 0)
                     {
-                        g_execlp3(s->program, s->program, 0);
-                        log_message(LOG_LEVEL_ALWAYS,
-                                    "error starting program %s for user %s - pid %d",
-                                    s->program, s->username, g_getpid());
+                        LOG(LOG_LEVEL_DEBUG,
+                            "starting program with parameters: %s ",
+                            s->program);
+                        if (g_strchr(s->program, ' ') != 0 || g_strchr(s->program, '\t') != 0)
+                        {
+                            const char *params[] = {"sh", "-c", s->program, NULL};
+                            g_execvp("/bin/sh", (char **)params);
+                        }
+                        else
+                        {
+                            g_execlp3(s->program, s->program, 0);
+                        }
+                        LOG(LOG_LEVEL_ALWAYS,
+                            "error starting program %s for user %s - pid %d",
+                            s->program, s->username, g_getpid());
                     }
                 }
                 /* try to execute user window manager if enabled */
@@ -562,51 +568,51 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     if (g_file_exist(text))
                     {
                         g_execlp3(text, g_cfg->user_wm, 0);
-                        log_message(LOG_LEVEL_ALWAYS, "error starting user "
-                                    "wm for user %s - pid %d", s->username, g_getpid());
+                        LOG(LOG_LEVEL_ALWAYS, "error starting user "
+                            "wm for user %s - pid %d", s->username, g_getpid());
                         /* logging parameters */
-                        log_message(LOG_LEVEL_DEBUG, "errno: %d, "
-                                    "description: %s", g_get_errno(), g_get_strerror());
-                        log_message(LOG_LEVEL_DEBUG, "execlp3 parameter "
-                                    "list:");
-                        log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                                    text);
-                        log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
-                                    g_cfg->user_wm);
+                        LOG(LOG_LEVEL_DEBUG, "errno: %d, "
+                            "description: %s", g_get_errno(), g_get_strerror());
+                        LOG(LOG_LEVEL_DEBUG, "execlp3 parameter "
+                            "list:");
+                        LOG(LOG_LEVEL_DEBUG, "        argv[0] = %s",
+                            text);
+                        LOG(LOG_LEVEL_DEBUG, "        argv[1] = %s",
+                            g_cfg->user_wm);
                     }
                 }
                 /* if we're here something happened to g_execlp3
                    so we try running the default window manager */
                 g_execlp3(g_cfg->default_wm, g_cfg->default_wm, 0);
 
-                log_message(LOG_LEVEL_ALWAYS, "error starting default "
-                             "wm for user %s - pid %d", s->username, g_getpid());
+                LOG(LOG_LEVEL_ALWAYS, "error starting default "
+                    "wm for user %s - pid %d", s->username, g_getpid());
                 /* logging parameters */
-                log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                            "%s", g_get_errno(), g_get_strerror());
-                log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
-                log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                            g_cfg->default_wm);
-                log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
-                            g_cfg->default_wm);
+                LOG(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                    "%s", g_get_errno(), g_get_strerror());
+                LOG(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
+                LOG(LOG_LEVEL_DEBUG, "        argv[0] = %s",
+                    g_cfg->default_wm);
+                LOG(LOG_LEVEL_DEBUG, "        argv[1] = %s",
+                    g_cfg->default_wm);
 
                 /* still a problem starting window manager just start xterm */
                 g_execlp3("xterm", "xterm", 0);
 
                 /* should not get here */
-                log_message(LOG_LEVEL_ALWAYS, "error starting xterm "
-                            "for user %s - pid %d", s->username, g_getpid());
+                LOG(LOG_LEVEL_ALWAYS, "error starting xterm "
+                    "for user %s - pid %d", s->username, g_getpid());
                 /* logging parameters */
-                log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                            "%s", g_get_errno(), g_get_strerror());
+                LOG(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                    "%s", g_get_errno(), g_get_strerror());
             }
             else
             {
-                log_message(LOG_LEVEL_ERROR, "another Xserver might "
-                            "already be active on display %d - see log", display);
+                LOG(LOG_LEVEL_ERROR, "another Xserver might "
+                    "already be active on display %d - see log", display);
             }
 
-            log_message(LOG_LEVEL_DEBUG, "aborting connection...");
+            LOG(LOG_LEVEL_DEBUG, "aborting connection...");
             g_exit(0);
         }
         else
@@ -671,9 +677,9 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                      */
                     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
                     {
-                        log_message(LOG_LEVEL_WARNING,
-                                    "Failed to disable setuid on X server: %s",
-                                    g_get_strerror());
+                        LOG(LOG_LEVEL_WARNING,
+                            "Failed to disable setuid on X server: %s",
+                            g_get_strerror());
                     }
 #endif
 
@@ -697,7 +703,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
 
                     pp1 = (char **) xserver_params->items;
 
-                    log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
+                    LOG(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
 
                     /* some args are passed via env vars */
                     g_sprintf(geometry, "%d", s->width);
@@ -742,7 +748,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     /* make sure it ends with a zero */
                     list_add_item(xserver_params, 0);
                     pp1 = (char **)xserver_params->items;
-                    log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
+                    LOG(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
                     g_execvp(xserver, pp1);
                 }
                 else if (type == SESMAN_SESSION_TYPE_XRDP)
@@ -771,30 +777,30 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     /* make sure it ends with a zero */
                     list_add_item(xserver_params, 0);
                     pp1 = (char **)xserver_params->items;
-                    log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
+                    LOG(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
                     g_execvp(xserver, pp1);
                 }
                 else
                 {
-                    log_message(LOG_LEVEL_ALWAYS, "bad session type - "
-                                "user %s - pid %d", s->username, g_getpid());
+                    LOG(LOG_LEVEL_ALWAYS, "bad session type - "
+                        "user %s - pid %d", s->username, g_getpid());
                     g_exit(1);
                 }
 
                 /* should not get here */
-                log_message(LOG_LEVEL_ALWAYS, "error starting X server "
-                            "- user %s - pid %d", s->username, g_getpid());
+                LOG(LOG_LEVEL_ALWAYS, "error starting X server "
+                    "- user %s - pid %d", s->username, g_getpid());
 
                 /* logging parameters */
-                log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                            "%s", g_get_errno(), g_get_strerror());
-                log_message(LOG_LEVEL_DEBUG, "execve parameter list size: "
-                            "%d", (xserver_params)->count);
+                LOG(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                    "%s", g_get_errno(), g_get_strerror());
+                LOG(LOG_LEVEL_DEBUG, "execve parameter list size: "
+                    "%d", (xserver_params)->count);
 
                 for (i = 0; i < (xserver_params->count); i++)
                 {
-                    log_message(LOG_LEVEL_DEBUG, "        argv[%d] = %s",
-                                i, (char *)list_get_item(xserver_params, i));
+                    LOG(LOG_LEVEL_DEBUG, "        argv[%d] = %s",
+                        i, (char *)list_get_item(xserver_params, i));
                 }
 
                 list_delete(xserver_params);
@@ -802,19 +808,42 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             }
             else
             {
+                int wm_wait_time;
                 wait_for_xserver(display);
                 chansrv_pid = session_start_chansrv(s->username, display);
-                log_message(LOG_LEVEL_ALWAYS, "waiting for window manager "
-                            "(pid %d) to exit", window_manager_pid);
+
+                /* Monitor the amount of time we wait for the
+                 * window manager. This is approximately how long the window
+                 * manager was running for */
+                LOG(LOG_LEVEL_INFO, "waiting for window manager "
+                    "(pid %d) to exit", window_manager_pid);
+                wm_wait_time = g_time1();
                 g_waitpid(window_manager_pid);
-                log_message(LOG_LEVEL_ALWAYS, "window manager (pid %d) did "
-                            "exit, cleaning up session", window_manager_pid);
-                log_message(LOG_LEVEL_INFO, "calling auth_stop_session and "
-                            "auth_end from pid %d", g_getpid());
+                wm_wait_time = g_time1() - wm_wait_time;
+                if (wm_wait_time < 10)
+                {
+                    /* This could be a config issue. Log a significant error */
+                    LOG(LOG_LEVEL_ALWAYS, "window manager exited quickly "
+                        "(%d secs). Window manager config problem?",
+                        wm_wait_time);
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_INFO, "window manager (pid %d) was running "
+                        "for approximately %d seconds.",
+                        window_manager_pid, wm_wait_time);
+                }
+                LOG(LOG_LEVEL_INFO, "Cleaning up session. Calling "
+                    "auth_stop_session and auth_end from pid %d", g_getpid());
                 auth_stop_session(data);
                 auth_end(data);
                 g_sigterm(display_pid);
                 g_sigterm(chansrv_pid);
+
+                /* make sure socket cleanup happen after child process exit */
+                g_waitpid(display_pid);
+                g_waitpid(chansrv_pid);
+
                 cleanup_sockets(display);
                 g_deinit();
                 g_exit(0);
@@ -923,8 +952,8 @@ session_kill(int pid)
     {
         if (tmp->item == 0)
         {
-            log_message(LOG_LEVEL_ERROR, "session descriptor for "
-                        "pid %d is null!", pid);
+            LOG(LOG_LEVEL_ERROR, "session descriptor for "
+                "pid %d is null!", pid);
 
             if (prev == 0)
             {
@@ -943,7 +972,7 @@ session_kill(int pid)
         if (tmp->item->pid == pid)
         {
             /* deleting the session */
-            log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+            LOG(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
             g_free(tmp->item);
 
             if (prev == 0)
@@ -982,8 +1011,8 @@ session_sigkill_all(void)
     {
         if (tmp->item == 0)
         {
-            log_message(LOG_LEVEL_ERROR, "found null session "
-                        "descriptor!");
+            LOG(LOG_LEVEL_ERROR, "found null session "
+                "descriptor!");
         }
         else
         {
@@ -1006,7 +1035,7 @@ session_get_bypid(int pid)
 
     if (0 == dummy)
     {
-        log_message(LOG_LEVEL_ERROR, "session_get_bypid: out of memory");
+        LOG(LOG_LEVEL_ERROR, "session_get_bypid: out of memory");
         return 0;
     }
 
@@ -1016,8 +1045,8 @@ session_get_bypid(int pid)
     {
         if (tmp->item == 0)
         {
-            log_message(LOG_LEVEL_ERROR, "session descriptor for "
-                        "pid %d is null!", pid);
+            LOG(LOG_LEVEL_ERROR, "session descriptor for "
+                "pid %d is null!", pid);
             g_free(dummy);
             return 0;
         }
@@ -1051,13 +1080,13 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
 
     while (tmp != 0)
     {
-        LOG_DBG("user: %s", user);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "user: %s", user);
 
         if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
         {
-            LOG_DBG("session_get_byuser: status=%d, flags=%d, "
-                    "result=%d", (tmp->item->status), flags,
-                    ((tmp->item->status) & flags));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "session_get_byuser: status=%d, flags=%d, "
+                      "result=%d", (tmp->item->status), flags,
+                      ((tmp->item->status) & flags));
 
             if ((tmp->item->status) & flags)
             {
@@ -1089,7 +1118,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
 
     while (tmp != 0)
     {
-/* #warning FIXME: we should get only disconnected sessions! */
+        /* #warning FIXME: we should get only disconnected sessions! */
         if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
         {
             if ((tmp->item->status) & flags)
@@ -1099,7 +1128,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
                 (sess[index]).height = tmp->item->height;
                 (sess[index]).width = tmp->item->width;
                 (sess[index]).bpp = tmp->item->bpp;
-/* #warning FIXME: setting idle times and such */
+                /* #warning FIXME: setting idle times and such */
                 /*(sess[index]).connect_time.year = tmp->item->connect_time.year;
                 (sess[index]).connect_time.month = tmp->item->connect_time.month;
                 (sess[index]).connect_time.day = tmp->item->connect_time.day;
@@ -1140,7 +1169,7 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags)
 int
 cleanup_sockets(int display)
 {
-    log_message(LOG_LEVEL_DEBUG, "cleanup_sockets:");
+    LOG(LOG_LEVEL_DEBUG, "cleanup_sockets:");
     char file[256];
     int error;
 
@@ -1149,11 +1178,12 @@ cleanup_sockets(int display)
     g_snprintf(file, 255, CHANSRV_PORT_OUT_STR, display);
     if (g_file_exist(file))
     {
-        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            log_message(LOG_LEVEL_DEBUG,
-                       "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1161,11 +1191,12 @@ cleanup_sockets(int display)
     g_snprintf(file, 255, CHANSRV_PORT_IN_STR, display);
     if (g_file_exist(file))
     {
-        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            log_message(LOG_LEVEL_DEBUG,
-                       "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1173,11 +1204,12 @@ cleanup_sockets(int display)
     g_snprintf(file, 255, XRDP_CHANSRV_STR, display);
     if (g_file_exist(file))
     {
-        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            log_message(LOG_LEVEL_DEBUG,
-                       "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }
@@ -1185,11 +1217,41 @@ cleanup_sockets(int display)
     g_snprintf(file, 255, CHANSRV_API_STR, display);
     if (g_file_exist(file))
     {
-        log_message(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
         if (g_file_delete(file) == 0)
         {
-            log_message(LOG_LEVEL_DEBUG,
-                       "cleanup_sockets: failed to delete %s", file);
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
+            error++;
+        }
+    }
+
+    /* the following files should be deleted by xorgxrdp
+     * but just in case the deletion failed */
+
+    g_snprintf(file, 255, XRDP_X11RDP_STR, display);
+    if (g_file_exist(file))
+    {
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
+            error++;
+        }
+    }
+
+    g_snprintf(file, 255, XRDP_DISCONNECT_STR, display);
+    if (g_file_exist(file))
+    {
+        LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
+        if (g_file_delete(file) == 0)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "cleanup_sockets: failed to delete %s (%s)",
+                file, g_get_strerror());
             error++;
         }
     }

@@ -27,6 +27,7 @@
 #include "xrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
+#include "string_calls.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -396,7 +397,6 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     char *val;
     struct list *names;
     struct list *values;
-    char cfg_file[256];
 
     if (autorun_name != 0)
     {
@@ -415,8 +415,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     self->background = HCOLOR(self->screen->bpp, 0x000000);
 
     /* now load them from the globals in xrdp.ini if defined */
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    fd = g_file_open(cfg_file);
+    fd = g_file_open(self->session->xrdp_ini);
 
     if (fd >= 0)
     {
@@ -507,7 +506,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", cfg_file);
+        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
     }
 
     if (self->screen->bpp == 8)
@@ -569,20 +568,20 @@ xrdp_wm_init(struct xrdp_wm *self)
     char param[256];
     char default_section_name[256];
     char section_name[256];
-    char cfg_file[256];
     char autorun_name[256];
 
     g_writeln("in xrdp_wm_init: ");
 
-    load_xrdp_config(self->xrdp_config, self->screen->bpp);
+    load_xrdp_config(self->xrdp_config, self->session->xrdp_ini,
+                     self->screen->bpp);
 
     /* global channels allow */
     names = list_create();
     names->auto_free = 1;
     values = list_create();
     values->auto_free = 1;
-    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-    if (file_by_name_read_section(cfg_file, "Channels", names, values) == 0)
+    if (file_by_name_read_section(self->session->xrdp_ini,
+                                  "Channels", names, values) == 0)
     {
         int error;
         int ii;
@@ -649,8 +648,7 @@ xrdp_wm_init(struct xrdp_wm *self)
          * NOTE: this should eventually be accessed from self->xrdp_config
          */
 
-        g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
-        fd = g_file_open(cfg_file); /* xrdp.ini */
+        fd = g_file_open(self->session->xrdp_ini);
         if (fd != -1)
         {
             names = list_create();
@@ -667,6 +665,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                 q = (char *)list_get_item(names, index);
                 if ((g_strncasecmp("globals", q, 8) != 0) &&
                     (g_strncasecmp("Logging", q, 8) != 0) &&
+                    (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
                     (g_strncasecmp("channels", q, 9) != 0))
                 {
                     g_strncpy(default_section_name, q, 255);
@@ -790,7 +789,9 @@ xrdp_wm_init(struct xrdp_wm *self)
         }
         else
         {
-            log_message(LOG_LEVEL_ERROR,"xrdp_wm_init: Could not read xrdp.ini file %s", cfg_file);
+            log_message(LOG_LEVEL_ERROR,
+                        "xrdp_wm_init: Could not read xrdp.ini file %s",
+                        self->session->xrdp_ini);
         }
     }
     else

@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include "log.h"
 #include "os_calls.h"
+#include "string_calls.h"
 
 
 /******************************************************************************/
@@ -46,19 +47,19 @@ add_xauth_cookie(int display, const char *file)
     g_bytes_to_hexstr(cookie_bin, 16, cookie_str, 33);
 
     g_sprintf(xauth_str, "xauth -q -f %s add :%d . %s",
-                file, display, cookie_str);
+              file, display, cookie_str);
 
     dp = popen(xauth_str, "r");
     if (dp == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "Unable to launch xauth");
+        LOG(LOG_LEVEL_ERROR, "Unable to launch xauth");
         return 1;
     }
 
     ret = pclose(dp);
     if (ret < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "An error occurred while running xauth");
+        LOG(LOG_LEVEL_ERROR, "An error occurred while running xauth");
         return 1;
     }
 

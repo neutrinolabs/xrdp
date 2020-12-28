@@ -187,6 +187,12 @@ struct config_sessions
 struct config_sesman
 {
   /**
+   * @var sesman_ini
+   * @brief File that these parameters are read from
+   */
+  char *sesman_ini;
+
+  /**
    * @var listen_address
    * @brief Listening address
    */
@@ -267,100 +273,15 @@ struct config_sesman
 /**
  *
  * @brief Reads sesman configuration
- * @param cfg pointer to configuration object to be replaced
- * @return 0 on success, 1 on failure
+ * @param sesman_ini Name of configuration file to read
+ * @return configuration on success, NULL on failure
+ *
+ * @post pass return value to config_free() to prevent memory leaks
  *
  */
-int
-config_read(struct config_sesman* cfg);
+struct config_sesman*
+config_read(const char *sesman_ini);
 
-/**
- *
- * @brief Reads sesman [global] configuration section
- * @param file configuration file descriptor
- * @param cf pointer to a config struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_globals(int file, struct config_sesman* cf,
-                    struct list* param_n, struct list* param_v);
-
-/**
- *
- * @brief Reads sesman [Security] configuration section
- * @param file configuration file descriptor
- * @param sc pointer to a config_security struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_security(int file, struct config_security* sc,
-                     struct list* param_n, struct list* param_v);
-
-/**
- *
- * @brief Reads sesman [Sessions] configuration section
- * @param file configuration file descriptor
- * @param ss pointer to a config_sessions struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_sessions(int file, struct config_sessions* ss,
-                     struct list* param_n, struct list* param_v);
-
-/**
- *
- * @brief Reads sesman [X11rdp] configuration section
- * @param file configuration file descriptor
- * @param cs pointer to a config_sesman struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
-                       struct list* param_v);
-
-/**
- *
- * @brief Reads sesman [Xorg] configuration section
- * @param file configuration file descriptor
- * @param cs pointer to a config_sesman struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_xorg_params(int file, struct config_sesman* cs, struct list* param_n,
-                        struct list* param_v);
-
-/**
- *
- * @brief Reads sesman [Xvnc] configuration section
- * @param file configuration file descriptor
- * @param cs pointer to a config_sesman struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-int
-config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
-                       struct list* param_v);
-
-int
-config_read_session_variables(int file, struct config_sesman *cs,
-                              struct list *param_n, struct list *param_v);
 /**
  *
  * @brief Dumps configuration
@@ -370,6 +291,12 @@ config_read_session_variables(int file, struct config_sesman *cs,
 void
 config_dump(struct config_sesman *config);
 
+/**
+ *
+ * @brief Frees configuration allocated by config_read()
+ * @param pointer to a config_sesman struct (may be NULL)
+ *
+ */
 void
 config_free(struct config_sesman *cs);
 

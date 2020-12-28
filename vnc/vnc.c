@@ -34,6 +34,7 @@
 #include "log.h"
 #include "trans.h"
 #include "ssl_calls.h"
+#include "string_calls.h"
 #include "xrdp_client_info.h"
 
 #define LLOG_LEVEL 1
@@ -1905,7 +1906,6 @@ lib_mod_connect(struct vnc *v)
     int error;
     int i;
     int check_sec_result;
-    struct source_info *si;
 
     v->server_msg(v, "VNC started connecting", 0);
     check_sec_result = 1;
@@ -1955,8 +1955,7 @@ lib_mod_connect(struct vnc *v)
     g_sprintf(text, "VNC connecting to %s %s", v->ip, con_port);
     v->server_msg(v, text, 0);
 
-    si = (struct source_info *) (v->si);
-    v->trans->si = si;
+    v->trans->si = v->si;
     v->trans->my_source = XRDP_SOURCE_MOD;
 
     error = trans_connect(v->trans, v->ip, con_port, 3000);

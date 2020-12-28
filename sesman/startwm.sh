@@ -85,6 +85,9 @@ wm_start()
     # do not execute the pseudo login shell scripts
     . /etc/X11/xdm/Xsession
     exit 0
+  elif [ -r /usr/etc/X11/xdm/Xsession ]; then
+    . /usr/etc/X11/xdm/Xsession
+    exit 0
   fi
 
   pre_start

@@ -1,3 +1,38 @@
+# Release notes for xrdp v0.9.15 (2020/12/28)
+
+## New features
+* Allow token sign in without autologon for SSO (#1667 #1668)
+* Norwegian keyboard support (#1675)
+* Improved config support for chansrv (#1635)
+* Unified chansrv, sesman and libxrdp logging (#1633 #1708 #1738) - thanks to @aquesnel
+* Support SUSE move to /usr/etc (#1702)
+* Parameters may now be specified for user-specified shell (#1270 #1695)
+* xrdp executables now allow alternative config files to be specified with -c (#1588 #1650 #1651)
+* sesrun improvements (#1741)
+* Drive redirection location can now be specified (#1048)
+* Now compiles on RISC-V (#1761)
+
+## Bug fixes
+* Additional buffer overflow checks (#1662)
+* FUSE support now builds on 32-bit platforms (#1682)
+* genkeymap array size conflict fixed (#1691)
+* Buffering issue with neutrinordp over a slow link fixed (#1608 1634)
+* Various documentation fixes (#1704 #1741 #1755 #1759)
+* Prevent PAM info message from causing authentication failure (#1727)
+* Cosmetic fixes for minor issues (#1751 #1755 #1749)
+* Try harder to clean up socket files on session exit (#1740 #1756)
+* xrdp-chansrv become defunct in docker while file copy (#1658)
+
+## Internal changes
+* Compilation warnings with newer compilers (#1659 #1680)
+* Continuation Integration checks on 32-bit platforms now include FUSE support (#1682)
+* Continuation Integration builds now default to the Ubuntu Focal platform (#1666)
+* FUSE type tidy-ups (#1686)
+* Switch from Travis CI to GitHub Actions (#1728 #1732)
+* Easier to set up console logging for utilities (#1711)
+
+-----------------------
+
 # Release notes for xrdp v0.9.14 (2020/08/31)
 
 ## New features
