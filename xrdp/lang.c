@@ -244,7 +244,7 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     /* if the file does not exist, use only lower 16 bits instead */
     if (!g_file_exist(filename))
     {
-        log_message(LOG_LEVEL_INFO, "Cannot find keymap file %s", filename);
+        LOG(LOG_LEVEL_WARNING, "Cannot find keymap file %s", filename);
         /* e.g. km-00000411.ini */
         g_snprintf(filename, 255, "%s/km-%08x.ini", XRDP_CFG_PATH, basic_key_layout);
     }
@@ -252,14 +252,14 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     /* finally, use 'en-us' */
     if (!g_file_exist(filename))
     {
-        log_message(LOG_LEVEL_INFO, "Cannot find keymap file %s", filename);
+        LOG(LOG_LEVEL_WARNING, "Cannot find keymap file %s", filename);
         g_snprintf(filename, 255, "%s/km-00000409.ini", XRDP_CFG_PATH);
     }
 
     if (g_file_exist(filename))
     {
         fd = g_file_open(filename);
-        log_message(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
+        LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
 
         if (fd != -1)
         {
@@ -280,9 +280,9 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 
             if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
             {
-                log_message(LOG_LEVEL_WARNING,
-                            "local keymap file for 0x%08x found and doesn't match "
-                            "built in keymap, using local keymap file", keylayout);
+                LOG(LOG_LEVEL_WARNING,
+                    "local keymap file for 0x%08x found and doesn't match "
+                    "built in keymap, using local keymap file", keylayout);
             }
 
             g_free(lkeymap);
@@ -291,7 +291,7 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     }
     else
     {
-        log_message(LOG_LEVEL_WARNING, "File does not exist: %s", filename);
+        LOG(LOG_LEVEL_WARNING, "File does not exist: %s", filename);
     }
 
     g_free(filename);

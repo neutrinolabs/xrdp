@@ -246,7 +246,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "Combo is 0 - potential programming error");
+        LOG(LOG_LEVEL_WARNING, "Combo is NULL - potential programming error");
     }
 
     return 0;
@@ -293,7 +293,6 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
     {
         /* we try to locate a number indicating what combobox index the user
          * prefer the information is loaded from domain field, from the client
-         * log_message(LOG_LEVEL_DEBUG, "domain contains _");
          * We must use valid chars in the domain name.
          * Underscore is a valid name in the domain.
          * Invalid chars are ignored in microsoft client therefore we use '_'
@@ -301,22 +300,22 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
         pos = g_pos(&originalDomainInfo[1], "__");
         if (pos > 0)
         {
-            /* an index is found we try to use it
-            log_message(LOG_LEVEL_DEBUG, "domain contains index char __");*/
+            /* an index is found we try to use it */
+            LOG(LOG_LEVEL_DEBUG, "domain contains index char __");
             if (decode)
             {
                 g_memset(index, 0, 2);
                 /* we just accept values 0-9  (one figure) */
                 g_strncpy(index, &originalDomainInfo[pos + 3], 1);
                 comboxindex = g_htoi(index);
-                log_message(LOG_LEVEL_DEBUG,
-                            "index value as string: %s, as int: %d, max: %d",
-                            index, comboxindex, comboMax - 1);
+                LOG(LOG_LEVEL_DEBUG,
+                    "index value as string: %s, as int: %d, max: %d",
+                    index, comboxindex, comboMax - 1);
                 /* limit to max number of items in combo box */
                 if ((comboxindex > 0) && (comboxindex < comboMax))
                 {
-                    log_message(LOG_LEVEL_DEBUG, "domain contains a valid "
-                                "index number");
+                    LOG(LOG_LEVEL_DEBUG, "domain contains a valid "
+                        "index number");
                     ret = comboxindex; /* preferred index for combo box. */
                 }
             }
@@ -325,7 +324,7 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
         }
         else
         {
-            /* log_message(LOG_LEVEL_DEBUG, "domain does not contain _"); */
+            LOG(LOG_LEVEL_DEBUG, "domain does not contain _");
             g_strncpy(resultBuffer, &originalDomainInfo[1], 255);
         }
     }
@@ -573,8 +572,8 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 
     if (fd < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "Could not read xrdp ini file %s",
-                    xrdp_ini);
+        LOG(LOG_LEVEL_ERROR, "Could not read xrdp ini file %s",
+            xrdp_ini);
         list_delete(sections);
         list_delete(section_names);
         list_delete(section_values);
@@ -740,7 +739,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                 g_snprintf(fileName, 255, "%s/%s",
                            XRDP_SHARE_PATH, globals->ls_background_image);
             }
-            log_message(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
+            LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
             xrdp_bitmap_load(but, fileName, self->palette);
             but->parent = self->screen;
             but->owner = self->screen;
@@ -886,8 +885,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     /* open xrdp.ini file */
     if ((fd = g_file_open(xrdp_ini)) < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "load_config: Could not read "
-                    "xrdp.ini file %s", xrdp_ini);
+        LOG(LOG_LEVEL_ERROR, "load_config: Could not read "
+            "xrdp.ini file %s", xrdp_ini);
         return -1;
 
     }
@@ -902,8 +901,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         list_delete(names);
         list_delete(values);
         g_file_close(fd);
-        log_message(LOG_LEVEL_ERROR, "load_config: Could not read globals "
-                    "section from xrdp.ini file %s", xrdp_ini);
+        LOG(LOG_LEVEL_ERROR, "load_config: Could not read globals "
+            "section from xrdp.ini file %s", xrdp_ini);
         return -1;
     }
 
@@ -1073,7 +1072,7 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
 
         else if (g_strncmp(n, "enable_token_login", 64) == 0)
         {
-            log_message(LOG_LEVEL_DEBUG, "Token login detection enabled x");
+            LOG(LOG_LEVEL_DEBUG, "Token login detection enabled x");
             globals->enable_token_login = g_text2bool(v);
         }
 
@@ -1190,63 +1189,61 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         }
     }
 
-#if 0
-    g_writeln("ini_version:             %d", globals->ini_version);
-    g_writeln("use_bitmap_cache:        %d", globals->use_bitmap_cache);
-    g_writeln("use_bitmap_compression:  %d", globals->use_bitmap_compression);
-    g_writeln("port:                    %d", globals->port);
-    g_writeln("crypt_level:             %d", globals->crypt_level);
-    g_writeln("allow_channels:          %d", globals->allow_channels);
-    g_writeln("max_bpp:                 %d", globals->max_bpp);
-    g_writeln("fork:                    %d", globals->fork);
-    g_writeln("tcp_nodelay:             %d", globals->tcp_nodelay);
-    g_writeln("tcp_keepalive:           %d", globals->tcp_keepalive);
-    g_writeln("tcp_send_buffer_bytes:   %d", globals->tcp_send_buffer_bytes);
-    g_writeln("tcp_recv_buffer_bytes:   %d", globals->tcp_recv_buffer_bytes);
-    g_writeln("new_cursors:             %d", globals->new_cursors);
-    g_writeln("allow_multimon:          %d", globals->allow_multimon);
+    LOG(LOG_LEVEL_DEBUG, "ini_version:             %d", globals->ini_version);
+    LOG(LOG_LEVEL_DEBUG, "use_bitmap_cache:        %d", globals->use_bitmap_cache);
+    LOG(LOG_LEVEL_DEBUG, "use_bitmap_compression:  %d", globals->use_bitmap_compression);
+    LOG(LOG_LEVEL_DEBUG, "port:                    %d", globals->port);
+    LOG(LOG_LEVEL_DEBUG, "crypt_level:             %d", globals->crypt_level);
+    LOG(LOG_LEVEL_DEBUG, "allow_channels:          %d", globals->allow_channels);
+    LOG(LOG_LEVEL_DEBUG, "max_bpp:                 %d", globals->max_bpp);
+    LOG(LOG_LEVEL_DEBUG, "fork:                    %d", globals->fork);
+    LOG(LOG_LEVEL_DEBUG, "tcp_nodelay:             %d", globals->tcp_nodelay);
+    LOG(LOG_LEVEL_DEBUG, "tcp_keepalive:           %d", globals->tcp_keepalive);
+    LOG(LOG_LEVEL_DEBUG, "tcp_send_buffer_bytes:   %d", globals->tcp_send_buffer_bytes);
+    LOG(LOG_LEVEL_DEBUG, "tcp_recv_buffer_bytes:   %d", globals->tcp_recv_buffer_bytes);
+    LOG(LOG_LEVEL_DEBUG, "new_cursors:             %d", globals->new_cursors);
+    LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
 
-    g_writeln("grey:                    %d", globals->grey);
-    g_writeln("black:                   %d", globals->black);
-    g_writeln("dark_grey:               %d", globals->dark_grey);
-    g_writeln("blue:                    %d", globals->blue);
-    g_writeln("dark_blue:               %d", globals->dark_blue);
-    g_writeln("white:                   %d", globals->white);
-    g_writeln("red:                     %d", globals->red);
-    g_writeln("green:                   %d", globals->green);
-    g_writeln("background:              %d", globals->background);
+    LOG(LOG_LEVEL_DEBUG, "grey:                    %d", globals->grey);
+    LOG(LOG_LEVEL_DEBUG, "black:                   %d", globals->black);
+    LOG(LOG_LEVEL_DEBUG, "dark_grey:               %d", globals->dark_grey);
+    LOG(LOG_LEVEL_DEBUG, "blue:                    %d", globals->blue);
+    LOG(LOG_LEVEL_DEBUG, "dark_blue:               %d", globals->dark_blue);
+    LOG(LOG_LEVEL_DEBUG, "white:                   %d", globals->white);
+    LOG(LOG_LEVEL_DEBUG, "red:                     %d", globals->red);
+    LOG(LOG_LEVEL_DEBUG, "green:                   %d", globals->green);
+    LOG(LOG_LEVEL_DEBUG, "background:              %d", globals->background);
 
-    g_writeln("autorun:                 %s", globals->autorun);
-    g_writeln("hidelogwindow:           %d", globals->hidelogwindow);
-    g_writeln("require_credentials:     %d", globals->require_credentials);
-    g_writeln("bulk_compression:        %d", globals->bulk_compression);
-    g_writeln("new_cursors:             %d", globals->new_cursors);
-    g_writeln("nego_sec_layer:          %d", globals->nego_sec_layer);
-    g_writeln("allow_multimon:          %d", globals->allow_multimon);
-    g_writeln("enable_token_login:      %d", globals->enable_token_login)
+    LOG(LOG_LEVEL_DEBUG, "autorun:                 %s", globals->autorun);
+    LOG(LOG_LEVEL_DEBUG, "hidelogwindow:           %d", globals->hidelogwindow);
+    LOG(LOG_LEVEL_DEBUG, "require_credentials:     %d", globals->require_credentials);
+    LOG(LOG_LEVEL_DEBUG, "bulk_compression:        %d", globals->bulk_compression);
+    LOG(LOG_LEVEL_DEBUG, "new_cursors:             %d", globals->new_cursors);
+    LOG(LOG_LEVEL_DEBUG, "nego_sec_layer:          %d", globals->nego_sec_layer);
+    LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
+    LOG(LOG_LEVEL_DEBUG, "enable_token_login:      %d", globals->enable_token_login)
 
-    g_writeln("ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
-    g_writeln("ls_width:                %d", globals->ls_width);
-    g_writeln("ls_height:               %d", globals->ls_height);
-    g_writeln("ls_bg_color:             %x", globals->ls_bg_color);
-    g_writeln("ls_title:                %s", globals->ls_title);
-    g_writeln("ls_logo_filename:        %s", globals->ls_logo_filename);
-    g_writeln("ls_logo_x_pos:           %d", globals->ls_logo_x_pos);
-    g_writeln("ls_logo_y_pos:           %d", globals->ls_logo_y_pos);
-    g_writeln("ls_label_x_pos:          %d", globals->ls_label_x_pos);
-    g_writeln("ls_label_width:          %d", globals->ls_label_width);
-    g_writeln("ls_input_x_pos:          %d", globals->ls_input_x_pos);
-    g_writeln("ls_input_width:          %d", globals->ls_input_width);
-    g_writeln("ls_input_y_pos:          %d", globals->ls_input_y_pos);
-    g_writeln("ls_btn_ok_x_pos:         %d", globals->ls_btn_ok_x_pos);
-    g_writeln("ls_btn_ok_y_pos:         %d", globals->ls_btn_ok_y_pos);
-    g_writeln("ls_btn_ok_width:         %d", globals->ls_btn_ok_width);
-    g_writeln("ls_btn_ok_height:        %d", globals->ls_btn_ok_height);
-    g_writeln("ls_btn_cancel_x_pos:     %d", globals->ls_btn_cancel_x_pos);
-    g_writeln("ls_btn_cancel_y_pos:     %d", globals->ls_btn_cancel_y_pos);
-    g_writeln("ls_btn_cancel_width:     %d", globals->ls_btn_cancel_width);
-    g_writeln("ls_btn_cancel_height:    %d", globals->ls_btn_cancel_height);
-#endif
+    LOG(LOG_LEVEL_DEBUG, "ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
+    LOG(LOG_LEVEL_DEBUG, "ls_width:                %d", globals->ls_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_height:               %d", globals->ls_height);
+    LOG(LOG_LEVEL_DEBUG, "ls_bg_color:             %x", globals->ls_bg_color);
+    LOG(LOG_LEVEL_DEBUG, "ls_title:                %s", globals->ls_title);
+    LOG(LOG_LEVEL_DEBUG, "ls_logo_filename:        %s", globals->ls_logo_filename);
+    LOG(LOG_LEVEL_DEBUG, "ls_logo_x_pos:           %d", globals->ls_logo_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_logo_y_pos:           %d", globals->ls_logo_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_label_x_pos:          %d", globals->ls_label_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_label_width:          %d", globals->ls_label_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_input_x_pos:          %d", globals->ls_input_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_input_width:          %d", globals->ls_input_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_input_y_pos:          %d", globals->ls_input_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_x_pos:         %d", globals->ls_btn_ok_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_y_pos:         %d", globals->ls_btn_ok_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_width:         %d", globals->ls_btn_ok_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_height:        %d", globals->ls_btn_ok_height);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_x_pos:     %d", globals->ls_btn_cancel_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_y_pos:     %d", globals->ls_btn_cancel_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_width:     %d", globals->ls_btn_cancel_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_height:    %d", globals->ls_btn_cancel_height);
 
     list_delete(names);
     list_delete(values);

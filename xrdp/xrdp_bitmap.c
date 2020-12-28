@@ -31,17 +31,7 @@
 #include "log.h"
 #include "string_calls.h"
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-    do \
-    { \
-        if (_level < LLOG_LEVEL) \
-        { \
-            g_write("xrdp:xrdp_bitmap [%10.10u]: ", g_time3()); \
-            g_writeln _args ; \
-        } \
-    } \
-    while (0)
+
 
 
 static const unsigned int g_crc_table[256] =
@@ -153,8 +143,8 @@ xrdp_bitmap_create(int width, int height, int bpp,
         self->data = alloc_bitmap_data(width, height, Bpp);
         if (self->data == NULL)
         {
-            LLOGLN(0, ("xrdp_bitmap_create: size overflow %dx%dx%d",
-                       width, height, Bpp));
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_create: size overflow %dx%dx%d",
+                width, height, Bpp);
             g_free(self);
             return NULL;
         }
@@ -163,12 +153,12 @@ xrdp_bitmap_create(int width, int height, int bpp,
 #if defined(XRDP_PAINTER)
     if (self->type == WND_TYPE_SCREEN) /* noorders */
     {
-        LLOGLN(0, ("xrdp_bitmap_create: noorders"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_bitmap_create: noorders");
         self->data = alloc_bitmap_data(width, height, Bpp);
         if (self->data == NULL)
         {
-            LLOGLN(0, ("xrdp_bitmap_create: size overflow %dx%dx%d",
-                       width, height, Bpp));
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_create: size overflow %dx%dx%d",
+                width, height, Bpp);
             g_free(self);
             return NULL;
         }
@@ -492,8 +482,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
 
     if (!g_file_exist(filename))
     {
-        log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
-                    "does not exist", filename);
+        LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+            "does not exist", filename);
         return 1;
     }
 
@@ -504,16 +494,16 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         /* read file type */
         if (g_file_read(fd, type1, 2) != 2)
         {
-            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
-                        "read error", filename);
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                "read error", filename);
             g_file_close(fd);
             return 1;
         }
 
         if ((type1[0] != 'B') || (type1[1] != 'M'))
         {
-            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
-                        "not BMP file", filename);
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                "not BMP file", filename);
             g_file_close(fd);
             return 1;
         }
@@ -526,8 +516,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         /* read bmp header */
         if (g_file_seek(fd, 14) < 0)
         {
-            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                        filename);
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
+                filename);
             free_stream(s);
             g_file_close(fd);
             return 1;
@@ -549,8 +539,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         if ((header.bit_count != 4) && (header.bit_count != 8) &&
                 (header.bit_count != 24))
         {
-            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
-                        "bad bpp %d", filename, header.bit_count);
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                "bad bpp %d", filename, header.bit_count);
             free_stream(s);
             g_file_close(fd);
             return 1;
@@ -560,8 +550,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         {
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                            filename);
+                LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: seek error in file %s",
+                    filename);
             }
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
             size = header.image_width * header.image_height * 3;
@@ -575,8 +565,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
 
                 if (k != size)
                 {
-                    log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap "
-                                "file [%s] read", filename);
+                    LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: error bitmap "
+                        "file [%s] read", filename);
                 }
             }
 
@@ -617,8 +607,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             /* read palette */
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                            filename);
+                LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: seek error in file %s",
+                    filename);
             }
             init_stream(s, 8192);
             g_file_read(fd, s->data, header.clr_used * sizeof(int));
@@ -640,8 +630,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
 
                 if (k != size)
                 {
-                    log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap "
-                                "file [%s] read", filename);
+                    LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: error bitmap "
+                        "file [%s] read", filename);
                 }
             }
 
@@ -678,8 +668,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             /* read palette */
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                            filename);
+                LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: seek error in file %s",
+                    filename);
             }
             init_stream(s, 8192);
             g_file_read(fd, s->data, header.clr_used * sizeof(int));
@@ -701,8 +691,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
 
                 if (k != size)
                 {
-                    log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap "
-                                "file [%s] read", filename);
+                    LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: error bitmap "
+                        "file [%s] read", filename);
                 }
             }
 
@@ -749,8 +739,8 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error loading bitmap "
-                    "from file [%s]", filename);
+        LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error loading bitmap "
+            "from file [%s]", filename);
         return 1;
     }
 
@@ -1242,10 +1232,10 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap *self,
     dest->crc32 = crc;
     dest->crc16 = dest->crc32 & 0xffff;
 
-    LLOGLN(10, ("xrdp_bitmap_copy_box_with_crc: crc16 0x%4.4x",
-                dest->crc16));
-    LLOGLN(10, ("xrdp_bitmap_copy_box_with_crc: width %d height %d",
-                dest->width, dest->height));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_bitmap_copy_box_with_crc: crc16 0x%4.4x",
+              dest->crc16);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_bitmap_copy_box_with_crc: width %d height %d",
+              dest->width, dest->height);
 
     return 0;
 }
@@ -1256,7 +1246,7 @@ int
 xrdp_bitmap_compare(struct xrdp_bitmap *self,
                     struct xrdp_bitmap *b)
 {
-    LLOGLN(10, ("xrdp_bitmap_compare:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_bitmap_compare:");
 
     if (self == 0)
     {

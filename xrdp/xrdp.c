@@ -102,7 +102,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
         /* this is the main thread, call the function directly */
         /* in fork mode, this always happens too */
         sync_result = sync_func(sync_param1, sync_param2);
-        /*g_writeln("g_xrdp_sync processed IN main thread -> continue");*/
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_xrdp_sync processed IN main thread -> continue");
     }
     else
     {
@@ -133,10 +133,9 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             tc_mutex_unlock(g_sync_mutex);
         }
         while (sync_command != 0); /* loop until g_process_waiting_function()
-
                                 * has processed the request */
         tc_mutex_unlock(g_sync1_mutex);
-        /*g_writeln("g_xrdp_sync processed BY main thread -> continue");*/
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_xrdp_sync processed BY main thread -> continue");
     }
 
     return sync_result;
@@ -149,8 +148,8 @@ xrdp_shutdown(int sig)
     tbus threadid;
 
     threadid = tc_get_threadid();
-    g_writeln("shutting down");
-    g_writeln("signal %d threadid %lld", sig, (long long)threadid);
+    LOG(LOG_LEVEL_INFO, "shutting down");
+    LOG(LOG_LEVEL_INFO, "signal %d threadid %lld", sig, (long long)threadid);
 
     if (!g_is_wait_obj_set(g_term_event))
     {
@@ -173,7 +172,7 @@ xrdp_child(int sig)
 static void
 xrdp_hang_up(int sig)
 {
-    log_message(LOG_LEVEL_INFO, "caught SIGHUP, noop...");
+    LOG(LOG_LEVEL_INFO, "caught SIGHUP, noop...");
 }
 
 /*****************************************************************************/
@@ -235,7 +234,7 @@ static void
 pipe_sig(int sig_num)
 {
     /* do nothing */
-    g_writeln("got XRDP SIGPIPE(%d)", sig_num);
+    LOG(LOG_LEVEL_INFO, "got XRDP SIGPIPE(%d)", sig_num);
 }
 
 /*****************************************************************************/
@@ -613,8 +612,8 @@ main(int argc, char **argv)
         /* if can't listen, exit with failure status */
         if (xrdp_listen_test(&startup_params) != 0)
         {
-            log_message(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
-                        "possibly address already in use.");
+            LOG(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
+                "possibly address already in use.");
             g_deinit();
             /* must exit with failure status,
                or systemd cannot detect xrdp daemon couldn't start properly */
@@ -686,13 +685,13 @@ main(int argc, char **argv)
     g_sync_mutex = tc_mutex_create();
     g_sync1_mutex = tc_mutex_create();
     pid = g_getpid();
-    log_message(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
+    LOG(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
     g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
     g_term_event = g_create_wait_obj(text);
 
     if (g_term_event == 0)
     {
-        g_writeln("error creating g_term_event");
+        LOG(LOG_LEVEL_WARNING, "error creating g_term_event");
     }
 
     g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
@@ -700,7 +699,7 @@ main(int argc, char **argv)
 
     if (g_sync_event == 0)
     {
-        g_writeln("error creating g_sync_event");
+        LOG(LOG_LEVEL_WARNING, "error creating g_sync_event");
     }
 
     g_listen->startup_params = &startup_params;
