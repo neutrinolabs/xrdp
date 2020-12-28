@@ -33,15 +33,15 @@
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
+    do \
     { \
-        g_write("xrdp:xrdp_bitmap [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
+        if (_level < LLOG_LEVEL) \
+        { \
+            g_write("xrdp:xrdp_bitmap [%10.10u]: ", g_time3()); \
+            g_writeln _args ; \
+        } \
     } \
-  } \
-  while (0)
+    while (0)
 
 
 static const unsigned int g_crc_table[256] =
@@ -231,7 +231,7 @@ xrdp_bitmap_create_with_data(int width, int height,
 #if defined(NEED_ALIGN)
     data_as_int = (tintptr) data;
     if (((bpp >= 24) && (data_as_int & 3)) ||
-        (((bpp == 15) || (bpp == 16)) && (data_as_int & 1)))
+            (((bpp == 15) || (bpp == 16)) && (data_as_int & 1)))
     {
         /* got to copy data here, it's not aligned
            other calls in this file assume alignment */
@@ -240,7 +240,7 @@ xrdp_bitmap_create_with_data(int width, int height,
         return self;
     }
 #endif
-    self->data = data; 
+    self->data = data;
     self->do_not_free_data = 1;
     return self;
 }
@@ -527,7 +527,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         if (g_file_seek(fd, 14) < 0)
         {
             log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                filename);
+                        filename);
             free_stream(s);
             g_file_close(fd);
             return 1;
@@ -561,7 +561,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
                 log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                    filename);
+                            filename);
             }
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
             size = header.image_width * header.image_height * 3;
@@ -618,7 +618,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
                 log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                    filename);
+                            filename);
             }
             init_stream(s, 8192);
             g_file_read(fd, s->data, header.clr_used * sizeof(int));
@@ -679,7 +679,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
                 log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
-                    filename);
+                            filename);
             }
             init_stream(s, 8192);
             g_file_read(fd, s->data, header.clr_used * sizeof(int));
@@ -1243,9 +1243,9 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap *self,
     dest->crc16 = dest->crc32 & 0xffff;
 
     LLOGLN(10, ("xrdp_bitmap_copy_box_with_crc: crc16 0x%4.4x",
-           dest->crc16));
+                dest->crc16));
     LLOGLN(10, ("xrdp_bitmap_copy_box_with_crc: width %d height %d",
-           dest->width, dest->height));
+                dest->width, dest->height));
 
     return 0;
 }

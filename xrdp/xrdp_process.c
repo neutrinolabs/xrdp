@@ -177,7 +177,7 @@ xrdp_process_data_in(struct trans *self)
                 /* not enough data read yet */
                 break;
             }
-            /* FALLTHROUGH */
+        /* FALLTHROUGH */
 
         case 2:
             /* we have enough now to get the PDU bytes */
@@ -197,7 +197,7 @@ xrdp_process_data_in(struct trans *self)
                 /* not enough data read yet */
                 break;
             }
-            /* FALLTHROUGH */
+        /* FALLTHROUGH */
 
         case 3:
             /* the whole PDU is read in now process */

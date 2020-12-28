@@ -108,7 +108,7 @@ get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
     {
         rv = &(keymap->keys_shiftaltgr[index]);
     }
-     else if (shift)
+    else if (shift)
     {
         rv = &(keymap->keys_shift[index]);
     }

@@ -31,15 +31,15 @@
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
+    do \
     { \
-        g_write("xrdp:xrdp_painter [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
+        if (_level < LLOG_LEVEL) \
+        { \
+            g_write("xrdp:xrdp_painter [%10.10u]: ", g_time3()); \
+            g_writeln _args ; \
+        } \
     } \
-  } \
-  while (0)
+    while (0)
 
 #if defined(XRDP_PAINTER)
 
@@ -73,7 +73,7 @@ xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
     rect.bottom = y + cy;
     xrdp_region_add_rect(self->dirty_region, &rect);
     LLOGLN(10, ("xrdp_painter_add_dirty_rect: x %d y %d cx %d cy %d",
-           x, y, cx, cy));
+                x, y, cx, cy));
     return 0;
 }
 
@@ -124,7 +124,7 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             dst += cx * Bpp;
         }
         LLOGLN(10, ("xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
-               rect.left, rect.top, cx, cy));
+                    rect.left, rect.top, cx, cy));
         libxrdp_send_bitmap(self->session, cx, cy, bpp,
                             ldata, rect.left, rect.top, cx, cy);
         g_free(ldata);
@@ -623,8 +623,8 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
             dst_pb.data = ldst->data;
 
             LLOGLN(10, ("xrdp_painter_fill_rect: ldst->width %d ldst->height %d "
-                       "dst->data %p self->fg_color %d",
-                       ldst->width, ldst->height, ldst->data, self->fg_color));
+                        "dst->data %p self->fg_color %d",
+                        ldst->width, ldst->height, ldst->data, self->fg_color));
 
             xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
             region = xrdp_region_create(self->wm);
@@ -1182,7 +1182,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
                                      draw_rect.right - draw_rect.left,
                                      draw_rect.bottom - draw_rect.top);
                     LLOGLN(10, ("  x %d y %d cx %d cy %d srcx %d srcy %d",
-                           x, y, cx, cy, srcx, srcy));
+                                x, y, cx, cy, srcx, srcy));
                     painter_copy(self->painter, &dst_pb, x, y, cx, cy,
                                  &src_pb, srcx, srcy);
                     xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
@@ -1376,15 +1376,15 @@ xrdp_painter_copy(struct xrdp_painter *self,
 
 /*****************************************************************************/
 int
-xrdp_painter_composite(struct xrdp_painter* self,
-                       struct xrdp_bitmap* src,
+xrdp_painter_composite(struct xrdp_painter *self,
+                       struct xrdp_bitmap *src,
                        int srcformat,
                        int srcwidth,
                        int srcrepeat,
-                       struct xrdp_bitmap* dst,
-                       int* srctransform,
+                       struct xrdp_bitmap *dst,
+                       int *srctransform,
                        int mskflags,
-                       struct xrdp_bitmap* msk,
+                       struct xrdp_bitmap *msk,
                        int mskformat, int mskwidth, int mskrepeat, int op,
                        int srcx, int srcy, int mskx, int msky,
                        int dstx, int dsty, int width, int height, int dstformat)
@@ -1393,7 +1393,7 @@ xrdp_painter_composite(struct xrdp_painter* self,
     struct xrdp_rect draw_rect;
     struct xrdp_rect rect1;
     struct xrdp_rect rect2;
-    struct xrdp_region* region;
+    struct xrdp_region *region;
     int k;
     int dx;
     int dy;

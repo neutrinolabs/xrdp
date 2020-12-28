@@ -31,15 +31,15 @@
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
+    do \
     { \
-        g_write("xrdp:xrdp_wm [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
+        if (_level < LLOG_LEVEL) \
+        { \
+            g_write("xrdp:xrdp_wm [%10.10u]: ", g_time3()); \
+            g_writeln _args ; \
+        } \
     } \
-  } \
-  while (0)
+    while (0)
 
 /*****************************************************************************/
 struct xrdp_wm *
@@ -105,7 +105,9 @@ xrdp_wm_delete(struct xrdp_wm *self)
     g_delete_wait_obj(self->login_state_event);
 
     if (self->xrdp_config)
+    {
         g_free(self->xrdp_config);
+    }
 
     /* free self */
     g_free(self);
@@ -247,8 +249,8 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     if (!g_file_exist(file_name))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error pointer file [%s] does not exist",
-                  file_name);
+        log_message(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: error pointer file [%s] does not exist",
+                    file_name);
         return 1;
     }
 
@@ -258,8 +260,8 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     if (fd < 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error loading pointer from file [%s]",
-                  file_name);
+        log_message(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: error loading pointer from file [%s]",
+                    file_name);
         xstream_free(fs);
         return 1;
     }
@@ -435,7 +437,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     if (g_strcasecmp(val, "black") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        self->black = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+                        self->black = HCOLOR(self->screen->bpp, xrdp_wm_htoi(val));
                     }
                     else if (g_strcasecmp(val, "grey") == 0)
                     {
@@ -506,7 +508,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
+        log_message(LOG_LEVEL_ERROR, "xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
     }
 
     if (self->screen->bpp == 8)
@@ -643,9 +645,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 q = (char *)list_get_item(names, index);
                 if ((g_strncasecmp("globals", q, 8) != 0) &&
-                    (g_strncasecmp("Logging", q, 8) != 0) &&
-                    (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
-                    (g_strncasecmp("channels", q, 9) != 0))
+                        (g_strncasecmp("Logging", q, 8) != 0) &&
+                        (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
+                        (g_strncasecmp("channels", q, 9) != 0))
                 {
                     g_strncpy(default_section_name, q, 255);
                     break;
@@ -1517,7 +1519,8 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
 
     // workaround odd shift behavior
     // see https://github.com/neutrinolabs/xrdp/issues/397
-    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT)) {
+    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT))
+    {
         return 0;
     }
 
@@ -1800,7 +1803,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 
 /*****************************************************************************/
 static int
-xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
+xrdp_wm_process_input_mousex(struct xrdp_wm *self, int device_flags,
                              int x, int y)
 {
     if (device_flags & PTRXFLAGS_DOWN)
@@ -2055,7 +2058,8 @@ add_string_to_logwindow(const char *msg, struct list *log)
         list_add_item(log, (tintptr) new_part_message);
         len_done += g_strlen(new_part_message);
         current_pointer += g_strlen(new_part_message);
-    } while ((len_done < g_strlen(msg)) && (len_done < DEFAULT_STRING_LEN));
+    }
+    while ((len_done < g_strlen(msg)) && (len_done < DEFAULT_STRING_LEN));
 }
 
 /*****************************************************************************/

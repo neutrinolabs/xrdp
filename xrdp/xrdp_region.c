@@ -39,7 +39,7 @@ xrdp_region_create(struct xrdp_wm *wm)
     self = (struct xrdp_region *)g_malloc(sizeof(struct xrdp_region), 1);
     self->wm = wm;
     self->reg = (struct pixman_region16 *)
-            g_malloc(sizeof(struct pixman_region16), 1);
+                g_malloc(sizeof(struct pixman_region16), 1);
     pixman_region_init(self->reg);
     return self;
 }
@@ -98,7 +98,7 @@ xrdp_region_subtract_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 /*****************************************************************************/
 /* returns error */
 int
-xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect)
+xrdp_region_intersect_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 {
     struct pixman_region16 lreg;
 

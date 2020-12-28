@@ -34,15 +34,15 @@
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
+    do \
     { \
-        g_write("xrdp:xrdp_encoder [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
+        if (_level < LLOG_LEVEL) \
+        { \
+            g_write("xrdp:xrdp_encoder [%10.10u]: ", g_time3()); \
+            g_writeln _args ; \
+        } \
     } \
-  } \
-  while (0)
+    while (0)
 
 #define XRDP_SURCMD_PREFIX_BYTES 256
 
@@ -100,8 +100,8 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         client_info->capture_code = 2;
         self->process_enc = process_enc_rfx;
         self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
-                                                    mm->wm->screen->height,
-                                                    RFX_FORMAT_YUV, 0);
+                             mm->wm->screen->height,
+                             RFX_FORMAT_YUV, 0);
     }
 #endif
     else if (client_info->h264_codec_id != 0)
@@ -286,7 +286,7 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         if (error < 0)
         {
             LLOGLN(0, ("process_enc_jpg: jpeg error %d bytes %d",
-                   error, out_data_bytes));
+                       error, out_data_bytes));
             g_free(out_data);
             return 1;
         }
@@ -338,7 +338,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 
     LLOGLN(10, ("process_enc_rfx:"));
     LLOGLN(10, ("process_enc_rfx: num_crects %d num_drects %d",
-           enc->num_crects, enc->num_drects));
+                enc->num_crects, enc->num_drects));
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;

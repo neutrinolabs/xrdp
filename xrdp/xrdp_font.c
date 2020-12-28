@@ -85,8 +85,8 @@ xrdp_font_create(struct xrdp_wm *wm)
 
     if (!g_file_exist(file_path))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error font file [%s] does not exist",
-               file_path);
+        log_message(LOG_LEVEL_ERROR, "xrdp_font_create: error font file [%s] does not exist",
+                    file_path);
         return 0;
     }
 
@@ -94,8 +94,8 @@ xrdp_font_create(struct xrdp_wm *wm)
 
     if (file_size < 1)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error reading font from file [%s]",
-        file_path);
+        log_message(LOG_LEVEL_ERROR, "xrdp_font_create: error reading font from file [%s]",
+                    file_path);
         return 0;
     }
 
@@ -139,9 +139,9 @@ xrdp_font_create(struct xrdp_wm *wm)
                 if (datasize < 0 || datasize > 512)
                 {
                     /* shouldn't happen */
-                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create, datasize wrong");
-                    log_message(LOG_LEVEL_DEBUG,"width %d height %d datasize %d index %d",
-                               f->width, f->height, datasize, index);
+                    log_message(LOG_LEVEL_ERROR, "error in xrdp_font_create, datasize wrong");
+                    log_message(LOG_LEVEL_DEBUG, "width %d height %d datasize %d index %d",
+                                f->width, f->height, datasize, index);
                     break;
                 }
 
@@ -152,7 +152,7 @@ xrdp_font_create(struct xrdp_wm *wm)
                 }
                 else
                 {
-                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create");
+                    log_message(LOG_LEVEL_ERROR, "error in xrdp_font_create");
                 }
 
                 index++;

@@ -548,20 +548,20 @@ main(int argc, char **argv)
     {
         switch (error)
         {
-        case LOG_ERROR_MALLOC:
-            g_writeln("error on malloc. cannot start logging. quitting.");
-            break;
-        case LOG_ERROR_FILE_OPEN:
-            g_writeln("error opening log file [%s]. quitting.",
-                      getLogFile(text, 255));
-            break;
-        case LOG_ERROR_NO_CFG:
-            g_writeln("config file %s unreadable or missing",
-                      startup_params.xrdp_ini);
-            break;
-        default:
-            g_writeln("log_start error");
-            break;
+            case LOG_ERROR_MALLOC:
+                g_writeln("error on malloc. cannot start logging. quitting.");
+                break;
+            case LOG_ERROR_FILE_OPEN:
+                g_writeln("error opening log file [%s]. quitting.",
+                          getLogFile(text, 255));
+                break;
+            case LOG_ERROR_NO_CFG:
+                g_writeln("config file %s unreadable or missing",
+                          startup_params.xrdp_ini);
+                break;
+            default:
+                g_writeln("log_start error");
+                break;
         }
 
         g_deinit();

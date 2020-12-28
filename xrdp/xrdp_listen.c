@@ -47,7 +47,7 @@ xrdp_listen_create_pro_done(struct xrdp_listen *self)
 
     if (self->pro_done_event == 0)
     {
-        log_message(LOG_LEVEL_ERROR,"Failure creating pro_done_event");
+        log_message(LOG_LEVEL_ERROR, "Failure creating pro_done_event");
     }
 
     return 0;
@@ -387,7 +387,7 @@ xrdp_listen_parse_vsock(char *strout, int strout_max,
         else
         {
             if (((strin[strin_index] >= '0') && (strin[strin_index] <= '9')) ||
-                 (strin[strin_index] == '-'))
+                    (strin[strin_index] == '-'))
             {
                 in = 1;
                 strout[strout_index++] = strin[strin_index++];
@@ -421,7 +421,7 @@ xrdp_listen_parse_ipv4(char *strout, int strout_max,
         if (in)
         {
             if (((strin[strin_index] >= '0') && (strin[strin_index] <= '9')) ||
-                 (strin[strin_index] == '.'))
+                    (strin[strin_index] == '.'))
             {
                 strout[strout_index++] = strin[strin_index++];
                 count++;
@@ -695,8 +695,8 @@ xrdp_listen_process_startup_params(struct xrdp_listen *self)
             return 1;
         }
         if ((mode == TRANS_MODE_TCP) ||
-            (mode == TRANS_MODE_TCP4) ||
-            (mode == TRANS_MODE_TCP6))
+                (mode == TRANS_MODE_TCP4) ||
+                (mode == TRANS_MODE_TCP6))
         {
             if (startup_params->tcp_nodelay)
             {
@@ -865,13 +865,13 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     self->status = 1;
     if (xrdp_listen_get_startup_params(self) != 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        log_message(LOG_LEVEL_ERROR, "xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
     if (xrdp_listen_process_startup_params(self) != 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        log_message(LOG_LEVEL_ERROR, "xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
