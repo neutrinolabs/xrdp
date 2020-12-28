@@ -101,7 +101,7 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             else
             {
                 LOG(LOG_LEVEL_WARNING, "Your configured crypt level is "
-                          "undefined, 'high' will be used");
+                    "undefined, 'high' will be used");
                 client_info->crypt_level = 3;
             }
         }
@@ -237,7 +237,7 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 g_strncpy(client_info->certificate, value, 1023);
             }
 
-	        if (!g_file_readable(client_info->certificate))
+            if (!g_file_readable(client_info->certificate))
             {
                 LOG(LOG_LEVEL_ERROR, "Cannot read certificate file %s: %s",
                     client_info->certificate, g_get_strerror());
@@ -423,9 +423,9 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* 
+/*
   Receives and parses pdu code from next data unit.
-  
+
   @param self
   @param (in/out) s: the stream to read from. Upon return the stream is ?
   @param (out) code: the pdu code from the packet
@@ -489,16 +489,16 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             {
                 if (chan != 1)
                 {
-                    LOG_DEVEL(LOG_LEVEL_WARNING, 
-                                "xrdp_rdp_recv: Wrong channel Id to be handled "
-                                "by xrdp_channel_process, channel id %d", chan);
+                    LOG_DEVEL(LOG_LEVEL_WARNING,
+                              "xrdp_rdp_recv: Wrong channel Id to be handled "
+                              "by xrdp_channel_process, channel id %d", chan);
                 }
             }
 
             s->next_packet = 0;
             *code = 0;
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_rdp_recv: out code 0 (skip data) "
-                    "data processed by channel id %d", chan);
+                      "data processed by channel id %d", chan);
             return 0;
         }
 
@@ -516,7 +516,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         *code = 0;
         len = (int)(s->end - s->p);
         LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_rdp_recv: out code 0 (skip data) "
-                "bad RDP packet, length [%d]", len);
+                  "bad RDP packet, length [%d]", len);
         return 0;
     }
     else
@@ -529,7 +529,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         s->next_packet += len;
         LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
                   "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
-                  "pduSource (ignored)", len, PDUTYPE_TO_STR(*code), *code, 
+                  "pduSource (ignored)", len, PDUTYPE_TO_STR(*code), *code,
                   ((pdu_code & 0xfff0) >> 4));
         return 0;
     }
@@ -545,17 +545,17 @@ xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type)
 
     s_pop_layer(s, rdp_hdr);
     len = s->end - s->p;
-    
+
     /* TS_SHARECONTROLHEADER */
     out_uint16_le(s, len);               /* totalLength */
     out_uint16_le(s, 0x10 | pdu_type);   /* pduType */
     out_uint16_le(s, self->mcs_channel); /* pduSource */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
-                  "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
-                  "pduSource %d", len, PDUTYPE_TO_STR(pdu_type & 0xf), 
-                  pdu_type & 0xf, (((0x10 | pdu_type) & 0xfff0) >> 4), 
-                  self->mcs_channel);
-                  
+              "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
+              "pduSource %d", len, PDUTYPE_TO_STR(pdu_type & 0xf),
+              pdu_type & 0xf, (((0x10 | pdu_type) & 0xfff0) >> 4),
+              self->mcs_channel);
+
     if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send: xrdp_sec_send failed");
@@ -623,9 +623,9 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         }
         else
         {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, 
+            LOG_DEVEL(LOG_LEVEL_DEBUG,
                       "xrdp_rdp_send_data: compress_rdp failed, sending "
-                      "uncompressed data. type %d, flags %d", 
+                      "uncompressed data. type %d, flags %d",
                       mppc_enc->protocol_type, mppc_enc->flags);
         }
     }
@@ -635,10 +635,10 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     out_uint16_le(s, pdutype);           /* pduType */
     out_uint16_le(s, self->mcs_channel); /* pduSource */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
-                  "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
-                  "pduSource %d", pdulen, PDUTYPE_TO_STR(pdutype & 0xf), 
-                  pdutype & 0xf, ((pdutype & 0xfff0) >> 4), self->mcs_channel);
-    
+              "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
+              "pduSource %d", pdulen, PDUTYPE_TO_STR(pdutype & 0xf),
+              pdutype & 0xf, ((pdutype & 0xfff0) >> 4), self->mcs_channel);
+
     /* TS_SHAREDATAHEADER */
     out_uint32_le(s, self->share_id);
     out_uint8(s, 0); /* pad */
@@ -648,10 +648,10 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     out_uint8(s, ctype); /* compressedType */
     out_uint16_le(s, clen); /* compressedLength */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SHAREDATAHEADER "
-                  "shareID %d, streamID 1, uncompressedLength %d, "
-                  "pduType2 0x%2.2x, compressedType 0x%2.2x, compressedLength %d", 
-                  self->share_id, dlen, data_pdu_type, ctype, clen);
-                  
+              "shareID %d, streamID 1, uncompressedLength %d, "
+              "pduType2 0x%2.2x, compressedType 0x%2.2x, compressedLength %d",
+              self->share_id, dlen, data_pdu_type, ctype, clen);
+
     if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send_data: xrdp_sec_send failed");
@@ -790,7 +790,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
             }
             else
             {
-                LOG_DEVEL(LOG_LEVEL_DEBUG, 
+                LOG_DEVEL(LOG_LEVEL_DEBUG,
                           "compress_rdp failed, sending uncompressed data. "
                           "type %d, flags %d", mppc_enc->protocol_type,
                           mppc_enc->flags);
@@ -809,8 +809,8 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
         out_uint16_le(&send_s, send_len);
         send_s.end = send_s.p + send_len;
         LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_FP_UPDATE "
-                  "updateCode %d, fragmentation %d, compression %d, compressionFlags %s, size %d", 
-                  updateCode, fragmentation, compression, 
+                  "updateCode %d, fragmentation %d, compression %d, compressionFlags %s, size %d",
+                  updateCode, fragmentation, compression,
                   (compression ? comp_type_str : "(not present)"), send_len);
         if (xrdp_sec_send_fastpath(self->sec_layer, &send_s) != 0)
         {
@@ -827,7 +827,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-/* Send a [MS-RDPBCGR] TS_UPDATE_SYNC or TS_FP_UPDATE_SYNCHRONIZE message 
+/* Send a [MS-RDPBCGR] TS_UPDATE_SYNC or TS_FP_UPDATE_SYNCHRONIZE message
    depending on if the client supports the fast path capability or not */
 int
 xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
@@ -875,8 +875,8 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
     else /* slowpath */
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_UPDATE_SYNC "
-                  "updateType %s (%d)", 
-                  GRAPHICS_UPDATE_TYPE_TO_STR(RDP_UPDATE_SYNCHRONIZE), 
+                  "updateType %s (%d)",
+                  GRAPHICS_UPDATE_TYPE_TO_STR(RDP_UPDATE_SYNCHRONIZE),
                   RDP_UPDATE_SYNCHRONIZE);
         if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_UPDATE) != 0)
         {
@@ -961,7 +961,7 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
     if (!s_check_rem(s, 4))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 4, remaining %d", s_rem(s));
+                  "len 4, remaining %d", s_rem(s));
         return 1;
     }
     in_uint16_le(s, num_events);
@@ -985,7 +985,7 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
         LOG_DEVEL(LOG_LEVEL_TRACE, "With field [MS-RDPBCGR] TS_INPUT_EVENT "
                   "eventTime %d, messageType 0x%4.4x", time, msg_type);
 
-        switch(msg_type)
+        switch (msg_type)
         {
             case RDP_INPUT_SYNCHRONIZE:
                 LOG_DEVEL(LOG_LEVEL_TRACE, "With field [MS-RDPBCGR] TS_INPUT_EVENT - TS_SYNC_EVENT "
@@ -1119,7 +1119,7 @@ xrdp_rdp_process_data_control(struct xrdp_rdp *self, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_CONTROL_PDU "
               "action 0x%4.4x, grantId (ignored), controlId (ignored)",
               action);
-    
+
     if (action == RDP_CTL_REQUEST_CONTROL)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "Responding to [MS-RDPBCGR] TS_CONTROL_PDU "
@@ -1165,7 +1165,7 @@ xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
     if (!s_check_rem(s, 4))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 4, remaining %d", s_rem(s));
+                  "len 4, remaining %d", s_rem(s));
         return 1;
     }
     in_uint8(s, num_rects);
@@ -1216,7 +1216,7 @@ xrdp_rdp_send_fontmap(struct xrdp_rdp *self)
 
     if (xrdp_rdp_init_data(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_rdp_send_fontmap: xrdp_rdp_init_data failed");
         free_stream(s);
         return 1;
@@ -1230,10 +1230,10 @@ xrdp_rdp_send_fontmap(struct xrdp_rdp *self)
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FONT_MAP_PDU "
               "numberEntries 0, totalNumEntries 0, mapFlags 0x0003, entrySize 4");
-              
+
     if (xrdp_rdp_send_data(self, s, 0x28) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_rdp_send_data: xrdp_rdp_init_data failed");
         free_stream(s);
         return 1;
@@ -1259,7 +1259,7 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
 
     /* 419 client sends Seq 1, then 2 */
     /* 2600 clients sends only Seq 3 */
-    /* listFlags SHOULD be set to 0x0003, which is the logical OR'd value of 
+    /* listFlags SHOULD be set to 0x0003, which is the logical OR'd value of
        FONTLIST_FIRST (0x0001) and FONTLIST_LAST (0x0002) */
     if (seq == 2 || seq == 3) /* after second font message, we are up and */
     {
@@ -1294,7 +1294,7 @@ xrdp_rdp_send_disconnect_query_response(struct xrdp_rdp *self)
 
     if (xrdp_rdp_init_data(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_rdp_send_disconnect_query_response: xrdp_rdp_init_data failed");
         free_stream(s);
         return 1;
@@ -1302,10 +1302,10 @@ xrdp_rdp_send_disconnect_query_response(struct xrdp_rdp *self)
 
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_SHUTDOWN_DENIED_PDU");
-    
+
     if (xrdp_rdp_send_data(self, s, PDUTYPE2_SHUTDOWN_DENIED) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_rdp_send_disconnect_query_response: xrdp_rdp_send_data failed");
         free_stream(s);
         return 1;
@@ -1328,7 +1328,7 @@ xrdp_rdp_send_disconnect_reason(struct xrdp_rdp *self, int reason)
 
     if (xrdp_rdp_init_data(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_rdp_send_disconnect_reason: xrdp_rdp_init_data failed");
         free_stream(s);
         return 1;
@@ -1341,7 +1341,7 @@ xrdp_rdp_send_disconnect_reason(struct xrdp_rdp *self, int reason)
 
     if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_DISCONNECT) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_rdp_send_disconnect_reason: xrdp_rdp_send_data failed");
         free_stream(s);
         return 1;
@@ -1390,7 +1390,7 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
     if (!s_check_rem(s, 1))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 1, remaining %d", s_rem(s));
+                  "len 1, remaining %d", s_rem(s));
         return 1;
     }
     in_uint8(s, allowDisplayUpdates);
@@ -1418,7 +1418,7 @@ xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
             if (!s_check_rem(s, 11))
             {
                 LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 11, remaining %d", s_rem(s));
+                          "len 11, remaining %d", s_rem(s));
                 return 1;
             }
             in_uint8s(s, 3); /* pad */
@@ -1458,7 +1458,7 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
     if (!s_check_rem(s, 12))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 12, remaining %d", s_rem(s));
+                  "len 12, remaining %d", s_rem(s));
         return 1;
     }
     in_uint8s(s, 6); /* shareID (4 bytes), padding (1 byte), streamID (1 byte) */
@@ -1482,9 +1482,9 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
         return 1;
     }
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_SHAREDATAHEADER "
-                  "shareID (ignored), streamID (ignored), uncompressedLength %d, "
-                  "pduType2 0x%2.2x, compressedType 0x%2.2x, compressedLength %d", 
-                  uncompressedLength, pduType2, compressedType, compressedLength);
+              "shareID (ignored), streamID (ignored), uncompressedLength %d, "
+              "pduType2 0x%2.2x, compressedType 0x%2.2x, compressedLength %d",
+              uncompressedLength, pduType2, compressedType, compressedLength);
 
     switch (pduType2)
     {
@@ -1570,10 +1570,10 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 
 /*****************************************************************************/
 /** Send a [MS-RDPBCGR] TS_SAVE_SESSION_INFO_PDU_DATA message.
- * 
+ *
  * @param self
- * @param data the data to send to the client in the 
- *      TS_SAVE_SESSION_INFO_PDU_DATA message. The first 4 bytes of the data 
+ * @param data the data to send to the client in the
+ *      TS_SAVE_SESSION_INFO_PDU_DATA message. The first 4 bytes of the data
  *      buffer MUST by the infoType value as specified in MS-RDPBCGR 2.2.10.1.1
  * @param data_bytes the length of the data buffer
  * @returns error code
@@ -1612,15 +1612,15 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
     else
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough space in the stream "
-                      "len %d, remaining %d", data_bytes, s_rem_out(s));
+                  "len %d, remaining %d", data_bytes, s_rem_out(s));
         free_stream(s);
         return 1;
     }
 
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_SAVE_SESSION_INFO_PDU_DATA "
-              "infoType 0x%8.8x", 
-              *((unsigned int*) data));
+              "infoType 0x%8.8x",
+              *((unsigned int *) data));
 
     if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_LOGON) != 0)
     {

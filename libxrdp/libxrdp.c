@@ -266,7 +266,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         {
             /*This situation can happen and this is a workaround*/
             cont = 0;
-            LOG(LOG_LEVEL_WARNING, 
+            LOG(LOG_LEVEL_WARNING,
                 "Serious programming error: we were locked in a deadly loop. "
                 "Remaining bytes: %d", (int) (s->end - s->next_packet));
             s->next_packet = 0;
@@ -298,8 +298,8 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     }
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "sending palette (%s)",
-              ((session->client_info->use_fast_path & 1) ? 
-              "fastpath" : "slowpath"));
+              ((session->client_info->use_fast_path & 1) ?
+               "fastpath" : "slowpath"));
 
     /* clear orders */
     libxrdp_orders_force_send(session);
@@ -354,7 +354,7 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_UPDATE_PALETTE_DATA "
                   "updateType %d (UPDATETYPE_PALETTE), pad2Octets <ignored>, "
-                  "numberColors 256, paletteEntries <omitted from log>", 
+                  "numberColors 256, paletteEntries <omitted from log>",
                   RDP_UPDATE_PALETTE);
         xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
                            RDP_DATA_PDU_UPDATE);
@@ -390,8 +390,8 @@ libxrdp_send_bell(struct xrdp_session *session)
         return 1;
     }
 
-    /* the original author intended (based on their comments) to use a 
-       duration of 100ms and a frequency of 440Hz. A frequency of 100Hz is 
+    /* the original author intended (based on their comments) to use a
+       duration of 100ms and a frequency of 440Hz. A frequency of 100Hz is
        a very low tone, and 440Hz is mid-range tone. */
     /* TODO: change the duration and frequency values, then test the code */
     out_uint32_le(s, 440); /* duration (ms) */
@@ -580,14 +580,14 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
             LOG_DEVEL(LOG_LEVEL_DEBUG, "libxrdp_send_bitmap: num_updates %d total_bufsize %d",
                       num_updates, total_bufsize);
-            
+
             p_num_updates[0] = num_updates;
             p_num_updates[1] = num_updates >> 8;
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_UPDATE_BITMAP_DATA "
                       "updateType %d (UPDATETYPE_BITMAP), numberRectangles %d, "
-                      "rectangles <omitted from log>", 
+                      "rectangles <omitted from log>",
                       RDP_UPDATE_BITMAP, num_updates);
-        
+
             xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
                                RDP_DATA_PDU_UPDATE);
 
@@ -694,7 +694,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                 s_mark_end(s);
                 LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_UPDATE_BITMAP_DATA "
                           "updateType %d (UPDATETYPE_BITMAP), numberRectangles 1, "
-                          "rectangles <omitted from log>", 
+                          "rectangles <omitted from log>",
                           RDP_UPDATE_BITMAP);
                 xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
                                    RDP_DATA_PDU_UPDATE);
@@ -735,13 +735,13 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             return 1;
         }
     }
-    /* the "(bpp == 15) && " looks like a bug since this expression 
-       allows any value except 15, but the "switch (bpp)" statement below 
+    /* the "(bpp == 15) && " looks like a bug since this expression
+       allows any value except 15, but the "switch (bpp)" statement below
        only allows 16, 24, or 32 */
     /* TODO: remove the "(bpp == 15) && " and test the code */
     if ((bpp == 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
     {
-        LOG(LOG_LEVEL_ERROR, 
+        LOG(LOG_LEVEL_ERROR,
             "Send pointer: invalid bpp value. Expected 16 or 24 or 32, "
             "received %d", bpp);
         return 1;
@@ -779,7 +779,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             out_uint16_le(s, 0); /* pad */
             data_bytes = 3072;
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_POINTER_PDU "
-                      "messageType %d (TS_PTRMSGTYPE_COLOR), pad2Octets <ignored>", 
+                      "messageType %d (TS_PTRMSGTYPE_COLOR), pad2Octets <ignored>",
                       RDP_POINTER_COLOR);
         }
         else
@@ -787,9 +787,9 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             out_uint16_le(s, RDP_POINTER_POINTER);
             out_uint16_le(s, 0); /* pad */
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_POINTER_PDU "
-                      "messageType %d (TS_PTRMSGTYPE_POINTER), pad2Octets <ignored>", 
+                      "messageType %d (TS_PTRMSGTYPE_POINTER), pad2Octets <ignored>",
                       RDP_POINTER_POINTER);
-            
+
             out_uint16_le(s, bpp); /* TS_POINTERATTRIBUTE -> xorBpp */
             data_bytes = ((bpp + 7) / 8) * 32 * 32;
         }
@@ -860,7 +860,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                       "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
                       "height 32, lengthAndMask 128, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
-                      "andMaskData <omitted from log> }", 
+                      "andMaskData <omitted from log> }",
                       cache_idx, x, y, data_bytes);
             if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                        FASTPATH_UPDATETYPE_COLOR) != 0)
@@ -878,7 +878,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                       "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
                       "height 32, lengthAndMask 128, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
-                      "andMaskData <omitted from log> }", 
+                      "andMaskData <omitted from log> }",
                       bpp, cache_idx, x, y, data_bytes);
             if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                        FASTPATH_UPDATETYPE_POINTER) != 0)
@@ -898,7 +898,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                       "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
                       "height 32, lengthAndMask 128, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
-                      "andMaskData <omitted from log>", 
+                      "andMaskData <omitted from log>",
                       cache_idx, x, y, data_bytes);
         }
         else
@@ -908,7 +908,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                       "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
                       "height 32, lengthAndMask 128, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
-                      "andMaskData <omitted from log> }", 
+                      "andMaskData <omitted from log> }",
                       bpp, cache_idx, x, y, data_bytes);
         }
         xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
@@ -942,17 +942,17 @@ libxrdp_set_pointer(struct xrdp_session *session, int cache_idx)
         out_uint16_le(s, RDP_POINTER_CACHED);
         out_uint16_le(s, 0); /* pad */
         LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_POINTER_PDU "
-              "messageType %d (TS_PTRMSGTYPE_CACHED), pad2Octets <ignored>", 
-              RDP_POINTER_CACHED);
+                  "messageType %d (TS_PTRMSGTYPE_CACHED), pad2Octets <ignored>",
+                  RDP_POINTER_CACHED);
     }
 
     out_uint16_le(s, cache_idx); /* cache_idx */
     s_mark_end(s);
-    
+
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
-    {   
+    {
         LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_CACHEDPOINTERATTRIBUTE "
-              "cachedPointerUpdateData.cacheIndex %d", cache_idx);
+                  "cachedPointerUpdateData.cacheIndex %d", cache_idx);
         if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                    FASTPATH_UPDATETYPE_CACHED) != 0)
         {
@@ -964,7 +964,7 @@ libxrdp_set_pointer(struct xrdp_session *session, int cache_idx)
     else
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_CACHEDPOINTERATTRIBUTE "
-              "cacheIndex %d", cache_idx);
+                  "cacheIndex %d", cache_idx);
         xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
                            RDP_DATA_PDU_POINTER);
     }
@@ -1269,7 +1269,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
     if (index < 0 || index >= count)
     {
         LOG(LOG_LEVEL_ERROR, "libxrdp_query_channel: Channel index out of range. "
-            "max channel index %d, received channel index %d", 
+            "max channel index %d, received channel index %d",
             count, index);
         return 1;
     }
@@ -1366,7 +1366,7 @@ libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
     out_uint8a(s, data, data_len);
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] Virtual Channel PDU "
-            "data <omitted from log>");
+              "data <omitted from log>");
 
     if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
     {
@@ -1404,7 +1404,7 @@ libxrdp_disable_channel(struct xrdp_session *session, int channel_id,
     }
     channel_item->disabled = is_disabled;
     LOG(LOG_LEVEL_DEBUG, "%s channel %d (%s)",
-        (is_disabled ? "Disabling" : "Enabling"), channel_item->chanid, 
+        (is_disabled ? "Disabling" : "Enabling"), channel_item->chanid,
         channel_item->name);
     return 1;
 }
@@ -1641,14 +1641,14 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     if (data_bytes + rdp_bytes + sec_bytes + cmd_bytes > max_bytes)
     {
         LOG(LOG_LEVEL_ERROR, "Too much data to send via fastpath. "
-            "Max fastpath bytes %d, received bytes %d", 
+            "Max fastpath bytes %d, received bytes %d",
             max_bytes, (data_bytes + rdp_bytes + sec_bytes + cmd_bytes));
         return 1;
     }
     if (sec_bytes + rdp_bytes + cmd_bytes > pad_bytes)
     {
         LOG(LOG_LEVEL_ERROR, "Too much header to send via fastpath. "
-            "Max fastpath header bytes %d, received bytes %d", 
+            "Max fastpath header bytes %d, received bytes %d",
             pad_bytes, (rdp_bytes + sec_bytes + cmd_bytes));
         return 1;
     }
@@ -1668,8 +1668,8 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_SURFCMD_STREAM_SURF_BITS "
               "cmdType 0x%4.4x (CMDTYPE_STREAM_SURFACE_BITS), destLeft %d, "
               "destTop %d, destRight %d, destBottom %d, "
-              "bitmapData <see TS_BITMAP_DATA_EX>", 
-              CMDTYPE_STREAM_SURFACE_BITS, destLeft, destTop, destRight, 
+              "bitmapData <see TS_BITMAP_DATA_EX>",
+              CMDTYPE_STREAM_SURFACE_BITS, destLeft, destTop, destRight,
               destBottom);
 
     /* TS_BITMAP_DATA_EX */
@@ -1689,7 +1689,7 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
     if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, 
+        LOG(LOG_LEVEL_ERROR,
             "libxrdp_fastpath_send_surface: xrdp_rdp_send_fastpath failed");
         return 1;
     }
@@ -1726,11 +1726,11 @@ libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FRAME_MARKER "
               "cmdType 0x0004 (CMDTYPE_FRAME_MARKER), frameAction 0x%4.4x, "
               "frameId %d", frame_action, frame_id);
-    
+
     /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
     if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, 
+        LOG(LOG_LEVEL_ERROR,
             "libxrdp_fastpath_send_frame_marker: xrdp_rdp_send_fastpath failed");
         free_stream(s);
         return 1;

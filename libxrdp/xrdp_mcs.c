@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * mcs layer which implements the Multipoint Communication Service protocol as 
+ * mcs layer which implements the Multipoint Communication Service protocol as
  * specified in [ITU-T T.125]
  */
 
@@ -97,11 +97,11 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
         return 1;
     }
 
-    /* The DomainMCSPDU choice index is a 6-bit int with the next bit as the 
+    /* The DomainMCSPDU choice index is a 6-bit int with the next bit as the
        bit field of the two optional fields in the struct (channelId, nonStandard)
     */
-    out_uint8(s, (MCS_CJCF << 2) | 0x02); /* DomainMCSPDU choice index, 
-                                             channelId field is present, 
+    out_uint8(s, (MCS_CJCF << 2) | 0x02); /* DomainMCSPDU choice index,
+                                             channelId field is present,
                                              nonStandard field is not present */
     out_uint8(s, 0); /* result choice index 0 = rt-successful */
     out_uint16_be(s, userid); /* initiator */
@@ -110,8 +110,8 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     s_mark_end(s);
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sening [ITU-T T.125] ChannelJoinConfirm "
-                      "result SUCCESS, initiator %d, requested %d, "
-                      "channelId %d",  userid, chanid, chanid);
+              "result SUCCESS, initiator %d, requested %d, "
+              "channelId %d",  userid, chanid, chanid);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
@@ -124,12 +124,12 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
 }
 
 /*****************************************************************************/
-/* 
+/*
  * Processes an [ITU-T T.125] DomainMCSPDU message.
- * 
+ *
  * Note: DomainMCSPDU messages use the ALIGNED BASIC-PER (Packed Encoding Rules)
  * from [ITU-T X.691].
- * 
+ *
  * returns error
  */
 int
@@ -157,12 +157,12 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
             return 1;
         }
 
-        /* The DomainMCSPDU choice index is a 6-bit int with the 2 least 
+        /* The DomainMCSPDU choice index is a 6-bit int with the 2 least
            significant bits of the byte as padding */
-        in_uint8(s, opcode); 
+        in_uint8(s, opcode);
         appid = opcode >> 2; /* 2-bit padding */
-        LOG_DEVEL(LOG_LEVEL_TRACE, 
-                 "Received [ITU-T T.125] DomainMCSPDU choice index %d", appid);
+        LOG_DEVEL(LOG_LEVEL_TRACE,
+                  "Received [ITU-T T.125] DomainMCSPDU choice index %d", appid);
 
         if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
         {
@@ -177,7 +177,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
             if (!s_check_rem(s, 4))
             {
                 LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 4, remaining %d", s_rem(s));
+                          "len 4, remaining %d", s_rem(s));
                 return 1;
             }
 
@@ -215,7 +215,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     if (!s_check_rem(s, 6))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 6, remaining %d", s_rem(s));
+                  "len 6, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -227,10 +227,10 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     if ((len & 0xC0) == 0x80)
     {
         /* From [ITU-T X.691] 11.9.3.7
-           encoding a length determinant if "n" is greater than 127 and 
-           less than 16K, then n is encoded using 2 bytes. 
-           The first byte will have the two highest order bits set to 1 and 0 
-           (ie. len & 0xC0 == 0x80) and the length is encoded as remaining 14 bits of 
+           encoding a length determinant if "n" is greater than 127 and
+           less than 16K, then n is encoded using 2 bytes.
+           The first byte will have the two highest order bits set to 1 and 0
+           (ie. len & 0xC0 == 0x80) and the length is encoded as remaining 14 bits of
            the two bytes (ie. len & 0x3fff). */
         if (!s_check_rem(s, 1))
         {
@@ -243,10 +243,10 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     else if ((len & 0xC0) == 0xC0)
     {
         /* From [ITU-T X.691] 11.9.3.8
-           encoding a length determinant if "n" is greater than 16K, 
-           then the list of items is fragmented with the length of the first 
-           fragment encoded using 1 byte. The two highest order bits are set 
-           to 1 and 1 (ie. len & 0xC0 == 0xC0) and the remaining 6 bits contain 
+           encoding a length determinant if "n" is greater than 16K,
+           then the list of items is fragmented with the length of the first
+           fragment encoded using 1 byte. The two highest order bits are set
+           to 1 and 1 (ie. len & 0xC0 == 0xC0) and the remaining 6 bits contain
            a multiplyer for 16K (ie. n = (len & 0x3f) * 0x3f)
         */
         LOG_DEVEL(LOG_LEVEL_ERROR, "[ITU-T T.125] SendDataRequest with length greater "
@@ -256,20 +256,20 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] SendDataRequest "
               "initiator (ignored), channelId %d, dataPriority (ignored), "
               "segmentation (ignored), userData Length (ignored)", *chan);
-    
+
     return 0;
 }
 
 /*****************************************************************************/
-/** 
- * Parse the identifier and length of a [ITU-T X.690] BER (Basic Encoding Rules) 
+/**
+ * Parse the identifier and length of a [ITU-T X.690] BER (Basic Encoding Rules)
  * structure header.
- * 
+ *
  * @param self
  * @param s [in] - the stream to read from
  * @param tag_val [in] - the expected tag value
  * @param len [out] - the length of the structure
- * @returns error 
+ * @returns error
  */
 static int
 xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
@@ -303,14 +303,14 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
     if (tag != tag_val)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Parsed [ITU-T X.690] Identifier: "
-                      "expected 0x%4.4x, actual 0x%4.4x", tag_val, tag);
+                  "expected 0x%4.4x, actual 0x%4.4x", tag_val, tag);
         return 1;
     }
 
     if (!s_check_rem(s, 1))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 1, remaining %d", s_rem(s));
+                  "len 1, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -326,7 +326,7 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
             if (!s_check_rem(s, 1))
             {
                 LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 1, remaining %d", s_rem(s));
+                          "len 1, remaining %d", s_rem(s));
                 return 1;
             }
             in_uint8(s, i);
@@ -340,7 +340,7 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
     }
     LOG_DEVEL(LOG_LEVEL_TRACE, "Parsed BER header [ITU-T X.690] "
               "Identifier 0x%4.4x, Length %d", tag, *len);
-    
+
     if (s_check(s))
     {
         return 0;
@@ -348,7 +348,7 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
     else
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 0, remaining %d", s_rem(s));
+                  "len 0, remaining %d", s_rem(s));
         return 1;
     }
 }
@@ -363,7 +363,7 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_TAG_DOMAIN_PARAMS, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_parse_domain_params: xrdp_mcs_ber_parse_header "
                   "with MCS_TAG_DOMAIN_PARAMS failed");
         return 1;
@@ -377,7 +377,7 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
     }
 
     in_uint8s(s, len); /* skip all fields */
-    
+
     if (s_check(s))
     {
         return 0;
@@ -414,7 +414,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_CONNECT_INITIAL, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
                   "with MCS_CONNECT_INITIAL failed");
         return 1;
@@ -422,7 +422,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
                   "with BER_TAG_OCTET_STRING failed");
         return 1;
@@ -439,7 +439,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
                   "with BER_TAG_OCTET_STRING failed");
         return 1;
@@ -456,7 +456,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_BOOLEAN, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
                   "with BER_TAG_BOOLEAN failed");
         return 1;
@@ -474,7 +474,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     /* [ITU-T T.125] Connect-Initial targetParameters */
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_parse_domain_params failed");
         return 1;
     }
@@ -482,7 +482,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     /* [ITU-T T.125] Connect-Initial minimumParameters */
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_parse_domain_params failed");
         return 1;
     }
@@ -490,7 +490,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     /* [ITU-T T.125] Connect-Initial maximumParameters */
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, 
+        LOG_DEVEL(LOG_LEVEL_ERROR,
                   "xrdp_mcs_recv_connect_initial: xrdp_mcs_parse_domain_params failed");
         return 1;
     }
@@ -498,7 +498,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_connect_initial: "
-                "xrdp_mcs_ber_parse_header with BER_TAG_OCTET_STRING failed");
+                  "xrdp_mcs_ber_parse_header with BER_TAG_OCTET_STRING failed");
         return 1;
     }
 
@@ -535,16 +535,16 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     else
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "MCS protocol error: "
-                "the stream should be at the end but it is not");
+                  "the stream should be at the end but it is not");
         return 1;
     }
 }
 
 /*****************************************************************************/
 /* Processes a [ITU-T T.25] DomainMCSPDU with type ErectDomainRequest
- *  
+ *
  * Note: a parsing example can be found in [MS-RDPBCGR] 4.1.5
- *  
+ *
  * returns error */
 static int
 xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
@@ -572,7 +572,7 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
         return 1;
     }
 
-    /* The DomainMCSPDU choice index is a 6-bit int with the next bit as the 
+    /* The DomainMCSPDU choice index is a 6-bit int with the next bit as the
        bit field of the optional field in the struct
     */
     in_uint8(s, opcode);
@@ -598,12 +598,12 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
               "choice index %d (ErectDomainRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ErectDomainRequest "
               "subHeight (ignored), subInterval (ignored), "
-              "nonStandard (%s)", 
+              "nonStandard (%s)",
               (opcode & 2) ? "present" : "not present");
-              
+
     /*
-     * [MS-RDPBCGR] 2.2.1.5 says that the mcsEDrq field is 5 bytes (which have 
-     * already been read into the opcode and previous fields), so the 
+     * [MS-RDPBCGR] 2.2.1.5 says that the mcsEDrq field is 5 bytes (which have
+     * already been read into the opcode and previous fields), so the
      * nonStandard field should never be present.
      */
     if (opcode & 2) /* ErectDomainRequest v3 nonStandard optional field is present? */
@@ -614,10 +614,10 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
                       "len 2, remaining %d", s_rem(s));
             return 1;
         }
-        in_uint16_be(s, self->userid); /* NonStandardParameter.key 
+        in_uint16_be(s, self->userid); /* NonStandardParameter.key
                                           NonStandardParameter.data */
         LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
-              "choice index %d (ErectDomainRequest)", (opcode >> 2));
+                  "choice index %d (ErectDomainRequest)", (opcode >> 2));
     }
 
     if (!(s_check_end(s)))
@@ -632,9 +632,9 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* Processes a [ITU-T T.25] DomainMCSPDU with type AttachUserRequest
- *  
+ *
  * Note: a parsing example can be found in [MS-RDPBCGR] 4.1.6
- *  
+ *
  * returns error */
 static int
 xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
@@ -662,7 +662,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
         return 1;
     }
 
-    /* The DomainMCSPDU choice index is a 6-bit int with the next bit as the 
+    /* The DomainMCSPDU choice index is a 6-bit int with the next bit as the
        bit field of the optional field in the struct
     */
     in_uint8(s, opcode);
@@ -675,8 +675,8 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     }
 
     /*
-     * [MS-RDPBCGR] 2.2.1.6 says that the mcsAUrq field is 1 bytes (which have 
-     * already been read into the opcode), so the nonStandard field should 
+     * [MS-RDPBCGR] 2.2.1.6 says that the mcsAUrq field is 1 bytes (which have
+     * already been read into the opcode), so the nonStandard field should
      * never be present.
      */
     if (opcode & 2)
@@ -685,7 +685,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
         {
             return 1;
         }
-        in_uint16_be(s, self->userid); /* NonStandardParameter.key 
+        in_uint16_be(s, self->userid); /* NonStandardParameter.key
                                           NonStandardParameter.data */
     }
 
@@ -699,16 +699,16 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
               "choice index %d (AttachUserRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] AttachUserRequest "
-              "nonStandard (%s)", 
+              "nonStandard (%s)",
               (opcode & 2) ? "present" : "not present");
     return 0;
 }
 
 /*****************************************************************************/
 /* Send a [ITU-T T.125] DomainMCSPDU with type AttachUserConfirm.
- *  
+ *
  * Note: a parsing example can be found in [MS-RDPBCGR] 4.1.7
- *  
+ *
  * returns error */
 static int
 xrdp_mcs_send_aucf(struct xrdp_mcs *self)
@@ -731,7 +731,7 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
     out_uint16_be(s, self->userid); /* initiator */
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [ITU-T T.125] DomainMCSPDU "
-              "of type AttachUserConfirm: result SUCCESS, initiator %d", 
+              "of type AttachUserConfirm: result SUCCESS, initiator %d",
               self->userid);
 
     if (xrdp_iso_send(self->iso_layer, s) != 0)
@@ -747,9 +747,9 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* Processes a [ITU-T T.25] DomainMCSPDU with type ChannelJoinRequest
- *  
+ *
  * Note: a parsing example can be found in [MS-RDPBCGR] 4.1.8.1.1
- *  
+ *
  * returns error */
 static int
 xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
@@ -797,8 +797,8 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
                         channelId (2 bytes) */
 
     /*
-     * [MS-RDPBCGR] 2.2.1.8 says that the mcsAUrq field is 5 bytes (which have 
-     * already been read into the opcode and other fields), so the nonStandard 
+     * [MS-RDPBCGR] 2.2.1.8 says that the mcsAUrq field is 5 bytes (which have
+     * already been read into the opcode and other fields), so the nonStandard
      * field should never be present.
      */
     if (opcode & 2)
@@ -806,10 +806,10 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
         if (!s_check_rem(s, 2))
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 2, remaining %d", s_rem(s));
+                      "len 2, remaining %d", s_rem(s));
             return 1;
         }
-        in_uint8s(s, 2);  /* NonStandardParameter.key 
+        in_uint8s(s, 2);  /* NonStandardParameter.key
                              NonStandardParameter.data */
     }
 
@@ -825,13 +825,13 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
               "choice index %d (ChannelJoinRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
               "initiator (ignored), channelId (ignored), "
-              "nonStandard (%s)", 
+              "nonStandard (%s)",
               (opcode & 2) ? "present" : "not present");
     return 0;
 }
 
 /*****************************************************************************/
-/* Write the identifier and length of a [ITU-T X.690] BER (Basic Encoding Rules) 
+/* Write the identifier and length of a [ITU-T X.690] BER (Basic Encoding Rules)
  * structure header.
  * returns error */
 static int
@@ -857,7 +857,7 @@ xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
         out_uint8(s, len);
     }
 
-    // LOG_DEVEL(LOG_LEVEL_TRACE, "Added header [ITU-T X.690] Identifier %d, Length %d", 
+    // LOG_DEVEL(LOG_LEVEL_TRACE, "Added header [ITU-T X.690] Identifier %d, Length %d",
     //           tag_val, len);
     return 0;
 }
@@ -914,17 +914,17 @@ xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
     xrdp_mcs_ber_out_int8(self, s, 1); /* maxHeight */
     xrdp_mcs_ber_out_int24(self, s, max_pdu_size);
     xrdp_mcs_ber_out_int8(self, s, 2); /* protocolVersion */
-    
+
     LOG_DEVEL(LOG_LEVEL_TRACE, "Write to stream [ITU-T T.125] DomainParameters "
               "maxChannelIds %d, maxUserIds %d, maxTokenIds %d, numPriorities 1, "
               "minThroughput 0 B/s, maxHeight 1, maxMCSPDUsize %d, "
-              "protocolVersion 2", 
+              "protocolVersion 2",
               max_channels, max_users, max_tokens, max_pdu_size);
     return 0;
 }
 /*****************************************************************************/
 /* Write an [ITU-T T.124] ConnectData (ALIGNED variant of BASIC-PER) message
- * with ConnectGCCPDU, ConferenceCreateResponse, 
+ * with ConnectGCCPDU, ConferenceCreateResponse,
  * and [MS-RDPBCGR] Server Data Blocks as user data.
  */
 int
@@ -943,42 +943,42 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     num_channels_even = num_channels + (num_channels & 1);
     s = &(self->server_mcs_data);
     init_stream(s, 8192);
-    
+
     /* [ITU-T T.124] ConnectData (ALIGNED variant of BASIC-PER) */
     out_uint16_be(s, 5); /* = 0x00 0x05 */
-                         /* t124Identifier choice index = 0 (object) */
-                         /* object length = 5 */
+    /* t124Identifier choice index = 0 (object) */
+    /* object length = 5 */
     out_uint16_be(s, 0x14);  /* t124Identifier.object = ??? (0x00 0x14 0x7c 0x00 0x01) */
-    out_uint8(s, 0x7c);      
+    out_uint8(s, 0x7c);
     out_uint16_be(s, 1); /* -- */
     out_uint8(s, 0x2a);  /* connectPDU length = 42 */
-                         /* connectPDU octet string of type ConnectGCCPDU 
-                            (unknown where this octet string is defined to be 
-                            of type ConnectGCCPDU) */
+    /* connectPDU octet string of type ConnectGCCPDU
+       (unknown where this octet string is defined to be
+       of type ConnectGCCPDU) */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [ITU-T T.124] ConnectData "
-              "t124Identifier.object 0x00 0x14 0x7c 0x00 0x01, connectPDU length %d", 
+              "t124Identifier.object 0x00 0x14 0x7c 0x00 0x01, connectPDU length %d",
               0x2a);
-              
+
     /* [ITU-T T.124] ConnectGCCPDU (ALIGNED variant of BASIC-PER) */
     out_uint8(s, 0x14);  /* ConnectGCCPDU choice index 1 = ConferenceCreateResponse with userData present */
-   
+
     /* [ITU-T T.124] ConferenceCreateResponse (ALIGNED variant of BASIC-PER) */
-    out_uint8(s, 0x76); /* nodeID = 31219 - 1001 (PER offset for min value) 
+    out_uint8(s, 0x76); /* nodeID = 31219 - 1001 (PER offset for min value)
                                   = 30218 (big-endian 0x760a) */
     out_uint8(s, 0x0a);
     out_uint8(s, 1);    /* tag length */
     out_uint8(s, 1);    /* tag */
     out_uint8(s, 0);    /* result = 0 (success) */
-    out_uint16_le(s, 0xc001); /* userData set count = 1 (0x01), 
+    out_uint16_le(s, 0xc001); /* userData set count = 1 (0x01),
                                  userData.isPresent = 0x80 (yes) | userData.key choice index = 0x40 (1 = h221NonStandard) */
     out_uint8(s, 0);    /* userData.key.h221NonStandard length
                            = 4 - 4 (PER offset for min value) (H221NonStandardIdentifier is an octet string SIZE (4..255))
-                           = 0 
+                           = 0
                            */
-    
-    /* [ITU-T H.221] H221NonStandardIdentifier uses country codes and 
-       manufactuer codes from [ITU-T T.35]. Unknown why these values are used, 
-       maybe this is just copied from the [MS-RDPBCGR] 4.1.4 example which uses 
+
+    /* [ITU-T H.221] H221NonStandardIdentifier uses country codes and
+       manufactuer codes from [ITU-T T.35]. Unknown why these values are used,
+       maybe this is just copied from the [MS-RDPBCGR] 4.1.4 example which uses
        the value "McDn" */
     out_uint8(s, 0x4d); /* M */
     out_uint8(s, 0x63); /* c */
@@ -986,7 +986,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8(s, 0x6e); /* n */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [ITU-T T.124] ConferenceCreateResponse "
               "nodeID %d, result SUCCESS", 0x760a + 1001);
-              
+
     /* ConferenceCreateResponse.userData.key.value (octet string) */
     /* GCC Response Total Length - 2 bytes , set later */
     gcc_size_ptr = s->p; /* RDPGCCUserDataResponseLength */
@@ -1009,21 +1009,21 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8(s, 8);
     out_uint8(s, 0); /* version (last byte) */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
-              "type 0x%4.4x, length %d", 
-              SEC_TAG_SRV_INFO, 
+              "type 0x%4.4x, length %d",
+              SEC_TAG_SRV_INFO,
               self->mcs_layer->iso_layer->rdpNegData ? 12 : 8);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
               "<Requiered fields> version 0x%8.8x", 0x00080004);
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
-         /* RequestedProtocol */
+        /* RequestedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol); /* clientRequestedProtocols */
         LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
-              "<Optional fields> clientRequestedProtocols 0x%8.8x", 
-              self->mcs_layer->iso_layer->requestedProtocol);
+                  "<Optional fields> clientRequestedProtocols 0x%8.8x",
+                  self->mcs_layer->iso_layer->requestedProtocol);
     }
-    
-    
+
+
     /* [MS-RDPBCGR] TS_UD_HEADER */
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS); /* type */
     out_uint16_le(s, 8 + (num_channels_even * 2)); /* length */
@@ -1031,10 +1031,10 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint16_le(s, MCS_GLOBAL_CHANNEL); /* 1003, 0x03eb main channel (MCSChannelId) */
     out_uint16_le(s, num_channels); /* number of other channels (channelCount) */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
-              "type 0x%4.4x, length %d", 
+              "type 0x%4.4x, length %d",
               SEC_TAG_SRV_CHANNELS, 8 + (num_channels_even * 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_NET "
-              "MCSChannelId %d, channelCount %d", 
+              "MCSChannelId %d, channelCount %d",
               MCS_GLOBAL_CHANNEL, num_channels);
     for (index = 0; index < num_channels_even; index++)
     {
@@ -1049,7 +1049,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
         {
             out_uint16_le(s, 0); /* padding or channelIdArray[index] (channel not allocated) */
         }
-        
+
     }
 
     if (self->rsa_key_bytes == 64)
@@ -1102,7 +1102,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
                   "serverCertificate.PublicKeyBlob.modulus (omitted), "
                   "serverCertificate.PublicKeyBlob.wSignatureBlobType 0x%4.4x, "
                   "serverCertificate.PublicKeyBlob.wSignatureBlobLen %d, "
-                  "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ", 
+                  "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ",
                   self->crypt_method, self->crypt_level, SEC_TAG_PUBKEY,
                   0x005c, SEC_RSA_MAGIC, 0x0048, 0x00020000, 0x3f000000,
                   SEC_TAG_KEYSIG, 72);
@@ -1157,7 +1157,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
                   "serverCertificate.PublicKeyBlob.modulus (omitted), "
                   "serverCertificate.PublicKeyBlob.wSignatureBlobType 0x%4.4x, "
                   "serverCertificate.PublicKeyBlob.wSignatureBlobLen %d, "
-                  "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ", 
+                  "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ",
                   self->crypt_method, self->crypt_level, SEC_TAG_PUBKEY,
                   0x011c, SEC_RSA_MAGIC, 0x0108, 0x00080000, 0xff000000,
                   SEC_TAG_KEYSIG, 72);
@@ -1174,14 +1174,14 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
         LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
                   "type 0x%4.4x, length %d", SEC_TAG_SRV_CRYPT, 12);
         LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_SEC1 "
-                  "encryptionMethod 0x%8.8x, encryptionMethod 0x%8.8x", 
+                  "encryptionMethod 0x%8.8x, encryptionMethod 0x%8.8x",
                   self->crypt_method, self->crypt_level);
     }
     else
     {
-        LOG(LOG_LEVEL_WARNING, 
+        LOG(LOG_LEVEL_WARNING,
             "Unsupported xrdp_sec.rsa_key_bytes value: %d, the client "
-            "will not be sent a [MS-RDPBCGR] TS_UD_SC_SEC1 message.", 
+            "will not be sent a [MS-RDPBCGR] TS_UD_SC_SEC1 message.",
             self->rsa_key_bytes);
     }
     s_mark_end(s);
@@ -1195,7 +1195,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 /*****************************************************************************/
 /* Send an [ITU-T T.125] Connect-Response message.
  *
- * Note: the xrdp_mcs_out_gcc_data() function must be called (to populate the 
+ * Note: the xrdp_mcs_out_gcc_data() function must be called (to populate the
  * xrdp_mcs.server_mcs_data stream) before this method is called.
  *
  * returns error
@@ -1228,7 +1228,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
               "domainParameters (see xrdp_mcs_out_domain_params() trace logs), "
               "userData (see xrdp_mcs_out_gcc_data() trace logs and "
               "hex dump below)");
-    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "[ITU-T T.125] Connect-Response userData", 
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "[ITU-T T.125] Connect-Response userData",
                       self->server_mcs_data->data, data_len);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
@@ -1242,7 +1242,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 }
 
 /*****************************************************************************/
-/* Process and send the MCS messages for the RDP Connection Sequence 
+/* Process and send the MCS messages for the RDP Connection Sequence
  * [MS-RDPBCGR] 1.3.1.1
  *
  * returns error
@@ -1387,13 +1387,13 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
         LOG(LOG_LEVEL_WARNING, "xrdp_mcs_send: stream size too big: %d bytes", len);
     }
 
-    /* The DomainMCSPDU choice index is a 6-bit int with the 2 least 
+    /* The DomainMCSPDU choice index is a 6-bit int with the 2 least
            significant bits of the byte as padding */
     out_uint8(s, MCS_SDIN << 2);    /* DomainMCSPDU choice index */
     out_uint16_be(s, self->userid); /* initiator */
     out_uint16_be(s, chan);         /* channelId */
-    out_uint8(s, 0x70);             /* dataPriority (upper 2 bits), 
-                                       segmentation (next 2 bits), 
+    out_uint8(s, 0x70);             /* dataPriority (upper 2 bits),
+                                       segmentation (next 2 bits),
                                        padding (4 bits) */
 
     if (len >= 128)
@@ -1418,7 +1418,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [ITU-T T.125] SendDataIndication "
               "initiator %d, channelId %d, dataPriority %d, segmentation 0x0, "
-              "userData length %d", 
+              "userData length %d",
               self->userid, chan, 0x70 >> 6, (0x70 >> 4) & 0x03);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
@@ -1480,7 +1480,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [ITU T.125] DisconnectProviderUltimatum "
               "reason %d", 0x80 >> 5);
-    
+
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);

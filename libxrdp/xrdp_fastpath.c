@@ -98,8 +98,8 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
         len = byte;
     }
     s->next_packet = holdp + len;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_fastpath_recv: numEvents %d secFlags 0x%x length %d", 
-            self->numEvents, self->secFlags, len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_fastpath_recv: numEvents %d secFlags 0x%x length %d",
+              self->numEvents, self->secFlags, len);
     return 0;
 }
 
