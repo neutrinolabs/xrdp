@@ -13,7 +13,7 @@ xrdp\-sesman \- \fBxrdp\fR(8) session manager
 \-\-version
 .br
 .B xrdp\-sesman
-[ \-\-nodaemon ] [ --config /path/to/sesman.ini ]
+[\-\-nodaemon] [\-\-dump\-config] [\-\-config /path/to/sesman.ini]
 
 .SH "DESCRIPTION"
 \fBxrdp\-sesman\fR is \fBxrdp\fR(8) session manager.
@@ -33,6 +33,10 @@ Output version information and exit.
 .TP
 \fB\-n\fR, \fB\-\-nodaemon\fR
 Starts \fBxrdp\-sesman\fR in foreground instead of starting it as a daemon.
+.TP
+\fB\-\-dump\-config\fR
+Print the configuration on stdout before starting the daemon.
+The default is not to do this.
 .TP
 \fB\-c\fR, \fB\-\-config\fR
 Specify a path to a different \fIsesman.ini\fR file. This option is intended
