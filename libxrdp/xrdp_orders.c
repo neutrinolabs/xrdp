@@ -131,7 +131,7 @@ xrdp_orders_init(struct xrdp_orders *self)
             out_uint8s(self->out_s, 2); /* pad */
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] TS_UPDATE_ORDERS_PDU_DATA "
                       "updateType %d (UPDATETYPE_ORDERS), pad2OctetsA <ignored>, "
-                      "numberOrders <to be set later>, pad2OctetsB <ignored>", 
+                      "numberOrders <to be set later>, pad2OctetsB <ignored>",
                       RDP_UPDATE_ORDERS);
         }
     }
@@ -161,7 +161,7 @@ xrdp_orders_send(struct xrdp_orders *self)
                 if (xrdp_rdp_send_fastpath(self->rdp_layer,
                                            self->out_s, 0) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_ERROR, 
+                    LOG_DEVEL(LOG_LEVEL_ERROR,
                               "xrdp_orders_send: xrdp_rdp_send_fastpath failed");
                     rv = 1;
                 }
@@ -171,7 +171,7 @@ xrdp_orders_send(struct xrdp_orders *self)
                 if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
                                        RDP_DATA_PDU_UPDATE) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_ERROR, 
+                    LOG_DEVEL(LOG_LEVEL_ERROR,
                               "xrdp_orders_send: xrdp_rdp_send_data failed");
                     rv = 1;
                 }
@@ -237,8 +237,8 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         if (max_size > max_order_size)
         {
             LOG(LOG_LEVEL_ERROR, "Requested orders max_size (%d) "
-                      "is greater than the client connection max_size (%d)", 
-                      max_size, max_order_size);
+                "is greater than the client connection max_size (%d)",
+                max_size, max_order_size);
             return 1;
         }
         else
@@ -261,7 +261,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
            correct max_size so we end up putting more into the buffer
            than we indicate we can */
         LOG(LOG_LEVEL_WARNING, "Ignoring Bug: order data length "
-            "is larger than maximum length. Expected %d, actual %d", 
+            "is larger than maximum length. Expected %d, actual %d",
             max_order_size, size);
         /* We where getting called with size already greater than
            max_order_size
@@ -2200,15 +2200,15 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
     out_uint8(self->out_s, order_flags);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] DRAWING_ORDER "
               "controlFlags 0x%2.2x (TS_STANDARD | TS_SECONDARY)", order_flags);
-    
+
     len = 1027 - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);              /* orderLength */
     out_uint16_le(self->out_s, 0);                /* extraFlags */
     out_uint8(self->out_s, TS_CACHE_COLOR_TABLE); /* orderType */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] SECONDARY_DRAWING_ORDER_HEADER "
-              "orderLength %d, extraFlags 0x0000, orderType 0x%2.2x (TS_CACHE_COLOR_TABLE)", 
+              "orderLength %d, extraFlags 0x0000, orderType 0x%2.2x (TS_CACHE_COLOR_TABLE)",
               len, TS_CACHE_COLOR_TABLE);
-    
+
     out_uint8(self->out_s, cache_id);
     out_uint16_le(self->out_s, 256); /* num colors */
 
@@ -2220,7 +2220,7 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
         out_uint8(self->out_s, 0);
     }
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPEGDI] CACHE_COLOR_TABLE_ORDER "
-              "cacheIndex %d, numberColors 256, colorTable <omitted from log>", 
+              "cacheIndex %d, numberColors 256, colorTable <omitted from log>",
               cache_id);
     return 0;
 }
