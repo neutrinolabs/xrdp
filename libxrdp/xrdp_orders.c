@@ -83,6 +83,7 @@ xrdp_orders_reset(struct xrdp_orders *self)
 {
     if (xrdp_orders_force_send(self) != 0)
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_reset: xrdp_orders_force_send failed");
         return 1;
     }
     g_free(self->orders_state.text_data);
@@ -109,23 +110,29 @@ xrdp_orders_init(struct xrdp_orders *self)
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_init: fastpath");
             if (xrdp_rdp_init_fastpath(self->rdp_layer, self->out_s) != 0)
             {
+                LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_init: xrdp_rdp_init_fastpath failed");
                 return 1;
             }
             self->order_count_ptr = self->out_s->p;
             out_uint8s(self->out_s, 2); /* number of orders, set later */
+            // LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] TODO");
         }
         else
         {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_init: slowpath");
             if (xrdp_rdp_init_data(self->rdp_layer, self->out_s) != 0)
             {
+                LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_init: xrdp_rdp_init_data failed");
                 return 1;
             }
-            out_uint16_le(self->out_s, RDP_UPDATE_ORDERS);
+            out_uint16_le(self->out_s, RDP_UPDATE_ORDERS); /* updateType */
             out_uint8s(self->out_s, 2); /* pad */
             self->order_count_ptr = self->out_s->p;
             out_uint8s(self->out_s, 2); /* number of orders, set later */
             out_uint8s(self->out_s, 2); /* pad */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] TS_UPDATE_ORDERS_PDU_DATA "
+                      "updateType %d (UPDATETYPE_ORDERS), pad2OctetsA <ignored>, "
+                      "numberOrders <to be set later>, pad2OctetsB <ignored>", 
+                      RDP_UPDATE_ORDERS);
         }
     }
     return 0;
@@ -154,6 +161,8 @@ xrdp_orders_send(struct xrdp_orders *self)
                 if (xrdp_rdp_send_fastpath(self->rdp_layer,
                                            self->out_s, 0) != 0)
                 {
+                    LOG_DEVEL(LOG_LEVEL_ERROR, 
+                              "xrdp_orders_send: xrdp_rdp_send_fastpath failed");
                     rv = 1;
                 }
             }
@@ -162,6 +171,8 @@ xrdp_orders_send(struct xrdp_orders *self)
                 if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
                                        RDP_DATA_PDU_UPDATE) != 0)
                 {
+                    LOG_DEVEL(LOG_LEVEL_ERROR, 
+                              "xrdp_orders_send: xrdp_rdp_send_data failed");
                     rv = 1;
                 }
             }
@@ -225,6 +236,9 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
     {
         if (max_size > max_order_size)
         {
+            LOG(LOG_LEVEL_ERROR, "Requested orders max_size (%d) "
+                      "is greater than the client connection max_size (%d)", 
+                      max_size, max_order_size);
             return 1;
         }
         else
@@ -237,7 +251,8 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
     size = (int)(self->out_s->p - self->order_count_ptr);
     if (size < 0)
     {
-        LOG(LOG_LEVEL_ERROR, "error in xrdp_orders_check, size too small: %d bytes", size);
+        LOG(LOG_LEVEL_ERROR, "Bug: order data length cannot be negative. "
+            "Found length %d bytes", size);
         return 1;
     }
     if (size > max_order_size)
@@ -245,7 +260,9 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         /* this suggests someone calls this function without passing the
            correct max_size so we end up putting more into the buffer
            than we indicate we can */
-        LOG(LOG_LEVEL_WARNING, "error in xrdp_orders_check, size too big: %d bytes", size);
+        LOG(LOG_LEVEL_WARNING, "Ignoring Bug: order data length "
+            "is larger than maximum length. Expected %d, actual %d", 
+            max_order_size, size);
         /* We where getting called with size already greater than
            max_order_size
            Which I suspect was because the sending of text did not include
@@ -2175,15 +2192,23 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
 
     if (xrdp_orders_check(self, 2000) != 0)
     {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_send_palette: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_STANDARD | TS_SECONDARY;
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] DRAWING_ORDER "
+              "controlFlags 0x%2.2x (TS_STANDARD | TS_SECONDARY)", order_flags);
+    
     len = 1027 - 7; /* length after type minus 7 */
-    out_uint16_le(self->out_s, len);
-    out_uint16_le(self->out_s, 0); /* flags */
-    out_uint8(self->out_s, TS_CACHE_COLOR_TABLE); /* type */
+    out_uint16_le(self->out_s, len);              /* orderLength */
+    out_uint16_le(self->out_s, 0);                /* extraFlags */
+    out_uint8(self->out_s, TS_CACHE_COLOR_TABLE); /* orderType */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] SECONDARY_DRAWING_ORDER_HEADER "
+              "orderLength %d, extraFlags 0x0000, orderType 0x%2.2x (TS_CACHE_COLOR_TABLE)", 
+              len, TS_CACHE_COLOR_TABLE);
+    
     out_uint8(self->out_s, cache_id);
     out_uint16_le(self->out_s, 256); /* num colors */
 
@@ -2194,7 +2219,9 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
         out_uint8(self->out_s, palette[i] >> 16);
         out_uint8(self->out_s, 0);
     }
-
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPEGDI] CACHE_COLOR_TABLE_ORDER "
+              "cacheIndex %d, numberColors 256, colorTable <omitted from log>", 
+              cache_id);
     return 0;
 }
 
