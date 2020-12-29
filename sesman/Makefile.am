@@ -15,10 +15,6 @@ if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
 endif
 
-if SESMAN_NOPAM
-AUTH_C = verify_user.c
-AUTH_LIB = -lcrypt
-else
 if SESMAN_BSD
 AUTH_C = verify_user_bsd.c
 AUTH_LIB =
@@ -30,6 +26,10 @@ else
 if SESMAN_KERBEROS
 AUTH_C = verify_user_kerberos.c
 AUTH_LIB = -lkrb5
+else
+if SESMAN_NOPAM
+AUTH_C = verify_user.c
+AUTH_LIB = -lcrypt
 else
 AUTH_C = verify_user_pam.c
 AUTH_LIB = -lpam
