@@ -29,6 +29,7 @@
 #endif
 
 #include "sesman.h"
+#include "string_calls.h"
 
 #include <stdio.h>
 #include <string.h>
