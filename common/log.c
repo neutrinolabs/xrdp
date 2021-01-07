@@ -304,7 +304,7 @@ internal_config_read_logging(int file,
     lc->console_level = LOG_LEVEL_INFO;
     lc->enable_syslog = 0;
     lc->syslog_level = LOG_LEVEL_INFO;
-    lc->dump_on_start = 1;
+    lc->dump_on_start = 0;
     lc->enable_pid = 0;
 
     g_snprintf(section_name, 511, "%s%s", section_prefix, SESMAN_CFG_LOGGING);
@@ -616,7 +616,6 @@ log_config_init_for_console(enum logLevels lvl, const char *override_name)
         {
             config->console_level = lvl;
         }
-        config->dump_on_start = 0; /* Don't need dump for console only */
     }
     return config;
 }
@@ -721,7 +720,8 @@ log_start_from_param(const struct log_config *src_log_config)
  * @return 0 on success
  */
 enum logReturns
-log_start(const char *iniFile, const char *applicationName)
+log_start(const char *iniFile, const char *applicationName,
+          bool_t dump_on_start)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
     struct log_config *config;
@@ -730,6 +730,7 @@ log_start(const char *iniFile, const char *applicationName)
 
     if (config != NULL)
     {
+        config->dump_on_start = dump_on_start;
         ret = log_start_from_param(config);
         log_config_free(config);
 

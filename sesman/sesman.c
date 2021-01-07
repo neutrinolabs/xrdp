@@ -41,6 +41,7 @@ struct sesman_startup_params
     int no_daemon;
     int help;
     int version;
+    int dump_config;
 };
 
 int g_sck;
@@ -126,6 +127,10 @@ sesman_process_params(int argc, char **argv,
         else if (nocase_matches(option, "-v", "--version", NULL))
         {
             startup_params->version = 1;
+        }
+        else if (nocase_matches(option, "--dump-config", NULL))
+        {
+            startup_params->dump_config = 1;
         }
         else if (nocase_matches(option, "-c", "--config", NULL))
         {
@@ -305,11 +310,12 @@ static void
 print_help(void)
 {
     g_printf("Usage: xrdp-sesman [options]\n");
-    g_printf("   -k, --kill       shut down xrdp-sesman\n");
-    g_printf("   -h, --help       show help\n");
-    g_printf("   -v, --version    show version\n");
-    g_printf("   -n, --nodaemon   don't fork into background\n");
-    g_printf("   -c, --config     specify new path to sesman.ini\n");
+    g_printf("   -k, --kill        shut down xrdp-sesman\n");
+    g_printf("   -h, --help        show help\n");
+    g_printf("   -v, --version     show version\n");
+    g_printf("   -n, --nodaemon    don't fork into background\n");
+    g_printf("   -c, --config      specify new path to sesman.ini\n");
+    g_writeln("      --dump-config display config on stdout on startup");
     g_deinit();
 }
 
@@ -415,12 +421,6 @@ main(int argc, char **argv)
         g_exit(kill_running_sesman(pid_file));
     }
 
-    daemon = !startup_params.no_daemon;
-    if (!daemon)
-    {
-        g_printf("starting sesman in foreground...\n");
-    }
-
     if (g_file_exist(pid_file))
     {
         g_printf("xrdp-sesman is already running.\n");
@@ -440,15 +440,14 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-    /* not to spit on the console, show config summary only when running
-    * in foreground */
-    if (!daemon)
+    if (startup_params.dump_config)
     {
         config_dump(g_cfg);
     }
 
     /* starting logging subsystem */
-    log_error = log_start(startup_params.sesman_ini, "xrdp-sesman");
+    log_error = log_start(startup_params.sesman_ini, "xrdp-sesman",
+                          startup_params.dump_config);
 
     if (log_error != LOG_STARTUP_OK)
     {
@@ -481,6 +480,7 @@ main(int argc, char **argv)
     LOG(LOG_LEVEL_TRACE, "    reconnect_sh      = %s", g_cfg->reconnect_sh);
     LOG(LOG_LEVEL_TRACE, "    auth_file_path    = %s", g_cfg->auth_file_path);
 
+    daemon = !startup_params.no_daemon;
     if (daemon)
     {
         /* not to spit on the console, shut up stdout/stderr before anything's logged */

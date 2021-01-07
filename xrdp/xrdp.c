@@ -74,13 +74,14 @@ static void
 print_help(void)
 {
     g_writeln("Usage: xrdp [options]");
-    g_writeln("   -k, --kill       shut down xrdp");
-    g_writeln("   -h, --help       show help");
-    g_writeln("   -v, --version    show version");
-    g_writeln("   -n, --nodaemon   don't fork into background");
-    g_writeln("   -p, --port       tcp listen port");
-    g_writeln("   -f, --fork       fork on new connection");
-    g_writeln("   -c, --config     Specify new path to xrdp.ini");
+    g_writeln("   -k, --kill        shut down xrdp");
+    g_writeln("   -h, --help        show help");
+    g_writeln("   -v, --version     show version");
+    g_writeln("   -n, --nodaemon    don't fork into background");
+    g_writeln("   -p, --port        tcp listen port");
+    g_writeln("   -f, --fork        fork on new connection");
+    g_writeln("   -c, --config      specify new path to xrdp.ini");
+    g_writeln("       --dump-config display config on stdout on startup");
 }
 
 /*****************************************************************************/
@@ -361,6 +362,10 @@ xrdp_process_params(int argc, char **argv,
             startup_params->fork = 1;
             g_writeln("--fork parameter found, ini override");
         }
+        else if (nocase_matches(option, "--dump-config", NULL))
+        {
+            startup_params->dump_config = 1;
+        }
         else if (nocase_matches(option, "-c", "--config", NULL))
         {
             index++;
@@ -536,7 +541,8 @@ main(int argc, char **argv)
     }
 
     /* starting logging subsystem */
-    error = log_start(startup_params.xrdp_ini, "xrdp");
+    error = log_start(startup_params.xrdp_ini, "xrdp",
+                      startup_params.dump_config);
 
     if (error != LOG_STARTUP_OK)
     {
