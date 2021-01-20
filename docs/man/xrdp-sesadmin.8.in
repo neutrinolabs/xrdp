@@ -55,3 +55,8 @@ xrdp\-sesadmin.log
 
 .SH SEE ALSO
 .BR xrdp (8).
+
+More info on \fBxrdp\fR can be found on the
+.UR @xrdphomeurl@
+xrdp homepage
+.UE

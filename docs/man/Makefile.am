@@ -15,10 +15,12 @@ EXTRA_DIST = $(man_MANS:=.in)
 SUBST_VARS = sed \
    -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
    -e 's|@bindir[@]|$(bindir)|g' \
+   -e 's|@sbindir[@]|$(sbindir)|g' \
    -e 's|@localstatedir[@]|$(localstatedir)|g' \
    -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
    -e 's|@socketdir[@]|$(socketdir)|g' \
-   -e 's|@xrdpconfdir[@]|$(sysconfdir)/xrdp|g'
+   -e 's|@xrdpconfdir[@]|$(sysconfdir)/xrdp|g' \
+   -e 's|@xrdphomeurl[@]|http://www.xrdp.org/|g'
 
 subst_verbose = $(subst_verbose_@AM_V@)
 subst_verbose_ = $(subst_verbose_@AM_DEFAULT_V@)
