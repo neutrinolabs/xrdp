@@ -583,56 +583,35 @@ xrdp_wm_init(struct xrdp_wm *self)
     if (file_by_name_read_section(self->session->xrdp_ini,
                                   "Channels", names, values) == 0)
     {
-        int error;
-        int ii;
         int chan_id;
-        int chan_flags;
-        int disabled;
-        char chan_name[16];
+        int chan_count = libxrdp_get_channel_count(self->session);
+        const char *disabled_str = NULL;
 
-        ii = 0;
-        error = libxrdp_query_channel(self->session, ii, chan_name,
-                                      &chan_flags);
-        while (error == 0)
+        for (chan_id = 0 ; chan_id < chan_count ; ++chan_id)
         {
-            r = NULL;
-            for (index = 0; index < names->count; index++)
+            char chan_name[16];
+            if (libxrdp_query_channel(self->session, chan_id, chan_name,
+                                      NULL) == 0)
             {
-                q = (char *) list_get_item(names, index);
-                if (g_strcasecmp(q, chan_name) == 0)
+                int disabled = 1; /* Channels disabled if not found */
+
+                for (index = 0; index < names->count; index++)
                 {
-                    r = (char *) list_get_item(values, index);
-                    break;
+                    q = (char *) list_get_item(names, index);
+                    if (g_strcasecmp(q, chan_name) == 0)
+                    {
+                        r = (const char *) list_get_item(values, index);
+                        disabled = !g_text2bool(r);
+                        break;
+                    }
                 }
-            }
-            if (r == NULL)
-            {
-                /* not found, disable the channel */
-                chan_id = libxrdp_get_channel_id(self->session, chan_name);
-                libxrdp_disable_channel(self->session, chan_id, 1);
-                g_writeln("xrdp_wm_init: channel %s channel id %d is "
-                          "disabled", chan_name, chan_id);
-            }
-            else
-            {
-                /* found */
-                chan_id = libxrdp_get_channel_id(self->session, q);
-                disabled = !g_text2bool(r);
+                disabled_str = (disabled) ? "disabled" : "enabled";
+                LOG(LOG_LEVEL_DEBUG, "xrdp_wm_init: "
+                    "channel %s channel id %d is %s",
+                    chan_name, chan_id, disabled_str);
+
                 libxrdp_disable_channel(self->session, chan_id, disabled);
-                if (disabled)
-                {
-                    g_writeln("xrdp_wm_init: channel %s channel id %d is "
-                              "disabled", chan_name, chan_id);
-                }
-                else
-                {
-                    g_writeln("xrdp_wm_init: channel %s channel id %d is "
-                              "allowed", chan_name, chan_id);
-                }
             }
-            ii++;
-            error = libxrdp_query_channel(self->session, ii, chan_name,
-                                          &chan_flags);
         }
     }
     list_delete(names);
