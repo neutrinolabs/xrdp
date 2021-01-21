@@ -49,7 +49,7 @@ the system (notably \fBxrdp(8)\fR and \fBxrdp\-chansrv(8)\fR) will want
 to read it.
 .RE
 .SH "FILES"
-@bindir@/xrdp\-sesman
+@sbindir@/xrdp\-sesman
 .br
 @bindir@/xrdp\-sesrun
 .br
@@ -70,4 +70,6 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+for more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

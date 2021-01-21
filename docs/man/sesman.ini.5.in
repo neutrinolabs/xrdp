@@ -304,4 +304,6 @@ environment variables in the user's session.
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-For more info on \fBxrdp\fR see http://www.xrdp.org/
+For more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

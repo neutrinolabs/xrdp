@@ -373,4 +373,6 @@ password={base64}cGFzc3dvcmQhCg==
 .BR sesrun (8),
 .BR sesman.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+For more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

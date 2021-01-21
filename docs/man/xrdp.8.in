@@ -55,7 +55,7 @@ to be used primarily for testing or for unusual configurations.
 
 
 .SH "FILES"
-@bindir@/xrdp
+@sbindir@/xrdp
 .br
 @sysconfdir@/xrdp/xrdp.ini
 .br
@@ -74,4 +74,6 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 .BR sesman.ini (5),
 .BR sesrun (8)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+for more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE
