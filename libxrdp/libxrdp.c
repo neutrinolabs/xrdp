@@ -735,11 +735,8 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             return 1;
         }
     }
-    /* the "(bpp == 15) && " looks like a bug since this expression
-       allows any value except 15, but the "switch (bpp)" statement below
-       only allows 16, 24, or 32 */
-    /* TODO: remove the "(bpp == 15) && " and test the code */
-    if ((bpp == 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
+
+    if ((bpp != 16) && (bpp != 24) && (bpp != 32))
     {
         LOG(LOG_LEVEL_ERROR,
             "Send pointer: invalid bpp value. Expected 16 or 24 or 32, "
