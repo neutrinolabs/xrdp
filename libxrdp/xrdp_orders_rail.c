@@ -42,8 +42,8 @@ xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id)
     order_size = 11;
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_window_delete: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_delete: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
@@ -88,8 +88,8 @@ xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
     order_size = 14;
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_window_cached_icon: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_cached_icon: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
@@ -208,8 +208,8 @@ xrdp_orders_send_window_icon(struct xrdp_orders *self,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_window_icon: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_icon: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
@@ -422,8 +422,8 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_window_new_update: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_new_update: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
@@ -653,8 +653,8 @@ xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
     order_size = 15;
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_notify_delete: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_notify_delete: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
@@ -759,8 +759,8 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_notify_new_update: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_notify_new_update: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
@@ -882,8 +882,8 @@ xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_orders_send_monitored_desktop: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_monitored_desktop: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;

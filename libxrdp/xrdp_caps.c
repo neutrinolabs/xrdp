@@ -668,29 +668,34 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
 
     if ((cap_len < 0) || (cap_len > 1024 * 1024))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU "
-                  "lengthCombinedCapabilities %d is too long (> %d)",
-                  cap_len, 1024 * 1024);
+        LOG(LOG_LEVEL_ERROR, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU "
+            "lengthCombinedCapabilities %d is too long (> %d)",
+            cap_len, 1024 * 1024);
         return 1;
     }
 
     for (index = 0; index < num_caps; index++)
     {
         p = s->p;
-        if (!s_check_rem(s, 4))
+        if (!s_check_rem_and_log(s, 4,
+                                 "Parsing [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET"))
         {
-            LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
-                "len 4, remaining %d", s_rem(s));
             return 1;
         }
         in_uint16_le(s, type);
         in_uint16_le(s, len);
         LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                   "capabilitySetType %d, lengthCapability %d", type, len);
-        if ((len < 4) || !s_check_rem(s, len - 4))
+        if (len < 4)
         {
-            LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
-                "len %d, remaining %d", (len - 4), s_rem(s));
+            LOG(LOG_LEVEL_ERROR,
+                "Protocol error [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                "lengthCapability must be greater than 3, received %d", len);
+            return 1;
+        }
+        if (!s_check_rem_and_log(s, len - 4,
+                                 "Parsing [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "))
+        {
             return 1;
         }
         len -= 4;
@@ -861,7 +866,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     if (xrdp_rdp_init(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: xrdp_rdp_init failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: xrdp_rdp_init failed");
         free_stream(s);
         return 1;
     }
@@ -1178,7 +1183,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
               "message with the server's capabilities");
     if (xrdp_rdp_send(self, s, PDUTYPE_DEMANDACTIVEPDU) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: xrdp_rdp_send failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_send_demand_active: xrdp_rdp_send failed");
         free_stream(s);
         return 1;
     }

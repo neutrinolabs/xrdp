@@ -83,7 +83,7 @@ xrdp_orders_reset(struct xrdp_orders *self)
 {
     if (xrdp_orders_force_send(self) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_reset: xrdp_orders_force_send failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_orders_reset: xrdp_orders_force_send failed");
         return 1;
     }
     g_free(self->orders_state.text_data);
@@ -110,7 +110,7 @@ xrdp_orders_init(struct xrdp_orders *self)
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_orders_init: fastpath");
             if (xrdp_rdp_init_fastpath(self->rdp_layer, self->out_s) != 0)
             {
-                LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_init: xrdp_rdp_init_fastpath failed");
+                LOG(LOG_LEVEL_ERROR, "xrdp_orders_init: xrdp_rdp_init_fastpath failed");
                 return 1;
             }
             self->order_count_ptr = self->out_s->p;
@@ -121,7 +121,7 @@ xrdp_orders_init(struct xrdp_orders *self)
         {
             if (xrdp_rdp_init_data(self->rdp_layer, self->out_s) != 0)
             {
-                LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_init: xrdp_rdp_init_data failed");
+                LOG(LOG_LEVEL_ERROR, "xrdp_orders_init: xrdp_rdp_init_data failed");
                 return 1;
             }
             out_uint16_le(self->out_s, RDP_UPDATE_ORDERS); /* updateType */
@@ -161,8 +161,8 @@ xrdp_orders_send(struct xrdp_orders *self)
                 if (xrdp_rdp_send_fastpath(self->rdp_layer,
                                            self->out_s, 0) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_ERROR,
-                              "xrdp_orders_send: xrdp_rdp_send_fastpath failed");
+                    LOG(LOG_LEVEL_ERROR,
+                        "xrdp_orders_send: xrdp_rdp_send_fastpath failed");
                     rv = 1;
                 }
             }
@@ -171,8 +171,8 @@ xrdp_orders_send(struct xrdp_orders *self)
                 if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
                                        RDP_DATA_PDU_UPDATE) != 0)
                 {
-                    LOG_DEVEL(LOG_LEVEL_ERROR,
-                              "xrdp_orders_send: xrdp_rdp_send_data failed");
+                    LOG(LOG_LEVEL_ERROR,
+                        "xrdp_orders_send: xrdp_rdp_send_data failed");
                     rv = 1;
                 }
             }
@@ -2192,7 +2192,7 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
 
     if (xrdp_orders_check(self, 2000) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_orders_send_palette: xrdp_orders_check failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_orders_send_palette: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;

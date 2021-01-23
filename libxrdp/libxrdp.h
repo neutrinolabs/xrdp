@@ -550,9 +550,9 @@ xrdp_codec_jpeg_compress(void *handle,
                          int   cy,       /* height of area to compress */
                          int   quality,  /* higher numbers compress less */
                          char *out_data, /* dest for jpg image */
-                         int  *io_len    /* length of out_data and on return */
-                                         /* len of compressed data */
-                         );
+                         int  *io_len    /* length of out_data and on return
+                                            len of compressed data */
+                        );
 
 void *
 xrdp_jpeg_init(void);
@@ -560,7 +560,7 @@ int
 xrdp_jpeg_deinit(void *handle);
 
 /* xrdp_channel.c */
-struct xrdp_channel*
+struct xrdp_channel *
 xrdp_channel_create(struct xrdp_sec *owner, struct xrdp_mcs *mcs_layer);
 void
 xrdp_channel_delete(struct xrdp_channel *self);

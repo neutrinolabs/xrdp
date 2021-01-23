@@ -94,7 +94,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
             }
             else
             {
-                LOG(LOG_LEVEL_ERROR, "Server requiers TLS for security, "
+                LOG(LOG_LEVEL_ERROR, "Server requires TLS for security, "
                     "but the client did not request TLS.");
                 self->failureCode = SSL_REQUIRED_BY_SERVER;
                 rv = 1; /* error */
@@ -132,10 +132,8 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
     int flags;
     int len;
 
-    if (!s_check_rem(s, 7))
+    if (!s_check_rem_and_log(s, 7, "Parsing [MS-RDPBCGR] RDP_NEG_REQ"))
     {
-        LOG(LOG_LEVEL_ERROR, "unexpected end-of-record. "
-            "expected 7, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -205,21 +203,24 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
             "transport input stream");
     }
 
-    /* TPKT header is 4 bytes, then first 2 bytes of the X.224 CR-TPDU */
-    if (!s_check_rem(s, 6))
+    /* [ITU-T T.123] TPKT header is 4 bytes, then first 2 bytes of the X.224 CR-TPDU */
+    if (!s_check_rem_and_log(s, 6,
+                             "Parsing [ITU-T T.123] TPKT header and [ITU-T X.224] TPDU header"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "unexpected end-of-record. "
-                  "expected 6, remaining %d", s_rem(s));
         return 1;
     }
 
     /* [ITU-T T.123] TPKT header */
     in_uint8(s, ver); /* version */
     in_uint8s(s, 3); /* Skip reserved field (1 byte), plus length (2 bytes) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [ITU-T T.123] TPKT "
+              "version %d, length (ignored)", ver);
 
     /* [ITU-T X.224] TPDU header */
     in_uint8(s, *len);  /* LI (length indicator) */
     in_uint8(s, *code); /* TPDU code */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [ITU-T X.224] TPDU "
+              "length indicator %d, TDPU code 0x%2.2x", *len, *code);
 
     if (ver != 3)
     {
@@ -241,10 +242,8 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
     if (*code == ISO_PDU_DT)
     {
         /* Data PDU : X.224 13.7 class 0 */
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T X.224] DT-TPDU (Data) header"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "unexpected end-of-record. "
-                      "expected 1, remaining %d", s_rem(s));
             return 1;
         }
         in_uint8s(s, 1); /* EOT (End of TSDU Mark) (upper 1 bit) and
@@ -257,10 +256,8 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
             CR Connection request (13.3)
             CC Connection confirm (13.4)
             DR Disconnect request (13.5) */
-        if (!s_check_rem(s, 5))
+        if (!s_check_rem_and_log(s, 5, "Parsing [ITU-T X.224] Other PDU header"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "unexpected end-of-record. "
-                      "expected 5, remaining %d", s_rem(s));
             return 1;
         }
         in_uint8s(s, 5); /* DST-REF (2 bytes)
@@ -268,10 +265,6 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
                             [CR, CC] CLASS OPTION (1 byte) or [DR] REASON (1 byte) */
     }
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [ITU-T T.123] TPKT "
-              "version %d, length (ignored)", ver);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [ITU-T X.224] TPDU "
-              "length indicator %d, TDPU code 0x%2.2x", *len, *code);
     return 0;
 }
 
@@ -379,7 +372,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
 
     if (trans_write_copy_s(self->trans, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_iso_send_cc: trans_write_copy_s failed");
+        LOG(LOG_LEVEL_ERROR, "Sending [ITU-T X.224] CC-TPDU (Connection Confirm) failed");
         free_stream(s);
         return 1;
     }
@@ -412,26 +405,26 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     struct stream *s;
     int expected_pdu_len;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "X.224 Connection Sequence: receive connection request");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[ITU-T X.224] Connection Sequence: receive connection request");
     s = libxrdp_force_read(self->trans);
     if (s == NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_iso_incoming: libxrdp_force_read failed");
+        LOG(LOG_LEVEL_ERROR, "[ITU-T X.224] Connection Sequence: CR-TPDU (Connection Request) failed");
         return 1;
     }
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_iso_incoming: xrdp_iso_recv_msg failed");
+        LOG(LOG_LEVEL_ERROR, "[ITU-T X.224] Connection Sequence: CR-TPDU (Connection Request) failed");
         return 1;
     }
 
     if (code != ISO_PDU_CR)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_iso_incoming only supports processing "
-                  "[ITU-T X.224] CR-TPDU (Connection Request) headers. "
-                  "Received TPDU header: length indicator %d, TDPU code 0x%2.2x",
-                  len, code);
+        LOG(LOG_LEVEL_ERROR, "xrdp_iso_incoming only supports processing "
+            "[ITU-T X.224] CR-TPDU (Connection Request) headers. "
+            "Received TPDU header: length indicator %d, TDPU code 0x%2.2x",
+            len, code);
         return 1;
     }
 
@@ -461,7 +454,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         {
             default:
                 LOG_DEVEL(LOG_LEVEL_WARNING,
-                          "Unknown structure type in X.224 Connection Request. "
+                          "Ignoring unknown structure type in [ITU-T X.224] CR-TPDU (Connection Request). "
                           "type 0x%2.2x", cc_type);
                 break;
             case RDP_NEG_REQ: /* rdpNegReq 1 */
@@ -469,16 +462,15 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 if (xrdp_iso_process_rdp_neg_req(self, s) != 0)
                 {
                     LOG(LOG_LEVEL_ERROR,
-                        "xrdp_iso_incoming: xrdp_iso_process_rdp_neg_req failed");
+                        "[ITU-T X.224] Connection Sequence: failed");
                     return 1;
                 }
                 break;
             case RDP_CORRELATION_INFO: /* rdpCorrelationInfo 6 */
                 // TODO
-                if (!s_check_rem(s, 1 + 2 + 16 + 16))
+                if (!s_check_rem_and_log(s, 1 + 2 + 16 + 16,
+                                         "Parsing [MS-RDPBCGR] RDP_NEG_CORRELATION_INFO"))
                 {
-                    LOG(LOG_LEVEL_ERROR, "unexpected end-of-record. "
-                        "expected 35, remaining %d", s_rem(s));
                     return 1;
                 }
 
@@ -515,14 +507,14 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     rv = xrdp_iso_negotiate_security(self);
 
     /* send connection confirm back to client */
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "X.224 Connection Sequence: send connection confirmation");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[ITU-T X.224] Connection Sequence: send connection confirmation");
     if (xrdp_iso_send_cc(self) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_iso_incoming: xrdp_iso_send_cc failed");
+        LOG(LOG_LEVEL_ERROR, "[ITU-T X.224] Connection Sequence: send connection confirmation failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "X.224 Connection Sequence: completed");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[ITU-T X.224] Connection Sequence: completed");
     return rv;
 }
 
@@ -567,7 +559,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
 
     if (trans_write_copy_s(self->trans, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_iso_send: trans_write_copy_s failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_iso_send: trans_write_copy_s failed");
         return 1;
     }
 

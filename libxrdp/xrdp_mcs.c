@@ -115,7 +115,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG(LOG_LEVEL_ERROR, "xrdp_mcs_send_cjcf: xrdp_iso_send failed");
+        LOG(LOG_LEVEL_ERROR, "Sening [ITU-T T.125] ChannelJoinConfirm failed");
         return 1;
     }
 
@@ -150,10 +150,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
             return 1;
         }
 
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 1, remaining %d", s_rem(s));
             return 1;
         }
 
@@ -167,6 +165,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DisconnectProviderUltimatum");
+            LOG(LOG_LEVEL_DEBUG, "Recieved disconnection request");
             return 1;
         }
 
@@ -174,10 +173,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
            this is channels getting added from the client */
         if (appid == MCS_CJRQ)
         {
-            if (!s_check_rem(s, 4))
+            if (!s_check_rem_and_log(s, 4, "Parsing [ITU-T T.125] ChannelJoinRequest"))
             {
-                LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                          "len 4, remaining %d", s_rem(s));
                 return 1;
             }
 
@@ -188,7 +185,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
             if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
             {
-                LOG(LOG_LEVEL_WARNING, "xrdp_mcs_recv: xrdp_mcs_send_cjcf failed");
+                LOG(LOG_LEVEL_WARNING, "[ITU-T T.125] Channel join sequence: failed");
             }
 
             s = libxrdp_force_read(self->iso_layer->trans);
@@ -212,10 +209,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         return 1;
     }
 
-    if (!s_check_rem(s, 6))
+    if (!s_check_rem_and_log(s, 6, "Parsing [ITU-T T.125] SendDataRequest"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                  "len 6, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -232,10 +227,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
            The first byte will have the two highest order bits set to 1 and 0
            (ie. len & 0xC0 == 0x80) and the length is encoded as remaining 14 bits of
            the two bytes (ie. len & 0x3fff). */
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] SendDataRequest userData Length"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 1, remaining %d", s_rem(s));
             return 1;
         }
         in_uint8s(s, 1); /* userData Length (byte 2) */
@@ -249,8 +242,8 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
            to 1 and 1 (ie. len & 0xC0 == 0xC0) and the remaining 6 bits contain
            a multiplyer for 16K (ie. n = (len & 0x3f) * 0x3f)
         */
-        LOG_DEVEL(LOG_LEVEL_ERROR, "[ITU-T T.125] SendDataRequest with length greater "
-                  "than 16K is not supported. len 0x%2.2x", len);
+        LOG(LOG_LEVEL_ERROR, "[ITU-T T.125] SendDataRequest with length greater "
+            "than 16K is not supported. len 0x%2.2x", len);
         return 1;
     }
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] SendDataRequest "
@@ -281,20 +274,16 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
 
     if (tag_val > 0xff)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [ITU-T X.690] Identifier"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 2, remaining %d", s_rem(s));
             return 1;
         }
         in_uint16_be(s, tag);
     }
     else
     {
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T X.690] Identifier"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                      "len 1, remaining %d", s_rem(s));
             return 1;
         }
         in_uint8(s, tag);
@@ -302,15 +291,13 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
 
     if (tag != tag_val)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Parsed [ITU-T X.690] Identifier: "
-                  "expected 0x%4.4x, actual 0x%4.4x", tag_val, tag);
+        LOG(LOG_LEVEL_ERROR, "Parsed [ITU-T X.690] Identifier: "
+            "expected 0x%4.4x, actual 0x%4.4x", tag_val, tag);
         return 1;
     }
 
-    if (!s_check_rem(s, 1))
+    if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T X.690] Length"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                  "len 1, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -323,10 +310,8 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
 
         while (l > 0)
         {
-            if (!s_check_rem(s, 1))
+            if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T X.690] Length"))
             {
-                LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                          "len 1, remaining %d", s_rem(s));
                 return 1;
             }
             in_uint8(s, i);
@@ -341,16 +326,7 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
     LOG_DEVEL(LOG_LEVEL_TRACE, "Parsed BER header [ITU-T X.690] "
               "Identifier 0x%4.4x, Length %d", tag, *len);
 
-    if (s_check(s))
-    {
-        return 0;
-    }
-    else
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream "
-                  "len 0, remaining %d", s_rem(s));
-        return 1;
-    }
+    return !s_check_rem_and_log(s, 0, "Parsing [ITU-T X.690]");
 }
 
 /*****************************************************************************/
@@ -363,31 +339,26 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_TAG_DOMAIN_PARAMS, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_parse_domain_params: xrdp_mcs_ber_parse_header "
-                  "with MCS_TAG_DOMAIN_PARAMS failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] DomainParameters failed");
         return 1;
     }
 
-    if ((len < 0) || !s_check_rem(s, len))
+    if (len < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len %d, remaining %d", len, s_rem(s));
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] DomainParameters length field is "
+            "invalid. Expected > 0, acctual %d", len);
+        return 1;
+    }
+    if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] DomainParameters"))
+    {
         return 1;
     }
 
     in_uint8s(s, len); /* skip all fields */
 
-    if (s_check(s))
-    {
-        return 0;
-    }
-    else
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 0, remaining %d", s_rem(s));
-        return 1;
-    }
+    return !s_check_rem_and_log(s, 0, "Parsing [ITU-T T.125] DomainParameters");
 }
 
 /*****************************************************************************/
@@ -402,36 +373,39 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_connect_initial: libxrdp_force_read failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] Connect-Initial failed");
         return 1;
     }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_connect_initial: xrdp_iso_recv failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] Connect-Initial failed");
         return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_CONNECT_INITIAL, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
-                  "with MCS_CONNECT_INITIAL failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial failed");
         return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
-                  "with BER_TAG_OCTET_STRING failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial callingDomainSelector failed");
         return 1;
     }
 
-    if ((len < 0) || !s_check_rem(s, len))
+    if (len < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len %d, remaining %d", len, s_rem(s));
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial callingDomainSelector length field is "
+            "invalid. Expected > 0, acctual %d", len);
+        return 1;
+    }
+    if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial callingDomainSelector"))
+    {
         return 1;
     }
 
@@ -439,16 +413,19 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
-                  "with BER_TAG_OCTET_STRING failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial calledDomainSelector failed");
         return 1;
     }
-
-    if ((len < 0) || !s_check_rem(s, len))
+    if (len < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len %d, remaining %d", len, s_rem(s));
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial calledDomainSelector length field is "
+            "invalid. Expected > 0, acctual %d", len);
+        return 1;
+    }
+    if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial calledDomainSelector"))
+    {
         return 1;
     }
 
@@ -456,16 +433,19 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_BOOLEAN, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_ber_parse_header "
-                  "with BER_TAG_BOOLEAN failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial upwardFlag failed");
         return 1;
     }
-
-    if ((len < 0) || !s_check_rem(s, len))
+    if (len < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len %d, remaining %d", len, s_rem(s));
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial upwardFlag length field is "
+            "invalid. Expected > 0, acctual %d", len);
+        return 1;
+    }
+    if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial upwardFlag"))
+    {
         return 1;
     }
 
@@ -474,46 +454,43 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     /* [ITU-T T.125] Connect-Initial targetParameters */
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_parse_domain_params failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial targetParameters failed");
         return 1;
     }
 
     /* [ITU-T T.125] Connect-Initial minimumParameters */
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_parse_domain_params failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial minimumParameters failed");
         return 1;
     }
 
     /* [ITU-T T.125] Connect-Initial maximumParameters */
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xrdp_mcs_recv_connect_initial: xrdp_mcs_parse_domain_params failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial maximumParameters failed");
         return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_connect_initial: "
-                  "xrdp_mcs_ber_parse_header with BER_TAG_OCTET_STRING failed");
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial userData failed");
         return 1;
     }
-
-    /* mcs data can not be zero length */
+    /* mcs userData can not be zero length */
     if ((len <= 0) || (len > 16 * 1024))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "MCS Protocol error: length too big. "
-                  "max length %d, len %d", 16 * 1024, len);
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [ITU-T T.125] Connect-Initial userData: length too big. "
+            "max length %d, len %d", 16 * 1024, len);
         return 1;
     }
-
-    if (!s_check_rem(s, len))
+    if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial userData"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len %d, remaining %d", len, s_rem(s));
         return 1;
     }
 
@@ -528,16 +505,13 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     in_uint8s(s, len);
     s_mark_end(self->client_mcs_data);
 
-    if (s_check_end(s))
+    if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] Connect-Initial"))
     {
-        return 0;
-    }
-    else
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "MCS protocol error: "
-                  "the stream should be at the end but it is not");
         return 1;
     }
+
+    return 0;
+
 }
 
 /*****************************************************************************/
@@ -555,20 +529,18 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_edrq: libxrdp_force_read failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] ErectDomainRequest failed");
         return 1;
     }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_edrq: xrdp_iso_recv failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] ErectDomainRequest failed");
         return 1;
     }
 
-    if (!s_check_rem(s, 1))
+    if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 1, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -579,15 +551,13 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
 
     if ((opcode >> 2) != MCS_EDRQ)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
-                  "expected %d, received %d", MCS_EDRQ, (opcode >> 2));
+        LOG(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
+            "expected %d, received %d", MCS_EDRQ, (opcode >> 2));
         return 1;
     }
 
-    if (!s_check_rem(s, 4))
+    if (!s_check_rem_and_log(s, 4, "Parsing [ITU-T T.125] ErectDomainRequest"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 4, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -608,10 +578,8 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
      */
     if (opcode & 2) /* ErectDomainRequest v3 nonStandard optional field is present? */
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [ITU-T T.125] ErectDomainRequest nonStandard"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                      "len 2, remaining %d", s_rem(s));
             return 1;
         }
         in_uint16_be(s, self->userid); /* NonStandardParameter.key
@@ -620,10 +588,8 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
                   "choice index %d (ErectDomainRequest)", (opcode >> 2));
     }
 
-    if (!(s_check_end(s)))
+    if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] ErectDomainRequest"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Expected to be at the end of the stream, "
-                  "but there are %d bytes remaining", s_rem(s));
         return 1;
     }
 
@@ -645,20 +611,18 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_aurq: libxrdp_force_read failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] AttachUserRequest failed");
         return 1;
     }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_aurq: xrdp_iso_recv failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] AttachUserRequest failed");
         return 1;
     }
 
-    if (!s_check_rem(s, 1))
+    if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 1, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -669,8 +633,8 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
 
     if ((opcode >> 2) != MCS_AURQ)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
-                  "expected %d, received %d", MCS_AURQ, (opcode >> 2));
+        LOG(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
+            "expected %d, received %d", MCS_AURQ, (opcode >> 2));
         return 1;
     }
 
@@ -681,26 +645,24 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
      */
     if (opcode & 2)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [ITU-T T.125] AttachUserRequest nonStandard"))
         {
             return 1;
         }
         in_uint16_be(s, self->userid); /* NonStandardParameter.key
                                           NonStandardParameter.data */
     }
-
-    if (!(s_check_end(s)))
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Expected to be at the end of the stream, "
-                  "but there are %d bytes remaining", s_rem(s));
-        return 1;
-    }
-
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
               "choice index %d (AttachUserRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] AttachUserRequest "
               "nonStandard (%s)",
               (opcode & 2) ? "present" : "not present");
+
+    if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] AttachUserRequest"))
+    {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -737,7 +699,7 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG(LOG_LEVEL_ERROR, "xrdp_mcs_send_aucf: xrdp_iso_send failed");
+        LOG(LOG_LEVEL_ERROR, "Sending [ITU-T T.125] AttachUserConfirm failed");
         return 1;
     }
 
@@ -760,36 +722,34 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_cjrq: libxrdp_force_read failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.25] ChannelJoinRequest failed");
         return 1;
     }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_recv_cjrq: xrdp_iso_recv failed");
+        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.25] ChannelJoinRequest failed");
         return 1;
     }
 
-    if (!s_check_rem(s, 1))
+    if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 1, remaining %d", s_rem(s));
         return 1;
     }
 
     in_uint8(s, opcode);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
+              "choice index %d (ChannelJoinRequest)", (opcode >> 2));
 
     if ((opcode >> 2) != MCS_CJRQ)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
-                  "expected %d, received %d", MCS_CJRQ, (opcode >> 2));
+        LOG(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
+            "expected %d, received %d", MCS_CJRQ, (opcode >> 2));
         return 1;
     }
 
-    if (!s_check_rem(s, 4))
+    if (!s_check_rem_and_log(s, 4, "Parsing [ITU-T T.125] ChannelJoinRequest"))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                  "len 4, remaining %d", s_rem(s));
         return 1;
     }
 
@@ -803,30 +763,24 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
      */
     if (opcode & 2)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [ITU-T T.125] ChannelJoinRequest nonStandard"))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "Not enough bytes in the stream, "
-                      "len 2, remaining %d", s_rem(s));
             return 1;
         }
         in_uint8s(s, 2);  /* NonStandardParameter.key
                              NonStandardParameter.data */
     }
 
-    if (!(s_check_end(s)))
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "Expected to be at the end of the stream, "
-                  "but there are %d bytes remaining", s_rem(s));
-        return 1;
-    }
-
-
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
-              "choice index %d (ChannelJoinRequest)", (opcode >> 2));
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
               "initiator (ignored), channelId (ignored), "
               "nonStandard (%s)",
               (opcode & 2) ? "present" : "not present");
+
+    if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] ChannelJoinRequest"))
+    {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -857,8 +811,8 @@ xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
         out_uint8(s, len);
     }
 
-    // LOG_DEVEL(LOG_LEVEL_TRACE, "Added header [ITU-T X.690] Identifier %d, Length %d",
-    //           tag_val, len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [ITU-T X.690] Identifier %d, Length %d",
+              tag_val, len);
     return 0;
 }
 
@@ -915,7 +869,7 @@ xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
     xrdp_mcs_ber_out_int24(self, s, max_pdu_size);
     xrdp_mcs_ber_out_int8(self, s, 2); /* protocolVersion */
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Write to stream [ITU-T T.125] DomainParameters "
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [ITU-T T.125] DomainParameters "
               "maxChannelIds %d, maxUserIds %d, maxTokenIds %d, numPriorities 1, "
               "minThroughput 0 B/s, maxHeight 1, maxMCSPDUsize %d, "
               "protocolVersion 2",
@@ -1223,7 +1177,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     out_uint8a(s, self->server_mcs_data->data, data_len);
     s_mark_end(s);
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sening [ITU-T T.125] Connect-Response "
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [ITU-T T.125] Connect-Response "
               "result SUCCESS, calledConnectId 0, "
               "domainParameters (see xrdp_mcs_out_domain_params() trace logs), "
               "userData (see xrdp_mcs_out_gcc_data() trace logs and "
@@ -1233,7 +1187,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        LOG(LOG_LEVEL_ERROR, "xrdp_mcs_send_connect_response: xrdp_iso_send failed");
+        LOG(LOG_LEVEL_ERROR, "Sending [ITU-T T.125] Connect-Response failed");
         return 1;
     }
 
@@ -1252,73 +1206,74 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
     int index;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: receive connection request");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive connection request");
     if (xrdp_mcs_recv_connect_initial(self) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_recv_connect_initial failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive connection request failed");
         return 1;
     }
 
     /* in xrdp_sec.c */
     if (xrdp_sec_process_mcs_data(self->sec_layer) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_sec_process_mcs_data failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] Connect Initial PDU with GCC Conference Create Request failed");
         return 1;
     }
 
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] construct connection reponse");
     if (xrdp_mcs_out_gcc_data(self->sec_layer) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_out_gcc_data failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] construct connection reponse failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: send connection reponse");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send connection reponse");
     if (xrdp_mcs_send_connect_response(self) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_send_connect_response failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send connection reponse failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: receive erect domain request");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive erect domain request");
     if (xrdp_mcs_recv_edrq(self) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_recv_edrq failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive erect domain request failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: receive attach user request");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive attach user request");
     if (xrdp_mcs_recv_aurq(self) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_recv_aurq failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive attach user request failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: send attach user confirm");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send attach user confirm");
     if (xrdp_mcs_send_aucf(self) != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_send_aucf failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send attach user confirm failed");
         return 1;
     }
 
     for (index = 0; index < self->channel_list->count + 2; index++)
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: receive channel join request");
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive channel join request");
         if (xrdp_mcs_recv_cjrq(self) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_recv_cjrq failed");
+            LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive channel join request failed");
             return 1;
         }
 
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: send channel join confirm");
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send channel join confirm");
         if (xrdp_mcs_send_cjcf(self, self->userid,
                                self->userid + MCS_USERCHANNEL_BASE + index) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "xrdp_mcs_incoming: xrdp_mcs_send_cjcf failed");
+            LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send channel join confirm failed");
             return 1;
         }
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS Connection Sequence: completed");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] completed");
     return 0;
 }
 
@@ -1485,7 +1440,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     {
         free_stream(s);
         close_rdp_socket(self);
-        LOG(LOG_LEVEL_ERROR, "xrdp_mcs_disconnect: xrdp_iso_send failed");
+        LOG(LOG_LEVEL_ERROR, "Sending [ITU T.125] DisconnectProviderUltimatum failed");
         return 1;
     }
 
