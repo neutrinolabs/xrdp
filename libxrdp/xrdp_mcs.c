@@ -892,6 +892,13 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     int gcc_size;
     char *gcc_size_ptr;
     char *ud_ptr;
+    int header_length;
+    int server_cert_len;
+    int public_key_blob_len;
+    int key_len;
+    int bit_len;
+    int data_len;
+    int modulus_len;
 
     num_channels = self->mcs_layer->channel_list->count;
     num_channels_even = num_channels + (num_channels & 1);
@@ -1006,114 +1013,86 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 
     }
 
-    if (self->rsa_key_bytes == 64)
+    if (self->rsa_key_bytes == 64 || self->rsa_key_bytes == 256)
     {
-        LOG(LOG_LEVEL_DEBUG, "using 512 bit RSA key");
+        if (self->rsa_key_bytes == 64)
+        {
+            header_length = 0x00ec;       /* length = 236 */
+            server_cert_len = 0xb8;       /* serverCertLen (184 bytes) */
+            public_key_blob_len = 0x005c; /* wPublicKeyBlobLen (92 bytes) */
+            key_len = 0x0048;             /* keylen (72 bytes = (bitlen / 8) modulus + 8 padding) */
+            bit_len = 512;                /* bitlen = 512 */
+            data_len = 63;                /* datalen (63 = (bitlen / 8) - 1) */
+            modulus_len = 64;
+        }
+        else if (self->rsa_key_bytes == 256)
+        {
+            header_length = 0x01ac;       /* length = 428 */
+            server_cert_len = 0x178;      /* serverCertLen (376 bytes) */
+            public_key_blob_len = 0x011c; /* wPublicKeyBlobLen (284 bytes) */
+            key_len = 0x0108;             /* keylen (264 bytes = (bitlen / 8) modulus + 8 padding) */
+            bit_len = 2048;               /* bitlen = 2048 */
+            data_len = 255;               /* datalen (255 = (bitlen / 8) - 1) */
+            modulus_len = 256;
+        }
+        LOG(LOG_LEVEL_DEBUG, "using %d bit RSA key", bit_len);
+
         /* [MS-RDPBCGR] TS_UD_HEADER */
         out_uint16_le(s, SEC_TAG_SRV_CRYPT);  /* type */
-        out_uint16_le(s, 0x00ec);             /* length is 236 */
+        out_uint16_le(s, header_length);      /* length */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
+                  "type 0x%4.4x, length %d", SEC_TAG_SRV_CRYPT, header_length);
+
         /* [MS-RDPBCGR] TS_UD_SC_SEC1 */
-        out_uint32_le(s, self->crypt_method); /* encryptionMethod  */
-        out_uint32_le(s, self->crypt_level);  /* encryptionLevel */
-        out_uint32_le(s, 32);                 /* serverRandomLen */
-        out_uint32_le(s, 0xb8);               /* serverCertLen (184 bytes) */
+        out_uint32_le(s, self->crypt_method);   /* encryptionMethod  */
+        out_uint32_le(s, self->crypt_level);    /* encryptionLevel */
+        out_uint32_le(s, 32);                   /* serverRandomLen */
+        out_uint32_le(s, server_cert_len);      /* serverCertLen */
         out_uint8a(s, self->server_random, 32); /* serverRandom */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_SEC1 "
+                  "encryptionMethod 0x%8.8x, encryptionLevel 0x%8.8x, "
+                  "serverRandomLen 32, serverCertLen %d, serverRandom (omitted), ",
+                  self->crypt_method, self->crypt_level, server_cert_len);
+
         /* (field serverCertificate) [MS-RDPBCGR] SERVER_CERTIFICATE */
         /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
         /* TermService\Parameters\Certificate */
         out_uint32_le(s, 1); /* dwVersion (1 = PROPRIETARYSERVERCERTIFICATE) */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] SERVER_CERTIFICATE "
+                  "dwVersion.certChainVersion 1 (CERT_CHAIN_VERSION_1), "
+                  "dwVersion.t 0 (permanent)");
+
         /* [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE */
         out_uint32_le(s, 1);              /* dwSigAlgId (1 = RSA) */
         out_uint32_le(s, 1);              /* dwKeyAlgId (1 = RSA) */
         out_uint16_le(s, SEC_TAG_PUBKEY); /* wPublicKeyBlobType (BB_RSA_KEY_BLOB) */
-        out_uint16_le(s, 0x005c);         /* wPublicKeyBlobLen (92 bytes) */
+        out_uint16_le(s, public_key_blob_len); /* wPublicKeyBlobLen */
+
         /* (field PublicKeyBlob) [MS-RDPBCGR] RSA_PUBLIC_KEY */
         out_uint32_le(s, SEC_RSA_MAGIC);  /* magic (0x31415352 'RSA1') */
-        out_uint32_le(s, 0x0048);         /* keylen (72 bytes = (bitlen / 8) modulus + 8 padding) */
-        out_uint32_be(s, 0x00020000);     /* bitlen = 512 */
-        out_uint32_be(s, 0x3f000000);     /* datalen (63 = (bitlen / 8) - 1) */
+        out_uint32_le(s, key_len);        /* keylen */
+        out_uint32_le(s, bit_len);        /* bitlen */
+        out_uint32_le(s, data_len);       /* datalen */
         out_uint8a(s, self->pub_exp, 4);  /* pubExp */
-        out_uint8a(s, self->pub_mod, 64); /* modulus */
-        out_uint8s(s, 8);                 /* pad */
+        out_uint8a(s, self->pub_mod, modulus_len); /* modulus */
+        out_uint8s(s, 8);                 /* modulus zero padding */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] RSA_PUBLIC_KEY "
+                  "magic 0x%8.8x, keylen %d, bitlen %d, datalen %d, "
+                  "pubExp <omitted>, modulus <omitted>, ",
+                  SEC_RSA_MAGIC, key_len, bit_len, data_len);
+
         out_uint16_le(s, SEC_TAG_KEYSIG); /* wSignatureBlobType (0x0008 RSA) */
         out_uint16_le(s, 72);             /* wSignatureBlobLen */
         out_uint8a(s, self->pub_sig, 64); /* SignatureBlob */
-        out_uint8s(s, 8);                 /* pad */
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
-                  "type 0x%4.4x, length %d", SEC_TAG_SRV_CRYPT, 0x00ec);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_SEC1 "
-                  "encryptionMethod 0x%8.8x, encryptionMethod 0x%8.8x, "
-                  "serverRandomLen 32, serverCertLen 184, serverRandom (omitted), "
-                  "serverCertificate.dwVersion 1, serverCertificate.dwSigAlgId 1, "
-                  "serverCertificate.dwKeyAlgId 1, "
-                  "serverCertificate.wPublicKeyBlobType 0x%4.4x, "
-                  "serverCertificate.wPublicKeyBlobLen %d, "
-                  "serverCertificate.PublicKeyBlob.magic 0x%8.8x, "
-                  "serverCertificate.PublicKeyBlob.keylen %d, "
-                  "serverCertificate.PublicKeyBlob.bitlen %d, "
-                  "serverCertificate.PublicKeyBlob.datalen %d, "
-                  "serverCertificate.PublicKeyBlob.pubExp (omitted), "
-                  "serverCertificate.PublicKeyBlob.modulus (omitted), "
-                  "serverCertificate.PublicKeyBlob.wSignatureBlobType 0x%4.4x, "
-                  "serverCertificate.PublicKeyBlob.wSignatureBlobLen %d, "
-                  "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ",
-                  self->crypt_method, self->crypt_level, SEC_TAG_PUBKEY,
-                  0x005c, SEC_RSA_MAGIC, 0x0048, 0x00020000, 0x3f000000,
-                  SEC_TAG_KEYSIG, 72);
-    }
-    else if (self->rsa_key_bytes == 256)
-    {
-        LOG(LOG_LEVEL_DEBUG, "using 2048 bit RSA key");
-        /* [MS-RDPBCGR] TS_UD_HEADER */
-        out_uint16_le(s, SEC_TAG_SRV_CRYPT);  /* type */
-        out_uint16_le(s, 0x01ac);             /* length is 428 */
-        /* [MS-RDPBCGR] TS_UD_SC_SEC1 */
-        out_uint32_le(s, self->crypt_method); /* encryptionMethod  */
-        out_uint32_le(s, self->crypt_level);  /* encryptionLevel */
-        out_uint32_le(s, 32);                 /* serverRandomLen */
-        out_uint32_le(s, 0x178);              /* serverCertLen (376 bytes) */
-        out_uint8a(s, self->server_random, 32); /* serverRandom */
-        /* (field serverCertificate) [MS-RDPBCGR] SERVER_CERTIFICATE */
-        /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
-        /* TermService\Parameters\Certificate */
-        out_uint32_le(s, 1); /* dwVersion (1 = PROPRIETARYSERVERCERTIFICATE) */
-        /* [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE */
-        out_uint32_le(s, 1);              /* dwSigAlgId (1 = RSA) */
-        out_uint32_le(s, 1);              /* dwKeyAlgId (1 = RSA) */
-        out_uint16_le(s, SEC_TAG_PUBKEY); /* wPublicKeyBlobType (BB_RSA_KEY_BLOB) */
-        out_uint16_le(s, 0x011c);         /* wPublicKeyBlobLen (284 bytes) */
-        /* (field PublicKeyBlob) [MS-RDPBCGR] RSA_PUBLIC_KEY */
-        out_uint32_le(s, SEC_RSA_MAGIC);  /* magic (0x31415352 'RSA1') */
-        out_uint32_le(s, 0x0108);         /* keylen (264 bytes = (bitlen / 8) modulus + 8 padding) */
-        out_uint32_be(s, 0x00080000);     /* bitlen = 2048 */
-        out_uint32_be(s, 0xff000000);     /* datalen (255 = (bitlen / 8) - 1) */
-        out_uint8a(s, self->pub_exp, 4);  /* pubExp */
-        out_uint8a(s, self->pub_mod, 256); /* modulus */
-        out_uint8s(s, 8);                 /* pad */
-        out_uint16_le(s, SEC_TAG_KEYSIG); /* wSignatureBlobType (0x0008 RSA) */
-        out_uint16_le(s, 72);             /* wSignatureBlobLen */
-        out_uint8a(s, self->pub_sig, 64); /* SignatureBlob */
-        out_uint8s(s, 8);                 /* pad */
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
-                  "type 0x%4.4x, length %d", SEC_TAG_SRV_CRYPT, 0x01ac);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_SEC1 "
-                  "encryptionMethod 0x%8.8x, encryptionMethod 0x%8.8x, "
-                  "serverRandomLen 32, serverCertLen 376, serverRandom (omitted), "
-                  "serverCertificate.dwVersion 1, serverCertificate.dwSigAlgId 1, "
-                  "serverCertificate.dwKeyAlgId 1, "
-                  "serverCertificate.wPublicKeyBlobType 0x%4.4x, "
-                  "serverCertificate.wPublicKeyBlobLen %d, "
-                  "serverCertificate.PublicKeyBlob.magic 0x%8.8x, "
-                  "serverCertificate.PublicKeyBlob.keylen %d, "
-                  "serverCertificate.PublicKeyBlob.bitlen %d, "
-                  "serverCertificate.PublicKeyBlob.datalen %d, "
-                  "serverCertificate.PublicKeyBlob.pubExp (omitted), "
-                  "serverCertificate.PublicKeyBlob.modulus (omitted), "
-                  "serverCertificate.PublicKeyBlob.wSignatureBlobType 0x%4.4x, "
-                  "serverCertificate.PublicKeyBlob.wSignatureBlobLen %d, "
-                  "serverCertificate.PublicKeyBlob.SignatureBlob (omitted), ",
-                  self->crypt_method, self->crypt_level, SEC_TAG_PUBKEY,
-                  0x011c, SEC_RSA_MAGIC, 0x0108, 0x00080000, 0xff000000,
+        out_uint8s(s, 8);                 /* modulus zero padding */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE "
+                  "dwKeyAlgId 1, "
+                  "wPublicKeyBlobType 0x%4.4x, "
+                  "wPublicKeyBlobLen %d, PublicKeyBlob <see RSA_PUBLIC_KEY above>"
+                  "wSignatureBlobType 0x%4.4x, "
+                  "wSignatureBlobLen %d, "
+                  "SignatureBlob <omitted>",
+                  SEC_TAG_PUBKEY, public_key_blob_len,
                   SEC_TAG_KEYSIG, 72);
     }
     else if (self->rsa_key_bytes == 0) /* no security */
@@ -1206,7 +1185,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
     int index;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive connection request");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive connection request");
     if (xrdp_mcs_recv_connect_initial(self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive connection request failed");
@@ -1220,35 +1199,35 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] construct connection reponse");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] construct connection reponse");
     if (xrdp_mcs_out_gcc_data(self->sec_layer) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] construct connection reponse failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send connection reponse");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send connection reponse");
     if (xrdp_mcs_send_connect_response(self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send connection reponse failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive erect domain request");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive erect domain request");
     if (xrdp_mcs_recv_edrq(self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive erect domain request failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive attach user request");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive attach user request");
     if (xrdp_mcs_recv_aurq(self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive attach user request failed");
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send attach user confirm");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send attach user confirm");
     if (xrdp_mcs_send_aucf(self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send attach user confirm failed");
@@ -1257,14 +1236,14 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
 
     for (index = 0; index < self->channel_list->count + 2; index++)
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive channel join request");
+        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive channel join request");
         if (xrdp_mcs_recv_cjrq(self) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive channel join request failed");
             return 1;
         }
 
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send channel join confirm");
+        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send channel join confirm");
         if (xrdp_mcs_send_cjcf(self, self->userid,
                                self->userid + MCS_USERCHANNEL_BASE + index) != 0)
         {
@@ -1273,7 +1252,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         }
     }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] completed");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] completed");
     return 0;
 }
 
