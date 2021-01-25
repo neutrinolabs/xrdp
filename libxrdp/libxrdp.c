@@ -376,9 +376,11 @@ libxrdp_send_bell(struct xrdp_session *session)
         return 1;
     }
 
-    out_uint32_le(s, 440); /* frequency */
     out_uint32_le(s, 100); /* duration (ms) */
+    out_uint32_le(s, 440); /* frequency */
     s_mark_end(s);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_PLAY_SOUND_PDU_DATA "
+              "duration 100 ms, frequency 440 Hz");
 
     if (xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_PLAY_SOUND) != 0)
     {
