@@ -268,11 +268,15 @@ internal_log_location_overrides_level(const char *function_name,
  * This function initialize the log facilities according to the configuration
  * file, that is described by the in parameter.
  * @param iniFile
- * @param applicationName, the name that is used in the log for the running application
+ * @param applicationName the name that is used in the log for the running
+ *                        application
+ * @param dump_on_start Whether to dump the config on stdout before
+ *                      logging is started
  * @return LOG_STARTUP_OK on success
  */
 enum logReturns
-log_start(const char *iniFile, const char *applicationName);
+log_start(const char *iniFile, const char *applicationName,
+          bool_t dump_on_start);
 
 /**
  * An alternative log_start where the caller gives the params directly.

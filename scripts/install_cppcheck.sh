@@ -129,6 +129,12 @@ fi
             make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR CFGDIR=$FILESDIR"
             ;;
         *)  make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR USE_Z3=yes"
+            # Check that the Z3 development files appear to be installed
+            # before trying to create z3_version.h. Otherwise we may
+            # mislead the user as to what needs to be done.
+            if [ ! -f /usr/include/z3.h ]; then
+                echo "** libz3-dev (or equivalent) does not appear to be installed" >&2
+            fi
             if [ ! -f /usr/include/z3_version.h ]; then
                 create_z3_version_h
             fi

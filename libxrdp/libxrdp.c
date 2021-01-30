@@ -390,15 +390,11 @@ libxrdp_send_bell(struct xrdp_session *session)
         return 1;
     }
 
-    /* the original author intended (based on their comments) to use a
-       duration of 100ms and a frequency of 440Hz. A frequency of 100Hz is
-       a very low tone, and 440Hz is mid-range tone. */
-    /* TODO: change the duration and frequency values, then test the code */
-    out_uint32_le(s, 440); /* duration (ms) */
-    out_uint32_le(s, 100); /* frequency */
+    out_uint32_le(s, 100); /* duration (ms) */
+    out_uint32_le(s, 440); /* frequency */
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_PLAY_SOUND_PDU_DATA "
-              "duration 440 ms, frequency 100 Hz");
+              "duration 100 ms, frequency 440 Hz");
 
     if (xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_PLAY_SOUND) != 0)
     {

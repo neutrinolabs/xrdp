@@ -13,7 +13,7 @@ xrdp\-sesman \- \fBxrdp\fR(8) session manager
 \-\-version
 .br
 .B xrdp\-sesman
-[ \-\-nodaemon ] [ --config /path/to/sesman.ini ]
+[\-\-nodaemon] [\-\-dump\-config] [\-\-config /path/to/sesman.ini]
 
 .SH "DESCRIPTION"
 \fBxrdp\-sesman\fR is \fBxrdp\fR(8) session manager.
@@ -34,6 +34,10 @@ Output version information and exit.
 \fB\-n\fR, \fB\-\-nodaemon\fR
 Starts \fBxrdp\-sesman\fR in foreground instead of starting it as a daemon.
 .TP
+\fB\-\-dump\-config\fR
+Print the configuration on stdout before starting the daemon.
+The default is not to do this.
+.TP
 \fB\-c\fR, \fB\-\-config\fR
 Specify a path to a different \fIsesman.ini\fR file. This option is intended
 to be used primarily for testing or for unusual configurations.
@@ -45,7 +49,7 @@ the system (notably \fBxrdp(8)\fR and \fBxrdp\-chansrv(8)\fR) will want
 to read it.
 .RE
 .SH "FILES"
-@bindir@/xrdp\-sesman
+@sbindir@/xrdp\-sesman
 .br
 @bindir@/xrdp\-sesrun
 .br
@@ -66,4 +70,6 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+for more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

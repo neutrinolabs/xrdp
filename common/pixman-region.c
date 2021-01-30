@@ -1799,7 +1799,10 @@ validate (region_type_t * badreg)
     *badreg = ri[0].reg;
 
     if (ri != stack_regions)
+    {
+        /* cppcheck-suppress autovarInvalidDeallocation */
         free (ri);
+    }
 
     GOOD (badreg);
     return ret;
@@ -1809,7 +1812,10 @@ bail:
         FREE_DATA (&ri[i].reg);
 
     if (ri != stack_regions)
+    {
+        /* cppcheck-suppress autovarInvalidDeallocation */
         free (ri);
+    }
 
     return pixman_break (badreg);
 }
