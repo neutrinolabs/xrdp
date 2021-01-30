@@ -522,7 +522,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     else
     {
         in_uint16_le(s, len);      /* totalLength */
-
         in_uint16_le(s, pdu_code); /* pduType */
         *code = pdu_code & 0xf;
         in_uint8s(s, 2);           /* pduSource */

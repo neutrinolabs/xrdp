@@ -1039,7 +1039,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
               self->rdp_layer->client_info.directory);
     LOG(LOG_LEVEL_DEBUG, "Client supplied domain: %s", self->rdp_layer->client_info.domain);
     LOG(LOG_LEVEL_DEBUG, "Client supplied username: %s", self->rdp_layer->client_info.username);
-    LOG(LOG_LEVEL_DEBUG, "Client supplied password: <ommitted from log>");
+    LOG(LOG_LEVEL_DEBUG, "Client supplied password: <omitted from log>");
     LOG(LOG_LEVEL_DEBUG, "Client supplied program: %s", self->rdp_layer->client_info.program);
     LOG(LOG_LEVEL_DEBUG, "Client supplied directory: %s", self->rdp_layer->client_info.directory);
 

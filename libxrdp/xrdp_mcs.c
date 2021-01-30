@@ -326,7 +326,7 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
     LOG_DEVEL(LOG_LEVEL_TRACE, "Parsed BER header [ITU-T X.690] "
               "Identifier 0x%4.4x, Length %d", tag, *len);
 
-    return !s_check_rem_and_log(s, 0, "Parsing [ITU-T X.690]");
+    return 0;
 }
 
 /*****************************************************************************/
@@ -348,7 +348,7 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
     {
         LOG(LOG_LEVEL_ERROR,
             "Parsing [ITU-T T.125] DomainParameters length field is "
-            "invalid. Expected > 0, acctual %d", len);
+            "invalid. Expected >= 0, actual %d", len);
         return 1;
     }
     if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] DomainParameters"))
@@ -401,7 +401,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     {
         LOG(LOG_LEVEL_ERROR,
             "Parsing [ITU-T T.125] Connect-Initial callingDomainSelector length field is "
-            "invalid. Expected > 0, acctual %d", len);
+            "invalid. Expected >= 0, actual %d", len);
         return 1;
     }
     if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial callingDomainSelector"))
@@ -421,7 +421,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     {
         LOG(LOG_LEVEL_ERROR,
             "Parsing [ITU-T T.125] Connect-Initial calledDomainSelector length field is "
-            "invalid. Expected > 0, acctual %d", len);
+            "invalid. Expected >= 0, actual %d", len);
         return 1;
     }
     if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial calledDomainSelector"))
@@ -441,7 +441,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     {
         LOG(LOG_LEVEL_ERROR,
             "Parsing [ITU-T T.125] Connect-Initial upwardFlag length field is "
-            "invalid. Expected > 0, acctual %d", len);
+            "invalid. Expected >= 0, actual %d", len);
         return 1;
     }
     if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial upwardFlag"))
@@ -485,8 +485,8 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     if ((len <= 0) || (len > 16 * 1024))
     {
         LOG(LOG_LEVEL_ERROR,
-            "Parsing [ITU-T T.125] Connect-Initial userData: length too big. "
-            "max length %d, len %d", 16 * 1024, len);
+            "Parsing [ITU-T T.125] Connect-Initial userData: invalid length. "
+            "Expected min 1, max %d; Actual %d", 16 * 1024, len);
         return 1;
     }
     if (!s_check_rem_and_log(s, len, "Parsing [ITU-T T.125] Connect-Initial userData"))
