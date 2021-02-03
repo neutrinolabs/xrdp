@@ -78,9 +78,9 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
             scp_v1s_deny_connection(t, "Login failed");
             LOG(LOG_LEVEL_INFO, "Login failed for user %s. "
                 "Connection terminated", s->username);
-            return 1;
+            return SCP_SERVER_STATE_END;
         }
-        return 0;
+        return SCP_SERVER_STATE_OK;
     }
 
     /* testing if login is allowed*/
@@ -89,7 +89,7 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
         scp_v1s_deny_connection(t, "Access to Terminal Server not allowed.");
         LOG(LOG_LEVEL_INFO, "User %s not allowed on TS. "
             "Connection terminated", s->username);
-        return 0;
+        return SCP_SERVER_STATE_END;
     }
 
     //check if we need password change
@@ -156,14 +156,14 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
         auth_end(data);
     }
     g_free(slist);
-    return 0;
+    return SCP_SERVER_STATE_OK;
 }
 
 /******************************************************************************/
 static enum SCP_SERVER_STATES_E
 scp_v1_process4(struct trans *t, struct SCP_SESSION *s)
 {
-    return 0;
+    return SCP_SERVER_STATE_OK;
 }
 
 /******************************************************************************/
@@ -181,7 +181,7 @@ scp_v1_process41(struct trans *t, struct SCP_SESSION *s)
     if (scount == 0)
     {
         /* */
-        return 1;
+        return SCP_SERVER_STATE_END;
     }
 
     e = scp_v1s_list_sessions42(t, scount, slist);
@@ -190,7 +190,7 @@ scp_v1_process41(struct trans *t, struct SCP_SESSION *s)
         LOG(LOG_LEVEL_ERROR, "scp_v1s_list_sessions42 failed");
     }
 
-    return 0;
+    return SCP_SERVER_STATE_OK;
 }
 
 /******************************************************************************/

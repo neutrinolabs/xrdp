@@ -39,10 +39,12 @@ extern struct config_sesman *g_cfg; /* in sesman.c */
 enum SCP_SERVER_STATES_E
 scp_process(struct trans *t)
 {
+    enum SCP_SERVER_STATES_E result;
     struct SCP_SESSION *sdata;
 
     sdata = NULL;
-    switch (scp_vXs_accept(t, &sdata))
+    result = scp_vXs_accept(t, &sdata);
+    switch (result)
     {
         case SCP_SERVER_STATE_OK:
             if (sdata->version == 0)
@@ -83,8 +85,9 @@ scp_process(struct trans *t)
             break;
         default:
             LOG(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
+            result = SCP_SERVER_STATE_INTERNAL_ERR;
             break;
     }
-    return 0;
+    return result;
 }
 

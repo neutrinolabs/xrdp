@@ -230,7 +230,7 @@ sesman_data_in(struct trans *self)
     {
         /* prcess message */
         self->in_s->p = self->in_s->data;
-        if (scp_process(self) != 0)
+        if (scp_process(self) != SCP_SERVER_STATE_OK)
         {
             LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
             return 1;
