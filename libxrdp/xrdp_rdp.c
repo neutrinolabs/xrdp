@@ -514,7 +514,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     {
         s->next_packet = 0;
         *code = 0;
-        len = (int)(s->end - s->p);
         LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: out code 0 (skip data) "
             "bad RDP packet");
         return 0;
