@@ -638,7 +638,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
 static int
 xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
 {
-    int index;
+    int chan_count;
+    /* This value should be the same as chan_count, but we need to
+     * cater for a possible failure of libxrdp_query_channel() */
+    int output_chan_count;
     int chan_id;
     int chan_flags;
     int size;
@@ -657,21 +660,24 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
     s_push_layer(s, iso_hdr, 8);
     s_push_layer(s, mcs_hdr, 8);
     s_push_layer(s, sec_hdr, 2);
-    index = 0;
 
-    while (libxrdp_query_channel(self->wm->session, index, chan_name,
-                                 &chan_flags) == 0)
+    chan_count = libxrdp_get_channel_count(self->wm->session);
+    output_chan_count = 0;
+    for (chan_id = 0 ; chan_id < chan_count; ++chan_id)
     {
-        chan_id = libxrdp_get_channel_id(self->wm->session, chan_name);
-        out_uint8a(s, chan_name, 8);
-        out_uint16_le(s, chan_id);
-        out_uint16_le(s, chan_flags);
-        index++;
+        if (libxrdp_query_channel(self->wm->session, chan_id, chan_name,
+                                  &chan_flags) == 0)
+        {
+            out_uint8a(s, chan_name, 8);
+            out_uint16_le(s, chan_id);
+            out_uint16_le(s, chan_flags);
+            ++output_chan_count;
+        }
     }
 
     s_mark_end(s);
     s_pop_layer(s, sec_hdr);
-    out_uint16_le(s, index);
+    out_uint16_le(s, output_chan_count);
     s_pop_layer(s, mcs_hdr);
     size = (int)(s->end - s->p);
     out_uint32_le(s, 3); /* msg id */

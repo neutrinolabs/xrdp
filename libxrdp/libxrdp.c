@@ -1235,12 +1235,33 @@ libxrdp_orders_send_bitmap3(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
+int EXPORT_CC
+libxrdp_get_channel_count(const struct xrdp_session *session)
+{
+    int count = 0;
+    const struct xrdp_rdp *rdp = (const struct xrdp_rdp *)session->rdp;
+    const struct xrdp_mcs *mcs = rdp->sec_layer->mcs_layer;
+
+    if (mcs->channel_list == NULL)
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "libxrdp_get_channel_count - No channel initialized");
+    }
+    else
+    {
+        count = mcs->channel_list->count;
+    }
+
+    return count;
+}
+
+/*****************************************************************************/
 /* returns error */
 /* this function gets the channel name and its flags, index is zero
    based.  either channel_name or channel_flags can be passed in nil if
    they are not needed */
 int EXPORT_CC
-libxrdp_query_channel(struct xrdp_session *session, int index,
+libxrdp_query_channel(struct xrdp_session *session, int channel_id,
                       char *channel_name, int *channel_flags)
 {
     int count = 0;
@@ -1259,16 +1280,16 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 
     count = mcs->channel_list->count;
 
-    if (index < 0 || index >= count)
+    if (channel_id < 0 || channel_id >= count)
     {
         LOG(LOG_LEVEL_ERROR, "libxrdp_query_channel: Channel index out of range. "
             "max channel index %d, received channel index %d",
-            count, index);
+            count, channel_id);
         return 1;
     }
 
     channel_item = (struct mcs_channel_item *)
-                   list_get_item(mcs->channel_list, index);
+                   list_get_item(mcs->channel_list, channel_id);
 
     if (channel_item == NULL)
     {
@@ -1280,7 +1301,8 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
     if (channel_name != 0)
     {
         g_strncpy(channel_name, channel_item->name, 8);
-        LOG(LOG_LEVEL_DEBUG, "libxrdp_query_channel - Channel %d name %s", index, channel_name);
+        LOG(LOG_LEVEL_DEBUG, "libxrdp_query_channel - Channel %d name %s",
+            channel_id, channel_name);
     }
 
     if (channel_flags != 0)
