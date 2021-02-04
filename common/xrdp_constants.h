@@ -95,8 +95,8 @@
  * not yet sorted out
  */
 
-#define MCS_CONNECT_INITIAL            0x7f65
-#define MCS_CONNECT_RESPONSE           0x7f66
+#define MCS_CONNECT_INITIAL            0x7f65 /* MCS BER: big endian, class=application (0x4000), constructed (0x2000), tag number > 30 (0x1f00), tag number=101 (0x0065) */
+#define MCS_CONNECT_RESPONSE           0x7f66 /* MCS BER: application 102 */
 
 #define BER_TAG_BOOLEAN                1
 #define BER_TAG_INTEGER                2

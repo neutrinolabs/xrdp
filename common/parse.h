@@ -26,6 +26,7 @@
 #define PARSE_H
 
 #include "arch.h"
+#include "log.h"
 
 #if defined(L_ENDIAN)
 #elif defined(B_ENDIAN)
@@ -54,16 +55,62 @@ struct stream
 };
 
 /******************************************************************************/
-#define s_check(s) ((s)->p <= (s)->end)
+#define s_check(s) s_check_rem(s, 0)
 
 /******************************************************************************/
 #define s_check_rem(s, n) ((s)->p + (n) <= (s)->end)
 
 /******************************************************************************/
+/**
+ * @returns true if there are at least n bytes remaining in the stream, 
+ *          else false and logs an error message
+ */
+#define s_check_rem_and_log(s, n, msg_prefix) \
+    ( s_check_rem((s), (n)) ? \
+      1 : \
+      LOG(LOG_LEVEL_ERROR, \
+          "%s Not enough bytes in the stream: expected %d, remaining %d", \
+          (msg_prefix), (n), s_rem(s)) \
+        && 0 )
+
+/******************************************************************************/
 #define s_check_rem_out(s, n) ((s)->p + (n) <= (s)->data + (s)->size)
 
 /******************************************************************************/
+/**
+ * @returns true if there are at least n bytes remaining in the stream, 
+ *          else false and logs an error message
+ */
+#define s_check_rem_out_and_log(s, n, msg_prefix) \
+    ( s_check_rem_out((s), (n)) ? \
+      1 : \
+      LOG(LOG_LEVEL_ERROR, \
+          "%s Not enough bytes in the stream: expected %d, remaining %d", \
+          (msg_prefix), (n), s_rem_out(s)) \
+        && 0 )
+          
+/******************************************************************************/
 #define s_check_end(s) ((s)->p == (s)->end)
+
+/******************************************************************************/
+/**
+ * @returns true if there are exactly 0 bytes remaining in the stream, 
+ *          else false and logs an error message
+ */
+#define s_check_end_and_log(s, msg_prefix) \
+    ( s_check_end((s)) ? \
+      1 : \
+      LOG(LOG_LEVEL_ERROR, \
+          "%s Expected to be at the end of the stream, " \
+          "but there are %d bytes remaining", \
+          (msg_prefix), s_rem(s)) \
+        && 0 )
+
+/******************************************************************************/
+#define s_rem(s) ((int) ((s)->end - (s)->p))
+
+/******************************************************************************/
+#define s_rem_out(s) ((int) ((s)->data + (s)->size - (s)->p))
 
 /******************************************************************************/
 #define make_stream(s) \

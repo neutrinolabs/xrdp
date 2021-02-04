@@ -30,12 +30,11 @@ xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
 {
     struct xrdp_fastpath *self;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  in xrdp_fastpath_create");
     self = (struct xrdp_fastpath *)g_malloc(sizeof(struct xrdp_fastpath), 1);
     self->sec_layer = owner;
     self->trans = trans;
     self->session = owner->rdp_layer->session;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_fastpath_create");
+
     return self;
 }
 
@@ -63,13 +62,13 @@ int
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 {
     int fp_hdr;
-    int len = 0; /* unused */
+    int len = 0;
     int byte;
     char *holdp;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "   in xrdp_fastpath_recv");
+
     holdp = s->p;
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_FP_INPUT_PDU"))
     {
         return 1;
     }
@@ -84,7 +83,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
         byte &= ~(0x80);
         len = (byte << 8);
 
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [MS-RDPBCGR] TS_FP_INPUT_PDU length2"))
         {
             return 1;
         }
@@ -97,7 +96,10 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
         len = byte;
     }
     s->next_packet = holdp + len;
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  out xrdp_fastpath_recv");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_FP_INPUT_PDU "
+              "fpInputHeader.action (ignored), fpInputHeader.numEvents %d, "
+              "fpInputHeader.flags 0x%1.1x, length %d",
+              self->numEvents, self->secFlags, len);
     return 0;
 }
 
@@ -134,6 +136,10 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
         self->session->callback(self->session->id, msg,
                                 param1, param2, param3, param4);
     }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_WARNING, "Bug: session is NULL");
+    }
     return 0;
 }
 
@@ -163,11 +169,14 @@ xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self,
     int code;
     flags = 0;
 
-    if (!s_check_rem(s, 1))
+    if (!s_check_rem_and_log(s, 1, "Parsing [MS-RDPBCGR] TS_FP_KEYBOARD_EVENT"))
     {
         return 1;
     }
     in_uint8(s, code); /* keyCode (1 byte) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_KEYBOARD_EVENT "
+              "eventHeader.eventFlags 0x%2.2x, eventHeader.eventCode (ignored), "
+              "keyCode %d", eventFlags, code);
 
     if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
     {
@@ -205,13 +214,16 @@ xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self,
         return 1;
     }
 
-    if (!s_check_rem(s, 2 + 2 + 2))
+    if (!s_check_rem_and_log(s, 2 + 2 + 2, "Parsing [MS-RDPBCGR] TS_FP_POINTER_EVENT"))
     {
         return 1;
     }
     in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
     in_uint16_le(s, xPos); /* xPos (2 bytes) */
     in_uint16_le(s, yPos); /* yPos (2 bytes) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_POINTER_EVENT "
+              "eventHeader.eventFlags 0x00, eventHeader.eventCode (ignored), "
+              "pointerFlags 0x%4.4x, xPos %d, yPos %d", pointerFlags, xPos, yPos);
 
     xrdp_fastpath_session_callback(self, RDP_INPUT_MOUSE,
                                    xPos, yPos, pointerFlags, 0);
@@ -235,13 +247,18 @@ xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self,
         return 1;
     }
 
-    if (!s_check_rem(s, 2 + 2 + 2))
+    if (!s_check_rem_and_log(s, 2 + 2 + 2,
+                             "Parsing [MS-RDPBCGR] TS_FP_POINTERX_EVENT"))
     {
         return 1;
     }
     in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
     in_uint16_le(s, xPos); /* xPos (2 bytes) */
     in_uint16_le(s, yPos); /* yPos (2 bytes) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_POINTERX_EVENT "
+              "eventHeader.eventFlags 0x%2.2x, eventHeader.eventCode (ignored), "
+              "pointerFlags 0x%4.4x, xPos %d, yPos %d",
+              eventFlags, pointerFlags, xPos, yPos);
 
     xrdp_fastpath_session_callback(self, RDP_INPUT_MOUSEX,
                                    xPos, yPos, pointerFlags, 0);
@@ -263,6 +280,10 @@ xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self,
      * status of the keyboard toggle keys.
      */
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_SYNC_EVENT"
+              "eventHeader.eventFlags 0x%2.2x, eventHeader.eventCode (ignored), ",
+              eventFlags);
+
     xrdp_fastpath_session_callback(self, RDP_INPUT_SYNCHRONIZE,
                                    eventFlags, 0, 0, 0);
 
@@ -279,11 +300,16 @@ xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
     int code;
 
     flags = 0;
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_FP_UNICODE_KEYBOARD_EVENT"))
     {
         return 1;
     }
     in_uint16_le(s, code); /* unicode (2 byte) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_UNICODE_KEYBOARD_EVENT"
+              "eventHeader.eventFlags 0x%2.2x, eventHeader.eventCode (ignored), "
+              "unicodeCode %d",
+              eventFlags, code);
+
     if (eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE)
     {
         flags |= KBD_FLAG_UP;
@@ -315,7 +341,7 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
     /* process fastpath input events */
     for (i = 0; i < self->numEvents; i++)
     {
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [MS-RDPBCGR] TS_FP_INPUT_EVENT eventHeader"))
         {
             return 1;
         }
@@ -323,6 +349,9 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
 
         eventFlags = (eventHeader & 0x1F);
         eventCode = (eventHeader >> 5);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_INPUT_EVENT"
+                  "eventHeader.eventFlags 0x%2.2x, eventHeader.eventCode 0x%1.1x",
+                  eventFlags, eventCode);
 
         switch (eventCode)
         {
@@ -367,8 +396,8 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                 }
                 break;
             default:
-                LOG(LOG_LEVEL_WARNING, "xrdp_fastpath_process_input_event: unknown "
-                    "eventCode %d", eventCode);
+                LOG(LOG_LEVEL_ERROR, "xrdp_fastpath_process_input_event: "
+                    "unknown eventCode %d", eventCode);
                 break;
         }
     }

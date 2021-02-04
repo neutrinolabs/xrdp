@@ -789,7 +789,7 @@ xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex)
     if (g_xfs == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xfuse_add_clip_dir_item() called with no filesystem")
+                  "xfuse_add_clip_dir_item() called with no filesystem");
     }
     else
     {

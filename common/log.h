@@ -22,6 +22,7 @@
 #include <pthread.h>
 
 #include "arch.h"
+#include "defines.h"
 #include "list.h"
 
 /* logging buffer size */
@@ -95,7 +96,7 @@ enum logReturns
  * @param ... the arguments for the printf format c-string
  */
 #define LOG_DEVEL(log_level, args...) \
-    log_message_with_location(__func__, __FILE__, __LINE__, log_level, args);
+    log_message_with_location(__func__, __FILE__, __LINE__, log_level, args)
 
 /**
  * @brief Logging macro for messages that are for a systeam administrator to
@@ -109,7 +110,7 @@ enum logReturns
  * @param ... the arguments for the printf format c-string
  */
 #define LOG(log_level, args...) \
-    log_message_with_location(__func__, __FILE__, __LINE__, log_level, args);
+    log_message_with_location(__func__, __FILE__, __LINE__, log_level, args)
 
 /**
  * @brief Logging macro for logging the contents of a byte array using a hex
@@ -124,12 +125,16 @@ enum logReturns
  * @param length, the length of the byte array to log
  */
 #define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)  \
-    log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length);
+    log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length)
 
 #else
-#define LOG_DEVEL(log_level, args...)
-#define LOG(log_level, args...) log_message(log_level, args);
-#define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)
+#define LOG(log_level, args...) log_message(log_level, args)
+
+/* Since log_message() returns a value ensure that the elided versions of 
+ * LOG_DEVEL and LOG_DEVEL_HEXDUMP also "fake" returning the success value
+ */
+#define LOG_DEVEL(log_level, args...) UNUSED_VAR(LOG_STARTUP_OK)
+#define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length) UNUSED_VAR(LOG_STARTUP_OK)
 
 #endif
 
