@@ -263,9 +263,9 @@ then
   AC_DEFINE([XRDP_ENABLE_IPV6],1,[Enable IPv6])
 fi
 
-if test "x$enable_pam" != "xyes"
+if test "x$enable_pam" = "xyes"
 then
-  AC_DEFINE([USE_NOPAM],1,[Disable PAM])
+  AC_DEFINE([USE_PAM],1,[Enable PAM])
 fi
 
 AS_IF( [test "x$enable_neutrinordp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
