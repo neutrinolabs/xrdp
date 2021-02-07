@@ -273,6 +273,9 @@ xrdp_process_main_loop(struct xrdp_process *self)
 
             if (g_is_wait_obj_set(term_obj)) /* term */
             {
+                LOG(LOG_LEVEL_DEBUG,
+                    "Received termination signal, stopping the client message "
+                    "processor thread");
                 break;
             }
 

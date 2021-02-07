@@ -912,6 +912,9 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
 
         if (g_is_wait_obj_set(term_obj)) /* termination called */
         {
+            LOG(LOG_LEVEL_INFO,
+                "Received termination signal, stopping the server accept new "
+                "connections thread");
             break;
         }
 

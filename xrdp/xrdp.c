@@ -142,15 +142,13 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
 }
 
 /*****************************************************************************/
+/* Signal handler for SIGINT and SIGTERM
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this funciton. For more details see `man signal-safety`
+ */
 static void
 xrdp_shutdown(int sig)
 {
-    tbus threadid;
-
-    threadid = tc_get_threadid();
-    LOG(LOG_LEVEL_INFO, "shutting down");
-    LOG(LOG_LEVEL_INFO, "signal %d threadid %lld", sig, (long long)threadid);
-
     if (!g_is_wait_obj_set(g_term_event))
     {
         g_set_wait_obj(g_term_event);
@@ -158,6 +156,10 @@ xrdp_shutdown(int sig)
 }
 
 /*****************************************************************************/
+/* Signal handler for SIGCHLD
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this funciton. For more details see `man signal-safety`
+ */
 static void
 xrdp_child(int sig)
 {
@@ -169,10 +171,14 @@ xrdp_child(int sig)
 }
 
 /*****************************************************************************/
+/* No-op signal handler.
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this funciton. For more details see `man signal-safety`
+ */
 static void
-xrdp_hang_up(int sig)
+xrdp_sig_no_op(int sig)
 {
-    LOG(LOG_LEVEL_INFO, "caught SIGHUP, noop...");
+    /* no-op */
 }
 
 /*****************************************************************************/
@@ -227,14 +233,6 @@ tbus
 g_get_sync_event(void)
 {
     return g_sync_event;
-}
-
-/*****************************************************************************/
-static void
-pipe_sig(int sig_num)
-{
-    /* do nothing */
-    LOG(LOG_LEVEL_INFO, "got XRDP SIGPIPE(%d)", sig_num);
 }
 
 /*****************************************************************************/
@@ -678,10 +676,10 @@ main(int argc, char **argv)
     g_threadid = tc_get_threadid();
     g_listen = xrdp_listen_create();
     g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
-    g_signal_pipe(pipe_sig);                /* SIGPIPE */
+    g_signal_pipe(xrdp_sig_no_op);          /* SIGPIPE */
     g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
     g_signal_child_stop(xrdp_child);        /* SIGCHLD */
-    g_signal_hang_up(xrdp_hang_up);         /* SIGHUP */
+    g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
     g_sync_mutex = tc_mutex_create();
     g_sync1_mutex = tc_mutex_create();
     pid = g_getpid();

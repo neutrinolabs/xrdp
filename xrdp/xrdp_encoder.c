@@ -482,7 +482,8 @@ proc_enc_msg(void *arg)
 
         if (g_is_wait_obj_set(term_obj)) /* global term */
         {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "proc_enc_msg: global term");
+            LOG(LOG_LEVEL_DEBUG,
+                "Received termination signal, stopping the encoder thread");
             break;
         }
 

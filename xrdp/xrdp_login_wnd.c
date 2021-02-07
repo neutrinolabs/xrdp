@@ -1221,7 +1221,7 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     LOG(LOG_LEVEL_DEBUG, "new_cursors:             %d", globals->new_cursors);
     LOG(LOG_LEVEL_DEBUG, "nego_sec_layer:          %d", globals->nego_sec_layer);
     LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
-    LOG(LOG_LEVEL_DEBUG, "enable_token_login:      %d", globals->enable_token_login)
+    LOG(LOG_LEVEL_DEBUG, "enable_token_login:      %d", globals->enable_token_login);
 
     LOG(LOG_LEVEL_DEBUG, "ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
     LOG(LOG_LEVEL_DEBUG, "ls_width:                %d", globals->ls_width);
