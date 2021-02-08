@@ -25,7 +25,7 @@
 #include "log.h"
 #include "string_calls.h"
 
-#ifndef USE_NOPAM
+#ifdef USE_PAM
 #if defined(HAVE__PAM_TYPES_H)
 #define LINUXPAM 1
 #include <security/_pam_types.h>
@@ -33,7 +33,7 @@
 #define OPENPAM 1
 #include <security/pam_constants.h>
 #endif
-#endif /* USE_NOPAM */
+#endif /* USE_PAM */
 
 #include "xrdp_encoder.h"
 #include "xrdp_sockets.h"
@@ -1789,7 +1789,7 @@ xrdp_mm_sesman_data_in(struct trans *trans)
     return error;
 }
 
-#ifndef USE_NOPAM
+#ifdef USE_PAM
 /*********************************************************************/
 /* return 0 on success */
 static int
@@ -1932,7 +1932,7 @@ cleanup_states(struct xrdp_mm *self)
     }
 }
 
-#ifndef USE_NOPAM
+#ifdef USE_PAM
 static const char *
 getPAMError(const int pamError, char *text, int text_bytes)
 {
@@ -2183,7 +2183,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     char ip[256];
     char port[8];
     char chansrvport[256];
-#ifndef USE_NOPAM
+#ifdef USE_PAM
     int use_pam_auth = 0;
     char pam_auth_sessionIP[256];
     char pam_auth_password[256];
@@ -2221,7 +2221,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             }
         }
 
-#ifndef USE_NOPAM
+#ifdef USE_PAM
         else if (g_strcasecmp(name, "pamusername") == 0)
         {
             use_pam_auth = 1;
@@ -2251,7 +2251,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         }
     }
 
-#ifndef USE_NOPAM
+#ifdef USE_PAM
     if (use_pam_auth)
     {
         int reply;
