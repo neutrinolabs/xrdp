@@ -241,7 +241,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
             /* will copy these cause dialog gets freed */
             list_append_list_strdup(mod_data->names, wm->mm->login_names, 0);
             list_append_list_strdup(mod_data->values, wm->mm->login_values, 0);
-            xrdp_wm_set_login_mode(wm, 2);
+            xrdp_wm_set_login_state(wm, WMLS_START_CONNECT);
         }
     }
     else

@@ -323,6 +323,42 @@ struct xrdp_keymap
 };
 
 /* the window manager */
+
+/***
+ * Window manager login mode states
+ *
+ * Use with xrdp_wm_set_login_state()
+ */
+enum wm_login_state
+{
+    /**
+     * Place the window manager in this state to reset it
+     */
+    WMLS_RESET = 0,
+    /**
+     * In this state, the window manager is waiting for the user to fill
+     * in the login box
+     */
+    WMLS_USER_PROMPT,
+    /**
+     * Place the window manager in this state to request xrdp connects to
+     * the X server, sesman, chansrv etc
+     */
+    WMLS_START_CONNECT,
+    /**
+     * In this state, the window manager is making required connections
+     */
+    WMLS_CONNECT_IN_PROGRESS,
+    /**
+     * Place the window manager in this state to request it finishes.
+     */
+    WMLS_CLEANUP,
+    /**
+     * In this state, the window manager is inactive
+     */
+    WMLS_INACTIVE
+};
+
 struct xrdp_wm
 {
   struct xrdp_process* pro_layer; /* owner */
@@ -374,8 +410,8 @@ struct xrdp_wm
   /* session log */
   struct list* log;
   struct xrdp_bitmap* log_wnd;
-  int login_mode;
-  tbus login_mode_event;
+  enum wm_login_state login_state;
+  tbus login_state_event;
   struct xrdp_mm* mm;
   struct xrdp_font* default_font;
   struct xrdp_keymap keymap;
