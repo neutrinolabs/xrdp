@@ -79,9 +79,10 @@ xrdp_process_loop(struct xrdp_process *self, struct stream *s)
         {
             DEBUG(("calling xrdp_wm_init and creating wm"));
             self->wm = xrdp_wm_create(self, self->session->client_info);
-            /* at this point the wm(window manager) is create and wm::login_mode is
-               zero and login_mode_event is set so xrdp_wm_init should be called by
-               xrdp_wm_check_wait_objs */
+            /* at this point the wm(window manager) is created and
+               wm::login_state is WMLS_RESET and wm::login_state_event is set
+               so xrdp_wm_init should be called by xrdp_wm_check_wait_objs
+               */
         }
     }
 

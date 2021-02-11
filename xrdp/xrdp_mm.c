@@ -132,7 +132,7 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
     {
         /* make sure autologin is off */
         self->wm->session->client_info->rdp_autologin = 0;
-        xrdp_wm_set_login_mode(self->wm, 0); /* reset session */
+        xrdp_wm_set_login_state(self->wm, WMLS_RESET); /* reset session */
     }
 
 }
@@ -1514,9 +1514,9 @@ static void cleanup_sesman_connection(struct xrdp_mm *self)
     self->delete_sesman_trans = 1;
     self->connected_state = 0;
 
-    if (self->wm->login_mode != 10)
+    if (self->wm->login_state != WMLS_CLEANUP)
     {
-        xrdp_wm_set_login_mode(self->wm, 11);
+        xrdp_wm_set_login_state(self->wm, WMLS_INACTIVE);
         xrdp_mm_module_cleanup(self);
     }
 }
@@ -1596,7 +1596,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
             if (xrdp_mm_setup_mod2(self, pguid) == 0)
             {
                 xrdp_mm_get_value(self, "ip", ip, 255);
-                xrdp_wm_set_login_mode(self->wm, 10);
+                xrdp_wm_set_login_state(self->wm, WMLS_CLEANUP);
                 self->wm->dragging = 0;
 
                 /* connect channel redir */
@@ -2350,7 +2350,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         {
             if (xrdp_mm_setup_mod2(self, 0) == 0)
             {
-                xrdp_wm_set_login_mode(self->wm, 10);
+                xrdp_wm_set_login_state(self->wm, WMLS_CLEANUP);
                 rv = 0; /*success*/
             }
             else
@@ -2366,15 +2366,15 @@ xrdp_mm_connect(struct xrdp_mm *self)
             log_message(LOG_LEVEL_ERROR,"Failure setting up module");
         }
 
-        if (self->wm->login_mode != 10)
+        if (self->wm->login_state != WMLS_CLEANUP)
         {
-            xrdp_wm_set_login_mode(self->wm, 11);
+            xrdp_wm_set_login_state(self->wm, WMLS_INACTIVE);
             xrdp_mm_module_cleanup(self);
             rv = 1; /* failure */
         }
     }
 
-    if ((self->wm->login_mode == 10) && (self->sesman_controlled == 0) &&
+    if ((self->wm->login_state == WMLS_CLEANUP) && (self->sesman_controlled == 0) &&
             (self->usechansrv != 0))
     {
         /* if sesman controlled, this will connect later */

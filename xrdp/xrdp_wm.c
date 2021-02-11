@@ -63,10 +63,10 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->pro_layer = owner;
     self->session = owner->session;
     pid = g_getpid();
-    g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_mode_event_%8.8x",
+    g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_state_event_%8.8x",
                pid, owner->session_id);
     log_message(LOG_LEVEL_DEBUG, "%s", event_name);
-    self->login_mode_event = g_create_wait_obj(event_name);
+    self->login_state_event = g_create_wait_obj(event_name);
     self->painter = xrdp_painter_create(self, self->session);
     self->cache = xrdp_cache_create(self, self->session, self->client_info);
     self->log = list_create();
@@ -75,7 +75,7 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->default_font = xrdp_font_create(self);
     /* this will use built in keymap or load from file */
     get_keymaps(self->session->client_info->keylayout, &(self->keymap));
-    xrdp_wm_set_login_mode(self, 0);
+    xrdp_wm_set_login_state(self, WMLS_RESET);
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
 
@@ -102,7 +102,7 @@ xrdp_wm_delete(struct xrdp_wm *self)
     list_delete(self->log);
     /* free default font */
     xrdp_font_delete(self->default_font);
-    g_delete_wait_obj(self->login_mode_event);
+    g_delete_wait_obj(self->login_state_event);
 
     if (self->xrdp_config)
         g_free(self->xrdp_config);
@@ -753,7 +753,10 @@ xrdp_wm_init(struct xrdp_wm *self)
                     list_add_item(self->mm->login_values, (long)g_strdup(r));
                 }
 
-                xrdp_wm_set_login_mode(self, 2);
+                /*
+                 * Skip the login box and go straight to the connection phase
+                 */
+                xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
             }
             else
             {
@@ -780,7 +783,7 @@ xrdp_wm_init(struct xrdp_wm *self)
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
         xrdp_wm_set_focused(self, self->login_window);
-        xrdp_wm_set_login_mode(self, 1);
+        xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
     }
 
     g_writeln("out xrdp_wm_init: ");
@@ -1932,29 +1935,27 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
 /* returns error */
 /* this gets called when there is nothing on any socket */
 static int
-xrdp_wm_login_mode_changed(struct xrdp_wm *self)
+xrdp_wm_login_state_changed(struct xrdp_wm *self)
 {
     if (self == 0)
     {
         return 0;
     }
 
-    g_writeln("xrdp_wm_login_mode_changed: login_mode is %d", self->login_mode);
-
-    if (self->login_mode == 0)
+    if (self->login_state == WMLS_RESET)
     {
         /* this is the initial state of the login window */
-        xrdp_wm_set_login_mode(self, 1); /* put the wm in login mode */
+        xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
         list_clear(self->log);
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_init(self);
     }
-    else if (self->login_mode == 2)
+    else if (self->login_state == WMLS_START_CONNECT)
     {
         if (xrdp_mm_connect(self->mm) == 0)
         {
-            xrdp_wm_set_login_mode(self, 3); /* put the wm in connected mode */
+            xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
             xrdp_wm_delete_all_children(self);
             self->dragging = 0;
         }
@@ -1963,11 +1964,11 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
             /* we do nothing on connect error so far */
         }
     }
-    else if (self->login_mode == 10)
+    else if (self->login_state == WMLS_CLEANUP)
     {
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
-        xrdp_wm_set_login_mode(self, 11);
+        xrdp_wm_set_login_state(self, WMLS_INACTIVE);
     }
 
     return 0;
@@ -2017,7 +2018,7 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
             {
                 /* make sure autologin is off */
                 wm->session->client_info->rdp_autologin = 0;
-                xrdp_wm_set_login_mode(wm, 0); /* reset session */
+                xrdp_wm_set_login_state(wm, WMLS_RESET); /* reset session */
             }
         }
     }
@@ -2075,7 +2076,7 @@ xrdp_wm_show_log(struct xrdp_wm *self)
     {
         /* make sure autologin is off */
         self->session->client_info->rdp_autologin = 0;
-        xrdp_wm_set_login_mode(self, 0); /* reset session */
+        xrdp_wm_set_login_state(self, WMLS_RESET); /* reset session */
         return 0;
     }
 
@@ -2176,7 +2177,7 @@ xrdp_wm_get_wait_objs(struct xrdp_wm *self, tbus *robjs, int *rc,
     }
 
     i = *rc;
-    robjs[i++] = self->login_mode_event;
+    robjs[i++] = self->login_state_event;
     *rc = i;
     return xrdp_mm_get_wait_objs(self->mm, robjs, rc, wobjs, wc, timeout);
 }
@@ -2194,10 +2195,10 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 
     rv = 0;
 
-    if (g_is_wait_obj_set(self->login_mode_event))
+    if (g_is_wait_obj_set(self->login_state_event))
     {
-        g_reset_wait_obj(self->login_mode_event);
-        xrdp_wm_login_mode_changed(self);
+        g_reset_wait_obj(self->login_state_event);
+        xrdp_wm_login_state_changed(self);
     }
 
     if (rv == 0)
@@ -2209,10 +2210,46 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int
-xrdp_wm_set_login_mode(struct xrdp_wm *self, int login_mode)
+
+static const char *
+wm_login_state_to_str(enum wm_login_state login_state)
 {
-    self->login_mode = login_mode;
-    g_set_wait_obj(self->login_mode_event);
+    const char *result = "unknown";
+    /* Use a switch for this, as some compilers will warn about missing states
+     */
+    switch (login_state)
+    {
+        case WMLS_RESET:
+            result = "WMLS_RESET";
+            break;
+        case WMLS_USER_PROMPT:
+            result = "WMLS_USER_PROMPT";
+            break;
+        case WMLS_START_CONNECT:
+            result = "WMLS_START_CONNECT";
+            break;
+        case WMLS_CONNECT_IN_PROGRESS:
+            result = "WMLS_CONNECT_IN_PROGRESS";
+            break;
+        case WMLS_CLEANUP:
+            result = "WMLS_CLEANUP";
+            break;
+        case WMLS_INACTIVE:
+            result = "WMLS_INACTIVE";
+    }
+
+    return result;
+}
+
+/*****************************************************************************/
+int
+xrdp_wm_set_login_state(struct xrdp_wm* self, enum wm_login_state login_state)
+{
+    LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
+        wm_login_state_to_str(self->login_state),
+        wm_login_state_to_str(login_state));
+
+    self->login_state = login_state;
+    g_set_wait_obj(self->login_state_event);
     return 0;
 }

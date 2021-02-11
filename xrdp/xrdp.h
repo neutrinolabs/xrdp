@@ -150,7 +150,7 @@ xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
 int
 xrdp_wm_check_wait_objs(struct xrdp_wm* self);
 int
-xrdp_wm_set_login_mode(struct xrdp_wm* self, int login_mode);
+xrdp_wm_set_login_state(struct xrdp_wm* self, enum wm_login_state login_state);
 
 /* xrdp_process.c */
 struct xrdp_process*
