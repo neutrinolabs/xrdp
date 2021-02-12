@@ -593,14 +593,14 @@ lxrdp_check_wait_objs(struct mod *mod)
 
 /******************************************************************************/
 static int
-lxrdp_frame_ack(struct mod* mod, int flags, int frame_id)
+lxrdp_frame_ack(struct mod *mod, int flags, int frame_id)
 {
     return 0;
 }
 
 /******************************************************************************/
 static int
-lxrdp_suppress_output(struct mod* mod, int suppress,
+lxrdp_suppress_output(struct mod *mod, int suppress,
                       int left, int top, int right, int bottom)
 {
 #if defined(NEUTRINORDP_HAS_SUPPRESS_OUTPUT)
@@ -1439,7 +1439,8 @@ lfreerdp_polygon_sc(rdpContext *context, POLYGON_SC_ORDER *polygon_sc)
 {
     struct mod *mod;
     int i;
-    struct {
+    struct
+    {
         short x, y;
     } points[4];
     int fgcolor;
@@ -1573,7 +1574,7 @@ lfreerdp_pre_connect(freerdp *instance)
     /* disabled as workaround for corrupted display like black bars left of cmd with W2K8 */
     /* instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1; */
     instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 0;
-    
+
     instance->settings->order_support[NEG_GLYPH_WEXTTEXTOUT_INDEX] = 0;
     instance->settings->order_support[NEG_GLYPH_WLONGTEXTOUT_INDEX] = 0;
     instance->settings->order_support[NEG_GLYPH_WLONGEXTTEXTOUT_INDEX] = 0;
@@ -2036,7 +2037,7 @@ lfreerdp_verify_certificate(freerdp *instance, char *subject, char *issuer,
 
 /******************************************************************************/
 static int
-lfreerdp_session_info(freerdp* instance, uint8* data, int data_bytes)
+lfreerdp_session_info(freerdp *instance, uint8 *data, int data_bytes)
 {
     struct mod *mod;
     int error;
@@ -2047,7 +2048,7 @@ lfreerdp_session_info(freerdp* instance, uint8* data, int data_bytes)
     if (mod != 0)
     {
         LLOGLN(10, ("lfreerdp_session_info: mod->server_session_info %p",
-               mod->server_session_info));
+                    mod->server_session_info));
         if (mod->server_session_info != 0)
         {
             error = mod->server_session_info(mod, (char *)data, data_bytes);
