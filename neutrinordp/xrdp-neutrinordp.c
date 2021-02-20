@@ -99,7 +99,7 @@ lxrdp_connect(struct mod *mod)
 {
     boolean ok;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_connect:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lxrdp_connect:");
 
     ok = freerdp_connect(mod->inst);
     LOG_DEVEL(LOG_LEVEL_INFO, "lxrdp_connect: freerdp_connect returned %d", ok);
@@ -348,7 +348,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
 
             if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
             {
-                LOG_DEVEL(LOG_LEVEL_WARNING, "lxrdp_event: error chanid %d", chanid);
+                LOG(LOG_LEVEL_WARNING, "lxrdp_event: error chanid %d", chanid);
                 break;
             }
 
@@ -392,7 +392,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         default:
-            LOG_DEVEL(LOG_LEVEL_WARNING, "Unhandled message type in eventhandler %d", msg);
+            LOG(LOG_LEVEL_WARNING, "Unhandled message type in eventhandler %d", msg);
             break;
     }
 
@@ -494,7 +494,7 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [%s]", name, value);
+        LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [%s]", name, value);
     }
 
     return 0;
@@ -517,7 +517,7 @@ lxrdp_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
     void **wfds;
     boolean ok;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_get_wait_objs:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lxrdp_get_wait_objs:");
     /*
      * Don't check this module for activity if our queued output data
      * has already reached the limit
@@ -549,7 +549,7 @@ lxrdp_check_wait_objs(struct mod *mod)
 {
     boolean ok;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_check_wait_objs:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lxrdp_check_wait_objs:");
     /*
      * Only process the freerdp file descriptors if our queued output data
      * has not reached the limit
@@ -605,7 +605,7 @@ lfreerdp_begin_paint(rdpContext *context)
 {
     struct mod *mod;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_begin_paint:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_begin_paint:");
     mod = ((struct mod_context *)context)->modi;
     mod->server_begin_update(mod);
 }
@@ -616,7 +616,7 @@ lfreerdp_end_paint(rdpContext *context)
 {
     struct mod *mod;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_end_paint:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_end_paint:");
     mod = ((struct mod_context *)context)->modi;
     mod->server_end_update(mod);
 }
@@ -728,7 +728,7 @@ lfreerdp_dst_blt(rdpContext *context, DSTBLT_ORDER *dstblt)
     struct mod *mod;
 
     mod = ((struct mod_context *)context)->modi;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_dst_blt:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_dst_blt:");
     mod->server_set_opcode(mod, dstblt->bRop);
     mod->server_fill_rect(mod, dstblt->nLeftRect, dstblt->nTopRect,
                           dstblt->nWidth, dstblt->nHeight);
@@ -748,7 +748,7 @@ lfreerdp_pat_blt(rdpContext *context, PATBLT_ORDER *patblt)
     struct brush_item *bi;
 
     mod = ((struct mod_context *)context)->modi;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_pat_blt:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_pat_blt:");
 
     server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
@@ -780,7 +780,8 @@ lfreerdp_pat_blt(rdpContext *context, PATBLT_ORDER *patblt)
 
         if ((idx < 0) || (idx >= 64))
         {
-            LOG(LOG_LEVEL_ERROR, "lfreerdp_pat_blt: error");
+            LOG(LOG_LEVEL_ERROR, "lfreerdp_pat_blt: error patblt->brush.hatch, "
+                "Expected min 0, max 63. Actual %d", idx);
             return;
         }
 
@@ -809,7 +810,7 @@ lfreerdp_scr_blt(rdpContext *context, SCRBLT_ORDER *scrblt)
     struct mod *mod;
 
     mod = ((struct mod_context *)context)->modi;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_scr_blt:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_scr_blt:");
     mod->server_set_opcode(mod, scrblt->bRop);
     mod->server_screen_blt(mod, scrblt->nLeftRect, scrblt->nTopRect,
                            scrblt->nWidth, scrblt->nHeight,
@@ -827,7 +828,7 @@ lfreerdp_opaque_rect(rdpContext *context, OPAQUE_RECT_ORDER *opaque_rect)
     int fgcolor;
 
     mod = ((struct mod_context *)context)->modi;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_opaque_rect:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_opaque_rect:");
     server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
     fgcolor = convert_color(server_bpp, client_bpp,
@@ -900,7 +901,7 @@ lfreerdp_glyph_index(rdpContext *context, GLYPH_INDEX_ORDER *glyph_index)
     int opBottom;
 
     mod = ((struct mod_context *)context)->modi;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_glyph_index:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_glyph_index:");
     server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
     fgcolor = convert_color(server_bpp, client_bpp,
@@ -957,7 +958,7 @@ lfreerdp_line_to(rdpContext *context, LINE_TO_ORDER *line_to)
     int bgcolor;
 
     mod = ((struct mod_context *)context)->modi;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_line_to:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_line_to:");
     mod->server_set_opcode(mod, line_to->bRop2);
     server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
@@ -1168,7 +1169,7 @@ lfreerdp_cache_brush(rdpContext *context, CACHE_BRUSH_ORDER *cache_brush_order)
     {
         if (bytes > 8)
         {
-            LOG_DEVEL(LOG_LEVEL_INFO, "lfreerdp_cache_brush: bytes to big %d", bytes);
+            LOG_DEVEL(LOG_LEVEL_INFO, "lfreerdp_cache_brush: bytes too big %d", bytes);
             bytes = 8;
         }
 
@@ -1234,7 +1235,7 @@ lfreerdp_get_pixel(void *bits, int width, int height, int bpp,
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_WARNING, "lfreerdp_get_pixel: unknown bpp %d", bpp);
+        LOG(LOG_LEVEL_WARNING, "lfreerdp_get_pixel: unknown bpp %d", bpp);
     }
 
     return 0;
@@ -1280,7 +1281,7 @@ lfreerdp_set_pixel(int pixel, void *bits, int width, int height, int bpp,
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_WARNING, "lfreerdp_set_pixel: unknown bpp %d", bpp);
+        LOG(LOG_LEVEL_WARNING, "lfreerdp_set_pixel: unknown bpp %d", bpp);
     }
 
     return 0;
@@ -1337,7 +1338,7 @@ lfreerdp_pointer_new(rdpContext *context,
 
     if (index >= 32)
     {
-        LOG_DEVEL(LOG_LEVEL_WARNING, "lfreerdp_pointer_new: pointer index too big");
+        LOG(LOG_LEVEL_ERROR, "lfreerdp_pointer_new: pointer index too big");
         return ;
     }
 
@@ -1380,9 +1381,9 @@ lfreerdp_pointer_new(rdpContext *context,
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_WARNING, "lfreerdp_pointer_new: error bpp %d width %d height %d index: %d",
-                  pointer_new->xorBpp, pointer_new->colorPtrAttr.width,
-                  pointer_new->colorPtrAttr.height, index);
+        LOG(LOG_LEVEL_WARNING, "lfreerdp_pointer_new: error bpp %d width %d height %d index: %d",
+            pointer_new->xorBpp, pointer_new->colorPtrAttr.width,
+            pointer_new->colorPtrAttr.height, index);
     }
 
     mod->server_set_pointer_ex(mod, mod->pointer_cache[index].hotx,
@@ -1420,7 +1421,7 @@ lfreerdp_pointer_cached(rdpContext *context,
 static void
 lfreerdp_polygon_cb(rdpContext *context, POLYGON_CB_ORDER *polygon_cb)
 {
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_polygon_sc called:- not supported!!!!!!!!!!!!!!!!!!!!");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_polygon_cb called:- not supported!!!!!!!!!!!!!!!!!!!!");
 }
 
 /******************************************************************************/
@@ -1673,7 +1674,7 @@ lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct rail_window_state_order wso;
     UNICONV *uniconv;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_WindowCreate:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_WindowCreate:");
     uniconv = freerdp_uniconv_new();
     mod = ((struct mod_context *)context)->modi;
     memset(&wso, 0, sizeof(wso));
@@ -1749,7 +1750,7 @@ void
 lrail_WindowUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                    WINDOW_STATE_ORDER *window_state)
 {
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_WindowUpdate:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_WindowUpdate:");
     lrail_WindowCreate(context, orderInfo, window_state);
 }
 
@@ -1759,7 +1760,7 @@ lrail_WindowDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_WindowDelete:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_WindowDelete:");
     mod = ((struct mod_context *)context)->modi;
     mod->server_window_delete(mod, orderInfo->windowId);
 }
@@ -1772,7 +1773,7 @@ lrail_WindowIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct mod *mod;
     struct rail_icon_info rii;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_WindowIcon:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_WindowIcon:");
     mod = ((struct mod_context *)context)->modi;
     memset(&rii, 0, sizeof(rii));
     rii.bpp = window_icon->iconInfo->bpp;
@@ -1797,7 +1798,7 @@ lrail_WindowCachedIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 {
     struct mod *mod;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_WindowCachedIcon:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_WindowCachedIcon:");
     mod = ((struct mod_context *)context)->modi;
     mod->server_window_cached_icon(mod, orderInfo->windowId,
                                    window_cached_icon->cachedIcon.cacheEntry,
@@ -1814,7 +1815,7 @@ lrail_NotifyIconCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct rail_notify_state_order rnso;
     UNICONV *uniconv;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_NotifyIconCreate:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_NotifyIconCreate:");
     uniconv = freerdp_uniconv_new();
     mod = ((struct mod_context *)context)->modi;
 
@@ -1867,7 +1868,7 @@ void
 lrail_NotifyIconUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                        NOTIFY_ICON_STATE_ORDER *notify_icon_state)
 {
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_NotifyIconUpdate:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_NotifyIconUpdate:");
     lrail_NotifyIconCreate(context, orderInfo, notify_icon_state);
 }
 
@@ -1877,7 +1878,7 @@ lrail_NotifyIconDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_NotifyIconDelete:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_NotifyIconDelete:");
     mod = ((struct mod_context *)context)->modi;
     mod->server_notify_delete(mod, orderInfo->windowId,
                               orderInfo->notifyIconId);
@@ -1892,7 +1893,7 @@ lrail_MonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct mod *mod;
     struct rail_monitored_desktop_order rmdo;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_MonitoredDesktop:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_MonitoredDesktop:");
     mod = ((struct mod_context *)context)->modi;
     memset(&rmdo, 0, sizeof(rmdo));
     rmdo.active_window_id = monitored_desktop->activeWindowId;
@@ -1922,7 +1923,7 @@ lrail_NonMonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
     struct mod *mod;
     struct rail_monitored_desktop_order rmdo;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lrail_NonMonitoredDesktop:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lrail_NonMonitoredDesktop:");
     mod = ((struct mod_context *)context)->modi;
     memset(&rmdo, 0, sizeof(rmdo));
     mod->server_monitored_desktop(mod, &rmdo, orderInfo->fieldFlags);
@@ -1934,7 +1935,7 @@ lfreerdp_post_connect(freerdp *instance)
 {
     struct mod *mod;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_post_connect:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_post_connect:");
     mod = ((struct mod_context *)(instance->context))->modi;
     g_memset(mod->password, 0, sizeof(mod->password));
 
@@ -2032,7 +2033,7 @@ lfreerdp_session_info(freerdp *instance, uint8 *data, int data_bytes)
     struct mod *mod;
     int error;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_session_info:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lfreerdp_session_info:");
     error = 0;
     mod = ((struct mod_context *)(instance->context))->modi;
     if (mod != 0)
@@ -2054,11 +2055,11 @@ mod_init(void)
     struct mod *mod;
     modContext *lcon;
 
-    LOG_DEVEL(LOG_LEVEL_INFO, "mod_init:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "mod_init:");
     mod = (struct mod *)g_malloc(sizeof(struct mod), 1);
     freerdp_get_version(&(mod->vmaj), &(mod->vmin), &(mod->vrev));
-    LOG_DEVEL(LOG_LEVEL_INFO, "  FreeRDP version major %d minor %d revision %d",
-              mod->vmaj, mod->vmin, mod->vrev);
+    LOG(LOG_LEVEL_INFO, "  FreeRDP version major %d minor %d revision %d",
+        mod->vmaj, mod->vmin, mod->vrev);
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
     mod->handle = (tintptr) mod;
@@ -2104,7 +2105,7 @@ mod_exit(tintptr handle)
 {
     struct mod *mod = (struct mod *) handle;
 
-    LOG_DEVEL(LOG_LEVEL_INFO, "mod_exit:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "mod_exit:");
 
     if (mod == 0)
     {
