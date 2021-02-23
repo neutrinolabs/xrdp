@@ -21,12 +21,6 @@
 #include <config_ac.h>
 #endif
 
-#define LOG_LEVEL 1
-#define LLOG(_level, _args) \
-    do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
-#define LLOGLN(_level, _args) \
-    do { if (_level < LOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +33,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include "log.h"
 #include "xrdp_sockets.h"
 #include "xrdpapi.h"
 
@@ -108,13 +103,13 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
 
     if (SessionId != WTS_CURRENT_SESSION)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: bad SessionId"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: bad SessionId");
         return 0;
     }
     wts = (struct wts_obj *) calloc(1, sizeof(struct wts_obj));
     if (wts == NULL)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: calloc failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: calloc failed");
         return 0;
     }
     wts->fd = -1;
@@ -127,7 +122,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
 
     if (wts->display_num <= 0)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: fatal error; display is 0"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; display is 0");
         free(wts);
         return NULL;
     }
@@ -135,7 +130,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     /* we use unix domain socket to communicate with chansrv */
     if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: socket failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: socket failed");
         free(wts);
         return NULL;
     }
@@ -145,7 +140,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     long1 = long1 | O_NONBLOCK;
     if (fcntl(wts->fd, F_SETFL, long1) < 0)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: set non-block mode failed"));
+        LOG(LOG_LEVEL_WARNING, "WTSVirtualChannelOpenEx: set non-block mode failed");
     }
 
     /* connect to chansrv session */
@@ -166,7 +161,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
         }
         else
         {
-            LLOGLN(0, ("WTSVirtualChannelOpenEx: connect failed"));
+            LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: connect failed");
             free(wts);
             return NULL;
         }
@@ -175,7 +170,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     /* wait for connection to complete */
     if (!can_send(wts->fd, 500))
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: can_send failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: can_send failed");
         free(wts);
         return NULL;
     }
@@ -183,12 +178,14 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     chan_name_bytes = strlen(pVirtualName);
     bytes = 4 + 4 + 4 + chan_name_bytes + 4;
 
-    LLOGLN(10, ("WTSVirtualChannelOpenEx: chan_name_bytes %d bytes %d pVirtualName %s", chan_name_bytes, bytes, pVirtualName));
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "WTSVirtualChannelOpenEx: chan_name_bytes %d bytes %d pVirtualName %s",
+              chan_name_bytes, bytes, pVirtualName);
 
     connect_data = (char *) calloc(bytes, 1);
     if (connect_data == NULL)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: calloc failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: calloc failed");
         free(wts);
         return NULL;
     }
@@ -212,19 +209,20 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     connect_data[4 + 4 + 4 + chan_name_bytes + 2] = (flags >> 16) & 0xFF;
     connect_data[4 + 4 + 4 + chan_name_bytes + 3] = (flags >> 24) & 0xFF;
 
-    LLOGLN(10, ("WTSVirtualChannelOpenEx: calling mysend with %d bytes", bytes));
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "WTSVirtualChannelOpenEx: calling mysend with %d bytes", bytes);
 
     if (mysend(wts->fd, connect_data, bytes) != bytes)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: mysend failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: mysend failed");
         free(wts);
         return NULL;
     }
-    LLOGLN(10, ("WTSVirtualChannelOpenEx: sent ok"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "WTSVirtualChannelOpenEx: sent ok");
 
     if (!can_recv(wts->fd, 500))
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: can_recv failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: can_recv failed");
         free(wts);
         return NULL;
     }
@@ -232,7 +230,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     /* get response */
     if (myrecv(wts->fd, connect_data, 4) != 4)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: myrecv failed"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: myrecv failed");
         free(wts);
         return NULL;
     }
@@ -240,7 +238,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if ((connect_data[0] != 0) || (connect_data[1] != 0) ||
             (connect_data[2] != 0) || (connect_data[3] != 0))
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: connect_data not ok"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: connect_data not ok");
         free(wts);
         return NULL;
     }
@@ -334,7 +332,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
 
     if (wts == 0)
     {
-        LLOGLN(10, ("WTSVirtualChannelWrite: wts is NULL"));
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelWrite: wts is NULL");
         return 0;
     }
 
@@ -345,7 +343,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
 
     rv = mysend(wts->fd, Buffer, Length);
 
-    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() returned %d", rv));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "WTSVirtualChannelWrite: mysend() returned %d", rv);
 
     if (rv >= 0)
     {
