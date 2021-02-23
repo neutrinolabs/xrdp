@@ -57,19 +57,19 @@ void *WTSVirtualChannelOpen(void *hServer, unsigned int SessionId,
                             const char *pVirtualName);
 
 void *WTSVirtualChannelOpenEx(unsigned int SessionId,
-                                const char *pVirtualName, unsigned int flags);
+                              const char *pVirtualName, unsigned int flags);
 
 int WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
-                            unsigned int Length, unsigned int *pBytesWritten);
+                           unsigned int Length, unsigned int *pBytesWritten);
 
 int WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
-                            char *Buffer, unsigned int BufferSize,
-                            unsigned int *pBytesRead);
+                          char *Buffer, unsigned int BufferSize,
+                          unsigned int *pBytesRead);
 
 int WTSVirtualChannelClose(void *hChannelHandle);
 
 int WTSVirtualChannelQuery(void *hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
-                            void **ppBuffer, unsigned int *pBytesReturned);
+                           void **ppBuffer, unsigned int *pBytesReturned);
 
 void WTSFreeMemory(void *pMemory);
 

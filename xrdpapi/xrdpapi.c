@@ -56,9 +56,9 @@ can_send(int sck, int millis);
 static int
 can_recv(int sck, int millis);
 static int
-mysend(int sck, const void* adata, int bytes);
+mysend(int sck, const void *adata, int bytes);
 static int
-myrecv(int sck, void* adata, int bytes);
+myrecv(int sck, void *adata, int bytes);
 
 /*
  * Opens a handle to the server end of a specified virtual channel - this
@@ -238,7 +238,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     }
 
     if ((connect_data[0] != 0) || (connect_data[1] != 0) ||
-        (connect_data[2] != 0) || (connect_data[3] != 0))
+            (connect_data[2] != 0) || (connect_data[3] != 0))
     {
         LLOGLN(0, ("WTSVirtualChannelOpenEx: connect_data not ok"));
         free(wts);
