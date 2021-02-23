@@ -29,17 +29,7 @@
 #include "log.h"
 #include "string_calls.h"
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
-    { \
-        g_write("xrdp:xrdp_wm [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
-    } \
-  } \
-  while (0)
+
 
 /*****************************************************************************/
 struct xrdp_wm *
@@ -65,7 +55,7 @@ xrdp_wm_create(struct xrdp_process *owner,
     pid = g_getpid();
     g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_state_event_%8.8x",
                pid, owner->session_id);
-    log_message(LOG_LEVEL_DEBUG, "%s", event_name);
+    LOG(LOG_LEVEL_DEBUG, "%s", event_name);
     self->login_state_event = g_create_wait_obj(event_name);
     self->painter = xrdp_painter_create(self, self->session);
     self->cache = xrdp_cache_create(self, self->session, self->client_info);
@@ -105,7 +95,9 @@ xrdp_wm_delete(struct xrdp_wm *self)
     g_delete_wait_obj(self->login_state_event);
 
     if (self->xrdp_config)
+    {
         g_free(self->xrdp_config);
+    }
 
     /* free self */
     g_free(self);
@@ -247,8 +239,8 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     if (!g_file_exist(file_name))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error pointer file [%s] does not exist",
-                  file_name);
+        LOG(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: error pointer file [%s] does not exist",
+            file_name);
         return 1;
     }
 
@@ -258,8 +250,8 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     if (fd < 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error loading pointer from file [%s]",
-                  file_name);
+        LOG(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: error loading pointer from file [%s]",
+            file_name);
         xstream_free(fs);
         return 1;
     }
@@ -435,7 +427,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     if (g_strcasecmp(val, "black") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        self->black = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+                        self->black = HCOLOR(self->screen->bpp, xrdp_wm_htoi(val));
                     }
                     else if (g_strcasecmp(val, "grey") == 0)
                     {
@@ -506,7 +498,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
+        LOG(LOG_LEVEL_WARNING, "xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
     }
 
     if (self->screen->bpp == 8)
@@ -540,13 +532,13 @@ xrdp_wm_load_static_pointers(struct xrdp_wm *self)
     struct xrdp_pointer_item pointer_item;
     char file_path[256];
 
-    DEBUG(("sending cursor"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "sending cursor");
     g_snprintf(file_path, 255, "%s/cursor1.cur", XRDP_SHARE_PATH);
     g_memset(&pointer_item, 0, sizeof(pointer_item));
     xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                          pointer_item.mask, &pointer_item.x, &pointer_item.y);
     xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
-    DEBUG(("sending cursor"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "sending cursor");
     g_snprintf(file_path, 255, "%s/cursor0.cur", XRDP_SHARE_PATH);
     g_memset(&pointer_item, 0, sizeof(pointer_item));
     xrdp_wm_load_pointer(self, file_path, pointer_item.data,
@@ -570,7 +562,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     char section_name[256];
     char autorun_name[256];
 
-    g_writeln("in xrdp_wm_init: ");
+    LOG(LOG_LEVEL_DEBUG, "in xrdp_wm_init: ");
 
     load_xrdp_config(self->xrdp_config, self->session->xrdp_ini,
                      self->screen->bpp);
@@ -643,9 +635,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 q = (char *)list_get_item(names, index);
                 if ((g_strncasecmp("globals", q, 8) != 0) &&
-                    (g_strncasecmp("Logging", q, 8) != 0) &&
-                    (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
-                    (g_strncasecmp("channels", q, 9) != 0))
+                        (g_strncasecmp("Logging", q, 8) != 0) &&
+                        (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
+                        (g_strncasecmp("channels", q, 9) != 0))
                 {
                     g_strncpy(default_section_name, q, 255);
                     break;
@@ -681,14 +673,14 @@ xrdp_wm_init(struct xrdp_wm *self)
              * in xrdp.ini, fallback to default_section_name */
             if (file_read_section(fd, section_name, names, values) != 0)
             {
-                log_message(LOG_LEVEL_INFO,
-                            "Module \"%s\" specified by %s from %s port %s "
-                            "is not configured. Using \"%s\" instead.",
-                            section_name,
-                            self->session->client_info->username,
-                            self->session->client_info->client_addr,
-                            self->session->client_info->client_port,
-                            default_section_name);
+                LOG(LOG_LEVEL_INFO,
+                    "Module \"%s\" specified by %s from %s port %s "
+                    "is not configured. Using \"%s\" instead.",
+                    section_name,
+                    self->session->client_info->username,
+                    self->session->client_info->client_addr,
+                    self->session->client_info->client_port,
+                    default_section_name);
                 list_clear(names);
                 list_clear(values);
 
@@ -761,8 +753,8 @@ xrdp_wm_init(struct xrdp_wm *self)
             else
             {
                 /* Hopefully, we never reach here. */
-                log_message(LOG_LEVEL_DEBUG,
-                            "Control should never reach %s:%d", __FILE__, __LINE__);
+                LOG(LOG_LEVEL_WARNING,
+                    "Control should never reach %s:%d", __FILE__, __LINE__);
             }
 
             list_delete(names);
@@ -771,14 +763,14 @@ xrdp_wm_init(struct xrdp_wm *self)
         }
         else
         {
-            log_message(LOG_LEVEL_ERROR,
-                        "xrdp_wm_init: Could not read xrdp.ini file %s",
-                        self->session->xrdp_ini);
+            LOG(LOG_LEVEL_WARNING,
+                "xrdp_wm_init: Could not read xrdp.ini file %s",
+                self->session->xrdp_ini);
         }
     }
     else
     {
-        g_writeln("   xrdp_wm_init: no autologin / auto run detected, draw login window");
+        LOG(LOG_LEVEL_DEBUG, "   xrdp_wm_init: no autologin / auto run detected, draw login window");
         xrdp_login_wnd_create(self);
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
@@ -786,7 +778,7 @@ xrdp_wm_init(struct xrdp_wm *self)
         xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
     }
 
-    g_writeln("out xrdp_wm_init: ");
+    LOG(LOG_LEVEL_DEBUG, "out xrdp_wm_init: ");
     return 0;
 }
 
@@ -1517,7 +1509,8 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
 
     // workaround odd shift behavior
     // see https://github.com/neutrinolabs/xrdp/issues/397
-    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT)) {
+    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT))
+    {
         return 0;
     }
 
@@ -1721,7 +1714,7 @@ static int
 xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
                             int x, int y)
 {
-    DEBUG(("mouse event flags %4.4x x %d y %d", device_flags, x, y));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "mouse event flags %4.4x x %d y %d", device_flags, x, y);
 
     if (device_flags & PTRFLAGS_MOVE)
     {
@@ -1800,7 +1793,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 
 /*****************************************************************************/
 static int
-xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
+xrdp_wm_process_input_mousex(struct xrdp_wm *self, int device_flags,
                              int x, int y)
 {
     if (device_flags & PTRXFLAGS_DOWN)
@@ -1916,7 +1909,7 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
             rv = xrdp_mm_check_chan(wm->mm);
             break;
         case 0x5557:
-            //g_writeln("callback: frame ack %d", param1);
+            LOG(LOG_LEVEL_DEBUG, "callback: frame ack %p", (void *) param1);
             xrdp_mm_frame_ack(wm->mm, param1);
             break;
         case 0x5558:
@@ -1942,6 +1935,7 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
         return 0;
     }
 
+    LOG(LOG_LEVEL_DEBUG, "xrdp_wm_login_mode_changed: login_mode is %d", self->login_state);
     if (self->login_state == WMLS_RESET)
     {
         /* this is the initial state of the login window */
@@ -2051,11 +2045,12 @@ add_string_to_logwindow(const char *msg, struct list *log)
     do
     {
         new_part_message = g_strndup(current_pointer, LOG_WINDOW_CHAR_PER_LINE);
-        g_writeln("%s", new_part_message);
+        LOG(LOG_LEVEL_INFO, "%s", new_part_message);
         list_add_item(log, (tintptr) new_part_message);
         len_done += g_strlen(new_part_message);
         current_pointer += g_strlen(new_part_message);
-    } while ((len_done < g_strlen(msg)) && (len_done < DEFAULT_STRING_LEN));
+    }
+    while ((len_done < g_strlen(msg)) && (len_done < DEFAULT_STRING_LEN));
 }
 
 /*****************************************************************************/
@@ -2159,7 +2154,7 @@ xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
     vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
 
-    log_message(loglevel, "xrdp_wm_log_msg: %s", msg);
+    LOG(loglevel, "xrdp_wm_log_msg: %s", msg);
     add_string_to_logwindow(msg, self->log);
     return 0;
 }
@@ -2243,7 +2238,7 @@ wm_login_state_to_str(enum wm_login_state login_state)
 
 /*****************************************************************************/
 int
-xrdp_wm_set_login_state(struct xrdp_wm* self, enum wm_login_state login_state)
+xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
 {
     LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
         wm_login_state_to_str(self->login_state),

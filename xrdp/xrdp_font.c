@@ -80,13 +80,13 @@ xrdp_font_create(struct xrdp_wm *wm)
     struct xrdp_font_char *f;
     char file_path[256];
 
-    DEBUG(("in xrdp_font_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_font_create");
     g_snprintf(file_path, 255, "%s/%s", XRDP_SHARE_PATH, DEFAULT_FONT_NAME);
 
     if (!g_file_exist(file_path))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error font file [%s] does not exist",
-               file_path);
+        LOG(LOG_LEVEL_ERROR, "xrdp_font_create: error font file [%s] does not exist",
+            file_path);
         return 0;
     }
 
@@ -94,8 +94,8 @@ xrdp_font_create(struct xrdp_wm *wm)
 
     if (file_size < 1)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error reading font from file [%s]",
-        file_path);
+        LOG(LOG_LEVEL_ERROR, "xrdp_font_create: error reading font from file [%s]",
+            file_path);
         return 0;
     }
 
@@ -139,9 +139,9 @@ xrdp_font_create(struct xrdp_wm *wm)
                 if (datasize < 0 || datasize > 512)
                 {
                     /* shouldn't happen */
-                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create, datasize wrong");
-                    log_message(LOG_LEVEL_DEBUG,"width %d height %d datasize %d index %d",
-                               f->width, f->height, datasize, index);
+                    LOG(LOG_LEVEL_ERROR, "error in xrdp_font_create, datasize wrong "
+                        "width %d, height %d, datasize %d, index %d",
+                        f->width, f->height, datasize, index);
                     break;
                 }
 
@@ -152,7 +152,7 @@ xrdp_font_create(struct xrdp_wm *wm)
                 }
                 else
                 {
-                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create");
+                    LOG(LOG_LEVEL_ERROR, "error in xrdp_font_create");
                 }
 
                 index++;
@@ -169,7 +169,7 @@ xrdp_font_create(struct xrdp_wm *wm)
       self->font_items[0].data = g_malloc(3 * 16, 0);
       g_memcpy(self->font_items[0].data, w_char, 3 * 16);
     */
-    DEBUG(("out xrdp_font_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_font_create");
     return self;
 }
 
