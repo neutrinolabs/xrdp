@@ -370,6 +370,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     rfx_context_set_cpu_opt(self->rfx_enc, xrdp_rdp_detect_cpu());
 #endif
     self->client_info.size = sizeof(self->client_info);
+    self->client_info.version = CLIENT_INFO_CURRENT_VERSION;
     LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_create");
     return self;
 }
