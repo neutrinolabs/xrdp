@@ -2002,12 +2002,12 @@ lib_mod_connect(struct vnc *v)
             }
             else if (i == 0)
             {
-                LOG(LOG_LEVEL_DEBUG, "VNC Server will disconnect");
+                LOG(LOG_LEVEL_ERROR, "VNC Server will disconnect");
                 error = 1;
             }
             else
             {
-                LOG(LOG_LEVEL_DEBUG, "VNC unsupported security level");
+                LOG(LOG_LEVEL_ERROR, "VNC unsupported security level %d", i);
                 error = 1;
             }
         }
