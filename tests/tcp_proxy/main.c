@@ -170,15 +170,15 @@ g_tcp_set_non_blocking(int sck)
 
 /*****************************************************************************/
 static int
-g_tcp_bind(int sck, const char* port)
+g_tcp_bind(int sck, const char *port)
 {
-  struct sockaddr_in s;
+    struct sockaddr_in s;
 
-  memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = INADDR_ANY;
-  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = INADDR_ANY;
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
 }
 
 /*****************************************************************************/
@@ -300,10 +300,10 @@ g_tcp_accept(int sck)
 
 /*****************************************************************************/
 static int
-g_tcp_connect(int sck, const char* address, const char* port)
+g_tcp_connect(int sck, const char *address, const char *port)
 {
     struct sockaddr_in s;
-    struct hostent* h;
+    struct hostent *h;
 
     g_memset(&s, 0, sizeof(struct sockaddr_in));
     s.sin_family = AF_INET;
@@ -320,13 +320,13 @@ g_tcp_connect(int sck, const char* address, const char* port)
                 {
                     if ((*(h->h_addr_list)) != 0)
                     {
-                        s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
+                        s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
                     }
                 }
             }
         }
     }
-    return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
 }
 
 /*****************************************************************************/

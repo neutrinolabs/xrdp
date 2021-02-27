@@ -43,10 +43,13 @@ void hexdump(int address, char *buf, int len)
     unsigned char c;
 
     char cvt[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-                  '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+                  '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+                 };
 
     if ((buf == NULL) || (len <= 0))
+    {
         return;
+    }
 
     addr = (address < 0) ? 0 : address;
     blocks = len / 16;
@@ -85,9 +88,13 @@ void hexdump(int address, char *buf, int len)
             outbuf[index2++] = ' ';
 
             if ((c >= 0x20) && (c <= 0x7e))
+            {
                 outbuf[index3++] = c;
+            }
             else
+            {
                 outbuf[index3++] = '.';
+            }
         }
 
         outbuf[index3] = 0;
@@ -95,7 +102,9 @@ void hexdump(int address, char *buf, int len)
     }
 
     if (!residual)
+    {
         return;
+    }
 
     outbuf[7] = cvt[(addr >>  0) & 0x0000000f];
     outbuf[6] = cvt[(addr >>  4) & 0x0000000f];
@@ -120,9 +129,13 @@ void hexdump(int address, char *buf, int len)
         outbuf[index2++] = ' ';
 
         if ((c >= 0x20) && (c <= 0x7e))
+        {
             outbuf[index3++] = c;
+        }
         else
+        {
             outbuf[index3++] = '.';
+        }
     }
 
     outbuf[index3] = 0;
