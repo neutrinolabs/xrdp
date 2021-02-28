@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +35,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "os_calls.h"
+#include "string_calls.h"
+
 int  g_loc_io_count = 0;  // bytes read from local port
 int  g_rem_io_count = 0;  // bytes read from remote port
 
@@ -40,294 +47,6 @@ static char g_buf[1024 * 32];
 
 typedef unsigned short tui16;
 
-/*****************************************************************************/
-static void
-g_memset(void *ptr, int val, int size)
-{
-    memset(ptr, val, size);
-}
-
-/*****************************************************************************/
-static void
-g_printf(const char *format, ...)
-{
-    va_list ap;
-
-    va_start(ap, format);
-    vfprintf(stdout, format, ap);
-    va_end(ap);
-}
-
-/*****************************************************************************/
-static void
-g_writeln(const char *format, ...)
-{
-    va_list ap;
-
-    va_start(ap, format);
-    vfprintf(stdout, format, ap);
-    va_end(ap);
-    g_printf("\n");
-}
-
-/*****************************************************************************/
-static void
-g_hexdump(char *p, int len)
-{
-    unsigned char *line;
-    int i;
-    int thisline;
-    int offset;
-
-    line = (unsigned char *)p;
-    offset = 0;
-
-    while (offset < len)
-    {
-        g_printf("%04x ", offset);
-        thisline = len - offset;
-
-        if (thisline > 16)
-        {
-            thisline = 16;
-        }
-
-        for (i = 0; i < thisline; i++)
-        {
-            g_printf("%02x ", line[i]);
-        }
-
-        for (; i < 16; i++)
-        {
-            g_printf("   ");
-        }
-
-        for (i = 0; i < thisline; i++)
-        {
-            g_printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
-        }
-
-        g_writeln("%s", "");
-        offset += thisline;
-        line += thisline;
-    }
-}
-
-/*****************************************************************************/
-static int
-g_tcp_socket(void)
-{
-    int rv;
-    int option_value;
-    socklen_t option_len;
-
-    rv = (int)socket(AF_INET, SOCK_STREAM, 0);
-    if (rv < 0)
-    {
-        return -1;
-    }
-    option_len = sizeof(option_value);
-    if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                   &option_len) == 0)
-    {
-        if (option_value == 0)
-        {
-            option_value = 1;
-            option_len = sizeof(option_value);
-            setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                       option_len);
-        }
-    }
-
-    option_len = sizeof(option_value);
-
-    if (getsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                   &option_len) == 0)
-    {
-        if (option_value < (1024 * 32))
-        {
-            option_value = 1024 * 32;
-            option_len = sizeof(option_value);
-            setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                       option_len);
-        }
-    }
-
-    return rv;
-}
-
-/*****************************************************************************/
-static int
-g_tcp_set_non_blocking(int sck)
-{
-    unsigned long i;
-
-    i = fcntl(sck, F_GETFL);
-    i = i | O_NONBLOCK;
-    fcntl(sck, F_SETFL, i);
-    return 0;
-}
-
-/*****************************************************************************/
-static int
-g_tcp_bind(int sck, const char *port)
-{
-    struct sockaddr_in s;
-
-    memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = INADDR_ANY;
-    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
-}
-
-/*****************************************************************************/
-static int
-g_tcp_listen(int sck)
-{
-    return listen(sck, 2);
-}
-
-/*****************************************************************************/
-static int
-g_tcp_select(int sck1, int sck2)
-{
-    fd_set rfds;
-    struct timeval time;
-    int max = 0;
-    int rv = 0;
-
-    g_memset(&rfds, 0, sizeof(fd_set));
-    g_memset(&time, 0, sizeof(struct timeval));
-
-    time.tv_sec = 0;
-    time.tv_usec = 0;
-    FD_ZERO(&rfds);
-
-    if (sck1 > 0)
-    {
-        FD_SET(((unsigned int)sck1), &rfds);
-    }
-
-    if (sck2 > 0)
-    {
-        FD_SET(((unsigned int)sck2), &rfds);
-    }
-
-    max = sck1;
-
-    if (sck2 > max)
-    {
-        max = sck2;
-    }
-
-    rv = select(max + 1, &rfds, 0, 0, &time);
-
-    if (rv > 0)
-    {
-        rv = 0;
-
-        if (FD_ISSET(((unsigned int)sck1), &rfds))
-        {
-            rv = rv | 1;
-        }
-
-        if (FD_ISSET(((unsigned int)sck2), &rfds))
-        {
-            rv = rv | 2;
-        }
-    }
-    else
-    {
-        rv = 0;
-    }
-
-    return rv;
-}
-
-/*****************************************************************************/
-static int
-g_tcp_recv(int sck, void *ptr, int len, int flags)
-{
-    return recv(sck, ptr, len, flags);
-}
-
-/*****************************************************************************/
-static void
-g_tcp_close(int sck)
-{
-    if (sck == 0)
-    {
-        return;
-    }
-    close(sck);
-}
-
-/*****************************************************************************/
-static int
-g_tcp_send(int sck, const void *ptr, int len, int flags)
-{
-    return send(sck, ptr, len, flags);
-}
-
-/*****************************************************************************/
-void
-g_sleep(int msecs)
-{
-    usleep(msecs * 1000);
-}
-
-/*****************************************************************************/
-static int
-g_tcp_last_error_would_block(int sck)
-{
-    return (errno == EWOULDBLOCK) || (errno == EAGAIN) || (errno == EINPROGRESS);
-}
-
-/*****************************************************************************/
-static int
-g_tcp_accept(int sck)
-{
-    int ret ;
-    struct sockaddr_in s;
-    unsigned int i;
-
-    i = sizeof(struct sockaddr_in);
-    memset(&s, 0, i);
-    ret = accept(sck, (struct sockaddr *)&s, &i);
-    return ret ;
-}
-
-/*****************************************************************************/
-static int
-g_tcp_connect(int sck, const char *address, const char *port)
-{
-    struct sockaddr_in s;
-    struct hostent *h;
-
-    g_memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = inet_addr(address);
-    if (s.sin_addr.s_addr == INADDR_NONE)
-    {
-        h = gethostbyname(address);
-        if (h != 0)
-        {
-            if (h->h_name != 0)
-            {
-                if (h->h_addr_list != 0)
-                {
-                    if ((*(h->h_addr_list)) != 0)
-                    {
-                        s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
-                    }
-                }
-            }
-        }
-    }
-    return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
-}
 
 /*****************************************************************************/
 static int
@@ -345,73 +64,6 @@ g_tcp_socket_ok(int sck)
     }
 
     return 0;
-}
-
-/*****************************************************************************/
-static void
-g_init(const char *app_name)
-{
-    setlocale(LC_CTYPE, "");
-}
-
-/*****************************************************************************/
-static void
-g_deinit(void)
-{
-}
-
-/*****************************************************************************/
-static int
-g_tcp_can_send(int sck, int millis)
-{
-    fd_set wfds;
-    struct timeval time;
-    int rv;
-
-    time.tv_sec = millis / 1000;
-    time.tv_usec = (millis * 1000) % 1000000;
-    FD_ZERO(&wfds);
-
-    if (sck > 0)
-    {
-        FD_SET(((unsigned int)sck), &wfds);
-        rv = select(sck + 1, 0, &wfds, 0, &time);
-
-        if (rv > 0)
-        {
-            return g_tcp_socket_ok(sck);
-        }
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
-static void
-g_signal_user_interrupt(void (*func)(int))
-{
-    signal(SIGINT, func);
-}
-
-/*****************************************************************************/
-static void
-g_signal_terminate(void (*func)(int))
-{
-    signal(SIGTERM, func);
-}
-
-/*****************************************************************************/
-static void
-g_signal_usr1(void (*func)(int))
-{
-    signal(SIGUSR1, func);
-}
-
-/*****************************************************************************/
-static int
-g_strcasecmp(const char *c1, const char *c2)
-{
-    return strcasecmp(c1, c2);
 }
 
 /*****************************************************************************/
@@ -504,7 +156,9 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
             error = 0;
             i = 0;
 
-            while ((!g_tcp_can_send(con_sck, 100)) && (!g_terminated) && (i < 100))
+            while (!(g_tcp_can_send(con_sck, 100) && g_tcp_socket_ok(con_sck))
+                    && (!g_terminated)
+                    && (i < 100))
             {
                 g_sleep(100);
                 i++;
@@ -567,7 +221,10 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
                     if ((i == -1) && g_tcp_last_error_would_block(acc_sck))
                     {
-                        g_tcp_can_send(acc_sck, 1000);
+                        if (g_tcp_can_send(acc_sck, 1000))
+                        {
+                            g_tcp_socket_ok(acc_sck);
+                        }
                     }
                     else if (i < 1)
                     {
@@ -610,7 +267,10 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
                     if ((i == -1) && g_tcp_last_error_would_block(con_sck))
                     {
-                        g_tcp_can_send(con_sck, 1000);
+                        if (g_tcp_can_send(con_sck, 1000))
+                        {
+                            g_tcp_socket_ok(con_sck);
+                        }
                     }
                     else if (i < 1)
                     {
