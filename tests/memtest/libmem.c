@@ -1,21 +1,18 @@
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "log.h"
 
 #define ALIGN_BY 32
 #define ALIGN_BY_M1 (ALIGN_BY - 1)
 #define ALIGN(_in) (((_in) + ALIGN_BY_M1) & (~ALIGN_BY_M1))
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_log_level, _params) \
-    do { \
-        if (_log_level < LLOG_LEVEL) \
-        { \
-            printf _params ; \
-            printf ("\n") ; \
-        } \
-    } while (0)
 
 struct mem_item
 {
@@ -272,30 +269,30 @@ libmem_print(struct mem_info *self)
 {
     struct mem_item *mi;
 
-    LLOGLN(0, ("libmem_print:"));
-    LLOGLN(0, ("  used_head %p", self->used_head));
-    LLOGLN(0, ("  used_tail %p", self->used_tail));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "libmem_print:");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "  used_head %p", self->used_head);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "  used_tail %p", self->used_tail);
     mi = self->used_head;
     if (mi != 0)
     {
-        LLOGLN(0, ("  used list"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "  used list");
         while (mi != 0)
         {
-            LLOGLN(0, ("    ptr %p prev %p next %p addr 0x%8.8x bytes %d",
-                       mi, mi->prev, mi->next, mi->addr, mi->bytes));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "    ptr %p prev %p next %p addr 0x%8.8x bytes %d",
+                      mi, mi->prev, mi->next, mi->addr, mi->bytes);
             mi = mi->next;
         }
     }
-    LLOGLN(0, ("  free_head %p", self->free_head));
-    LLOGLN(0, ("  free_tail %p", self->free_tail));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "  free_head %p", self->free_head);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "  free_tail %p", self->free_tail);
     mi = self->free_head;
     if (mi != 0)
     {
-        LLOGLN(0, ("  free list"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "  free list");
         while (mi != 0)
         {
-            LLOGLN(0, ("    ptr %p prev %p next %p addr 0x%8.8x bytes %d",
-                       mi, mi->prev, mi->next, mi->addr, mi->bytes));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "    ptr %p prev %p next %p addr 0x%8.8x bytes %d",
+                      mi, mi->prev, mi->next, mi->addr, mi->bytes);
             mi = mi->next;
         }
     }
@@ -344,7 +341,7 @@ libmem_alloc(void *obj, int bytes)
     }
     else
     {
-        LLOGLN(0, ("libmem_alloc: error"));
+        LOG_DEVEL(LOG_LEVEL_ERROR, "libmem_alloc: error");
     }
     return addr;
 }
@@ -377,7 +374,7 @@ libmem_free(void *obj, unsigned int addr)
         }
         mi = mi->prev;
     }
-    LLOGLN(0, ("libmem_free: error"));
+    LOG_DEVEL(LOG_LEVEL_ERROR, "libmem_free: error");
     return 1;
 }
 

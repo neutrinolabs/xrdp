@@ -35,6 +35,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
 
@@ -92,7 +93,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
     if (error != 0)
     {
-        g_writeln("bind failed");
+        LOG(LOG_LEVEL_WARNING, "bind failed");
     }
 
     /* listen for an incoming connection */
@@ -102,7 +103,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
         if (error == 0)
         {
-            g_writeln("listening for connection");
+            LOG(LOG_LEVEL_INFO, "listening for connection");
         }
     }
 
@@ -138,7 +139,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
         if (error == 0)
         {
-            g_writeln("got connection");
+            LOG(LOG_LEVEL_INFO, "got connection");
         }
     }
 
@@ -166,7 +167,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
             if (i > 99)
             {
-                g_writeln("timeout connecting");
+                LOG(LOG_LEVEL_ERROR, "timeout connecting");
                 error = 1;
             }
 
@@ -178,7 +179,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
         if ((error != 0) && (!g_terminated))
         {
-            g_writeln("error connecting to remote\r\n");
+            LOG(LOG_LEVEL_ERROR, "error connecting to remote\r\n");
         }
     }
 
@@ -205,14 +206,11 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
                 if (hexdump)
                 {
-                    g_writeln("from remove, the socket from connect");
-                    g_hexdump(g_buf, count);
+                    LOG_HEXDUMP(LOG_LEVEL_INFO, "from remove, the socket from connect", g_buf, count);
                 }
 
-#if 0
-                g_writeln("local_io_count: %d\tremote_io_count: %d",
-                          g_loc_io_count, g_rem_io_count);
-#endif
+                LOG(LOG_LEVEL_DEBUG, "local_io_count: %d\tremote_io_count: %d",
+                    g_loc_io_count, g_rem_io_count);
                 sent = 0;
 
                 while ((sent < count) && (error == 0) && (!g_terminated))
@@ -251,14 +249,11 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
                 if (hexdump)
                 {
-                    g_writeln("from accepted, the socket from accept");
-                    g_hexdump(g_buf, count);
+                    LOG_HEXDUMP(LOG_LEVEL_INFO, "from accepted, the socket from accept", g_buf, count);
                 }
 
-#if 0
-                g_writeln("local_io_count: %d\tremote_io_count: %d",
-                          g_loc_io_count, g_rem_io_count);
-#endif
+                LOG(LOG_LEVEL_DEBUG, "local_io_count: %d\tremote_io_count: %d",
+                    g_loc_io_count, g_rem_io_count);
                 sent = 0;
 
                 while ((sent < count) && (error == 0) && (!g_terminated))
@@ -288,8 +283,8 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
     g_tcp_close(lis_sck);
     g_tcp_close(con_sck);
     g_tcp_close(acc_sck);
-    g_writeln("acc_to_con %d", acc_to_con);
-    g_writeln("con_to_acc %d", con_to_acc);
+    LOG(LOG_LEVEL_INFO, "acc_to_con %d", acc_to_con);
+    LOG(LOG_LEVEL_INFO, "con_to_acc %d", con_to_acc);
     return 0;
 }
 
@@ -307,15 +302,15 @@ usage(void)
 void
 proxy_shutdown(int sig)
 {
-    g_writeln("shutting down");
+    LOG(LOG_LEVEL_INFO, "shutting down");
     g_terminated = 1;
 }
 
 void
 clear_counters(int sig)
 {
-    g_writeln("cleared counters at: local_io_count: %d remote_io_count: %d",
-              g_loc_io_count, g_rem_io_count);
+    LOG(LOG_LEVEL_DEBUG, "cleared counters at: local_io_count: %d remote_io_count: %d",
+        g_loc_io_count, g_rem_io_count);
     g_loc_io_count = 0;
     g_rem_io_count = 0;
 }
@@ -325,6 +320,7 @@ int
 main(int argc, char **argv)
 {
     int dump;
+    struct log_config *config;
 
     if (argc < 4)
     {
@@ -336,6 +332,10 @@ main(int argc, char **argv)
     g_signal_user_interrupt(proxy_shutdown); /* SIGINT  */
     g_signal_usr1(clear_counters);           /* SIGUSR1 */
     g_signal_terminate(proxy_shutdown);      /* SIGTERM */
+
+    config = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
+    log_start_from_param(config);
+    log_config_free(config);
 
     if (argc < 5)
     {
@@ -356,6 +356,7 @@ main(int argc, char **argv)
         }
     }
 
+    log_end();
     g_deinit();
     return 0;
 }

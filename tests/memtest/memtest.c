@@ -1,10 +1,15 @@
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "libmem.h"
+#include "log.h"
 
 int main(int argc, char **argv)
 {
@@ -16,6 +21,11 @@ int main(int argc, char **argv)
     unsigned int addr5;
     int index;
     int rd;
+    struct log_config *config;
+
+    config = log_config_init_for_console(LOG_LEVEL_DEBUG, NULL);
+    log_start_from_param(config);
+    log_config_free(config);
 
     srand(time(0));
     obj = libmem_init(0x80000000, 64 * 1024 * 1024);
@@ -57,5 +67,6 @@ int main(int argc, char **argv)
         libmem_free(obj, addr5);
     }
     libmem_deinit(obj);
+    log_end();
     return 0;
 }
