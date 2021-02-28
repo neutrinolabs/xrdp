@@ -764,7 +764,18 @@ log_end(void)
 }
 
 /*****************************************************************************/
-/* produce a hex dump */
+/* log a hex dump */
+enum logReturns
+log_hexdump(const enum logLevels log_level,
+              const char *message,
+              const char *src,
+              int len)
+{
+    return log_hexdump_with_location("", "", 0, log_level, message, src, len);
+}
+
+/*****************************************************************************/
+/* log a hex dump */
 enum logReturns
 log_hexdump_with_location(const char *function_name,
                           const char *file_name,
@@ -774,37 +785,10 @@ log_hexdump_with_location(const char *function_name,
                           const char *src,
                           int len)
 {
-    unsigned char *line;
-    int i;
-    int dump_number_lines;
-    int dump_line_length;
-    int dump_length;
-    int dump_offset;
-    int thisline;
-    int offset;
     char *dump_buffer;
-    enum logReturns rv;
+    enum logReturns rv = LOG_STARTUP_OK;
     enum logLevels override_log_level;
     bool_t override_destination_level = 0;
-
-    /* Start the dump on a new line so that the first line of the dump is
-       aligned to the first column instead of to after the log message
-       preamble (eg. time, log level, ...)
-    */
-#define HEX_DUMP_SOURCE_BYTES_PER_LINE (16)
-#ifdef _WIN32
-#define HEX_DUMP_HEADER ("%s Hex Dump:\r\n")
-#define HEX_DUMP_NEWLINE_SIZE (2)
-#else
-#ifdef _MACOS
-#define HEX_DUMP_HEADER ("%s Hex Dump:\r")
-#define HEX_DUMP_NEWLINE_SIZE (1)
-#else
-#define HEX_DUMP_HEADER ("%s Hex Dump:\n")
-#define HEX_DUMP_NEWLINE_SIZE (1)
-#endif
-#endif
-#define HEX_DUMP_HEADER_SIZE (sizeof(HEX_DUMP_HEADER) - 1)
 
     override_destination_level = internal_log_location_overrides_level(
         function_name,
@@ -815,107 +799,37 @@ log_hexdump_with_location(const char *function_name,
         return LOG_STARTUP_OK;
     }
 
-    dump_line_length = (4 + 3             /* = 4 offset + 3 space */
-                        + ((2 + 1) * HEX_DUMP_SOURCE_BYTES_PER_LINE)  /* + (2 hex char + 1 space) per source byte */
-                        + 2 /* + 2 space */
-                        + HEX_DUMP_SOURCE_BYTES_PER_LINE
-                        + HEX_DUMP_NEWLINE_SIZE);
-
-    dump_number_lines = (len / HEX_DUMP_SOURCE_BYTES_PER_LINE) + 1; /* +1 to round up */
-    dump_length = (dump_number_lines *dump_line_length    /* hex dump lines */
-                   + HEX_DUMP_HEADER_SIZE
-                   + 1);    /* terminating NULL */
-    dump_buffer = (char *)g_malloc(dump_length, 1);
-    if (dump_buffer == NULL)
-    {
-        LOG_DEVEL(LOG_LEVEL_WARNING,
-                  "Failed to allocate buffer for hex dump of size %d",
-                  dump_length);
-        return LOG_ERROR_MALLOC;
-    }
-
-    line = (unsigned char *)src;
-    offset = 0;
-
-    g_memcpy(dump_buffer, HEX_DUMP_HEADER, HEX_DUMP_HEADER_SIZE);
-    dump_offset = HEX_DUMP_HEADER_SIZE;
-
-    while (offset < len)
-    {
-        g_sprintf(dump_buffer + dump_offset, "%04x   ", offset);
-        dump_offset += 7;
-        thisline = len - offset;
-
-        if (thisline > HEX_DUMP_SOURCE_BYTES_PER_LINE)
-        {
-            thisline = HEX_DUMP_SOURCE_BYTES_PER_LINE;
-        }
-
-        for (i = 0; i < thisline; i++)
-        {
-            g_sprintf(dump_buffer + dump_offset, "%02x ", line[i]);
-            dump_offset += 3;
-        }
-
-        for (; i < HEX_DUMP_SOURCE_BYTES_PER_LINE; i++)
-        {
-            dump_buffer[dump_offset++] = ' ';
-            dump_buffer[dump_offset++] = ' ';
-            dump_buffer[dump_offset++] = ' ';
-        }
-
-        dump_buffer[dump_offset++] = ' ';
-        dump_buffer[dump_offset++] = ' ';
-
-        for (i = 0; i < thisline; i++)
-        {
-            dump_buffer[dump_offset++] = (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.';
-        }
-
-        for (; i < HEX_DUMP_SOURCE_BYTES_PER_LINE; i++)
-        {
-            dump_buffer[dump_offset++] = ' ';
-        }
-
+    /* Start the dump on a new line so that the first line of the dump is
+       aligned to the first column instead of to after the log message
+       preamble (eg. time, log level, ...)
+    */
 #ifdef _WIN32
-        dump_buffer[dump_offset++] = '\r';
-        dump_buffer[dump_offset++] = '\n';
+#define HEX_DUMP_HEADER ("Hex Dump:\r\n")
 #else
 #ifdef _MACOS
-        dump_buffer[dump_offset++] = '\r';
+#define HEX_DUMP_HEADER ("Hex Dump:\r")
 #else
-        dump_buffer[dump_offset++] = '\n';
+#define HEX_DUMP_HEADER ("Hex Dump:\n")
 #endif
 #endif
-        offset += thisline;
-        line += thisline;
 
+    dump_buffer = g_bytes_to_hexdump(src, len);
 
-        if ((dump_offset - HEX_DUMP_HEADER_SIZE) % dump_line_length != 0)
-        {
-            LOG_DEVEL(LOG_LEVEL_ERROR,
-                      "BUG: dump_offset (%d) at the end of a line is not a "
-                      "multiple of the line length (%d)",
-                      dump_offset, dump_line_length);
-        }
-
-    }
-    if (dump_offset > dump_length)
+    if (dump_buffer != NULL)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "BUG: dump_offset (%d) is larger than the dump_buffer length (%d)",
-                  dump_offset, dump_length);
+        if (g_strlen(file_name) > 0)
+        {
+            rv = log_message_with_location(function_name, file_name, line_number,
+                                           log_level, "%s %s%s", 
+                                           message, HEX_DUMP_HEADER, dump_buffer);
+        }
+        else
+        {
+            rv = log_message(log_level, "%s %s%s", 
+                             message, HEX_DUMP_HEADER, dump_buffer);
+        }
         g_free(dump_buffer);
-        return LOG_GENERAL_ERROR;
     }
-
-    /* replace the last new line with the end of the string since log_message
-       will add a new line */
-    dump_buffer[dump_offset - HEX_DUMP_NEWLINE_SIZE] = '\0';
-
-    rv = log_message_with_location(function_name, file_name, line_number,
-                                   log_level, dump_buffer, message);
-    g_free(dump_buffer);
     return rv;
 }
 

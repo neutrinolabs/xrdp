@@ -80,6 +80,29 @@ g_bool2text(int value);
 int
 g_text2bool(const char *s);
 
+/**
+ * Converts a binary array into a hux dump suitable for displaying to a user.
+ *
+ * The format of the hex dump is:
+ * 0000   01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16   ................
+ * /\     /\                                                /\
+ * |      |                                                 |
+ * |      |                                                 ascii representation of bytes
+ * |      hex representation of bytes
+ * offset from beining of the byte array in hex
+ *
+ * Note: the ascii representation uses '.' for all non-printable
+ * characters (eg. below 32 or above 127).
+ *
+ * Note: the string contains embedded new lines, but is not new line terminated.
+ *
+ * @param[in] src Value to convert
+ * @param[in] len The number of bytes in src to convert
+ * @return string containing the hex dump that must be free'd by the caller
+ */
+char *
+g_bytes_to_hexdump(const char *src, int len);
+
 int      g_strlen(const char *text);
 const char *g_strchr(const char *text, int c);
 char    *g_strcpy(char *dest, const char *src);
