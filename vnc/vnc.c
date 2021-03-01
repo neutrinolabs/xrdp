@@ -37,20 +37,6 @@
 #include "string_calls.h"
 #include "xrdp_client_info.h"
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-    do \
-    { \
-        if (_level < LLOG_LEVEL) \
-        { \
-            g_write("xrdp:vnc [%10.10u]: ", g_time3()); \
-            g_writeln _args ; \
-        } \
-    } \
-    while (0)
-
-#define AS_LOG_MESSAGE log_message
-
 /* Client-to-server messages */
 enum c2s
 {
@@ -98,7 +84,7 @@ static const char *eds_status_msg[] =
 
 /* elements in above list */
 #define EDS_STATUS_MSG_COUNT \
-    (sizeof(eds_status_msg) / sizeof(eds_status_msg[0])) 
+    (sizeof(eds_status_msg) / sizeof(eds_status_msg[0]))
 
 /* Used by enabled_encodings_mask */
 enum
@@ -185,13 +171,13 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
         in_uint16_le(s, status);
         in_uint32_le(s, length);
 
-        //g_writeln("clip data type %d status %d length %d", type, status, length);
-        //g_hexdump(s->p, s->end - s->p);
+        LOG(LOG_LEVEL_DEBUG, "clip data type %d status %d length %d", type, status, length);
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "clipboard data", s->p, s->end - s->p);
         switch (type)
         {
             case 2: /* CLIPRDR_FORMAT_ANNOUNCE */
-                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ANNOUNCE - "
-                               "status %d length %d", status, length);
+                LOG(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ANNOUNCE - "
+                    "status %d length %d", status, length);
                 make_stream(out_s);
                 init_stream(out_s, 8192);
                 out_uint16_le(out_s, 3); // msg-type:  CLIPRDR_FORMAT_ACK
@@ -222,12 +208,12 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                 break;
 
             case 3: /* CLIPRDR_FORMAT_ACK */
-                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ACK - "
-                               "status %d length %d", status, length);
+                LOG(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ACK - "
+                    "status %d length %d", status, length);
                 break;
             case 4: /* CLIPRDR_DATA_REQUEST */
-                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_REQUEST - "
-                               "status %d length %d", status, length);
+                LOG(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_REQUEST - "
+                    "status %d length %d", status, length);
                 format = 0;
 
                 if (length >= 4)
@@ -279,8 +265,8 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                 break;
 
             case 5: /* CLIPRDR_DATA_RESPONSE */
-                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_RESPONSE - "
-                               "status %d length %d", status, length);
+                LOG(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_RESPONSE - "
+                    "status %d length %d", status, length);
                 clip_bytes = MIN(length, 256);
                 // - Read the response data from the cliprdr channel, stream 's'.
                 // - Send the response data to the vnc server, stream 'out_s'.
@@ -306,15 +292,15 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
 
             default:
             {
-                log_message(LOG_LEVEL_DEBUG, "VNC clip information unhandled");
+                LOG(LOG_LEVEL_DEBUG, "VNC clip information unhandled");
                 break;
             }
         }
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid: "
-                    "%d :(v->clip_chanid) %d", chanid, v->clip_chanid);
+        LOG(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid: "
+            "%d :(v->clip_chanid) %d", chanid, v->clip_chanid);
     }
 
     return 0;
@@ -353,7 +339,7 @@ log_screen_layout(const enum logLevels lvl, const char *source,
                          layout->s[i].x, layout->s[i].y);
         ++i;
     }
-    log_message(lvl, "%s", text);
+    LOG(lvl, "%s", text);
 }
 
 /**************************************************************************//**
@@ -460,8 +446,8 @@ read_extended_desktop_size_rect(struct vnc *v,
             screens = g_new(struct vnc_screen, count);
             if (screens == NULL)
             {
-                log_message(LOG_LEVEL_ERROR,
-                            "VNC : Can't alloc for %d screens", count);
+                LOG(LOG_LEVEL_ERROR,
+                    "VNC : Can't alloc for %d screens", count);
                 error = 1;
             }
             else
@@ -531,7 +517,7 @@ send_set_desktop_size(struct vnc *v, const struct vnc_screen_layout *layout)
         out_uint32_be(s, layout->s[i].flags);
     }
     s_mark_end(s);
-    log_message(LOG_LEVEL_DEBUG, "VNC Sending SetDesktopSize");
+    LOG(LOG_LEVEL_DEBUG, "VNC Sending SetDesktopSize");
     error = lib_send_copy(v, s);
     free_stream(s);
 
@@ -655,10 +641,10 @@ resize_client_from_layout(struct vnc *v,
          */
         if (layout->count != 1)
         {
-            log_message(LOG_LEVEL_ERROR,
-                        "VNC Resize to %d screen(s) from %d screen(s) "
-                        "not implemented",
-                        v->client_layout.count, layout->count);
+            LOG(LOG_LEVEL_ERROR,
+                "VNC Resize to %d screen(s) from %d screen(s) "
+                "not implemented",
+                v->client_layout.count, layout->count);
 
             /* Dump some useful info, in case we get here when we don't
              * need to */
@@ -888,7 +874,7 @@ get_pixel_safe(char *data, int x, int y, int width, int height, int bpp)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "error in get_pixel_safe bpp %d", bpp);
+        LOG(LOG_LEVEL_ERROR, "error in get_pixel_safe bpp %d", bpp);
     }
 
     return 0;
@@ -949,7 +935,7 @@ set_pixel_safe(char *data, int x, int y, int width, int height, int bpp,
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "error in set_pixel_safe bpp %d", bpp);
+        LOG(LOG_LEVEL_ERROR, "error in set_pixel_safe bpp %d", bpp);
     }
 }
 
@@ -986,7 +972,7 @@ split_color(int pixel, int *r, int *g, int *b, int bpp, int *palette)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "error in split_color bpp %d", bpp);
+        LOG(LOG_LEVEL_ERROR, "error in split_color bpp %d", bpp);
     }
 
     return 0;
@@ -1002,7 +988,7 @@ make_color(int r, int g, int b, int bpp)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "error in make_color bpp %d", bpp);
+        LOG(LOG_LEVEL_ERROR, "error in make_color bpp %d", bpp);
     }
 
     return 0;
@@ -1071,14 +1057,14 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
         case ENC_RAW:
         {
             int need_size = cx * cy * get_bytes_per_pixel(v->server_bpp);
-            log_message(LOG_LEVEL_DEBUG, "Skipping ENC_RAW encoding");
+            LOG(LOG_LEVEL_DEBUG, "Skipping ENC_RAW encoding");
             error = skip_trans_bytes(v->trans, need_size);
         }
         break;
 
         case ENC_COPY_RECT:
         {
-            log_message(LOG_LEVEL_DEBUG, "Skipping ENC_COPY_RECT encoding");
+            LOG(LOG_LEVEL_DEBUG, "Skipping ENC_COPY_RECT encoding");
             error = skip_trans_bytes(v->trans, 4);
         }
         break;
@@ -1088,22 +1074,22 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
             int j = cx * cy * get_bytes_per_pixel(v->server_bpp);
             int k = ((cx + 7) / 8) * cy;
 
-            log_message(LOG_LEVEL_DEBUG, "Skipping ENC_CURSOR encoding");
+            LOG(LOG_LEVEL_DEBUG, "Skipping ENC_CURSOR encoding");
             error = skip_trans_bytes(v->trans, j + k);
         }
         break;
 
         case ENC_DESKTOP_SIZE:
-            log_message(LOG_LEVEL_DEBUG, "Skipping ENC_DESKTOP_SIZE encoding");
+            LOG(LOG_LEVEL_DEBUG, "Skipping ENC_DESKTOP_SIZE encoding");
             break;
 
         case ENC_EXTENDED_DESKTOP_SIZE:
         {
             struct vnc_screen_layout layout = {0};
-            log_message(LOG_LEVEL_DEBUG,
-                        "Skipping ENC_EXTENDED_DESKTOP_SIZE encoding "
-                        "x=%d, y=%d geom=%dx%d",
-                        x, y, cx, cy);
+            LOG(LOG_LEVEL_DEBUG,
+                "Skipping ENC_EXTENDED_DESKTOP_SIZE encoding "
+                "x=%d, y=%d geom=%dx%d",
+                x, y, cx, cy);
             error = read_extended_desktop_size_rect(v, &layout);
             g_free(layout.s);
         }
@@ -1183,10 +1169,10 @@ find_matching_extended_rect(struct vnc *v,
                         match_layout->s == NULL &&
                         match(x, y, cx, cy))
                 {
-                    log_message(LOG_LEVEL_DEBUG,
-                                "VNC matched ExtendedDesktopSize rectangle "
-                                "x=%d, y=%d geom=%dx%d",
-                                x, y, cx, cy);
+                    LOG(LOG_LEVEL_DEBUG,
+                        "VNC matched ExtendedDesktopSize rectangle "
+                        "x=%d, y=%d geom=%dx%d",
+                        x, y, cx, cy);
 
                     error = read_extended_desktop_size_rect(v, match_layout);
                     if (match_x)
@@ -1351,7 +1337,7 @@ lib_framebuffer_first_update(struct vnc *v)
     {
         if (layout.s != NULL)
         {
-            log_message(LOG_LEVEL_DEBUG, "VNC server supports resizing");
+            LOG(LOG_LEVEL_DEBUG, "VNC server supports resizing");
 
             /* Force the client geometry over to the server */
             log_screen_layout(LOG_LEVEL_INFO, "OldLayout", &layout);
@@ -1366,9 +1352,9 @@ lib_framebuffer_first_update(struct vnc *v)
              */
             if (layout.count == 1 && v->client_layout.count == 1)
             {
-                log_message(LOG_LEVEL_DEBUG, "VNC "
-                            "setting screen id to %d from server",
-                            layout.s[0].id);
+                LOG(LOG_LEVEL_DEBUG, "VNC "
+                    "setting screen id to %d from server",
+                    layout.s[0].id);
 
                 v->client_layout.s[0].id = layout.s[0].id;
                 v->client_layout.s[0].flags = layout.s[0].flags;
@@ -1376,25 +1362,25 @@ lib_framebuffer_first_update(struct vnc *v)
 
             if (vnc_screen_layouts_equal(&layout, &v->client_layout))
             {
-                log_message(LOG_LEVEL_DEBUG, "Server layout is the same "
-                            "as the client layout");
+                LOG(LOG_LEVEL_DEBUG, "Server layout is the same "
+                    "as the client layout");
                 v->initial_resize_status = VRS_DONE;
             }
             else
             {
-                log_message(LOG_LEVEL_DEBUG, "Server layout differs from "
-                            "the client layout. Changing server layout");
+                LOG(LOG_LEVEL_DEBUG, "Server layout differs from "
+                    "the client layout. Changing server layout");
                 error = send_set_desktop_size(v, &v->client_layout);
                 v->initial_resize_status = VRS_WAITING_FOR_RESIZE_CONFIRM;
             }
         }
         else
         {
-            log_message(LOG_LEVEL_DEBUG, "VNC server does not support resizing");
+            LOG(LOG_LEVEL_DEBUG, "VNC server does not support resizing");
 
             /* Force client to same size as server */
-            log_message(LOG_LEVEL_DEBUG, "Resizing client to server %dx%d",
-                        v->server_width, v->server_height);
+            LOG(LOG_LEVEL_DEBUG, "Resizing client to server %dx%d",
+                v->server_width, v->server_height);
             error = resize_client(v, 0, v->server_width, v->server_height);
             v->initial_resize_status = VRS_DONE;
         }
@@ -1437,18 +1423,18 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
         {
             if (response_code == 0)
             {
-                log_message(LOG_LEVEL_DEBUG, "VNC server successfully resized");
+                LOG(LOG_LEVEL_DEBUG, "VNC server successfully resized");
                 log_screen_layout(LOG_LEVEL_INFO, "NewLayout", &layout);
             }
             else
             {
-                log_message(LOG_LEVEL_ERROR,
-                            "VNC server resize failed - error code %d [%s]",
-                            response_code,
-                            get_eds_status_msg(response_code));
+                LOG(LOG_LEVEL_WARNING,
+                    "VNC server resize failed - error code %d [%s]",
+                    response_code,
+                    get_eds_status_msg(response_code));
                 /* Force client to same size as server */
-                log_message(LOG_LEVEL_DEBUG, "Resizing client to server %dx%d",
-                            v->server_width, v->server_height);
+                LOG(LOG_LEVEL_WARNING, "Resizing client to server %dx%d",
+                    v->server_width, v->server_height);
                 error = resize_client(v, 0, v->server_width, v->server_height);
             }
             v->initial_resize_status = VRS_DONE;
@@ -1773,7 +1759,6 @@ lib_bell_trigger(struct vnc *v)
 int
 lib_mod_signal(struct vnc *v)
 {
-    g_writeln("lib_mod_signal: not used");
     return 0;
 }
 
@@ -1816,7 +1801,7 @@ lib_mod_process_message(struct vnc *v, struct stream *s)
         }
         else if (type == S2C_SERVER_CUT_TEXT) /* clipboard */
         {
-            log_message(LOG_LEVEL_DEBUG, "VNC got clip data");
+            LOG(LOG_LEVEL_DEBUG, "VNC got clip data");
             error = lib_clip_data(v);
         }
         else
@@ -1864,7 +1849,7 @@ lib_data_in(struct trans *trans)
     struct vnc *self;
     struct stream *s;
 
-    LLOGLN(10, ("lib_data_in:"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_data_in:");
 
     if (trans == 0)
     {
@@ -1881,7 +1866,7 @@ lib_data_in(struct trans *trans)
 
     if (lib_mod_process_message(self, s) != 0)
     {
-        g_writeln("lib_data_in: lib_mod_process_message failed");
+        LOG(LOG_LEVEL_ERROR, "lib_data_in: lib_mod_process_message failed");
         return 1;
     }
 
@@ -2017,12 +2002,12 @@ lib_mod_connect(struct vnc *v)
             }
             else if (i == 0)
             {
-                log_message(LOG_LEVEL_DEBUG, "VNC Server will disconnect");
+                LOG(LOG_LEVEL_ERROR, "VNC Server will disconnect");
                 error = 1;
             }
             else
             {
-                log_message(LOG_LEVEL_DEBUG, "VNC unsupported security level");
+                LOG(LOG_LEVEL_ERROR, "VNC unsupported security level %d", i);
                 error = 1;
             }
         }
@@ -2030,8 +2015,8 @@ lib_mod_connect(struct vnc *v)
 
     if (error != 0)
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC error %d after security negotiation",
-                    error);
+        LOG(LOG_LEVEL_ERROR, "VNC error %d after security negotiation",
+            error);
     }
 
     if (error == 0 && check_sec_result)
@@ -2067,7 +2052,7 @@ lib_mod_connect(struct vnc *v)
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC error before sending share flag");
+        LOG(LOG_LEVEL_ERROR, "VNC error before sending share flag");
     }
 
     if (error == 0)
@@ -2078,7 +2063,7 @@ lib_mod_connect(struct vnc *v)
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC error before receiving server init");
+        LOG(LOG_LEVEL_ERROR, "VNC error before receiving server init");
     }
 
     if (error == 0)
@@ -2092,7 +2077,7 @@ lib_mod_connect(struct vnc *v)
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC error before receiving pixel format");
+        LOG(LOG_LEVEL_ERROR, "VNC error before receiving pixel format");
     }
 
     if (error == 0)
@@ -2103,7 +2088,7 @@ lib_mod_connect(struct vnc *v)
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC error before receiving name length");
+        LOG(LOG_LEVEL_ERROR, "VNC error before receiving name length");
     }
 
     if (error == 0)
@@ -2125,7 +2110,7 @@ lib_mod_connect(struct vnc *v)
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC error before receiving name");
+        LOG(LOG_LEVEL_ERROR, "VNC error before receiving name");
     }
 
     /* should be connected */
@@ -2234,8 +2219,8 @@ lib_mod_connect(struct vnc *v)
         }
         else
         {
-            log_message(LOG_LEVEL_INFO,
-                        "VNC User disabled EXTENDED_DESKTOP_SIZE");
+            LOG(LOG_LEVEL_INFO,
+                "VNC User disabled EXTENDED_DESKTOP_SIZE");
         }
 
         init_stream(s, 8192);
@@ -2412,7 +2397,7 @@ int
 lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
-    LLOGLN(10, ("lib_mod_get_wait_objs:"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_get_wait_objs:");
 
     if (v != 0)
     {
@@ -2512,7 +2497,7 @@ int EXPORT_CC
 mod_exit(tintptr handle)
 {
     struct vnc *v = (struct vnc *) handle;
-    log_message(LOG_LEVEL_DEBUG, "VNC mod_exit");
+    LOG(LOG_LEVEL_TRACE, "VNC mod_exit");
 
     if (v == 0)
     {
