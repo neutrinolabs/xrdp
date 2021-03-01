@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-/* 
+/*
  * Portions are from OpenSSH, under the following license:
  *
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -59,7 +59,7 @@
  * xrdp-ssh-agent.c: program to forward ssh-agent protocol from xrdp session
  *
  * This performs the equivalent function of ssh-agent on a server you connect
- * to via ssh, but the ssh-agent protocol is over an RDP dynamic virtual 
+ * to via ssh, but the ssh-agent protocol is over an RDP dynamic virtual
  * channel and not an SSH channel.
  *
  * This will print out variables to set in your environment (specifically,
@@ -119,23 +119,23 @@ static int is_going = 1;
 void
 mktemp_proto(char *s, size_t len)
 {
-	const char *tmpdir;
-	int r;
+    const char *tmpdir;
+    int r;
 
-	if ((tmpdir = getenv("TMPDIR")) != NULL)
+    if ((tmpdir = getenv("TMPDIR")) != NULL)
+    {
+        r = snprintf(s, len, "%s/ssh-XXXXXXXXXXXX", tmpdir);
+        if (r > 0 && (size_t)r < len)
         {
-		r = snprintf(s, len, "%s/ssh-XXXXXXXXXXXX", tmpdir);
-		if (r > 0 && (size_t)r < len)
-                {
-			return;
-                }
-	}
-	r = snprintf(s, len, "/tmp/ssh-XXXXXXXXXXXX");
-	if (r < 0 || (size_t)r >= len)
-        {
-            fprintf(stderr, "%s: template string too short", __func__);
-            exit(1);
+            return;
         }
+    }
+    r = snprintf(s, len, "/tmp/ssh-XXXXXXXXXXXX");
+    if (r < 0 || (size_t)r >= len)
+    {
+        fprintf(stderr, "%s: template string too short", __func__);
+        exit(1);
+    }
 }
 
 
@@ -391,7 +391,7 @@ main(int argc, char **argv)
         {
             socklen_t addrsize = sizeof(addr);
             int client_fd = accept(sa_uds_fd,
-                                   (struct sockaddr*)&addr,
+                                   (struct sockaddr *)&addr,
                                    &addrsize);
             handle_connection(client_fd);
             close(client_fd);
