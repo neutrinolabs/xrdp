@@ -64,7 +64,7 @@ typedef int bool_t;
 
 #if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 #if defined(__sparc__) || \
-    defined(__hppa__) || \
+    defined(__hppa__) || defined (__m68k__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
     (defined(__ppc__) && defined(__BIG_ENDIAN__))
 #define B_ENDIAN
@@ -77,7 +77,7 @@ typedef int bool_t;
 /* check if we need to align data */
 #if !(defined(NEED_ALIGN) || defined(NO_NEED_ALIGN))
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
-    defined(__AIX__) || defined(__mips__) || \
+    defined(__AIX__) || defined(__m68k__) || defined(__mips__) || \
     defined(__ia64__) || defined(__arm__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
     (defined(__ppc__) && defined(__BIG_ENDIAN__))
