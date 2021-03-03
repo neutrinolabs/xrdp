@@ -85,6 +85,7 @@ typedef int bool_t;
 #elif defined(__x86__) || defined(__x86_64__) || \
       defined(__AMD64__) || defined(_M_IX86) || defined (_M_AMD64) || \
       defined(__i386__) || defined(__aarch64__) || \
+      defined(__PPC__) || defined(__LITTLE_ENDIAN__) || \
       defined(__riscv)
 #define NO_NEED_ALIGN
 #else
