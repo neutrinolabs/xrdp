@@ -10,7 +10,7 @@
 
 **xrdp** provides a graphical login to remote machines using Microsoft
 Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of
-RDP clients: FreeRDP, rdesktop, NeutrinoRDP and Microsoft Remote Desktop
+RDP clients: FreeRDP, rdesktop, KRDC, NeutrinoRDP and Microsoft Remote Desktop
 Client (for Windows, Mac OS, iOS and Android).
 
 RDP transport is encrypted using TLS by default.
