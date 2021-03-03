@@ -79,7 +79,7 @@ typedef int bool_t;
 #if !(defined(NEED_ALIGN) || defined(NO_NEED_ALIGN))
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
     defined(__AIX__) || defined(__m68k__) || defined(__mips__) || \
-    defined(__ia64__) || defined(__arm__) || \
+    defined(__ia64__) || defined(__arm__) || defined(__sh__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
     (defined(__ppc__) && defined(__BIG_ENDIAN__))
 #define NEED_ALIGN
