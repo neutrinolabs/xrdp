@@ -189,7 +189,7 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                 v->server_send_to_channel(v, v->clip_chanid, out_s->data,
                                           length, length, 3);
                 free_stream(out_s);
-#if 0
+
                 // Send the CLIPRDR_DATA_REQUEST message to the cliprdr channel.
                 //
                 make_stream(out_s);
@@ -204,7 +204,6 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                 v->server_send_to_channel(v, v->clip_chanid, out_s->data,
                                           length, length, 3);
                 free_stream(out_s);
-#endif
                 break;
 
             case 3: /* CLIPRDR_FORMAT_ACK */
