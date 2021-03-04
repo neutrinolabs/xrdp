@@ -130,6 +130,10 @@ jobs:
       CPPCHECK_VER: 2.3
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
+      # This is currently the only way to get a version into
+      # the cache tag name - see https://github.com/actions/cache/issues/543
+      - run: |
+          echo "OS_VERSION=`lsb_release -sr`" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Cache cppcheck
         uses: actions/cache@v2
@@ -137,7 +141,7 @@ jobs:
           cache-name: cache-cppcheck
         with:
           path: ~/cppcheck.local
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
+          key: ${{ runner.os }}-${{ env.OS_VERSION }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
       - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh
       - run: ./bootstrap
       - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
