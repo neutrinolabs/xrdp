@@ -32,6 +32,16 @@ RDP transport is encrypted using TLS by default.
  * audio redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
  * drive redirection (mount local client drives on remote machine)
 
+## Supported Platforms
+
+**xrdp** primarily targets GNU/Linux operating system. x86 (including x86-64)
+and ARM processors are most mature architecture to run xrdp on.
+See also [Platform Support Tier](https://github.com/neutrinolabs/xrdp/wiki/Platform-Support-Tier).
+
+Some components such as xorgxrdp and RemoteFX codec have special optimization
+for x86 using SIMD instructions. So running xrdp on x86 processors will get
+fully accelerated experience.
+
 ## Quick Start
 
 Most Linux distributions should distribute the latest release of xrdp in their
@@ -64,20 +74,6 @@ yum install xrdp
 
 `yum` is being replaced with `dnf`, so you may need to use `dnf` instead
 of `yum` in the above commands.
-
-## Environment
-
-**xrdp** primarily targets to GNU/Linux. Tested on x86, x86_64, SPARC and
-PowerPC.
-
-xorgxrdp and RemoteFX Codec have special optimization for x86 and x86_64 using
-SIMD instructions.
-
-FreeBSD is not a primary target of xrdp. It is working on FreeBSD except
-for the drive redirection feature.
-
-Other operating systems such as macOS are not supported so far, but we
-welcome your contributions.
 
 ## Compiling
 
