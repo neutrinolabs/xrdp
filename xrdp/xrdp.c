@@ -445,7 +445,6 @@ int
 main(int argc, char **argv)
 {
     int exit_status = 0;
-    int test;
     enum logReturns error;
     struct xrdp_startup_params startup_params = {0};
     int pid;
@@ -453,16 +452,18 @@ main(int argc, char **argv)
     int daemon;
     char text[256];
     const char *pid_file = XRDP_PID_PATH "/xrdp.pid";
-
     int errored_argc;
+
+#ifdef XRDP_DEBUG
+    int test;
+    for (test = 0; test < argc; test++)
+    {
+        g_writeln("Argument %i - %s", test, argv[test]);
+    }
+#endif
 
     g_init("xrdp");
     ssl_init();
-
-    for (test = 0; test < argc; test++)
-    {
-        DEBUG(("Argument %i - %s", test, argv[test]));
-    }
 
     startup_params.xrdp_ini = XRDP_CFG_PATH "/xrdp.ini";
 

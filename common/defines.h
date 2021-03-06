@@ -21,12 +21,6 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
-/* check for debug */
-#ifdef XRDP_DEBUG
-#define DEBUG(args) g_writeln args;
-#else
-#define DEBUG(args)
-#endif
 /* other macros */
 #undef MIN
 #define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
