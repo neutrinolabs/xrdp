@@ -40,9 +40,9 @@
 struct trans; /* forward declaration */
 struct xrdp_tls;
 
-typedef int (*ttrans_data_in)(struct trans* self);
-typedef int (*ttrans_conn_in)(struct trans* self,
-                                         struct trans* new_self);
+typedef int (*ttrans_data_in)(struct trans *self);
+typedef int (*ttrans_conn_in)(struct trans *self,
+                              struct trans *new_self);
 typedef int (*tis_term)(void);
 typedef int (*trans_recv_proc) (struct trans *self, char *ptr, int len);
 typedef int (*trans_send_proc) (struct trans *self, const char *data, int len);
@@ -97,13 +97,13 @@ struct trans
     int type1; /* 1 listener 2 server 3 client */
     ttrans_data_in trans_data_in;
     ttrans_conn_in trans_conn_in;
-    void* callback_data;
+    void *callback_data;
     int header_size;
-    struct stream* in_s;
-    struct stream* out_s;
-    char* listen_filename;
+    struct stream *in_s;
+    struct stream *out_s;
+    char *listen_filename;
     tis_term is_term; /* used to test for exit */
-    struct stream* wait_s;
+    struct stream *wait_s;
     char addr[256];
     char port[256];
     int no_stream_init_on_data_in;
@@ -118,43 +118,43 @@ struct trans
     enum xrdp_source my_source;
 };
 
-struct trans*
+struct trans *
 trans_create(int mode, int in_size, int out_size);
 void
-trans_delete(struct trans* self);
+trans_delete(struct trans *self);
 void
-trans_delete_from_child(struct trans* self);
+trans_delete_from_child(struct trans *self);
 int
-trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
+trans_get_wait_objs(struct trans *self, tbus *objs, int *count);
 int
 trans_get_wait_objs_rw(struct trans *self,
                        tbus *robjs, int *rcount,
                        tbus *wobjs, int *wcount, int *timeout);
 int
-trans_check_wait_objs(struct trans* self);
+trans_check_wait_objs(struct trans *self);
 int
-trans_force_read_s(struct trans* self, struct stream* in_s, int size);
+trans_force_read_s(struct trans *self, struct stream *in_s, int size);
 int
-trans_force_write_s(struct trans* self, struct stream* out_s);
+trans_force_write_s(struct trans *self, struct stream *out_s);
 int
-trans_force_read(struct trans* self, int size);
+trans_force_read(struct trans *self, int size);
 int
-trans_force_write(struct trans* self);
+trans_force_write(struct trans *self);
 int
-trans_write_copy(struct trans* self);
+trans_write_copy(struct trans *self);
 int
-trans_write_copy_s(struct trans* self, struct stream* out_s);
+trans_write_copy_s(struct trans *self, struct stream *out_s);
 int
-trans_connect(struct trans* self, const char* server, const char* port,
+trans_connect(struct trans *self, const char *server, const char *port,
               int timeout);
 int
-trans_listen_address(struct trans* self, char* port, const char* address);
+trans_listen_address(struct trans *self, char *port, const char *address);
 int
-trans_listen(struct trans* self, char* port);
-struct stream*
-trans_get_in_s(struct trans* self);
-struct stream*
-trans_get_out_s(struct trans* self, int size);
+trans_listen(struct trans *self, char *port);
+struct stream *
+trans_get_in_s(struct trans *self);
+struct stream *
+trans_get_out_s(struct trans *self, int size);
 int
 trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
                    long ssl_protocols, const char *tls_ciphers);

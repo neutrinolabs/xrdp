@@ -145,7 +145,7 @@ typedef int tsock;
 /* format string verification */
 #if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
 #define printflike(arg_format, arg_first_check) \
- __attribute__((__format__(__printf__, arg_format, arg_first_check)))
+    __attribute__((__format__(__printf__, arg_format, arg_first_check)))
 #else
 #define printflike(arg_format, arg_first_check)
 #endif
@@ -154,8 +154,8 @@ typedef int tsock;
 #ifdef __cplusplus
 extern "C" {
 #endif
-   tintptr mod_init(void);
-   int mod_exit(tintptr);
+tintptr mod_init(void);
+int mod_exit(tintptr);
 #ifdef __cplusplus
 }
 #endif

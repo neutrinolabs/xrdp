@@ -130,7 +130,7 @@ enum logReturns
 #else
 #define LOG(log_level, args...) log_message(log_level, args)
 
-/* Since log_message() returns a value ensure that the elided versions of 
+/* Since log_message() returns a value ensure that the elided versions of
  * LOG_DEVEL and LOG_DEVEL_HEXDUMP also "fake" returning the success value
  */
 #define LOG_DEVEL(log_level, args...) UNUSED_VAR(LOG_STARTUP_OK)
