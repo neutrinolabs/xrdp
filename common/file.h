@@ -24,14 +24,14 @@
 #include "arch.h"
 
 int
-file_read_sections(int fd, struct list* names);
+file_read_sections(int fd, struct list *names);
 int
-file_by_name_read_sections(const char* file_name, struct list* names);
+file_by_name_read_sections(const char *file_name, struct list *names);
 int
-file_read_section(int fd, const char* section,
-                  struct list* names, struct list* values);
+file_read_section(int fd, const char *section,
+                  struct list *names, struct list *values);
 int
-file_by_name_read_section(const char* file_name, const char* section,
-                          struct list* names, struct list* values);
+file_by_name_read_section(const char *file_name, const char *section,
+                          struct list *names, struct list *values);
 
 #endif

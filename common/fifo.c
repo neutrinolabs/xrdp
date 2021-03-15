@@ -47,20 +47,24 @@ fifo_delete(FIFO *self)
     USER_DATA *udp;
 
     if (!self)
+    {
         return;
+    }
 
-     if (!self->head)
-     {
-         /* FIFO is empty */
-         g_free(self);
-         return;
-     }
+    if (!self->head)
+    {
+        /* FIFO is empty */
+        g_free(self);
+        return;
+    }
 
     if (self->head == self->tail)
     {
         /* only one item in FIFO */
         if (self->auto_free)
+        {
             g_free(self->head->item);
+        }
 
         g_free(self->head);
         g_free(self);
@@ -73,7 +77,9 @@ fifo_delete(FIFO *self)
         udp = self->head;
 
         if (self->auto_free)
+        {
             g_free(udp->item);
+        }
 
         self->head = udp->next;
         g_free(udp);
@@ -97,10 +103,14 @@ fifo_add_item(FIFO *self, void *item)
     USER_DATA *udp;
 
     if (!self || !item)
+    {
         return -1;
+    }
 
     if ((udp = (USER_DATA *) g_malloc(sizeof(USER_DATA), 0)) == 0)
+    {
         return -1;
+    }
 
     udp->item = item;
     udp->next = 0;
@@ -135,7 +145,9 @@ fifo_remove_item(FIFO *self)
     USER_DATA *udp;
 
     if (!self || !self->head)
+    {
         return 0;
+    }
 
     if (self->head == self->tail)
     {
@@ -167,7 +179,9 @@ int
 fifo_is_empty(FIFO *self)
 {
     if (!self)
+    {
         return 1;
+    }
 
     return (self->head == 0);
 }

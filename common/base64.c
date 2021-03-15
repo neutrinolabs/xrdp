@@ -67,7 +67,7 @@ base64_decode(char *dst, const char *src, size_t len)
     bio = BIO_new_mem_buf(b64str, len);
     bio = BIO_push(b64, bio);
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
-    decoded_bytes = BIO_read(bio , dst, len);
+    decoded_bytes = BIO_read(bio, dst, len);
     BIO_free_all(bio);
 
     /* if input is corrupt, return empty string */

@@ -282,16 +282,16 @@
 #define TS_NEG_SCRBLT_INDEX             0x02
 #define TS_NEG_MEMBLT_INDEX             0x03
 #define TS_NEG_MEM3BLT_INDEX            0x04
-                                     /* 0x05 */
-                                     /* 0x06 */
+/*                                      0x05 */
+/*                                      0x06 */
 #define TS_NEG_DRAWNINEGRID_INDEX       0x07
 #define TS_NEG_LINETO_INDEX             0x08
 #define TS_NEG_MULTI_DRAWNINEGRID_INDEX 0x09
-                                     /* 0x0A */
+/*                                      0x0A */
 #define TS_NEG_SAVEBITMAP_INDEX         0x0B
-                                     /* 0x0C */
-                                     /* 0x0D */
-                                     /* 0x0E */
+/*                                      0x0C */
+/*                                      0x0D */
+/*                                      0x0E */
 #define TS_NEG_MULTIDSTBLT_INDEX        0x0F
 #define TS_NEG_MULTIPATBLT_INDEX        0x10
 #define TS_NEG_MULTISCRBLT_INDEX        0x11
@@ -300,15 +300,15 @@
 #define TS_NEG_POLYGON_SC_INDEX         0x14
 #define TS_NEG_POLYGON_CB_INDEX         0x15
 #define TS_NEG_POLYLINE_INDEX           0x16
-                                     /* 0x17 */
+/*                                      0x17 */
 #define TS_NEG_FAST_GLYPH_INDEX         0x18
 #define TS_NEG_ELLIPSE_SC_INDEX         0x19
 #define TS_NEG_ELLIPSE_CB_INDEX         0x1A
 #define TS_NEG_INDEX_INDEX              0x1B
-                                     /* 0x1C */
-                                     /* 0x1D */
-                                     /* 0x1E */
-                                     /* 0x1F */
+/*                                      0x1C */
+/*                                      0x1D */
+/*                                      0x1E */
+/*                                      0x1F */
 
 /* Input Capability Set: inputFlags (2.2.7.1.6) */
 #define  INPUT_FLAG_SCANCODES          0x0001
@@ -340,27 +340,27 @@
 
 /* CODEC_GUID_NSCODEC  CA8D1BB9-000F-154F-589FAE2D1A87E2D6 */
 #define XR_CODEC_GUID_NSCODEC \
-  "\xb9\x1b\x8d\xca\x0f\x00\x4f\x15\x58\x9f\xae\x2d\x1a\x87\xe2\xd6"
+    "\xb9\x1b\x8d\xca\x0f\x00\x4f\x15\x58\x9f\xae\x2d\x1a\x87\xe2\xd6"
 
 /* CODEC_GUID_REMOTEFX 76772F12-BD72-4463-AFB3B73C9C6F7886 */
 #define XR_CODEC_GUID_REMOTEFX \
-  "\x12\x2F\x77\x76\x72\xBD\x63\x44\xAF\xB3\xB7\x3C\x9C\x6F\x78\x86"
+    "\x12\x2F\x77\x76\x72\xBD\x63\x44\xAF\xB3\xB7\x3C\x9C\x6F\x78\x86"
 
 /* CODEC_GUID_IMAGE_REMOTEFX 2744CCD4-9D8A-4E74-803C-0ECBEEA19C54 */
 #define XR_CODEC_GUID_IMAGE_REMOTEFX \
-  "\xD4\xCC\x44\x27\x8A\x9D\x74\x4E\x80\x3C\x0E\xCB\xEE\xA1\x9C\x54"
+    "\xD4\xCC\x44\x27\x8A\x9D\x74\x4E\x80\x3C\x0E\xCB\xEE\xA1\x9C\x54"
 
 /* MFVideoFormat_H264  0x34363248-0000-0010-800000AA00389B71 */
 #define XR_CODEC_GUID_H264 \
-  "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
+    "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
 
 /* CODEC_GUID_JPEG     1BAF4CE6-9EED-430C-869ACB8B37B66237 */
 #define XR_CODEC_GUID_JPEG \
-  "\xE6\x4C\xAF\x1B\xED\x9E\x0C\x43\x86\x9A\xCB\x8B\x37\xB6\x62\x37"
+    "\xE6\x4C\xAF\x1B\xED\x9E\x0C\x43\x86\x9A\xCB\x8B\x37\xB6\x62\x37"
 
 /* CODEC_GUID_PNG      0E0C858D-28E0-45DB-ADAA0F83E57CC560 */
 #define XR_CODEC_GUID_PNG \
-  "\x8D\x85\x0C\x0E\xE0\x28\xDB\x45\xAD\xAA\x0F\x83\xE5\x7C\xC5\x60"
+    "\x8D\x85\x0C\x0E\xE0\x28\xDB\x45\xAD\xAA\x0F\x83\xE5\x7C\xC5\x60"
 
 /* PDU Types (2.2.8.1.1.1.1) */
 #define PDUTYPE_DEMANDACTIVEPDU        0x1
@@ -376,7 +376,7 @@
      (pdu_type) == PDUTYPE_DATAPDU ? "PDUTYPE_DATAPDU" : \
      (pdu_type) == PDUTYPE_SERVER_REDIR_PKT ? "PDUTYPE_SERVER_REDIR_PKT" : \
      "unknown" \
-     )
+    )
 
 /* Share Data Header: pduType2 (2.2.8.1.1.1.2) */
 /* TODO: to be renamed */
@@ -417,7 +417,7 @@
 
 /* Keyboard Event: keyboardFlags (2.2.8.1.1.3.1.1.1) */
 /* TODO: to be renamed */
-#define KBD_FLAG_RIGHT                 0x0001 
+#define KBD_FLAG_RIGHT                 0x0001
 #define KBD_FLAG_EXT                   0x0100 /* KBDFLAGS_EXTENDED */
 #define KBD_FLAG_QUIET                 0x1000
 #define KBD_FLAG_DOWN                  0x4000
@@ -475,7 +475,7 @@
      (type) == RDP_UPDATE_PALETTE ? "RDP_UPDATE_PALETTE" : \
      (type) == RDP_UPDATE_SYNCHRONIZE ? "RDP_UPDATE_SYNCHRONIZE" : \
      "unknown" \
-     )
+    )
 
 /* Server Pointer Update PDU: messageType (2.2.9.1.1.4) */
 /* TODO: to be renamed */
