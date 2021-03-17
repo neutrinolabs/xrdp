@@ -77,7 +77,6 @@ in
             libxfixes-dev:i386 \
             libxrandr-dev:i386 \
             libxrender-dev:i386 \
-            openssl:i386 \
             libfuse-dev:i386"
         
         dpkg --add-architecture i386
