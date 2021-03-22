@@ -1918,14 +1918,15 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
 
     out_uint32_le(s, send_bytes);
 
-    val = send_bytes > 0 ? 0x00020008 : 0;
+    val = send_bytes > 0 ? 0x00020008 : 0; /* 0x00020008 : pointer to data after Transmit_Call struct : 0x00020000 + offset * 4 : map3 */
     out_uint32_le(s, val); /* map3 */
 
-    val = recv_ior_is_null ? 0 : 0x00020008;
+    val = recv_ior_is_null ? 0 : 0x00020008; /* 0x00020008 : pointer to data after Transmit_Call struct : 0x00020000 + offset * 4 : map4 */
     out_uint32_le(s, val); /* map 4 */
 
     out_uint32_le(s, recv_is_null); // map5
     out_uint32_le(s, recv_bytes);
+    /* end of Transmit_Call struct */
 
     /* map0 */
     out_uint32_le(s, context_bytes);
@@ -1943,6 +1944,7 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
 
     if (send_bytes > 0)
     {
+        /* map3 */
         out_uint32_le(s, send_bytes);
         out_uint8a(s, send_data, send_bytes);
         align_s(s, 4);
