@@ -1,6 +1,6 @@
 
 EXTRA_DIST = \
-  readme.txt
+  gtcp_proxy
 
 SUBDIRS = \
-  memtest 
+  tcp_proxy

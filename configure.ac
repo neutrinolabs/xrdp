@@ -399,7 +399,9 @@ AC_CONFIG_FILES([
   sesman/tools/Makefile
   tests/Makefile
   tests/memtest/Makefile
-  tests/tcp_proxy/Makefile
+  tools/Makefile
+  tools/devel/Makefile
+  tools/devel/tcp_proxy/Makefile
   vnc/Makefile
   xrdpapi/Makefile
   xrdp/Makefile
