@@ -30,6 +30,7 @@
 #include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
+#include "defines.h"
 
 unsigned int
 g_format_info_string(char *dest, unsigned int len,
@@ -805,4 +806,51 @@ g_strtrim(char *str, int trim_flags)
     free(text);
     free(text1);
     return 0;
+}
+
+/*****************************************************************************/
+char *
+g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int src_len)
+{
+    int len = 0;
+    int joiner_len;
+    int i = 0;
+    int dest_remaining;
+    char *dest_pos = dest;
+    char *dest_end;
+    
+    if (dest == NULL || dest_len < 1)
+    {
+        return dest;
+    }
+    if (src == NULL || src_len < 1)
+    {
+        dest[0] = '\0';
+        return dest;
+    }
+
+    dest[0] = '\0';
+    dest_end = dest + dest_len - 1;
+    joiner_len = g_strlen(joiner);
+    for (i = 0; i < src_len - 1 && dest_pos < dest_end; i++)
+    {
+        len = g_strlen(src[i]);
+        dest_remaining = dest_end - dest_pos;
+        g_strncat(dest_pos, src[i], dest_remaining);
+        dest_pos += MIN(len, dest_remaining);
+
+        if (dest_pos < dest_end)
+        {
+            dest_remaining = dest_end - dest_pos;
+            g_strncat(dest_pos, joiner, dest_remaining);
+            dest_pos += MIN(joiner_len, dest_remaining);
+        }
+    }
+
+    if (i == src_len - 1 && dest_pos < dest_end)
+    {
+        g_strncat(dest_pos, src[i], dest_end - dest_pos);
+    }
+
+    return dest;
 }

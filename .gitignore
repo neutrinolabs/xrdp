@@ -42,7 +42,9 @@ sesman/xrdp-sesman
 sesman/sesman.ini
 *.so
 stamp-h1
+tap-driver.sh
 test-driver
+tests/common/test_common
 tests/memtest/memtest
 tools/devel/tcp_proxy/tcp_proxy
 *.trs

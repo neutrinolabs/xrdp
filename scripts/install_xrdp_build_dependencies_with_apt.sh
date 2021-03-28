@@ -26,7 +26,8 @@ PACKAGES=" \
     libtool \
     make \
     nasm \
-    pkg-config\
+    pkg-config \
+    check \
     "
 
 case "$ARCH"
