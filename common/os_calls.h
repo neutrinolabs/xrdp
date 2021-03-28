@@ -23,6 +23,15 @@
 
 #include "arch.h"
 
+struct exit_status
+{
+    /* set to -1 when the process exited via a signal */
+    uint8_t exit_code;
+    
+    /* set to 0 when the process exited normally */
+    uint8_t signal_no;
+};
+
 #define g_tcp_can_recv g_sck_can_recv
 #define g_tcp_can_send g_sck_can_send
 #define g_tcp_recv g_sck_recv
@@ -145,6 +154,7 @@ int      g_getlogin(char *name, unsigned int len);
 int      g_setlogin(const char *name);
 int      g_waitchild(void);
 int      g_waitpid(int pid);
+struct exit_status g_waitpid_status(int pid);
 void     g_clearenv(void);
 int      g_setenv(const char *name, const char *value, int rewrite);
 char    *g_getenv(const char *name);
