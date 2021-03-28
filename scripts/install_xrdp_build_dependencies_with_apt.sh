@@ -1,20 +1,18 @@
 #!/bin/sh
 set -eufx
 
-FEATURE_SET="$1"
-ARCH="$2"
-shift
-shift
+FEATURE_SET=min
+ARCH=amd64
+
+if [ $# -ge 1 ]; then
+    FEATURE_SET="$1"
+    shift
+fi
+if [ $# -ge 1 ]; then
+    ARCH="$1"
+    shift
+fi
 APT_EXTRA_ARGS="$@"
-
-if [ -z "$FEATURE_SET" ]; then
-    FEATURE_SET=min
-fi
-
-if [ -z "$ARCH" ]; then
-    ARCH=amd64
-fi
-
 
 # common build tools for all architectures and feature sets
 PACKAGES=" \
