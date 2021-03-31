@@ -120,9 +120,9 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
         wts->display_num = get_display_num_from_display(display_text);
     }
 
-    if (wts->display_num <= 0)
+    if (wts->display_num < 0)
     {
-        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; display is <= 0");
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; invalid DISPLAY");
         free(wts);
         return NULL;
     }
@@ -552,6 +552,10 @@ get_display_num_from_display(char *display_text)
         }
         else if (mode == 1)
         {
+            if (display_text[index] < '0' || display_text[index] > '9')
+            {
+                return -1;
+            }
             disp[disp_index] = display_text[index];
             disp_index++;
         }
@@ -559,5 +563,5 @@ get_display_num_from_display(char *display_text)
     }
 
     disp[disp_index] = 0;
-    return atoi(disp);
+    return (disp_index== 0) ? -1 : atoi(disp);
 }

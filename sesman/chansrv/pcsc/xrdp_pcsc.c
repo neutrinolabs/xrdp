@@ -194,6 +194,10 @@ get_display_num_from_display(const char *display_text)
         }
         else if (mode == 1)
         {
+            if (display_text[index] < '0' || display_text[index] > '9')
+            {
+                return -1;
+            }
             disp[disp_index] = display_text[index];
             disp_index++;
         }
@@ -209,7 +213,7 @@ get_display_num_from_display(const char *display_text)
     scre[scre_index] = 0;
     LLOGLN(10, ("get_display_num_from_display: host [%s] disp [%s] scre [%s]",
                 host, disp, scre));
-    rv = atoi(disp);
+    rv = (disp_index== 0) ? -1 : atoi(disp);
     return rv;
 }
 
@@ -253,10 +257,10 @@ connect_to_chansrv(void)
         return 1;
     }
     dis = get_display_num_from_display(xrdp_display);
-    if (dis < 10)
+    if (dis < 0)
     {
-        /* DISPLAY must be > 9 */
-        LLOGLN(0, ("connect_to_chansrv: error, display not > 9 %d", dis));
+        LLOGLN(0, ("connect_to_chansrv: error, don't understand DISPLAY='%s'",
+               xrdp_display));
         return 1;
     }
     g_sck = socket(PF_LOCAL, SOCK_STREAM, 0);

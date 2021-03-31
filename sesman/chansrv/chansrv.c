@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include <ctype.h>
+
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -61,7 +63,7 @@ static tbus g_thread_done_event = 0;
 
 struct config_chansrv *g_cfg = NULL;
 
-int g_display_num = 0;
+int g_display_num = -1;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
 int g_rdpdr_chan_id = -1;   /* rdpdr   */
@@ -1559,61 +1561,30 @@ x_server_fatal_handler(void)
 
 /*****************************************************************************/
 static int
-get_display_num_from_display(char *display_text)
+get_display_num_from_display(const char *display_text)
 {
-    int index;
-    int mode;
-    int host_index;
-    int disp_index;
-    int scre_index;
-    char host[256];
-    char disp[256];
-    char scre[256];
+    int rv = -1;
+    const char *p;
 
-    g_memset(host, 0, 256);
-    g_memset(disp, 0, 256);
-    g_memset(scre, 0, 256);
-
-    index = 0;
-    host_index = 0;
-    disp_index = 0;
-    scre_index = 0;
-    mode = 0;
-
-    while (display_text[index] != 0)
+    /* Skip over the hostname part of the DISPLAY */
+    if ((p = g_strchr(display_text, ':')) != NULL)
     {
-        if (display_text[index] == ':')
+        ++p; /* Skip the ':' */
+
+        /* Cater for the (still supported) double-colon. See
+         * https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html */
+        if (*p == ':')
         {
-            mode = 1;
-        }
-        else if (display_text[index] == '.')
-        {
-            mode = 2;
-        }
-        else if (mode == 0)
-        {
-            host[host_index] = display_text[index];
-            host_index++;
-        }
-        else if (mode == 1)
-        {
-            disp[disp_index] = display_text[index];
-            disp_index++;
-        }
-        else if (mode == 2)
-        {
-            scre[scre_index] = display_text[index];
-            scre_index++;
+            ++p;
         }
 
-        index++;
+        if (isdigit(*p))
+        {
+            rv = g_atoi(p);
+        }
     }
 
-    host[host_index] = 0;
-    disp[disp_index] = 0;
-    scre[scre_index] = 0;
-    g_display_num = g_atoi(disp);
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1728,7 +1699,7 @@ main(int argc, char **argv)
     char text[256];
     const char *config_path;
     char log_path[256];
-    char *display_text;
+    const char *display_text;
     char log_file[256];
     enum logReturns error;
     struct log_config *logconfig;
@@ -1739,6 +1710,21 @@ main(int argc, char **argv)
     if (get_log_path(log_path, 255) != 0)
     {
         g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
+        main_cleanup();
+        return 1;
+    }
+
+    display_text = g_getenv("DISPLAY");
+    if (display_text == NULL)
+    {
+        g_writeln("DISPLAY is not set");
+        main_cleanup();
+        return 1;
+    }
+    g_display_num = get_display_num_from_display(display_text);
+    if (g_display_num < 0)
+    {
+        g_writeln("Unable to get display from DISPLAY='%s'", display_text);
         main_cleanup();
         return 1;
     }
@@ -1755,11 +1741,6 @@ main(int argc, char **argv)
     config_dump(g_cfg);
 
     pid = g_getpid();
-    display_text = g_getenv("DISPLAY");
-    if (display_text != NULL)
-    {
-        get_display_num_from_display(display_text);
-    }
 
     /* starting logging subsystem */
     g_snprintf(log_file, 255, "%s/xrdp-chansrv.%d.log", log_path, g_display_num);
@@ -1812,13 +1793,6 @@ main(int argc, char **argv)
     xcommon_set_x_server_fatal_handler(x_server_fatal_handler);
 
     LOG_DEVEL(LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text);
-
-    if (g_display_num == 0)
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "main: error, display is zero");
-        main_cleanup();
-        return 1;
-    }
 
     LOG_DEVEL(LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num);
     g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
