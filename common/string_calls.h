@@ -89,7 +89,7 @@ g_text2bool(const char *s);
  * |      |                                                 |
  * |      |                                                 ascii representation of bytes
  * |      hex representation of bytes
- * offset from beining of the byte array in hex
+ * offset from beginning of the byte array in hex
  *
  * Note: the ascii representation uses '.' for all non-printable
  * characters (eg. below 32 or above 127).
