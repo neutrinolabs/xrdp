@@ -30,7 +30,9 @@ int tcp_socket_create(void)
 
     /* in win32 a socket is an unsigned int, in linux, it's an int */
     if ((rv = (int) socket(PF_INET, SOCK_STREAM, 0)) < 0)
+    {
         return -1;
+    }
 
     option_len = sizeof(option_value);
 
@@ -157,7 +159,9 @@ int tcp_last_error_would_block()
 void tcp_close(int skt)
 {
     if (skt <= 0)
+    {
         return;
+    }
 
 #if defined(_WIN32)
     closesocket(skt);
@@ -180,7 +184,9 @@ int tcp_socket(void)
 
     /* in win32 a socket is an unsigned int, in linux, it's an int */
     if ((rv = (int) socket(PF_INET, SOCK_STREAM, 0)) < 0)
+    {
         return -1;
+    }
 
     option_len = sizeof(option_value);
 
@@ -295,7 +301,9 @@ int tcp_socket_ok(int skt)
     if (getsockopt(skt, SOL_SOCKET, SO_ERROR, (char *) (&opt), &opt_len) == 0)
     {
         if (opt == 0)
+        {
             return 1;
+        }
     }
 
     return 0;
@@ -323,15 +331,21 @@ int tcp_select(int sck1, int sck2)
     FD_ZERO(&rfds);
 
     if (sck1 > 0)
+    {
         FD_SET(((unsigned int) sck1), &rfds);
+    }
 
     if (sck2 > 0)
+    {
         FD_SET(((unsigned int) sck2), &rfds);
+    }
 
     max = sck1;
 
     if (sck2 > max)
+    {
         max = sck2;
+    }
 
     rv = select(max + 1, &rfds, 0, 0, &time);
 
@@ -340,10 +354,14 @@ int tcp_select(int sck1, int sck2)
         rv = 0;
 
         if (FD_ISSET(((unsigned int) sck1), &rfds))
+        {
             rv = rv | 1;
+        }
 
         if (FD_ISSET(((unsigned int)sck2), &rfds))
+        {
             rv = rv | 2;
+        }
     }
     else
     {

@@ -25,8 +25,9 @@
 #include <strings.h>
 #include <stdlib.h>
 
-#include "string_calls.h"
+#include "log.h"
 #include "os_calls.h"
+#include "string_calls.h"
 
 unsigned int
 g_format_info_string(char *dest, unsigned int len,
@@ -468,6 +469,129 @@ g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
         rv += 2;
     }
     return rv;
+}
+
+/*****************************************************************************/
+/* convert a byte array into a hex dump */
+char *
+g_bytes_to_hexdump(const char *src, int len)
+{
+    unsigned char *line;
+    int i;
+    int dump_number_lines;
+    int dump_line_length;
+    int dump_length;
+    int dump_offset;
+    int thisline;
+    int offset;
+    char *dump_buffer;
+
+#define HEX_DUMP_SOURCE_BYTES_PER_LINE (16)
+#ifdef _WIN32
+#define HEX_DUMP_NEWLINE_SIZE (2)
+#else
+#ifdef _MACOS
+#define HEX_DUMP_NEWLINE_SIZE (1)
+#else
+#define HEX_DUMP_NEWLINE_SIZE (1)
+#endif
+#endif
+
+    dump_line_length = (4 + 3             /* = 4 offset + 3 space */
+                        + ((2 + 1) * HEX_DUMP_SOURCE_BYTES_PER_LINE)  /* + (2 hex char + 1 space) per source byte */
+                        + 2 /* + 2 space */
+                        + HEX_DUMP_SOURCE_BYTES_PER_LINE
+                        + HEX_DUMP_NEWLINE_SIZE);
+
+    dump_number_lines = (len / HEX_DUMP_SOURCE_BYTES_PER_LINE) + 1; /* +1 to round up */
+    dump_length = (dump_number_lines *dump_line_length    /* hex dump lines */
+                   + 1);    /* terminating NULL */
+    dump_buffer = (char *)g_malloc(dump_length, 1);
+    if (dump_buffer == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_WARNING,
+                  "Failed to allocate buffer for hex dump of size %d",
+                  dump_length);
+        return NULL;
+    }
+
+    line = (unsigned char *)src;
+    offset = 0;
+    dump_offset = 0;
+
+    while (offset < len)
+    {
+        g_sprintf(dump_buffer + dump_offset, "%04x   ", offset);
+        dump_offset += 7;
+        thisline = len - offset;
+
+        if (thisline > HEX_DUMP_SOURCE_BYTES_PER_LINE)
+        {
+            thisline = HEX_DUMP_SOURCE_BYTES_PER_LINE;
+        }
+
+        for (i = 0; i < thisline; i++)
+        {
+            g_sprintf(dump_buffer + dump_offset, "%02x ", line[i]);
+            dump_offset += 3;
+        }
+
+        for (; i < HEX_DUMP_SOURCE_BYTES_PER_LINE; i++)
+        {
+            dump_buffer[dump_offset++] = ' ';
+            dump_buffer[dump_offset++] = ' ';
+            dump_buffer[dump_offset++] = ' ';
+        }
+
+        dump_buffer[dump_offset++] = ' ';
+        dump_buffer[dump_offset++] = ' ';
+
+        for (i = 0; i < thisline; i++)
+        {
+            dump_buffer[dump_offset++] = (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.';
+        }
+
+        for (; i < HEX_DUMP_SOURCE_BYTES_PER_LINE; i++)
+        {
+            dump_buffer[dump_offset++] = ' ';
+        }
+
+#ifdef _WIN32
+        dump_buffer[dump_offset++] = '\r';
+        dump_buffer[dump_offset++] = '\n';
+#else
+#ifdef _MACOS
+        dump_buffer[dump_offset++] = '\r';
+#else
+        dump_buffer[dump_offset++] = '\n';
+#endif
+#endif
+        offset += thisline;
+        line += thisline;
+
+
+        if (dump_offset % dump_line_length != 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_WARNING,
+                      "BUG: dump_offset (%d) at the end of a line is not a "
+                      "multiple of the line length (%d)",
+                      dump_offset, dump_line_length);
+        }
+
+    }
+    if (dump_offset > dump_length)
+    {
+        LOG_DEVEL(LOG_LEVEL_WARNING,
+                  "BUG: dump_offset (%d) is larger than the dump_buffer length (%d)",
+                  dump_offset, dump_length);
+        dump_buffer[0] = '\0';
+        return dump_buffer;
+    }
+
+    /* replace the last new line with the end of the string since log_message
+       will add a new line */
+    dump_buffer[dump_offset - HEX_DUMP_NEWLINE_SIZE] = '\0';
+    return dump_buffer;
 }
 
 /*****************************************************************************/

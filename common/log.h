@@ -127,8 +127,23 @@ enum logReturns
 #define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length)  \
     log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length)
 
+/**
+ * @brief Logging macro for logging the contents of a byte array using a hex
+ * dump format.
+ *
+ * @param log_level, the log level
+ * @param message, a message prefix for the hex dump. Note: no printf like
+ *          formatting is done to this message.
+ * @param buffer, a pointer to the byte array to log as a hex dump
+ * @param length, the length of the byte array to log
+ */
+#define LOG_HEXDUMP(log_level, message, buffer, length)  \
+    log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length)
+
 #else
 #define LOG(log_level, args...) log_message(log_level, args)
+#define LOG_HEXDUMP(log_level, message, buffer, length)  \
+    log_hexdump(log_level, message, buffer, length)
 
 /* Since log_message() returns a value ensure that the elided versions of
  * LOG_DEVEL and LOG_DEVEL_HEXDUMP also "fake" returning the success value
@@ -344,6 +359,12 @@ log_end(void);
  */
 enum logReturns
 log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
+
+enum logReturns
+log_hexdump(const enum logLevels log_level,
+            const char *msg,
+            const char *p,
+            int len);
 
 /**
  * the log function that all files use to log an event,

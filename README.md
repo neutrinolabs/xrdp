@@ -128,9 +128,17 @@ xrdp
 ├── mc ·········· media center module
 ├── neutrinordp · RDP client module for proxying RDP connections using NeutrinoRDP
 ├── pkgconfig ··· pkg-config configuration
-├── sesman ······ session manager for xrdp
+├── scripts ····· build scripts
+├┬─ sesman ······ session manager for xrdp
+|├── chansrv ···· channel server for xrdp
+|├── libscp ····· authorization library
+|└── tools ······ session management tools for sys admins
 ├── tcutils ····· QT based utility program for thin clients
 ├── tests ······· tests for the code
+├┬─ tools ······· tools
+|└┬─ devel ······ development tools
+| ├── gtcp_proxy  GTK app that forwards TCP connections to a remote host
+| └── tcp_proxy · CLI app that forwards TCP connections to a remote host
 ├── vnc ········· VNC client module for xrdp
 ├── vrplayer ···· QT player redirecting video/audio to clients over xrdpvr channel
 ├── xrdp ········ main server code

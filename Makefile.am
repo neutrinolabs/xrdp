@@ -20,7 +20,6 @@ EXTRA_DIST = \
   m4 \
   postinstall-pak \
   tcutils \
-  tests \
   vrplayer
 
 if XRDP_NEUTRINORDP
@@ -64,7 +63,9 @@ SUBDIRS = \
   genkeymap \
   xrdpapi \
   pkgconfig \
-  $(XRDPVRDIR)
+  $(XRDPVRDIR) \
+  tests \
+  tools
 
 distclean-local:
 	-rm -f xrdp_configure_options.h

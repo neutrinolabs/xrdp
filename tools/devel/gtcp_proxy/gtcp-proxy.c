@@ -332,7 +332,9 @@ static void *tcp_proxy(void *arg)
         for (i = 0; i < 100; i++)
         {
             if (tcp_can_send(con_skt, 100))
+            {
                 break;
+            }
 
             usleep(100);
         }
@@ -452,7 +454,9 @@ static void show_msg(int not_main_window, int style,
     GtkWidget *dialog;
 
     if (not_main_window)
+    {
         gdk_threads_enter();
+    }
 
     dialog = gtk_message_dialog_new(GTK_WINDOW(NULL),
                                     GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -465,7 +469,9 @@ static void show_msg(int not_main_window, int style,
     gtk_widget_destroy(dialog);
 
     if (not_main_window)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
@@ -475,12 +481,16 @@ static void show_msg(int not_main_window, int style,
 static void show_status(int not_main_thread, char *msg)
 {
     if (not_main_thread)
+    {
         gdk_threads_enter();
+    }
 
     gtk_statusbar_push(GTK_STATUSBAR(g_statusbar), CONTEXT_ID, msg);
 
     if (not_main_thread)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
@@ -490,12 +500,16 @@ static void show_status(int not_main_thread, char *msg)
 static void clear_status(int not_main_thread)
 {
     if (not_main_thread)
+    {
         gdk_threads_enter();
+    }
 
     gtk_statusbar_remove_all(GTK_STATUSBAR(g_statusbar), CONTEXT_ID);
 
     if (not_main_thread)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
@@ -505,12 +519,16 @@ static void clear_status(int not_main_thread)
 static void enable_btn_start(int not_main_thread)
 {
     if (not_main_thread)
+    {
         gdk_threads_enter();
+    }
 
     gtk_widget_set_sensitive(GTK_WIDGET(g_btn_start), TRUE);
 
     if (not_main_thread)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
@@ -520,12 +538,16 @@ static void enable_btn_start(int not_main_thread)
 static void disable_btn_start(int not_main_thread)
 {
     if (not_main_thread)
+    {
         gdk_threads_enter();
+    }
 
     gtk_widget_set_sensitive(GTK_WIDGET(g_btn_start), FALSE);
 
     if (not_main_thread)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
@@ -569,12 +591,16 @@ static void show_loc_port_stats(int not_main_thread, int count)
     sprintf(buf, "%d", count);
 
     if (not_main_thread)
+    {
         gdk_threads_enter();
+    }
 
     gtk_entry_set_text(GTK_ENTRY(g_tbx_loc_stats), buf);
 
     if (not_main_thread)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
@@ -588,12 +614,16 @@ static void show_rem_port_stats(int not_main_thread, int count)
     sprintf(buf, "%d", count);
 
     if (not_main_thread)
+    {
         gdk_threads_enter();
+    }
 
     gtk_entry_set_text(GTK_ENTRY(g_tbx_rem_stats), buf);
 
     if (not_main_thread)
+    {
         gdk_threads_leave();
+    }
 }
 
 /**
