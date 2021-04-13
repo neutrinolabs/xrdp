@@ -6,7 +6,7 @@ if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
 endif
 
-sbin_PROGRAMS = \
+noinst_PROGRAMS = \
   tcp_proxy
 
 tcp_proxy_SOURCES = \
