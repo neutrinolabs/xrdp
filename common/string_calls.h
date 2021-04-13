@@ -103,6 +103,16 @@ g_text2bool(const char *s);
 char *
 g_bytes_to_hexdump(const char *src, int len);
 
+/**
+ * Extracts the display number from an X11 display string
+ *
+ * @param Display string (i.e. g_getenv("DISPLAY"))
+ *
+ * @result <0 if the string could not be parsed, or >=0 for a display number
+ */
+int
+g_get_display_num_from_display(const char *display_text);
+
 int      g_strlen(const char *text);
 const char *g_strchr(const char *text, int c);
 char    *g_strcpy(char *dest, const char *src);

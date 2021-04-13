@@ -35,6 +35,7 @@
 
 #include "log.h"
 #include "xrdp_sockets.h"
+#include "string_calls.h"
 #include "xrdpapi.h"
 
 struct wts_obj
@@ -44,8 +45,6 @@ struct wts_obj
 };
 
 /* helper functions used by WTSxxx API - do not invoke directly */
-static int
-get_display_num_from_display(char *display_text);
 static int
 can_send(int sck, int millis);
 static int
@@ -93,7 +92,6 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
                         unsigned int flags)
 {
     struct wts_obj *wts;
-    char *display_text;
     int bytes;
     unsigned long long1;
     struct sockaddr_un s;
@@ -113,16 +111,10 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
         return 0;
     }
     wts->fd = -1;
-    display_text = getenv("DISPLAY");
-
-    if (display_text != 0)
+    wts->display_num = g_get_display_num_from_display(getenv("DISPLAY"));
+    if (wts->display_num < 0)
     {
-        wts->display_num = get_display_num_from_display(display_text);
-    }
-
-    if (wts->display_num <= 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; display is <= 0");
+        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; invalid DISPLAY");
         free(wts);
         return NULL;
     }
@@ -525,39 +517,4 @@ can_recv(int sck, int millis)
     }
 
     return 0;
-}
-
-/*****************************************************************************/
-static int
-get_display_num_from_display(char *display_text)
-{
-    int index;
-    int mode;
-    int disp_index;
-    char disp[256];
-
-    index = 0;
-    disp_index = 0;
-    mode = 0;
-
-    while (display_text[index] != 0)
-    {
-        if (display_text[index] == ':')
-        {
-            mode = 1;
-        }
-        else if (display_text[index] == '.')
-        {
-            mode = 2;
-        }
-        else if (mode == 1)
-        {
-            disp[disp_index] = display_text[index];
-            disp_index++;
-        }
-        index++;
-    }
-
-    disp[disp_index] = 0;
-    return atoi(disp);
 }

@@ -34,6 +34,7 @@
 #include <security/pam_constants.h>
 #endif
 #endif /* USE_PAM */
+#include <ctype.h>
 
 #include "xrdp_encoder.h"
 #include "xrdp_sockets.h"
@@ -2160,6 +2161,54 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
 }
 #endif
 
+/*************************************************************************//**
+ * Parses a chansrvport string
+ *
+ * This will be in one of the following formats:-
+ * <path>         UNIX path to a domain socket
+ * DISPLAY(<num>) Use chansrv on X Display <num>
+ *
+ * @param value assigned to chansrvport
+ * @param dest Output buffer
+ * @param dest_size Total size of output buffer, including terminator space
+ * @return 0 for success
+ */
+
+static int
+parse_chansrvport(const char *value, char *dest, int dest_size)
+{
+    int rv = 0;
+
+    if (g_strncmp(value, "DISPLAY(", 8) == 0)
+    {
+        const char *p = value + 8;
+        const char *end = p;
+
+        /* Check next chars are digits followed by ')' */
+        while (isdigit(*end))
+        {
+            ++end;
+        }
+
+        if (end == p || *end != ')')
+        {
+            LOG(LOG_LEVEL_WARNING, "Ignoring invalid chansrvport string '%s'",
+                value);
+            rv = -1;
+        }
+        else
+        {
+            g_snprintf(dest, dest_size, XRDP_CHANSRV_STR, g_atoi(p));
+        }
+    }
+    else
+    {
+        g_strncpy(dest, value, dest_size - 1);
+    }
+
+    return rv;
+}
+
 /*****************************************************************************/
 int
 xrdp_mm_connect(struct xrdp_mm *self)
@@ -2238,8 +2287,10 @@ xrdp_mm_connect(struct xrdp_mm *self)
         }
         else if (g_strcasecmp(name, "chansrvport") == 0)
         {
-            g_strncpy(chansrvport, value, 255);
-            self->usechansrv = 1;
+            if (parse_chansrvport(value, chansrvport, sizeof(chansrvport)) == 0)
+            {
+                self->usechansrv = 1;
+            }
         }
     }
 

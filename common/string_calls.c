@@ -24,6 +24,8 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <ctype.h>
+
 
 #include "log.h"
 #include "os_calls.h"
@@ -138,6 +140,36 @@ g_text2bool(const char *s)
         return 1;
     }
     return 0;
+}
+
+/*****************************************************************************/
+int
+g_get_display_num_from_display(const char *display_text)
+{
+    int rv = -1;
+    const char *p;
+
+    /* Skip over the hostname part of the DISPLAY */
+    if (display_text != NULL && (p = strchr(display_text, ':')) != NULL)
+    {
+        ++p; /* Skip the ':' */
+
+        /* Cater for the (still supported) double-colon. See
+         * https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html */
+        if (*p == ':')
+        {
+            ++p;
+        }
+
+        /* Check it starts with a digit, to avoid oddities like DISPLAY=":zz.0"
+         * being parsed successfully */
+        if (isdigit(*p))
+        {
+            rv = g_atoi(p);
+        }
+    }
+
+    return rv;
 }
 
 /*****************************************************************************/
@@ -774,4 +806,3 @@ g_strtrim(char *str, int trim_flags)
     free(text1);
     return 0;
 }
-
