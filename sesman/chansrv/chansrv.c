@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-#include <ctype.h>
-
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -1560,34 +1558,6 @@ x_server_fatal_handler(void)
 }
 
 /*****************************************************************************/
-static int
-get_display_num_from_display(const char *display_text)
-{
-    int rv = -1;
-    const char *p;
-
-    /* Skip over the hostname part of the DISPLAY */
-    if ((p = g_strchr(display_text, ':')) != NULL)
-    {
-        ++p; /* Skip the ':' */
-
-        /* Cater for the (still supported) double-colon. See
-         * https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html */
-        if (*p == ':')
-        {
-            ++p;
-        }
-
-        if (isdigit(*p))
-        {
-            rv = g_atoi(p);
-        }
-    }
-
-    return rv;
-}
-
-/*****************************************************************************/
 int
 main_cleanup(void)
 {
@@ -1721,7 +1691,7 @@ main(int argc, char **argv)
         main_cleanup();
         return 1;
     }
-    g_display_num = get_display_num_from_display(display_text);
+    g_display_num = g_get_display_num_from_display(display_text);
     if (g_display_num < 0)
     {
         g_writeln("Unable to get display from DISPLAY='%s'", display_text);

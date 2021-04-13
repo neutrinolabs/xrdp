@@ -29,6 +29,7 @@
 #include <errno.h>
 
 #include "xrdp_sockets.h"
+#include "string_calls.h"
 
 int main(int argc, char **argv)
 {
@@ -36,7 +37,6 @@ int main(int argc, char **argv)
     int dis;
     struct sockaddr_un sa;
     size_t len;
-    char *p;
     char *display;
 
     if (argc != 1)
@@ -54,7 +54,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    dis = strtol(display + 1, &p, 10);
+    dis = g_get_display_num_from_display(display);
+    if (dis < 0)
+    {
+        printf("Can't parse DISPLAY='%s'\n", display);
+        return 1;
+    }
     memset(&sa, 0, sizeof(sa));
     sa.sun_family = AF_UNIX;
     sprintf(sa.sun_path, XRDP_DISCONNECT_STR, dis);

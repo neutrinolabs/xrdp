@@ -38,6 +38,9 @@ xrdp_sesadmin_SOURCES = \
 xrdp_dis_SOURCES = \
   dis.c
 
+xrdp_dis_LDADD = \
+  $(top_builddir)/common/libcommon.la
+
 xrdp_xcon_SOURCES = \
   xcon.c
 
