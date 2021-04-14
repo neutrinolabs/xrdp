@@ -357,6 +357,11 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 
 CFLAGS="$save_CFLAGS"
 
+# checking for libcheck (used for unit testing)
+PKG_CHECK_MODULES([CHECK], [check >= 0.10.0])
+AC_CHECK_HEADER([check.h], [],
+  [AC_MSG_ERROR([please install check])])
+
 AC_SUBST([moduledir], '${libdir}/xrdp')
 
 AC_ARG_ENABLE([strict-locations],
@@ -398,6 +403,7 @@ AC_CONFIG_FILES([
   sesman/Makefile
   sesman/tools/Makefile
   tests/Makefile
+  tests/common/Makefile
   tests/memtest/Makefile
   tools/Makefile
   tools/devel/Makefile
@@ -409,6 +415,7 @@ AC_CONFIG_FILES([
   xup/Makefile
 ])
 
+AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_OUTPUT
 
 echo ""

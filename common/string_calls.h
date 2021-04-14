@@ -81,6 +81,33 @@ int
 g_text2bool(const char *s);
 
 /**
+ * Joins an array of strings into a single string.
+ *
+ * Note: The joiner is placed between each source string. The joiner is not
+ *      placed after the last source string. If there is only one source string,
+ *      then the result string will be equal to the source string.
+ *
+ * Note: any content that is present in dest will be overwritten with the new
+ *      joined string.
+ *
+ * Note: If the destination array is not large enough to hold the entire
+ *      contents of the joined string, then the joined string will be truncated
+ *      to fit in the destination array.
+ *
+ * @param[out] dest The destination array to write the joined string into.
+ * @param[in] dest_len The max number of characters to write to the destination
+ *      array including the terminating null. Must be > 0
+ * @param[in] joiner The string to concatenate between each source string.
+ *      The joiner string may be NULL which is processed as a zero length string.
+ * @param[in] src An array of strings to join. The array must be non-null.
+ *      Array items may be NULL and are processed as zero length strings.
+ * @param[in] src_len The number of strings to join in the src array. Must be > 0
+ * @return A pointer to the begining of the joined string (ie. returns dest).
+ */
+char *
+g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int src_len);
+
+/**
  * Converts a binary array into a hux dump suitable for displaying to a user.
  *
  * The format of the hex dump is:

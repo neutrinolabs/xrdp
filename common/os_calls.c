@@ -2591,16 +2591,41 @@ g_get_errno(void)
 
 /*****************************************************************************/
 /* does not work in win32 */
+
+#define ARGS_STR_LEN 1024
+
 int
 g_execvp(const char *p1, char *args[])
 {
 #if defined(_WIN32)
     return 0;
 #else
+
     int rv;
+    char args_str[ARGS_STR_LEN];
+    int args_len;
+
+    args_len = 0;
+    while (args[args_len] != NULL)
+    {
+        args_len++;
+    }
+
+    g_strnjoin(args_str, ARGS_STR_LEN, " ", (const char **) args, args_len);
+
+    LOG(LOG_LEVEL_DEBUG,
+        "Calling exec (excutable: %s, arguments: %s)",
+        p1, args_str);
 
     g_rm_temp_dir();
     rv = execvp(p1, args);
+
+    /* should not get here */
+    LOG(LOG_LEVEL_ERROR,
+        "Error calling exec (excutable: %s, arguments: %s) "
+        "returned errno: %d, description: %s",
+        p1, args_str, g_get_errno(), g_get_strerror());
+
     g_mk_socket_path(0);
     return rv;
 #endif
@@ -2615,9 +2640,24 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
     return 0;
 #else
     int rv;
+    const char *args[] = {a2, a3, NULL};
+    char args_str[ARGS_STR_LEN];
+
+    g_strnjoin(args_str, ARGS_STR_LEN, " ", args, 2);
+
+    LOG(LOG_LEVEL_DEBUG,
+        "Calling exec (excutable: %s, arguments: %s)",
+        a1, args_str);
 
     g_rm_temp_dir();
     rv = execlp(a1, a2, a3, (void *)0);
+
+    /* should not get here */
+    LOG(LOG_LEVEL_ERROR,
+        "Error calling exec (excutable: %s, arguments: %s) "
+        "returned errno: %d, description: %s",
+        a1, args_str, g_get_errno(), g_get_strerror());
+
     g_mk_socket_path(0);
     return rv;
 #endif
@@ -2715,6 +2755,12 @@ g_fork(void)
     if (rv == 0) /* child */
     {
         g_mk_socket_path(0);
+    }
+    else if (rv == -1) /* error */
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Process fork failed with errno: %d, description: %s",
+            g_get_errno(), g_get_strerror());
     }
 
     return rv;
@@ -2873,6 +2919,51 @@ g_waitpid(int pid)
     }
 
     return rv;
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32
+   returns exit status code of child process with pid */
+struct exit_status
+g_waitpid_status(int pid)
+{
+    struct exit_status exit_status;
+
+#if defined(_WIN32)
+    exit_status.exit_code = -1;
+    exit_status.signal_no = 0;
+    return exit_status;
+#else
+    int rv;
+    int status;
+
+    exit_status.exit_code = -1;
+    exit_status.signal_no = 0;
+
+    if (pid > 0)
+    {
+        LOG(LOG_LEVEL_DEBUG, "waiting for pid %d to exit", pid);
+        rv = waitpid(pid, &status, 0);
+
+        if (rv != -1)
+        {
+            if (WIFEXITED(status))
+            {
+                exit_status.exit_code = WEXITSTATUS(status);
+            }
+            if (WIFSIGNALED(status))
+            {
+                exit_status.signal_no = WTERMSIG(status);
+            }
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING, "wait for pid %d returned unknown result", pid);
+        }
+    }
+
+    return exit_status;
 #endif
 }
 

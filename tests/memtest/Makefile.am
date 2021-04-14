@@ -9,6 +9,9 @@ endif
 noinst_PROGRAMS = \
   memtest
 
+check_PROGRAMS = \
+  memtest
+
 memtest_SOURCES = \
   libmem.h \
   libmem.c \
