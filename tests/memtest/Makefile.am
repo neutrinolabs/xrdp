@@ -6,6 +6,9 @@ if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
 endif
 
+noinst_PROGRAMS = \
+  memtest
+
 check_PROGRAMS = \
   memtest
 
