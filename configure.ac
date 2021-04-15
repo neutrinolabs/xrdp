@@ -358,8 +358,7 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 CFLAGS="$save_CFLAGS"
 
 # checking for libcheck (used for unit testing)
-PKG_CHECK_MODULES([CHECK], [check >= 0.10.0])
-AC_CHECK_HEADER([check.h], [],
+PKG_CHECK_MODULES([CHECK], [check >= 0.10.0], [],
   [AC_MSG_ERROR([please install check])])
 
 AC_SUBST([moduledir], '${libdir}/xrdp')
