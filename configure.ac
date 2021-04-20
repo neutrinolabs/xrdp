@@ -357,9 +357,20 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 
 CFLAGS="$save_CFLAGS"
 
-# checking for libcheck (used for unit testing)
-PKG_CHECK_MODULES([CHECK], [check >= 0.10.0], [],
-  [AC_MSG_ERROR([please install check])])
+# perform unit tests if libcheck found
+PKG_CHECK_MODULES([CHECK], [check >= 0.10.0],
+    [perform_unit_tests=yes],
+    [perform_unit_tests=no])
+
+if test "x$perform_unit_tests" == "xyes"; then
+    AC_MSG_NOTICE([libcheck found, unit tests will be performed])
+else
+    AC_MSG_NOTICE([libcheck not found, unit tests will be skipped])
+fi
+
+AM_CONDITIONAL(PERFORM_UNIT_TESTS,
+               [test "x$perform_unit_tests" = "xyes"])
+# -- end perform unit tests
 
 AC_SUBST([moduledir], '${libdir}/xrdp')
 
@@ -442,6 +453,8 @@ echo "  exec_prefix             $exec_prefix"
 echo "  libdir                  $libdir"
 echo "  bindir                  $bindir"
 echo "  sysconfdir              $sysconfdir"
+echo ""
+echo "  perform unit tests      $perform_unit_tests"
 echo ""
 echo "  CFLAGS = $CFLAGS"
 echo "  LDFLAGS = $LDFLAGS"

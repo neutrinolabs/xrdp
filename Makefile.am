@@ -67,5 +67,9 @@ SUBDIRS = \
   tests \
   tools
 
+if PERFORM_UNIT_TESTS
+SUBDIRS += tests
+endif
+
 distclean-local:
 	-rm -f xrdp_configure_options.h
