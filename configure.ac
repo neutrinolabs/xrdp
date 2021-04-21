@@ -377,9 +377,6 @@ if test "x$perform_unit_tests" == "xyes"; then
 else
     AC_MSG_NOTICE([libcheck not found, unit tests will be skipped])
 fi
-
-AM_CONDITIONAL(PERFORM_UNIT_TESTS,
-               [test "x$perform_unit_tests" = "xyes"])
 # -- end perform unit tests
 
 AC_SUBST([moduledir], '${libdir}/xrdp')
