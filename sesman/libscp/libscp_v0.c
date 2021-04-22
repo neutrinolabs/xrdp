@@ -403,13 +403,14 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d, const tui8 *guid)
+scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d,
+                         const struct guid *guid)
 {
     int msg_size;
     struct stream *out_s;
 
     out_s = trans_get_out_s(atrans, 0);
-    msg_size = guid == 0 ? 14 : 14 + 16;
+    msg_size = guid == 0 ? 14 : 14 + GUID_SIZE;
     out_uint32_be(out_s, 0);  /* version */
     out_uint32_be(out_s, msg_size); /* size */
     out_uint16_be(out_s, 3);  /* cmd */
@@ -417,7 +418,7 @@ scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d, const tui8 *guid)
     out_uint16_be(out_s, d);  /* data */
     if (msg_size > 14)
     {
-        out_uint8a(out_s, guid, 16);
+        out_uint8a(out_s, guid->g, GUID_SIZE);
     }
     s_mark_end(out_s);
     if (0 != trans_write_copy(atrans))

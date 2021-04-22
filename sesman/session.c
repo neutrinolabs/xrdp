@@ -779,8 +779,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
-                    char guid_str[64];
-                    g_bytes_to_hexstr(s->guid, 16, guid_str, 64);
+                    char guid_str[GUID_STR_SIZE];
+                    guid_to_str(&s->guid, guid_str);
                     env_check_password_file(passwd_file, guid_str);
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
@@ -957,7 +957,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         temp->item->data = data;
         g_strncpy(temp->item->connection_description, s->connection_description, 255);   /* store client ip data */
         g_strncpy(temp->item->name, s->username, 255);
-        g_memcpy(temp->item->guid, s->guid, 16);
+        temp->item->guid = s->guid;
 
         ltime = g_time1();
         localtime_r(&ltime, &stime);

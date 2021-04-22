@@ -24,6 +24,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include "guid.h"
 #include "ms-rdpedisp.h"
 #include "ms-rdpbcgr.h"
 
@@ -486,7 +487,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
 /*****************************************************************************/
 static int
-xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
+xrdp_mm_setup_mod2(struct xrdp_mm *self, const struct guid *pguid)
 {
     char text[256];
     const char *name;
@@ -566,9 +567,9 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
         self->mod->mod_set_param(self->mod, "hostname", name);
         g_snprintf(text, 255, "%d", self->wm->session->client_info->keylayout);
         self->mod->mod_set_param(self->mod, "keylayout", text);
-        if (guid != 0)
+        if (pguid != NULL)
         {
-            self->mod->mod_set_param(self->mod, "guid", (char *) guid);
+            self->mod->mod_set_param(self->mod, "guid", (char *) &pguid);
         }
 
         for (i = 0; i < self->login_names->count; i++)
@@ -1763,18 +1764,17 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     int rv;
     char ip[256];
     char port[256];
-    tui8 guid[16];
-    tui8 *pguid;
     char username[256];
+    struct guid guid;
+    const struct guid *pguid = NULL;
 
     rv = 0;
     in_uint16_be(s, ok);
     in_uint16_be(s, display);
-    pguid = 0;
-    if (s_check_rem(s, 16))
+    if (s_check_rem(s, GUID_SIZE))
     {
-        in_uint8a(s, guid, 16);
-        pguid = guid;
+        in_uint8a(s, guid.g, GUID_SIZE);
+        pguid = &guid;
     }
 
     if (xrdp_mm_get_value(self, "username",

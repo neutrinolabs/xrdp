@@ -38,6 +38,7 @@
 #include "log.h"
 #include "tcp.h"
 #include "string_calls.h"
+#include "guid.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
@@ -528,12 +529,12 @@ handle_scpv0_auth_reply(int sck)
                     }
                     else
                     {
-                        char guid[16];
-                        char guid_str[64];
-                        if (s_check_rem(in_s, 16) != 0)
+                        struct guid guid;
+                        char guid_str[MAX(GUID_STR_SIZE, 16)];
+                        if (s_check_rem(in_s, GUID_SIZE) != 0)
                         {
-                            in_uint8a(in_s, guid, 16);
-                            g_bytes_to_hexstr(guid, 16, guid_str, 64);
+                            in_uint8a(in_s, guid.g, GUID_SIZE);
+                            guid_to_str(&guid, guid_str);
                         }
                         else
                         {
