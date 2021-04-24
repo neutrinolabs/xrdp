@@ -235,6 +235,9 @@ ip=ask
 port=ask3389
 username=ask
 password=ask
+; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
+; this line if you're using a client which does.
+#enable_dynamic_resizing=false
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true

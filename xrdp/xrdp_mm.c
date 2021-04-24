@@ -24,6 +24,8 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include "ms-rdpedisp.h"
+#include "ms-rdpbcgr.h"
 
 #ifdef USE_PAM
 #if defined(HAVE__PAM_TYPES_H)
@@ -993,11 +995,207 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm *self, struct stream *s)
 }
 
 /******************************************************************************/
+static int
+dynamic_monitor_open_response(intptr_t id, int chan_id, int creation_status)
+{
+    struct xrdp_process *pro;
+    struct xrdp_wm *wm;
+    struct stream *s;
+    int bytes;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_open_response: chan_id %d creation_status 0x%8.8x", chan_id, creation_status);
+    if (creation_status != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "dynamic_monitor_open_response: error");
+        return 1;
+    }
+    pro = (struct xrdp_process *) id;
+    wm = pro->wm;
+    make_stream(s);
+    init_stream(s, 1024);
+    out_uint32_le(s, 5); /* DISPLAYCONTROL_PDU_TYPE_CAPS */
+    out_uint32_le(s, 8 + 12);
+    out_uint32_le(s, CLIENT_MONITOR_DATA_MAXIMUM_MONITORS); /* MaxNumMonitors */
+    out_uint32_le(s, 4096); /* MaxMonitorAreaFactorA */
+    out_uint32_le(s, 2048); /* MaxMonitorAreaFactorB */
+    s_mark_end(s);
+    bytes = (int) (s->end - s->data);
+    libxrdp_drdynvc_data(wm->session, chan_id, s->data, bytes);
+    free_stream(s);
+    return 0;
+}
+
+/******************************************************************************/
+static int
+dynamic_monitor_close_response(intptr_t id, int chan_id)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_close_response:");
+    return 0;
+}
+
+/******************************************************************************/
+static int
+dynamic_monitor_data_first(intptr_t id, int chan_id, char *data, int bytes,
+                           int total_bytes)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_data_first:");
+    return 0;
+}
+
+/******************************************************************************/
+static int
+dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
+{
+    struct stream ls;
+    struct stream *s;
+    int msg_type;
+    int msg_length;
+    int monitor_index;
+    struct xrdp_process *pro;
+    struct xrdp_wm *wm;
+
+    int MonitorLayoutSize;
+    int NumMonitor;
+
+    struct dynamic_monitor_layout monitor_layouts[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS];
+    struct dynamic_monitor_layout *monitor_layout;
+
+    struct xrdp_rect rect;
+    int session_width;
+    int session_height;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_data:");
+    pro = (struct xrdp_process *) id;
+    wm = pro->wm;
+    g_memset(&ls, 0, sizeof(ls));
+    ls.data = data;
+    ls.p = ls.data;
+    ls.size = bytes;
+    ls.end = ls.data + bytes;
+    s = &ls;
+    in_uint32_le(s, msg_type);
+    in_uint32_le(s, msg_length);
+    LOG(LOG_LEVEL_DEBUG, "dynamic_monitor_data: msg_type %d msg_length %d",
+           msg_type, msg_length);
+
+    rect.left = 8192;
+    rect.top = 8192;
+    rect.right = -8192;
+    rect.bottom = -8192;
+
+    if (msg_type == DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT)
+    {
+        in_uint32_le(s, MonitorLayoutSize);
+        in_uint32_le(s, NumMonitor);
+        LOG(LOG_LEVEL_DEBUG, "  MonitorLayoutSize %d NumMonitor %d",
+               MonitorLayoutSize, NumMonitor);
+        for (monitor_index = 0; monitor_index < NumMonitor; monitor_index++)
+        {
+            monitor_layout = monitor_layouts + monitor_index;
+            in_uint32_le(s, monitor_layout->flags);
+            in_uint32_le(s, monitor_layout->left);
+            in_uint32_le(s, monitor_layout->top);
+            in_uint32_le(s, monitor_layout->width);
+            in_uint32_le(s, monitor_layout->height);
+            in_uint32_le(s, monitor_layout->physical_width);
+            in_uint32_le(s, monitor_layout->physical_height);
+            in_uint32_le(s, monitor_layout->orientation);
+            in_uint32_le(s, monitor_layout->desktop_scale_factor);
+            in_uint32_le(s, monitor_layout->device_scale_factor);
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "    Flags 0x%8.8x Left %d Top %d "
+                   "Width %d Height %d PhysicalWidth %d PhysicalHeight %d "
+                   "Orientation %d DesktopScaleFactor %d DeviceScaleFactor %d",
+                   monitor_layout->flags, monitor_layout->left, monitor_layout->top,
+                   monitor_layout->width, monitor_layout->height,
+                   monitor_layout->physical_width, monitor_layout->physical_height,
+                   monitor_layout->orientation, monitor_layout->desktop_scale_factor,
+                   monitor_layout->device_scale_factor);
+
+            rect.left = MIN(monitor_layout->left, rect.left);
+            rect.top = MIN(monitor_layout->top, rect.top);
+            rect.right = MAX(rect.right, monitor_layout->left + monitor_layout->width);
+            rect.bottom = MAX(rect.bottom, monitor_layout->top + monitor_layout->height);
+        }
+    }
+    session_width = rect.right - rect.left;
+    session_height = rect.bottom - rect.top;
+    if ((session_width > 0) && (session_height > 0))
+    {
+        // TODO: Unify this logic with server_reset
+        libxrdp_reset(wm->session, session_width, session_height, wm->screen->bpp);
+        /* reset cache */
+        xrdp_cache_reset(wm->cache, wm->client_info);
+        /* resize the main window */
+        xrdp_bitmap_resize(wm->screen, session_width, session_height);
+        /* load some stuff */
+        xrdp_wm_load_static_colors_plus(wm, 0);
+        xrdp_wm_load_static_pointers(wm);
+        /* redraw */
+        xrdp_bitmap_invalidate(wm->screen, 0);
+
+        struct xrdp_mod* v = wm->mm->mod;
+        if (v != 0) {
+            v->mod_server_version_message(v);
+            v->mod_server_monitor_resize(v, session_width, session_height);
+            v->mod_server_monitor_full_invalidate(v, session_width, session_height);
+        }
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+dynamic_monitor_initialize(struct xrdp_mm *self)
+{
+    struct xrdp_drdynvc_procs d_procs;
+    int flags;
+    int error;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_initialize:");
+
+    g_memset(&d_procs, 0, sizeof(d_procs));
+    d_procs.open_response = dynamic_monitor_open_response;
+    d_procs.close_response = dynamic_monitor_close_response;
+    d_procs.data_first = dynamic_monitor_data_first;
+    d_procs.data = dynamic_monitor_data;
+    flags = 0;
+    error = libxrdp_drdynvc_open(self->wm->session,
+                                 "Microsoft::Windows::RDS::DisplayControl",
+                                 flags, &d_procs,
+                                 &(self->dynamic_monitor_chanid));
+    if (error != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_mm_drdynvc_up: "
+            "libxrdp_drdynvc_open failed %d", error);
+    }
+    return error;
+}
+
+/******************************************************************************/
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self)
 {
-    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_drdynvc_up:");
-    return 0;
+    char enable_dynamic_resize[32];
+    int error = 0;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_drdynvc_up:");
+
+    xrdp_mm_get_value(self, "enable_dynamic_resizing",
+                      enable_dynamic_resize,
+                      sizeof(enable_dynamic_resize) - 1);
+
+    /*
+     * User can disable dynamic resizing if necessary
+     */
+    if (enable_dynamic_resize[0] != '\0' && !g_text2bool(enable_dynamic_resize))
+    {
+        LOG(LOG_LEVEL_INFO, "User has disabled dynamic resizing.");
+    }
+    else
+    {
+        error = dynamic_monitor_initialize(self);
+    }
+    return error;
 }
 
 /******************************************************************************/

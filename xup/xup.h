@@ -51,7 +51,12 @@ struct mod
     int (*mod_frame_ack)(struct mod *v, int flags, int frame_id);
     int (*mod_suppress_output)(struct mod *v, int suppress,
                                int left, int top, int right, int bottom);
-    tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
+    int (*mod_server_monitor_resize)(struct mod* v,
+                               int width, int height);
+    int (*mod_server_monitor_full_invalidate)(struct mod* v,
+                               int width, int height);
+    int (*mod_server_version_message)(struct mod* v);
+    tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                  functions above */
     /* server functions */
     int (*server_begin_update)(struct mod *v);

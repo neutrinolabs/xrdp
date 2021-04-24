@@ -28,6 +28,15 @@
 #include "string_calls.h"
 
 static int
+send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int height, int bpp);
+
+static int
+send_server_monitor_full_invalidate(struct mod *mod, struct stream *s, int width, int height);
+
+static int
+send_server_version_message(struct mod *v, struct stream *s);
+
+static int
 lib_mod_process_message(struct mod *mod, struct stream *s);
 
 /******************************************************************************/
@@ -139,7 +148,6 @@ int
 lib_mod_connect(struct mod *mod)
 {
     int error;
-    int len;
     int i;
     int use_uds;
     struct stream *s;
@@ -243,60 +251,18 @@ lib_mod_connect(struct mod *mod)
 
     if (error == 0)
     {
-        /* send version message */
-        init_stream(s, 8192);
-        s_push_layer(s, iso_hdr, 4);
-        out_uint16_le(s, 103);
-        out_uint32_le(s, 301);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 1);
-        s_mark_end(s);
-        len = (int)(s->end - s->data);
-        s_pop_layer(s, iso_hdr);
-        out_uint32_le(s, len);
-        lib_send_copy(mod, s);
+        error = send_server_version_message(mod, s);
     }
 
     if (error == 0)
     {
         /* send screen size message */
-        init_stream(s, 8192);
-        s_push_layer(s, iso_hdr, 4);
-        out_uint16_le(s, 103);
-        out_uint32_le(s, 300);
-        out_uint32_le(s, mod->width);
-        out_uint32_le(s, mod->height);
-        out_uint32_le(s, mod->bpp);
-        out_uint32_le(s, 0);
-        s_mark_end(s);
-        len = (int)(s->end - s->data);
-        s_pop_layer(s, iso_hdr);
-        out_uint32_le(s, len);
-        lib_send_copy(mod, s);
+        error = send_server_monitor_resize(mod, s, mod->width, mod->height, mod->bpp);
     }
 
     if (error == 0)
     {
-        /* send invalidate message */
-        init_stream(s, 8192);
-        s_push_layer(s, iso_hdr, 4);
-        out_uint16_le(s, 103);
-        out_uint32_le(s, 200);
-        /* x and y */
-        i = 0;
-        out_uint32_le(s, i);
-        /* width and height */
-        i = ((mod->width & 0xffff) << 16) | mod->height;
-        out_uint32_le(s, i);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 0);
-        s_mark_end(s);
-        len = (int)(s->end - s->data);
-        s_pop_layer(s, iso_hdr);
-        out_uint32_le(s, len);
-        lib_send_copy(mod, s);
+        error = send_server_monitor_full_invalidate(mod, s, mod->width, mod->height);
     }
 
     free_stream(s);
@@ -1295,6 +1261,124 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
+send_server_version_message(struct mod *mod, struct stream *s)
+{
+    /* send version message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 301);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 1);
+    s_mark_end(s);
+    int len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    int rv = lib_send_copy(mod, s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int height, int bpp)
+{
+    /* send screen size message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 300);
+    out_uint32_le(s, width);
+    out_uint32_le(s, height);
+    /*
+        TODO: The bpp here is only necessary for initial creation. We should modify XUP to require this
+        only on server initialization, but not on resize. Microsoft's RDP protocol does not support changing
+        the bpp on resize.
+    */
+    out_uint32_le(s, bpp);
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    int len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    int rv = lib_send_copy(mod, s);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_resize: sent resize message with following properties to xorgxrdp backend "
+        "width=%d, height=%d, bpp=%d, return value=%d",
+        width, height, bpp, rv);
+    return rv;
+}
+
+static int
+send_server_monitor_full_invalidate(struct mod *mod, struct stream *s, int width, int height)
+{
+    /* send invalidate message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 200);
+    /* x and y */
+    int i = 0;
+    out_uint32_le(s, i);
+    /* width and height */
+    i = ((width & 0xffff) << 16) | height;
+    out_uint32_le(s, i);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    int len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    int rv = lib_send_copy(mod, s);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_full_invalidate: sent invalidate message with following properties to xorgxrdp backend "
+        "width=%d, height=%d, return value=%d",
+        width, height, rv);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_send_server_version_message(struct mod *mod)
+{
+    /* send server version message */
+    struct stream *s;
+    make_stream(s);
+    int rv = send_server_version_message(mod, s);
+    free_stream(s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_send_server_monitor_resize(struct mod *mod, int width, int height)
+{
+    /* send screen size message */
+    struct stream *s;
+    make_stream(s);
+    int rv = send_server_monitor_resize(mod, s, width, height, mod->bpp);
+    free_stream(s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_send_server_monitor_full_invalidate(struct mod *mod, int width, int height)
+{
+    /* send invalidate message */
+    struct stream *s;
+    make_stream(s);
+    int rv = send_server_monitor_full_invalidate(mod, s, width, height);
+    free_stream(s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
 lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
@@ -1636,6 +1720,9 @@ mod_init(void)
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
     mod->mod_frame_ack = lib_mod_frame_ack;
     mod->mod_suppress_output = lib_mod_suppress_output;
+    mod->mod_server_monitor_resize = lib_send_server_monitor_resize;
+    mod->mod_server_monitor_full_invalidate = lib_send_server_monitor_full_invalidate;
+    mod->mod_server_version_message = lib_send_server_version_message;
     return (tintptr) mod;
 }
 
