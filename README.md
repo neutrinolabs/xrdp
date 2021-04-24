@@ -10,12 +10,12 @@
 
 **xrdp** provides a graphical login to remote machines using Microsoft
 Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of RDP clients:
-  - FreeRDP
-  - rdesktop
-  - KRDC
-  - NeutrinoRDP
-  - Windows MSTSC (Microsoft Terminal Services Client)
-  - Microsoft Remote Desktop (which is distinct from MSTSC)
+  * FreeRDP
+  * rdesktop
+  * KRDC
+  * NeutrinoRDP
+  * Windows MSTSC (Microsoft Terminal Services Client, aka `mstsc.exe`)
+  * Microsoft Remote Desktop (found on Microsoft Store, which is distinct from MSTSC)
 
 Many of these work on some or all of Windows, Mac OS, iOS, and/or Android.
 
@@ -30,13 +30,14 @@ RDP transport is encrypted using TLS by default.
  * Connect to a Linux desktop using RDP from anywhere (requires
    [xorgxrdp](https://github.com/neutrinolabs/xorgxrdp) Xorg module)
  * Reconnect to an existing session
- * Session resizing on connect and while an existing session is active.
+ * Session resizing (both on-connect and on-the-fly)
  * RDP/VNC proxy (connect to another RDP/VNC server via xrdp)
 
 ### Access to Remote Resources
- * two-way clipboard transfer (text, bitmap, file)
- * audio redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
- * drive redirection (mount local client drives on remote machine)
+ * Two-way clipboard transfer (text, bitmap, file)
+ * Audio redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
+ * Microphone redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
+ * Drive redirection (mount local client drives on remote machine)
 
 ## Supported Platforms
 
