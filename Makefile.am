@@ -1,7 +1,8 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_DISTCHECK_CONFIGURE_FLAGS = \
   --without-systemdsystemunitdir \
-  --enable-strict-locations
+  --enable-strict-locations \
+  --enable-tests
 
 EXTRA_DIST = \
   COPYING \

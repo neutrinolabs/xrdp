@@ -65,6 +65,10 @@ if test "x$with_systemdsystemunitdir" != xno; then
 fi
 AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
 
+AC_ARG_ENABLE(tests,
+              AC_HELP_STRING([--enable-tests],
+              [Ensure dependencies for the tests are installed]),
+              [ensure_tests_deps=yes], [])
 AC_ARG_ENABLE(pam, AS_HELP_STRING([--enable-pam],
               [Build PAM support (default: yes)]),
               [], [enable_pam=yes])
@@ -357,10 +361,23 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 
 CFLAGS="$save_CFLAGS"
 
-# checking for libcheck (used for unit testing)
-PKG_CHECK_MODULES([CHECK], [check >= 0.10.0])
-AC_CHECK_HEADER([check.h], [],
-  [AC_MSG_ERROR([please install check])])
+# perform unit tests if libcheck found
+if test "x$ensure_tests_deps" == "xyes"; then
+    PKG_CHECK_MODULES([CHECK], [check >= 0.10.0],
+        [perform_unit_tests=yes],
+        [AC_MSG_ERROR([please install check, the unit test framework])])
+else
+    PKG_CHECK_MODULES([CHECK], [check >= 0.10.0],
+        [perform_unit_tests=yes],
+        [perform_unit_tests=no])
+fi
+
+if test "x$perform_unit_tests" == "xyes"; then
+    AC_MSG_NOTICE([libcheck found, unit tests will be performed])
+else
+    AC_MSG_NOTICE([libcheck not found, unit tests will be skipped])
+fi
+# -- end perform unit tests
 
 AC_SUBST([moduledir], '${libdir}/xrdp')
 
@@ -443,6 +460,8 @@ echo "  exec_prefix             $exec_prefix"
 echo "  libdir                  $libdir"
 echo "  bindir                  $bindir"
 echo "  sysconfdir              $sysconfdir"
+echo ""
+echo "  unit tests performable  $perform_unit_tests"
 echo ""
 echo "  CFLAGS = $CFLAGS"
 echo "  LDFLAGS = $LDFLAGS"
