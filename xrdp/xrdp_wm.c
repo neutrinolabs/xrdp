@@ -1909,7 +1909,7 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
             rv = xrdp_mm_check_chan(wm->mm);
             break;
         case 0x5557:
-            LOG(LOG_LEVEL_DEBUG, "callback: frame ack %p", (void *) param1);
+            LOG(LOG_LEVEL_TRACE, "callback: frame ack %p", (void *) param1);
             xrdp_mm_frame_ack(wm->mm, param1);
             break;
         case 0x5558:
