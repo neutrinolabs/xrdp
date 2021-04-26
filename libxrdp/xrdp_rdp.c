@@ -622,7 +622,7 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         }
         else
         {
-            LOG_DEVEL(LOG_LEVEL_DEBUG,
+            LOG_DEVEL(LOG_LEVEL_TRACE,
                       "xrdp_rdp_send_data: compress_rdp failed, sending "
                       "uncompressed data. type %d, flags %d",
                       mppc_enc->protocol_type, mppc_enc->flags);
