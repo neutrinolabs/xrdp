@@ -451,6 +451,7 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [%s]", name, value);
     }
+
     settings = mod->inst->settings;
 
     if (g_strcmp(name, "hostname") == 0)
@@ -503,9 +504,11 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         settings->desktop_resize = g_text2bool(value);
     }
-    else if (g_strcmp(name, "pampassword") == 0)
+    else if (g_strcmp(name, "pamusername") == 0 ||
+             g_strcmp(name, "pampassword") == 0 ||
+             g_strcmp(name, "pammsessionmng") == 0)
     {
-        LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [******]", name);
+        /* Valid (but unused) parameters not logged */
     }
     else
     {
