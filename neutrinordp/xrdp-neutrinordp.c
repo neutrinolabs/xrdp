@@ -443,7 +443,14 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
 {
     rdpSettings *settings;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [%s]", name, value);
+    if (g_strcmp(name, "password") == 0 || g_strcmp(name, "pampassword") == 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [******]", name);
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_set_param: name [%s] value [%s]", name, value);
+    }
     settings = mod->inst->settings;
 
     if (g_strcmp(name, "hostname") == 0)
@@ -495,6 +502,10 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     else if (g_strcmp(name, "enable_dynamic_resizing") == 0)
     {
         settings->desktop_resize = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "pampassword") == 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [******]", name);
     }
     else
     {
