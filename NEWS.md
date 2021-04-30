@@ -1,4 +1,4 @@
-# Release notes for xrdp v0.9.16 (yyyy/mm/dd)
+# Release notes for xrdp v0.9.16 (2021/04/30)
 
 ## New features
 * On-the-fly resolution change now supported for Xvnc and Xorg (#448, #1820) - thanks to @Nexarian for this significant first contribution. See the following YouTube video for a demo.
