@@ -232,7 +232,7 @@ This option can have one of the following values:
 
 \fBINFO\fR or \fB3\fR \- Logs errors, warnings and informational messages
 
-\fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
+\fBDEBUG\fR or \fB4\fR \- Log everything. If \fBxrdp-sesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
 
 .TP
 \fBEnableSyslog\fR=\fI[true|false]\fR
@@ -338,6 +338,16 @@ values supported for a particular release of \fBxrdp\fR(8) are documented in
 Specifies the session type. The default, \fI0\fR, is Xvnc, \fI10\fR is
 X11rdp, and \fI20\fR is Xorg with xorgxrdp modules.
 
+.TP
+\fBchansrvport\fR=\fBDISPLAY(\fR\fIn\fR\fB)\fR|\fI/path/to/domain-socket\fR
+Asks xrdp to connect to a manually started \fBxrdp-chansrv\fR instance.
+This can be useful if you wish to use to use xrdp to connect to a VNC session
+which has been started other than by \fBxrdp-sesman\fR, as you can then make
+use of \fBxrdp\-chansrv\fR facilities in the VNC session.
+
+The first form of this setting is recommended, replacing \fIn\fR with the
+X11 display number of the session.
+
 .SH "EXAMPLES"
 This is an example \fBxrdp.ini\fR:
 
@@ -369,8 +379,11 @@ password={base64}cGFzc3dvcmQhCg==
 
 .SH "SEE ALSO"
 .BR xrdp (8),
-.BR sesman (8),
-.BR sesrun (8),
+.BR xrdp\-chansrv (8),
+.BR xrdp\-sesman (8),
+.BR xrdp\-sesrun (8),
 .BR sesman.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+For more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

@@ -203,9 +203,28 @@ int
 libxrdp_orders_send_bitmap3(struct xrdp_session *session,
                             int width, int height, int bpp, char *data,
                             int cache_id, int cache_idx, int hints);
+/**
+ * Returns the number of channels in the session
+ *
+ * This value is one more than the last valid channel ID
+ *
+ * @param session RDP session
+ * @return Number of available channels
+ */
 int
-libxrdp_query_channel(struct xrdp_session *session, int index,
+libxrdp_get_channel_count(const struct xrdp_session *session);
+int
+libxrdp_query_channel(struct xrdp_session *session, int channel_id,
                       char *channel_name, int *channel_flags);
+/**
+ * Gets the channel ID for the named channel
+ *
+ * Channel IDs are in the range 0..(channel_count-1)
+ *
+ * @param session RDP session
+ * @param name name of channel
+ * @return channel ID, or -1 if the channel cannot be found
+ */
 int
 libxrdp_get_channel_id(struct xrdp_session *session, const char *name);
 int

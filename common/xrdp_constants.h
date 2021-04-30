@@ -95,8 +95,8 @@
  * not yet sorted out
  */
 
-#define MCS_CONNECT_INITIAL            0x7f65
-#define MCS_CONNECT_RESPONSE           0x7f66
+#define MCS_CONNECT_INITIAL            0x7f65 /* MCS BER: big endian, class=application (0x4000), constructed (0x2000), tag number > 30 (0x1f00), tag number=101 (0x0065) */
+#define MCS_CONNECT_RESPONSE           0x7f66 /* MCS BER: application 102 */
 
 #define BER_TAG_BOOLEAN                1
 #define BER_TAG_INTEGER                2
@@ -180,7 +180,7 @@
 #define MASK_REMOVE_BITS(var, mask)    (var &= ~mask)
 #define MASK_HAS_BITS(var, mask)       ((var & mask)>0)
 #define MASK_CHANGE_BIT(var, mask, active) \
-                  (var = ((var & ~mask) | (active ? mask : 0)))
+    (var = ((var & ~mask) | (active ? mask : 0)))
 
 /* Clipboard constants, "borrowed" from GCC system headers in
    the w32 cross compiler */

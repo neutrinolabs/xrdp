@@ -25,17 +25,7 @@
 #include "xrdp.h"
 #include "log.h"
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
-    { \
-        g_write("xrdp:xrdp_cache [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
-    } \
-  } \
-  while (0)
+
 
 /*****************************************************************************/
 static int
@@ -124,8 +114,8 @@ xrdp_cache_create(struct xrdp_wm *owner,
     self->xrdp_os_del_list = list_create();
     xrdp_cache_reset_lru(self);
     xrdp_cache_reset_crc(self);
-    LLOGLN(10, ("xrdp_cache_create: 0 %d 1 %d 2 %d",
-                self->cache1_entries, self->cache2_entries, self->cache3_entries));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_create: 0 %d 1 %d 2 %d",
+              self->cache1_entries, self->cache2_entries, self->cache3_entries);
     return self;
 }
 
@@ -231,9 +221,9 @@ xrdp_cache_reset(struct xrdp_cache *self,
 }
 
 #define COMPARE_WITH_CRC32(_b1, _b2) \
- ((_b1->crc32 == _b2->crc32) && \
-  (_b1->bpp == _b2->bpp) && \
-  (_b1->width == _b2->width) && (_b1->height == _b2->height))
+    ((_b1->crc32 == _b2->crc32) && \
+     (_b1->bpp == _b2->bpp) && \
+     (_b1->width == _b2->width) && (_b1->height == _b2->height))
 
 /*****************************************************************************/
 static int
@@ -245,10 +235,10 @@ xrdp_cache_update_lru(struct xrdp_cache *self, int cache_id, int lru_index)
     struct xrdp_lru_item *thislru;
     struct xrdp_lru_item *taillru;
 
-    LLOGLN(10, ("xrdp_cache_update_lru: lru_index %d", lru_index));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_update_lru: lru_index %d", lru_index);
     if ((lru_index < 0) || (lru_index >= XRDP_MAX_BITMAP_CACHE_IDX))
     {
-        LLOGLN(0, ("xrdp_cache_update_lru: error"));
+        LOG(LOG_LEVEL_ERROR, "xrdp_cache_update_lru: error");
         return 1;
     }
     if (self->lru_tail[cache_id] == lru_index)
@@ -327,9 +317,9 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     struct xrdp_bitmap *lbm;
     struct xrdp_lru_item *llru;
 
-    LLOGLN(10, ("xrdp_cache_add_bitmap:"));
-    LLOGLN(10, ("xrdp_cache_add_bitmap: crc16 0x%4.4x",
-           bitmap->crc16));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_add_bitmap:");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_add_bitmap: crc16 0x%4.4x",
+              bitmap->crc16);
 
     e = (4 - (bitmap->width % 4)) & 3;
     found = 0;
@@ -358,8 +348,8 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "error in xrdp_cache_add_bitmap, "
-                    "too big(%d) bpp %d", bmp_size, bitmap->bpp);
+        LOG(LOG_LEVEL_ERROR, "error in xrdp_cache_add_bitmap, "
+            "too big(%d) bpp %d", bmp_size, bitmap->bpp);
         return 0;
     }
 
@@ -371,7 +361,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
         lbm = self->bitmap_items[cache_id][cache_idx].bitmap;
         if ((lbm != NULL) && COMPARE_WITH_CRC32(lbm, bitmap))
         {
-            LLOGLN(10, ("found bitmap at %d %d", index, jndex));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "found bitmap at %d %d", cache_idx, jndex);
             found = 1;
             break;
         }
@@ -394,8 +384,8 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     if (self->lru_reset[cache_id])
     {
         self->lru_reset[cache_id] = 0;
-        LLOGLN(0, ("xrdp_cache_add_bitmap: reset detected cache_id %d",
-               cache_id));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_cache_add_bitmap: reset detected cache_id %d",
+                  cache_id);
         self->lru_tail[cache_id] = cache_entries - 1;
         index = self->lru_tail[cache_id];
         llru = &(self->bitmap_lrus[cache_id][index]);
@@ -409,12 +399,12 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     /* update lru to end */
     xrdp_cache_update_lru(self, cache_id, lru_index);
 
-    LLOGLN(10, ("xrdp_cache_add_bitmap: oldest %d %d", cache_id, cache_idx));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_add_bitmap: oldest %d %d", cache_id, cache_idx);
 
-    LLOGLN(10, ("adding bitmap at %d %d old ptr %p new ptr %p",
-           cache_id, cache_idx,
-           self->bitmap_items[cache_id][cache_idx].bitmap,
-           bitmap));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "adding bitmap at %d %d old ptr %p new ptr %p",
+              cache_id, cache_idx,
+              self->bitmap_items[cache_id][cache_idx].bitmap,
+              bitmap);
 
     /* remove old, about to be deleted, from crc16 list */
     lbm = self->bitmap_items[cache_id][cache_idx].bitmap;
@@ -425,10 +415,10 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
         iig = list16_index_of(ll, cache_idx);
         if (iig == -1)
         {
-            LLOGLN(0, ("xrdp_cache_add_bitmap: error removing cache_idx"));
+            LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_cache_add_bitmap: error removing cache_idx");
         }
-        LLOGLN(10, ("xrdp_cache_add_bitmap: removing index %d from crc16 %d",
-               iig, crc16));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_add_bitmap: removing index %d from crc16 %d",
+                  iig, crc16);
         list16_remove_item(ll, iig);
         xrdp_bitmap_delete(lbm);
     }
@@ -445,7 +435,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     list16_add_item(ll, cache_idx);
     if (ll->count > 1)
     {
-        LLOGLN(10, ("xrdp_cache_add_bitmap: count %d", ll->count));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_cache_add_bitmap: count %d", ll->count);
     }
 
     if (self->use_bitmap_comp)
@@ -575,7 +565,7 @@ xrdp_cache_add_char(struct xrdp_cache *self,
             if (xrdp_font_item_compare(&self->char_items[i][j].font_item, font_item))
             {
                 self->char_items[i][j].stamp = self->char_stamp;
-                DEBUG(("found font at %d %d", i, j));
+                LOG_DEVEL(LOG_LEVEL_TRACE, "found font at %d %d", i, j);
                 return MAKELONG(j, i);
             }
         }
@@ -599,7 +589,7 @@ xrdp_cache_add_char(struct xrdp_cache *self,
         }
     }
 
-    DEBUG(("adding char at %d %d", f, c));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "adding char at %d %d", f, c);
     /* set, send char and return */
     fi = &self->char_items[f][c].font_item;
     g_free(fi->data);
@@ -649,7 +639,7 @@ xrdp_cache_add_pointer(struct xrdp_cache *self,
             self->pointer_items[i].stamp = self->pointer_stamp;
             xrdp_wm_set_pointer(self->wm, i);
             self->wm->current_pointer = i;
-            DEBUG(("found pointer at %d", i));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "found pointer at %d", i);
             return i;
         }
     }
@@ -682,7 +672,7 @@ xrdp_cache_add_pointer(struct xrdp_cache *self,
                          self->pointer_items[index].y,
                          self->pointer_items[index].bpp);
     self->wm->current_pointer = index;
-    DEBUG(("adding pointer at %d", index));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "adding pointer at %d", index);
     return index;
 }
 
@@ -714,7 +704,7 @@ xrdp_cache_add_pointer_static(struct xrdp_cache *self,
                          self->pointer_items[index].y,
                          self->pointer_items[index].bpp);
     self->wm->current_pointer = index;
-    DEBUG(("adding pointer at %d", index));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "adding pointer at %d", index);
     return index;
 }
 
@@ -742,7 +732,7 @@ xrdp_cache_add_brush(struct xrdp_cache *self,
                      brush_item_data, 8) == 0)
         {
             self->brush_items[i].stamp = self->brush_stamp;
-            DEBUG(("found brush at %d", i));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "found brush at %d", i);
             return i;
         }
     }
@@ -765,7 +755,7 @@ xrdp_cache_add_brush(struct xrdp_cache *self,
     self->brush_items[index].stamp = self->brush_stamp;
     libxrdp_orders_send_brush(self->session, 8, 8, 1, 0x81, 8,
                               self->brush_items[index].pattern, index);
-    DEBUG(("adding brush at %d", index));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "adding brush at %d", index);
     return index;
 }
 

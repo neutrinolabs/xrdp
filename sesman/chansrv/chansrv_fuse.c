@@ -130,7 +130,12 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
 **                                                                           **
 ******************************************************************************/
 
-#define FUSE_USE_VERSION 26
+/* FUSE_USE_VERSION must be defined globally for other parts of
+ * xrdp-chansrv which include <fuse_lowlevel.h> for definitions. Check
+ * it's actually defined here */
+#ifndef FUSE_USE_VERSION
+#error Define FUSE_USE_VERSION in the make system and recompile
+#endif
 
 #include <fuse_lowlevel.h>
 #include <stdio.h>
@@ -789,7 +794,7 @@ xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex)
     if (g_xfs == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR,
-                  "xfuse_add_clip_dir_item() called with no filesystem")
+                  "xfuse_add_clip_dir_item() called with no filesystem");
     }
     else
     {

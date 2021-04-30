@@ -77,7 +77,12 @@ struct vnc
     int (*mod_frame_ack)(struct vnc *v, int flags, int frame_id);
     int (*mod_suppress_output)(struct vnc *v, int suppress,
                                int left, int top, int right, int bottom);
-    tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
+    int (*mod_server_monitor_resize)(struct vnc *v,
+                               int width, int height);
+    int (*mod_server_monitor_full_invalidate)(struct vnc *v,
+                               int width, int height);
+    int (*mod_server_version_message)(struct vnc *v);
+    tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                   functions above */
     /* server functions */
     int (*server_begin_update)(struct vnc *v);
@@ -152,5 +157,5 @@ struct vnc
     unsigned int enabled_encodings_mask;
     /* Resizeable support */
     struct vnc_screen_layout client_layout;
-    enum vnc_resize_status initial_resize_status;
+    enum vnc_resize_status resize_status;
 };

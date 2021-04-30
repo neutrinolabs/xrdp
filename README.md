@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/neutrinolabs/xrdp.svg?branch=devel)](https://travis-ci.org/neutrinolabs/xrdp)
+[![Build Status](https://github.com/neutrinolabs/xrdp/actions/workflows/build.yml/badge.svg)](https://github.com/neutrinolabs/xrdp/actions)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp-questions)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
@@ -9,9 +9,15 @@
 ## Overview
 
 **xrdp** provides a graphical login to remote machines using Microsoft
-Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of
-RDP clients: FreeRDP, rdesktop, NeutrinoRDP and Microsoft Remote Desktop
-Client (for Windows, Mac OS, iOS and Android).
+Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of RDP clients:
+  * FreeRDP
+  * rdesktop
+  * KRDC
+  * NeutrinoRDP
+  * Windows MSTSC (Microsoft Terminal Services Client, aka `mstsc.exe`)
+  * Microsoft Remote Desktop (found on Microsoft Store, which is distinct from MSTSC)
+
+Many of these work on some or all of Windows, Mac OS, iOS, and/or Android.
 
 RDP transport is encrypted using TLS by default.
 
@@ -24,13 +30,24 @@ RDP transport is encrypted using TLS by default.
  * Connect to a Linux desktop using RDP from anywhere (requires
    [xorgxrdp](https://github.com/neutrinolabs/xorgxrdp) Xorg module)
  * Reconnect to an existing session
- * Session resizing
+ * Session resizing (both on-connect and on-the-fly)
  * RDP/VNC proxy (connect to another RDP/VNC server via xrdp)
 
 ### Access to Remote Resources
- * two-way clipboard transfer (text, bitmap, file)
- * audio redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
- * drive redirection (mount local client drives on remote machine)
+ * Two-way clipboard transfer (text, bitmap, file)
+ * Audio redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
+ * Microphone redirection ([requires to build additional modules](https://github.com/neutrinolabs/xrdp/wiki/How-to-set-up-audio-redirection))
+ * Drive redirection (mount local client drives on remote machine)
+
+## Supported Platforms
+
+**xrdp** primarily targets GNU/Linux operating system. x86 (including x86-64)
+and ARM processors are most mature architecture to run xrdp on.
+See also [Platform Support Tier](https://github.com/neutrinolabs/xrdp/wiki/Platform-Support-Tier).
+
+Some components such as xorgxrdp and RemoteFX codec have special optimization
+for x86 using SIMD instructions. So running xrdp on x86 processors will get
+fully accelerated experience.
 
 ## Quick Start
 
@@ -64,20 +81,6 @@ yum install xrdp
 
 `yum` is being replaced with `dnf`, so you may need to use `dnf` instead
 of `yum` in the above commands.
-
-## Environment
-
-**xrdp** primarily targets to GNU/Linux. Tested on x86, x86_64, SPARC and
-PowerPC.
-
-xorgxrdp and RemoteFX Codec have special optimization for x86 and x86_64 using
-SIMD instructions.
-
-FreeBSD is not a primary target of xrdp. It is working on FreeBSD except
-for the drive redirection feature.
-
-Other operating systems such as macOS are not supported so far, but we
-welcome your contributions.
 
 ## Compiling
 
@@ -132,9 +135,17 @@ xrdp
 ├── mc ·········· media center module
 ├── neutrinordp · RDP client module for proxying RDP connections using NeutrinoRDP
 ├── pkgconfig ··· pkg-config configuration
-├── sesman ······ session manager for xrdp
+├── scripts ····· build scripts
+├┬─ sesman ······ session manager for xrdp
+|├── chansrv ···· channel server for xrdp
+|├── libscp ····· authorization library
+|└── tools ······ session management tools for sys admins
 ├── tcutils ····· QT based utility program for thin clients
 ├── tests ······· tests for the code
+├┬─ tools ······· tools
+|└┬─ devel ······ development tools
+| ├── gtcp_proxy  GTK app that forwards TCP connections to a remote host
+| └── tcp_proxy · CLI app that forwards TCP connections to a remote host
 ├── vnc ········· VNC client module for xrdp
 ├── vrplayer ···· QT player redirecting video/audio to clients over xrdpvr channel
 ├── xrdp ········ main server code

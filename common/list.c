@@ -26,6 +26,7 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "list.h"
+#include "log.h"
 
 /*****************************************************************************/
 struct list *
@@ -221,11 +222,11 @@ list_dump_items(struct list *self)
 
     if (self->count == 0)
     {
-        g_writeln("List is empty");
+        LOG_DEVEL(LOG_LEVEL_TRACE, "List is empty");
     }
 
     for (index = 0; index < self->count; index++)
     {
-        g_writeln("%d: %p", index, (void *) list_get_item(self, index));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "%d: %p", index, (void *) list_get_item(self, index));
     }
 }

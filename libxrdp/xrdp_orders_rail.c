@@ -42,12 +42,19 @@ xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id)
     order_size = 11;
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_delete: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
@@ -55,6 +62,12 @@ xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id)
     out_uint32_le(self->out_s, field_present_flags);
     /* windowId (4 bytes) */
     out_uint32_le(self->out_s, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_WINDOW_ORDER_HEADER "
+              "OrderSize %d, "
+              "FieldsPresentFlags 0x%8.8x (WINDOW_ORDER_TYPE_WINDOW | WINDOW_ORDER_STATE_DELETED), "
+              "WindowId 0x%8.8x",
+              order_size, field_present_flags, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] Deleted Window");
     return 0;
 }
 
@@ -75,12 +88,19 @@ xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
     order_size = 14;
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_cached_icon: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
@@ -89,10 +109,17 @@ xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
     out_uint32_le(self->out_s, field_present_flags);
     /* windowId (4 bytes) */
     out_uint32_le(self->out_s, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_WINDOW_ORDER_HEADER "
+              "OrderSize %d, FieldsPresentFlags 0x%8.8x, WindowId 0x%8.8x",
+              order_size, field_present_flags, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] Cached Icon");
+
     /* CacheEntry (2 bytes) */
     out_uint16_le(self->out_s, cache_entry);
     /* CacheId (1 byte) */
     out_uint8(self->out_s, cache_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order field [MS-RDPERP] TS_CACHED_ICON_INFO "
+              "CacheEntry %d, CacheId %d", cache_entry, cache_id);
     return 0;
 }
 
@@ -134,6 +161,18 @@ xrdp_orders_send_ts_icon(struct stream *s, int cache_entry, int cache_id,
     }
 
     out_uint8p(s, icon_info->data, icon_info->data_bytes);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order fields [MS-RDPERP] TS_ICON_INFO "
+              "CacheEntry %d, CacheId %d, Bpp %d, Width %d, Height %d, "
+              "CbColorTable <%s>, "
+              "CbBitsMask %d, CbBitsColor %d, BitsMask <omitted from log>, "
+              "ColorTable <%s>, "
+              "BitsColor <omitted from log>",
+              cache_entry, cache_id, icon_info->bpp, icon_info->width,
+              icon_info->height,
+              (use_cmap ? "present, omitted from log" : "not present"),
+              icon_info->mask_bytes, icon_info->data_bytes,
+              (use_cmap ? "present, omitted from log" : "not present")
+             );
     return 0;
 }
 
@@ -169,12 +208,19 @@ xrdp_orders_send_window_icon(struct xrdp_orders *self,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_icon: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
@@ -183,6 +229,10 @@ xrdp_orders_send_window_icon(struct xrdp_orders *self,
     out_uint32_le(self->out_s, field_present_flags);
     /* windowId (4 bytes) */
     out_uint32_le(self->out_s, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_WINDOW_ORDER_HEADER "
+              "OrderSize %d, FieldsPresentFlags 0x%8.8x, WindowId 0x%8.8x",
+              order_size, field_present_flags, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] Window Icon");
 
     xrdp_orders_send_ts_icon(self->out_s, cache_entry, cache_id, icon_info);
 
@@ -372,23 +422,36 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_window_new_update: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
     out_uint32_le(self->out_s, field_present_flags);
     /* windowId (4 bytes) */
     out_uint32_le(self->out_s, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_WINDOW_ORDER_HEADER "
+              "OrderSize %d, FieldsPresentFlags 0x%8.8x, WindowId 0x%8.8x",
+              order_size, field_present_flags, window_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] New or Existing Window (TS_WINDOW_INFO)");
 
     if (field_present_flags & WINDOW_ORDER_FIELD_OWNER)
     {
         /* ownerWindowId (4 bytes) */
         out_uint32_le(self->out_s, window_state->owner_window_id);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "OwnerWindowId 0x%8.8x", window_state->owner_window_id);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_STYLE)
@@ -397,18 +460,28 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         out_uint32_le(self->out_s, window_state->style);
         /* extendedStyle (4 bytes) */
         out_uint32_le(self->out_s, window_state->extended_style);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "Style 0x%8.8x, ExtendedStyle 0x%8.8x",
+                  window_state->style, window_state->extended_style);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_SHOW)
     {
         /* showState (1 byte) */
         out_uint8(self->out_s, window_state->show_state);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "ShowState 0x%2.2x", window_state->show_state);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_TITLE)
     {
         /* titleInfo */
         xrdp_orders_send_as_unicode(self->out_s, window_state->title_info);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "TitleInfo %s", window_state->title_info);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET)
@@ -417,26 +490,61 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         out_uint32_le(self->out_s, window_state->client_offset_x);
         /* clientOffsetY (4 bytes) */
         out_uint32_le(self->out_s, window_state->client_offset_y);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "ClientOffsetX  %d, ClientOffsetY %d",
+                  window_state->client_offset_x, window_state->client_offset_y);
     }
 
+    /* TODO: The [MS-RDPERP] spec says that:
+     * The ClientAreaWidth and ClientAreaHeight field only appears if the WndSupportLevel field of the
+     * Window List Capability Set message is set to TS_WINDOW_LEVEL_SUPPORTED_EX
+     * (as specified in [MS-RDPERP] section 2.2.1.1.2)
+     */
     if (field_present_flags & WINDOW_ORDER_FIELD_CLIENT_AREA_SIZE)
     {
         /* clientAreaWidth (4 bytes) */
         out_uint32_le(self->out_s, window_state->client_area_width);
         /* clientAreaHeight (4 bytes) */
         out_uint32_le(self->out_s, window_state->client_area_height);
-    }
 
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "ClientAreaWidth %d, ClientAreaHeight %d",
+                  window_state->client_area_width, window_state->client_area_height);
+    }
+    /* TODO: The [MS-RDPERP] spec section 2.2.1.3.1.2.1 has the following additional fields:
+     * WindowLeftResizeMargin (optional)
+     * WindowRightResizeMargin (optional)
+     * WindowTopResizeMargin (optional)
+     * WindowBottomResizeMargin (optional)
+     */
+
+    /* TODO: The [MS-RDPERP] spec says that:
+     * The RPContent field only appears if the WndSupportLevel field of the
+     * Window List Capability Set message is set to TS_WINDOW_LEVEL_SUPPORTED_EX
+     * (as specified in [MS-RDPERP] section 2.2.1.1.2)
+     */
     if (field_present_flags & WINDOW_ORDER_FIELD_RP_CONTENT)
     {
         /* RPContent (1 byte) */
         out_uint8(self->out_s, window_state->rp_content);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "RPContent 0x%2.2x", window_state->rp_content);
     }
 
+    /* TODO: The [MS-RDPERP] spec says that:
+     * The RootParentHandle field only appears if the WndSupportLevel field of the
+     * Window List Capability Set message is set to TS_WINDOW_LEVEL_SUPPORTED_EX
+     * (as specified in [MS-RDPERP] section 2.2.1.1.2)
+     */
     if (field_present_flags & WINDOW_ORDER_FIELD_ROOT_PARENT)
     {
         /* rootParentHandle (4 bytes) */
         out_uint32_le(self->out_s, window_state->root_parent_handle);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "RootParentHandle 0x%8.8x", window_state->root_parent_handle);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_WND_OFFSET)
@@ -445,6 +553,10 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         out_uint32_le(self->out_s, window_state->window_offset_x);
         /* windowOffsetY (4 bytes) */
         out_uint32_le(self->out_s, window_state->window_offset_y);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "WindowOffsetX %d, WindowOffsetY %d",
+                  window_state->window_offset_x, window_state->window_offset_y);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_WND_CLIENT_DELTA)
@@ -453,6 +565,10 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         out_uint32_le(self->out_s, window_state->window_client_delta_x);
         /* windowClientDeltaY (4 bytes) */
         out_uint32_le(self->out_s, window_state->window_client_delta_y);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "WindowClientDeltaX %d, WindowClientDeltaY %d",
+                  window_state->window_client_delta_x, window_state->window_client_delta_y);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_WND_SIZE)
@@ -461,6 +577,10 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         out_uint32_le(self->out_s, window_state->window_width);
         /* windowHeight (4 bytes) */
         out_uint32_le(self->out_s, window_state->window_height);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "WindowWidth %d, WindowHeight %d",
+                  window_state->window_width, window_state->window_height);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_WND_RECTS)
@@ -475,6 +595,9 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
             out_uint16_le(self->out_s, window_state->window_rects[index].right);
             out_uint16_le(self->out_s, window_state->window_rects[index].bottom);
         }
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "NumWindowRects %d, WindowRects <omitted from log>",
+                  window_state->num_window_rects);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_VIS_OFFSET)
@@ -483,6 +606,10 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         out_uint32_le(self->out_s, window_state->visible_offset_x);
         /* visibleOffsetY (4 bytes) */
         out_uint32_le(self->out_s, window_state->visible_offset_y);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "VisibleOffsetX %d, VisibleOffsetY %d",
+                  window_state->visible_offset_x, window_state->visible_offset_y);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_VISIBILITY)
@@ -497,7 +624,17 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
             out_uint16_le(self->out_s, window_state->visibility_rects[index].right);
             out_uint16_le(self->out_s, window_state->visibility_rects[index].bottom);
         }
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding optional field [MS-RDPERP] TS_WINDOW_INFO "
+                  "NumVisibilityRects %d, VisibilityRects <omitted from log>",
+                  window_state->num_visibility_rects);
     }
+    /* TODO: The [MS-RDPERP] spec section 2.2.1.3.1.2.1 has the following additional fields:
+     * OverlayDescription (optional, variable)
+     * TaskbarButton (optional)
+     * EnforceServerZOrder (optional)
+     * AppBarState (optional)
+     * AppBarEdge (optional)
+     */
 
     return 0;
 }
@@ -516,12 +653,19 @@ xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
     order_size = 15;
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_notify_delete: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
@@ -531,6 +675,11 @@ xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
     out_uint32_le(self->out_s, window_id);
     /* notifyIconId (4 bytes) */
     out_uint32_le(self->out_s, notify_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_NOTIFYICON_ORDER_HEADER "
+              "OrderSize %d, FieldsPresentFlags 0x%8.8x, WindowId 0x%8.8x, NotifyIconId 0x%8.8x",
+              order_size, field_present_flags, window_id, notify_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] Deleted Notification Icons");
+
     return 0;
 }
 
@@ -610,12 +759,19 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_notify_new_update: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
     out_uint8(self->out_s, order_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
@@ -624,17 +780,27 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
     out_uint32_le(self->out_s, window_id);
     /* notifyIconId (4 bytes) */
     out_uint32_le(self->out_s, notify_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_NOTIFYICON_ORDER_HEADER "
+              "OrderSize %d, FieldsPresentFlags 0x%8.8x, WindowId 0x%8.8x, NotifyIconId 0x%8.8x",
+              order_size, field_present_flags, window_id, notify_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] New or Existing Notification Icons");
 
     if (field_present_flags & WINDOW_ORDER_FIELD_NOTIFY_VERSION)
     {
         /* Version (4 bytes) */
         out_uint32_le(self->out_s, notify_state->version);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order optional field [MS-RDPERP] "
+                  "Version %d", notify_state->version);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_NOTIFY_TIP)
     {
         /* ToolTip (variable) UNICODE_STRING */
         xrdp_orders_send_as_unicode(self->out_s, notify_state->tool_tip);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order optional field [MS-RDPERP] "
+                  "ToolTip %s", notify_state->tool_tip);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_NOTIFY_INFO_TIP)
@@ -644,12 +810,20 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
         out_uint32_le(self->out_s, notify_state->infotip.flags);
         xrdp_orders_send_as_unicode(self->out_s, notify_state->infotip.text);
         xrdp_orders_send_as_unicode(self->out_s, notify_state->infotip.title);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order optional field [MS-RDPERP] TS_NOTIFY_ICON_INFOTIP "
+                  "Timeout %d, InfoFlags 0x%8.8x, InfoTipText %s, Title %s",
+                  notify_state->infotip.timeout, notify_state->infotip.flags,
+                  notify_state->infotip.text, notify_state->infotip.title);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_NOTIFY_STATE)
     {
         /* State (4 bytes) */
         out_uint32_le(self->out_s, notify_state->state);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order optional field [MS-RDPERP] "
+                  "State %d", notify_state->state);
     }
 
     if (field_present_flags & WINDOW_ORDER_ICON)
@@ -666,6 +840,10 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
         out_uint16_le(self->out_s, notify_state->icon_cache_entry);
         /* CacheId (1 byte) */
         out_uint8(self->out_s, notify_state->icon_cache_id);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order field [MS-RDPERP] TS_CACHED_ICON_INFO "
+                  "CacheEntry %d, CacheId %d",
+                  notify_state->icon_cache_entry, notify_state->icon_cache_id);
     }
 
     return 0;
@@ -704,21 +882,37 @@ xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
 
     if (xrdp_orders_check(self, order_size) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_orders_send_monitored_desktop: xrdp_orders_check failed");
         return 1;
     }
     self->order_count++;
     order_flags = TS_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPEGDI] ALTSEC_DRAWING_ORDER_HEADER "
+              "controlFlags.class 0x%1.1x (TS_SECONDARY), "
+              "controlFlags.orderType 0x%2.2x (TS_ALTSEC_WINDOW)",
+              (order_flags & 0x3), (order_flags >> 2));
+
     out_uint8(self->out_s, order_flags);
     /* orderSize (2 bytes) */
     out_uint16_le(self->out_s, order_size);
     /* FieldsPresentFlags (4 bytes) */
     out_uint32_le(self->out_s, field_present_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPERP] TS_DESKTOP_ORDER_HEADER "
+              "OrderSize %d, FieldsPresentFlags 0x%8.8x",
+              order_size, field_present_flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order [MS-RDPERP] %s",
+              ((field_present_flags & WINDOW_ORDER_FIELD_DESKTOP_NONE) ?
+               "Non-Monitored Desktop" : "Actively Monitored Desktop"));
 
     if (field_present_flags & WINDOW_ORDER_FIELD_DESKTOP_ACTIVE_WND)
     {
         /* ActiveWindowId (4 bytes) */
         out_uint32_le(self->out_s, mdo->active_window_id);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order optional field [MS-RDPERP] "
+                  "ActiveWindowId 0x%8.8x", mdo->active_window_id);
     }
 
     if (field_present_flags & WINDOW_ORDER_FIELD_DESKTOP_ZORDER)
@@ -731,6 +925,10 @@ xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
         {
             out_uint32_le(self->out_s, mdo->window_ids[index]);
         }
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding order optional field [MS-RDPERP] "
+                  "NumWindowIds %d, WindowIds <omitted from log>",
+                  mdo->num_window_ids);
     }
 
     return 0;

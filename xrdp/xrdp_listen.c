@@ -47,7 +47,7 @@ xrdp_listen_create_pro_done(struct xrdp_listen *self)
 
     if (self->pro_done_event == 0)
     {
-        log_message(LOG_LEVEL_ERROR,"Failure creating pro_done_event");
+        LOG(LOG_LEVEL_WARNING, "Failure creating pro_done_event");
     }
 
     return 0;
@@ -145,12 +145,12 @@ xrdp_process_run(void *in_val)
 {
     struct xrdp_process *process;
 
-    DEBUG(("process started"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "process started");
     process = g_process;
     g_process = 0;
     tc_sem_inc(g_process_sem);
     xrdp_process_main_loop(process);
-    DEBUG(("process done"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "process done");
     return 0;
 }
 
@@ -387,7 +387,7 @@ xrdp_listen_parse_vsock(char *strout, int strout_max,
         else
         {
             if (((strin[strin_index] >= '0') && (strin[strin_index] <= '9')) ||
-                 (strin[strin_index] == '-'))
+                    (strin[strin_index] == '-'))
             {
                 in = 1;
                 strout[strout_index++] = strin[strin_index++];
@@ -421,7 +421,7 @@ xrdp_listen_parse_ipv4(char *strout, int strout_max,
         if (in)
         {
             if (((strin[strin_index] >= '0') && (strin[strin_index] <= '9')) ||
-                 (strin[strin_index] == '.'))
+                    (strin[strin_index] == '.'))
             {
                 strout[strout_index++] = strin[strin_index++];
                 count++;
@@ -671,91 +671,91 @@ xrdp_listen_process_startup_params(struct xrdp_listen *self)
     {
         if (xrdp_listen_pp(self, &index, address, port, &mode) != 0)
         {
-            log_message(LOG_LEVEL_INFO, "xrdp_listen_pp done");
+            LOG(LOG_LEVEL_INFO, "xrdp_listen_pp done");
             cont = 0;
             break;
         }
-        log_message(LOG_LEVEL_INFO, "address [%s] port [%s] mode %d",
-                    address, port, mode);
+        LOG(LOG_LEVEL_INFO, "address [%s] port [%s] mode %d",
+            address, port, mode);
         ltrans = trans_create(mode, 16, 16);
         if (ltrans == NULL)
         {
-            log_message(LOG_LEVEL_ERROR, "trans_create failed");
+            LOG(LOG_LEVEL_ERROR, "trans_create failed");
             xrdp_listen_stop_all_listen(self);
             return 1;
         }
-        log_message(LOG_LEVEL_INFO, "listening to port %s on %s",
-                    port, address);
+        LOG(LOG_LEVEL_INFO, "listening to port %s on %s",
+            port, address);
         error = trans_listen_address(ltrans, port, address);
         if (error != 0)
         {
-            log_message(LOG_LEVEL_ERROR, "trans_listen_address failed");
+            LOG(LOG_LEVEL_ERROR, "trans_listen_address failed");
             trans_delete(ltrans);
             xrdp_listen_stop_all_listen(self);
             return 1;
         }
         if ((mode == TRANS_MODE_TCP) ||
-            (mode == TRANS_MODE_TCP4) ||
-            (mode == TRANS_MODE_TCP6))
+                (mode == TRANS_MODE_TCP4) ||
+                (mode == TRANS_MODE_TCP6))
         {
             if (startup_params->tcp_nodelay)
             {
                 if (g_tcp_set_no_delay(ltrans->sck))
                 {
-                    log_message(LOG_LEVEL_ERROR, "Error setting tcp_nodelay");
+                    LOG(LOG_LEVEL_ERROR, "Error setting tcp_nodelay");
                 }
             }
             if (startup_params->tcp_keepalive)
             {
                 if (g_tcp_set_keepalive(ltrans->sck))
                 {
-                    log_message(LOG_LEVEL_ERROR, "Error setting "
-                                "tcp_keepalive");
+                    LOG(LOG_LEVEL_ERROR, "Error setting "
+                        "tcp_keepalive");
                 }
             }
             if (startup_params->tcp_send_buffer_bytes > 0)
             {
                 bytes = startup_params->tcp_send_buffer_bytes;
-                log_message(LOG_LEVEL_INFO, "setting send buffer to %d bytes",
-                            bytes);
+                LOG(LOG_LEVEL_INFO, "setting send buffer to %d bytes",
+                    bytes);
                 if (g_sck_set_send_buffer_bytes(ltrans->sck, bytes) != 0)
                 {
-                    log_message(LOG_LEVEL_ERROR, "error setting send buffer");
+                    LOG(LOG_LEVEL_WARNING, "error setting send buffer");
                 }
                 else
                 {
                     if (g_sck_get_send_buffer_bytes(ltrans->sck, &bytes) != 0)
                     {
-                        log_message(LOG_LEVEL_ERROR, "error getting send "
-                                    "buffer");
+                        LOG(LOG_LEVEL_WARNING, "error getting send "
+                            "buffer");
                     }
                     else
                     {
-                        log_message(LOG_LEVEL_INFO, "send buffer set to %d "
-                                    "bytes", bytes);
+                        LOG(LOG_LEVEL_INFO, "send buffer set to %d "
+                            "bytes", bytes);
                     }
                 }
             }
             if (startup_params->tcp_recv_buffer_bytes > 0)
             {
                 bytes = startup_params->tcp_recv_buffer_bytes;
-                log_message(LOG_LEVEL_INFO, "setting recv buffer to %d bytes",
-                            bytes);
+                LOG(LOG_LEVEL_INFO, "setting recv buffer to %d bytes",
+                    bytes);
                 if (g_sck_set_recv_buffer_bytes(ltrans->sck, bytes) != 0)
                 {
-                    log_message(LOG_LEVEL_ERROR, "error setting recv buffer");
+                    LOG(LOG_LEVEL_WARNING, "error setting recv buffer");
                 }
                 else
                 {
                     if (g_sck_get_recv_buffer_bytes(ltrans->sck, &bytes) != 0)
                     {
-                        log_message(LOG_LEVEL_ERROR, "error getting recv "
-                                    "buffer");
+                        LOG(LOG_LEVEL_WARNING, "error getting recv "
+                            "buffer");
                     }
                     else
                     {
-                        log_message(LOG_LEVEL_INFO, "recv buffer set to %d "
-                                    "bytes", bytes);
+                        LOG(LOG_LEVEL_INFO, "recv buffer set to %d "
+                            "bytes", bytes);
                     }
                 }
             }
@@ -865,13 +865,13 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     self->status = 1;
     if (xrdp_listen_get_startup_params(self) != 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
     if (xrdp_listen_process_startup_params(self) != 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
@@ -912,6 +912,9 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
 
         if (g_is_wait_obj_set(term_obj)) /* termination called */
         {
+            LOG(LOG_LEVEL_INFO,
+                "Received termination signal, stopping the server accept new "
+                "connections thread");
             break;
         }
 

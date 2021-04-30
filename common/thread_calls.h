@@ -24,7 +24,7 @@
 #include "arch.h"
 
 int
-tc_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
+tc_thread_create(THREAD_RV (THREAD_CC *start_routine)(void *), void *arg);
 tbus
 tc_get_threadid(void);
 int

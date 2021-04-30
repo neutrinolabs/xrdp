@@ -55,7 +55,7 @@ tc_thread_create(unsigned long (__stdcall *start_routine)(void *), void *arg)
 }
 #else
 int
-tc_thread_create(void * (* start_routine)(void *), void *arg)
+tc_thread_create(void *(* start_routine)(void *), void *arg)
 {
     int rv = 0;
     pthread_t thread = (pthread_t)0;

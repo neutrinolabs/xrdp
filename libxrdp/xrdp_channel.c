@@ -43,6 +43,19 @@
 #define XRDP_DRDYNVC_STATUS_OPEN            2
 #define XRDP_DRDYNVC_STATUS_CLOSE_SENT      3
 
+#define XRDP_DRDYNVC_STATUS_TO_STR(status) \
+    ((status) == XRDP_DRDYNVC_STATUS_CLOSED ? "CLOSED" : \
+     (status) == XRDP_DRDYNVC_STATUS_OPEN_SENT ? "OPEN_SENT" : \
+     (status) == XRDP_DRDYNVC_STATUS_OPEN ? "OPEN" : \
+     (status) == XRDP_DRDYNVC_STATUS_CLOSE_SENT ? "CLOSE_SENT" : \
+     "unknown" \
+    )
+
+#define XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id) \
+    (xrdp_channel_get_item((self), (chan_id)) != NULL \
+     ? xrdp_channel_get_item((self), (chan_id))->name \
+     : "unknown")
+
 /*****************************************************************************/
 /* returns pointer or nil on error */
 static struct mcs_channel_item *
@@ -52,7 +65,7 @@ xrdp_channel_get_item(struct xrdp_channel *self, int channel_id)
 
     if (self->mcs_layer->channel_list == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_channel_get_item - No channel initialized");
+        LOG(LOG_LEVEL_WARNING, "Channel list is NULL, returning NULL");
         return NULL ;
     }
 
@@ -95,6 +108,7 @@ xrdp_channel_init(struct xrdp_channel *self, struct stream *s)
 {
     if (xrdp_sec_init(self->sec_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_channel_init: xrdp_sec_init failed");
         return 1;
     }
 
@@ -115,13 +129,17 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
 
     if (channel == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_channel_send - no such channel");
+        LOG(LOG_LEVEL_ERROR,
+            "Request to send a message to non-existent channel_id %d",
+            channel_id);
         return 1;
     }
 
     if (channel->disabled)
     {
-        LOG(LOG_LEVEL_WARNING, "xrdp_channel_send, channel disabled");
+        LOG(LOG_LEVEL_DEBUG,
+            "Request to send a message to the disabled channel %s (%d)",
+            channel->name, channel_id);
         return 0; /* not an error */
     }
 
@@ -145,10 +163,12 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
     //    }
 
     out_uint32_le(s, flags);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] CHANNEL_PDU_HEADER "
+              "length %d, flags 0x%8.8x", total_data_len, flags);
 
     if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_channel_send - failure sending data");
+        LOG(LOG_LEVEL_ERROR, "xrdp_channel_send: xrdp_sec_send failed");
         return 1;
     }
 
@@ -183,18 +203,28 @@ xrdp_channel_call_callback(struct xrdp_channel *self, struct stream *s,
         }
         else
         {
-            LOG(LOG_LEVEL_TRACE, "in xrdp_channel_call_callback, session->callback is nil");
+            LOG_DEVEL(LOG_LEVEL_WARNING, "session->callback is NULL");
         }
     }
     else
     {
-        LOG(LOG_LEVEL_TRACE, "in xrdp_channel_call_callback, session is nil");
+        LOG_DEVEL(LOG_LEVEL_WARNING, "session is NULL");
     }
 
     return rv;
 }
 
 /*****************************************************************************/
+/**
+ * Write a variable length unsigned int (1, 2, or 4 bytes) to the stream.
+ *
+ * The number of bytes written is the minimum number of bytes needed to
+ * represent the value.
+ *
+ * @param s the stream to write to
+ * @param val the value to write
+ * @return the DYNVC cbId length code for the number of bytes written (see [MS-RDPEDYC] 2.2.2.1)
+ */
 static int
 drdynvc_insert_uint_124(struct stream *s, uint32_t val)
 {
@@ -220,6 +250,17 @@ drdynvc_insert_uint_124(struct stream *s, uint32_t val)
 }
 
 /*****************************************************************************/
+/**
+ * Read a variable length unsigned int (1, 2, or 4 bytes) from the stream.
+ *
+ * The number of bytes read is determined by the cbId bit field flag in the
+ * cmd argument (see [MS-RDPEDYC] 2.2.2.1).
+ *
+ * @param s [in] the stream to read from
+ * @param cmd [in] the cmd byte which contains the cbId bit field flag
+ * @param chan_id_p [out] a pointer to the value read from the stream
+ * @return error code
+ */
 static int
 drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p)
 {
@@ -229,7 +270,7 @@ drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p)
     cbChId = cmd & 0x03;
     if (cbChId == 0)
     {
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [MS-RDPEDYC] channel id"))
         {
             return 1;
         }
@@ -237,7 +278,7 @@ drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p)
     }
     else if (cbChId == 1)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPEDYC] channel id"))
         {
             return 1;
         }
@@ -245,7 +286,7 @@ drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p)
     }
     else
     {
-        if (!s_check_rem(s, 4))
+        if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEDYC] channel id"))
         {
             return 1;
         }
@@ -256,6 +297,9 @@ drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p)
 }
 
 /*****************************************************************************/
+/*
+ * Process a [MS-RDPEDYC] DYNVC_CAPS_RSP message.
+ */
 static int
 drdynvc_process_capability_response(struct xrdp_channel *self,
                                     int cmd, struct stream *s)
@@ -264,18 +308,22 @@ drdynvc_process_capability_response(struct xrdp_channel *self,
     int cap_version;
     int rv;
 
-    /* skip padding */
-    in_uint8s(s, 1);
-    /* read client's version */
-    in_uint16_le(s, cap_version);
-    if ((cap_version != 2) && (cap_version != 3))
+    if (!s_check_rem_and_log(s, 3, "Parsing [MS-RDPEDYC] DYNVC_CAPS_RSP"))
     {
-        LOG(LOG_LEVEL_ERROR, "drdynvc_process_capability_response: incompatible DVC "
-            "version %d detected", cap_version);
         return 1;
     }
-    LOG(LOG_LEVEL_INFO, "drdynvc_process_capability_response: DVC version %d selected",
-        cap_version);
+    in_uint8s(s, 1);              /* skip padding */
+    in_uint16_le(s, cap_version); /* Version */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPEDYC] DYNVC_CAPS_RSP "
+              "version %d", cap_version);
+
+    if ((cap_version != 2) && (cap_version != 3))
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Dynamic Virtual Channel version %d is not supported",
+            cap_version);
+        return 1;
+    }
     self->drdynvc_state = 1;
     session = self->sec_layer->rdp_layer->session;
     rv = session->callback(session->id, 0x5558, 0, 0, 0, 0);
@@ -283,6 +331,9 @@ drdynvc_process_capability_response(struct xrdp_channel *self,
 }
 
 /*****************************************************************************/
+/*
+ * Process a [MS-RDPEDYC] DYNVC_CREATE_RSP message.
+ */
 static int
 drdynvc_process_open_channel_response(struct xrdp_channel *self,
                                       int cmd, struct stream *s)
@@ -292,22 +343,27 @@ drdynvc_process_open_channel_response(struct xrdp_channel *self,
     uint32_t chan_id;
     struct xrdp_drdynvc *drdynvc;
 
-    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0)
+    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0) /* ChannelId */
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [MS-RDPEDYC] DYNVC_CREATE_RSP failed");
+        return 1;
+    }
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEDYC] DYNVC_CREATE_RSP"))
     {
         return 1;
     }
-    if (!s_check_rem(s, 4))
-    {
-        return 1;
-    }
-    in_uint32_le(s, creation_status);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_open_channel_response: chan_id 0x%x "
-              "creation_status %d", chan_id, creation_status);
-    session = self->sec_layer->rdp_layer->session;
+    in_uint32_le(s, creation_status); /* CreationStatus */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPEDYC] DYNVC_CREATE_RSP "
+              "ChannelId %d, CreationStatus %d", chan_id, creation_status);
     if (chan_id > 255)
     {
+        LOG(LOG_LEVEL_ERROR, "Received [MS-RDPEDYC] DYNVC_CREATE_RSP for an "
+            "invalid channel id. Max allowed 255, received %d", chan_id);
         return 1;
     }
+
+    session = self->sec_layer->rdp_layer->session;
     drdynvc = self->drdynvcs + chan_id;
     if (creation_status == 0)
     {
@@ -317,14 +373,26 @@ drdynvc_process_open_channel_response(struct xrdp_channel *self,
     {
         drdynvc->status = XRDP_DRDYNVC_STATUS_CLOSED;
     }
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "Dynamic Virtual Channel %s (%d) updated: status = %s",
+              XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id),
+              chan_id,
+              XRDP_DRDYNVC_STATUS_TO_STR(drdynvc->status));
     if (drdynvc->open_response != NULL)
     {
         return drdynvc->open_response(session->id, chan_id, creation_status);
     }
+    LOG_DEVEL(LOG_LEVEL_WARNING, "Dynamic Virtual Channel %s (%d): "
+              "callback 'open_response' is NULL",
+              XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id),
+              chan_id);
     return 0;
 }
 
 /*****************************************************************************/
+/*
+ * Process a [MS-RDPEDYC] DYNVC_CLOSE message.
+ */
 static int
 drdynvc_process_close_channel_response(struct xrdp_channel *self,
                                        int cmd, struct stream *s)
@@ -333,26 +401,45 @@ drdynvc_process_close_channel_response(struct xrdp_channel *self,
     uint32_t chan_id;
     struct xrdp_drdynvc *drdynvc;
 
-    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0)
+    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0) /* ChannelId */
     {
+        LOG(LOG_LEVEL_ERROR,
+            "drdynvc_process_close_channel_response: drdynvc_get_chan_id failed");
         return 1;
     }
-    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_close_channel_response: chan_id 0x%x", chan_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPEDYC] DYNVC_CLOSE "
+              "ChannelId %d", chan_id);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
+        LOG(LOG_LEVEL_ERROR, "Received message for an invalid "
+            "channel id. channel id %d", chan_id);
         return 1;
     }
+
     drdynvc = self->drdynvcs + chan_id;
     drdynvc->status = XRDP_DRDYNVC_STATUS_CLOSED;
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "Dynamic Virtual Channel %s (%d) updated: status = %s",
+              XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id),
+              chan_id,
+              XRDP_DRDYNVC_STATUS_TO_STR(drdynvc->status));
+
     if (drdynvc->close_response != NULL)
     {
         return drdynvc->close_response(session->id, chan_id);
     }
+    LOG_DEVEL(LOG_LEVEL_WARNING, "Dynamic Virtual Channel %s (%d): "
+              "callback 'close_response' is NULL",
+              XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id),
+              chan_id);
     return 0;
 }
 
 /*****************************************************************************/
+/*
+ * Process a [MS-RDPEDYC] DYNVC_DATA_FIRST message.
+ */
 static int
 drdynvc_process_data_first(struct xrdp_channel *self,
                            int cmd, struct stream *s)
@@ -364,40 +451,47 @@ drdynvc_process_data_first(struct xrdp_channel *self,
     int total_bytes;
     struct xrdp_drdynvc *drdynvc;
 
-    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0)
+    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0) /* ChannelId */
     {
+        LOG(LOG_LEVEL_ERROR,
+            "Parsing [MS-RDPEDYC] DYNVC_DATA_FIRST failed");
         return 1;
     }
     len = (cmd >> 2) & 0x03;
     if (len == 0)
     {
-        if (!s_check_rem(s, 1))
+        if (!s_check_rem_and_log(s, 1, "Parsing [MS-RDPEDYC] DYNVC_DATA_FIRST"))
         {
             return 1;
         }
-        in_uint8(s, total_bytes);
+        in_uint8(s, total_bytes); /* Length */
     }
     else if (len == 1)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPEDYC] DYNVC_DATA_FIRST"))
         {
             return 1;
         }
-        in_uint16_le(s, total_bytes);
+        in_uint16_le(s, total_bytes); /* Length */
     }
     else
     {
-        if (!s_check_rem(s, 4))
+        if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEDYC] DYNVC_DATA_FIRST"))
         {
             return 1;
         }
-        in_uint32_le(s, total_bytes);
+        in_uint32_le(s, total_bytes); /* Length */
     }
     bytes = (int) (s->end - s->p);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_data_first: bytes %d total_bytes %d", bytes, total_bytes);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPEDYC] DYNVC_DATA_FIRST "
+              "ChannelId %d, Length %d, Data (omitted from the log)",
+              chan_id, total_bytes);
+
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
+        LOG(LOG_LEVEL_ERROR, "Received [MS-RDPEDYC] DYNVC_DATA_FIRST for an "
+            "invalid channel id. Max allowed 255, received %d", chan_id);
         return 1;
     }
     drdynvc = self->drdynvcs + chan_id;
@@ -406,10 +500,17 @@ drdynvc_process_data_first(struct xrdp_channel *self,
         return drdynvc->data_first(session->id, chan_id, s->p,
                                    bytes, total_bytes);
     }
+    LOG_DEVEL(LOG_LEVEL_WARNING, "Dynamic Virtual Channel %s (%d): "
+              "callback 'data_first' is NULL",
+              XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id),
+              chan_id);
     return 0;
 }
 
 /*****************************************************************************/
+/*
+ * Process a [MS-RDPEDYC] DYNVC_DATA message.
+ */
 static int
 drdynvc_process_data(struct xrdp_channel *self,
                      int cmd, struct stream *s)
@@ -419,15 +520,20 @@ drdynvc_process_data(struct xrdp_channel *self,
     int bytes;
     struct xrdp_drdynvc *drdynvc;
 
-    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0)
+    if (drdynvc_get_chan_id(s, cmd, &chan_id) != 0) /* ChannelId */
     {
+        LOG(LOG_LEVEL_ERROR, "drdynvc_process_data: drdynvc_get_chan_id failed");
         return 1;
     }
     bytes = (int) (s->end - s->p);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "drdynvc_process_data: bytes %d", bytes);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPEDYC] DYNVC_DATA "
+              "ChannelId %d, (re-assembled) Length %d, Data (omitted from the log)",
+              chan_id, bytes);
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
+        LOG(LOG_LEVEL_ERROR, "Received message for an invalid "
+            "channel id. channel id %d", chan_id);
         return 1;
     }
     drdynvc = self->drdynvcs + chan_id;
@@ -435,10 +541,18 @@ drdynvc_process_data(struct xrdp_channel *self,
     {
         return drdynvc->data(session->id, chan_id, s->p, bytes);
     }
+    LOG_DEVEL(LOG_LEVEL_WARNING, "Dynamic Virtual Channel %s (%d): "
+              "callback 'data' is NULL",
+              XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id),
+              chan_id);
     return 0;
 }
 
 /*****************************************************************************/
+/**
+ * Process a [MS-RDPBCGR] 2.2.6.1 Virtual Channel PDU and re-assemble the
+ * data chunks as needed.
+ */
 static int
 xrdp_channel_process_drdynvc(struct xrdp_channel *self,
                              struct mcs_channel_item *channel,
@@ -451,61 +565,82 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
     int rv;
     struct stream *ls;
 
-    if (!s_check_rem(s, 8))
+    if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] CHANNEL_PDU_HEADER"))
     {
         return 1;
     }
-    in_uint32_le(s, total_length);
-    in_uint32_le(s, flags);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: total_length %d flags 0x%8.8x",
-              total_length, flags);
+    in_uint32_le(s, total_length); /* length */
+    in_uint32_le(s, flags);        /* flags */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] CHANNEL_PDU_HEADER "
+              "length %d, flags 0x%8.8x", total_length, flags);
     ls = NULL;
     switch (flags & 3)
     {
-        case 0:
+        case 0: /* not first chunk and not last chunk */
             length = (int) (s->end - s->p);
-            if (!s_check_rem_out(self->s, length))
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (middle) "
+                      "length %d", length);
+            if (length > s_rem_out(self->s))
             {
+                LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Data chunk length is bigger than "
+                    "the remaining chunk buffer size. length %d, remaining %d",
+                    length, s_rem_out(self->s));
                 return 1;
             }
-            out_uint8a(self->s, s->p, length);
-            in_uint8s(s, length);
+            out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
+            in_uint8s(s, length);              /* virtualChannelData */
             return 0;
-        case 1:
+        case 1: /* CHANNEL_FLAG_FIRST */
             free_stream(self->s);
             make_stream(self->s);
             init_stream(self->s, total_length);
             length = (int) (s->end - s->p);
-            if (!s_check_rem_out(self->s, length))
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (first) "
+                      "length %d", length);
+            if (length > s_rem_out(self->s))
             {
+                LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Data chunk length is bigger than "
+                    "the remaining chunk buffer size. length %d, remaining %d",
+                    length, s_rem_out(self->s));
                 return 1;
             }
-            out_uint8a(self->s, s->p, length);
-            in_uint8s(s, length);
+            out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
+            in_uint8s(s, length);              /* virtualChannelData */
             return 0;
-        case 2:
+        case 2: /* CHANNEL_FLAG_LAST */
             length = (int) (s->end - s->p);
-            if (!s_check_rem_out(self->s, length))
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (last) "
+                      "length %d", length);
+            if (length > s_rem_out(self->s))
             {
+                LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Data chunk length is bigger than "
+                    "the remaining chunk buffer size. length %d, remaining %d",
+                    length, s_rem_out(self->s));
                 return 1;
             }
-            out_uint8a(self->s, s->p, length);
-            in_uint8s(s, length);
+            out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
+            in_uint8s(s, length);              /* virtualChannelData */
             ls = self->s;
             break;
-        case 3:
+        case 3: /* CHANNEL_FLAG_FIRST and CHANNEL_FLAG_LAST */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (first and last) "
+                      "length %d", total_length);
             ls = s;
             break;
         default:
-            LOG(LOG_LEVEL_ERROR, "xrdp_channel_process_drdynvc: error");
+            LOG(LOG_LEVEL_ERROR, "Received [MS-RDPBCGR] data chunk with "
+                "unknown flag 0x%8.8x", (int) (flags & 3));
             return 1;
     }
     if (ls == NULL)
     {
+        LOG(LOG_LEVEL_ERROR, "BUG: ls must not be NULL");
         return 1;
     }
-    in_uint8(ls, cmd); /* read command */
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: cmd 0x%x", cmd);
+    in_uint8(ls, cmd); /* cbId (low 2 bits), Sp (2 bits), Cmd (hi 4 bits) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPEDYC] "
+              "cbId %d, Sp %d, Cmd 0x%2.2x",
+              (cmd & 0x03), (cmd & 0x0c) >> 2, (cmd & 0xf0) >> 4);
     rv = 1;
     switch (cmd & 0xf0)
     {
@@ -525,16 +660,17 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
             rv = drdynvc_process_data(self, cmd, s);
             break;
         default:
-            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: got unknown "
-                      "command 0x%x", cmd);
+            LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPEDYC] with "
+                "unknown command 0x%2.2x", cmd);
             break;
     }
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_process_drdynvc: rv %d", rv);
     return rv;
 }
 
 /*****************************************************************************/
-/* returns error */
+/* Process a static ([MS-RDPBCGR] 2.2.6) or dynamic (MS-RDPEDYC 2.2.3)
+ * virtual channel message.
+ * returns error */
 /* This is called from the secure layer to process an incoming non global
    channel packet.
    'chanid' passed in here is the mcs channel id so it MCS_GLOBAL_CHANNEL
@@ -557,12 +693,16 @@ xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
     channel = xrdp_channel_get_item(self, channel_id);
     if (channel == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_channel_process, channel not found");
+        LOG(LOG_LEVEL_ERROR,
+            "Received a message for an unknown channel id. channel id %d",
+            chanid);
         return 1;
     }
     if (channel->disabled)
     {
-        LOG(LOG_LEVEL_WARNING, "xrdp_channel_process, channel disabled");
+        LOG(LOG_LEVEL_WARNING,
+            "Received a message for the disabled channel %s (%d)",
+            channel->name, chanid);
         return 0; /* not an error */
     }
     if (channel_id == self->drdynvc_channel_id)
@@ -570,14 +710,16 @@ xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
         return xrdp_channel_process_drdynvc(self, channel, s);
     }
     rv = 0;
-    in_uint32_le(s, length);
-    in_uint32_le(s, flags);
+    in_uint32_le(s, length); /* length */
+    in_uint32_le(s, flags);  /* flags */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] CHANNEL_PDU_HEADER "
+              "length %d, flags 0x%8.8x", length, flags);
     rv = xrdp_channel_call_callback(self, s, channel_id, length, flags);
     return rv;
 }
 
 /*****************************************************************************/
-/* drdynvc */
+/* Send a [MS-RDPEDYC] DYNVC_CAPS_VERSION2 message */
 static int
 xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
 {
@@ -592,11 +734,13 @@ xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
     init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_send_capability_request: xrdp_channel_init failed");
         free_stream(s);
         return 1;
     }
     phold = s->p;
-    out_uint8(s, 0x50);         /* insert cmd       */
+    out_uint8(s, 0x50);         /* insert cbId (2 bits), Sp (2 bits), cmd (4 bits) */
     out_uint8(s, 0x00);         /* insert padding   */
     out_uint16_le(s, 2);        /* insert version   */
     /* channel priority unused for now              */
@@ -609,8 +753,13 @@ xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
     total_data_len = (int) (s->end - phold);
     flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
     channel_id = self->drdynvc_channel_id;
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CAPS_VERSION2 "
+              "cbId 0, Sp 0, Cmd 0x05, Version 2, PriorityCharge0 0, "
+              "PriorityCharge1 0, PriorityCharge2 0, PriorityCharge3 0");
     if (xrdp_channel_send(self, s, channel_id, total_data_len, flags) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_send_capability_request: xrdp_channel_send failed");
         free_stream(s);
         return 1;
     }
@@ -627,7 +776,12 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
     struct mcs_channel_item *ci;
     struct mcs_channel_item *dci;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_channel_drdynvc_start:");
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_channel_drdynvc_start: drdynvc_channel_id %d", self->drdynvc_channel_id);
+    if (self->drdynvc_channel_id != -1)
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_channel_drdynvc_start: already started");
+        return 0;
+    }
     dci = NULL;
     count = self->mcs_layer->channel_list->count;
     for (index = 0; index < count; index++)
@@ -645,12 +799,24 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
     if (dci != NULL)
     {
         self->drdynvc_channel_id = (dci->chanid - MCS_GLOBAL_CHANNEL) - 1;
+        LOG_DEVEL(LOG_LEVEL_DEBUG,
+                  "Initializing Dynamic Virtual Channel with channel id %d",
+                  self->drdynvc_channel_id);
         xrdp_channel_drdynvc_send_capability_request(self);
+    }
+    else
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "Dynamic Virtual Channel named 'drdynvc' not found, "
+            "channel not initialized");
     }
     return 0;
 }
 
 /*****************************************************************************/
+/*
+ * Send a [MS-RDPEDYC] DYNVC_CREATE_REQ message to request the creation of a channel.
+ */
 int
 xrdp_channel_drdynvc_open(struct xrdp_channel *self, const char *name,
                           int flags, struct xrdp_drdynvc_procs *procs,
@@ -670,33 +836,46 @@ xrdp_channel_drdynvc_open(struct xrdp_channel *self, const char *name,
     init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_open: xrdp_channel_init failed");
         free_stream(s);
         return 1;
     }
     cmd_ptr = s->p;
-    out_uint8(s, 0);
+    out_uint8(s, 0); /* set later */
     ChId = 1;
     while (self->drdynvcs[ChId].status != XRDP_DRDYNVC_STATUS_CLOSED)
     {
         ChId++;
         if (ChId > 255)
         {
+            LOG(LOG_LEVEL_ERROR,
+                "Attempting to create a new channel when the maximum "
+                "number of channels have already been created. "
+                "XRDP only supports 255 open channels.");
             free_stream(s);
             return 1;
         }
     }
-    cbChId = drdynvc_insert_uint_124(s, ChId);
+    cbChId = drdynvc_insert_uint_124(s, ChId); /* ChannelId */
     name_length = g_strlen(name);
-    out_uint8a(s, name, name_length + 1);
+    out_uint8a(s, name, name_length + 1); /* ChannelName */
     chan_pri = 0;
+    /* cbId (low 2 bits), Pri (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_OPEN_CHANNEL | ((chan_pri << 2) & 0x0c) | cbChId;
     static_channel_id = self->drdynvc_channel_id;
     static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
     s_mark_end(s);
     total_data_len = (int) (s->end - cmd_ptr);
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CREATE_REQ "
+              "cbId %d, Pri %d, Cmd 0x%2.2x, ChannelId %d, ChannelName [%s]",
+              cbChId, chan_pri, CMD_DVC_OPEN_CHANNEL, ChId, name);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "Sending [MS-RDPEDYC] DYNVC_CREATE_REQ failed");
         free_stream(s);
         return 1;
     }
@@ -711,6 +890,9 @@ xrdp_channel_drdynvc_open(struct xrdp_channel *self, const char *name,
 }
 
 /*****************************************************************************/
+/*
+ * Send a [MS-RDPEDYC] DYNVC_CLOSE message to request the closing of a channel.
+ */
 int
 xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
 {
@@ -724,33 +906,48 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
 
     if ((chan_id < 0) || (chan_id > 255))
     {
+        LOG(LOG_LEVEL_ERROR, "Attempting to close an invalid channel id. "
+            "channel id %d", chan_id);
         return 1;
     }
     if ((self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN) &&
             (self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN_SENT))
     {
         /* not open */
+        LOG(LOG_LEVEL_ERROR, "Attempting to close a channel that is not open. "
+            "channel id %d, channel status %s",
+            chan_id,
+            XRDP_DRDYNVC_STATUS_TO_STR(self->drdynvcs[chan_id].status));
         return 1;
     }
     make_stream(s);
     init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_close: xrdp_channel_init failed");
         free_stream(s);
         return 1;
     }
     cmd_ptr = s->p;
-    out_uint8(s, 0);
+    out_uint8(s, 0); /* set later */
     ChId = chan_id;
-    cbChId = drdynvc_insert_uint_124(s, ChId);
+    cbChId = drdynvc_insert_uint_124(s, ChId); /* ChannelId */
+    /* cbId (low 2 bits), Sp (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_CLOSE_CHANNEL | cbChId;
     static_channel_id = self->drdynvc_channel_id;
     static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
     s_mark_end(s);
     total_data_len = (int) (s->end - cmd_ptr);
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CLOSE "
+              "cbId %d, Sp 0, Cmd 0x%2.2x, ChannelId %d",
+              cbChId, CMD_DVC_OPEN_CHANNEL, ChId);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_open: xrdp_channel_send failed");
         free_stream(s);
         return 1;
     }
@@ -760,6 +957,9 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
 }
 
 /*****************************************************************************/
+/*
+ * Send a [MS-RDPEDYC] DYNVC_DATA_FIRST message.
+ */
 int
 xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
                                 const char *data, int data_bytes,
@@ -776,37 +976,53 @@ xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
 
     if ((chan_id < 0) || (chan_id > 255))
     {
+        LOG(LOG_LEVEL_ERROR, "Attempting to send data to an invalid "
+            "channel id. channel id %d", chan_id);
         return 1;
     }
     if (self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN)
     {
+        LOG(LOG_LEVEL_ERROR, "Attempting to send data to a channel that "
+            "is not open. channel id %d, channel status %s",
+            chan_id,
+            XRDP_DRDYNVC_STATUS_TO_STR(self->drdynvcs[chan_id].status));
         return 1;
     }
     if (data_bytes > 1590)
     {
+        LOG(LOG_LEVEL_ERROR, "Payload for channel id %d is is too big. "
+            "data_bytes %d", chan_id, data_bytes);
         return 1;
     }
     make_stream(s);
     init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_data_first: xrdp_channel_init failed");
         free_stream(s);
         return 1;
     }
     cmd_ptr = s->p;
-    out_uint8(s, 0);
+    out_uint8(s, 0); /* set later */
     ChId = chan_id;
-    cbChId = drdynvc_insert_uint_124(s, ChId);
-    cbTotalDataSize = drdynvc_insert_uint_124(s, total_data_bytes);
-    out_uint8p(s, data, data_bytes);
+    cbChId = drdynvc_insert_uint_124(s, ChId); /* ChannelId */
+    cbTotalDataSize = drdynvc_insert_uint_124(s, total_data_bytes); /* Length */
+    out_uint8p(s, data, data_bytes);           /* Data */
+    /* cbId (low 2 bits), Len (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_DATA_FIRST | (cbTotalDataSize << 2) | cbChId;
     static_channel_id = self->drdynvc_channel_id;
     static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
     s_mark_end(s);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_DATA_FIRST "
+              "cbId %d, Len %d, Cmd 0x%2.2x, ChannelId %d, Length %d",
+              cbChId, cbTotalDataSize, CMD_DVC_DATA_FIRST, ChId, total_data_bytes);
     total_data_len = (int) (s->end - cmd_ptr);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_data_first: xrdp_channel_send failed");
         free_stream(s);
         return 1;
     }
@@ -815,6 +1031,9 @@ xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
 }
 
 /*****************************************************************************/
+/*
+ * Send a [MS-RDPEDYC] DYNVC_DATA message.
+ */
 int
 xrdp_channel_drdynvc_data(struct xrdp_channel *self, int chan_id,
                           const char *data, int data_bytes)
@@ -829,36 +1048,52 @@ xrdp_channel_drdynvc_data(struct xrdp_channel *self, int chan_id,
 
     if ((chan_id < 0) || (chan_id > 255))
     {
+        LOG(LOG_LEVEL_ERROR, "Attempting to send data to an invalid "
+            "channel id. channel id %d", chan_id);
         return 1;
     }
     if (self->drdynvcs[chan_id].status != XRDP_DRDYNVC_STATUS_OPEN)
     {
+        LOG(LOG_LEVEL_ERROR, "Attempting to send data to a channel that "
+            "is not open. channel id %d, channel status %s",
+            chan_id,
+            XRDP_DRDYNVC_STATUS_TO_STR(self->drdynvcs[chan_id].status));
         return 1;
     }
     if (data_bytes > 1590)
     {
+        LOG(LOG_LEVEL_ERROR, "Payload for channel id %d is is too big. "
+            "data_bytes %d", chan_id, data_bytes);
         return 1;
     }
     make_stream(s);
     init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_data: xrdp_channel_init failed");
         free_stream(s);
         return 1;
     }
     cmd_ptr = s->p;
-    out_uint8(s, 0);
+    out_uint8(s, 0); /* set later */
     ChId = chan_id;
-    cbChId = drdynvc_insert_uint_124(s, ChId);
-    out_uint8p(s, data, data_bytes);
+    cbChId = drdynvc_insert_uint_124(s, ChId); /* ChannelId */
+    out_uint8p(s, data, data_bytes);           /* Data */
+    /* cbId (low 2 bits), Sp (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_DATA | cbChId;
     static_channel_id = self->drdynvc_channel_id;
     static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
     s_mark_end(s);
     total_data_len = (int) (s->end - cmd_ptr);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_DATA "
+              "cbId %d, Sp 0, Cmd 0x%2.2x, ChannelId %d",
+              cbChId, CMD_DVC_DATA_FIRST, ChId);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_channel_drdynvc_data: xrdp_channel_send failed");
         free_stream(s);
         return 1;
     }

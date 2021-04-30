@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        
+
           # Minimal 64-bit arch builds
           - CC: gcc
             feature_set: min
@@ -38,19 +38,19 @@ jobs:
             arch: amd64
             os: ubuntu-latest
             DISTCHECK: true
-          
+
           - CC: g++
             feature_set: max
             arch: amd64
             os: ubuntu-latest
             DISTCHECK: true
-          
+
           - CC: clang
             feature_set: max
             arch: amd64
             os: ubuntu-latest
             DISTCHECK: true
-          
+
           # Maximal debug 64-bit arch builds
           - CC: gcc
             feature_set: max
@@ -58,7 +58,7 @@ jobs:
             os: ubuntu-latest
             name_extra: and DEBUG
             CONF_FLAGS_EXTRA: "--enable-xrdpdebug"
-            
+
           # Maximal 32-bit arch builds
           - CC: gcc
             feature_set: max
@@ -82,12 +82,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CC: ${{ matrix.CC }}
-      
-      # HACK (2020-11-16): github actions dosen't support YAML anchors/aliases to 
-      # avoid repeating long config values. So instead the config values are defined 
-      # as environment variables using a naming convention with fields that come from 
-      # the job config. These environment variables are then referenced as regualr 
-      # environment variables via the naming convention in the "define env" step to 
+
+      # HACK (2020-11-16): github actions dosen't support YAML anchors/aliases to
+      # avoid repeating long config values. So instead the config values are defined
+      # as environment variables using a naming convention with fields that come from
+      # the job config. These environment variables are then referenced as regualr
+      # environment variables via the naming convention in the "define env" step to
       # define the stardard environment variable used in the rest of the steps.
       CONF_FLAGS_amd64_min: "--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
                   --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
@@ -98,13 +98,13 @@ jobs:
       CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
                   --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
                   --disable-pixman --host=i686-linux"
-      
+
       PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
       CFLAGS_i386: "-m32"
       LDFLAGS_i386: "-m32"
     steps:
       - name: Define feature and arch dependent environment variables
-        # Note: any "variable=value" written to the $GITHUB_ENV file will be 
+        # Note: any "variable=value" written to the $GITHUB_ENV file will be
         # defined as an environment variable for all future steps in this job
         # See: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
         run: |
@@ -119,17 +119,21 @@ jobs:
       - run: make
       - if: ${{ matrix.DISTCHECK }}
         run: make distcheck
-        
+
   cppcheck:
     name: cppcheck
     runs-on: ubuntu-latest
     env:
       CC: gcc
       # This is required to use a version of cppcheck other than that
-      # suplied with the operating system
-      CPPCHECK_VER: 2.1
+      # supplied with the operating system
+      CPPCHECK_VER: 2.4
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
+      # This is currently the only way to get a version into
+      # the cache tag name - see https://github.com/actions/cache/issues/543
+      - run: |
+          echo "OS_VERSION=`lsb_release -sr`" >> $GITHUB_ENV
       - uses: actions/checkout@v2
       - name: Cache cppcheck
         uses: actions/cache@v2
@@ -137,9 +141,8 @@ jobs:
           cache-name: cache-cppcheck
         with:
           path: ~/cppcheck.local
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
+          key: ${{ runner.os }}-${{ env.OS_VERSION }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
       - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh
       - run: ./bootstrap
       - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
       - run: scripts/run_cppcheck.sh -v $CPPCHECK_VER
-      

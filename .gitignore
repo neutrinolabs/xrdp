@@ -22,6 +22,7 @@ keygen/xrdp-keygen
 .libs
 libtool
 *.lo
+*.log
 ltmain.sh
 Makefile
 Makefile.in
@@ -41,6 +42,12 @@ sesman/xrdp-sesman
 sesman/sesman.ini
 *.so
 stamp-h1
+tap-driver.sh
+test-driver
+tests/common/test_common
+tests/memtest/memtest
+tools/devel/tcp_proxy/tcp_proxy
+*.trs
 xrdp/xrdp
 xrdp/xrdp.ini
 xrdp_configure_options.h

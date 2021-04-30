@@ -52,7 +52,7 @@ list16_delete(struct list16 *self)
 
 /*****************************************************************************/
 void
-list16_init(struct list16* self)
+list16_init(struct list16 *self)
 {
     g_memset(self, 0, sizeof(struct list16));
     self->max_count = 4;
@@ -61,7 +61,7 @@ list16_init(struct list16* self)
 
 /*****************************************************************************/
 void
-list16_deinit(struct list16* self)
+list16_deinit(struct list16 *self)
 {
     if (self->items != self->mitems)
     {

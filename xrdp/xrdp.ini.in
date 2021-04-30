@@ -182,9 +182,6 @@ tcutils=true
 ; for debugging xrdp, in section xrdp1, change port=-1 to this:
 #port=/tmp/.xrdp/xrdp_display_10
 
-; for debugging xrdp, add following line to section xrdp1
-#chansrvport=/tmp/.xrdp/xrdp_chansrv_socket_7210
-
 
 ;
 ; Session types
@@ -214,7 +211,10 @@ port=-1
 ; Disable requested encodings to support buggy VNC servers
 ; (1 = ExtendedDesktopSize)
 #disabled_encodings_mask=0
-
+; Use this to connect to a chansrv instance created outside of sesman
+; (e.g. as part of an x11vnc console session). Replace '0' with the
+; display number of the session
+#chansrvport=DISPLAY(0)
 
 [vnc-any]
 name=vnc-any
@@ -235,6 +235,9 @@ ip=ask
 port=ask3389
 username=ask
 password=ask
+; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
+; this line if you're using a client which does.
+#enable_dynamic_resizing=false
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true

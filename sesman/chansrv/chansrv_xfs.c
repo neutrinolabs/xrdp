@@ -273,7 +273,11 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
         xfs->free_list   = NULL;
         xfs->generation = 1;
 
+        /* xfs->inode_table check should be superfluous here, but it
+         * prevents cppcheck 2.2/2.3 generating a false positive nullPointer
+         * report */
         if (!grow_xfs(xfs, INODE_TABLE_ALLOCATION_INITIAL) ||
+                xfs->inode_table == NULL ||
                 (xino1 = g_new0(XFS_INODE_ALL, 1)) == NULL ||
                 (xino2 = g_new0(XFS_INODE_ALL, 1)) == NULL)
         {
