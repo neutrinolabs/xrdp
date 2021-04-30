@@ -1,3 +1,48 @@
+# Release notes for xrdp v0.9.16 (2021/04/30)
+
+## New features
+* On-the-fly resolution change now supported for Xvnc and Xorg (#448, #1820) - thanks to @Nexarian for this significant first contribution. See the following YouTube video for a demo.
+    * [Windows] https://youtu.be/cZ0ebieZHeA
+    * [Mac] https://youtu.be/6kfAkyLUgFY
+* xrdp can now use key algorithms other than RSA for TLS (#1776)
+* Do not spit on the console 2nd stage (inspired by Debian) #1762
+* Unified and improved logging (#1742, #1767, #1802, #1806, #1807, #1826, #1843) - thanks to @aquesnel for this detailed work.
+* Other logging level fixes (#1864)
+* chansrv can now work on `DISPLAY=:0` so it can be used with x11vnc/Vino/etc sessions (#1849)
+
+## Bug fixes
+* Fix some regressions in sesman auth modules (#1769)
+* Minor manpage fixes (#1787)
+* Fix TS_PLAY_SOUND_PDU_DATA to set the correct frequency and duration (#1793)
+* Fix password leakage to logs in NeutrinoRDP module (#1872) - thanks to @TOMATO-ONE for reporting.
+
+## Internal changes
+* cppcheck version for CI bumped to 2.4 (#1771, #1836)
+* FreeBSD version for CI bumped to 12-2 (#1804)
+* Support for check unit test framework added (#1843, #1860)
+* FreeBSD FUSE module now compiles under CI but needs additional work (#1856)
+* Compilation support added for additional Debian platforms (#1818)
+* Refactoring:-
+   * Confusing preprocessor macro USE_NOPAM replaced with USE_PAM (#1800)
+   * Window manager states in xrdp executable now use symbolic constants instead of numbers (#1803)
+* Documentation improvements
+   * KRDC added to client list (#1817)
+   * Platform support tier added (#1822)
+   * README file revised (#1863)
+* Don't install test+development executables by default (#1858)
+
+## Changes for packagers
+These changes are likely to impact operating system package builders and those building xrdp from source.
+* (#1843, #1860) This release introduces an additional optional compile-time dependency on the `check` unit test framework. The dependency is recommended when packaging for compile-time tests.
+* (#1858) The executables `memtest` and `tcp_proxy` are no longer copied to the sbin directory on a package install.
+
+## Known issues
+
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.15 (2020/12/28)
 
 ## New features
