@@ -111,6 +111,12 @@ grey=dedede
 ls_top_window_bg_color=009cb5
 
 ; width and height of login screen
+;
+; The default height allows for about 5 fields to be comfortably displayed
+; above the buttons at the bottom. To display more fields, make <ls_height>
+; larger, and also increase <ls_btn_ok_y_pos> and <ls_btn_cancel_y_pos>
+; below
+;
 ls_width=350
 ls_height=430
 
@@ -216,6 +222,9 @@ port=-1
 ; display number of the session
 #chansrvport=DISPLAY(0)
 
+; Generic VNC Proxy
+; Tailor this to specific hosts and VNC instances by specifying an ip
+; and port and setting a suitable name.
 [vnc-any]
 name=vnc-any
 lib=libvnc.@lib_extension@
@@ -228,13 +237,23 @@ password=ask
 #pamsessionmng=127.0.0.1
 #delay_ms=2000
 
+; Generic RDP proxy using NeutrinoRDP
+; Tailor this to specific hosts by specifying an ip and port and setting
+; a suitable name.
 [neutrinordp-any]
 name=neutrinordp-any
+; To use this section, you should build xrdp with configure option
+; --enable-neutrinordp.
 lib=libxrdpneutrinordp.@lib_extension@
 ip=ask
 port=ask3389
 username=ask
 password=ask
+; Uncomment the following lines to enable PAM authentication for proxy
+; connections.
+#pamusername=ask
+#pampassword=ask
+#pamsessionmng=127.0.0.1
 ; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
 ; this line if you're using a client which does.
 #enable_dynamic_resizing=false
