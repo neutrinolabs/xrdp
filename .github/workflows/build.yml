@@ -146,3 +146,32 @@ jobs:
       - run: ./bootstrap
       - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
       - run: scripts/run_cppcheck.sh -v $CPPCHECK_VER
+
+  code_formatting_check:
+    name: code formatting check
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc
+      # This is required to use a version of astyle other than that
+      # supplied with the operating system
+      ASTYLE_VER: 3.1
+      ASTYLE_REPO: https://svn.code.sf.net/p/astyle/code/tags
+    steps:
+      # This is currently the only way to get a version into
+      # the cache tag name - see https://github.com/actions/cache/issues/543
+      - run: |
+          echo "OS_VERSION=`lsb_release -sr`" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+      - name: Cache astyle
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-astyle
+        with:
+          path: ~/astyle.local
+          key: ${{ runner.os }}-${{ env.OS_VERSION }}-build-${{ env.cache-name }}-${{ env.ASTYLE_VER }}
+      - run: sudo scripts/install_astyle_dependencies_with_apt.sh
+      - run: scripts/install_astyle.sh $ASTYLE_REPO $ASTYLE_VER
+      - name: Format code with astyle
+        run: scripts/run_astyle.sh
+      - name: Check code formatting
+        run: git diff --exit-code
