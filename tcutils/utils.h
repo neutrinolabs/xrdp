@@ -14,111 +14,111 @@
 
 typedef struct stream
 {
-    char* data;    /* holds stream data           */
-    char* pos;     /* current read/write position */
+    char *data;    /* holds stream data           */
+    char *pos;     /* current read/write position */
     int   size;    /* number of bytes in data     */
 } STREAM;
 
 #define qstream_new(_s, _size)                 \
-do                                             \
-{                                              \
-    (_s).data = (char *) malloc(_size);        \
-    (_s).pos = (_s).data;                      \
-    (_s).size = (_size);                       \
-}                                              \
-while (0)
+    do                                             \
+    {                                              \
+        (_s).data = (char *) malloc(_size);        \
+        (_s).pos = (_s).data;                      \
+        (_s).size = (_size);                       \
+    }                                              \
+    while (0)
 
 #define qstream_new_zero(_s, _size)            \
-do                                             \
-{                                              \
-    (_s).data = (char *) calloc((_size), 1);   \
-    (_s).pos = (_s).data;                      \
-    (_s).size = (_size);                       \
-}                                              \
-while (0)
+    do                                             \
+    {                                              \
+        (_s).data = (char *) calloc((_size), 1);   \
+        (_s).pos = (_s).data;                      \
+        (_s).size = (_size);                       \
+    }                                              \
+    while (0)
 
 #define qstream_free(_s)              \
-do                                    \
-{                                     \
-    if ((_s)->data)                   \
-        free((_s)->data);             \
-}                                     \
-while (0)
+    do                                    \
+    {                                     \
+        if ((_s)->data)                   \
+            free((_s)->data);             \
+    }                                     \
+    while (0)
 
 #define qstream_set_pos(_s, _p)       \
-do                                    \
-{                                     \
-    (_s)->pos = (_s)->data + (_p);    \
-}                                     \
-while (0)
+    do                                    \
+    {                                     \
+        (_s)->pos = (_s)->data + (_p);    \
+    }                                     \
+    while (0)
 
 #define qstream_inc_pos(_s, _v)       \
-do                                    \
-{                                     \
-    (_s)->pos += (_v);                \
-}                                     \
-while (0)
+    do                                    \
+    {                                     \
+        (_s)->pos += (_v);                \
+    }                                     \
+    while (0)
 
 #define qstream_rd_u8(_s, _v)                \
-do                                           \
-{                                            \
-    (_v) = *((unsigned char *) ((_s)->pos)); \
-    (_s)->pos++;                             \
-}                                            \
-while (0)
+    do                                           \
+    {                                            \
+        (_v) = *((unsigned char *) ((_s)->pos)); \
+        (_s)->pos++;                             \
+    }                                            \
+    while (0)
 
 #define qstream_rd_u16(_s, _v)                        \
-do                                                    \
-{                                                     \
-    (_v) = (unsigned short)                           \
-    (                                                 \
-        (*((unsigned char *) ((_s)->pos + 0)) << 0) | \
-        (*((unsigned char *) ((_s)->pos + 1)) << 8)   \
-    );                                                \
-    (_s)->pos += 2;                                   \
-} while (0)
+    do                                                    \
+    {                                                     \
+        (_v) = (unsigned short)                           \
+               (                                                 \
+                       (*((unsigned char *) ((_s)->pos + 0)) << 0) | \
+                       (*((unsigned char *) ((_s)->pos + 1)) << 8)   \
+               );                                                \
+        (_s)->pos += 2;                                   \
+    } while (0)
 
 #define qstream_rd_u32(_s, _v)                          \
-do                                                      \
-{                                                       \
-    (_v) = (unsigned int)                               \
-    (                                                   \
-        (*((unsigned char *) ((_s)->pos + 0)) << 0)  |  \
-        (*((unsigned char *) ((_s)->pos + 1)) << 8)  |  \
-        (*((unsigned char *) ((_s)->pos + 2)) << 16) |  \
-        (*((unsigned char *) ((_s)->pos + 3)) << 24)    \
-    );                                                  \
-    (_s)->pos += 4;                                     \
-} while (0)
+    do                                                      \
+    {                                                       \
+        (_v) = (unsigned int)                               \
+               (                                                   \
+                       (*((unsigned char *) ((_s)->pos + 0)) << 0)  |  \
+                       (*((unsigned char *) ((_s)->pos + 1)) << 8)  |  \
+                       (*((unsigned char *) ((_s)->pos + 2)) << 16) |  \
+                       (*((unsigned char *) ((_s)->pos + 3)) << 24)    \
+               );                                                  \
+        (_s)->pos += 4;                                     \
+    } while (0)
 
 #define qstream_wr_u8(_s, _v)                           \
-do                                                      \
-{                                                       \
-    *((_s)->pos) = (unsigned char) (_v);                \
-    (_s)->pos++;                                        \
-} while (0)
+    do                                                      \
+    {                                                       \
+        *((_s)->pos) = (unsigned char) (_v);                \
+        (_s)->pos++;                                        \
+    } while (0)
 
 #define qstream_wr_u16(_s, _v)                          \
-do                                                      \
-{                                                       \
-    *((_s)->pos) = (unsigned char) ((_v) >> 0);         \
-    (_s)->pos++;                                        \
-    *((_s)->pos) = (unsigned char) ((_v) >> 8);         \
-    (_s)->pos++;                                        \
-} while (0)
+    do                                                      \
+    {                                                       \
+        *((_s)->pos) = (unsigned char) ((_v) >> 0);         \
+        (_s)->pos++;                                        \
+        *((_s)->pos) = (unsigned char) ((_v) >> 8);         \
+        (_s)->pos++;                                        \
+    } while (0)
 
 #define qstream_wr_u32(_s, _v)                          \
-do                                                      \
-{                                                       \
-  *((_s)->pos) = (unsigned char) ((_v) >> 0);           \
-  (_s)->pos++;                                          \
-  *((_s)->pos) = (unsigned char) ((_v) >> 8);           \
-  (_s)->pos++;                                          \
-  *((_s)->pos) = (unsigned char) ((_v) >> 16);          \
-  (_s)->pos++;                                          \
-  *((_s)->pos) = (unsigned char) ((_v) >> 24);          \
-  (_s)->pos++;                                          \
-} while (0)
+    do                                                      \
+    {                                                       \
+        *((_s)->pos) = (unsigned char) ((_v) >> 0);           \
+        (_s)->pos++;                                          \
+        *((_s)->pos) = (unsigned char) ((_v) >> 8);           \
+        (_s)->pos++;                                          \
+        *((_s)->pos) = (unsigned char) ((_v) >> 16);          \
+        (_s)->pos++;                                          \
+        *((_s)->pos) = (unsigned char) ((_v) >> 24);          \
+        (_s)->pos++;                                          \
+    } while (0)
 
 /* list of commands we support; this list should match the one in */
 /* NeutrinoRDP channels/tcutils/tcutils_main.h                    */
@@ -141,10 +141,10 @@ enum TCU_UMOUNT_ERROR
 
 class Utils
 {
-public:
-    Utils();
-    static int getMountList(void *wtsChannel, QList<QListWidgetItem *> *itemList);
-    static int unmountDevice(void *wtsChannel, QString device, QStatusBar *statusBar);
+    public:
+        Utils();
+        static int getMountList(void *wtsChannel, QList<QListWidgetItem *> *itemList);
+        static int unmountDevice(void *wtsChannel, QString device, QStatusBar *statusBar);
 };
 
 #endif // UTILS_H

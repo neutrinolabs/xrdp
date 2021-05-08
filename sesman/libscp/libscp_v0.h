@@ -39,7 +39,7 @@
  *
  */
 enum SCP_CLIENT_STATES_E
-scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
 
 /* server API */
 /**
@@ -52,7 +52,7 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);
+scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk);
 
 /**
  *
@@ -61,7 +61,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d, const tui8 *guid);
+scp_v0s_allow_connection(struct SCP_CONNECTION *c, SCP_DISPLAY d, const tui8 *guid);
 
 /**
  *
@@ -70,7 +70,7 @@ scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d, const tui8 *gu
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_deny_connection(struct SCP_CONNECTION* c);
+scp_v0s_deny_connection(struct SCP_CONNECTION *c);
 
 /**
  * @brief send reply to an authentication request
@@ -79,6 +79,6 @@ scp_v0s_deny_connection(struct SCP_CONNECTION* c);
  * @return
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value);
+scp_v0s_replyauthentication(struct SCP_CONNECTION *c, unsigned short int value);
 
 #endif

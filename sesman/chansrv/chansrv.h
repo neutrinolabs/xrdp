@@ -35,9 +35,9 @@ int
 g_is_term(void);
 
 int send_channel_data(int chan_id, const char *data, int size);
-int send_rail_drawing_orders(char* data, int size);
+int send_rail_drawing_orders(char *data, int size);
 int main_cleanup(void);
-int add_timeout(int msoffset, void (*callback)(void* data), void* data);
+int add_timeout(int msoffset, void (*callback)(void *data), void *data);
 
 #ifndef GSET_UINT8
 #define GSET_UINT8(_ptr, _offset, _data) \

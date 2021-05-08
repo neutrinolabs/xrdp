@@ -42,6 +42,6 @@
  *          It this memory needs to be g_free()d
  *
  */
-enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s);
+enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s);
 
 #endif

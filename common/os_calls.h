@@ -27,7 +27,7 @@ struct exit_status
 {
     /* set to -1 when the process exited via a signal */
     uint8_t exit_code;
-    
+
     /* set to 0 when the process exited normally */
     uint8_t signal_no;
 };

@@ -128,7 +128,7 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
 };
 
 int clipboard_out_unicode(struct stream *s, const char *text,
-                                 int num_chars);
+                          int num_chars);
 int clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
 
 #endif

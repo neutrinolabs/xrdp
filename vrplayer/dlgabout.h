@@ -3,23 +3,24 @@
 
 #include <QDialog>
 
-namespace Ui {
-class DlgAbout;
+namespace Ui
+{
+    class DlgAbout;
 }
 
 class DlgAbout : public QDialog
 {
-    Q_OBJECT
-    
-public:
-    explicit DlgAbout(QWidget *parent = 0);
-    ~DlgAbout();
-    
-private:
-    Ui::DlgAbout *ui;
+        Q_OBJECT
 
-private slots:
-    void onOk();
+    public:
+        explicit DlgAbout(QWidget *parent = 0);
+        ~DlgAbout();
+
+    private:
+        Ui::DlgAbout *ui;
+
+    private slots:
+        void onOk();
 };
 
 #endif // DLGABOUT_H

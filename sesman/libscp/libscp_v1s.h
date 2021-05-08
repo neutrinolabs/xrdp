@@ -42,7 +42,7 @@
  * that should be free()d
  */
 enum SCP_SERVER_STATES_E
-scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);
+scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk);
 
 /**
  *
@@ -53,35 +53,35 @@ scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);
  */
 /* 002 */
 enum SCP_SERVER_STATES_E
-scp_v1s_deny_connection(struct SCP_CONNECTION* c, const char *reason);
+scp_v1s_deny_connection(struct SCP_CONNECTION *c, const char *reason);
 
 enum SCP_SERVER_STATES_E
-scp_v1s_request_password(struct SCP_CONNECTION* c, struct SCP_SESSION* s,
+scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
                          const char *reason);
 
 /* 020 */
 enum SCP_SERVER_STATES_E
-scp_v1s_request_pwd_change(struct SCP_CONNECTION* c, char* reason, char* npw);
+scp_v1s_request_pwd_change(struct SCP_CONNECTION *c, char *reason, char *npw);
 
 /* 023 */
 enum SCP_SERVER_STATES_E
-scp_v1s_pwd_change_error(struct SCP_CONNECTION* c, char* error, int retry, char* npw);
+scp_v1s_pwd_change_error(struct SCP_CONNECTION *c, char *error, int retry, char *npw);
 
 /* 030 */
 enum SCP_SERVER_STATES_E
-scp_v1s_connect_new_session(struct SCP_CONNECTION* c, SCP_DISPLAY d);
+scp_v1s_connect_new_session(struct SCP_CONNECTION *c, SCP_DISPLAY d);
 
 /* 032 */
 enum SCP_SERVER_STATES_E
-scp_v1s_connection_error(struct SCP_CONNECTION* c, const char *error);
+scp_v1s_connection_error(struct SCP_CONNECTION *c, const char *error);
 
 /* 040 */
 enum SCP_SERVER_STATES_E
-scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt,
-                      struct SCP_DISCONNECTED_SESSION* ds, SCP_SID* sid);
+scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt,
+                      struct SCP_DISCONNECTED_SESSION *ds, SCP_SID *sid);
 
 /* 046 was: 031 struct SCP_DISCONNECTED_SESSION* ds, */
 enum SCP_SERVER_STATES_E
-scp_v1s_reconnect_session(struct SCP_CONNECTION* c, SCP_DISPLAY d);
+scp_v1s_reconnect_session(struct SCP_CONNECTION *c, SCP_DISPLAY d);
 
 #endif

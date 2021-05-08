@@ -19,21 +19,21 @@
 
 class Decoder : public QObject
 {
-    Q_OBJECT
-public:
-    explicit Decoder(QObject *parent = 0);
-    int init(QString filename);
-    //int deinit();
-    //int setWindow(QRectangle rect);
+        Q_OBJECT
+    public:
+        explicit Decoder(QObject *parent = 0);
+        int init(QString filename);
+        //int deinit();
+        //int setWindow(QRectangle rect);
 
-private:
-    void *channel;
-    QRect mainWindowGeometry;
+    private:
+        void *channel;
+        QRect mainWindowGeometry;
 
-signals:
+    signals:
 
-public slots:
-    void onGeometryChanged(QRect *geometry);
+    public slots:
+        void onGeometryChanged(QRect *geometry);
 };
 
 #endif // DECODER_H

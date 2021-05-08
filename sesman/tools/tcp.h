@@ -37,7 +37,7 @@
  *
  */
 int
-tcp_force_recv(int sck, char* data, int len);
+tcp_force_recv(int sck, char *data, int len);
 
 /**
  *
@@ -49,7 +49,7 @@ tcp_force_recv(int sck, char* data, int len);
  *
  */
 int
-tcp_force_send(int sck, char* data, int len);
+tcp_force_send(int sck, char *data, int len);
 
 /**
  *
@@ -61,6 +61,6 @@ tcp_force_send(int sck, char* data, int len);
  *
  */
 int
-tcp_bind(int sck, char* addr, char* port);
+tcp_bind(int sck, char *addr, char *port);
 
 #endif

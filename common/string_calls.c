@@ -537,7 +537,7 @@ g_bytes_to_hexdump(const char *src, int len)
                         + HEX_DUMP_NEWLINE_SIZE);
 
     dump_number_lines = (len / HEX_DUMP_SOURCE_BYTES_PER_LINE) + 1; /* +1 to round up */
-    dump_length = (dump_number_lines *dump_line_length    /* hex dump lines */
+    dump_length = (dump_number_lines * dump_line_length   /* hex dump lines */
                    + 1);    /* terminating NULL */
     dump_buffer = (char *)g_malloc(dump_length, 1);
     if (dump_buffer == NULL)
@@ -818,7 +818,7 @@ g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int 
     int dest_remaining;
     char *dest_pos = dest;
     char *dest_end;
-    
+
     if (dest == NULL || dest_len < 1)
     {
         return dest;

@@ -19,8 +19,8 @@
 /* ffmpeg related stuff */
 extern "C"
 {
-    #include <libavformat/avformat.h>
-    #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
 
 #define VCR_PLAY        1
@@ -31,29 +31,29 @@ extern "C"
 
 class PlayAudio : public QObject
 {
-    Q_OBJECT
+        Q_OBJECT
 
-public:
-    explicit PlayAudio(QObject *parent = 0,
-                       QQueue<MediaPacket *> *audioQueue = 0,
-                       QMutex *sendMutex = 0,
-                       void *channel = 0,
-                       int stream_id = 101);
+    public:
+        explicit PlayAudio(QObject *parent = 0,
+                           QQueue<MediaPacket *> *audioQueue = 0,
+                           QMutex *sendMutex = 0,
+                           void *channel = 0,
+                           int stream_id = 101);
 
-    void setVcrOp(int op);
+        void setVcrOp(int op);
 
-public slots:
-    void play();
+    public slots:
+        void play();
 
-private:
-    QQueue<MediaPacket *> *audioQueue;
-    QMutex                *sendMutex;
-    QMutex                 vcrMutex;
-    int                    vcrFlag;
-    void                  *channel;
-    int                    stream_id;
+    private:
+        QQueue<MediaPacket *> *audioQueue;
+        QMutex                *sendMutex;
+        QMutex                 vcrMutex;
+        int                    vcrFlag;
+        void                  *channel;
+        int                    stream_id;
 
-    void clearAudioQ();
+        void clearAudioQ();
 };
 
 #endif // PLAYAUDIO_H

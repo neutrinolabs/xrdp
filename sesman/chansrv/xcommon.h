@@ -33,7 +33,7 @@ xcommon_get_local_time(void);
 int
 xcommon_init(void);
 int
-xcommon_get_wait_objs(tbus* objs, int* count, int* timeout);
+xcommon_get_wait_objs(tbus *objs, int *count, int *timeout);
 int
 xcommon_check_wait_objs(void);
 void

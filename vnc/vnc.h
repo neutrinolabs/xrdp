@@ -78,9 +78,9 @@ struct vnc
     int (*mod_suppress_output)(struct vnc *v, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct vnc *v,
-                               int width, int height);
+                                     int width, int height);
     int (*mod_server_monitor_full_invalidate)(struct vnc *v,
-                               int width, int height);
+            int width, int height);
     int (*mod_server_version_message)(struct vnc *v);
     tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                   functions above */

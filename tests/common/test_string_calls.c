@@ -199,8 +199,8 @@ START_TEST(test_strnjoin__when_always__then_doesnt_write_beyond_end_of_destinati
 {
     /* setup */
 
-    const char *src[] = { "a","b","c"};
-    char result[5+1+1]; /* a-b-c + term null + guard value */
+    const char *src[] = { "a", "b", "c"};
+    char result[5 + 1 + 1]; /* a-b-c + term null + guard value */
 
     /* test */
 
