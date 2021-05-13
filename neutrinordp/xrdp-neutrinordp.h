@@ -216,5 +216,5 @@ struct mod
     struct bitmap_item bitmap_cache[4][4096];
     struct brush_item brush_cache[64];
     struct pointer_item pointer_cache[32];
-
+    char pamusername[255];
 };

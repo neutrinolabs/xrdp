@@ -182,18 +182,30 @@ lxrdp_connect(struct mod *mod)
         }
 
 #endif
-        LOG(LOG_LEVEL_ERROR, "freerdp_connect Failed to "
-            "destination :%s:%d",
+        LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed]," 
+            " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+            " xrdp pamusername [%s], xrdp process id [%d]",
+            mod->client_info.client_addr,
+            mod->client_info.client_port,
             mod->inst->settings->hostname,
-            mod->inst->settings->port);
+            mod->inst->settings->port,
+            mod->inst->settings->username,
+            mod->pamusername,
+            g_getpid());
         return 1;
     }
     else
     {
-        LOG(LOG_LEVEL_INFO, "freerdp_connect returned Success to "
-            "destination :%s:%d",
+        LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Success],"
+            " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+            " xrdp pamusername [%s], xrdp process id [%d]",
+            mod->client_info.client_addr,
+            mod->client_info.client_port,
             mod->inst->settings->hostname,
-            mod->inst->settings->port);
+            mod->inst->settings->port,
+            mod->inst->settings->username,
+            mod->pamusername,
+            g_getpid());
     }
 
     return 0;
@@ -433,6 +445,16 @@ lxrdp_end(struct mod *mod)
     }
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_end:");
+    LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Disconnect],"
+        " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+        " xrdp pamusername [%s], xrdp process id [%d]",
+        mod->client_info.client_addr,
+        mod->client_info.client_port,
+        mod->inst->settings->hostname,
+        mod->inst->settings->port,
+        mod->inst->settings->username,
+        mod->pamusername,
+        g_getpid());
     return 0;
 }
 
@@ -504,9 +526,12 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         settings->desktop_resize = g_text2bool(value);
     }
-    else if (g_strcmp(name, "pamusername") == 0 ||
-             g_strcmp(name, "pampassword") == 0 ||
-             g_strcmp(name, "pammsessionmng") == 0)
+    else if (g_strcmp(name, "pamusername") == 0)
+    {
+        g_strncpy(mod->pamusername, value, 255);
+    }
+    else if (g_strcmp(name, "pampassword") == 0 ||
+             g_strcmp(name, "pamsessionmng") == 0)
     {
         /* Valid (but unused) parameters not logged */
     }
