@@ -46,6 +46,7 @@ read_entire_packet(struct stream *src, struct stream **dest, int chan_flags,
         /* packet not fragmented */
         xstream_new(ls, total_length);
         xstream_copyin(ls, src->p, length);
+        s_mark_end(ls);
         ls->p = ls->data;
         *dest = ls;
         return 1;
@@ -67,7 +68,8 @@ read_entire_packet(struct stream *src, struct stream **dest, int chan_flags,
     /* in last packet, chan_flags & 0x02 will be true */
     if (chan_flags & 0x02)
     {
-        /* rewind stream */
+        /* terminate and rewind stream */
+        s_mark_end(ls);
         ls->p = ls->data;
         return 1;
     }
