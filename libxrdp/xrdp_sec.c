@@ -642,6 +642,10 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
             s_push_layer(s, sec_hdr, 4);
         }
     }
+    else
+    {
+        s_push_layer(s, sec_hdr, 0);
+    }
 
     return 0;
 }
