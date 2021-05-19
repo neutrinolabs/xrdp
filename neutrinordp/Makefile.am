@@ -6,10 +6,6 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   $(FREERDP_CFLAGS)
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 module_LTLIBRARIES = \
   libxrdpneutrinordp.la
 

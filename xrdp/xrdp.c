@@ -454,7 +454,7 @@ main(int argc, char **argv)
     const char *pid_file = XRDP_PID_PATH "/xrdp.pid";
     int errored_argc;
 
-#ifdef XRDP_DEBUG
+#ifdef USE_DEVEL_LOGGING
     int test;
     for (test = 0; test < argc; test++)
     {

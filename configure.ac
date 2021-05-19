@@ -98,10 +98,19 @@ AC_ARG_ENABLE(pam-config, AS_HELP_STRING([--enable-pam-config=CONF],
               [Select PAM config to install: arch, debian, redhat, suse, freebsd, macos, unix
                (default: autodetect)]))
 
-AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
-              [Build debug (default: no)]),
-              [], [enable_xrdpdebug=no])
-AM_CONDITIONAL(XRDP_DEBUG, [test x$enable_xrdpdebug = xyes])
+# Development options. devel_all is first as this provides a default for
+# the others
+AC_ARG_ENABLE(devel_all, AS_HELP_STRING([--enable-devel-all],
+              [Enable all development options (default: no)]),
+              [devel_all=$enableval], [devel_all=no])
+AC_ARG_ENABLE(devel_debug, AS_HELP_STRING([--enable-devel-debug],
+              [Build exes with no optimisation and debugging symbols (default: no)]),
+              [devel_debug=$enableval], [devel_debug=$devel_all])
+AM_CONDITIONAL(DEVEL_DEBUG, [test x$devel_debug = xyes ])
+AC_ARG_ENABLE(devel_logging, AS_HELP_STRING([--enable-devel-logging],
+              [Enable development logging (default: no)]),
+              [devel_logging=$enableval], [devel_logging=$devel_all])
+
 AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [Build neutrinordp module (default: no)]),
               [], [enable_neutrinordp=no])
@@ -163,7 +172,7 @@ AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
 AM_COND_IF([LINUX],
   [AX_APPEND_COMPILE_FLAGS([-Werror])]) # bsd has warnings that have not been fixed yet
 
-AM_COND_IF([XRDP_DEBUG],
+AM_COND_IF([DEVEL_DEBUG],
   [AX_APPEND_COMPILE_FLAGS([-g -O0])],
   [AX_APPEND_COMPILE_FLAGS([-O2])])
 
@@ -246,6 +255,13 @@ then
 fi
 
 AC_SUBST(PAM_RULES)
+
+# Add define for development options to config_ac.h
+AC_DEFINE([CONFIG_AC_H],1, [Allow sources to check config_ac.h is included])
+if test x$devel_logging = xyes
+then
+  AC_DEFINE([USE_DEVEL_LOGGING],1,[Enable development logging])
+fi
 
 if test "x$enable_vsock" = "xyes"
 then
@@ -438,21 +454,22 @@ AC_OUTPUT
 echo ""
 echo "xrdp will be compiled with:"
 echo ""
-echo "  mp3lame         $enable_mp3lame"
-echo "  opus            $enable_opus"
-echo "  fdkaac          $enable_fdkaac"
-echo "  jpeg            $enable_jpeg"
-echo "  turbo jpeg      $enable_tjpeg"
-echo "  rfxcodec        $enable_rfxcodec"
-echo "  painter         $enable_painter"
-echo "  pixman          $enable_pixman"
-echo "  fuse            $enable_fuse"
-echo "  ipv6            $enable_ipv6"
-echo "  ipv6only        $enable_ipv6only"
-echo "  vsock           $enable_vsock"
-echo "  auth mechanism  $auth_mech"
-echo "  debug           $enable_xrdpdebug"
-echo "  rdpsndaudin     $enable_rdpsndaudin"
+echo "  mp3lame                 $enable_mp3lame"
+echo "  opus                    $enable_opus"
+echo "  fdkaac                  $enable_fdkaac"
+echo "  jpeg                    $enable_jpeg"
+echo "  turbo jpeg              $enable_tjpeg"
+echo "  rfxcodec                $enable_rfxcodec"
+echo "  painter                 $enable_painter"
+echo "  pixman                  $enable_pixman"
+echo "  fuse                    $enable_fuse"
+echo "  ipv6                    $enable_ipv6"
+echo "  ipv6only                $enable_ipv6only"
+echo "  vsock                   $enable_vsock"
+echo "  auth mechanism          $auth_mech"
+echo "  rdpsndaudin             $enable_rdpsndaudin"
+echo
+echo "  development logging     $devel_logging"
 echo ""
 echo "  strict_locations        $enable_strict_locations"
 echo "  prefix                  $prefix"

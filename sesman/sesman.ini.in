@@ -74,7 +74,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [LoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #sesman.c=INFO
 #main()=INFO
 
@@ -139,7 +140,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [ChansrvLoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #chansrv.c=INFO
 #main()=INFO
 
