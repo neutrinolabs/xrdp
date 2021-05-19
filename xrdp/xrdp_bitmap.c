@@ -466,6 +466,7 @@ int
 xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
 {
     int fd = 0;
+    int len = 0;
     int i = 0;
     int j = 0;
     int k = 0;
@@ -511,7 +512,15 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         /* read file size */
         make_stream(s);
         init_stream(s, 8192);
-        g_file_read(fd, s->data, 4);
+        if (g_file_read(fd, s->data, 4) != 4)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: missing length in file %s",
+                filename);
+            free_stream(s);
+            g_file_close(fd);
+            return 1;
+        }
+        s->end = s->data + 4;
         in_uint32_le(s, size);
         /* read bmp header */
         if (g_file_seek(fd, 14) < 0)
@@ -523,7 +532,17 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             return 1;
         }
         init_stream(s, 8192);
-        g_file_read(fd, s->data, 40); /* size better be 40 */
+        len = g_file_read(fd, s->data, 40); /* size better be 40 */
+        if (len != 40)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: "
+                "unexpected read length %d in file %s",
+                len, filename);
+            free_stream(s);
+            g_file_close(fd);
+            return 1;
+        }
+        s->end = s->data + len;
         in_uint32_le(s, header.size);
         in_uint32_le(s, header.image_width);
         in_uint32_le(s, header.image_height);
@@ -556,6 +575,10 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
             size = header.image_width * header.image_height * 3;
             init_stream(s, size);
+            /* Pre-fill the buffer, so if we get short reads we're
+             * not working with uninitialised data */
+            g_memset(s->data, 0, size);
+            s->end = s->data + size;
 
             /* read data */
             for (i = header.image_height - 1; i >= 0; i--)
@@ -610,8 +633,21 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
                 LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
-            init_stream(s, 8192);
-            g_file_read(fd, s->data, header.clr_used * sizeof(int));
+            size = header.clr_used * sizeof(int);
+
+            init_stream(s, size);
+            /* Pre-fill the buffer, so if we get short reads we're
+             * not working with uninitialised data */
+            g_memset(s->data, 0, size);
+            s->end = s->data + size;
+
+            len = g_file_read(fd, s->data, size);
+            if (len != size)
+            {
+                LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: "
+                    "unexpected read length in file %s",
+                    filename);
+            }
 
             for (i = 0; i < header.clr_used; i++)
             {
@@ -621,6 +657,10 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
             size = header.image_width * header.image_height;
             init_stream(s, size);
+            /* Pre-fill the buffer, so if we get short reads we're
+             * not working with uninitialised data */
+            g_memset(s->data, 0, size);
+            s->end = s->data + size;
 
             /* read data */
             for (i = header.image_height - 1; i >= 0; i--)
@@ -671,8 +711,21 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
                 LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
-            init_stream(s, 8192);
-            g_file_read(fd, s->data, header.clr_used * sizeof(int));
+            size = header.clr_used * sizeof(int);
+
+            init_stream(s, size);
+            /* Pre-fill the buffer, so if we get short reads we're
+             * not working with uninitialised data */
+            g_memset(s->data, 0, size);
+            s->end = s->data + size;
+
+            len = g_file_read(fd, s->data, size);
+            if (len != size)
+            {
+                LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_load: "
+                    "unexpected read length in file %s",
+                    filename);
+            }
 
             for (i = 0; i < header.clr_used; i++)
             {
@@ -682,6 +735,10 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
             size = (header.image_width * header.image_height) / 2;
             init_stream(s, size);
+            /* Pre-fill the buffer, so if we get short reads we're
+             * not working with uninitialised data */
+            g_memset(s->data, 0, size);
+            s->end = s->data + size;
 
             /* read data */
             for (i = header.image_height - 1; i >= 0; i--)
