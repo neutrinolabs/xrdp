@@ -110,6 +110,9 @@ AM_CONDITIONAL(DEVEL_DEBUG, [test x$devel_debug = xyes ])
 AC_ARG_ENABLE(devel_logging, AS_HELP_STRING([--enable-devel-logging],
               [Enable development logging (default: no)]),
               [devel_logging=$enableval], [devel_logging=$devel_all])
+AC_ARG_ENABLE(devel_streamcheck, AS_HELP_STRING([--enable-devel-streamcheck],
+              [Add range-check/abort to stream primitives (default: no)]),
+              [devel_streamcheck=$enableval], [devel_streamcheck=$devel_all])
 
 AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [Build neutrinordp module (default: no)]),
@@ -261,6 +264,11 @@ AC_DEFINE([CONFIG_AC_H],1, [Allow sources to check config_ac.h is included])
 if test x$devel_logging = xyes
 then
   AC_DEFINE([USE_DEVEL_LOGGING],1,[Enable development logging])
+fi
+
+if test x$devel_streamcheck = xyes
+then
+  AC_DEFINE([USE_DEVEL_STREAMCHECK],1,[Enable development stream checking])
 fi
 
 if test "x$enable_vsock" = "xyes"
@@ -470,6 +478,7 @@ echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
 echo
 echo "  development logging     $devel_logging"
+echo "  development streamcheck $devel_streamcheck"
 echo ""
 echo "  strict_locations        $enable_strict_locations"
 echo "  prefix                  $prefix"
