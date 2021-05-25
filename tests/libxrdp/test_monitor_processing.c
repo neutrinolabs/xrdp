@@ -11,9 +11,6 @@ struct xrdp_sec *sec_layer;
 struct xrdp_rdp *rdp_layer;
 struct xrdp_session *session;
 
-int
-xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s);
-
 void setup(void)
 {
     rdp_layer = (struct xrdp_rdp *)g_malloc(sizeof(struct xrdp_rdp), 1);
@@ -45,7 +42,7 @@ START_TEST(test_process_monitors__when_flags_is_not_zero__fail)
     s->p = s->data;
 
     int error = xrdp_sec_process_mcs_data_monitors(sec_layer, s);
-    ck_assert_int_eq(error, 1);
+    ck_assert_int_eq(error, SEC_PROCESS_MONITORS_ERR);
 
     free_stream(s);
 }
@@ -64,7 +61,7 @@ START_TEST(test_process_monitors__when_mounter_count_is_greater_than_sixteen__fa
     s->p = s->data;
 
     int error = xrdp_sec_process_mcs_data_monitors(sec_layer, s);
-    ck_assert_int_eq(error, 2);
+    ck_assert_int_eq(error, SEC_PROCESS_MONITORS_ERR_TOO_MANY_MONITORS);
 
     free_stream(s);
 }
@@ -190,7 +187,7 @@ START_TEST(test_process_monitors__when_virtual_desktop_width_is_too_large)
 
     //Verify function call passed.
     int error = xrdp_sec_process_mcs_data_monitors(sec_layer, s);
-    ck_assert_int_eq(error, 3);
+    ck_assert_int_eq(error, SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP);
 
     free_stream(s);
 }
@@ -218,7 +215,7 @@ START_TEST(test_process_monitors__when_virtual_desktop_width_is_too_small)
 
     //Verify function call passed.
     int error = xrdp_sec_process_mcs_data_monitors(sec_layer, s);
-    ck_assert_int_eq(error, 3);
+    ck_assert_int_eq(error, SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP);
 
     free_stream(s);
 }
@@ -246,7 +243,7 @@ START_TEST(test_process_monitors__when_virtual_desktop_height_is_too_large)
 
     //Verify function call passed.
     int error = xrdp_sec_process_mcs_data_monitors(sec_layer, s);
-    ck_assert_int_eq(error, 3);
+    ck_assert_int_eq(error, SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP);
 
     free_stream(s);
 }
@@ -274,7 +271,7 @@ START_TEST(test_process_monitors__when_virtual_desktop_height_is_too_small)
 
     //Verify function call passed.
     int error = xrdp_sec_process_mcs_data_monitors(sec_layer, s);
-    ck_assert_int_eq(error, 3);
+    ck_assert_int_eq(error, SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP);
 
     free_stream(s);
 }

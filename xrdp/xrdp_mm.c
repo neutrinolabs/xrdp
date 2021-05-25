@@ -1024,25 +1024,152 @@ dynamic_monitor_data_first(intptr_t id, int chan_id, char *data, int bytes,
 
 /******************************************************************************/
 static int
+process_dynamic_monitor_description(struct xrdp_wm *wm,
+                                    struct display_size_description *description)
+{
+    int error = 0;
+    struct xrdp_mm *mm = wm->mm;
+    struct xrdp_mod *module = mm->mod;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "process_dynamic_monitor_description:");
+
+    if (wm->client_info->suppress_output == 1)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "process_dynamic_monitor_description:"
+            " Not allowing resize. Suppress output is active.");
+        return 0;
+    }
+    if (description == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "process_dynamic_monitor_description:"
+                  " description is null.");
+        return 0;
+    }
+    if (description->session_width <= 0 || description->session_height <= 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "process_dynamic_monitor_description: Not allowing resize due to"
+            " invalid dimensions (w: %d x h: %d)",
+            description->session_width, description->session_height);
+        return 0;
+    }
+
+    // TODO: Unify this logic with server_reset
+    error = libxrdp_reset(wm->session,
+                          description->session_width,
+                          description->session_height,
+                          wm->screen->bpp);
+    if (error != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "process_dynamic_monitor_description:"
+                  " libxrdp_reset failed %d", error);
+        return error;
+    }
+    /* reset cache */
+    error = xrdp_cache_reset(wm->cache, wm->client_info);
+    if (error != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "process_dynamic_monitor_description: xrdp_cache_reset"
+                  " failed %d", error);
+        return error;
+    }
+    /* load some stuff */
+    error = xrdp_wm_load_static_colors_plus(wm, 0);
+    if (error != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "process_dynamic_monitor_description:"
+                  " xrdp_wm_load_static_colors_plus failed %d", error);
+        return error;
+    }
+
+    error = xrdp_wm_load_static_pointers(wm);
+    if (error != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "process_dynamic_monitor_description:"
+                  " xrdp_wm_load_static_pointers failed %d", error);
+        return error;
+    }
+    /* resize the main window */
+    error = xrdp_bitmap_resize(wm->screen,
+                               description->session_width,
+                               description->session_height);
+    if (error != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "process_dynamic_monitor_description:"
+                  " xrdp_bitmap_resize failed %d", error);
+        return error;
+    }
+    /* redraw */
+    error = xrdp_bitmap_invalidate(wm->screen, 0);
+    if (error != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "process_dynamic_monitor_description:"
+                  " xrdp_bitmap_invalidate failed %d", error);
+        return error;
+    }
+
+    if (module != 0)
+    {
+        error = module->mod_server_version_message(module);
+        if (error != 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_dynamic_monitor_description:"
+                      " mod_server_version_message failed %d", error);
+            return error;
+        }
+        error = module->mod_server_monitor_resize(
+                    module,
+                    description->session_width,
+                    description->session_height);
+        if (error != 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_dynamic_monitor_description:"
+                      "mod_server_monitor_resize failed %d", error);
+            return error;
+        }
+        error = module->mod_server_monitor_full_invalidate(
+                    module,
+                    description->session_width,
+                    description->session_height);
+        if (error != 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_dynamic_monitor_description:"
+                      "mod_server_monitor_full_invalidate failed %d", error);
+            return error;
+        }
+    }
+
+    wm->client_info->monitorCount = description->monitorCount;
+    wm->client_info->width = description->session_width;
+    wm->client_info->height = description->session_height;
+    g_memcpy(wm->client_info->minfo,
+             description->minfo,
+             sizeof(struct monitor_info)
+             * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+    g_memcpy(wm->client_info->minfo_wm,
+             description->minfo_wm,
+             sizeof(struct monitor_info)
+             * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+    return 0;
+}
+
+/******************************************************************************/
+static int
 dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
 {
+    int error = 0;
     struct stream ls;
     struct stream *s;
     int msg_type;
     int msg_length;
-    int monitor_index;
     struct xrdp_process *pro;
     struct xrdp_wm *wm;
-
-    int MonitorLayoutSize;
-    int NumMonitor;
-
-    struct dynamic_monitor_layout monitor_layouts[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS];
-    struct dynamic_monitor_layout *monitor_layout;
-
-    struct xrdp_rect rect;
-    int session_width;
-    int session_height;
+    int monitor_layout_size;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_data:");
     pro = (struct xrdp_process *) id;
@@ -1058,70 +1185,31 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     LOG(LOG_LEVEL_DEBUG, "dynamic_monitor_data: msg_type %d msg_length %d",
         msg_type, msg_length);
 
-    rect.left = 8192;
-    rect.top = 8192;
-    rect.right = -8192;
-    rect.bottom = -8192;
-
-    if (msg_type == DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT)
+    if (msg_type != DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT)
     {
-        in_uint32_le(s, MonitorLayoutSize);
-        in_uint32_le(s, NumMonitor);
-        LOG(LOG_LEVEL_DEBUG, "  MonitorLayoutSize %d NumMonitor %d",
-            MonitorLayoutSize, NumMonitor);
-        for (monitor_index = 0; monitor_index < NumMonitor; monitor_index++)
-        {
-            monitor_layout = monitor_layouts + monitor_index;
-            in_uint32_le(s, monitor_layout->flags);
-            in_uint32_le(s, monitor_layout->left);
-            in_uint32_le(s, monitor_layout->top);
-            in_uint32_le(s, monitor_layout->width);
-            in_uint32_le(s, monitor_layout->height);
-            in_uint32_le(s, monitor_layout->physical_width);
-            in_uint32_le(s, monitor_layout->physical_height);
-            in_uint32_le(s, monitor_layout->orientation);
-            in_uint32_le(s, monitor_layout->desktop_scale_factor);
-            in_uint32_le(s, monitor_layout->device_scale_factor);
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "    Flags 0x%8.8x Left %d Top %d "
-                      "Width %d Height %d PhysicalWidth %d PhysicalHeight %d "
-                      "Orientation %d DesktopScaleFactor %d DeviceScaleFactor %d",
-                      monitor_layout->flags, monitor_layout->left, monitor_layout->top,
-                      monitor_layout->width, monitor_layout->height,
-                      monitor_layout->physical_width, monitor_layout->physical_height,
-                      monitor_layout->orientation, monitor_layout->desktop_scale_factor,
-                      monitor_layout->device_scale_factor);
-
-            rect.left = MIN(monitor_layout->left, rect.left);
-            rect.top = MIN(monitor_layout->top, rect.top);
-            rect.right = MAX(rect.right, monitor_layout->left + monitor_layout->width);
-            rect.bottom = MAX(rect.bottom, monitor_layout->top + monitor_layout->height);
-        }
+        return 0;
     }
-    session_width = rect.right - rect.left;
-    session_height = rect.bottom - rect.top;
-    if ((session_width > 0) && (session_height > 0))
+    in_uint32_le(s, monitor_layout_size);
+    if (monitor_layout_size != 40)
     {
-        // TODO: Unify this logic with server_reset
-        libxrdp_reset(wm->session, session_width, session_height, wm->screen->bpp);
-        /* reset cache */
-        xrdp_cache_reset(wm->cache, wm->client_info);
-        /* resize the main window */
-        xrdp_bitmap_resize(wm->screen, session_width, session_height);
-        /* load some stuff */
-        xrdp_wm_load_static_colors_plus(wm, 0);
-        xrdp_wm_load_static_pointers(wm);
-        /* redraw */
-        xrdp_bitmap_invalidate(wm->screen, 0);
-
-        struct xrdp_mod *v = wm->mm->mod;
-        if (v != 0)
-        {
-            v->mod_server_version_message(v);
-            v->mod_server_monitor_resize(v, session_width, session_height);
-            v->mod_server_monitor_full_invalidate(v, session_width, session_height);
-        }
+        LOG(LOG_LEVEL_ERROR, "dynamic_monitor_data: monitor_layout_size"
+            " is %d. Per spec ([MS-RDPEDISP] 2.2.2.2"
+            " DISPLAYCONTROL_MONITOR_LAYOUT_PDU) it must be 40.",
+            monitor_layout_size);
+        return 1;
     }
-    return 0;
+
+    struct display_size_description *description =
+        (struct display_size_description *)
+        g_malloc(sizeof(struct display_size_description), 1);
+
+    error = libxrdp_process_monitor_stream(s, description, 1);
+    if (error == 0)
+    {
+        error = process_dynamic_monitor_description(wm, description);
+    }
+    g_free(description);
+    return error;
 }
 
 /******************************************************************************/

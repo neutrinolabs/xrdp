@@ -24,12 +24,28 @@
 #if !defined(XRDP_CLIENT_INFO_H)
 #define XRDP_CLIENT_INFO_H
 
+/*
+ * 2.2.1.3.6.1 Monitor Definition (TS_MONITOR_DEF)
+ * 2.2.1.3.9.1 Monitor Attributes (TS_MONITOR_ATTRIBUTES)
+ * 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT
+ */
 struct monitor_info
 {
+    /* From 2.2.1.3.6.1 Monitor Definition (TS_MONITOR_DEF) */
     int left;
     int top;
     int right;
     int bottom;
+    int flags;
+
+    /* From 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT */
+    int physical_width;
+    int physical_height;
+    int orientation;
+    int desktop_scale_factor;
+    int device_scale_factor;
+
+    /* Derived setting */
     int is_primary;
 };
 
@@ -39,6 +55,15 @@ struct xrdp_keyboard_overrides
     int type;
     int subtype;
     int layout;
+};
+
+struct display_size_description
+{
+    int monitorCount; /* number of monitors detected (max = 16) */
+    struct monitor_info minfo[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS]; /* client monitor data */
+    struct monitor_info minfo_wm[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS]; /* client monitor data, non-negative values */
+    int session_width;
+    int session_height;
 };
 
 /**

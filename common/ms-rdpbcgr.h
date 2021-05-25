@@ -83,10 +83,24 @@
 #define RDPSND_SVC_CHANNEL_NAME         "rdpsnd"
 #define RDPDR_SVC_CHANNEL_NAME          "rdpdr"
 
-/* 2.2.1.3.6 Client Monitor Data - */
+/* 2.2.1.3.6 Client Monitor Data */
 /* monitorCount (4 bytes): A 32-bit, unsigned integer. The number of display */
 /* monitor definitions in the monitorDefArray field (the maximum allowed is 16). */
-#define CLIENT_MONITOR_DATA_MAXIMUM_MONITORS 16
+#define CLIENT_MONITOR_DATA_MAXIMUM_MONITORS               16
+
+/* 2.2.1.3.6 Client Monitor Data */
+/* The maximum width of the virtual desktop resulting from the union of the monitors */
+/* contained in the monitorDefArray field MUST NOT exceed 32,766 pixels. Similarly, */
+/* the maximum height of the virtual desktop resulting from the union of the monitors  */
+/* contained in the monitorDefArray field MUST NOT exceed 32,766 pixels. */
+/* The minimum permitted size of the virtual desktop is 200 x 200 pixels. */
+#define CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_DESKTOP_WIDTH  0xC8
+#define CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_DESKTOP_HEIGHT 0xC8
+#define CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_WIDTH  0x7FFE
+#define CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_HEIGHT 0x7FFE
+
+/* 2.2.1.3.6.1 Monitor Definition (TS_MONITOR_DEF) */
+#define TS_MONITOR_PRIMARY 0x00000001
 
 /* Options field */
 /* NOTE: XR_ prefixed to avoid conflict with FreeRDP */

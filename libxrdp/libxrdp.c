@@ -25,10 +25,8 @@
 #include "libxrdp.h"
 #include "string_calls.h"
 #include "xrdp_orders_rail.h"
-
+#include "ms-rdpedisp.h"
 #include "ms-rdpbcgr.h"
-
-
 
 #define MAX_BITMAP_BUF_SIZE (16 * 1024) /* 16K */
 
@@ -1766,3 +1764,323 @@ libxrdp_send_session_info(struct xrdp_session *session, const char *data,
     return xrdp_rdp_send_session_info(rdp, data, data_bytes);
 }
 
+/*****************************************************************************/
+/*
+   Process a [MS-RDPBCGR] TS_UD_CS_MONITOR message.
+   reads the client monitors data
+*/
+int
+libxrdp_process_monitor_stream(struct stream *s,
+                               struct display_size_description *description,
+                               int full_parameters)
+{
+    uint32_t num_monitor;
+    uint32_t monitor_index;
+    struct monitor_info *monitor_layout;
+    struct xrdp_rect all_monitors_encompassing_bounds = {0};
+    int got_primary = 0;
+    int monitor_struct_stream_check_bytes;
+    const char *monitor_struct_stream_check_message;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_monitor_stream:");
+    if (description == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "libxrdp_process_monitor_stream: description was"
+                  " null. Valid pointer to allocated description expected.");
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    if (!s_check_rem_and_log(s, 4,
+                             "libxrdp_process_monitor_stream:"
+                             " Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR"))
+    {
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    in_uint32_le(s, num_monitor);
+    LOG(LOG_LEVEL_DEBUG, "libxrdp_process_monitor_stream:"
+        " The number of monitors received is: %d",
+        num_monitor);
+
+    if (num_monitor >= CLIENT_MONITOR_DATA_MAXIMUM_MONITORS)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "libxrdp_process_monitor_stream: [MS-RDPBCGR] Protocol"
+            " error: TS_UD_CS_MONITOR monitorCount"
+            " MUST be less than %d, received: %d",
+            CLIENT_MONITOR_DATA_MAXIMUM_MONITORS, num_monitor);
+        return SEC_PROCESS_MONITORS_ERR_TOO_MANY_MONITORS;
+    }
+
+    /*
+     * Unfortunately the structure length values aren't directly defined in the
+     * Microsoft specifications. They are derived from the lengths of the
+     * specific structures referenced below.
+     */
+    if (full_parameters == 0)
+    {
+        monitor_struct_stream_check_bytes = 20;
+        monitor_struct_stream_check_message =
+            "libxrdp_process_monitor_stream: Parsing monitor definitions"
+            " from [MS-RDPBCGR] 2.2.1.3.6.1 Monitor Definition"
+            " (TS_MONITOR_DEF).";
+    }
+    else
+    {
+        monitor_struct_stream_check_bytes = 40;
+        monitor_struct_stream_check_message =
+            "libxrdp_process_monitor_stream: Parsing monitor definitions"
+            " from [MS-RDPEDISP] 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT.";
+    }
+
+    description->monitorCount = num_monitor;
+
+    for (monitor_index = 0; monitor_index < num_monitor; ++monitor_index)
+    {
+        if (!s_check_rem_and_log(
+                    s,
+                    monitor_struct_stream_check_bytes,
+                    monitor_struct_stream_check_message))
+        {
+            return SEC_PROCESS_MONITORS_ERR;
+        }
+
+        monitor_layout = description->minfo + monitor_index;
+        if (full_parameters != 0)
+        {
+            in_uint32_le(s, monitor_layout->flags);
+        }
+        in_uint32_le(s, monitor_layout->left);
+        in_uint32_le(s, monitor_layout->top);
+
+        if (full_parameters == 0)
+        {
+            in_uint32_le(s, monitor_layout->right);
+            in_uint32_le(s, monitor_layout->bottom);
+            in_uint32_le(s, monitor_layout->is_primary);
+
+            /*
+             * 2.2.1.3.6.1 Monitor Definition (TS_MONITOR_DEF)
+             */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_monitor_stream:"
+                      " Received [MS-RDPBCGR] 2.2.1.3.6.1"
+                      " TS_UD_CS_MONITOR.TS_MONITOR_DEF"
+                      " Index: %d, Left %d, Top %d, Right %d, Bottom %d,"
+                      " Flags 0x%8.8x",
+                      monitor_index,
+                      monitor_layout->left,
+                      monitor_layout->top,
+                      monitor_layout->right,
+                      monitor_layout->bottom,
+                      monitor_layout->is_primary);
+        }
+        else
+        {
+            /* Per spec (2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT),
+             * this is the width.
+             * 200 <= width <= 8192 and must not be odd.
+             * Ex: in_uint32_le(s, monitor_layout->width);
+             */
+            in_uint32_le(s, monitor_layout->right);
+            if (monitor_layout->right
+                    > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_MONITOR_WIDTH
+                    || monitor_layout->right
+                    < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_MONITOR_WIDTH
+                    || monitor_layout->right % 2 != 0)
+            {
+                return SEC_PROCESS_MONITORS_ERR_INVALID_MONITOR;
+            }
+
+            /* Per spec (2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT),
+             * this is the height.
+             * 200 <= height <= 8192
+             * Ex: in_uint32_le(s, monitor_layout->height);
+             */
+            in_uint32_le(s, monitor_layout->bottom);
+            if (monitor_layout->bottom
+                    > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_MONITOR_HEIGHT
+                    || monitor_layout->bottom
+                    < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_MONITOR_HEIGHT)
+            {
+                return SEC_PROCESS_MONITORS_ERR_INVALID_MONITOR;
+            }
+
+            in_uint32_le(s, monitor_layout->physical_width);
+            in_uint32_le(s, monitor_layout->physical_height);
+
+            in_uint32_le(s, monitor_layout->orientation);
+            switch (monitor_layout->orientation) {
+                case ORIENTATION_LANDSCAPE:
+                case ORIENTATION_PORTRAIT:
+                case ORIENTATION_LANDSCAPE_FLIPPED:
+                case ORIENTATION_PORTRAIT_FLIPPED:
+                    break;
+                default:
+                    LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
+                        " Orientation is not one of %d, %d, %d, or %d."
+                        " Value was %d and ignored.",
+                        ORIENTATION_LANDSCAPE,
+                        ORIENTATION_PORTRAIT,
+                        ORIENTATION_LANDSCAPE_FLIPPED,
+                        ORIENTATION_PORTRAIT_FLIPPED,
+                        monitor_layout->orientation);
+            }
+
+            in_uint32_le(s, monitor_layout->desktop_scale_factor);
+            in_uint32_le(s, monitor_layout->device_scale_factor);
+
+            /*
+             * 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT
+             */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_monitor_stream:"
+                      " Received [MS-RDPEDISP] 2.2.2.2.1"
+                      " DISPLAYCONTROL_MONITOR_LAYOUT_PDU"
+                      ".DISPLAYCONTROL_MONITOR_LAYOUT"
+                      " Index: %d, Flags 0x%8.8x, Left %d, Top %d, Width %d,"
+                      " Height %d, PhysicalWidth %d, PhysicalHeight %d,"
+                      " Orientation %d, DesktopScaleFactor %d,"
+                      " DeviceScaleFactor %d",
+                      monitor_index,
+                      monitor_layout->flags,
+                      monitor_layout->left,
+                      monitor_layout->top,
+                      monitor_layout->right,
+                      monitor_layout->bottom,
+                      monitor_layout->physical_width,
+                      monitor_layout->physical_height,
+                      monitor_layout->orientation,
+                      monitor_layout->desktop_scale_factor,
+                      monitor_layout->device_scale_factor);
+
+            monitor_layout->right =
+                monitor_layout->left + monitor_layout->right;
+            monitor_layout->bottom =
+                monitor_layout->top + monitor_layout->bottom;
+
+            if (monitor_layout->flags == DISPLAYCONTROL_MONITOR_PRIMARY)
+            {
+                monitor_layout->is_primary = TS_MONITOR_PRIMARY;
+            }
+        }
+
+        if (monitor_index == 0)
+        {
+            all_monitors_encompassing_bounds.left = monitor_layout->left;
+            all_monitors_encompassing_bounds.top = monitor_layout->top;
+            all_monitors_encompassing_bounds.right = monitor_layout->right;
+            all_monitors_encompassing_bounds.bottom = monitor_layout->bottom;
+        }
+        else
+        {
+            all_monitors_encompassing_bounds.left =
+                MIN(monitor_layout->left,
+                    all_monitors_encompassing_bounds.left);
+            all_monitors_encompassing_bounds.top =
+                MIN(monitor_layout->top,
+                    all_monitors_encompassing_bounds.top);
+            all_monitors_encompassing_bounds.right =
+                MAX(all_monitors_encompassing_bounds.right,
+                    monitor_layout->right);
+            all_monitors_encompassing_bounds.bottom =
+                MAX(all_monitors_encompassing_bounds.bottom,
+                    monitor_layout->bottom);
+        }
+
+        if (monitor_layout->is_primary == TS_MONITOR_PRIMARY)
+        {
+            got_primary = 1;
+        }
+    }
+
+    if (!got_primary)
+    {
+        /* no primary monitor was set,
+         * choose the leftmost monitor as primary.
+         */
+        for (monitor_index = 0; monitor_index < num_monitor; ++monitor_index)
+        {
+            monitor_layout = description->minfo + monitor_index;
+            if (monitor_layout->left
+                    == all_monitors_encompassing_bounds.left
+                    && monitor_layout->top
+                    == all_monitors_encompassing_bounds.top)
+            {
+                monitor_layout->is_primary = TS_MONITOR_PRIMARY;
+                break;
+            }
+        }
+    }
+
+    /* set wm geometry if the encompassing area is well formed. Otherwise, log and return an error.*/
+    if (all_monitors_encompassing_bounds.right
+            > all_monitors_encompassing_bounds.left
+            && all_monitors_encompassing_bounds.bottom
+            > all_monitors_encompassing_bounds.top)
+    {
+        description->session_width =
+            all_monitors_encompassing_bounds.right
+            - all_monitors_encompassing_bounds.left + 1;
+        description->session_height =
+            all_monitors_encompassing_bounds.bottom
+            - all_monitors_encompassing_bounds.top + 1;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_ERROR, "libxrdp_process_monitor_stream:"
+            " The area encompassing the monitors is not a"
+            " well-formed rectangle. Received"
+            " (top: %d, left: %d, right: %d, bottom: %d)."
+            " This will prevent initialization.",
+            all_monitors_encompassing_bounds.top,
+            all_monitors_encompassing_bounds.left,
+            all_monitors_encompassing_bounds.right,
+            all_monitors_encompassing_bounds.bottom);
+        return SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP;
+    }
+
+    /* Make sure virtual desktop size is OK
+     * 2.2.1.3.6 Client Monitor Data (TS_UD_CS_MONITOR)
+     */
+    if (description->session_width
+            > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_WIDTH
+            || description->session_width
+            < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_DESKTOP_WIDTH
+            || description->session_height
+            > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_HEIGHT
+            || description->session_height
+            < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_DESKTOP_HEIGHT)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "libxrdp_process_monitor_stream: Client supplied virtual"
+            " desktop width or height is invalid."
+            " Allowed width range: min %d, max %d. Width received: %d."
+            " Allowed height range: min %d, max %d. Height received: %d",
+            CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_DESKTOP_WIDTH,
+            CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_WIDTH,
+            description->session_width,
+            CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_DESKTOP_HEIGHT,
+            CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_HEIGHT,
+            description->session_width);
+        return SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP;
+    }
+
+    /* keep a copy of non negative monitor info values for xrdp_wm usage */
+    for (monitor_index = 0; monitor_index < num_monitor; ++monitor_index)
+    {
+        monitor_layout = description->minfo_wm + monitor_index;
+
+        g_memcpy(monitor_layout,
+                 description->minfo + monitor_index,
+                 sizeof(struct monitor_info));
+
+        monitor_layout->left =
+            monitor_layout->left - all_monitors_encompassing_bounds.left;
+        monitor_layout->top =
+            monitor_layout->top - all_monitors_encompassing_bounds.top;
+        monitor_layout->right =
+            monitor_layout->right - all_monitors_encompassing_bounds.left;
+        monitor_layout->bottom =
+            monitor_layout->bottom - all_monitors_encompassing_bounds.top;
+    }
+    return 0;
+}
