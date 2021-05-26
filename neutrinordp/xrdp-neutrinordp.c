@@ -535,6 +535,13 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         /* Valid (but unused) parameters not logged */
     }
+    else if (g_strcmp(name, "channel.rdpdr") == 0 ||
+             g_strcmp(name, "channel.rdpsnd") == 0 ||
+             g_strcmp(name, "channel.cliprdr") == 0 ||
+             g_strcmp(name, "channel.drdynvc") == 0)
+    {
+        /* Valid (but unused) parameters not logged */
+    }
     else
     {
         LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [%s]", name, value);
