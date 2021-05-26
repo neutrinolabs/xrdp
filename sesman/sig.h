@@ -59,7 +59,7 @@ sig_sesman_session_end(int sig);
  * @brief signal handling thread
  *
  */
-void*
-sig_handler_thread(void* arg);
+void *
+sig_handler_thread(void *arg);
 
 #endif

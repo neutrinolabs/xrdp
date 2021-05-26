@@ -83,9 +83,9 @@ struct mod
     int (*mod_suppress_output)(struct mod *mod, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct mod *mod,
-                               int width, int height);
+                                     int width, int height);
     int (*mod_server_monitor_full_invalidate)(struct mod *mod,
-                               int width, int height);
+            int width, int height);
     int (*mod_server_version_message)(struct mod *mod);
     tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                  functions above */

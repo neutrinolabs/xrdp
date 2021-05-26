@@ -805,7 +805,7 @@ xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex)
                                            (0666 | S_IFREG));
         if (xinode == NULL)
         {
-            LOG(LOG_LEVEL_INFO, 
+            LOG(LOG_LEVEL_INFO,
                 "failed to create file %s in xrdp filesystem", filename);
         }
         else

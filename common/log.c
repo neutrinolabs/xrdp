@@ -767,9 +767,9 @@ log_end(void)
 /* log a hex dump */
 enum logReturns
 log_hexdump(const enum logLevels log_level,
-              const char *message,
-              const char *src,
-              int len)
+            const char *message,
+            const char *src,
+            int len)
 {
     return log_hexdump_with_location("", "", 0, log_level, message, src, len);
 }
@@ -820,12 +820,12 @@ log_hexdump_with_location(const char *function_name,
         if (g_strlen(file_name) > 0)
         {
             rv = log_message_with_location(function_name, file_name, line_number,
-                                           log_level, "%s %s%s", 
+                                           log_level, "%s %s%s",
                                            message, HEX_DUMP_HEADER, dump_buffer);
         }
         else
         {
-            rv = log_message(log_level, "%s %s%s", 
+            rv = log_message(log_level, "%s %s%s",
                              message, HEX_DUMP_HEADER, dump_buffer);
         }
         g_free(dump_buffer);

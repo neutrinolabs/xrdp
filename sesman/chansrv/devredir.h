@@ -27,10 +27,10 @@
 int devredir_init(void);
 int devredir_deinit(void);
 
-int devredir_data_in(struct stream* s, int chan_id, int chan_flags,
+int devredir_data_in(struct stream *s, int chan_id, int chan_flags,
                      int length, int total_length);
 
-int devredir_get_wait_objs(tbus* objs, int* count, int* timeout);
+int devredir_get_wait_objs(tbus *objs, int *count, int *timeout);
 int devredir_check_wait_objs(void);
 
 /* misc stuff */
@@ -57,23 +57,23 @@ struct state_close;
 /* called from FUSE module */
 
 int devredir_get_dir_listing(struct state_dirscan *fusep, tui32 device_id,
-                              const char *path);
+                             const char *path);
 
 int devredir_lookup_entry(struct state_lookup *fusep, tui32 device_id,
-                           const char *path);
+                          const char *path);
 
 int devredir_setattr_for_entry(
-                           struct state_setattr *fusep, tui32 device_id,
-                           const char *filename,
-                           const struct file_attr *fattr,
-                           tui32 to_set);
+    struct state_setattr *fusep, tui32 device_id,
+    const char *filename,
+    const struct file_attr *fattr,
+    tui32 to_set);
 
 int devredir_file_create(
-                        struct state_create *fusep, tui32 device_id,
-                        const char *path, int mode);
+    struct state_create *fusep, tui32 device_id,
+    const char *path, int mode);
 
 int devredir_file_open(struct state_open *fusep, tui32 device_id,
-                        const char *path, int flags);
+                       const char *path, int flags);
 
 int devredir_file_close(struct state_close *fusep, tui32 device_id,
                         tui32 file_id);
@@ -87,9 +87,9 @@ devredir_file_write(struct state_write *fusep, tui32 DeviceId, tui32 FileId,
                     const char *buf, int Length, tui64 Offset);
 
 int devredir_file_rename(
-                        struct state_rename *fusep, tui32 device_id,
-                        const char *old_name,
-                        const char *new_name);
+    struct state_rename *fusep, tui32 device_id,
+    const char *old_name,
+    const char *new_name);
 
 int
 devredir_rmdir_or_file(struct state_remove *fusep, tui32 device_id,

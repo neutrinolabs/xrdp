@@ -65,90 +65,90 @@
 
 struct SCP_CONNECTION
 {
-  int in_sck;
-  struct stream* in_s;
-  struct stream* out_s;
+    int in_sck;
+    struct stream *in_s;
+    struct stream *out_s;
 };
 
 struct SCP_SESSION
 {
-  tui8  type;
-  tui32 version;
-  tui16 height;
-  tui16 width;
-  tui8  bpp;
-  tui8  rsr;
-  char  locale[18];
-  char* username;
-  char* password;
-  char* hostname;
-  tui8  addr_type;
-  tui32 ipv4addr;
-  tui8  ipv6addr[16];
-  SCP_DISPLAY display;
-  char* errstr;
-  struct SCP_MNG_DATA* mng;
-  char* domain;
-  char* program;
-  char* directory;
-  char* client_ip;
-  tui8 guid[16];
+    tui8  type;
+    tui32 version;
+    tui16 height;
+    tui16 width;
+    tui8  bpp;
+    tui8  rsr;
+    char  locale[18];
+    char *username;
+    char *password;
+    char *hostname;
+    tui8  addr_type;
+    tui32 ipv4addr;
+    tui8  ipv6addr[16];
+    SCP_DISPLAY display;
+    char *errstr;
+    struct SCP_MNG_DATA *mng;
+    char *domain;
+    char *program;
+    char *directory;
+    char *client_ip;
+    tui8 guid[16];
 };
 
 struct SCP_DISCONNECTED_SESSION
 {
-  tui32 SID;
-  tui8  type;
-  tui8  status;
-  tui16 height;
-  tui16 width;
-  tui8  bpp;
-  tui8  idle_days;
-  tui8  idle_hours;
-  tui8  idle_minutes;
-  tui16 conn_year;
-  tui8  conn_month;
-  tui8  conn_day;
-  tui8  conn_hour;
-  tui8  conn_minute;
-  tui8  addr_type;
-  tui32 ipv4addr;
-  tui8  ipv6addr[16];
+    tui32 SID;
+    tui8  type;
+    tui8  status;
+    tui16 height;
+    tui16 width;
+    tui8  bpp;
+    tui8  idle_days;
+    tui8  idle_hours;
+    tui8  idle_minutes;
+    tui16 conn_year;
+    tui8  conn_month;
+    tui8  conn_day;
+    tui8  conn_hour;
+    tui8  conn_minute;
+    tui8  addr_type;
+    tui32 ipv4addr;
+    tui8  ipv6addr[16];
 };
 
 enum SCP_CLIENT_STATES_E
 {
-  SCP_CLIENT_STATE_OK,
-  SCP_CLIENT_STATE_NETWORK_ERR,
-  SCP_CLIENT_STATE_VERSION_ERR,
-  SCP_CLIENT_STATE_SEQUENCE_ERR,
-  SCP_CLIENT_STATE_SIZE_ERR,
-  SCP_CLIENT_STATE_INTERNAL_ERR,
-  SCP_CLIENT_STATE_SESSION_LIST,
-  SCP_CLIENT_STATE_LIST_OK,
-  SCP_CLIENT_STATE_RESEND_CREDENTIALS,
-  SCP_CLIENT_STATE_CONNECTION_DENIED,
-  SCP_CLIENT_STATE_PWD_CHANGE_REQ,
-  SCP_CLIENT_STATE_RECONNECT_SINGLE,
-  SCP_CLIENT_STATE_SELECTION_CANCEL,
-  SCP_CLIENT_STATE_END
+    SCP_CLIENT_STATE_OK,
+    SCP_CLIENT_STATE_NETWORK_ERR,
+    SCP_CLIENT_STATE_VERSION_ERR,
+    SCP_CLIENT_STATE_SEQUENCE_ERR,
+    SCP_CLIENT_STATE_SIZE_ERR,
+    SCP_CLIENT_STATE_INTERNAL_ERR,
+    SCP_CLIENT_STATE_SESSION_LIST,
+    SCP_CLIENT_STATE_LIST_OK,
+    SCP_CLIENT_STATE_RESEND_CREDENTIALS,
+    SCP_CLIENT_STATE_CONNECTION_DENIED,
+    SCP_CLIENT_STATE_PWD_CHANGE_REQ,
+    SCP_CLIENT_STATE_RECONNECT_SINGLE,
+    SCP_CLIENT_STATE_SELECTION_CANCEL,
+    SCP_CLIENT_STATE_END
 };
 
 enum SCP_SERVER_STATES_E
 {
-  SCP_SERVER_STATE_OK,
-  SCP_SERVER_STATE_VERSION_ERR,
-  SCP_SERVER_STATE_NETWORK_ERR,
-  SCP_SERVER_STATE_SEQUENCE_ERR,
-  SCP_SERVER_STATE_INTERNAL_ERR,
-  SCP_SERVER_STATE_SESSION_TYPE_ERR,
-  SCP_SERVER_STATE_SIZE_ERR,
-  SCP_SERVER_STATE_SELECTION_CANCEL,
-  /*SCP_SERVER_STATE_FORCE_NEW,*/
-  SCP_SERVER_STATE_START_MANAGE,
-  SCP_SERVER_STATE_MNG_LISTREQ,
-  SCP_SERVER_STATE_MNG_ACTION,
-  SCP_SERVER_STATE_END
+    SCP_SERVER_STATE_OK,
+    SCP_SERVER_STATE_VERSION_ERR,
+    SCP_SERVER_STATE_NETWORK_ERR,
+    SCP_SERVER_STATE_SEQUENCE_ERR,
+    SCP_SERVER_STATE_INTERNAL_ERR,
+    SCP_SERVER_STATE_SESSION_TYPE_ERR,
+    SCP_SERVER_STATE_SIZE_ERR,
+    SCP_SERVER_STATE_SELECTION_CANCEL,
+    /*SCP_SERVER_STATE_FORCE_NEW,*/
+    SCP_SERVER_STATE_START_MANAGE,
+    SCP_SERVER_STATE_MNG_LISTREQ,
+    SCP_SERVER_STATE_MNG_ACTION,
+    SCP_SERVER_STATE_END
 };
 
 #endif

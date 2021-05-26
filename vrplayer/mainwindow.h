@@ -38,8 +38,8 @@
 /* ffmpeg related stuff */
 extern "C"
 {
-    #include <libavformat/avformat.h>
-    #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
 
 #define VCR_PLAY        1
@@ -55,78 +55,78 @@ namespace Ui
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+        Q_OBJECT
 
-public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    public:
+        explicit MainWindow(QWidget *parent = 0);
+        ~MainWindow();
 
-signals:
-    void onGeometryChanged(int x, int y, int width, int height);
+    signals:
+        void onGeometryChanged(int x, int y, int width, int height);
 
-public slots:
-    void onSliderValueChanged(int value);
+    public slots:
+        void onSliderValueChanged(int value);
 
-private slots:
-    void on_actionOpen_Media_File_triggered();
-    void on_actionExit_triggered();
+    private slots:
+        void on_actionOpen_Media_File_triggered();
+        void on_actionExit_triggered();
 
-    void onBtnPlayClicked(bool flag);
-    void onBtnRewindClicked(bool flag);
-    void onBtnStopClicked(bool flag);
+        void onBtnPlayClicked(bool flag);
+        void onBtnRewindClicked(bool flag);
+        void onBtnStopClicked(bool flag);
 
-    void onMediaDurationInSeconds(int duration);
-    void onElapsedTime(int secs);
-    void onSliderActionTriggered(int value);
-    void onMoveCompleted();
+        void onMediaDurationInSeconds(int duration);
+        void onElapsedTime(int secs);
+        void onSliderActionTriggered(int value);
+        void onMoveCompleted();
 
-    void on_actionAbout_triggered();
+        void on_actionAbout_triggered();
 
-    void onVolSliderValueChanged(int value);
+        void onVolSliderValueChanged(int value);
 
-protected:
-    void resizeEvent(QResizeEvent *e);
-    void closeEvent(QCloseEvent *e);
-    void moveEvent(QMoveEvent *e);
+    protected:
+        void resizeEvent(QResizeEvent *e);
+        void closeEvent(QCloseEvent *e);
+        void moveEvent(QMoveEvent *e);
 
-private:
-    Ui::MainWindow *ui;
+    private:
+        Ui::MainWindow *ui;
 
-    /* for UI */
-    QLabel        *lblCurrentPos;
-    QLabel        *lblDuration;
-    QLabel        *lblVideo;
-    QHBoxLayout   *hboxLayoutTop;
-    QHBoxLayout   *hboxLayoutMiddle;
-    QHBoxLayout   *hboxLayoutBottom;
-    QVBoxLayout   *vboxLayout;
-    QPushButton   *btnPlay;
-    QPushButton   *btnStop;
-    QPushButton   *btnRewind;
-    QSlider       *slider;
-    QSlider       *volSlider;
-    QWidget       *window;
-    bool           acceptSliderMove;
-    QTimer        *moveResizeTimer;
+        /* for UI */
+        QLabel        *lblCurrentPos;
+        QLabel        *lblDuration;
+        QLabel        *lblVideo;
+        QHBoxLayout   *hboxLayoutTop;
+        QHBoxLayout   *hboxLayoutMiddle;
+        QHBoxLayout   *hboxLayoutBottom;
+        QVBoxLayout   *vboxLayout;
+        QPushButton   *btnPlay;
+        QPushButton   *btnStop;
+        QPushButton   *btnRewind;
+        QSlider       *slider;
+        QSlider       *volSlider;
+        QWidget       *window;
+        bool           acceptSliderMove;
+        QTimer        *moveResizeTimer;
 
-    /* private stuff */
-    OurInterface  *interface;
-    //PlayVideo     *playVideo;
-    DemuxMedia    *demuxMedia;
-    QString        filename;
-    bool           oneTimeInitSuccess;
-    bool           remoteClientInited;
-    void          *channel;
-    int            stream_id;
-    int64_t        elapsedTime; /* elapsed time in usecs since play started */
-    int            vcrFlag;
-    bool           gotMediaOnCmdline;
+        /* private stuff */
+        OurInterface  *interface;
+        //PlayVideo     *playVideo;
+        DemuxMedia    *demuxMedia;
+        QString        filename;
+        bool           oneTimeInitSuccess;
+        bool           remoteClientInited;
+        void          *channel;
+        int            stream_id;
+        int64_t        elapsedTime; /* elapsed time in usecs since play started */
+        int            vcrFlag;
+        bool           gotMediaOnCmdline;
 
-    /* private methods */
-    void setupUI();
-    void openMediaFile();
-    void getVdoGeometry(QRect *rect);
-    void clearDisplay();
+        /* private methods */
+        void setupUI();
+        void openMediaFile();
+        void getVdoGeometry(QRect *rect);
+        void clearDisplay();
 };
 
 #endif // MAINWINDOW_H

@@ -1076,7 +1076,7 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     in_uint32_le(s, msg_type);
     in_uint32_le(s, msg_length);
     LOG(LOG_LEVEL_DEBUG, "dynamic_monitor_data: msg_type %d msg_length %d",
-           msg_type, msg_length);
+        msg_type, msg_length);
 
     rect.left = 8192;
     rect.top = 8192;
@@ -1088,7 +1088,7 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
         in_uint32_le(s, MonitorLayoutSize);
         in_uint32_le(s, NumMonitor);
         LOG(LOG_LEVEL_DEBUG, "  MonitorLayoutSize %d NumMonitor %d",
-               MonitorLayoutSize, NumMonitor);
+            MonitorLayoutSize, NumMonitor);
         for (monitor_index = 0; monitor_index < NumMonitor; monitor_index++)
         {
             monitor_layout = monitor_layouts + monitor_index;
@@ -1103,13 +1103,13 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
             in_uint32_le(s, monitor_layout->desktop_scale_factor);
             in_uint32_le(s, monitor_layout->device_scale_factor);
             LOG_DEVEL(LOG_LEVEL_DEBUG, "    Flags 0x%8.8x Left %d Top %d "
-                   "Width %d Height %d PhysicalWidth %d PhysicalHeight %d "
-                   "Orientation %d DesktopScaleFactor %d DeviceScaleFactor %d",
-                   monitor_layout->flags, monitor_layout->left, monitor_layout->top,
-                   monitor_layout->width, monitor_layout->height,
-                   monitor_layout->physical_width, monitor_layout->physical_height,
-                   monitor_layout->orientation, monitor_layout->desktop_scale_factor,
-                   monitor_layout->device_scale_factor);
+                      "Width %d Height %d PhysicalWidth %d PhysicalHeight %d "
+                      "Orientation %d DesktopScaleFactor %d DeviceScaleFactor %d",
+                      monitor_layout->flags, monitor_layout->left, monitor_layout->top,
+                      monitor_layout->width, monitor_layout->height,
+                      monitor_layout->physical_width, monitor_layout->physical_height,
+                      monitor_layout->orientation, monitor_layout->desktop_scale_factor,
+                      monitor_layout->device_scale_factor);
 
             rect.left = MIN(monitor_layout->left, rect.left);
             rect.top = MIN(monitor_layout->top, rect.top);
@@ -1133,8 +1133,9 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
         /* redraw */
         xrdp_bitmap_invalidate(wm->screen, 0);
 
-        struct xrdp_mod* v = wm->mm->mod;
-        if (v != 0) {
+        struct xrdp_mod *v = wm->mm->mod;
+        if (v != 0)
+        {
             v->mod_server_version_message(v);
             v->mod_server_monitor_resize(v, session_width, session_height);
             v->mod_server_monitor_full_invalidate(v, session_width, session_height);

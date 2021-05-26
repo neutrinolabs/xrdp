@@ -28,10 +28,10 @@ rail_init(void);
 int
 rail_deinit(void);
 int
-rail_data_in(struct stream* s, int chan_id, int chan_flags,
+rail_data_in(struct stream *s, int chan_id, int chan_flags,
              int length, int total_length);
 int
-rail_xevent(void* xevent);
+rail_xevent(void *xevent);
 int rail_request_title(int window_id);
 
 #endif

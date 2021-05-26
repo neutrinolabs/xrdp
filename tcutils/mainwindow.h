@@ -17,41 +17,42 @@
 
 #include "utils.h"
 
-namespace Ui {
-class MainWindow;
+namespace Ui
+{
+    class MainWindow;
 }
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+        Q_OBJECT
 
-public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+    public:
+        explicit MainWindow(QWidget *parent = 0);
+        ~MainWindow();
 
-private:
-    Ui::MainWindow  *ui;
-    void            *wtsChannel;
-    QSystemTrayIcon *trayIcon;
-    QMenu           *trayMenu;
-    bool             okToQuit;
-    QRect            savedGeometry;
-    QStatusBar      *statusBar;
+    private:
+        Ui::MainWindow  *ui;
+        void            *wtsChannel;
+        QSystemTrayIcon *trayIcon;
+        QMenu           *trayMenu;
+        bool             okToQuit;
+        QRect            savedGeometry;
+        QStatusBar      *statusBar;
 
-    QList<QListWidgetItem *> itemList;
+        QList<QListWidgetItem *> itemList;
 
-    void setupSystemTray();
-    int  initWtsChannel();
-    int  deinitWtsChannel();
-    void setStatusMsg(QString msg);
-    void closeEvent(QCloseEvent * event);
+        void setupSystemTray();
+        int  initWtsChannel();
+        int  deinitWtsChannel();
+        void setStatusMsg(QString msg);
+        void closeEvent(QCloseEvent *event);
 
-private slots:
-    void onBtnRefreshClicked();
-    void onBtnUnmountClicked();
-    void onActionQuit();
-    void onActionLaunch();
-    void onSystemTrayClicked(QSystemTrayIcon::ActivationReason);
+    private slots:
+        void onBtnRefreshClicked();
+        void onBtnUnmountClicked();
+        void onActionQuit();
+        void onActionLaunch();
+        void onSystemTrayClicked(QSystemTrayIcon::ActivationReason);
 };
 
 #endif // MAINWINDOW_H

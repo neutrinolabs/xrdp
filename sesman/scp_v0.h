@@ -38,6 +38,6 @@
  *
  */
 void
-scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
 
 #endif

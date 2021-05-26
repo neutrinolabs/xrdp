@@ -16,20 +16,20 @@
  * limitations under the License.
  */
 
- /* FIFO implementation to store a pointer to a user struct */
+/* FIFO implementation to store a pointer to a user struct */
 
 typedef struct fifo
 {
-    long* user_data;
+    long *user_data;
     int   rd_ptr;
     int   wr_ptr;
     int   entries;
 } FIFO;
 
-int   fifo_init(FIFO* fp, int num_entries);
-int   fifo_deinit(FIFO* fp);
-int   fifo_is_empty(FIFO* fp);
-int   fifo_insert(FIFO* fp, void* data);
-void* fifo_remove(FIFO* fp);
-void* fifo_peek(FIFO* fp);
+int   fifo_init(FIFO *fp, int num_entries);
+int   fifo_deinit(FIFO *fp);
+int   fifo_is_empty(FIFO *fp);
+int   fifo_insert(FIFO *fp, void *data);
+void *fifo_remove(FIFO *fp);
+void *fifo_peek(FIFO *fp);
 

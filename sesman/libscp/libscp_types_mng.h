@@ -34,14 +34,14 @@
 
 enum SCP_MNG_COMMAND
 {
-  SCP_MNG_CMD_KILL,
-  SCP_MNG_CMD_DISCONNECT
+    SCP_MNG_CMD_KILL,
+    SCP_MNG_CMD_DISCONNECT
 };
 
 struct SCP_MNG_DATA
 {
-  enum SCP_MNG_COMMAND cmd;
-  SCP_SID sid;
+    enum SCP_MNG_COMMAND cmd;
+    SCP_SID sid;
 };
 
 #endif

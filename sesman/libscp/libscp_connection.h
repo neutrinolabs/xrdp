@@ -37,7 +37,7 @@
  * @return a struct SCP_CONNECTION* object on success, NULL otherwise
  *
  */
-struct SCP_CONNECTION*
+struct SCP_CONNECTION *
 scp_connection_create(int sck);
 
 /**
@@ -47,6 +47,6 @@ scp_connection_create(int sck);
  *
  */
 void
-scp_connection_destroy(struct SCP_CONNECTION* c);
+scp_connection_destroy(struct SCP_CONNECTION *c);
 
 #endif

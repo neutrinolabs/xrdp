@@ -48,41 +48,41 @@
 
 struct session_date
 {
-  tui16 year;
-  tui8  month;
-  tui8  day;
-  tui8  hour;
-  tui8  minute;
+    tui16 year;
+    tui8  month;
+    tui8  day;
+    tui8  hour;
+    tui8  minute;
 };
 
 #define zero_time(s) { (s)->year=0; (s)->month=0; (s)->day=0; (s)->hour=0; (s)->minute=0; }
 
 struct session_item
 {
-  char name[256];
-  int pid; /* pid of sesman waiting for wm to end */
-  int display;
-  int width;
-  int height;
-  int bpp;
-  long data;
+    char name[256];
+    int pid; /* pid of sesman waiting for wm to end */
+    int display;
+    int width;
+    int height;
+    int bpp;
+    long data;
 
-  /* status info */
-  unsigned char status;
-  unsigned char type;
+    /* status info */
+    unsigned char status;
+    unsigned char type;
 
-  /* time data  */
-  struct session_date connect_time;
-  struct session_date disconnect_time;
-  struct session_date idle_time;
-  char client_ip[256];
-  tui8 guid[16];
+    /* time data  */
+    struct session_date connect_time;
+    struct session_date disconnect_time;
+    struct session_date idle_time;
+    char client_ip[256];
+    tui8 guid[16];
 };
 
 struct session_chain
 {
-  struct session_chain* next;
-  struct session_item* item;
+    struct session_chain *next;
+    struct session_item *item;
 };
 
 /**
@@ -91,11 +91,11 @@ struct session_chain
  * @return session data or 0
  *
  */
-struct session_item*
+struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
                    const char *client_ip);
 #ifndef session_find_item
-  #define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
+#define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
 #endif
 
 /**
@@ -137,7 +137,7 @@ session_sigkill_all(void);
  * @return a pointer to the session descriptor on success, NULL otherwise
  *
  */
-struct session_item*
+struct session_item *
 session_get_bypid(int pid);
 
 /**
@@ -147,7 +147,7 @@ session_get_bypid(int pid);
  * @return a pointer to the session descriptor on success, NULL otherwise
  *
  */
-struct SCP_DISCONNECTED_SESSION*
+struct SCP_DISCONNECTED_SESSION *
 session_get_byuser(const char *user, int *cnt, unsigned char flags);
 
 /**

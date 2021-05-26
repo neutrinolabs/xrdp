@@ -198,7 +198,7 @@ connect_to_chansrv(void)
     if (dis < 0)
     {
         LLOGLN(0, ("connect_to_chansrv: error, don't understand DISPLAY='%s'",
-               xrdp_display));
+                   xrdp_display));
         return 1;
     }
     g_sck = socket(PF_LOCAL, SOCK_STREAM, 0);
