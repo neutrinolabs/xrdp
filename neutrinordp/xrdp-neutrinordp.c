@@ -182,7 +182,7 @@ lxrdp_connect(struct mod *mod)
         }
 
 #endif
-        LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed]," 
+        LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed],"
             " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
             " xrdp pamusername [%s], xrdp process id [%d]",
             mod->client_info.client_addr,
