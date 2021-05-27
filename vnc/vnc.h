@@ -18,6 +18,9 @@
  * libvnc
  */
 
+#ifndef VNC_H
+#define VNC_H
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -57,6 +60,9 @@ enum vnc_resize_status
 };
 
 struct source_info;
+
+/* Defined in vnc_clip.c */
+struct vnc_clipboard_data;
 
 struct vnc
 {
@@ -149,7 +155,7 @@ struct vnc
     int shift_state; /* 0 up, 1 down */
     int keylayout;
     int clip_chanid;
-    struct stream *clip_data_s;
+    struct vnc_clipboard_data *vc;
     int delay_ms;
     struct trans *trans;
     int got_guid;
@@ -160,3 +166,13 @@ struct vnc
     struct vnc_screen_layout client_layout;
     enum vnc_resize_status resize_status;
 };
+
+/*
+ * Functions
+ */
+int
+lib_send_copy(struct vnc *v, struct stream *s);
+int
+skip_trans_bytes(struct trans *trans, unsigned int bytes);
+
+#endif /* VNC_H */
