@@ -100,6 +100,7 @@ struct mod
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct mod *v);
+    int (*server_chansrv_in_use)(struct mod *v);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct mod *v, int rdpindex,
                                     int width, int height);
@@ -151,7 +152,7 @@ struct mod
                               char *data, int width, int height,
                               int flags, int frame_id);
 
-    tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

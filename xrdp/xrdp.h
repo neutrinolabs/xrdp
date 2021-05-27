@@ -413,6 +413,8 @@ server_end_update(struct xrdp_mod *mod);
 int
 server_bell_trigger(struct xrdp_mod *mod);
 int
+server_chansrv_in_use(struct xrdp_mod *mod);
+int
 server_fill_rect(struct xrdp_mod *mod, int x, int y, int cx, int cy);
 int
 server_screen_blt(struct xrdp_mod *mod, int x, int y, int cx, int cy,
