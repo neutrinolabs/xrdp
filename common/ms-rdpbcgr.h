@@ -236,6 +236,15 @@
 #define exDiscReasonLicenseCantUpgradeLicense         0x0109
 #define exDiscReasonLicenseNoRemoteConnections        0x010a
 
+/* Virtual channel PDU (2.2.6.1) */
+#define CHANNEL_CHUNK_LENGTH                          1600
+
+/* Channel PDU Header flags (2.2.6.1.1) */
+/* NOTE: XR_ prefixed to avoid conflict with FreeRDP */
+#define XR_CHANNEL_FLAG_FIRST          0x00000001
+#define XR_CHANNEL_FLAG_LAST           0x00000002
+#define XR_CHANNEL_FLAG_SHOW_PROTOCOL  0x00000010
+
 /* General Capability Set: osMajorType (2.2.7.1.1) */
 #define OSMAJORTYPE_UNSPECIFIED        0x0000
 #define OSMAJORTYPE_WINDOWS            0x0001

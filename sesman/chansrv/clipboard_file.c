@@ -41,6 +41,7 @@
 #include "clipboard_common.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
+#include "ms-rdpeclip.h"
 
 extern int g_cliprdr_chan_id; /* in chansrv.c */
 
