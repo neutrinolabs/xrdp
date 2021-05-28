@@ -48,6 +48,12 @@
 #define SCARD_RESET_CARD            0x00000001 /* reset smart card        */
 #define SCARD_UNPOWER_CARD          0x00000002 /* turn off and reset card */
 
+/* see [MS-RDPESC] 2.2.5 protocol return code */
+#define SCARD_S_SUCCESS             0x00000000
+#define SCARD_F_INTERNAL_ERROR      0x80100001
+#define SCARD_E_UNSUPPORTED_FEATURE 0x8010001F
+#define SCARD_E_TIMEOUT             0x8010000A
+
 struct xrdp_scard_io_request
 {
     tui32 dwProtocol;
