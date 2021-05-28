@@ -1798,7 +1798,6 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
                 {
                     g_snprintf(port, 255, "%d", 7200 + display);
                 }
-                xrdp_mm_update_allowed_channels(self);
                 xrdp_mm_connect_chansrv(self, ip, port);
             }
         }
@@ -2492,6 +2491,8 @@ xrdp_mm_connect(struct xrdp_mm *self)
             }
         }
     }
+
+    xrdp_mm_update_allowed_channels(self);
 
 #ifdef USE_PAM
     if (use_pam_auth)
