@@ -25,6 +25,13 @@
 #include "defines.h"
 #include "list.h"
 
+/* Check the config_ac.h file is included so we know whether to enable the
+ * development macros
+ */
+#ifndef CONFIG_AC_H
+#   error config_ac.h not visible in log.h
+#endif
+
 /* logging buffer size */
 #define LOG_BUFFER_SIZE      8192
 #define LOGGER_NAME_SIZE     50
@@ -66,7 +73,7 @@ enum logReturns
 /* enable threading */
 /*#define LOG_ENABLE_THREAD*/
 
-#ifdef XRDP_DEBUG
+#ifdef USE_DEVEL_LOGGING
 
 #define LOG_PER_LOGGER_LEVEL
 
@@ -77,9 +84,10 @@ enum logReturns
  * Note: all log levels are relavant to help a developer understand XRDP at
  *      different levels of granularity.
  *
- * Note: the logging function calls are removed when XRDP_DEBUG is NOT defined.
+ * Note: the logging function calls are removed when USE_DEVEL_LOGGING is
+ * NOT defined.
  *
- * Note: when the build is configured with --enable-xrdpdebug, then
+ * Note: when the build is configured with --enable-devel-logging, then
  *      the log level can be configured per the source file name or method name
  *      (with the suffix "()") in the [LoggingPerLogger]
  *      section of the configuration file.
@@ -103,7 +111,7 @@ enum logReturns
  * configure and run XRDP on their machine.
  *
  * Note: the logging function calls contain additional code location info when
- *      XRDP_DEBUG is defined.
+ *      USE_DEVEL_LOGGING is defined.
  *
  * @param lvl, the log level
  * @param msg, the log text as a printf format c-string
@@ -116,7 +124,8 @@ enum logReturns
  * @brief Logging macro for logging the contents of a byte array using a hex
  * dump format.
  *
- * Note: the logging function calls are removed when XRDP_DEBUG is NOT defined.
+ * Note: the logging function calls are removed when USE_DEVEL_LOGGING is
+ * NOT defined.
  *
  * @param log_level, the log level
  * @param message, a message prefix for the hex dump. Note: no printf like

@@ -3,10 +3,6 @@ AM_CPPFLAGS = \
   -I$(top_builddir) \
   -I$(top_srcdir)/common
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/tap-driver.sh
 

@@ -611,7 +611,7 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
             ls.data = mppc_enc->outputBuffer - (rdp_offset + 18);
             ls.p = ls.data + rdp_offset;
             ls.end = ls.p + clen;
-            ls.size = clen;
+            ls.size = s->end - s->data;
             ls.iso_hdr = ls.data + iso_offset;
             ls.mcs_hdr = ls.data + mcs_offset;
             ls.sec_hdr = ls.data + sec_offset;

@@ -317,6 +317,7 @@ devredir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             return 0;
         }
 
+        s_mark_end(g_input_stream);
         g_input_stream->p = g_input_stream->data;
         ls = g_input_stream;
     }

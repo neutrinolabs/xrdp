@@ -89,7 +89,7 @@
 #define PREFIX(x) pixman_region##x
 #endif
 
-#ifdef XRDP_DEBUG
+#ifdef USE_DEVEL_LOGGING
 
 pixman_bool_t PREFIX(_selfcheck) (region_type_t *reg);
 

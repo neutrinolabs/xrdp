@@ -8,10 +8,6 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/sesman/libscp \
   -I$(top_srcdir)/sesman
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 AM_CFLAGS = $(X_CFLAGS)
 
 bin_PROGRAMS = \

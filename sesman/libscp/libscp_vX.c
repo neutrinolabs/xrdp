@@ -40,6 +40,7 @@ enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION *c, struct SCP_SES
     {
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
+    c->in_s->end = c->in_s->data + 8;
 
     in_uint32_be(c->in_s, version);
 
