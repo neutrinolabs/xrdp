@@ -79,7 +79,7 @@ void
 parser_stream_overflow_check(const struct stream *s, int n, int is_out,
                              const char *file, int line);
 
-#ifdef USE_STREAMCHECK
+#ifdef USE_DEVEL_STREAMCHECK
 #   define S_CHECK_REM(s,n) \
     parser_stream_overflow_check((s), (n), 0, __FILE__, __LINE__)
 #   define S_CHECK_REM_OUT(s,n) \
