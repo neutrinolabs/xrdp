@@ -200,6 +200,19 @@ g_strchr(const char *text, int c)
 }
 
 /*****************************************************************************/
+/* locates char in text with length */
+const char *
+g_strnchr(const char *text, int c, int len)
+{
+    if (text == NULL || len <= 0)
+    {
+        return NULL;
+    }
+
+    return (const char *)memchr(text, c, len);
+}
+
+/*****************************************************************************/
 /* returns dest */
 char *
 g_strcpy(char *dest, const char *src)
