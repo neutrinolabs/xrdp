@@ -33,6 +33,7 @@
 #include "vnc.h"
 #include "vnc_clip.h"
 #include "string_calls.h"
+#include "ssl_calls.h"
 #include "rfb.h"
 #include "log.h"
 #include "trans.h"
@@ -68,6 +69,16 @@ struct vnc_clipboard_data
     int capability_version;  /* Clipboard virt channel extension version */
     int capability_flags;    /* Channel capability flags */
     bool_t startup_complete; /* is the startup sequence done (1.3.2.1) */
+};
+
+/**
+ * Summarise a stream contents in a way which allows two streams to
+ * be easily compared
+ */
+struct stream_characteristics
+{
+    char digest[16];
+    int length;
 };
 
 #ifdef USE_DEVEL_LOGGING
@@ -336,6 +347,49 @@ handle_cb_format_list(struct vnc *v, int msg_flags, struct stream *s)
     free_stream(out_s);
 
     return rv;
+}
+
+/***************************************************************************//**
+ * Computes the characteristics of a stream.
+ *
+ * This can be used to tell if a stream has changed or two streams are
+ * the same
+ *
+ * @param s Stream
+ * @param[out] chars Resulting characteristics of stream
+ */
+static void
+compute_stream_characteristics(const struct stream *s,
+                               struct stream_characteristics *chars)
+{
+    void *info = ssl_md5_info_create();
+    ssl_md5_clear(info);
+    if (s->data != NULL && s->end != NULL)
+    {
+        chars->length = (int)(s->end - s->data);
+        ssl_md5_transform(info, s->data, chars->length);
+    }
+    else
+    {
+        chars->length = 0;
+    }
+    ssl_md5_complete(info, chars->digest);
+    ssl_md5_info_delete(info);
+}
+
+/***************************************************************************//**
+ * Compare two stream characteristics structs for equality
+ *
+ * @param a characteristics of first stream
+ * @param b characteristics of second stream
+ * @result != 0 if characteristics are equal
+ */
+static int
+stream_characteristics_equal(const struct stream_characteristics *a,
+                             const struct stream_characteristics *b)
+{
+    return (a->length == b->length &&
+            g_memcmp(a->digest, b->digest, sizeof(a->digest)) == 0);
 }
 
 /******************************************************************************/
@@ -938,6 +992,12 @@ vnc_clip_process_rfb_data(struct vnc *v)
         }
         else
         {
+            struct stream_characteristics old_chars;
+            struct stream_characteristics new_chars;
+
+            /* Compute the characteristics of the existing data */
+            compute_stream_characteristics(vc->rfb_clip_s, &old_chars);
+
             /* Lose any existing RFB clip data */
             free_stream(vc->rfb_clip_s);
             vc->rfb_clip_s = 0;
@@ -959,13 +1019,24 @@ vnc_clip_process_rfb_data(struct vnc *v)
                 LOG(LOG_LEVEL_DEBUG, "Reading %d clip bytes from RFB", size);
                 rv = trans_force_read_s(v->trans, vc->rfb_clip_s, size);
             }
-        }
-    }
 
-    /* startup_complete is only ever set if we're using the VNC clip facility */
-    if (rv == 0 && vc->startup_complete)
-    {
-        send_format_list(v);
+            /* Consider telling the RDP client about the update only if we've
+             * completed the startup handshake */
+            if (rv == 0 && vc->startup_complete)
+            {
+                /* Has the data actually changed ? */
+                compute_stream_characteristics(vc->rfb_clip_s, &new_chars);
+                if (stream_characteristics_equal(&old_chars, &new_chars))
+                {
+                    LOG_DEVEL(LOG_LEVEL_INFO, "RFB Clip data is unchanged");
+                }
+                else
+                {
+                    LOG_DEVEL(LOG_LEVEL_INFO, "RFB Clip data is updated");
+                    send_format_list(v);
+                }
+            }
+        }
     }
 
     free_stream(s);
