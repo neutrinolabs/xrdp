@@ -57,7 +57,7 @@ jobs:
             arch: amd64
             os: ubuntu-latest
             name_extra: and DEBUG
-            CONF_FLAGS_EXTRA: "--enable-xrdpdebug"
+            CONF_FLAGS_EXTRA: "--enable-devel-all"
 
           # Maximal 32-bit arch builds
           - CC: gcc
