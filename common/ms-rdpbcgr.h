@@ -77,6 +77,11 @@
 /* Channel definition structure CHANNEL_DEF (2.2.1.3.4.1) */
 /* This isn't explicitly named in MS-RDPBCGR */
 #define CHANNEL_NAME_LEN                7
+/* These names are also not explicitly defined in MS-RDPBCGR */
+#define CLIPRDR_SVC_CHANNEL_NAME        "cliprdr"
+#define RAIL_SVC_CHANNEL_NAME           "rail"
+#define RDPSND_SVC_CHANNEL_NAME         "rdpsnd"
+#define RDPDR_SVC_CHANNEL_NAME          "rdpdr"
 
 /* 2.2.1.3.6 Client Monitor Data - */
 /* monitorCount (4 bytes): A 32-bit, unsigned integer. The number of display */

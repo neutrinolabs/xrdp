@@ -1047,7 +1047,7 @@ vnc_clip_process_rfb_data(struct vnc *v)
 int
 vnc_clip_open_clip_channel(struct vnc *v)
 {
-    v->clip_chanid = v->server_get_channel_id(v, "cliprdr");
+    v->clip_chanid = v->server_get_channel_id(v, CLIPRDR_SVC_CHANNEL_NAME);
 
     if (v->server_chansrv_in_use(v))
     {
