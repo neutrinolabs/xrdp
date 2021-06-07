@@ -166,6 +166,14 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
+# Obsolete options
+AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
+              [This option is no longer supported - use --enable-devel-all]))
+
+if test "x$enable_xrdpdebug" != x; then
+  AC_MSG_ERROR([--enable-xrdpdebug must be replaced with one or more --enable-devel-* options])
+fi
+
 # configure compiler options and CFLAGS
 AX_GCC_FUNC_ATTRIBUTE([format])
 AX_TYPE_SOCKLEN_T
