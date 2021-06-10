@@ -93,7 +93,30 @@ msg_style_to_str(int msg_style, char *buff, unsigned int bufflen)
     return result;
 }
 
-/******************************************************************************/
+/***************************************************************************//**
+ * Provides the PAM conversation callback function
+ *
+ * At present, the main purpose of this function is to supply the
+ * user's password to the PAM stack, although some module logging is
+ * implemented here.
+ *
+ * @param[in] num_msg Count of messages in the msg array
+ * @param[in] msg Messages from the PAM stack to the application
+ * @param[out] resp Message replies from the application to the PAM stack
+ * @param[in] appdata_ptr Used to pass in a struct t_user_pass pointer
+ *
+ * @result PAM_SUCCESS if the messages were all processed successfully.
+ *
+ * @post If PAM_SUCCESS is returned, resp and its contents are allocated here
+ *       and must be freed by the caller
+ * @post If PAM_SUCCESS is not returned, resp is not allocated and must not
+ *       be not freed by the caller
+ *
+ * @note See pam_conv(3) for more information
+ * @note A basic example conversation function can be found in OSF RFC
+         86.0 (1995)
+ */
+
 static int
 verify_pam_conv(int num_msg, const struct pam_message **msg,
                 struct pam_response **resp, void *appdata_ptr)
