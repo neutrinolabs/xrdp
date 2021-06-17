@@ -86,7 +86,7 @@ msg_style_to_str(int msg_style, char *buff, unsigned int bufflen)
             break;
 
         default:
-            snprintf(buff, bufflen, "UNKNOWN_0x%x", msg_style);
+            g_snprintf(buff, bufflen, "UNKNOWN_0x%x", msg_style);
             result = buff;
     }
 
