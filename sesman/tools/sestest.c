@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 {
     char buf[256];
     struct SCP_SESSION *s;
-    struct SCP_CONNECTION *c;
+    struct trans *t;
     /*struct SCP_DISCONNECTED_SESSION ds;*/
     struct SCP_DISCONNECTED_SESSION *dsl;
     enum SCP_CLIENT_STATES_E e;
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     }
 
     s = scp_session_create();
-    c = scp_connection_create(sock);
+    t = scp_trans_create(sock);
 
     if (0 != g_tcp_connect(sock, "localhost", "3350"))
     {
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     s.errstr=0;*/
 
     end = 0;
-    e = scp_v1c_connect(c, s);
+    e = scp_v1c_connect(t, s);
 
     while (!end)
     {
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
                 break;
             case SCP_CLIENT_STATE_SESSION_LIST:
                 g_printf("OK : session list needed\n");
-                e = scp_v1c_get_session_list(c, &scnt, &dsl);
+                e = scp_v1c_get_session_list(t, &scnt, &dsl);
                 break;
             case SCP_CLIENT_STATE_LIST_OK:
                 g_printf("OK : selecting a session:\n");
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
                 }
 
                 sel = menuSelect(scnt);
-                e = scp_v1c_select_session(c, s, dsl[sel - 1].SID);
+                e = scp_v1c_select_session(t, s, dsl[sel - 1].SID);
                 g_printf("\n return: %d \n", e);
                 break;
             case SCP_CLIENT_STATE_RESEND_CREDENTIALS:
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
                 }
 
                 scp_session_set_password(s, buf);
-                e = scp_v1c_resend_credentials(c, s);
+                e = scp_v1c_resend_credentials(t, s);
                 break;
             case SCP_CLIENT_STATE_CONNECTION_DENIED:
                 g_printf("ERR: connection denied: %s\n", s->errstr);
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 
     g_tcp_close(sock);
     scp_session_destroy(s);
-    scp_connection_destroy(c);
+    trans_delete(t);
     /*free_stream(c.in_s);
     free_stream(c.out_s);*/
 

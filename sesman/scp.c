@@ -51,19 +51,19 @@ scp_process(struct trans *t)
             {
                 /* starts processing an scp v0 connection */
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "accept ok, go on with scp v0");
-                scp_v0_process(t, sdata);
+                result = scp_v0_process(t, sdata);
             }
             else
             {
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "accept ok, go on with scp v1");
-                scp_v1_process(t, sdata);
+                result = scp_v1_process(t, sdata);
             }
             break;
         case SCP_SERVER_STATE_START_MANAGE:
             /* starting a management session */
             LOG(LOG_LEVEL_INFO,
                 "starting a sesman management session...");
-            scp_v1_mng_process_msg(t, sdata);
+            result = scp_v1_mng_process_msg(t, sdata);
             break;
         case SCP_SERVER_STATE_VERSION_ERR:
         case SCP_SERVER_STATE_SIZE_ERR:

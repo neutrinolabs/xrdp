@@ -29,6 +29,9 @@
 
 #include "libscp.h"
 
+/*TODO : Replace this (unused) function with something that can be used
+ * by xrdp_mm.c and sesrun.c */
+#if 0
 /* client API */
 /**
  *
@@ -40,6 +43,7 @@
  */
 enum SCP_CLIENT_STATES_E
 scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
+#endif
 
 /* server API */
 /**

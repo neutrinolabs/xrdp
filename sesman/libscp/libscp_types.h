@@ -64,13 +64,6 @@
    exhaustion attempts (CVE-2020-4044) */
 #define SCP_MAX_MESSAGE_SIZE 8192
 
-struct SCP_CONNECTION
-{
-    int in_sck;
-    struct stream *in_s;
-    struct stream *out_s;
-};
-
 struct SCP_SESSION
 {
     tui8  type;

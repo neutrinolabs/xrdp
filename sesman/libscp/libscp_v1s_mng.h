@@ -50,7 +50,7 @@ scp_v1s_mng_accept(struct trans *atrans, struct SCP_SESSION **s);
  */
 /* 002 */
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_allow_connection(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
+scp_v1s_mng_allow_connection(struct trans *atrans, struct SCP_SESSION *s);
 
 /**
  *
@@ -61,7 +61,7 @@ scp_v1s_mng_allow_connection(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
  */
 /* 003 */
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_deny_connection(struct SCP_CONNECTION *c, const char *reason);
+scp_v1s_mng_deny_connection(struct trans *atrans, const char *reason);
 
 /**
  *
@@ -71,7 +71,7 @@ scp_v1s_mng_deny_connection(struct SCP_CONNECTION *c, const char *reason);
  */
 /* 006 */
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_list_sessions(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
+scp_v1s_mng_list_sessions(struct trans *atrans, struct SCP_SESSION *s,
                           int sescnt, struct SCP_DISCONNECTED_SESSION *ds);
 //                           SCP_SID* sid);
 

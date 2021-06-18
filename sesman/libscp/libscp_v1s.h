@@ -80,9 +80,11 @@ enum SCP_SERVER_STATES_E
 scp_v1s_connection_error(struct trans *t, const char *error);
 
 /* 040 */
+#if 0
 enum SCP_SERVER_STATES_E
 scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt,
                       struct SCP_DISCONNECTED_SESSION *ds, SCP_SID *sid);
+#endif
 
 enum SCP_SERVER_STATES_E
 scp_v1s_list_sessions40(struct trans *t);

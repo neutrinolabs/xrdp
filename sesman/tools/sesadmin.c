@@ -38,8 +38,8 @@ char cmnd[257];
 char serv[257];
 char port[257];
 
-void cmndList(struct SCP_CONNECTION *c);
-void cmndKill(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
+void cmndList(struct trans *t);
+void cmndKill(struct trans *t, struct SCP_SESSION *s);
 void cmndHelp(void);
 
 int inputSession(struct SCP_SESSION *s);
@@ -48,7 +48,7 @@ unsigned int menuSelect(unsigned int choices);
 int main(int argc, char **argv)
 {
     struct SCP_SESSION *s;
-    struct SCP_CONNECTION *c;
+    struct trans *t;
     enum SCP_CLIENT_STATES_E e;
     //int end;
     int idx;
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     }
 
     s = scp_session_create();
-    c = scp_connection_create(sock);
+    t = scp_trans_create(sock);
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "Connecting to %s:%s with user %s (%s)", serv, port, user, pass);
 
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     scp_session_set_username(s, user);
     scp_session_set_password(s, pass);
 
-    e = scp_v1c_mng_connect(c, s);
+    e = scp_v1c_mng_connect(t, s);
 
     if (SCP_CLIENT_STATE_OK != e)
     {
@@ -160,16 +160,16 @@ int main(int argc, char **argv)
 
     if (0 == g_strncmp(cmnd, "list", 5))
     {
-        cmndList(c);
+        cmndList(t);
     }
     else if (0 == g_strncmp(cmnd, "kill:", 5))
     {
-        cmndKill(c, s);
+        cmndKill(t, s);
     }
 
     g_tcp_close(sock);
     scp_session_destroy(s);
-    scp_connection_destroy(c);
+    trans_delete(t);
     log_end();
 
     return 0;
@@ -203,14 +203,14 @@ print_session(const struct SCP_DISCONNECTED_SESSION *s)
            s->conn_minute);
 }
 
-void cmndList(struct SCP_CONNECTION *c)
+void cmndList(struct trans *t)
 {
     struct SCP_DISCONNECTED_SESSION *dsl;
     enum SCP_CLIENT_STATES_E e;
     int scnt;
     int idx;
 
-    e = scp_v1c_mng_get_session_list(c, &scnt, &dsl);
+    e = scp_v1c_mng_get_session_list(t, &scnt, &dsl);
 
     if (e != SCP_CLIENT_STATE_LIST_OK)
     {
@@ -233,7 +233,7 @@ void cmndList(struct SCP_CONNECTION *c)
     g_free(dsl);
 }
 
-void cmndKill(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
+void cmndKill(struct trans *t, struct SCP_SESSION *s)
 {
 
 }
