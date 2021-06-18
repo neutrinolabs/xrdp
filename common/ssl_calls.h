@@ -90,6 +90,7 @@ struct ssl_tls
     char *key;
     struct trans *trans;
     tintptr rwo; /* wait obj */
+    int error_logged; /* Error has already been logged */
 };
 
 /* xrdp_tls.c */

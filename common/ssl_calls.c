@@ -615,40 +615,86 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 }
 
 /*****************************************************************************/
-static int
-ssl_tls_log_error(const char *func, SSL *connection, int value)
+static void
+dump_ssl_error_stack(struct ssl_tls *self)
 {
-    switch (SSL_get_error(connection, value))
+    if (!self->error_logged)
     {
-        case SSL_ERROR_ZERO_RETURN:
-            LOG(LOG_LEVEL_ERROR, "%s: Server closed TLS connection", func);
-            return 1;
-
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-            return 0;
-
-        case SSL_ERROR_SYSCALL:
-            LOG(LOG_LEVEL_ERROR, "%s: I/O error", func);
-            return 1;
-
-        case SSL_ERROR_SSL:
-            LOG(LOG_LEVEL_ERROR, "%s: Failure in SSL library (protocol error?)", func);
-            return 1;
-
-        default:
-            LOG(LOG_LEVEL_ERROR, "%s: Unknown SSL error", func);
-            return 1;
+        /* Dump the error stack from the SSL library */
+        unsigned long code;
+        char buff[256];
+        while ((code = ERR_get_error()) != 0L)
+        {
+            ERR_error_string_n(code, buff, sizeof(buff));
+            LOG(LOG_LEVEL_ERROR, "SSL: %s", buff);
+        }
+        self->error_logged = 1;
     }
 }
 
 /*****************************************************************************/
+static int
+ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
+{
+    int result = 1;
+    int ssl_error = SSL_get_error(self->ssl, value);
+
+    if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE)
+    {
+        result = 0;
+    }
+    else if (!self->error_logged)
+    {
+        switch (ssl_error)
+        {
+            case SSL_ERROR_ZERO_RETURN:
+                LOG(LOG_LEVEL_ERROR, "%s: Server closed TLS connection", func);
+                break;
+
+            case SSL_ERROR_SYSCALL:
+                LOG(LOG_LEVEL_ERROR, "%s: I/O error", func);
+                break;
+
+            case SSL_ERROR_SSL:
+                LOG(LOG_LEVEL_ERROR, "%s: Failure in SSL library "
+                    "(protocol error?)", func);
+                break;
+
+            default:
+                LOG(LOG_LEVEL_ERROR, "%s: Unknown SSL error", func);
+                break;
+        }
+
+        dump_ssl_error_stack(self); /* Sets self->error_logged */
+    }
+
+    return result;
+}
+
+/**************************************************************************//**
+ * Log an attempt to use an encrypted file
+ *
+ * For example, a private key could have a password set on it. We don't
+ * support this.
+ */
+static int
+log_encrypted_file_unsupported(char *buf, int size, int rwflag, void *u)
+{
+    LOG(LOG_LEVEL_ERROR, "Encryption is not supported for %s",
+        (const char *)u);
+    return -1; /* See pem_password_cb(3ssl) */
+}
+
+/*****************************************************************************/
+
 int
 ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                const char *tls_ciphers)
 {
     int connection_status;
     long options = 0;
+
+    ERR_clear_error();
 
     /**
      * SSL_OP_NO_SSLv2
@@ -695,6 +741,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     if (self->ctx == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to negotiate a TLS connection with the client");
+        dump_ssl_error_stack(self);
         return 1;
     }
 
@@ -715,6 +762,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to setup DHE parameters for TLS");
+        dump_ssl_error_stack(self);
         return 1;
     }
     DH_free(dh); // ok to free, copied into ctx by SSL_CTX_set_tmp_dh()
@@ -732,30 +780,56 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
         if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
         {
             LOG(LOG_LEVEL_ERROR, "Invalid TLS cipher options %s", tls_ciphers);
+            dump_ssl_error_stack(self);
             return 1;
         }
     }
 
     SSL_CTX_set_read_ahead(self->ctx, 0);
 
+    /*
+     * We don't currently handle encrypted private keys - set a callback
+     * to tell the user if one is provided */
+    SSL_CTX_set_default_passwd_cb(self->ctx, log_encrypted_file_unsupported);
+    SSL_CTX_set_default_passwd_cb_userdata(self->ctx, self->key);
+
     if (SSL_CTX_use_PrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
             <= 0)
     {
         LOG(LOG_LEVEL_ERROR, "Error loading TLS private key from %s", self->key);
+        dump_ssl_error_stack(self);
         return 1;
     }
+    SSL_CTX_set_default_passwd_cb(self->ctx, NULL);
+    SSL_CTX_set_default_passwd_cb_userdata(self->ctx, NULL);
 
     if (SSL_CTX_use_certificate_chain_file(self->ctx, self->cert) <= 0)
     {
         LOG(LOG_LEVEL_ERROR, "Error loading TLS certificate chain from %s", self->cert);
+        dump_ssl_error_stack(self);
         return 1;
     }
+
+    /*
+     * Don't call SSL_check_private_key() for openSSL prior to 1.0.2, as
+     * certificate chains are not handled in the same way - see
+     * SSL_CTX_check_private_key(3ssl) */
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+    if (!SSL_CTX_check_private_key(self->ctx))
+    {
+        LOG(LOG_LEVEL_ERROR, "Private key %s and certificate %s do not match",
+            self->key, self->cert);
+        dump_ssl_error_stack(self);
+        return 1;
+    }
+#endif
 
     self->ssl = SSL_new(self->ctx);
 
     if (self->ssl == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to create an SSL structure");
+        dump_ssl_error_stack(self);
         return 1;
     }
 
@@ -763,16 +837,23 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     {
         LOG(LOG_LEVEL_ERROR, "Unable to set up an SSL structure on fd %d",
             (int)self->trans->sck);
+        dump_ssl_error_stack(self);
         return 1;
     }
 
     while (1)
     {
+        /*
+         * Make sure the error queue is clear before (re-) attempting the
+         * accept. If the accept is successful, the error queue will
+         * remain clear for normal SSL operation */
+        ERR_clear_error();
+
         connection_status = SSL_accept(self->ssl);
 
         if (connection_status <= 0)
         {
-            if (ssl_tls_log_error("SSL_accept", self->ssl, connection_status))
+            if (ssl_tls_log_error(self, "SSL_accept", connection_status))
             {
                 return 1;
             }
@@ -823,7 +904,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
         status = SSL_shutdown(self->ssl);
         if (status <= 0)
         {
-            if (ssl_tls_log_error("SSL_shutdown", self->ssl, status))
+            if (ssl_tls_log_error(self, "SSL_shutdown", status))
             {
                 return 1;
             }
@@ -893,7 +974,7 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
                 return 0;
 
             default:
-                ssl_tls_log_error("SSL_read", tls->ssl, status);
+                ssl_tls_log_error(tls, "SSL_read", status);
                 status = -1;
                 break_flag = 1;
                 break;
@@ -947,7 +1028,7 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
                 return 0;
 
             default:
-                ssl_tls_log_error("SSL_write", tls->ssl, status);
+                ssl_tls_log_error(tls, "SSL_write", status);
                 status = -1;
                 break_flag = 1;
                 break;
