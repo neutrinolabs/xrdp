@@ -258,6 +258,23 @@ password=ask
 ; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
 ; this line if you're using a client which does.
 #enable_dynamic_resizing=false
+; By default, performance settings requested by the RDP client are ignored
+; and chosen by NeutrinoRDP. Uncomment this line to allow the user to
+; select performance settings in the RDP client.
+#perf.allow_client_experiencesettings=true
+; Override any experience setting by uncommenting one or more of the
+; following lines.
+#perf.wallpaper=false
+#perf.font_smoothing=false
+#perf.desktop_composition=false
+#perf.full_window_drag=false
+#perf.menu_anims=false
+#perf.themes=false
+#perf.cursor_blink=false
+; By default NeutrinoRDP supports cursor shadows. If this is giving
+; you problems (e.g. cursor is a black rectangle) try disabling cursor
+; shadows by uncommenting the following line.
+#perf.cursor_shadow=false
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true
