@@ -40,7 +40,7 @@
  * that should be free()d
  */
 enum SCP_SERVER_STATES_E
-scp_v1s_accept(struct trans *t, struct SCP_SESSION **s);
+scp_v1s_accept(struct trans *t, struct SCP_SESSION *s);
 
 /**
  *
@@ -58,7 +58,7 @@ scp_v1s_request_password(struct trans *t, struct SCP_SESSION *s,
                          const char *reason);
 
 enum SCP_SERVER_STATES_E
-scp_v1s_accept_password_reply(int cmd, struct trans *t);
+scp_v1s_accept_password_reply(struct trans *t, struct SCP_SESSION *s);
 
 enum SCP_SERVER_STATES_E
 scp_v1s_accept_list_sessions_reply(int cmd, struct trans *t);

@@ -78,14 +78,6 @@ scp_session_set_type(struct SCP_SESSION *s, tui8 type)
 
         case SCP_SESSION_TYPE_MANAGE:
             s->type = SCP_SESSION_TYPE_MANAGE;
-            s->mng = (struct SCP_MNG_DATA *)g_malloc(sizeof(struct SCP_MNG_DATA), 1);
-
-            if (NULL == s->mng)
-            {
-                LOG(LOG_LEVEL_ERROR, "[session:%d] set_type: internal error", __LINE__);
-                return 1;
-            }
-
             break;
 
         default:
@@ -439,14 +431,55 @@ scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
 void
 scp_session_destroy(struct SCP_SESSION *s)
 {
-    g_free(s->username);
-    g_free(s->password);
-    g_free(s->hostname);
-    g_free(s->domain);
-    g_free(s->program);
-    g_free(s->directory);
-    g_free(s->client_ip);
-    g_free(s->errstr);
-    g_free(s->mng);
-    g_free(s);
+    if (s != NULL)
+    {
+        g_free(s->username);
+        g_free(s->password);
+        g_free(s->hostname);
+        g_free(s->domain);
+        g_free(s->program);
+        g_free(s->directory);
+        g_free(s->client_ip);
+        g_free(s->errstr);
+        g_free(s);
+    }
+}
+
+/*******************************************************************/
+struct SCP_SESSION *
+scp_session_clone(const struct SCP_SESSION *s)
+{
+    struct SCP_SESSION *result = NULL;
+
+    if (s != NULL && (result = g_new(struct SCP_SESSION, 1)) != NULL)
+    {
+        /* Duplicate all the scalar variables */
+        g_memcpy(result, s, sizeof(*s));
+
+        /* Now duplicate all the strings */
+        result->username = g_strdup(s->username);
+        result->password = g_strdup(s->password);
+        result->hostname = g_strdup(s->hostname);
+        result->errstr = g_strdup(s->errstr);
+        result->domain = g_strdup(s->domain);
+        result->program = g_strdup(s->program);
+        result->directory = g_strdup(s->directory);
+        result->client_ip = g_strdup(s->client_ip);
+
+        /* Did all the string copies succeed? */
+        if ((s->username != NULL && result->username == NULL) ||
+                (s->password != NULL && result->password == NULL) ||
+                (s->hostname != NULL && result->hostname == NULL) ||
+                (s->errstr != NULL && result->errstr == NULL) ||
+                (s->domain != NULL && result->domain == NULL) ||
+                (s->program != NULL && result->program == NULL) ||
+                (s->directory != NULL && result->directory == NULL) ||
+                (s->client_ip != NULL && result->client_ip == NULL))
+        {
+            scp_session_destroy(result);
+            result = NULL;
+        }
+    }
+
+    return result;
 }

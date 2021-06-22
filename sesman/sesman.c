@@ -50,6 +50,15 @@ struct config_sesman *g_cfg; /* defined in config.h */
 
 tintptr g_term_event = 0;
 
+/**
+ * Items stored on the g_con_list
+ */
+struct sesman_con
+{
+    struct trans *t;
+    struct SCP_SESSION *s;
+};
+
 static struct trans *g_list_trans = NULL;
 static struct list *g_con_list = NULL;
 
@@ -79,6 +88,54 @@ static int nocase_matches(const char *candidate, ...)
     va_end(vl);
     return result;
 }
+
+/**
+ * Allocates a sesman_con struct
+ *
+ * @param trans Pointer to  newly-allocated transport
+ * @return struct sesman_con pointer
+ */
+static struct sesman_con *
+alloc_connection(struct trans *t)
+{
+    struct sesman_con *result;
+    struct SCP_SESSION *s;
+
+    if ((result = g_new(struct sesman_con, 1)) != NULL)
+    {
+        if ((s = scp_session_create()) != NULL)
+        {
+            result->t = t;
+            result->s = s;
+            /* Ensure we can find the connection easily from a callback */
+            t->callback_data = (void *)result;
+        }
+        else
+        {
+            g_free(result);
+            result = NULL;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Deletes a sesman_con struct, freeing resources
+ *
+ * After this call, the passed-in pointer is invalid and must not be
+ * referenced.
+ *
+ * @param sc struct to de-allocate
+ */
+static void
+delete_connection(struct sesman_con *sc)
+{
+    trans_delete(sc->t);
+    scp_session_destroy(sc->s);
+    g_free(sc);
+}
+
 
 /*****************************************************************************/
 /**
@@ -195,14 +252,14 @@ int
 sesman_close_all(void)
 {
     int index;
-    struct trans *con_trans;
+    struct sesman_con *sc;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "sesman_close_all:");
     trans_delete(g_list_trans);
     for (index = 0; index < g_con_list->count; index++)
     {
-        con_trans = (struct trans *) list_get_item(g_con_list, index);
-        trans_delete(con_trans);
+        sc = (struct sesman_con *) list_get_item(g_con_list, index);
+        delete_connection(sc);
     }
     return 0;
 }
@@ -228,9 +285,10 @@ sesman_data_in(struct trans *self)
     }
     else
     {
-        /* prcess message */
+        /* process message */
+        struct sesman_con *sc = (struct sesman_con *)self->callback_data;
         self->in_s->p = self->in_s->data;
-        if (scp_process(self) != SCP_SERVER_STATE_OK)
+        if (scp_process(self, sc->s) != SCP_SERVER_STATE_OK)
         {
             LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
             return 1;
@@ -247,20 +305,28 @@ sesman_data_in(struct trans *self)
 static int
 sesman_listen_conn_in(struct trans *self, struct trans *new_self)
 {
-    if (g_con_list->count < 16)
-    {
-        new_self->header_size = 8;
-        new_self->trans_data_in = sesman_data_in;
-        new_self->no_stream_init_on_data_in = 1;
-        new_self->extra_flags = 0;
-        list_add_item(g_con_list, (intptr_t) new_self);
-    }
-    else
+    struct sesman_con *sc;
+    if (g_con_list->count >= 16)
     {
         LOG(LOG_LEVEL_ERROR, "sesman_data_in: error, too many "
             "connections, rejecting");
         trans_delete(new_self);
     }
+    else if ((sc = alloc_connection(new_self)) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "sesman_data_in: No memory to allocate "
+            "new connection");
+        trans_delete(new_self);
+    }
+    else
+    {
+        new_self->header_size = 8;
+        new_self->trans_data_in = sesman_data_in;
+        new_self->no_stream_init_on_data_in = 1;
+        new_self->extra_flags = 0;
+        list_add_item(g_con_list, (intptr_t) sc);
+    }
+
     return 0;
 }
 
@@ -281,7 +347,7 @@ sesman_main_loop(void)
     int index;
     intptr_t robjs[32];
     intptr_t wobjs[32];
-    struct trans *con_trans;
+    struct sesman_con *scon;
 
     g_con_list = list_create();
     if (g_con_list == NULL)
@@ -319,10 +385,11 @@ sesman_main_loop(void)
         wobjs_count = 0;
         for (index = 0; index < g_con_list->count; index++)
         {
-            con_trans = (struct trans *) list_get_item(g_con_list, index);
-            if (con_trans != NULL)
+            scon = (struct sesman_con *)list_get_item(g_con_list, index);
+            if (scon != NULL)
             {
-                error = trans_get_wait_objs_rw(con_trans, robjs, &robjs_count,
+                error = trans_get_wait_objs_rw(scon->t,
+                                               robjs, &robjs_count,
                                                wobjs, &wobjs_count, &timeout);
                 if (error != 0)
                 {
@@ -359,15 +426,15 @@ sesman_main_loop(void)
 
         for (index = 0; index < g_con_list->count; index++)
         {
-            con_trans = (struct trans *) list_get_item(g_con_list, index);
-            if (con_trans != NULL)
+            scon = (struct sesman_con *)list_get_item(g_con_list, index);
+            if (scon != NULL)
             {
-                error = trans_check_wait_objs(con_trans);
+                error = trans_check_wait_objs(scon->t);
                 if (error != 0)
                 {
                     LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
                         "trans_check_wait_objs failed, removing trans");
-                    trans_delete(con_trans);
+                    delete_connection(scon);
                     list_remove_item(g_con_list, index);
                     index--;
                     continue;
@@ -384,8 +451,8 @@ sesman_main_loop(void)
     }
     for (index = 0; index < g_con_list->count; index++)
     {
-        con_trans = (struct trans *) list_get_item(g_con_list, index);
-        trans_delete(con_trans);
+        scon = (struct sesman_con *) list_get_item(g_con_list, index);
+        delete_connection(scon);
     }
     list_delete(g_con_list);
     trans_delete(g_list_trans);

@@ -34,13 +34,10 @@
  *
  * @brief processes the stream using scp version 1
  * @param atrans connection descriptor
- * @param s pointer to session descriptor pointer
- *
- * this function places in *s the address of a newly allocated SCP_SESSION structure
- * that should be free()d
+ * @param s session descriptor pointer
  */
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_accept(struct trans *atrans, struct SCP_SESSION **s);
+scp_v1s_mng_accept(struct trans *atrans, struct SCP_SESSION *s);
 
 /**
  *

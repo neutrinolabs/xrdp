@@ -95,6 +95,7 @@ scp_v1c_mng_connect(struct trans *t, struct SCP_SESSION *s)
     sz = g_strlen(s->hostname);
     out_uint8(out_s, sz);
     out_uint8p(out_s, s->hostname, sz);
+    s_mark_end(out_s);
 
     if (0 != trans_force_write(t))
     {

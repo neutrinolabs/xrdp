@@ -37,12 +37,10 @@
  *
  * @brief version neutral server accept function
  * @param atrans connection trans
- * @param s session descriptor pointer address.
- *          it will return a newly allocated descriptor.
- *          It this memory needs to be g_free()d
+ * @param s session descriptor
  *
  */
 enum SCP_SERVER_STATES_E
-scp_vXs_accept(struct trans *atrans, struct SCP_SESSION **s);
+scp_vXs_accept(struct trans *atrans, struct SCP_SESSION *s);
 
 #endif

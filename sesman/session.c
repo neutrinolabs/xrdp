@@ -492,6 +492,15 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         LOG(LOG_LEVEL_INFO,
             "[session start] (display %d): calling auth_start_session from pid %d",
             display, g_getpid());
+
+        /* Clone the session object, as the passed-in copy will be
+         * deleted by sesman_close_all() */
+        if ((s = scp_session_clone(s)) == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Failed to clone the session data - out of memory");
+            g_exit(1);
+        }
         auth_start_session(data, display);
         g_delete_wait_obj(g_term_event);
         sesman_close_all();

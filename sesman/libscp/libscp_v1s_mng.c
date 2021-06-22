@@ -97,8 +97,8 @@ int in_string8(struct stream *s, char str[], const char *param, int line)
  * @param [out] session pre-allocated session object
  * @return SCP_SERVER_STATE_START_MANAGE for success
  */
-static enum SCP_SERVER_STATES_E
-scp_v1s_mng_init_session(struct trans *atrans, struct SCP_SESSION *session)
+enum SCP_SERVER_STATES_E
+scp_v1s_mng_accept(struct trans *atrans, struct SCP_SESSION *session)
 {
     tui32 ipaddr;
     tui16 cmd;
@@ -187,34 +187,6 @@ scp_v1s_mng_init_session(struct trans *atrans, struct SCP_SESSION *session)
     return SCP_SERVER_STATE_START_MANAGE;
 }
 
-enum SCP_SERVER_STATES_E
-scp_v1s_mng_accept(struct trans *atrans, struct SCP_SESSION **s)
-{
-    enum SCP_SERVER_STATES_E result;
-    struct SCP_SESSION *session;
-
-    session = scp_session_create();
-    if (NULL == session)
-    {
-        result = SCP_SERVER_STATE_INTERNAL_ERR;
-    }
-    else
-    {
-        scp_session_set_type(session, SCP_SESSION_TYPE_MANAGE);
-
-        result = scp_v1s_mng_init_session(atrans, session);
-        if (result != SCP_SERVER_STATE_START_MANAGE)
-        {
-            scp_session_destroy(session);
-            session = NULL;
-        }
-    }
-
-    (*s) = session;
-
-    return result;
-}
-
 /* 002 */
 enum SCP_SERVER_STATES_E
 scp_v1s_mng_allow_connection(struct trans *t, struct SCP_SESSION *s)
@@ -230,7 +202,7 @@ scp_v1s_mng_allow_connection(struct trans *t, struct SCP_SESSION *s)
     out_uint16_be(out_s, SCP_CMD_MNG_LOGIN_ALLOW);
     s_mark_end(out_s);
 
-    if (0 != trans_write_copy(t))
+    if (0 != trans_force_write(t))
     {
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
@@ -266,7 +238,7 @@ scp_v1s_mng_deny_connection(struct trans *t, const char *reason)
     out_uint8p(out_s, reason, rlen);
     s_mark_end(out_s);
 
-    if (0 != trans_write_copy(t))
+    if (0 != trans_force_write(t))
     {
         return SCP_SERVER_STATE_NETWORK_ERR;
     }
@@ -364,12 +336,12 @@ scp_v1s_mng_list_sessions(struct trans *t, struct SCP_SESSION *s,
 
             if (cds->addr_type == SCP_ADDRESS_TYPE_IPV4)
             {
-                in_uint32_be(out_s, cds->ipv4addr);
+                out_uint32_be(out_s, cds->ipv4addr);
                 size += 4;
             }
             else if (cds->addr_type == SCP_ADDRESS_TYPE_IPV6)
             {
-                in_uint8a(out_s, cds->ipv6addr, 16);
+                out_uint8a(out_s, cds->ipv6addr, 16);
                 size += 16;
             }
         }

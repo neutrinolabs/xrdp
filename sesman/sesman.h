@@ -41,6 +41,15 @@
 
 #include "libscp.h"
 
+/*
+ * Close all file descriptors used by sesman.
+ *
+ * This is generally used after forking, to make sure the
+ * file descriptors used by the main process are not disturbed
+ *
+ * This call will also release all trans and SCP_SESSION objects
+ * held by sesman
+ */
 int
 sesman_close_all(void);
 

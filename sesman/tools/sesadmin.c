@@ -140,9 +140,9 @@ int main(int argc, char **argv)
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "Connecting to %s:%s with user %s (%s)", serv, port, user, pass);
 
-    if (0 != g_tcp_connect(sock, serv, port))
+    if (0 != trans_connect(t, serv, port, 3000))
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_tcp_connect() error");
+        LOG(LOG_LEVEL_ERROR, "trans_connect() error");
         return 1;
     }
 
@@ -167,7 +167,6 @@ int main(int argc, char **argv)
         cmndKill(t, s);
     }
 
-    g_tcp_close(sock);
     scp_session_destroy(s);
     trans_delete(t);
     log_end();

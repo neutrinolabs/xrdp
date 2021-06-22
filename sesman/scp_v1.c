@@ -49,8 +49,12 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
     struct SCP_DISCONNECTED_SESSION *slist;
     bool_t do_auth_end = 1;
 
-    s->retries = g_cfg->sec.login_retry;
-    s->current_try = s->retries;
+    if (s->retries == 0)
+    {
+        /* First time in */
+        s->retries = g_cfg->sec.login_retry;
+        s->current_try = s->retries;
+    }
     data = auth_userpass(s->username, s->password, NULL);
     if (data == 0)
     {
@@ -246,10 +250,11 @@ scp_v1_process45(struct trans *t, struct SCP_SESSION *s)
 enum SCP_SERVER_STATES_E
 scp_v1_process(struct trans *t, struct SCP_SESSION *s)
 {
+    ; /* astyle 3.1 needs this, or the switch is badly formatted */
     switch (s->current_cmd)
     {
         case 1:
-                    return scp_v1_process1(t, s);
+            return scp_v1_process1(t, s);
         case 4:
             return scp_v1_process4(t, s);
         case 41:

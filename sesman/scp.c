@@ -37,13 +37,9 @@ extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_process(struct trans *t)
+scp_process(struct trans *t, struct SCP_SESSION *sdata)
 {
-    enum SCP_SERVER_STATES_E result;
-    struct SCP_SESSION *sdata;
-
-    sdata = NULL;
-    result = scp_vXs_accept(t, &sdata);
+    enum SCP_SERVER_STATES_E result = scp_vXs_accept(t, sdata);
     switch (result)
     {
         case SCP_SERVER_STATE_OK:
@@ -88,6 +84,7 @@ scp_process(struct trans *t)
             result = SCP_SERVER_STATE_INTERNAL_ERR;
             break;
     }
+
     return result;
 }
 

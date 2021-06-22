@@ -40,6 +40,6 @@
  *
  */
 enum SCP_SERVER_STATES_E
-scp_process(struct trans *t);
+scp_process(struct trans *t, struct SCP_SESSION *s);
 
 #endif

@@ -230,8 +230,8 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
  * @param [out] session pre-allocated session object
  * @return SCP_SERVER_STATE_OK for success
  */
-static enum SCP_SERVER_STATES_E
-scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
+enum SCP_SERVER_STATES_E
+scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
 {
     tui16 height;
     tui16 width;
@@ -239,7 +239,7 @@ scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
     tui32 code = 0;
     char buf[STRING16_MAX_LEN + 1];
     struct stream *in_s = atrans->in_s;
-
+    int session_type = -1;
     scp_session_set_version(session, 0);
 
     if (!s_check_rem(in_s, 6))
@@ -252,16 +252,17 @@ scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
     {
         if (code == 0)
         {
-            scp_session_set_type(session, SCP_SESSION_TYPE_XVNC);
+            session_type = SCP_SESSION_TYPE_XVNC;
         }
         else if (code == 10)
         {
-            scp_session_set_type(session, SCP_SESSION_TYPE_XRDP);
+            session_type = SCP_SESSION_TYPE_XRDP;
         }
-        else if (code == 20)
+        else
         {
-            scp_session_set_type(session, SCP_SESSION_TYPE_XORG);
+            session_type = SCP_SESSION_TYPE_XORG;
         }
+        scp_session_set_type(session, session_type);
 
         /* reading username */
         if (!in_string16(in_s, buf, "username"))
@@ -296,6 +297,12 @@ scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
         in_uint16_be(in_s, height);
         scp_session_set_height(session, height);
         in_uint16_be(in_s, bpp);
+        if (session_type == SCP_SESSION_TYPE_XORG && bpp != 24)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "Setting bpp to 24 from %d for Xorg session", bpp);
+            bpp = 24;
+        }
         if (0 != scp_session_set_bpp(session, (tui8)bpp))
         {
             LOG(LOG_LEVEL_WARNING,
@@ -393,36 +400,6 @@ scp_v0s_init_session(struct trans *atrans, struct SCP_SESSION *session)
 
     return SCP_SERVER_STATE_OK;
 }
-
-
-/* server API */
-/******************************************************************************/
-enum SCP_SERVER_STATES_E
-scp_v0s_accept(struct trans *atrans, struct SCP_SESSION **s)
-{
-    enum SCP_SERVER_STATES_E result = SCP_SERVER_STATE_OK;
-
-    struct SCP_SESSION *session = scp_session_create();
-    if (NULL == session)
-    {
-        LOG(LOG_LEVEL_ERROR, "SCPV0 connection aborted: network error");
-        result = SCP_SERVER_STATE_INTERNAL_ERR;
-    }
-    else
-    {
-        result = scp_v0s_init_session(atrans, session);
-        if (result != SCP_SERVER_STATE_OK)
-        {
-            scp_session_destroy(session);
-            session = NULL;
-        }
-    }
-
-    (*s) = session;
-
-    return result;
-}
-
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E

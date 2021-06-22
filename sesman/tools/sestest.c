@@ -41,18 +41,17 @@ int main(int argc, char **argv)
     /*struct SCP_DISCONNECTED_SESSION ds;*/
     struct SCP_DISCONNECTED_SESSION *dsl;
     enum SCP_CLIENT_STATES_E e;
-    struct log_config log;
+    struct log_config *logging;
     int end;
     int scnt;
     int idx;
     int sel;
     int sock;
 
-    log.enable_syslog = 0;
-    log.log_level = LOG_LEVEL_DEBUG;
-    log.program_name = "sestest";
-    log.log_file = g_strdup("sestest.log");
-    log_start_from_param(&log);
+    logging = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
+    log_start_from_param(logging);
+    log_config_free(logging);
+
     scp_init();
 
     sock = g_tcp_socket();
@@ -64,7 +63,7 @@ int main(int argc, char **argv)
     s = scp_session_create();
     t = scp_trans_create(sock);
 
-    if (0 != g_tcp_connect(sock, "localhost", "3350"))
+    if (0 != trans_connect(t, "localhost", "3350", 3000))
     {
         g_printf("error connecting");
         return 1;
@@ -173,11 +172,9 @@ int main(int argc, char **argv)
         }
     }
 
-    g_tcp_close(sock);
     scp_session_destroy(s);
     trans_delete(t);
-    /*free_stream(c.in_s);
-    free_stream(c.out_s);*/
+    log_end();
 
     return 0;
 }

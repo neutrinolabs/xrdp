@@ -32,7 +32,7 @@
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_vXs_accept(struct trans *atrans, struct SCP_SESSION **s)
+scp_vXs_accept(struct trans *atrans, struct SCP_SESSION *s)
 {
     struct stream *in_s;
     int version;

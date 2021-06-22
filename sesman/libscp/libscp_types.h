@@ -81,7 +81,6 @@ struct SCP_SESSION
     tui8  ipv6addr[16];
     SCP_DISPLAY display;
     char *errstr;
-    struct SCP_MNG_DATA *mng;
     char *domain;
     char *program;
     char *directory;
