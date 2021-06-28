@@ -542,6 +542,74 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         /* Valid (but unused) parameters not logged */
     }
+    else if (g_strcmp(name, "perf.allow_client_experiencesettings") == 0)
+    {
+        mod->allow_client_experiencesettings = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "perf.wallpaper") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_WALLPAPER;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_WALLPAPER;
+        }
+    }
+    else if (g_strcmp(name, "perf.font_smoothing") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_ENABLE_FONT_SMOOTHING;
+        if (g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_ENABLE_FONT_SMOOTHING;
+        }
+    }
+    else if (g_strcmp(name, "perf.desktop_composition") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_ENABLE_DESKTOP_COMPOSITION;
+        if (g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_ENABLE_DESKTOP_COMPOSITION;
+        }
+    }
+    else if (g_strcmp(name, "perf.full_window_drag") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_FULLWINDOWDRAG;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_FULLWINDOWDRAG;
+        }
+    }
+    else if (g_strcmp(name, "perf.menu_anims") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_MENUANIMATIONS;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_MENUANIMATIONS;
+        }
+    }
+    else if (g_strcmp(name, "perf.themes") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_THEMING;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_THEMING;
+        }
+    }
+    else if (g_strcmp(name, "perf.cursor_blink") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_CURSORSETTINGS;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_CURSORSETTINGS;
+        }
+    }
+    else if (g_strcmp(name, "perf.cursor_shadow") == 0)
+    {
+        mod->perf_settings_override_mask |= PERF_DISABLE_CURSOR_SHADOW;
+        if (!g_text2bool(value))
+        {
+            mod->perf_settings_values_mask |= PERF_DISABLE_CURSOR_SHADOW;
+        }
+    }
     else
     {
         LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [%s]", name, value);
@@ -1681,6 +1749,60 @@ lfreerdp_pre_connect(freerdp *instance)
                                                 PERF_DISABLE_THEMING;
         // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS;
     }
+
+    /* Allow users or administrators to configure the mstsc experience settings. #1903 */
+
+    if ((mod->allow_client_experiencesettings == 1) &&
+            (mod->client_info.mcs_connection_type == CONNECTION_TYPE_AUTODETECT))
+    {
+        /* auto-detect not yet supported - use default performance settings */
+    }
+    else if (mod->allow_client_experiencesettings == 1)
+    {
+        instance->settings->performance_flags =
+            (mod->client_info.rdp5_performanceflags &
+             /* Mask to avoid accepting invalid flags. */
+             (PERF_DISABLE_WALLPAPER |
+              PERF_DISABLE_FULLWINDOWDRAG |
+              PERF_DISABLE_MENUANIMATIONS |
+              PERF_DISABLE_THEMING |
+              PERF_DISABLE_CURSOR_SHADOW |
+              PERF_DISABLE_CURSORSETTINGS |
+              PERF_ENABLE_FONT_SMOOTHING |
+              PERF_ENABLE_DESKTOP_COMPOSITION));
+
+        LOG(LOG_LEVEL_DEBUG, "RDP client experience settings, "
+            "rdp5_performance_flags:[0x%08x], "
+            "masked performance_flags:[0x%08x]",
+            mod->client_info.rdp5_performanceflags,
+            instance->settings->performance_flags);
+
+        if (mod->client_info.rail_enable &&
+                (mod->client_info.rail_support_level > 0))
+        {
+            instance->settings->performance_flags |= (PERF_DISABLE_WALLPAPER |
+                    PERF_DISABLE_FULLWINDOWDRAG);
+            LOG(LOG_LEVEL_DEBUG, "Add in performance setting for Railsupport:"
+                "[0x%08x]", PERF_DISABLE_WALLPAPER |
+                PERF_DISABLE_FULLWINDOWDRAG);
+        }
+    }
+
+    LOG(LOG_LEVEL_DEBUG, "before overriding performance_flags:[0x%08x]",
+        instance->settings->performance_flags);
+    LOG(LOG_LEVEL_DEBUG, "perf_settings_override_mask:[0x%08x], "
+        "perf_settings_values_mask:[0x%08x]",
+        mod->perf_settings_override_mask,
+        mod->perf_settings_values_mask);
+
+    /* Clear bits for any overridden performance settings */
+    instance->settings->performance_flags &= ~mod->perf_settings_override_mask;
+
+    /* Add in overridden performance settings */
+    instance->settings->performance_flags |= mod->perf_settings_values_mask;
+
+    LOG(LOG_LEVEL_DEBUG, "final performance_flags:[0x%08x]",
+        instance->settings->performance_flags);
 
     instance->settings->compression = 0;
     instance->settings->ignore_certificate = 1;

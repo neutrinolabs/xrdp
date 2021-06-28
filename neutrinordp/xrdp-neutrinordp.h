@@ -217,4 +217,8 @@ struct mod
     struct brush_item brush_cache[64];
     struct pointer_item pointer_cache[32];
     char pamusername[255];
+
+    int allow_client_experiencesettings;
+    int perf_settings_override_mask; /* Performance bits overridden in ini file */
+    int perf_settings_values_mask; /* Values of overridden performance bits */
 };
