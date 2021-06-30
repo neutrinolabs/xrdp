@@ -166,6 +166,8 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
+AC_ARG_WITH(imlib2, AC_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use (yes/no/auto/<path>)]),,)
+
 # Obsolete options
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [This option is no longer supported - use --enable-devel-all]))
@@ -215,6 +217,48 @@ AC_CHECK_HEADER([security/_pam_types.h],
                 [AC_DEFINE([HAVE__PAM_TYPES_H], 1, [Using Linux-PAM], [])])
 AC_CHECK_HEADER([security/pam_constants.h],
                 [AC_DEFINE([HAVE_PAM_CONSTANTS_H], 1, [Using OpenPAM], [])])
+
+# Find imlib2
+case "$with_imlib2" in
+    no) AC_MSG_NOTICE([imlib2 will not be supported])
+        use_imlib2=no
+        ;;
+    '' | auto)
+        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.10],
+            [use_imlib2=yes],
+            [use_imlib2=no])
+        ;;
+    yes)
+        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.10],
+            [use_imlib2=yes],
+            [AC_MSG_ERROR([please install libimlib2-dev or imlib2-devel])])
+        ;;
+    *)
+        AC_MSG_CHECKING([for imlib2 in $with_imlib2])
+        if test -d $with_imlib2/lib; then
+            IMLIB2_LIBS="-L $with_imlib2/lib -lImlib2"
+        elif test -d $with_imlib2/lib64; then
+            IMLIB2_LIBS="-L $with_imlib2/lib64 -lImlib2"
+        else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([Can't find libImlib2 in $with_imlib2])
+        fi
+
+        if test -f $with_imlib2/include/Imlib2.h; then
+            IMLIB2_CFLAGS="-I $with_imlib2/include"
+        else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([Can't find $with_imlib2/include/Imlib2.h])
+        fi
+        AC_MSG_RESULT([yes])
+        AC_SUBST([IMLIB2_LIBS])
+        AC_SUBST([IMLIB2_CFLAGS])
+        use_imlib2=yes
+esac
+
+if test x$use_imlib2 = xyes; then
+    AC_DEFINE([USE_IMLIB2],1, [Compile with imlib2 support])
+fi
 
 # Check only one auth mechanism is specified, and give it a name
 auth_cnt=0
@@ -485,6 +529,12 @@ echo "  ipv6only                $enable_ipv6only"
 echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
+echo
+if test x$use_imlib2 = xyes; then
+    echo "  with imlib2             yes"
+else
+    echo "  with imlib2             no"
+fi
 echo
 echo "  development logging     $devel_logging"
 echo "  development streamcheck $devel_streamcheck"
