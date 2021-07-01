@@ -119,6 +119,12 @@ xrdp_bitmap_create(int width, int height, int bpp,
     int Bpp = 0;
 
     self = (struct xrdp_bitmap *)g_malloc(sizeof(struct xrdp_bitmap), 1);
+    if (self == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_create: no memory");
+        return self;
+    }
+
     self->type = type;
     self->width = width;
     self->height = height;
@@ -403,7 +409,7 @@ xrdp_bitmap_set_focus(struct xrdp_bitmap *self, int focused)
 
 /*****************************************************************************/
 static int
-xrdp_bitmap_get_index(struct xrdp_bitmap *self, int *palette, int color)
+xrdp_bitmap_get_index(struct xrdp_bitmap *self, const int *palette, int color)
 {
     int r = 0;
     int g = 0;
@@ -458,12 +464,177 @@ xrdp_bitmap_resize(struct xrdp_bitmap *self, int width, int height)
     return 0;
 }
 
+/**************************************************************************//**
+ * Private routine to swap pixel data between two pixmaps
+ * @param a First bitmap
+ * @param b Second bitmap
+ *
+ * The main use-case for this routine is to modify an existing bitmap using
+ * the following logic:-
+ * - Create a temporary WND_TYPE_BITMAP
+ * - Process the data in a bitmap in some way, moving it to the temporary
+ * - Call this routine
+ * - Delete the temporary
+ *
+ */
+static void
+swap_pixel_data(struct xrdp_bitmap *a, struct xrdp_bitmap *b)
+{
+    int tmp_width = a->width;
+    int tmp_height = a->height;
+    int tmp_bpp = a->bpp;
+    int tmp_line_size = a->line_size;
+    char *tmp_data = a->data;
+    int tmp_do_not_free_data = a->do_not_free_data;
+
+    a->width = b->width;
+    a->height = b->height;
+    a->bpp = b->bpp;
+    a->line_size = b->line_size;
+    a->data = b->data;
+    a->do_not_free_data = b->do_not_free_data;
+
+    b->width = tmp_width;
+    b->height = tmp_height;
+    b->bpp = tmp_bpp;
+    b->line_size = tmp_line_size;
+    b->data = tmp_data;
+    b->do_not_free_data = tmp_do_not_free_data;
+}
+
+/**************************************************************************//**
+ * Scales a bitmap image
+ *
+ * @param self Bitmap to scale
+ * @param target_width target width
+ * @param target_height target height
+ * @return 0 for success
+ */
+static int
+xrdp_bitmap_scale(struct xrdp_bitmap *self, int targ_width, int targ_height)
+{
+    int src_width = self->width;
+    int src_height = self->height;
+
+    if (src_width != targ_width || src_height != targ_height)
+    {
+        struct xrdp_bitmap *target =
+            xrdp_bitmap_create(targ_width, targ_height,
+                               self->bpp, WND_TYPE_BITMAP, 0);
+        int targ_x, targ_y;
+
+        if (target == NULL)
+        {
+            /* Error is logged */
+            return 1;
+        }
+
+        /* For each pixel in the target pixmap, scale to one in the source */
+        for (targ_x = 0 ; targ_x < targ_width; ++targ_x)
+        {
+            int src_x = targ_x * src_width / targ_width;
+            for (targ_y = 0 ; targ_y < targ_height; ++targ_y)
+            {
+                int src_y = targ_y * src_height / targ_height;
+                int pixel = xrdp_bitmap_get_pixel(self, src_x, src_y);
+                xrdp_bitmap_set_pixel(target, targ_x, targ_y, pixel);
+            }
+        }
+        swap_pixel_data(self, target);
+        xrdp_bitmap_delete(target);
+    }
+
+    return 0;
+}
+
+/**************************************************************************//**
+ * Zooms a bitmap image
+ *
+ * @param self Bitmap to zoom
+ * @param target_width target width
+ * @param target_height target height
+ * @return 0 for success
+ *
+ * This works the same way as a scaled image, but the aspect ratio is
+ * maintained by removing pixels from the top-and-bottom,
+ * or the left-and-right before scaling.
+ */
+static int
+xrdp_bitmap_zoom(struct xrdp_bitmap *self, int targ_width, int targ_height)
+{
+    int src_width = self->width;
+    int src_height = self->height;
+    double targ_ratio = (double)targ_width / targ_height;
+    double src_ratio = (double)src_width / src_height;
+
+    unsigned int chop_width;
+    unsigned int chop_left_margin;
+    unsigned int chop_height;
+    unsigned int chop_top_margin;
+
+    int result = 0;
+
+    if (src_ratio > targ_ratio)
+    {
+        /* Source is relatively wider than source. Select a box
+         * narrower than the source, but the same height */
+        chop_width = (int)(targ_ratio * src_height + .5);
+        chop_left_margin = (src_width - chop_width) / 2;
+        chop_height = src_height;
+        chop_top_margin = 0;
+    }
+    else
+    {
+        /* Source is relatively taller than source (or same shape) */
+        chop_width = src_width;
+        chop_left_margin = 0;
+        chop_height = (int)(src_width / targ_ratio + .5);
+        chop_top_margin = (src_height - chop_height) / 2;
+    }
+
+    /* Only chop the image if there's a need to */
+    if (chop_top_margin != 0 || chop_left_margin != 0)
+    {
+        struct xrdp_bitmap *chopbox;
+        chopbox = xrdp_bitmap_create(chop_width, chop_height, self->bpp,
+                                     WND_TYPE_BITMAP, 0);
+        if (chopbox == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_zoom: no memory");
+            result = 1;
+        }
+        else
+        {
+            result = xrdp_bitmap_copy_box(self, chopbox,
+                                          chop_left_margin, chop_top_margin,
+                                          chop_width, chop_height);
+            if (result != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_zoom: can't copy box");
+            }
+            else
+            {
+                swap_pixel_data(self, chopbox);
+            }
+            xrdp_bitmap_delete(chopbox);
+        }
+    }
+
+    if (result == 0)
+    {
+        result = xrdp_bitmap_scale(self, targ_width, targ_height);
+    }
+
+    return result;
+}
+
 /*****************************************************************************/
 /* load a bmp file */
 /* return 0 ok */
 /* return 1 error */
-int
-xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
+static int
+xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
+                 const int *palette)
 {
     int fd = 0;
     int len = 0;
@@ -802,6 +973,42 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
     }
 
     return 0;
+}
+
+/*****************************************************************************/
+int
+xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
+                 const int *palette,
+                 int background,
+                 enum xrdp_bitmap_load_transform transform,
+                 int twidth,
+                 int theight)
+{
+    /* this is the default bmp-only implementation if a graphics library
+     * isn't built in */
+
+    int result = xrdp_bitmap_load_bmp(self, filename, palette);
+    if (result == 0)
+    {
+        switch (transform)
+        {
+            case XBLT_NONE:
+                break;
+
+            case XBLT_SCALE:
+                result = xrdp_bitmap_scale(self, twidth, theight);
+                break;
+
+            case XBLT_ZOOM:
+                result = xrdp_bitmap_zoom(self, twidth, theight);
+                break;
+
+            default:
+                LOG(LOG_LEVEL_WARNING, "Invalid bitmap transform %d specified",
+                    transform);
+        }
+    }
+    return result;
 }
 
 /*****************************************************************************/

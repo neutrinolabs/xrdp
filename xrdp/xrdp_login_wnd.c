@@ -740,7 +740,8 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                            XRDP_SHARE_PATH, globals->ls_background_image);
             }
             LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
-            xrdp_bitmap_load(but, fileName, self->palette);
+            xrdp_bitmap_load(but, fileName, self->palette,
+                             globals->ls_top_window_bg_color, XBLT_NONE, 0, 0);
             but->parent = self->screen;
             but->owner = self->screen;
             but->left = self->screen->width - but->width;
@@ -762,7 +763,8 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
             g_snprintf(globals->ls_logo_filename, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
         }
 
-        xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette);
+        xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette,
+                         globals->ls_bg_color, XBLT_NONE, 0, 0);
         but->parent = self->login_window;
         but->owner = self->login_window;
         but->left = globals->ls_logo_x_pos;

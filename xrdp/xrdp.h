@@ -201,8 +201,33 @@ int
 xrdp_bitmap_set_focus(struct xrdp_bitmap *self, int focused);
 int
 xrdp_bitmap_resize(struct xrdp_bitmap *self, int width, int height);
+/**
+ * Loads a bitmap from a file and (optionally) transforms it
+ *
+ * @param self from rdp_bitmap_create()
+ * @param filename Filename to load
+ * @param[in] palette For 8-bit conversions. Currently unused
+ * @param background Background color for alpha-blending
+ * @param transform Transform to apply to the image after loading
+ * @param twidth target width if transform != XBLT_NONE
+ * @param theight target height if transform != XBLT_NONE
+ * @return 0 for success.
+ *
+ * The background color is only used if the specified image contains
+ * an alpha layer
+ *
+ * After a successful call, the bitmap is resized to the image file size.
+ *
+ * If the call is not successful, the bitmap will be in an indeterminate
+ * state and should not be used.
+ */
 int
-xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette);
+xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
+                 const int *palette,
+                 int background,
+                 enum xrdp_bitmap_load_transform transform,
+                 int twidth,
+                 int theight);
 int
 xrdp_bitmap_get_pixel(struct xrdp_bitmap *self, int x, int y);
 int

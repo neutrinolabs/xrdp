@@ -168,6 +168,16 @@ struct xrdp_mod
     struct source_info *si;
 };
 
+/**
+ * Transform to apply to loaded images
+ */
+enum xrdp_bitmap_load_transform
+{
+    XBLT_NONE = 0,
+    XBLT_SCALE,
+    XBLT_ZOOM
+};
+
 /* header for bmp file */
 struct xrdp_bmp_header
 {
