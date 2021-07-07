@@ -454,6 +454,7 @@ AC_CONFIG_FILES([
   tests/Makefile
   tests/common/Makefile
   tests/memtest/Makefile
+  tests/xrdp/Makefile
   tools/Makefile
   tools/devel/Makefile
   tools/devel/tcp_proxy/Makefile
