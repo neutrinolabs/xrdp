@@ -43,6 +43,8 @@ xrdp_SOURCES = \
   xrdp.c \
   xrdp.h \
   xrdp_bitmap.c \
+  xrdp_bitmap_load.c \
+  xrdp_bitmap_common.c \
   xrdp_cache.c \
   xrdp_encoder.c \
   xrdp_encoder.h \
