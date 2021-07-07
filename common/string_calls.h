@@ -142,6 +142,7 @@ g_get_display_num_from_display(const char *display_text);
 
 int      g_strlen(const char *text);
 const char *g_strchr(const char *text, int c);
+const char *g_strnchr(const char *text, int c, int len);
 char    *g_strcpy(char *dest, const char *src);
 char    *g_strncpy(char *dest, const char *src, int len);
 char    *g_strcat(char *dest, const char *src);

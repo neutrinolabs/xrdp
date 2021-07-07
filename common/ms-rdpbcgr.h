@@ -77,6 +77,11 @@
 /* Channel definition structure CHANNEL_DEF (2.2.1.3.4.1) */
 /* This isn't explicitly named in MS-RDPBCGR */
 #define CHANNEL_NAME_LEN                7
+/* These names are also not explicitly defined in MS-RDPBCGR */
+#define CLIPRDR_SVC_CHANNEL_NAME        "cliprdr"
+#define RAIL_SVC_CHANNEL_NAME           "rail"
+#define RDPSND_SVC_CHANNEL_NAME         "rdpsnd"
+#define RDPDR_SVC_CHANNEL_NAME          "rdpdr"
 
 /* 2.2.1.3.6 Client Monitor Data - */
 /* monitorCount (4 bytes): A 32-bit, unsigned integer. The number of display */
@@ -235,6 +240,15 @@
 #define exDiscReasonLicenseErrClientEncryption        0x0108
 #define exDiscReasonLicenseCantUpgradeLicense         0x0109
 #define exDiscReasonLicenseNoRemoteConnections        0x010a
+
+/* Virtual channel PDU (2.2.6.1) */
+#define CHANNEL_CHUNK_LENGTH                          1600
+
+/* Channel PDU Header flags (2.2.6.1.1) */
+/* NOTE: XR_ prefixed to avoid conflict with FreeRDP */
+#define XR_CHANNEL_FLAG_FIRST          0x00000001
+#define XR_CHANNEL_FLAG_LAST           0x00000002
+#define XR_CHANNEL_FLAG_SHOW_PROTOCOL  0x00000010
 
 /* General Capability Set: osMajorType (2.2.7.1.1) */
 #define OSMAJORTYPE_UNSPECIFIED        0x0000

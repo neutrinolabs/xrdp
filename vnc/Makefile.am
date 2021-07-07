@@ -10,7 +10,10 @@ module_LTLIBRARIES = \
 
 libvnc_la_SOURCES = \
   vnc.c \
-  vnc.h
+  vnc_clip.c \
+  rfb.h \
+  vnc.h \
+  vnc_clip.h
 
 libvnc_la_LIBADD = \
   $(top_builddir)/common/libcommon.la

@@ -427,6 +427,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_begin_update = server_begin_update;
             self->mod->server_end_update = server_end_update;
             self->mod->server_bell_trigger = server_bell_trigger;
+            self->mod->server_chansrv_in_use = server_chansrv_in_use;
             self->mod->server_fill_rect = server_fill_rect;
             self->mod->server_screen_blt = server_screen_blt;
             self->mod->server_paint_rect = server_paint_rect;
@@ -1628,8 +1629,6 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, const char *ip, const char *port)
 {
     int index;
 
-    self->usechansrv = 1;
-
     if (self->wm->client_info->channels_allowed == 0)
     {
         LOG(LOG_LEVEL_DEBUG, "%s: "
@@ -2457,6 +2456,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             if (g_strcasecmp(value, "-1") == 0)
             {
                 self->sesman_controlled = 1;
+                self->usechansrv = 1;
             }
         }
 
@@ -3002,6 +3002,17 @@ server_bell_trigger(struct xrdp_mod *mod)
     wm = (struct xrdp_wm *)(mod->wm);
     xrdp_wm_send_bell(wm);
     return 0;
+}
+
+/*****************************************************************************/
+/* Chansrv in use on this configuration? */
+int
+server_chansrv_in_use(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    return wm->mm->usechansrv;
 }
 
 
@@ -3610,14 +3621,13 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
 
     if (wm->mm->usechansrv)
     {
-        /*
-         * Xvnc backend reaches here
-         * should not return 1 as this case is not an error
-         */
-        return 0;
+        /* Modules should not be calling this if chansrv is running -
+         * they can use server_chansrv_in_use() to avoid doing this */
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "Bad call of server_send_to_channel() detected");
+        return 1;
     }
 
-    /* vnc proxy mode reaches here */
     return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
                                    total_data_len, flags);
 }

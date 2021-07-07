@@ -10,6 +10,7 @@ include_HEADERS = \
   ms-erref.h \
   ms-fscc.h \
   ms-rdpbcgr.h \
+  ms-rdpeclip.h \
   ms-rdpefs.h \
   ms-rdpegdi.h \
   ms-rdpele.h \

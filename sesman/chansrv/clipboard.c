@@ -177,7 +177,7 @@ x-special/gnome-copied-files
 #include "clipboard_common.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
-
+#include "ms-rdpeclip.h"
 
 static char g_bmp_image_header[] =
 {
@@ -234,7 +234,7 @@ struct clip_s2c g_clip_s2c;
 struct clip_c2s g_clip_c2s;
 
 /* default version and flags */
-static int g_cliprdr_version = 2;
+static int g_cliprdr_version = CB_CAPS_VERSION_2;
 static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
                              CB_STREAM_FILECLIP_ENABLED |
                              CB_FILECLIP_NO_FILE_PATHS;
@@ -418,7 +418,7 @@ clipboard_init(void)
         out_uint16_le(s, 1); /* cCapabilitiesSets */
         out_uint16_le(s, 0); /* pad1 */
         /* CLIPRDR_GENERAL_CAPABILITY */
-        out_uint16_le(s, 1); /* capabilitySetType */
+        out_uint16_le(s, CB_CAPSTYPE_GENERAL); /* capabilitySetType */
         out_uint16_le(s, 12); /* lengthCapability */
         out_uint32_le(s, g_cliprdr_version); /* version */
         out_uint32_le(s, g_cliprdr_flags); /* generalFlags */
