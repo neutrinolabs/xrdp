@@ -25,6 +25,9 @@
 #include "xrdp.h"
 #include "log.h"
 
+/* Rounds up to the nearest multiple of 4 */
+#define ROUND4(x) (((x) + 3) / 4 * 4)
+
 /**************************************************************************//**
  * Private routine to swap pixel data between two pixmaps
  * @param a First bitmap
@@ -153,8 +156,15 @@ xrdp_bitmap_zoom(struct xrdp_bitmap *self, int targ_width, int targ_height)
         chop_top_margin = (src_height - chop_height) / 2;
     }
 
-    /* Only chop the image if there's a need to */
-    if (chop_top_margin != 0 || chop_left_margin != 0)
+    /* Only chop the image if there's a need to, and if it will look
+     * meaningful */
+    if (chop_width < 1 || chop_height < 1)
+    {
+        LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_zoom: Ignoring pathological"
+            " request (%dx%d) -> (%dx%d)", src_width, src_height,
+            targ_width, targ_height);
+    }
+    else if (chop_top_margin != 0 || chop_left_margin != 0)
     {
         struct xrdp_bitmap *chopbox;
         chopbox = xrdp_bitmap_create(chop_width, chop_height, self->bpp,
@@ -206,29 +216,245 @@ xrdp_bitmap_get_index(struct xrdp_bitmap *self, const int *palette, int color)
     return (b | g | r);
 }
 
+/**************************************************************************//**
+ * reads the palette from a bmp file with a palette embedded in it
+ *
+ * @pre The read position in the file is at the end of the bmp DIB header.
+ *
+ * @param filename  Name of file
+ * @param fd   File descriptor for file
+ * @param header Pointer to BMP header info struct
+ * @param palette output. Must be at least 256 elements
+ */
+static void
+read_palette(const char *filename, int fd,
+             const struct xrdp_bmp_header *header, int *palette)
+{
+    struct stream *s;
+    int clr_used;
+    int palette_size;
+    int len;
+    int i;
+
+    /* Find the number of colors used in the bitmap */
+    if (header->clr_used != 0)
+    {
+        clr_used = header->clr_used;
+        /* Is the header value sane? */
+        if (clr_used < 0 || clr_used > 256)
+        {
+            clr_used = 256;
+            LOG(LOG_LEVEL_WARNING, "%s : Invalid palette size %d in file %s",
+                __func__, header->clr_used, filename);
+        }
+    }
+    else if (header->bit_count == 4)
+    {
+        clr_used = 16;
+    }
+    else
+    {
+        clr_used = 256;
+    }
+
+    palette_size = clr_used * 4;
+
+    make_stream(s);
+    init_stream(s, palette_size);
+
+    /* Pre-fill the buffer, so if we get short reads we're
+     * not working with uninitialised data */
+    g_memset(s->data, 0, palette_size);
+    s->end = s->data + palette_size;
+
+    len = g_file_read(fd, s->data, palette_size);
+    if (len != palette_size)
+    {
+        LOG(LOG_LEVEL_WARNING, "%s: unexpected read length in file %s",
+            __func__, filename);
+    }
+
+    for (i = 0; i < clr_used; ++i)
+    {
+        in_uint32_le(s, palette[i]);
+    }
+
+    free_stream(s);
+}
+
+/**************************************************************************//**
+ * Process a row of data from a 24-bit bmp file
+ *
+ * @param self Bitmap we're filling in
+ * @param s Stream containing bitmap data
+ * @param in_palette Palette from bmp file (unused)
+ * @param out_palette Palette for output bitmap
+ * @param row Row number
+ */
+static void
+process_row_data_24bit(struct xrdp_bitmap *self,
+                       struct stream *s,
+                       const int *in_palette,
+                       const int *out_palette,
+                       int row)
+{
+    int j;
+    int k;
+    int color;
+
+    for (j = 0; j < self->width; ++j)
+    {
+        in_uint8(s, k);
+        color = k;
+        in_uint8(s, k);
+        color |= k << 8;
+        in_uint8(s, k);
+        color |= k << 16;
+
+        if (self->bpp == 8)
+        {
+            color = xrdp_bitmap_get_index(self, out_palette, color);
+        }
+        else if (self->bpp == 15)
+        {
+            color = COLOR15((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+        }
+        else if (self->bpp == 16)
+        {
+            color = COLOR16((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+        }
+
+        xrdp_bitmap_set_pixel(self, j, row, color);
+    }
+}
+
+/**************************************************************************//**
+ * Process a row of data from an 8-bit bmp file
+ *
+ * @param self Bitmap we're filling in
+ * @param s Stream containing bitmap data
+ * @param in_palette Palette from bmp file
+ * @param out_palette Palette for output bitmap
+ * @param row Row number
+ */
+static void
+process_row_data_8bit(struct xrdp_bitmap *self,
+                      struct stream *s,
+                      const int *in_palette,
+                      const int *out_palette,
+                      int row)
+{
+    int j;
+    int k;
+    int color;
+
+    for (j = 0; j < self->width; ++j)
+    {
+        in_uint8(s, k);
+        color = in_palette[k];
+
+        if (self->bpp == 8)
+        {
+            color = xrdp_bitmap_get_index(self, out_palette, color);
+        }
+        else if (self->bpp == 15)
+        {
+            color = COLOR15((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+        }
+        else if (self->bpp == 16)
+        {
+            color = COLOR16((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+        }
+
+        xrdp_bitmap_set_pixel(self, j, row, color);
+    }
+}
+
+/**************************************************************************//**
+ * Process a row of data from an 4-bit bmp file
+ *
+ * @param self Bitmap we're filling in
+ * @param s Stream containing bitmap data
+ * @param in_palette Palette from bmp file
+ * @param out_palette Palette for output bitmap
+ * @param row Row number
+ */
+static void
+process_row_data_4bit(struct xrdp_bitmap *self,
+                      struct stream *s,
+                      const int *in_palette,
+                      const int *out_palette,
+                      int row)
+{
+    int j;
+    int k = 0;
+    int color;
+
+    for (j = 0; j < self->width; ++j)
+    {
+        if ((j & 1) == 0)
+        {
+            in_uint8(s, k);
+            color = (k >> 4) & 0xf;
+        }
+        else
+        {
+            color = k & 0xf;
+        }
+
+        color = in_palette[color];
+
+        if (self->bpp == 8)
+        {
+            color = xrdp_bitmap_get_index(self, out_palette, color);
+        }
+        else if (self->bpp == 15)
+        {
+            color = COLOR15((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+        }
+        else if (self->bpp == 16)
+        {
+            color = COLOR16((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+        }
+
+        xrdp_bitmap_set_pixel(self, j, row, color);
+    }
+}
+
 /*****************************************************************************/
 /* load a bmp file */
 /* return 0 ok */
 /* return 1 error */
 static int
 xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
-                     const int *palette)
+                     const int *out_palette)
 {
     int fd = 0;
     int len = 0;
-    int i = 0;
-    int j = 0;
-    int k = 0;
-    int color = 0;
-    int size = 0;
-    int palette1[256];
-    char type1[4];
-    struct xrdp_bmp_header header;
+    int row = 0;
+    int row_size = 0;
+    int bmp_palette[256] = {0};
+    char fixed_header[14] = {0};
+    struct xrdp_bmp_header header = {0};
     struct stream *s = (struct stream *)NULL;
-
-    g_memset(palette1, 0, sizeof(int) * 256);
-    g_memset(type1, 0, sizeof(char) * 4);
-    g_memset(&header, 0, sizeof(struct xrdp_bmp_header));
+    /* Pointer to row data processing function */
+    void (*process_row_data)(struct xrdp_bitmap * self,
+                             struct stream * s,
+                             const int *in_palette,
+                             const int *out_palette,
+                             int row);
 
     if (!g_file_exist(filename))
     {
@@ -246,8 +472,8 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
         return 1;
     }
 
-    /* read file type */
-    if (g_file_read(fd, type1, 2) != 2)
+    /* read the fixed file header */
+    if (g_file_read(fd, fixed_header, 14) != 14)
     {
         LOG(LOG_LEVEL_ERROR, "%s: error bitmap file [%s] read error",
             __func__, filename);
@@ -255,7 +481,7 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
         return 1;
     }
 
-    if ((type1[0] != 'B') || (type1[1] != 'M'))
+    if ((fixed_header[0] != 'B') || (fixed_header[1] != 'M'))
     {
         LOG(LOG_LEVEL_ERROR, "%s: error bitmap file [%s] not BMP file",
             __func__, filename);
@@ -263,28 +489,8 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
         return 1;
     }
 
-    /* read file size */
+    /* read information header */
     make_stream(s);
-    init_stream(s, 8192);
-    if (g_file_read(fd, s->data, 4) != 4)
-    {
-        LOG(LOG_LEVEL_ERROR, "%s: missing length in file %s",
-            __func__, filename);
-        free_stream(s);
-        g_file_close(fd);
-        return 1;
-    }
-    s->end = s->data + 4;
-    in_uint32_le(s, size);
-    /* read bmp header */
-    if (g_file_seek(fd, 14) < 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "%s: seek error in file %s",
-            __func__, filename);
-        free_stream(s);
-        g_file_close(fd);
-        return 1;
-    }
     init_stream(s, 8192);
     len = g_file_read(fd, s->data, 40); /* size better be 40 */
     if (len != 40)
@@ -308,238 +514,74 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
     in_uint32_le(s, header.clr_used);
     in_uint32_le(s, header.clr_important);
 
-    if ((header.bit_count != 4) && (header.bit_count != 8) &&
-            (header.bit_count != 24))
+    if (header.compression != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "%s: error bitmap file [%s] bad bpp %d",
-            __func__, filename, header.bit_count);
-        free_stream(s);
-        g_file_close(fd);
-        return 1;
+        LOG(LOG_LEVEL_WARNING, "%s: error bitmap file [%s]"
+            " unsupported compression value %d",
+            __func__, filename, header.compression);
     }
 
-    if (header.bit_count == 24) /* 24 bit bitmap */
+    if (g_file_seek(fd, 14 + header.size) < 0)
     {
-        if (g_file_seek(fd, 14 + header.size) < 0)
-        {
-            LOG(LOG_LEVEL_WARNING, "%s: seek error in file %s",
-                __func__, filename);
-        }
-        xrdp_bitmap_resize(self, header.image_width, header.image_height);
-        size = header.image_width * header.image_height * 3;
-        init_stream(s, size);
-        /* Pre-fill the buffer, so if we get short reads we're
-         * not working with uninitialised data */
-        g_memset(s->data, 0, size);
-        s->end = s->data + size;
-
-        /* read data */
-        for (i = header.image_height - 1; i >= 0; i--)
-        {
-            size = header.image_width * 3;
-            k = g_file_read(fd, s->data + i * size, size);
-
-            if (k != size)
-            {
-                LOG(LOG_LEVEL_WARNING, "%s: error bitmap file [%s] read",
-                    __func__, filename);
-            }
-        }
-
-        for (i = 0; i < self->height; i++)
-        {
-            for (j = 0; j < self->width; j++)
-            {
-                in_uint8(s, k);
-                color = k;
-                in_uint8(s, k);
-                color |= k << 8;
-                in_uint8(s, k);
-                color |= k << 16;
-
-                if (self->bpp == 8)
-                {
-                    color = xrdp_bitmap_get_index(self, palette, color);
-                }
-                else if (self->bpp == 15)
-                {
-                    color = COLOR15((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
-                }
-                else if (self->bpp == 16)
-                {
-                    color = COLOR16((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
-                }
-
-                xrdp_bitmap_set_pixel(self, j, i, color);
-            }
-        }
+        LOG(LOG_LEVEL_WARNING, "%s: seek error in file %s",
+            __func__, filename);
     }
-    else if (header.bit_count == 8) /* 8 bit bitmap */
+
+    /* Validate the bit count for the file, read any palette, and
+     * dtermine the row size and row processing function */
+    switch (header.bit_count)
     {
-        /* read palette */
-        if (g_file_seek(fd, 14 + header.size) < 0)
-        {
-            LOG(LOG_LEVEL_WARNING, "%s: seek error in file %s",
-                __func__, filename);
-        }
-        size = header.clr_used * sizeof(int);
+        case 24:
+            row_size = ROUND4(header.image_width * 3);
+            process_row_data = process_row_data_24bit;
+            break;
 
-        init_stream(s, size);
-        /* Pre-fill the buffer, so if we get short reads we're
-         * not working with uninitialised data */
-        g_memset(s->data, 0, size);
-        s->end = s->data + size;
+        case 8:
+            read_palette(filename, fd, &header, bmp_palette);
+            row_size = ROUND4(header.image_width);
+            process_row_data = process_row_data_8bit;
+            break;
 
-        len = g_file_read(fd, s->data, size);
-        if (len != size)
-        {
-            LOG(LOG_LEVEL_ERROR, "%s: unexpected read length in file %s",
-                __func__, filename);
-        }
+        case 4:
+            read_palette(filename, fd, &header, bmp_palette);
+            /* The storage for a row is a complex calculation for 4 bit pixels.
+             * a width of 1-8 pixels takes 4 bytes
+             * a width of 9-16 pixels takes 8 bytes, etc
+             * So bytes = (width + 7) / 8 * 4
+             */
+            row_size = ((header.image_width + 7) / 8 * 4);
+            process_row_data = process_row_data_4bit;
+            break;
 
-        for (i = 0; i < header.clr_used; i++)
-        {
-            in_uint32_le(s, palette1[i]);
-        }
-
-        xrdp_bitmap_resize(self, header.image_width, header.image_height);
-        size = header.image_width * header.image_height;
-        init_stream(s, size);
-        /* Pre-fill the buffer, so if we get short reads we're
-         * not working with uninitialised data */
-        g_memset(s->data, 0, size);
-        s->end = s->data + size;
-
-        /* read data */
-        for (i = header.image_height - 1; i >= 0; i--)
-        {
-            size = header.image_width;
-            k = g_file_read(fd, s->data + i * size, size);
-
-            if (k != size)
-            {
-                LOG(LOG_LEVEL_WARNING, "%s: error bitmap file [%s] read",
-                    __func__, filename);
-            }
-        }
-
-        for (i = 0; i < self->height; i++)
-        {
-            for (j = 0; j < self->width; j++)
-            {
-                in_uint8(s, k);
-                color = palette1[k];
-
-                if (self->bpp == 8)
-                {
-                    color = xrdp_bitmap_get_index(self, palette, color);
-                }
-                else if (self->bpp == 15)
-                {
-                    color = COLOR15((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
-                }
-                else if (self->bpp == 16)
-                {
-                    color = COLOR16((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
-                }
-
-                xrdp_bitmap_set_pixel(self, j, i, color);
-            }
-        }
+        default:
+            LOG(LOG_LEVEL_ERROR, "%s: error bitmap file [%s] bad bpp %d",
+                __func__, filename, header.bit_count);
+            free_stream(s);
+            g_file_close(fd);
+            return 1;
     }
-    else if (header.bit_count == 4) /* 4 bit bitmap */
+
+    xrdp_bitmap_resize(self, header.image_width, header.image_height);
+
+    /* Set up the row data buffer. Pre fill it, so if we get short reads
+     * we're not working with uninitialised data */
+    init_stream(s, row_size);
+    g_memset(s->data, 0, row_size);
+    s->end = s->data + row_size;
+
+    /* read and process the pixel data a row at a time */
+    for (row = header.image_height - 1; row >= 0; row--)
     {
-        /* read palette */
-        if (g_file_seek(fd, 14 + header.size) < 0)
-        {
-            LOG(LOG_LEVEL_WARNING, "%s: seek error in file %s",
-                __func__, filename);
-        }
-        size = header.clr_used * sizeof(int);
+        len = g_file_read(fd, s->data, row_size);
 
-        init_stream(s, size);
-        /* Pre-fill the buffer, so if we get short reads we're
-         * not working with uninitialised data */
-        g_memset(s->data, 0, size);
-        s->end = s->data + size;
-
-        len = g_file_read(fd, s->data, size);
-        if (len != size)
+        if (len != row_size)
         {
-            LOG(LOG_LEVEL_ERROR, "%s: unexpected read length in file %s",
+            LOG(LOG_LEVEL_WARNING, "%s: error bitmap file [%s] read",
                 __func__, filename);
         }
 
-        for (i = 0; i < header.clr_used; i++)
-        {
-            in_uint32_le(s, palette1[i]);
-        }
-
-        xrdp_bitmap_resize(self, header.image_width, header.image_height);
-        size = (header.image_width * header.image_height) / 2;
-        init_stream(s, size);
-        /* Pre-fill the buffer, so if we get short reads we're
-         * not working with uninitialised data */
-        g_memset(s->data, 0, size);
-        s->end = s->data + size;
-
-        /* read data */
-        for (i = header.image_height - 1; i >= 0; i--)
-        {
-            size = header.image_width / 2;
-            k = g_file_read(fd, s->data + i * size, size);
-
-            if (k != size)
-            {
-                LOG(LOG_LEVEL_WARNING, "%s: error bitmap file [%s] read",
-                    __func__, filename);
-            }
-        }
-
-        for (i = 0; i < self->height; i++)
-        {
-            for (j = 0; j < self->width; j++)
-            {
-                if ((j & 1) == 0)
-                {
-                    in_uint8(s, k);
-                    color = (k >> 4) & 0xf;
-                }
-                else
-                {
-                    color = k & 0xf;
-                }
-
-                color = palette1[color];
-
-                if (self->bpp == 8)
-                {
-                    color = xrdp_bitmap_get_index(self, palette, color);
-                }
-                else if (self->bpp == 15)
-                {
-                    color = COLOR15((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
-                }
-                else if (self->bpp == 16)
-                {
-                    color = COLOR16((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
-                }
-
-                xrdp_bitmap_set_pixel(self, j, i, color);
-            }
-        }
+        s->p = s->data;
+        (*process_row_data)(self, s, bmp_palette, out_palette, row);
     }
 
     g_file_close(fd);
