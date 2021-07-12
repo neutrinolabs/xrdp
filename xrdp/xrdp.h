@@ -253,7 +253,8 @@ xrdp_bitmap_get_screen_clip(struct xrdp_bitmap *self,
  * @return 0 for success.
  *
  * The background color is only used if the specified image contains
- * an alpha layer
+ * an alpha layer. It is in HCOLOR format, and the bpp must correspond to
+ * the bpp used to create 'self'.
  *
  * After a successful call, the bitmap is resized to the image file size.
  *

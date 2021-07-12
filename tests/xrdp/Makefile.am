@@ -2,7 +2,8 @@ AM_CPPFLAGS = \
   -I$(top_builddir) \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \
-  -I$(top_srcdir)/common
+  -I$(top_srcdir)/common \
+  $(IMLIB2_CFLAGS)
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/tap-driver.sh
@@ -34,4 +35,5 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_common.o \
     $(top_builddir)/xrdp/funcs.o \
     $(top_builddir)/common/libcommon.la \
+    $(IMLIB2_LIBS) \
     @CHECK_LIBS@

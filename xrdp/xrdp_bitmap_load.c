@@ -22,12 +22,122 @@
 #include <config_ac.h>
 #endif
 
+#ifdef USE_IMLIB2
+#   include <Imlib2.h>
+#endif
+
 #include "xrdp.h"
 #include "log.h"
 
 /* Rounds up to the nearest multiple of 4 */
 #define ROUND4(x) (((x) + 3) / 4 * 4)
 
+/* Are we using the builtin BMP format-only loader */
+
+#ifdef USE_BUILTIN_LOADER
+#   undef USE_BUILTIN_LOADER
+#endif
+
+#ifndef USE_IMLIB2
+#   define USE_BUILTIN_LOADER
+#endif
+
+/**
+ * Describes a box within an image
+ */
+struct box
+{
+    int left_margin;
+    int width;
+    int top_margin;
+    int height;
+};
+
+/**************************************************************************//**
+ * Calculates a zoom box, from source and destination image dimensions
+ *
+ * The zoom box is the largest centred part of the source image which
+ * preserves the aspect ratio of the destination image. We find it
+ * by cutting off the left and right sides of the source, or the top
+ * and bottom.
+ *
+ * @param src_width    Width of source image
+ * @param src_height   Height of source image
+ * @param dst_width    Width of destination image
+ * @param dst_height   Height of destination image
+ * @param[out] zb_return Zoom box
+ * @return 0 for success
+ */
+static int
+calculate_zoom_box(int src_width, int src_height,
+                   int dst_width, int dst_height,
+                   struct box *zb_return)
+{
+    int result = 1;
+    struct box zb;
+
+    if (dst_height == 0 || src_height == 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't zoom to or from zero-width images");
+    }
+    else
+    {
+        double dst_ratio = (double)dst_width / dst_height;
+        double src_ratio = (double)src_width / src_height;
+
+        if (src_ratio > dst_ratio)
+        {
+            /* Source is relatively wider than source. Select a box
+             * narrower than the source, but the same height */
+            zb.width = (int)(dst_ratio * src_height + .5);
+            zb.left_margin = (src_width - zb.width) / 2;
+            zb.height = src_height;
+            zb.top_margin = 0;
+        }
+        else
+        {
+            /* Source is relatively taller than source (or same shape) */
+            zb.width = src_width;
+            zb.left_margin = 0;
+            zb.height = (int)(src_width / dst_ratio + .5);
+            zb.top_margin = (src_height - zb.height) / 2;
+        }
+
+        /* Only allow meaningful zoom boxes */
+        if (zb.width < 1 || zb.height < 1)
+        {
+            LOG(LOG_LEVEL_WARNING, "Ignoring pathological zoom"
+                " request (%dx%d) -> (%dx%d)", src_width, src_height,
+                dst_width, dst_height);
+        }
+        else
+        {
+            *zb_return = zb;
+            result = 0;
+        }
+    }
+
+    return result;
+}
+
+/*****************************************************************************/
+static int
+xrdp_bitmap_get_index(struct xrdp_bitmap *self, const int *palette, int color)
+{
+    int r = 0;
+    int g = 0;
+    int b = 0;
+
+    r = (color & 0xff0000) >> 16;
+    g = (color & 0x00ff00) >> 8;
+    b = (color & 0x0000ff) >> 0;
+    r = (r >> 5) << 0;
+    g = (g >> 5) << 3;
+    b = (b >> 6) << 6;
+    return (b | g | r);
+}
+
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * Private routine to swap pixel data between two pixmaps
  * @param a First bitmap
@@ -65,7 +175,9 @@ swap_pixel_data(struct xrdp_bitmap *a, struct xrdp_bitmap *b)
     b->data = tmp_data;
     b->do_not_free_data = tmp_do_not_free_data;
 }
+#endif /* USE_BUILTIN_LOADER */
 
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * Scales a bitmap image
  *
@@ -110,7 +222,10 @@ xrdp_bitmap_scale(struct xrdp_bitmap *self, int targ_width, int targ_height)
 
     return 0;
 }
+#endif /* USE_BUILTIN_LOADER */
 
+
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * Zooms a bitmap image
  *
@@ -126,68 +241,39 @@ xrdp_bitmap_scale(struct xrdp_bitmap *self, int targ_width, int targ_height)
 static int
 xrdp_bitmap_zoom(struct xrdp_bitmap *self, int targ_width, int targ_height)
 {
-    int src_width = self->width;
-    int src_height = self->height;
-    double targ_ratio = (double)targ_width / targ_height;
-    double src_ratio = (double)src_width / src_height;
-
-    unsigned int chop_width;
-    unsigned int chop_left_margin;
-    unsigned int chop_height;
-    unsigned int chop_top_margin;
+    struct box zb;
 
     int result = 0;
 
-    if (src_ratio > targ_ratio)
+    if (calculate_zoom_box(self->width, self->height,
+                           targ_width, targ_height, &zb) == 0)
     {
-        /* Source is relatively wider than source. Select a box
-         * narrower than the source, but the same height */
-        chop_width = (int)(targ_ratio * src_height + .5);
-        chop_left_margin = (src_width - chop_width) / 2;
-        chop_height = src_height;
-        chop_top_margin = 0;
-    }
-    else
-    {
-        /* Source is relatively taller than source (or same shape) */
-        chop_width = src_width;
-        chop_left_margin = 0;
-        chop_height = (int)(src_width / targ_ratio + .5);
-        chop_top_margin = (src_height - chop_height) / 2;
-    }
-
-    /* Only chop the image if there's a need to, and if it will look
-     * meaningful */
-    if (chop_width < 1 || chop_height < 1)
-    {
-        LOG(LOG_LEVEL_WARNING, "xrdp_bitmap_zoom: Ignoring pathological"
-            " request (%dx%d) -> (%dx%d)", src_width, src_height,
-            targ_width, targ_height);
-    }
-    else if (chop_top_margin != 0 || chop_left_margin != 0)
-    {
-        struct xrdp_bitmap *chopbox;
-        chopbox = xrdp_bitmap_create(chop_width, chop_height, self->bpp,
-                                     WND_TYPE_BITMAP, 0);
-        if (chopbox == NULL)
+        /* Need to chop anything? */
+        if (zb.top_margin != 0 || zb.left_margin != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_zoom: no memory");
-            result = 1;
-        }
-        else
-        {
-            result = xrdp_bitmap_copy_box(self, chopbox,
-                                          chop_left_margin, chop_top_margin,
-                                          chop_width, chop_height);
-            if (result != 0)
+            struct xrdp_bitmap *zbitmap;
+            zbitmap = xrdp_bitmap_create(zb.width, zb.height, self->bpp,
+                                         WND_TYPE_BITMAP, 0);
+            if (zbitmap == NULL)
             {
-                LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_zoom: can't copy box");
+                LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_zoom: no memory");
+                result = 1;
             }
             else
             {
-                swap_pixel_data(self, chopbox);
+                result = xrdp_bitmap_copy_box(self, zbitmap,
+                                              zb.left_margin, zb.top_margin,
+                                              zb.width, zb.height);
+                if (result != 0)
+                {
+                    LOG(LOG_LEVEL_ERROR, "xrdp_bitmap_zoom: can't copy box");
+                }
+                else
+                {
+                    swap_pixel_data(self, zbitmap);
+                }
+                xrdp_bitmap_delete(zbitmap);
             }
-            xrdp_bitmap_delete(chopbox);
         }
     }
 
@@ -198,24 +284,9 @@ xrdp_bitmap_zoom(struct xrdp_bitmap *self, int targ_width, int targ_height)
 
     return result;
 }
+#endif /* USE_BUILTIN_LOADER */
 
-/*****************************************************************************/
-static int
-xrdp_bitmap_get_index(struct xrdp_bitmap *self, const int *palette, int color)
-{
-    int r = 0;
-    int g = 0;
-    int b = 0;
-
-    r = (color & 0xff0000) >> 16;
-    g = (color & 0x00ff00) >> 8;
-    b = (color & 0x0000ff) >> 0;
-    r = (r >> 5) << 0;
-    g = (g >> 5) << 3;
-    b = (b >> 6) << 6;
-    return (b | g | r);
-}
-
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * reads the palette from a bmp file with a palette embedded in it
  *
@@ -281,7 +352,9 @@ read_palette(const char *filename, int fd,
 
     free_stream(s);
 }
+#endif /* USE_BUILTIN_LOADER */
 
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * Process a row of data from a 24-bit bmp file
  *
@@ -331,7 +404,9 @@ process_row_data_24bit(struct xrdp_bitmap *self,
         xrdp_bitmap_set_pixel(self, j, row, color);
     }
 }
+#endif /* USE_BUILTIN_LOADER */
 
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * Process a row of data from an 8-bit bmp file
  *
@@ -377,7 +452,9 @@ process_row_data_8bit(struct xrdp_bitmap *self,
         xrdp_bitmap_set_pixel(self, j, row, color);
     }
 }
+#endif /* USE_BUILTIN_LOADER */
 
+#ifdef USE_BUILTIN_LOADER
 /**************************************************************************//**
  * Process a row of data from an 4-bit bmp file
  *
@@ -432,7 +509,9 @@ process_row_data_4bit(struct xrdp_bitmap *self,
         xrdp_bitmap_set_pixel(self, j, row, color);
     }
 }
+#endif /* USE_BUILTIN_LOADER */
 
+#ifdef USE_BUILTIN_LOADER
 /*****************************************************************************/
 /* load a bmp file */
 /* return 0 ok */
@@ -589,7 +668,9 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
 
     return 0;
 }
+#endif /* USE_BUILTIN_LOADER */
 
+#ifdef USE_BUILTIN_LOADER
 /*****************************************************************************/
 int
 xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
@@ -623,5 +704,396 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
                     transform);
         }
     }
+
     return result;
 }
+#endif /* USE_BUILTIN_LOADER */
+
+#ifdef USE_IMLIB2
+/**************************************************************************//**
+ * Log an error from the Imlib2 library
+ *
+ * @param level Log level to use
+ * @param filename file we're trying to load
+ * @param lerr Error return from imlib2
+ */
+static void
+log_imlib2_error(enum logLevels level, const char *filename,
+                 Imlib_Load_Error lerr)
+{
+    const char *msg;
+    char buff[256];
+
+    switch (lerr)
+    {
+        case IMLIB_LOAD_ERROR_NONE:
+            msg = "No error";
+            break;
+        case IMLIB_LOAD_ERROR_FILE_DOES_NOT_EXIST:
+            msg = "No such file";
+            break;
+        case IMLIB_LOAD_ERROR_PERMISSION_DENIED_TO_READ:
+            msg = "Permission denied";
+            break;
+        case IMLIB_LOAD_ERROR_NO_LOADER_FOR_FILE_FORMAT:
+            msg = "Unrecognised file format";
+            break;
+        case IMLIB_LOAD_ERROR_FILE_IS_DIRECTORY:
+        case IMLIB_LOAD_ERROR_PATH_TOO_LONG:
+        case IMLIB_LOAD_ERROR_PATH_COMPONENT_NON_EXISTANT:
+        case IMLIB_LOAD_ERROR_PATH_POINTS_OUTSIDE_ADDRESS_SPACE:
+        case IMLIB_LOAD_ERROR_TOO_MANY_SYMBOLIC_LINKS:
+            msg = "Bad filename";
+            break;
+        case IMLIB_LOAD_ERROR_OUT_OF_MEMORY:
+            msg = " No memory";
+            break;
+        case IMLIB_LOAD_ERROR_OUT_OF_FILE_DESCRIPTORS:
+            msg = "No file decriptors";
+            break;
+        case IMLIB_LOAD_ERROR_OUT_OF_DISK_SPACE:
+            msg = "No disk space";
+            break;
+        case IMLIB_LOAD_ERROR_UNKNOWN:
+            msg = "Unknown error";
+            break;
+        default:
+            g_snprintf(buff, sizeof(buff), "Unrecognised code %d", lerr);
+            msg = buff;
+    }
+
+    LOG(LOG_LEVEL_ERROR, "Error loading %s [%s]", filename, msg);
+}
+#endif /* USE_IMLIB2 */
+
+#ifdef USE_IMLIB2
+/**************************************************************************//**
+ * Blend an imlib2 image onto a background of the specified color
+ *
+ * The current context image is merged. On return the new image is the
+ * current context image, and the old image is deleted.
+ *
+ * @param filename Filename we're working on (for error reporting)
+ * @param r Background red
+ * @param g Background green
+ * @param g Background blue
+ *
+ * @return 0 for success. On failure the current context image is unchanged.
+ */
+static int
+blend_imlib_image_onto_background(const char *filename, int r, int g, int b)
+{
+    int result = 0;
+    Imlib_Image img = imlib_context_get_image();
+
+    if (img == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "No context for blending image");
+        result = 1;
+    }
+    else
+    {
+        int width = imlib_image_get_width();
+        int height = imlib_image_get_height();
+
+        /* Create a suitable image to merge this one onto */
+        Imlib_Image bg = imlib_create_image(width, height);
+        if (bg == NULL)
+        {
+            log_imlib2_error(LOG_LEVEL_ERROR, filename,
+                             IMLIB_LOAD_ERROR_OUT_OF_MEMORY);
+            result = 1;
+        }
+        else
+        {
+            imlib_context_set_image(bg);
+            imlib_context_set_color(r, g, b, 0xff);
+            imlib_image_fill_rectangle(0, 0, width, height);
+            imlib_blend_image_onto_image(img, 0,
+                                         0, 0, width, height,
+                                         0, 0, width, height);
+            imlib_context_set_image(img);
+            imlib_free_image();
+            imlib_context_set_image(bg);
+        }
+    }
+    return result;
+}
+#endif /* USE_IMLIB2 */
+
+#ifdef USE_IMLIB2
+/**************************************************************************//**
+ * Scales an imlib2 image
+ *
+ * The current context image is scaled. On return the new image is the
+ * current context image, and the old image is deleted.
+ *
+ * @param filename Filename we're working on (for error reporting)
+ * @param twidth target width
+ * @param theight target height
+ * @return 0 for success
+ */
+static int
+scale_imlib_image(const char *filename, int twidth, int theight)
+{
+    int result = 0;
+    Imlib_Image img = imlib_context_get_image();
+
+    if (img == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "No context for scaling image");
+        result = 1;
+    }
+    else
+    {
+        int width = imlib_image_get_width();
+        int height = imlib_image_get_height();
+
+        Imlib_Image newimg = imlib_create_cropped_scaled_image(
+                                 0, 0, width, height, twidth, theight);
+        if (newimg == NULL)
+        {
+            log_imlib2_error(LOG_LEVEL_ERROR, filename,
+                             IMLIB_LOAD_ERROR_OUT_OF_MEMORY);
+            result = 1;
+        }
+        else
+        {
+            imlib_free_image();
+            imlib_context_set_image(newimg);
+        }
+    }
+    return result;
+}
+#endif /* USE_IMLIB2 */
+
+#ifdef USE_IMLIB2
+/**************************************************************************//**
+ * Zooms an imlib2 image
+ *
+ * @param filename Filename we're working on (for error reporting)
+ * @param twidth target width
+ * @param theight target height
+ * @return 0 for success
+ */
+static int
+zoom_imlib_image(const char *filename, int twidth, int theight)
+{
+    int result = 0;
+    Imlib_Image img = imlib_context_get_image();
+
+    if (img == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "No context for zooming image");
+        result = 1;
+    }
+    else
+    {
+        struct box zb;
+        Imlib_Image newimg = NULL;
+        int width = imlib_image_get_width();
+        int height = imlib_image_get_height();
+
+        if (calculate_zoom_box(width, height,
+                               twidth, theight, &zb) == 0)
+        {
+            newimg = imlib_create_cropped_scaled_image(
+                         zb.left_margin, zb.top_margin,
+                         zb.width, zb.height, twidth, theight);
+        }
+        else
+        {
+            /* Can't zoom - scale the image instead */
+            newimg = imlib_create_cropped_scaled_image(
+                         0, 0, width, height, twidth, theight);
+        }
+        if (newimg == NULL)
+
+        {
+            log_imlib2_error(LOG_LEVEL_ERROR, filename,
+                             IMLIB_LOAD_ERROR_OUT_OF_MEMORY);
+            result = 1;
+        }
+        else
+        {
+            imlib_free_image();
+            imlib_context_set_image(newimg);
+        }
+    }
+    return result;
+}
+#endif /* USE_IMLIB2 */
+
+#ifdef USE_IMLIB2
+/**************************************************************************//**
+ * Copies imlib2 image data to a bitmap
+ *
+ * @param self bitmap to copy data to
+ * @param out_palette Palette for output bitmap
+ * @return 0 for success
+ */
+static int
+copy_imlib_data_to_bitmap(struct xrdp_bitmap *self,
+                          const int *out_palette)
+{
+    int result = 0;
+    Imlib_Image img = imlib_context_get_image();
+
+    if (img == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "No context for zooming image");
+        result = 1;
+    }
+    else
+    {
+        int width = imlib_image_get_width();
+        int height = imlib_image_get_height();
+        int i;
+        int j;
+        DATA32 *bdata;
+        int color;
+        xrdp_bitmap_resize(self, width, height);
+
+        bdata = imlib_image_get_data_for_reading_only();
+        for (j = 0 ; j < height; ++j)
+        {
+            for (i = 0 ; i < width ; ++i)
+            {
+                color = (*bdata++ & 0xffffff);
+
+                if (self->bpp == 8)
+                {
+                    color = xrdp_bitmap_get_index(self, out_palette, color);
+                }
+                else if (self->bpp == 15)
+                {
+                    color = COLOR15((color & 0xff0000) >> 16,
+                                    (color & 0x00ff00) >> 8,
+                                    (color & 0x0000ff) >> 0);
+                }
+                else if (self->bpp == 16)
+                {
+                    color = COLOR16((color & 0xff0000) >> 16,
+                                    (color & 0x00ff00) >> 8,
+                                    (color & 0x0000ff) >> 0);
+                }
+
+                xrdp_bitmap_set_pixel(self, i, j, color);
+            }
+        }
+    }
+
+    return result;
+}
+#endif /* USE_IMLIB2 */
+
+#ifdef USE_IMLIB2
+/**
+ * Converts an xrdp HCOLOR into RGB values used by imlib2
+ *
+ * @param hcolor Color to convert
+ * @param bpp    Bits-per-pixel for the hcolor
+ * @param[out] r Red value
+ * @param[out] g Green value
+ * @param[out] b Blue value
+ */
+static void hcolor_to_rgb(int hcolor, int bpp, int *r, int *g, int *b)
+{
+    switch (bpp)
+    {
+        case 8:
+            *r = (hcolor & 0x7) << 5;
+            *g = (hcolor & 0x38) << 2;
+            *b = (hcolor & 0xc0);
+            break;
+
+        case 15:
+            SPLITCOLOR15(*r, *g, *b, hcolor);
+            break;
+
+        case 16:
+            SPLITCOLOR16(*r, *g, *b, hcolor);
+            break;
+
+        default:
+            /* Beware : HCOLOR is BGR, not RGB */
+            *r = hcolor & 0xff;
+            *g = (hcolor >> 8) & 0xff;
+            *b = (hcolor >> 16) & 0xff;
+            break;
+    }
+}
+#endif
+
+#ifdef USE_IMLIB2
+/*****************************************************************************/
+int
+xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
+                 const int *palette,
+                 int background,
+                 enum xrdp_bitmap_load_transform transform,
+                 int twidth,
+                 int theight)
+{
+    int result = 0;
+    Imlib_Load_Error lerr;
+    int free_context_image = 0; /* Set if we've got an image loaded */
+    Imlib_Image img = imlib_load_image_with_error_return(filename, &lerr);
+
+    /* Load the image */
+    if (img == NULL)
+    {
+        log_imlib2_error(LOG_LEVEL_ERROR, filename, lerr);
+        result = 1;
+    }
+    else
+    {
+        imlib_context_set_image(img);
+        free_context_image = 1;
+    }
+
+    /* Sort out the background */
+    if (result == 0 && imlib_image_has_alpha())
+    {
+        int r;
+        int g;
+        int b;
+        hcolor_to_rgb(background, self->bpp, &r, &g, &b);
+
+        result = blend_imlib_image_onto_background(filename, r, g, b);
+    }
+
+    if (result == 0)
+    {
+        switch (transform)
+        {
+            case XBLT_NONE:
+                break;
+
+            case XBLT_SCALE:
+                result = scale_imlib_image(filename, twidth, theight);
+                break;
+
+            case XBLT_ZOOM:
+                result = zoom_imlib_image(filename, twidth, theight);
+                break;
+
+            default:
+                LOG(LOG_LEVEL_WARNING, "Invalid bitmap transform %d specified",
+                    transform);
+        }
+    }
+
+    if (result == 0)
+    {
+        result = copy_imlib_data_to_bitmap(self, palette);
+    }
+
+    if (free_context_image)
+    {
+        imlib_free_image();
+    }
+
+    return result;
+}
+#endif /* USE_IMLIB2 */
