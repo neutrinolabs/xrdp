@@ -17,6 +17,8 @@ typedef struct stream
     char *data;    /* holds stream data           */
     char *pos;     /* current read/write position */
     int   size;    /* number of bytes in data     */
+
+    stream() : data(0), pos(0), size(0) {}
 } STREAM;
 
 #define qstream_new(_s, _size)                 \
