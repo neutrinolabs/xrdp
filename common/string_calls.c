@@ -408,6 +408,30 @@ g_atoi(const char *str)
 }
 
 /*****************************************************************************/
+/* As g_atoi() but allows for hexadecimal too */
+int
+g_atoix(const char *str)
+{
+    int base = 10;
+    if (str == NULL)
+    {
+        str = "0";
+    }
+
+    while (isspace(*str))
+    {
+        ++str;
+    }
+
+    if (*str == '0' && tolower(*(str + 1)) == 'x')
+    {
+        str += 2;
+        base = 16;
+    }
+    return strtol(str, NULL, base);
+}
+
+/*****************************************************************************/
 int
 g_htoi(char *str)
 {

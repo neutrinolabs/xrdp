@@ -155,6 +155,15 @@ int      g_strncmp_d(const char *c1, const char *c2, const char delim, int len);
 int      g_strcasecmp(const char *c1, const char *c2);
 int      g_strncasecmp(const char *c1, const char *c2, int len);
 int      g_atoi(const char *str);
+/**
+ * Extends g_atoi(), Converts decimal and hexadecimal number String to integer
+ *
+ * Prefix hexadecimal numbers with '0x'
+ *
+ * @param str String to convert to an integer
+ * @return int Integer expression of a string
+ */
+int      g_atoix(const char *str);
 int      g_htoi(char *str);
 int      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
                            int bytes_out_str);

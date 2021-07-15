@@ -94,10 +94,107 @@ lxrdp_start(struct mod *mod, int w, int h, int bpp)
 
 /******************************************************************************/
 /* return error */
+static void
+set_keyboard_overrides(struct mod *mod)
+{
+    const struct kbd_overrides *ko = &mod->kbd_overrides;
+    rdpSettings *settings = mod->inst->settings;
+
+    if (mod->allow_client_kbd_settings)
+    {
+        settings->kbd_type = mod->client_info.keyboard_type;
+        settings->kbd_subtype = mod->client_info.keyboard_subtype;
+        /* Define the most common number of function keys, 12.
+           because we can't get it from client. */
+        settings->kbd_fn_keys = 12;
+
+        settings->kbd_layout = mod->client_info.keylayout;
+        if (mod->client_info.keyboard_type == 0x00)
+        {
+            LOG(LOG_LEVEL_WARNING, "keyboard_type:[0x%02x] ,Set on Server",
+                mod->client_info.keyboard_type);
+        }
+        else if (mod->client_info.keyboard_type == 0x04)
+        {
+            /* When the keyboard type is 0x04 (PC101/102 keyboard) and the lower 16
+               bits are a value of 0x0411(Japanese KeyLayout), the kbd_layout is set
+               to 0x00000411 no matter what the upper 16 bits are. */
+            if ((mod->client_info.keylayout & 0x0000FFFF) == 0x00000411)
+            {
+                LOG(LOG_LEVEL_INFO, "overrode kbd_layout 0x%08X with 0x%08X"
+                    " for Japanese environment", settings->kbd_layout,
+                    0x00000411);
+                settings->kbd_layout = 0x00000411;
+            }
+            LOG(LOG_LEVEL_INFO,
+                "keyboardLayout for PC101/102 keyboard:"
+                "[0x%08X]", settings->kbd_layout);
+        }
+        else if (mod->client_info.keyboard_type == 0x07)
+        {
+            /* When the keyboard type is 0x07 (Japanese keyboard) and the lower 16
+               bits are a value of 0x0411(Japanese KeyLayout), the kbd_layout is set
+               to 0x00000411 no matter what the upper 16 bits are. */
+            if ((mod->client_info.keylayout & 0x0000FFFF) == 0x00000411)
+            {
+                LOG(LOG_LEVEL_INFO, "overrode kbd_layout 0x%08X with 0x%08X"
+                    " for Japanese environment", settings->kbd_layout,
+                    0x00000411);
+                settings->kbd_layout = 0x00000411;
+            }
+            LOG(LOG_LEVEL_INFO,
+                "keyboardLayout for Japanese PC106/109 keyboard:"
+                "[0x%08X]", settings->kbd_layout);
+        }
+    }
+
+    if (ko->type != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_type 0x%02X with 0x%02X",
+            settings->kbd_type, ko->type);
+        settings->kbd_type = ko->type;
+    }
+
+    if (ko->subtype != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_subtype 0x%02X with 0x%02X",
+            settings->kbd_subtype, ko->subtype);
+        settings->kbd_subtype = ko->subtype;
+    }
+
+    if (ko->fn_keys != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_fn_keys %d with %d",
+            settings->kbd_fn_keys, ko->fn_keys);
+        settings->kbd_fn_keys = ko->fn_keys;
+    }
+
+    if (ko->layout != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_layout 0x%08X with 0x%08X",
+            settings->kbd_layout, ko->layout);
+        settings->kbd_layout = ko->layout;
+    }
+
+    if (ko->layout_mask != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "Masked kbd_layout 0x%08X to 0x%08X",
+            settings->kbd_layout, settings->kbd_layout & ko->layout_mask);
+        settings->kbd_layout &= ko->layout_mask;
+    }
+
+    LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy remote keyboard settings, "
+        "kbd_type:[0x%02X], kbd_subtype:[0x%02X], "
+        "kbd_fn_keys:[%02d], kbd_layout:[0x%08X]",
+        settings->kbd_type, settings->kbd_subtype,
+        settings->kbd_fn_keys, settings->kbd_layout);
+}
+
 static int
 lxrdp_connect(struct mod *mod)
 {
     boolean ok;
+    set_keyboard_overrides(mod);
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "lxrdp_connect:");
 
@@ -489,6 +586,7 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     }
     else if (g_strcmp(name, "keylayout") == 0)
     {
+        LOG(LOG_LEVEL_DEBUG, "%s:[0x%08X]", name, g_atoi(value));
     }
     else if (g_strcmp(name, "name") == 0)
     {
@@ -609,6 +707,31 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
         {
             mod->perf_settings_values_mask |= PERF_DISABLE_CURSOR_SHADOW;
         }
+    }
+    else if (g_strcmp(name, "neutrinordp.allow_client_keyboardLayout") == 0)
+    {
+        /* Keyboard values are stored for later processing */
+        mod->allow_client_kbd_settings = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.overrode_keyboardLayout_mask") == 0)
+    {
+        mod->kbd_overrides.layout_mask = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.overrode_kbd_type") == 0)
+    {
+        mod->kbd_overrides.type = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.overrode_kbd_subtype") == 0)
+    {
+        mod->kbd_overrides.subtype = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.overrode_kbd_fn_keys") == 0)
+    {
+        mod->kbd_overrides.fn_keys = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.overrode_kbd_layout") == 0)
+    {
+        mod->kbd_overrides.layout = g_atoix(value);
     }
     else
     {
