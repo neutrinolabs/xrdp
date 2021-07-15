@@ -453,6 +453,7 @@ AC_CONFIG_FILES([
   sesman/tools/Makefile
   tests/Makefile
   tests/common/Makefile
+  tests/libxrdp/Makefile
   tests/memtest/Makefile
   tools/Makefile
   tools/devel/Makefile
