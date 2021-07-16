@@ -140,7 +140,6 @@ xrdp
 |├── chansrv ···· channel server for xrdp
 |├── libscp ····· authorization library
 |└── tools ······ session management tools for sys admins
-├── tcutils ····· QT based utility program for thin clients
 ├── tests ······· tests for the code
 ├┬─ tools ······· tools
 |└┬─ devel ······ development tools

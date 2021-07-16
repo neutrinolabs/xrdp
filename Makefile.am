@@ -20,7 +20,6 @@ EXTRA_DIST = \
   install.txt \
   m4 \
   postinstall-pak \
-  tcutils \
   vrplayer
 
 if XRDP_NEUTRINORDP
