@@ -40,6 +40,14 @@
 struct SCP_SESSION *
 scp_session_create(void);
 
+/*
+ * Makes a copy of a struct SCP_SESSION object
+ * @param s Object to clone
+ * @return a copy of s, or NULL if no memory
+ */
+struct SCP_SESSION *
+scp_session_clone(const struct SCP_SESSION *s);
+
 int
 scp_session_set_type(struct SCP_SESSION *s, tui8 type);
 

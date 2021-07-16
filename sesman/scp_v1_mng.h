@@ -30,12 +30,11 @@
 /**
  *
  * @brief processes the stream using scp version 1
- * @param in_sck connection socket
- * @param in_s input stream
- * @param out_s output stream
+ * @param atrans incoming transport
+ * @param s incoming session details
  *
  */
-void
-scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
+enum SCP_SERVER_STATES_E
+scp_v1_mng_process_msg(struct trans *atrans, struct SCP_SESSION *s);
 
 #endif

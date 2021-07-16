@@ -32,32 +32,14 @@
 
 //extern struct log_config* s_log;
 
-struct SCP_CONNECTION *
-scp_connection_create(int sck)
+struct trans *
+scp_trans_create(int sck)
 {
-    struct SCP_CONNECTION *conn;
-
-    conn = g_new(struct SCP_CONNECTION, 1);
-
-    if (0 == conn)
+    struct trans *result = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    if (result != NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "[connection:%d] connection create: malloc error", __LINE__);
-        return 0;
+        result->sck = sck;
     }
 
-    conn->in_sck = sck;
-    make_stream(conn->in_s);
-    init_stream(conn->in_s, 8196);
-    make_stream(conn->out_s);
-    init_stream(conn->out_s, 8196);
-
-    return conn;
-}
-
-void
-scp_connection_destroy(struct SCP_CONNECTION *c)
-{
-    free_stream(c->in_s);
-    free_stream(c->out_s);
-    g_free(c);
+    return result;
 }

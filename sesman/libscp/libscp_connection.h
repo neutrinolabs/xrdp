@@ -31,22 +31,18 @@
 
 /**
  *
- * @brief creates a new connection
+ * @brief creates a new SCP transport object
  * @param sck the connection socket
  *
- * @return a struct SCP_CONNECTION* object on success, NULL otherwise
+ * This is a convenience function which calls trans_create() with the
+ * correct parameters.
+ *
+ * Returned object can be freed with trans_delete()
+ *
+ * @return a struct trans* object on success, NULL otherwise
  *
  */
-struct SCP_CONNECTION *
-scp_connection_create(int sck);
-
-/**
- *
- * @brief destroys a struct SCP_CONNECTION* object
- * @param c the object to be destroyed
- *
- */
-void
-scp_connection_destroy(struct SCP_CONNECTION *c);
+struct trans *
+scp_trans_create(int sck);
 
 #endif

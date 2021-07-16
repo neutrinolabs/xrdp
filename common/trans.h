@@ -148,9 +148,9 @@ int
 trans_connect(struct trans *self, const char *server, const char *port,
               int timeout);
 int
-trans_listen_address(struct trans *self, char *port, const char *address);
+trans_listen_address(struct trans *self, const char *port, const char *address);
 int
-trans_listen(struct trans *self, char *port);
+trans_listen(struct trans *self, const char *port);
 struct stream *
 trans_get_in_s(struct trans *self);
 struct stream *

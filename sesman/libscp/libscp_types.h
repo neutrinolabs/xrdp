@@ -31,6 +31,7 @@
 #include "parse.h"
 #include "arch.h"
 #include "log.h"
+#include "trans.h"
 
 #define SCP_SID      tui32
 #define SCP_DISPLAY  tui16
@@ -63,13 +64,6 @@
    exhaustion attempts (CVE-2020-4044) */
 #define SCP_MAX_MESSAGE_SIZE 8192
 
-struct SCP_CONNECTION
-{
-    int in_sck;
-    struct stream *in_s;
-    struct stream *out_s;
-};
-
 struct SCP_SESSION
 {
     tui8  type;
@@ -87,12 +81,16 @@ struct SCP_SESSION
     tui8  ipv6addr[16];
     SCP_DISPLAY display;
     char *errstr;
-    struct SCP_MNG_DATA *mng;
     char *domain;
     char *program;
     char *directory;
     char *client_ip;
     tui8 guid[16];
+    /* added for state */
+    int current_cmd;
+    int return_sid;
+    int retries;
+    int current_try;
 };
 
 struct SCP_DISCONNECTED_SESSION
