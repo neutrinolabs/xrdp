@@ -38,7 +38,6 @@ static enum SCP_CLIENT_STATES_E
 _scp_v1c_check_response(struct trans *t, struct SCP_SESSION *s);
 
 /* client API */
-/* 001 */
 enum SCP_CLIENT_STATES_E
 scp_v1c_connect(struct trans *t, struct SCP_SESSION *s)
 {
@@ -66,7 +65,7 @@ scp_v1c_connect(struct trans *t, struct SCP_SESSION *s)
     out_uint32_be(out_s, 1); /* version */
     out_uint32_be(out_s, size);
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, 1);
+    out_uint16_be(out_s, SCP_CMD_LOGIN);
 
     /* body */
     out_uint8(out_s, s->type);
@@ -106,7 +105,6 @@ scp_v1c_connect(struct trans *t, struct SCP_SESSION *s)
     return _scp_v1c_check_response(t, s);
 }
 
-/* 004 */
 enum SCP_CLIENT_STATES_E
 scp_v1c_resend_credentials(struct trans *t, struct SCP_SESSION *s)
 {
@@ -123,7 +121,7 @@ scp_v1c_resend_credentials(struct trans *t, struct SCP_SESSION *s)
     out_uint32_be(out_s, 1); /* version */
     out_uint32_be(out_s, size);
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, 4);
+    out_uint16_be(out_s, SCP_CMD_RESEND_CREDS);
 
     /* body */
     sz = g_strlen(s->username);
@@ -143,7 +141,6 @@ scp_v1c_resend_credentials(struct trans *t, struct SCP_SESSION *s)
     return _scp_v1c_check_response(t, s);
 }
 
-/* 041 */
 enum SCP_CLIENT_STATES_E
 scp_v1c_get_session_list(struct trans *t, int *scount,
                          struct SCP_DISCONNECTED_SESSION **s)
@@ -152,7 +149,7 @@ scp_v1c_get_session_list(struct trans *t, int *scount,
     struct stream *out_s = t->out_s;
     tui32 version = 1;
     int size = 12;
-    tui16 cmd = 41;
+    tui16 cmd = SCP_CMD_GET_SESSION_LIST;
     tui32 sescnt = 0;    /* total session number */
     tui32 sestmp = 0;    /* additional total session number */
     tui8 pktcnt = 0;     /* packet session count */
@@ -221,7 +218,7 @@ scp_v1c_get_session_list(struct trans *t, int *scount,
 
         in_uint16_be(in_s, cmd);
 
-        if (cmd != 42)
+        if (cmd != SCP_REPLY_SESSIONS_INFO)
         {
             g_free(ds);
             return SCP_CLIENT_STATE_SEQUENCE_ERR;
@@ -288,7 +285,6 @@ scp_v1c_get_session_list(struct trans *t, int *scount,
     return SCP_CLIENT_STATE_LIST_OK;
 }
 
-/* 043 */
 enum SCP_CLIENT_STATES_E
 scp_v1c_select_session(struct trans *t, struct SCP_SESSION *s,
                        SCP_SID sid)
@@ -297,7 +293,7 @@ scp_v1c_select_session(struct trans *t, struct SCP_SESSION *s,
     struct stream *out_s = t->out_s;
     tui32 version = 1;
     int size = 16;
-    tui16 cmd = 43;
+    tui16 cmd = SCP_CMD_SELECT_SESSION;
 
     init_stream(out_s, 64);
 
@@ -354,7 +350,7 @@ scp_v1c_select_session(struct trans *t, struct SCP_SESSION *s,
 
     in_uint16_be(in_s, cmd);
 
-    if (cmd != 46)
+    if (cmd != SCP_REPLY_SESSION_RECONNECTED)
     {
         return SCP_CLIENT_STATE_SEQUENCE_ERR;
     }
@@ -367,14 +363,13 @@ scp_v1c_select_session(struct trans *t, struct SCP_SESSION *s,
     return SCP_CLIENT_STATE_OK;
 }
 
-/* 044 */
 enum SCP_CLIENT_STATES_E
 scp_v1c_select_session_cancel(struct trans *t)
 {
     struct stream *out_s = t->out_s;
     tui32 version = 1;
     tui32 size = 12;
-    tui16 cmd = 44;
+    tui16 cmd = SCP_CMD_SELECT_SESSION_CANCEL;
 
     init_stream(out_s, 64);
 
@@ -435,7 +430,7 @@ _scp_v1c_check_response(struct trans *t, struct SCP_SESSION *s)
 
     in_uint16_be(in_s, cmd);
 
-    if (cmd == 2) /* connection denied */
+    if (cmd == SCP_REPLY_LOGIN_DENIED)
     {
         in_uint16_be(in_s, dim);
 
@@ -456,7 +451,7 @@ _scp_v1c_check_response(struct trans *t, struct SCP_SESSION *s)
 
         return SCP_CLIENT_STATE_CONNECTION_DENIED;
     }
-    else if (cmd == 3) /* resend usr/pwd */
+    else if (cmd == SCP_REPLY_REREQUEST_CREDS)
     {
         in_uint16_be(in_s, dim);
 
@@ -477,7 +472,7 @@ _scp_v1c_check_response(struct trans *t, struct SCP_SESSION *s)
 
         return SCP_CLIENT_STATE_RESEND_CREDENTIALS;
     }
-    else if (cmd == 20) /* password change */
+    else if (cmd == SCP_REPLY_CHANGE_PASSWD)
     {
         in_uint16_be(in_s, dim);
 
@@ -498,7 +493,7 @@ _scp_v1c_check_response(struct trans *t, struct SCP_SESSION *s)
 
         return SCP_CLIENT_STATE_PWD_CHANGE_REQ;
     }
-    else if (cmd == 30) /* display */
+    else if (cmd == SCP_REPLY_NEW_SESSION)
     {
         in_uint16_be(in_s, s->display);
 
@@ -512,7 +507,7 @@ _scp_v1c_check_response(struct trans *t, struct SCP_SESSION *s)
     //{
     //  return SCP_CLIENT_STATE_RECONNECT;
     //}
-    else if (cmd == 40) /* session list */
+    else if (cmd == SCP_REPLY_USER_SESSIONS_EXIST) /* session list */
     {
         return SCP_CLIENT_STATE_SESSION_LIST;
     }

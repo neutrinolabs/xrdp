@@ -1,3 +1,11 @@
+************************************************************
+** Notes on the current version of the SCP protocol used  **
+** to communicate with sesman                             **
+**                                                        **
+** This information is for internal documentational use   **
+** only. It may be incomplete. The SCP protocol is        **
+** internal, and may change for even minor releases.      **
+************************************************************
 
 
 message header

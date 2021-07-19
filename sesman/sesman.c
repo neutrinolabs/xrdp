@@ -34,6 +34,14 @@
 #include "xrdp_configure_options.h"
 #include "string_calls.h"
 
+/**
+ * Maximum number of short-lived connections to sesman
+ *
+ * At the moment, all connections to sesman are short-lived. This may change
+ * in the future
+ */
+#define MAX_SHORT_LIVED_CONNECTIONS 16
+
 struct sesman_startup_params
 {
     const char *sesman_ini;
@@ -296,7 +304,7 @@ sesman_data_in(struct trans *self)
         /* reset for next message */
         self->header_size = 8;
         self->extra_flags = 0;
-        init_stream(self->in_s, 0);
+        init_stream(self->in_s, 0); /* Reset input stream pointers */
     }
     return 0;
 }
@@ -306,7 +314,7 @@ static int
 sesman_listen_conn_in(struct trans *self, struct trans *new_self)
 {
     struct sesman_con *sc;
-    if (g_con_list->count >= 16)
+    if (g_con_list->count >= MAX_SHORT_LIVED_CONNECTIONS)
     {
         LOG(LOG_LEVEL_ERROR, "sesman_data_in: error, too many "
             "connections, rejecting");

@@ -256,14 +256,14 @@ scp_v1s_accept(struct trans *t, struct SCP_SESSION *s)
 
     switch (cmd)
     {
-        case 1:
+        case SCP_CMD_LOGIN:
             s->current_cmd = cmd;
             result = scp_v1s_init_session(t, s);
             break;
 
-        case 4:
+        case SCP_CMD_RESEND_CREDS:
             result = scp_v1s_accept_password_reply(t, s);
-            s->current_cmd = 1; /* Caller re-parses credentials */
+            s->current_cmd = SCP_CMD_LOGIN; /* Caller re-parses credentials */
             break;
 
         default:
@@ -293,7 +293,7 @@ scp_v1s_deny_connection(struct trans *t, const char *reason)
     /* version + size + cmdset + cmd + msglen + msg */
     out_uint32_be(out_s, rlen + 14);
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, 2);
+    out_uint16_be(out_s, SCP_REPLY_LOGIN_DENIED);
     out_uint16_be(out_s, rlen);
     out_uint8p(out_s, reason, rlen);
     s_mark_end(out_s);
@@ -324,7 +324,7 @@ scp_v1s_request_password(struct trans *t, struct SCP_SESSION *s,
     /* version + size + cmdset + cmd + msglen + msg */
     out_uint32_be(out_s, rlen + 14);
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, 3);
+    out_uint16_be(out_s, SCP_REPLY_REREQUEST_CREDS);
     out_uint16_be(out_s, rlen);
     out_uint8p(out_s, reason, rlen);
     s_mark_end(out_s);
@@ -374,21 +374,18 @@ scp_v1s_accept_password_reply(struct trans *t, struct SCP_SESSION *s)
     return SCP_SERVER_STATE_OK;
 }
 
-/* 020 */
 enum SCP_SERVER_STATES_E
 scp_v1s_request_pwd_change(struct trans *t, char *reason, char *npw)
 {
     return SCP_SERVER_STATE_INTERNAL_ERR;
 }
 
-/* 023 */
 enum SCP_SERVER_STATES_E
 scp_v1s_pwd_change_error(struct trans *t, char *error, int retry, char *npw)
 {
     return SCP_SERVER_STATE_INTERNAL_ERR;
 }
 
-/* 030 */
 enum SCP_SERVER_STATES_E
 scp_v1s_connect_new_session(struct trans *t, SCP_DISPLAY d)
 {
@@ -400,7 +397,7 @@ scp_v1s_connect_new_session(struct trans *t, SCP_DISPLAY d)
     /* version + size + cmdset + cmd + msglen + msg */
     out_uint32_be(out_s, 14);
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, 30);
+    out_uint16_be(out_s, SCP_REPLY_NEW_SESSION);
     out_uint16_be(out_s, d);
     s_mark_end(out_s);
     if (0 != trans_force_write(t))
@@ -411,7 +408,6 @@ scp_v1s_connect_new_session(struct trans *t, SCP_DISPLAY d)
     return SCP_SERVER_STATE_OK;
 }
 
-/* 032 */
 enum SCP_SERVER_STATES_E
 scp_v1s_connection_error(struct trans *t, const char *error)
 {
@@ -429,7 +425,7 @@ scp_v1s_connection_error(struct trans *t, const char *error)
     /* version + size + cmdset + cmd */
     out_uint32_be(out_s, 12 + len);
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, SCP_CMD_CONN_ERROR);
+    out_uint16_be(out_s, SCP_REPLY_CMD_CONN_ERROR);
     out_uint8a(out_s, error, len);
     s_mark_end(out_s);
     if (0 != trans_force_write(t))
@@ -439,7 +435,6 @@ scp_v1s_connection_error(struct trans *t, const char *error)
     return SCP_SERVER_STATE_END;
 }
 
-/* 040 */
 #if 0
 enum SCP_SERVER_STATES_E
 scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNECTED_SESSION *ds, SCP_SID *sid)
@@ -719,7 +714,7 @@ scp_v1s_list_sessions40(struct trans *t)
     out_uint32_be(out_s, 1);                         /* version */
     out_uint32_be(out_s, 12);                        /* size    */
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);   /* cmdset  */
-    out_uint16_be(out_s, 40);                        /* cmd     */
+    out_uint16_be(out_s, SCP_REPLY_USER_SESSIONS_EXIST);/* cmd     */
     s_mark_end(out_s);
     if (0 != trans_force_write(t))
     {
@@ -757,7 +752,7 @@ scp_v1s_list_sessions42(struct trans *t, int sescnt, struct SCP_DISCONNECTED_SES
         /* header */
         s_push_layer(out_s, channel_hdr, 8);
         out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-        out_uint16_be(out_s, 42);
+        out_uint16_be(out_s, SCP_REPLY_SESSIONS_INFO);
 
         /* session count */
         out_uint32_be(out_s, sescnt);
@@ -845,14 +840,14 @@ scp_v1s_accept_list_sessions_reply(int cmd, struct trans *t)
     in_s = t->in_s;
     switch (cmd)
     {
-        case 41:
+        case SCP_CMD_GET_SESSION_LIST:
             break;
-        case 43:
+        case SCP_CMD_SELECT_SESSION:
             in_uint32_be(in_s, s->return_sid);
             break;
-        case 44:
+        case SCP_CMD_SELECT_SESSION_CANCEL:
             break;
-        case 45:
+        case SCP_CMD_FORCE_NEW_CONN:
             break;
         default:
             break;
@@ -860,7 +855,6 @@ scp_v1s_accept_list_sessions_reply(int cmd, struct trans *t)
     return SCP_SERVER_STATE_OK;
 }
 
-/* 046 was: 031 struct SCP_DISCONNECTED_SESSION* ds, */
 enum SCP_SERVER_STATES_E
 scp_v1s_reconnect_session(struct trans *t, SCP_DISPLAY d)
 {
@@ -872,7 +866,7 @@ scp_v1s_reconnect_session(struct trans *t, SCP_DISPLAY d)
     out_uint32_be(out_s, 1); /* version */
     out_uint32_be(out_s, 14); /* size */
     out_uint16_be(out_s, SCP_COMMAND_SET_DEFAULT);
-    out_uint16_be(out_s, 46); /* cmd */
+    out_uint16_be(out_s, SCP_REPLY_SESSION_RECONNECTED); /* cmd */
     /* session data */
     out_uint16_be(out_s, d); /* session display */
     s_mark_end(out_s);

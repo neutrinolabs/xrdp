@@ -191,7 +191,7 @@ scp_v1_process41(struct trans *t, struct SCP_SESSION *s)
     e = scp_v1s_list_sessions42(t, scount, slist);
     if (SCP_SERVER_STATE_OK != e)
     {
-        LOG(LOG_LEVEL_ERROR, "scp_v1s_list_sessions42 failed");
+        LOG(LOG_LEVEL_WARNING, "scp_v1s_list_sessions42 failed");
     }
 
     return SCP_SERVER_STATE_OK;
@@ -209,7 +209,7 @@ scp_v1_process43(struct trans *t, struct SCP_SESSION *s)
     if (0 == sitem)
     {
         e = scp_v1s_connection_error(t, "Internal error");
-        LOG(LOG_LEVEL_INFO, "Cannot find session item on the chain");
+        LOG(LOG_LEVEL_INFO, "No session exists with PID %d", s->return_sid);
     }
     else
     {
@@ -253,17 +253,17 @@ scp_v1_process(struct trans *t, struct SCP_SESSION *s)
     ; /* astyle 3.1 needs this, or the switch is badly formatted */
     switch (s->current_cmd)
     {
-        case 1:
+        case SCP_CMD_LOGIN:
             return scp_v1_process1(t, s);
-        case 4:
+        case SCP_CMD_RESEND_CREDS:
             return scp_v1_process4(t, s);
-        case 41:
+        case SCP_CMD_GET_SESSION_LIST:
             return scp_v1_process41(t, s);
-        case 43:
+        case SCP_CMD_SELECT_SESSION:
             return scp_v1_process43(t, s);
-        case 44:
+        case SCP_CMD_SELECT_SESSION_CANCEL:
             return scp_v1_process44(t, s);
-        case 45:
+        case SCP_CMD_FORCE_NEW_CONN:
             return scp_v1_process45(t, s);
     }
     return SCP_SERVER_STATE_END;
