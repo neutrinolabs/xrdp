@@ -97,6 +97,7 @@ lxrdp_start(struct mod *mod, int w, int h, int bpp)
 static void
 set_keyboard_overrides(struct mod *mod)
 {
+    const struct kbd_overrides *ko = &mod->kbd_overrides;
     rdpSettings *settings = mod->inst->settings;
 
     if (mod->allow_client_kbd_settings)
@@ -126,6 +127,42 @@ set_keyboard_overrides(struct mod *mod)
             /* Nothing to do. */
         }
     }
+
+    if (ko->type != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_type 0x%02X with 0x%02X",
+            settings->kbd_type, ko->type);
+        settings->kbd_type = ko->type;
+    }
+
+    if (ko->subtype != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_subtype 0x%02X with 0x%02X",
+            settings->kbd_subtype, ko->subtype);
+        settings->kbd_subtype = ko->subtype;
+    }
+
+    if (ko->fn_keys != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_fn_keys %d with %d",
+            settings->kbd_fn_keys, ko->fn_keys);
+        settings->kbd_fn_keys = ko->fn_keys;
+    }
+
+    if (ko->layout != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode kbd_layout 0x%08X with 0x%08X",
+            settings->kbd_layout, ko->layout);
+        settings->kbd_layout = ko->layout;
+    }
+
+    if (ko->layout_mask != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "Masked kbd_layout 0x%08X to 0x%08X",
+            settings->kbd_layout, settings->kbd_layout & ko->layout_mask);
+        settings->kbd_layout &= ko->layout_mask;
+    }
+
     LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy remote keyboard settings, "
         "kbd_type:[0x%02X], kbd_subtype:[0x%02X], "
         "kbd_fn_keys:[%02d], kbd_layout:[0x%08X]",
@@ -529,6 +566,7 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     }
     else if (g_strcmp(name, "keylayout") == 0)
     {
+        LOG(LOG_LEVEL_DEBUG, "%s:[0x%08X]", name, g_atoi(value));
     }
     else if (g_strcmp(name, "name") == 0)
     {
@@ -2236,6 +2274,31 @@ lfreerdp_receive_channel_data(freerdp *instance, int channelId, uint8 *data,
         {
             LOG(LOG_LEVEL_ERROR, "lfreerdp_receive_channel_data: error %d", error);
         }
+    }
+    else if (g_strcmp(name, "neutrinordp.allow_client_keyboardLayout") == 0)
+    {
+        mod->allow_client_kbd_settings = g_text2bool(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_keyboardLayout_mask") == 0)
+    {
+        /* Keyboard values are stored for later processing */
+        mod->kbd_overrides.layout_mask = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_type") == 0)
+    {
+        mod->kbd_overrides.type = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_subtype") == 0)
+    {
+        mod->kbd_overrides.subtype = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_fn_keys") == 0)
+    {
+        mod->kbd_overrides.fn_keys = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_layout") == 0)
+    {
+        mod->kbd_overrides.layout = g_atoix(value);
     }
     else
     {
