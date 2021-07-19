@@ -94,10 +94,50 @@ lxrdp_start(struct mod *mod, int w, int h, int bpp)
 
 /******************************************************************************/
 /* return error */
+static void
+set_keyboard_overrides(struct mod *mod)
+{
+    rdpSettings *settings = mod->inst->settings;
+
+    if (mod->allow_client_kbd_settings)
+    {
+        settings->kbd_type = mod->client_info.keyboard_type;
+        settings->kbd_subtype = mod->client_info.keyboard_subtype;
+        /* Define the most common number of function keys, 12.
+           because we can't get it from client. */
+        settings->kbd_fn_keys = 12;
+        settings->kbd_layout = mod->client_info.keylayout;
+
+        /* Exception processing for each RDP Keyboard type */
+        if (mod->client_info.keyboard_type == 0x00)
+        {
+            /* 0x00000000 : Set on Server */
+            LOG(LOG_LEVEL_WARNING, "keyboard_type:[0x%02x] ,Set on Server",
+                mod->client_info.keyboard_type);
+        }
+        else if (mod->client_info.keyboard_type == 0x04)
+        {
+            /* 0x00000004 : IBM enhanced (101- or 102-key) keyboard */
+            /* Nothing to do. */
+        }
+        else if (mod->client_info.keyboard_type == 0x07)
+        {
+            /* 0x00000007 : Japanese keyboard */
+            /* Nothing to do. */
+        }
+    }
+    LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy remote keyboard settings, "
+        "kbd_type:[0x%02X], kbd_subtype:[0x%02X], "
+        "kbd_fn_keys:[%02d], kbd_layout:[0x%08X]",
+        settings->kbd_type, settings->kbd_subtype,
+        settings->kbd_fn_keys, settings->kbd_layout);
+}
+
 static int
 lxrdp_connect(struct mod *mod)
 {
     boolean ok;
+    set_keyboard_overrides(mod);
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "lxrdp_connect:");
 
@@ -609,6 +649,10 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
         {
             mod->perf_settings_values_mask |= PERF_DISABLE_CURSOR_SHADOW;
         }
+    }
+    else if (g_strcmp(name, "neutrinordp.allow_client_keyboardLayout") == 0)
+    {
+        mod->allow_client_kbd_settings = g_text2bool(value);
     }
     else
     {
