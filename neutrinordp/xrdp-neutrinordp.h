@@ -63,6 +63,15 @@ struct pointer_item
 
 struct source_info;
 
+struct kbd_overrides
+{
+    int type;
+    int subtype;
+    int fn_keys;
+    int layout;
+    int layout_mask;
+};
+
 struct mod
 {
     int size; /* size of this struct */
@@ -222,4 +231,6 @@ struct mod
     int allow_client_experiencesettings;
     int perf_settings_override_mask; /* Performance bits overridden in ini file */
     int perf_settings_values_mask; /* Values of overridden performance bits */
+    int allow_client_kbd_settings;
+    struct kbd_overrides kbd_overrides; /* neutrinordp.overide_kbd_* values */
 };

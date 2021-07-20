@@ -275,6 +275,17 @@ password=ask
 ; you problems (e.g. cursor is a black rectangle) try disabling cursor
 ; shadows by uncommenting the following line.
 #perf.cursor_shadow=false
+; By default, NeutrinoRDP uses the keyboard layout of the remote RDP Server.
+; If you want to tell the remote the keyboard layout of the RDP Client,
+; by uncommenting the following line.
+#neutrinordp.allow_client_keyboardLayout=true
+; The following options will override the remote keyboard layout settings.
+; These options are for DEBUG and are not recommended for regular use.
+#neutrinordp.override_keyboardLayout_mask=0x0000FFFF
+#neutrinordp.override_kbd_type=0x04
+#neutrinordp.override_kbd_subtype=0x01
+#neutrinordp.override_kbd_fn_keys=12
+#neutrinordp.override_kbd_layout=0x00000409
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true
