@@ -692,6 +692,27 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     {
         mod->allow_client_kbd_settings = g_text2bool(value);
     }
+    else if (g_strcmp(name, "neutrinordp.override_keyboardLayout_mask") == 0)
+    {
+        /* Keyboard values are stored for later processing */
+        mod->kbd_overrides.layout_mask = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_type") == 0)
+    {
+        mod->kbd_overrides.type = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_subtype") == 0)
+    {
+        mod->kbd_overrides.subtype = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_fn_keys") == 0)
+    {
+        mod->kbd_overrides.fn_keys = g_atoix(value);
+    }
+    else if (g_strcmp(name, "neutrinordp.override_kbd_layout") == 0)
+    {
+        mod->kbd_overrides.layout = g_atoix(value);
+    }
     else
     {
         LOG(LOG_LEVEL_WARNING, "lxrdp_set_param: unknown name [%s] value [%s]", name, value);
@@ -2274,31 +2295,6 @@ lfreerdp_receive_channel_data(freerdp *instance, int channelId, uint8 *data,
         {
             LOG(LOG_LEVEL_ERROR, "lfreerdp_receive_channel_data: error %d", error);
         }
-    }
-    else if (g_strcmp(name, "neutrinordp.allow_client_keyboardLayout") == 0)
-    {
-        mod->allow_client_kbd_settings = g_text2bool(value);
-    }
-    else if (g_strcmp(name, "neutrinordp.override_keyboardLayout_mask") == 0)
-    {
-        /* Keyboard values are stored for later processing */
-        mod->kbd_overrides.layout_mask = g_atoix(value);
-    }
-    else if (g_strcmp(name, "neutrinordp.override_kbd_type") == 0)
-    {
-        mod->kbd_overrides.type = g_atoix(value);
-    }
-    else if (g_strcmp(name, "neutrinordp.override_kbd_subtype") == 0)
-    {
-        mod->kbd_overrides.subtype = g_atoix(value);
-    }
-    else if (g_strcmp(name, "neutrinordp.override_kbd_fn_keys") == 0)
-    {
-        mod->kbd_overrides.fn_keys = g_atoix(value);
-    }
-    else if (g_strcmp(name, "neutrinordp.override_kbd_layout") == 0)
-    {
-        mod->kbd_overrides.layout = g_atoix(value);
     }
     else
     {
