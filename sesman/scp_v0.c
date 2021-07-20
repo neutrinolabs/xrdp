@@ -157,6 +157,8 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
     else
     {
+        LOG(LOG_LEVEL_INFO, "Username or password error for user: %s",
+            s->username);
         scp_v0s_deny_connection(c);
     }
     if (do_auth_end)
