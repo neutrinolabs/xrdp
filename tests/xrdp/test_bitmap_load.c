@@ -35,6 +35,15 @@ static int WHITE = COLOR24RGB(255, 255, 255);
 #define TEST_BM_BOTTOM_LEFT_PIXEL BLUE
 #define TEST_BM_BOTTOM_RIGHT_PIXEL WHITE
 
+/*
+ * Scaling bitmaps properly will introduce color changes with dithering.
+ * Also some filetypes use compression, and these do not represent colors
+ * perfectly.
+ *
+ * This is the Pythagorean distance we allow between two colors for them to
+ * be considered close enough to each other */
+#define MAX_SIMILAR_COLOR_DISTANCE 3
+
 void setup(void)
 {
 }
@@ -68,16 +77,44 @@ check_pixel(struct xrdp_bitmap *bm, int i, int j, int expected)
     int pixel = xrdp_bitmap_get_pixel(bm, i, j);
     if (pixel != expected)
     {
-        ck_abort_msg("Pixmap (%d,%d) expected %06x, got %06x",
+        ck_abort_msg("Pixmap (%d,%d) expected 0x%06x, got 0x%06x",
                      i, j, expected, pixel);
     }
 }
 
-/* Check we can load bitmaps of various depths with various transforms */
+/* Calculates whether two colors are close enough to be considered the same */
 static void
-load_and_transform_bm(int depth,
-                      enum xrdp_bitmap_load_transform transform,
-                      int twidth, int theight)
+check_is_close_color(struct xrdp_bitmap *bm, int i, int j, int expected)
+{
+    int pixel = xrdp_bitmap_get_pixel(bm, i, j);
+    int r1;
+    int g1;
+    int b1;
+    int r2;
+    int g2;
+    int b2;
+    int variance;
+
+    SPLITCOLOR32(r1, g1, b1, pixel);
+    SPLITCOLOR32(r2, g2, b2, expected);
+
+    variance = ((r1 - r2) * (r1 - r2) +
+                (g1 - g2) * (g1 - g2) +
+                (b1 - b2) * (b1 - b2));
+
+    if (variance > MAX_SIMILAR_COLOR_DISTANCE * MAX_SIMILAR_COLOR_DISTANCE)
+    {
+        ck_abort_msg("Pixmap (%d,%d) expected 0x%06x, got 0x%06x"
+                     " which exceeds distance of %d",
+                     i, j, expected, pixel, MAX_SIMILAR_COLOR_DISTANCE);
+    }
+}
+
+/* Check we can load images of various depths with various transforms */
+static void
+load_and_transform_img(const char *name,
+                       enum xrdp_bitmap_load_transform transform,
+                       int twidth, int theight)
 {
     struct xrdp_wm *wm = NULL;
     int result;
@@ -85,18 +122,15 @@ load_and_transform_bm(int depth,
     int width;
     int height;
 
-    char name[256];
-    int top_left_pixel;
-    int top_right_pixel;
-    int bottom_left_pixel;
-    int bottom_right_pixel;
+    char full_name[256];
 
     struct xrdp_bitmap *bm = xrdp_bitmap_create(4, 4, 32, WND_TYPE_IMAGE, wm);
 
     ck_assert_ptr_ne(bm, NULL);
 
-    g_snprintf(name, sizeof(name), IMAGEDIR "/test_%dbit.bmp", depth);
-    result = xrdp_bitmap_load(bm, name, NULL, 0, transform, twidth, theight);
+    g_snprintf(full_name, sizeof(full_name), IMAGEDIR "/%s", name);
+    result = xrdp_bitmap_load(bm, full_name, NULL, HCOLOR(bm->bpp, WHITE),
+                              transform, twidth, theight);
 
     ck_assert_int_eq(result, 0);
 
@@ -116,23 +150,18 @@ load_and_transform_bm(int depth,
         ck_assert_int_eq(bm->height, theight);
     }
 
-    /* Corners OK? */
-    top_left_pixel = xrdp_bitmap_get_pixel(bm, 0, 0);
-    top_right_pixel = xrdp_bitmap_get_pixel(bm, width - 1, 0);
-    bottom_left_pixel = xrdp_bitmap_get_pixel(bm, 0, height - 1);
-    bottom_right_pixel = xrdp_bitmap_get_pixel(bm, width - 1, height - 1);
-
-    ck_assert_int_eq(top_left_pixel, TEST_BM_TOP_LEFT_PIXEL);
-    ck_assert_int_eq(top_right_pixel, TEST_BM_TOP_RIGHT_PIXEL);
-    ck_assert_int_eq(bottom_left_pixel, TEST_BM_BOTTOM_LEFT_PIXEL);
-    ck_assert_int_eq(bottom_right_pixel, TEST_BM_BOTTOM_RIGHT_PIXEL);
+    /* Corners OK?  Allow for dithering */
+    check_is_close_color(bm, 0, 0, TEST_BM_TOP_LEFT_PIXEL);
+    check_is_close_color(bm, width - 1, 0, TEST_BM_TOP_RIGHT_PIXEL);
+    check_is_close_color(bm, 0, height - 1, TEST_BM_BOTTOM_LEFT_PIXEL);
+    check_is_close_color(bm, width - 1, height - 1, TEST_BM_BOTTOM_RIGHT_PIXEL);
 
     xrdp_bitmap_delete(bm);
 }
 
 /* Check we can load bitmaps that aren't a multiple of 4 pixels wide */
 static void
-load_not4_bm(int depth)
+load_not4_img(const char *name)
 {
     struct xrdp_wm *wm = NULL;
     int result;
@@ -140,7 +169,7 @@ load_not4_bm(int depth)
     const int width = TEST_NOT4_BM_WIDTH;
     const int height = TEST_NOT4_BM_HEIGHT;
 
-    char name[256];
+    char full_name[256];
     int i;
     int j;
 
@@ -148,8 +177,9 @@ load_not4_bm(int depth)
 
     ck_assert_ptr_ne(bm, NULL);
 
-    g_snprintf(name, sizeof(name), IMAGEDIR "/test_not4_%dbit.bmp", depth);
-    result = xrdp_bitmap_load(bm, name, NULL, 0, XBLT_NONE, 0, 0);
+    g_snprintf(full_name, sizeof(full_name), IMAGEDIR "/%s", name);
+    result = xrdp_bitmap_load(bm, full_name, NULL, HCOLOR(bm->bpp, WHITE),
+                              XBLT_NONE, 0, 0);
 
     ck_assert_int_eq(result, 0);
 
@@ -175,79 +205,91 @@ load_not4_bm(int depth)
 
 START_TEST(test_bitmap_load__4_bit__ok)
 {
-    load_and_transform_bm(4, XBLT_NONE, 0, 0);
+    load_and_transform_img("test_4bit.bmp", XBLT_NONE, 0, 0);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__8_bit__ok)
 {
-    load_and_transform_bm(8, XBLT_NONE, 0, 0);
+    load_and_transform_img("test_8bit.bmp", XBLT_NONE, 0, 0);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__24_bit__ok)
 {
-    load_and_transform_bm(24, XBLT_NONE, 0, 0);
+    load_and_transform_img("test_24bit.bmp", XBLT_NONE, 0, 0);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__max_width_zoom__ok)
 {
-    load_and_transform_bm(24,
-                          XBLT_ZOOM, MAX_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
+    load_and_transform_img("test_24bit.bmp",
+                           XBLT_ZOOM, MAX_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__max_height_zoom__ok)
 {
-    load_and_transform_bm(24,
-                          XBLT_ZOOM, MIN_VDESKTOP_WIDTH, MAX_VDESKTOP_HEIGHT);
+    load_and_transform_img("test_24bit.bmp",
+                           XBLT_ZOOM, MIN_VDESKTOP_WIDTH, MAX_VDESKTOP_HEIGHT);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__min_zoom__ok)
 {
-    load_and_transform_bm(24,
-                          XBLT_ZOOM, MIN_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
+    load_and_transform_img("test_24bit.bmp",
+                           XBLT_ZOOM, MIN_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__max_width_scale__ok)
 {
-    load_and_transform_bm(24,
-                          XBLT_SCALE, MAX_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
+    load_and_transform_img("test_24bit.bmp",
+                           XBLT_SCALE, MAX_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__max_height_scale__ok)
 {
-    load_and_transform_bm(24,
-                          XBLT_SCALE, MIN_VDESKTOP_WIDTH, MAX_VDESKTOP_HEIGHT);
+    load_and_transform_img("test_24bit.bmp",
+                           XBLT_SCALE, MIN_VDESKTOP_WIDTH, MAX_VDESKTOP_HEIGHT);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__min_scale__ok)
 {
-    load_and_transform_bm(24,
-                          XBLT_SCALE, MIN_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
+    load_and_transform_img("test_24bit.bmp",
+                           XBLT_SCALE, MIN_VDESKTOP_WIDTH, MIN_VDESKTOP_HEIGHT);
 }
 END_TEST
 
 START_TEST(test_bitmap_load__not_4_pixels_wide_4_bit__ok)
 {
-    load_not4_bm(4);
+    load_not4_img("test_not4_4bit.bmp");
 }
 END_TEST
 
 START_TEST(test_bitmap_load__not_4_pixels_wide_8_bit__ok)
 {
-    load_not4_bm(8);
+    load_not4_img("test_not4_8bit.bmp");
 }
 END_TEST
 
 START_TEST(test_bitmap_load__not_4_pixels_wide_24_bit__ok)
 {
-    load_not4_bm(24);
+    load_not4_img("test_not4_24bit.bmp");
+}
+END_TEST
+
+START_TEST(test_png_load__blend_ok)
+{
+    load_and_transform_img("test_alpha_blend.png", XBLT_NONE, 0, 0);
+}
+END_TEST
+
+START_TEST(test_jpg_load__ok)
+{
+    load_and_transform_img("test1.jpg", XBLT_NONE, 0, 0);
 }
 END_TEST
 
