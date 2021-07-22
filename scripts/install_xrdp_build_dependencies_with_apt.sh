@@ -50,6 +50,7 @@ in
                     libjpeg-dev \
                     libmp3lame-dev \
                     libfdk-aac-dev \
+                    libimlib2-dev \
                     libopus-dev \
                     libpixman-1-dev"
                 ;;
