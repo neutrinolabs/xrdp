@@ -16,7 +16,9 @@ EXTRA_DIST = \
   test_24bit.bmp \
   test_not4_4bit.bmp \
   test_not4_8bit.bmp \
-  test_not4_24bit.bmp
+  test_not4_24bit.bmp \
+  test1.jpg \
+  test_alpha_blend.png
 
 TESTS = test_xrdp
 check_PROGRAMS = test_xrdp

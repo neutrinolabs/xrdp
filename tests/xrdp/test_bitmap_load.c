@@ -299,6 +299,7 @@ make_suite_test_bitmap_load(void)
 {
     Suite *s;
     TCase *tc_bitmap_load;
+    TCase *tc_other_load;
 
     s = suite_create("BitmapLoad");
 
@@ -319,6 +320,14 @@ make_suite_test_bitmap_load(void)
     tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_24_bit__ok);
 
     suite_add_tcase(s, tc_bitmap_load);
+
+#ifdef USE_IMLIB2
+    tc_other_load = tcase_create("xrdp_other_load");
+    tcase_add_checked_fixture(tc_other_load, setup, teardown);
+    tcase_add_test(tc_other_load, test_png_load__blend_ok);
+    tcase_add_test(tc_other_load, test_jpg_load__ok);
+    suite_add_tcase(s, tc_other_load);
+#endif
 
     return s;
 }
