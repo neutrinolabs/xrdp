@@ -1687,11 +1687,12 @@ scard_process_cmd_wait_reader_state_change(struct trans *con,
                                            struct stream *in_s)
 {
     int rv;
-    int timeOut __attribute__((unused));
+    int timeOut;
     int reader_state_bytes;
     struct stream *out_s;
     struct pcsc_uds_client *uds_client;
 
+    UNUSED_VAR(timeOut); //remove when timeOut variable used outside debug mode
     LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_process_cmd_wait_reader_state_change:");
     uds_client = (struct pcsc_uds_client *) (con->callback_data);
     uds_client->waiting = 1;
