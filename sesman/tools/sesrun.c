@@ -504,6 +504,7 @@ handle_scpv0_auth_reply(int sck)
         int data;
         int display;
 
+        in_s->end = in_s->data + 8;
         in_uint32_be(in_s, version);
         in_uint32_be(in_s, size);
         if (version == 0 && size >= 14)

@@ -49,7 +49,6 @@
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
-extern int g_sck; /* in sesman.c */
 struct session_chain *g_sessions;
 int g_session_count;
 
@@ -411,8 +410,7 @@ session_start_chansrv(char *username, int display)
 /******************************************************************************/
 /* called with the main thread */
 static int
-session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
-                   struct SCP_SESSION *s)
+session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
 {
     int display = 0;
     int pid = 0;
@@ -494,10 +492,18 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
         LOG(LOG_LEVEL_INFO,
             "[session start] (display %d): calling auth_start_session from pid %d",
             display, g_getpid());
+
+        /* Clone the session object, as the passed-in copy will be
+         * deleted by sesman_close_all() */
+        if ((s = scp_session_clone(s)) == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Failed to clone the session data - out of memory");
+            g_exit(1);
+        }
         auth_start_session(data, display);
         g_delete_wait_obj(g_term_event);
-        g_tcp_close(g_sck);
-        g_tcp_close(c->in_sck);
+        sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);
         g_sprintf(screen, ":%d", display);
@@ -1008,10 +1014,9 @@ session_reconnect_fork(int display, char *username, long data)
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
 int
-session_start(long data, tui8 type, struct SCP_CONNECTION *c,
-              struct SCP_SESSION *s)
+session_start(long data, tui8 type, struct SCP_SESSION *s)
 {
-    return session_start_fork(data, type, c, s);
+    return session_start_fork(data, type, s);
 }
 
 /******************************************************************************/

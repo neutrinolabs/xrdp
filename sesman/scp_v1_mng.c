@@ -37,8 +37,8 @@ extern struct config_sesman *g_cfg; /* in sesman.c */
 static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f);
 
 /******************************************************************************/
-void
-scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
+enum SCP_SERVER_STATES_E
+scp_v1_mng_process_msg(struct trans *atrans, struct SCP_SESSION *s)
 {
     long data;
     enum SCP_SERVER_STATES_E e;
@@ -51,24 +51,24 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
     if (!data)
     {
-        scp_v1s_mng_deny_connection(c, "Login failed");
+        scp_v1s_mng_deny_connection(atrans, "Login failed");
         LOG(LOG_LEVEL_INFO,
             "[MNG] Login failed for user %s. Connection terminated", s->username);
         auth_end(data);
-        return;
+        return SCP_SERVER_STATE_END;
     }
 
     /* testing if login is allowed */
     if (0 == access_login_mng_allowed(s->username))
     {
-        scp_v1s_mng_deny_connection(c, "Access to Terminal Server not allowed.");
+        scp_v1s_mng_deny_connection(atrans, "Access to Terminal Server not allowed.");
         LOG(LOG_LEVEL_INFO,
             "[MNG] User %s not allowed on TS. Connection terminated", s->username);
         auth_end(data);
-        return;
+        return SCP_SERVER_STATE_END;
     }
 
-    e = scp_v1s_mng_allow_connection(c, s);
+    e = scp_v1s_mng_allow_connection(atrans, s);
 
     end = 1;
 
@@ -89,7 +89,7 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                     LOG(LOG_LEVEL_INFO, "No sessions on Terminal Server");
                 }
 
-                e = scp_v1s_mng_list_sessions(c, s, scount, slist);
+                e = scp_v1s_mng_list_sessions(atrans, s, scount, slist);
                 g_free(slist);
                 break;
             default:
@@ -102,6 +102,7 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
     /* cleanup */
     auth_end(data);
+    return SCP_SERVER_STATE_END;
 }
 
 static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
