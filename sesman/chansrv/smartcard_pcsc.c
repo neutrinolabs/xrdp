@@ -48,7 +48,11 @@
 
 
 #define MAX_ATR_SIZE 33
-#define MAX_READERS 32
+
+//The MAX_READERS value is generaly 16, but on some RHEL release, ti might be 32 or 64. See the PCSCLITE_MAX_READERS_CONTEXTS of the libpcsclite source package and adjust MAX_READERS value accordingly.
+#define MAX_READERS 16
+//#define MAX_READERS 32
+//#define MAX_READERS 64
 
 extern int g_display_num; /* in chansrv.c */
 
