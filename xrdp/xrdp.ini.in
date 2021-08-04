@@ -123,12 +123,27 @@ ls_height=430
 ; login screen background color in RGB format
 ls_bg_color=dedede
 
-; optional background image filename (bmp format).
+; optional background image filename. BMP format is always supported,
+; but other formats will be supported if xrdp is build with imlib2
+; The transform can be one of the following:-
+;     none  : No transformation. Image is placed in bottom-right corner
+;             of the screen.
+;     scale : Image is scaled to the screen size. The image aspect
+;             ratio is not preserved.
+;     zoom  : Image is scaled to the screen size. The image aspect
+;             ratio is preserved by clipping the image.
 #ls_background_image=
+#ls_background_transform=none
 
 ; logo
-; full path to bmp-file or file in shared folder
+; full path to file or file in shared folder. BMP format is always supported,
+; but other formats will be supported if xrdp is build with imlib2
+; For transform values, see 'ls_background_transform'. The logo width and
+; logo height are ignored for a transform of 'none'.
 ls_logo_filename=
+#ls_logo_transform=none
+#ls_logo_width=240
+#ls_logo_height=140
 ls_logo_x_pos=55
 ls_logo_y_pos=50
 

@@ -740,12 +740,27 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                            XRDP_SHARE_PATH, globals->ls_background_image);
             }
             LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
-            xrdp_bitmap_load(but, fileName, self->palette,
-                             globals->ls_top_window_bg_color, XBLT_NONE, 0, 0);
+            if (globals->ls_background_transform == XBLT_NONE)
+            {
+                xrdp_bitmap_load(but, fileName, self->palette,
+                                 globals->ls_top_window_bg_color,
+                                 globals->ls_background_transform,
+                                 0, 0);
+                /* Place the background in the bottom right corner */
+                but->left = self->screen->width - but->width;
+                but->top = self->screen->height - but->height;
+            }
+            else
+            {
+                xrdp_bitmap_load(but, fileName, self->palette,
+                                 globals->ls_top_window_bg_color,
+                                 globals->ls_background_transform,
+                                 self->screen->width, self->screen->height);
+                but->left = 0;
+                but->top = 0;
+            }
             but->parent = self->screen;
             but->owner = self->screen;
-            but->left = self->screen->width - but->width;
-            but->top = self->screen->height - but->height;
             list_add_item(self->screen->child_list, (long)but);
         }
 
@@ -764,7 +779,10 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
         }
 
         xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette,
-                         globals->ls_bg_color, XBLT_NONE, 0, 0);
+                         globals->ls_bg_color,
+                         globals->ls_logo_transform,
+                         globals->ls_logo_width,
+                         globals->ls_logo_height);
         but->parent = self->login_window;
         but->owner = self->login_window;
         but->left = globals->ls_logo_x_pos;
@@ -834,6 +852,42 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 }
 
 /**
+ * Map a bitmap transform string to a value
+ *
+ * @param param Param we're trying to read
+ * @param str   String we're trying to map
+ *
+ * @return enum xrdp_bitmap_load_transform value
+ *
+ * A warning is logged if the string is not recognised
+ *****************************************************************************/
+static enum xrdp_bitmap_load_transform
+bitmap_transform_str_to_val(const char *param, const char *str)
+{
+    enum xrdp_bitmap_load_transform rv;
+    if (g_strcmp(str, "none") == 0)
+    {
+        rv = XBLT_NONE;
+    }
+    else if (g_strcmp(str, "scale") == 0)
+    {
+        rv = XBLT_SCALE;
+    }
+    else if (g_strcmp(str, "zoom") == 0)
+    {
+        rv = XBLT_ZOOM;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_WARNING, "Param '%s' has unrecognised value '%s'"
+            " - assuming 'none'", param, str);
+        rv = XBLT_NONE;
+    }
+
+    return rv;
+}
+
+/**
  * Load configuration from xrdp.ini file
  *
  * @param config XRDP configuration to initialise
@@ -868,6 +922,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
     globals->ls_width = 350;
     globals->ls_height = 350;
+    globals->ls_background_transform = XBLT_NONE;
+    globals->ls_logo_transform = XBLT_NONE;
     globals->ls_logo_x_pos = 63;
     globals->ls_logo_y_pos = 50;
     globals->ls_label_x_pos = 30;
@@ -1105,16 +1161,39 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             globals->ls_title[255] = 0;
         }
 
-        else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
-        {
-            g_strncpy(globals->ls_logo_filename, v, 255);
-            globals->ls_logo_filename[255] = 0;
-        }
         else if (g_strncmp(n, "ls_background_image", 255) == 0)
         {
             g_strncpy(globals->ls_background_image, v, 255);
             globals->ls_background_image[255] = 0;
         }
+
+        else if (g_strncmp(n, "ls_background_transform", 255) == 0)
+        {
+            globals->ls_background_transform =
+                bitmap_transform_str_to_val(n, v);
+        }
+
+        else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
+        {
+            g_strncpy(globals->ls_logo_filename, v, 255);
+            globals->ls_logo_filename[255] = 0;
+        }
+
+        else if (g_strncmp(n, "ls_logo_transform", 255) == 0)
+        {
+            globals->ls_logo_transform = bitmap_transform_str_to_val(n, v);
+        }
+
+        else if (g_strncmp(n, "ls_logo_width", 64) == 0)
+        {
+            globals->ls_logo_width = g_atoi(v);
+        }
+
+        else if (g_strncmp(n, "ls_logo_height", 64) == 0)
+        {
+            globals->ls_logo_height = g_atoi(v);
+        }
+
         else if (g_strncmp(n, "ls_logo_x_pos", 64) == 0)
         {
             globals->ls_logo_x_pos = g_atoi(v);
