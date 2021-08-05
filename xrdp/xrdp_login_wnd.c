@@ -643,7 +643,9 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     int log_width;
     int log_height;
     int regular;
-    int primary_x_offset;
+    int primary_width;     /* Dimensions of primary screen */
+    int primary_height;
+    int primary_x_offset;  /* Offset of centre of primary screen */
     int primary_y_offset;
     int index;
     int x;
@@ -653,8 +655,10 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     globals = &self->xrdp_config->cfg_globals;
 
-    primary_x_offset = self->screen->width / 2;
-    primary_y_offset = self->screen->height / 2;
+    primary_width = self->screen->width;
+    primary_height = self->screen->height;
+    primary_x_offset = primary_width / 2;
+    primary_y_offset = primary_height / 2;
 
     log_width = globals->ls_width;
     log_height = globals->ls_height;
@@ -686,8 +690,10 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                 cx = self->client_info->minfo_wm[index].right;
                 cy = self->client_info->minfo_wm[index].bottom;
 
-                primary_x_offset = x + ((cx  - x) / 2);
-                primary_y_offset = y + ((cy - y) / 2);
+                primary_width = cx - x;
+                primary_height = cy - y;
+                primary_x_offset = x + (primary_width / 2);
+                primary_y_offset = y + (primary_height / 2);
                 break;
             }
         }
@@ -747,17 +753,17 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                                  globals->ls_background_transform,
                                  0, 0);
                 /* Place the background in the bottom right corner */
-                but->left = self->screen->width - but->width;
-                but->top = self->screen->height - but->height;
+                but->left = primary_x_offset + (primary_width / 2) - but->width;
+                but->top = primary_y_offset + (primary_height / 2) - but->height;
             }
             else
             {
                 xrdp_bitmap_load(but, fileName, self->palette,
                                  globals->ls_top_window_bg_color,
                                  globals->ls_background_transform,
-                                 self->screen->width, self->screen->height);
-                but->left = 0;
-                but->top = 0;
+                                 primary_width, primary_height);
+                but->left = primary_x_offset - (primary_width / 2);
+                but->top = primary_y_offset - (primary_height / 2);
             }
             but->parent = self->screen;
             but->owner = self->screen;
