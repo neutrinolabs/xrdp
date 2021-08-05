@@ -731,43 +731,62 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     {
         /* Load the background image. */
         /* If no file is specified no default image will be loaded. */
-        /* We only load the image if bpp > 8 */
-        if (globals->ls_background_image[0] != 0 && self->screen->bpp > 8)
+        /* We only load the image if bpp > 8, and if the user hasn't
+         * disabled wallpaer in the performance settings */
+        if (globals->ls_background_image[0] != 0)
         {
-            char fileName[256] ;
-            but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-            if (globals->ls_background_image[0] == '/')
+            if (self->screen->bpp <= 8)
             {
-                g_snprintf(fileName, 255, "%s", globals->ls_background_image);
+                LOG(LOG_LEVEL_INFO, "Login background not loaded for bpp=%d",
+                    self->screen->bpp);
+            }
+            else if ((self->client_info->rdp5_performanceflags &
+                      RDP5_NO_WALLPAPER) != 0)
+            {
+                LOG(LOG_LEVEL_INFO, "Login background not loaded as client "
+                    "has requested PERF_DISABLE_WALLPAPER");
             }
             else
             {
-                g_snprintf(fileName, 255, "%s/%s",
-                           XRDP_SHARE_PATH, globals->ls_background_image);
+                char fileName[256] ;
+                but = xrdp_bitmap_create(4, 4, self->screen->bpp,
+                                         WND_TYPE_IMAGE, self);
+                if (globals->ls_background_image[0] == '/')
+                {
+                    g_snprintf(fileName, 255, "%s",
+                               globals->ls_background_image);
+                }
+                else
+                {
+                    g_snprintf(fileName, 255, "%s/%s",
+                               XRDP_SHARE_PATH, globals->ls_background_image);
+                }
+                LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
+                if (globals->ls_background_transform == XBLT_NONE)
+                {
+                    xrdp_bitmap_load(but, fileName, self->palette,
+                                     globals->ls_top_window_bg_color,
+                                     globals->ls_background_transform,
+                                     0, 0);
+                    /* Place the background in the bottom right corner */
+                    but->left = primary_x_offset + (primary_width / 2) -
+                                but->width;
+                    but->top = primary_y_offset + (primary_height / 2) -
+                               but->height;
+                }
+                else
+                {
+                    xrdp_bitmap_load(but, fileName, self->palette,
+                                     globals->ls_top_window_bg_color,
+                                     globals->ls_background_transform,
+                                     primary_width, primary_height);
+                    but->left = primary_x_offset - (primary_width / 2);
+                    but->top = primary_y_offset - (primary_height / 2);
+                }
+                but->parent = self->screen;
+                but->owner = self->screen;
+                list_add_item(self->screen->child_list, (long)but);
             }
-            LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
-            if (globals->ls_background_transform == XBLT_NONE)
-            {
-                xrdp_bitmap_load(but, fileName, self->palette,
-                                 globals->ls_top_window_bg_color,
-                                 globals->ls_background_transform,
-                                 0, 0);
-                /* Place the background in the bottom right corner */
-                but->left = primary_x_offset + (primary_width / 2) - but->width;
-                but->top = primary_y_offset + (primary_height / 2) - but->height;
-            }
-            else
-            {
-                xrdp_bitmap_load(but, fileName, self->palette,
-                                 globals->ls_top_window_bg_color,
-                                 globals->ls_background_transform,
-                                 primary_width, primary_height);
-                but->left = primary_x_offset - (primary_width / 2);
-                but->top = primary_y_offset - (primary_height / 2);
-            }
-            but->parent = self->screen;
-            but->owner = self->screen;
-            list_add_item(self->screen->child_list, (long)but);
         }
 
         /* if logo image not specified, use default */
