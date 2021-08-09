@@ -1003,21 +1003,34 @@ vnc_clip_process_rfb_data(struct vnc *v)
             vc->rfb_clip_s = 0;
 
             make_stream(vc->rfb_clip_s);
-            if (size >= 0)
+            if (size < 0)
             {
-                init_stream(vc->rfb_clip_s, size);
-            }
-            if (vc->rfb_clip_s->data == NULL)
-            {
-                LOG(LOG_LEVEL_ERROR,
-                    "Memory exhausted allocating %d bytes for RFB clip data",
-                    size);
+                /* This shouldn't happen - see Extended Clipboard
+                 * Pseudo-Encoding */
+                LOG(LOG_LEVEL_ERROR, "Unexpected size %d for RFB data", size);
                 rv = 1;
+            }
+            else if (size == 0)
+            {
+                LOG(LOG_LEVEL_DEBUG, "RFB clip data cleared by VNC server");
             }
             else
             {
-                LOG(LOG_LEVEL_DEBUG, "Reading %d clip bytes from RFB", size);
-                rv = trans_force_read_s(v->trans, vc->rfb_clip_s, size);
+                init_stream(vc->rfb_clip_s, size);
+                if (vc->rfb_clip_s->data == NULL)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Memory exhausted allocating %d bytes"
+                        " for RFB clip data",
+                        size);
+                    rv = 1;
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_DEBUG, "Reading %d clip bytes from RFB",
+                        size);
+                    rv = trans_force_read_s(v->trans, vc->rfb_clip_s, size);
+                }
             }
 
             /* Consider telling the RDP client about the update only if we've
