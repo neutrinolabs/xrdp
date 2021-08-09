@@ -281,6 +281,7 @@ START_TEST(test_bitmap_load__not_4_pixels_wide_24_bit__ok)
 }
 END_TEST
 
+#ifdef USE_IMLIB2
 START_TEST(test_png_load__blend_ok)
 {
     load_and_transform_img("test_alpha_blend.png", XBLT_NONE, 0, 0);
@@ -292,6 +293,7 @@ START_TEST(test_jpg_load__ok)
     load_and_transform_img("test1.jpg", XBLT_NONE, 0, 0);
 }
 END_TEST
+#endif
 
 /******************************************************************************/
 Suite *
@@ -299,7 +301,9 @@ make_suite_test_bitmap_load(void)
 {
     Suite *s;
     TCase *tc_bitmap_load;
+#ifdef USE_IMLIB2
     TCase *tc_other_load;
+#endif
 
     s = suite_create("BitmapLoad");
 

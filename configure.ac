@@ -166,7 +166,7 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
-AC_ARG_WITH(imlib2, AC_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use (yes/no/auto/<path>)]),,)
+AC_ARG_WITH(imlib2, AC_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
 # Obsolete options
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
@@ -220,25 +220,19 @@ AC_CHECK_HEADER([security/pam_constants.h],
 
 # Find imlib2
 case "$with_imlib2" in
-    no) AC_MSG_NOTICE([imlib2 will not be supported])
+    '' | no) AC_MSG_NOTICE([imlib2 will not be supported])
         use_imlib2=no
-        ;;
-    '' | auto)
-        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.10],
-            [use_imlib2=yes],
-            [use_imlib2=no])
         ;;
     yes)
         PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.10],
             [use_imlib2=yes],
             [AC_MSG_ERROR([please install libimlib2-dev or imlib2-devel])])
         ;;
-    *)
-        AC_MSG_CHECKING([for imlib2 in $with_imlib2])
+    /*) AC_MSG_CHECKING([for imlib2 in $with_imlib2])
         if test -d $with_imlib2/lib; then
-            IMLIB2_LIBS="-L $with_imlib2/lib -lImlib2"
+            IMLIB2_LIBS="-L$with_imlib2/lib -lImlib2"
         elif test -d $with_imlib2/lib64; then
-            IMLIB2_LIBS="-L $with_imlib2/lib64 -lImlib2"
+            IMLIB2_LIBS="-L$with_imlib2/lib64 -lImlib2"
         else
             AC_MSG_RESULT([no])
             AC_MSG_ERROR([Can't find libImlib2 in $with_imlib2])
@@ -254,6 +248,8 @@ case "$with_imlib2" in
         AC_SUBST([IMLIB2_LIBS])
         AC_SUBST([IMLIB2_CFLAGS])
         use_imlib2=yes
+        ;;
+    *)  AC_MSG_ERROR([--with-imlib2 needs yes/no or absolute path])
 esac
 
 if test x$use_imlib2 = xyes; then
