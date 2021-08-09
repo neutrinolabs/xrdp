@@ -67,6 +67,7 @@ in
             libgl1-mesa-dev:i386 \
             libglu1-mesa-dev:i386 \
             libjpeg-dev:i386 \
+            libimlib2-dev:i386 \
             libmp3lame-dev:i386 \
             libfdk-aac-dev:i386 \
             libopus-dev:i386 \

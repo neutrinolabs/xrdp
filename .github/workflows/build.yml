@@ -97,7 +97,7 @@ jobs:
                   --enable-pixman --with-imlib2"
       CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
                   --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
-                  --disable-pixman --host=i686-linux"
+                  --disable-pixman --with-imlib2 --host=i686-linux"
 
       PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
       CFLAGS_i386: "-m32"
