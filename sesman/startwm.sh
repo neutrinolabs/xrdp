@@ -90,6 +90,14 @@ wm_start()
     exit 0
   fi
 
+  # alpine
+  if [ -r /etc/X11/xinit/xinitrc ]; then
+    pre_start
+    . /etc/X11/xinit/xinitrc
+    post_start
+    exit 0
+  fi
+
   pre_start
   xterm
   post_start
