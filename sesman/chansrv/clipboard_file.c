@@ -445,6 +445,10 @@ clipboard_send_file_data(int streamId, int lindex,
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     g_file_close(fd);
+
+    /* Log who transferred which file via clipboard for the purpose of audit */
+    LOG(LOG_LEVEL_INFO, "S2C: Transfered a file: filename=%s, uid=%d", full_fn, g_getuid());
+
     return rv;
 }
 
