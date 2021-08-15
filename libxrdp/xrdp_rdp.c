@@ -50,6 +50,10 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
     char *tmp = NULL;
     int tmp_length = 0;
 
+    client_info->xrdp_keyboard_overrides.type = -1;
+    client_info->xrdp_keyboard_overrides.subtype = -1;
+    client_info->xrdp_keyboard_overrides.layout = -1;
+
     /* initialize (zero out) local variables: */
     items = list_create();
     items->auto_free = 1;

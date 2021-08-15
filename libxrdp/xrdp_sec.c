@@ -383,20 +383,20 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         client_info->keyboard_type, client_info->keyboard_subtype,
         client_info->keylayout);
 
-    if (ko->type != 0)
+    if (ko->type != -1)
     {
         LOG(LOG_LEVEL_INFO, "overrode keyboard_type 0x%02X"
             " with 0x%02X", client_info->keyboard_type, ko->type);
         client_info->keyboard_type = ko->type;
     }
-    if (ko->subtype != 0)
+    if (ko->subtype != -1)
     {
         LOG(LOG_LEVEL_INFO, "overrode keyboard_subtype 0x%02X"
             " with 0x%02X", client_info->keyboard_subtype,
             ko->subtype);
         client_info->keyboard_subtype = ko->subtype;
     }
-    if (ko->layout != 0)
+    if (ko->layout != -1)
     {
         LOG(LOG_LEVEL_INFO, "overrode keylayout 0x%08X"
             " with 0x%08X", client_info->keylayout, ko->layout);
