@@ -38,6 +38,21 @@ struct info_string_tag
 #define INFO_STRING_END_OF_LIST { '\0', NULL }
 
 /**
+ * Map a bitmask to a string value
+ *
+ *
+ * This structure is used by g_bitmask_to_str() to specify the
+ * string for each bit in the bitmask
+ */
+struct bitmask_string
+{
+    int mask;
+    const char *str;
+};
+
+#define BITMASK_STRING_END_OF_LIST { 0, NULL }
+
+/**
  * Processes a format string for general info
  *
  * @param[out] dest Destination buffer
@@ -139,6 +154,25 @@ g_bytes_to_hexdump(const char *src, int len);
  */
 int
 g_get_display_num_from_display(const char *display_text);
+
+/**
+ * Converts a bitmask into a string for output purposes
+ *
+ * @param bitmask Bitmask to convert
+ * @param bitdefs Definitions for strings for bits
+ * @param delim Delimiter to use between strings
+ * @param buff Output buff
+ * @param bufflen Length of buff, including terminator '`\0'
+ *
+ * @return Total length excluding terminator which would be written, as
+ *         in snprintf(). Can be used to check for overflow
+ *
+ * @note Any undefined bits in the bitmask are appended to the output as
+ *       a hexadecimal constant.
+ */
+int
+g_bitmask_to_str(int bitmask, const struct bitmask_string[],
+                 char delim, char *buff, int bufflen);
 
 int      g_strlen(const char *text);
 const char *g_strchr(const char *text, int c);
