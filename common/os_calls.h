@@ -93,7 +93,8 @@ int      g_sck_socket_ok(int sck);
 int      g_sck_can_send(int sck, int millis);
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
-void     g_write_ip_address(int rcv_sck, char *ip_address, int bytes);
+void     g_write_connection_description(int rcv_sck,
+                                        char *description, int bytes);
 void     g_sleep(int msecs);
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);

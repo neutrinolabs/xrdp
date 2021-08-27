@@ -378,8 +378,10 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     self->client_info.cache3_entries = 262;
     self->client_info.cache3_size = 4096;
     /* load client ip info */
-    bytes = sizeof(self->client_info.client_ip) - 1;
-    g_write_ip_address(trans->sck, self->client_info.client_ip, bytes);
+    bytes = sizeof(self->client_info.connection_description) - 1;
+    g_write_connection_description(trans->sck,
+                                   self->client_info.connection_description,
+                                   bytes);
     self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
 #if defined(XRDP_NEUTRINORDP)
     self->rfx_enc = rfx_context_new();

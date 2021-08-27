@@ -108,10 +108,10 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
         LOG(LOG_LEVEL_DEBUG, "No disconnected sessions for this user "
             "- we create a new one");
 
-        if (0 != s->client_ip)
+        if (0 != s->connection_description)
         {
             LOG(LOG_LEVEL_INFO, "++ created session (access granted): "
-                "username %s, ip %s", s->username, s->client_ip);
+                "username %s, ip %s", s->username, s->connection_description);
         }
         else
         {
@@ -219,9 +219,9 @@ scp_v1_process43(struct trans *t, struct SCP_SESSION *s)
         {
             LOG(LOG_LEVEL_ERROR, "scp_v1s_reconnect_session failed");
         }
-        if (0 != s->client_ip)
+        if (0 != s->connection_description)
         {
-            LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, sitem->pid, s->client_ip);
+            LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, sitem->pid, s->connection_description);
         }
         else
         {

@@ -1389,11 +1389,9 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 }
 
 /*****************************************************************************/
-/*
- * TODO: this function writes not only IP address, name is confusing
- */
+
 void
-g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
+g_write_connection_description(int rcv_sck, char *description, int bytes)
 {
     char *addr;
     int port;
@@ -1454,13 +1452,13 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 
         if (ok)
         {
-            g_snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
+            g_snprintf(description, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
         }
     }
 
     if (!ok)
     {
-        g_snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
+        g_snprintf(description, bytes, "NULL:NULL - socket: %d", rcv_sck);
     }
 
     g_free(addr);

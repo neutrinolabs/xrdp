@@ -84,7 +84,7 @@ struct SCP_SESSION
     char *domain;
     char *program;
     char *directory;
-    char *client_ip;
+    char *connection_description;
     tui8 guid[16];
     /* added for state */
     int current_cmd;
