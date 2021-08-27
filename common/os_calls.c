@@ -1465,6 +1465,45 @@ g_write_connection_description(int rcv_sck, char *description, int bytes)
 }
 
 /*****************************************************************************/
+
+const char *g_get_ip_from_description(const char *description,
+                                      char *ip, int bytes)
+{
+    if (bytes > 0)
+    {
+        /* Look for the space after ip:port */
+        const char *end = g_strchr(description, ' ');
+        if (end == NULL)
+        {
+            end = description; /* Means we've failed */
+        }
+        else
+        {
+            /* Look back for the last ':' */
+            while (end > description && *end != ':')
+            {
+                --end;
+            }
+        }
+
+        if (end == description)
+        {
+            g_snprintf(ip, bytes, "<unknown>");
+        }
+        else if ((end - description) < (bytes - 1))
+        {
+            g_strncpy(ip, description, end - description);
+        }
+        else
+        {
+            g_strncpy(ip, description, bytes - 1);
+        }
+    }
+
+    return ip;
+}
+
+/*****************************************************************************/
 void
 g_sleep(int msecs)
 {

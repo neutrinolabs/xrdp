@@ -96,6 +96,7 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
 {
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
+    char ip[64];
 
     tmp = g_sessions;
 
@@ -115,12 +116,34 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
             return 0;
     }
 
+    if ((policy & SESMAN_CFG_SESS_POLICY_I) != 0)
+    {
+        /* We'll need to compare on IP addresses */
+        g_get_ip_from_description(connection_description, ip, sizeof(ip));
+    }
+    else
+    {
+        ip[0] = '\0';
+    }
+
     LOG(LOG_LEVEL_DEBUG,
         "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
         policy, name, width, height, bpp, type, connection_description);
 
     while (tmp != 0)
     {
+        char tmp_ip[64];
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_I) != 0)
+        {
+            g_get_ip_from_description(tmp->item->connection_description,
+                                      tmp_ip, sizeof (tmp_ip));
+        }
+        else
+        {
+            tmp_ip[0] = '\0';
+        }
+
         LOG(LOG_LEVEL_DEBUG,
             "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
             tmp->item,
@@ -133,7 +156,7 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
                 (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
                  (tmp->item->width == width && tmp->item->height == height)) &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-                 (g_strncmp_d(connection_description, tmp->item->connection_description, ':', 255) == 0)) &&
+                 (g_strcmp(ip, tmp_ip) == 0)) &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
                  (g_strncmp(connection_description, tmp->item->connection_description, 255) == 0)) &&
                 tmp->item->bpp == bpp &&

@@ -79,9 +79,17 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
         }
         else
         {
+            char ip[64];
+            g_get_ip_from_description(s->connection_description,
+                                      ip, sizeof(ip));
+            /*
+             * The message is intended for use by fail2ban, so for
+             * future-proofing we only log the IP address rather than the
+             * connection description */
+            LOG(LOG_LEVEL_INFO,
+                "Username or password error for user: %s from %s",
+                s->username, ip);
             scp_v1s_deny_connection(t, "Login failed");
-            LOG(LOG_LEVEL_INFO, "Login failed for user %s. "
-                "Connection terminated", s->username);
             return SCP_SERVER_STATE_END;
         }
         return SCP_SERVER_STATE_OK;

@@ -95,6 +95,16 @@ int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
 void     g_write_connection_description(int rcv_sck,
                                         char *description, int bytes);
+/**
+ * Extracts the IP address from the connection description
+ * @param description Connection description (from
+ *                    g_write_connection_description())
+ * @param ip buffer to write IP address to
+ * @param bytes Size of ip buffer
+ * @return Pointer to IP for convenience
+ */
+const char *g_get_ip_from_description(const char *description,
+                                      char *ip, int bytes);
 void     g_sleep(int msecs);
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);
