@@ -374,9 +374,34 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
-    LOG(LOG_LEVEL_INFO, "xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
-        client_info->keyboard_type, client_info->keyboard_subtype);
+    const struct xrdp_keyboard_overrides *ko =
+            &client_info->xrdp_keyboard_overrides;
 
+    LOG(LOG_LEVEL_INFO, "xrdp_load_keyboard_layout: Keyboard information sent"
+        " by the RDP client, keyboard_type:[0x%02X], keyboard_subtype:[0x%02X],"
+        " keylayout:[0x%08X]",
+        client_info->keyboard_type, client_info->keyboard_subtype,
+        client_info->keylayout);
+
+    if (ko->type != -1)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode keyboard_type 0x%02X"
+            " with 0x%02X", client_info->keyboard_type, ko->type);
+        client_info->keyboard_type = ko->type;
+    }
+    if (ko->subtype != -1)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode keyboard_subtype 0x%02X"
+            " with 0x%02X", client_info->keyboard_subtype,
+            ko->subtype);
+        client_info->keyboard_subtype = ko->subtype;
+    }
+    if (ko->layout != -1)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode keylayout 0x%08X"
+            " with 0x%08X", client_info->keylayout, ko->layout);
+        client_info->keylayout = ko->layout;
+    }
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
     g_memset(client_info->model, 0, sizeof(client_info->model));

@@ -33,6 +33,14 @@ struct monitor_info
     int is_primary;
 };
 
+/* xrdp keyboard overrids */
+struct xrdp_keyboard_overrides
+{
+    int type;
+    int subtype;
+    int layout;
+};
+
 /**
  * Information about the xrdp client
  *
@@ -172,9 +180,12 @@ struct xrdp_client_info
 
     int enable_token_login;
     char domain_user_separator[16];
+
+    /* xrdp.override_* values */
+    struct xrdp_keyboard_overrides xrdp_keyboard_overrides;
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
-#define CLIENT_INFO_CURRENT_VERSION 20210225
+#define CLIENT_INFO_CURRENT_VERSION 20210723
 
 #endif
