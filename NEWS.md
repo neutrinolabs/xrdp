@@ -1,3 +1,41 @@
+# Release notes for xrdp v0.9.17 (2021/08/31)
+
+## General announcements
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## New features
+* The IP address, port, and user name of NeutrinoRDP Proxy connection are logged in xrdp.log - these connections may not have a sesman log to use (#1873)
+* The performance settings for NeutrinoRDP can be now configured (#1903)
+* Support for Alpine Linux in startwm.sh (#1965)
+* clipboard: log file transfer for the purpose of audit (#1954)
+* Client's Keyboard layout now can be overridden by xrdp configuration for debugging purposes (#1952)
+
+## Bug fixes
+* PAM_USER environment variable is not set when using pam_exec module (#1882)
+* Allow common channel settings to be overridden for modules as well as chansrv (#1899)
+* The text only-copy/paste interface for the VNC module (used only when chansrv is not active) has been improved (#1900)
+* The unsupported `tcutils` utility has been removed (#1943)
+* The quality of TLS logging has been improved (#1926)
+* Keyboard information is now passed correctly through NeuutrinoRDP, and can be overridden if required (#1934)
+* A message is now logged in the sesman log for unsuccessful login attempts detailing the user used (#1947)
+
+
+## Internal changes
+* astyle formatting is now checked during CI builds (#1879)
+* Generalise development build options, and add --enable-devel-streamcheck (#1887)
+* Now uses cppcheck 2.5 for CI builds (#1938)
+* The SCP protocol is now using a standard `struct trans` for messaging rather than its own thing (#1925)
+
+## Changes for packagers or developers
+* The `--enable-xrdpdebug` developer option has been replaced with finer-grained `--enable-devel-*` options. Consequently, specifying `--enable-xrdpdebug` is now an error (#1913)
+
+## Known issues
+
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.16 (2021/04/30)
 
 ## New features
