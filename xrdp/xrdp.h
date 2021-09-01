@@ -185,7 +185,7 @@ int
 xrdp_region_get_rect(struct xrdp_region *self, int index,
                      struct xrdp_rect *rect);
 
-/* xrdp_bitmap.c */
+/* xrdp_bitmap_common.c */
 struct xrdp_bitmap *
 xrdp_bitmap_create(int width, int height, int bpp,
                    int type, struct xrdp_wm *wm);
@@ -195,14 +195,8 @@ xrdp_bitmap_create_with_data(int width, int height,
                              struct xrdp_wm *wm);
 void
 xrdp_bitmap_delete(struct xrdp_bitmap *self);
-struct xrdp_bitmap *
-xrdp_bitmap_get_child_by_id(struct xrdp_bitmap *self, int id);
-int
-xrdp_bitmap_set_focus(struct xrdp_bitmap *self, int focused);
 int
 xrdp_bitmap_resize(struct xrdp_bitmap *self, int width, int height);
-int
-xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette);
 int
 xrdp_bitmap_get_pixel(struct xrdp_bitmap *self, int x, int y);
 int
@@ -211,6 +205,12 @@ int
 xrdp_bitmap_copy_box(struct xrdp_bitmap *self,
                      struct xrdp_bitmap *dest,
                      int x, int y, int cx, int cy);
+
+/* xrdp_bitmap.c */
+struct xrdp_bitmap *
+xrdp_bitmap_get_child_by_id(struct xrdp_bitmap *self, int id);
+int
+xrdp_bitmap_set_focus(struct xrdp_bitmap *self, int focused);
 int
 xrdp_bitmap_hash_crc(struct xrdp_bitmap *self);
 int
@@ -239,6 +239,35 @@ xrdp_bitmap_get_screen_clip(struct xrdp_bitmap *self,
                             struct xrdp_rect *rect,
                             int *dx, int *dy);
 
+/* xrdp_bitmap_load.c */
+/**
+ * Loads a bitmap from a file and (optionally) transforms it
+ *
+ * @param self from rdp_bitmap_create()
+ * @param filename Filename to load
+ * @param[in] palette For 8-bit conversions. Currently unused
+ * @param background Background color for alpha-blending
+ * @param transform Transform to apply to the image after loading
+ * @param twidth target width if transform != XBLT_NONE
+ * @param theight target height if transform != XBLT_NONE
+ * @return 0 for success.
+ *
+ * The background color is only used if the specified image contains
+ * an alpha layer. It is in HCOLOR format, and the bpp must correspond to
+ * the bpp used to create 'self'.
+ *
+ * After a successful call, the bitmap is resized to the image file size.
+ *
+ * If the call is not successful, the bitmap will be in an indeterminate
+ * state and should not be used.
+ */
+int
+xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
+                 const int *palette,
+                 int background,
+                 enum xrdp_bitmap_load_transform transform,
+                 int twidth,
+                 int theight);
 /* xrdp_painter.c */
 struct xrdp_painter *
 xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session);

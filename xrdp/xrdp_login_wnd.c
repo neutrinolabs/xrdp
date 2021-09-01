@@ -643,7 +643,9 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     int log_width;
     int log_height;
     int regular;
-    int primary_x_offset;
+    int primary_width;     /* Dimensions of primary screen */
+    int primary_height;
+    int primary_x_offset;  /* Offset of centre of primary screen */
     int primary_y_offset;
     int index;
     int x;
@@ -653,8 +655,10 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     globals = &self->xrdp_config->cfg_globals;
 
-    primary_x_offset = self->screen->width / 2;
-    primary_y_offset = self->screen->height / 2;
+    primary_width = self->screen->width;
+    primary_height = self->screen->height;
+    primary_x_offset = primary_width / 2;
+    primary_y_offset = primary_height / 2;
 
     log_width = globals->ls_width;
     log_height = globals->ls_height;
@@ -686,8 +690,10 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                 cx = self->client_info->minfo_wm[index].right;
                 cy = self->client_info->minfo_wm[index].bottom;
 
-                primary_x_offset = x + ((cx  - x) / 2);
-                primary_y_offset = y + ((cy - y) / 2);
+                primary_width = cx - x;
+                primary_height = cy - y;
+                primary_x_offset = x + (primary_width / 2);
+                primary_y_offset = y + (primary_height / 2);
                 break;
             }
         }
@@ -725,27 +731,62 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     {
         /* Load the background image. */
         /* If no file is specified no default image will be loaded. */
-        /* We only load the image if bpp > 8 */
-        if (globals->ls_background_image[0] != 0 && self->screen->bpp > 8)
+        /* We only load the image if bpp > 8, and if the user hasn't
+         * disabled wallpaer in the performance settings */
+        if (globals->ls_background_image[0] != 0)
         {
-            char fileName[256] ;
-            but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-            if (globals->ls_background_image[0] == '/')
+            if (self->screen->bpp <= 8)
             {
-                g_snprintf(fileName, 255, "%s", globals->ls_background_image);
+                LOG(LOG_LEVEL_INFO, "Login background not loaded for bpp=%d",
+                    self->screen->bpp);
+            }
+            else if ((self->client_info->rdp5_performanceflags &
+                      RDP5_NO_WALLPAPER) != 0)
+            {
+                LOG(LOG_LEVEL_INFO, "Login background not loaded as client "
+                    "has requested PERF_DISABLE_WALLPAPER");
             }
             else
             {
-                g_snprintf(fileName, 255, "%s/%s",
-                           XRDP_SHARE_PATH, globals->ls_background_image);
+                char fileName[256] ;
+                but = xrdp_bitmap_create(4, 4, self->screen->bpp,
+                                         WND_TYPE_IMAGE, self);
+                if (globals->ls_background_image[0] == '/')
+                {
+                    g_snprintf(fileName, 255, "%s",
+                               globals->ls_background_image);
+                }
+                else
+                {
+                    g_snprintf(fileName, 255, "%s/%s",
+                               XRDP_SHARE_PATH, globals->ls_background_image);
+                }
+                LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
+                if (globals->ls_background_transform == XBLT_NONE)
+                {
+                    xrdp_bitmap_load(but, fileName, self->palette,
+                                     globals->ls_top_window_bg_color,
+                                     globals->ls_background_transform,
+                                     0, 0);
+                    /* Place the background in the bottom right corner */
+                    but->left = primary_x_offset + (primary_width / 2) -
+                                but->width;
+                    but->top = primary_y_offset + (primary_height / 2) -
+                               but->height;
+                }
+                else
+                {
+                    xrdp_bitmap_load(but, fileName, self->palette,
+                                     globals->ls_top_window_bg_color,
+                                     globals->ls_background_transform,
+                                     primary_width, primary_height);
+                    but->left = primary_x_offset - (primary_width / 2);
+                    but->top = primary_y_offset - (primary_height / 2);
+                }
+                but->parent = self->screen;
+                but->owner = self->screen;
+                list_add_item(self->screen->child_list, (long)but);
             }
-            LOG(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
-            xrdp_bitmap_load(but, fileName, self->palette);
-            but->parent = self->screen;
-            but->owner = self->screen;
-            but->left = self->screen->width - but->width;
-            but->top = self->screen->height - but->height;
-            list_add_item(self->screen->child_list, (long)but);
         }
 
         /* if logo image not specified, use default */
@@ -762,7 +803,11 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
             g_snprintf(globals->ls_logo_filename, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
         }
 
-        xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette);
+        xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette,
+                         globals->ls_bg_color,
+                         globals->ls_logo_transform,
+                         globals->ls_logo_width,
+                         globals->ls_logo_height);
         but->parent = self->login_window;
         but->owner = self->login_window;
         but->left = globals->ls_logo_x_pos;
@@ -832,6 +877,42 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 }
 
 /**
+ * Map a bitmap transform string to a value
+ *
+ * @param param Param we're trying to read
+ * @param str   String we're trying to map
+ *
+ * @return enum xrdp_bitmap_load_transform value
+ *
+ * A warning is logged if the string is not recognised
+ *****************************************************************************/
+static enum xrdp_bitmap_load_transform
+bitmap_transform_str_to_val(const char *param, const char *str)
+{
+    enum xrdp_bitmap_load_transform rv;
+    if (g_strcmp(str, "none") == 0)
+    {
+        rv = XBLT_NONE;
+    }
+    else if (g_strcmp(str, "scale") == 0)
+    {
+        rv = XBLT_SCALE;
+    }
+    else if (g_strcmp(str, "zoom") == 0)
+    {
+        rv = XBLT_ZOOM;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_WARNING, "Param '%s' has unrecognised value '%s'"
+            " - assuming 'none'", param, str);
+        rv = XBLT_NONE;
+    }
+
+    return rv;
+}
+
+/**
  * Load configuration from xrdp.ini file
  *
  * @param config XRDP configuration to initialise
@@ -866,6 +947,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
     globals->ls_width = 350;
     globals->ls_height = 350;
+    globals->ls_background_transform = XBLT_NONE;
+    globals->ls_logo_transform = XBLT_NONE;
     globals->ls_logo_x_pos = 63;
     globals->ls_logo_y_pos = 50;
     globals->ls_label_x_pos = 30;
@@ -1103,16 +1186,39 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             globals->ls_title[255] = 0;
         }
 
-        else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
-        {
-            g_strncpy(globals->ls_logo_filename, v, 255);
-            globals->ls_logo_filename[255] = 0;
-        }
         else if (g_strncmp(n, "ls_background_image", 255) == 0)
         {
             g_strncpy(globals->ls_background_image, v, 255);
             globals->ls_background_image[255] = 0;
         }
+
+        else if (g_strncmp(n, "ls_background_transform", 255) == 0)
+        {
+            globals->ls_background_transform =
+                bitmap_transform_str_to_val(n, v);
+        }
+
+        else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
+        {
+            g_strncpy(globals->ls_logo_filename, v, 255);
+            globals->ls_logo_filename[255] = 0;
+        }
+
+        else if (g_strncmp(n, "ls_logo_transform", 255) == 0)
+        {
+            globals->ls_logo_transform = bitmap_transform_str_to_val(n, v);
+        }
+
+        else if (g_strncmp(n, "ls_logo_width", 64) == 0)
+        {
+            globals->ls_logo_width = g_atoi(v);
+        }
+
+        else if (g_strncmp(n, "ls_logo_height", 64) == 0)
+        {
+            globals->ls_logo_height = g_atoi(v);
+        }
+
         else if (g_strncmp(n, "ls_logo_x_pos", 64) == 0)
         {
             globals->ls_logo_x_pos = g_atoi(v);
