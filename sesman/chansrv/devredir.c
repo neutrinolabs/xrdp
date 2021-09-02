@@ -814,18 +814,24 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
         /* Assume this device isn't supported by us */
         response_status = STATUS_NOT_SUPPORTED;
 
+        /* Read the device data length from the stream */
+        xstream_rd_u32_le(s, device_data_len);
+
         switch (device_type)
         {
             case RDPDR_DTYP_FILESYSTEM:
                 /* get device data len */
-                xstream_rd_u32_le(s, device_data_len);
                 if (device_data_len)
                 {
                     xstream_rd_string(g_full_name_for_filesystem, s,
                                       device_data_len);
                 }
 
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "device_type=FILE_SYSTEM device_id=0x%x dosname=%s "
+                LOG(LOG_LEVEL_INFO, "detected remote drive %s",
+                    preferred_dos_name);
+
+                LOG_DEVEL(LOG_LEVEL_DEBUG,
+                          "device_type=FILE_SYSTEM device_id=0x%x dosname=%s "
                           "device_data_len=%d full_name=%s", g_device_id,
                           preferred_dos_name,
                           device_data_len, g_full_name_for_filesystem);
@@ -838,9 +844,13 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                 break;
 
             case RDPDR_DTYP_SMARTCARD:
-                /* for smart cards, device data len always 0 */
+                xstream_skip_u8(s, device_data_len);
 
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "device_type=SMARTCARD device_id=0x%x dosname=%s",
+                LOG(LOG_LEVEL_INFO, "Detected remote smartcard '%s'",
+                    preferred_dos_name);
+
+                LOG_DEVEL(LOG_LEVEL_DEBUG,
+                          "device_type=SMARTCARD device_id=0x%x dosname=%s",
                           g_device_id, preferred_dos_name);
 
                 response_status = STATUS_SUCCESS;
@@ -848,29 +858,24 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                 scard_device_announce(g_device_id);
                 break;
 
-            case RDPDR_DTYP_SERIAL:
-                LOG_DEVEL(LOG_LEVEL_DEBUG,
-                          "device_type=SERIAL device_id=0x%x dosname=%s",
-                          g_device_id, preferred_dos_name);
-                break;
-
-            case RDPDR_DTYP_PARALLEL:
-                LOG_DEVEL(LOG_LEVEL_DEBUG,
-                          "device_type=PARALLEL device_id=0x%x dosname=%s",
-                          g_device_id, preferred_dos_name);
-                break;
-
-            case RDPDR_DTYP_PRINT:
-                LOG_DEVEL(LOG_LEVEL_DEBUG,
-                          "device_type=PRINT device_id=0x%x dosname=%s",
-                          g_device_id, preferred_dos_name);
-                break;
-
             default:
+            {
+                /* All other devices are unsupported */
+                const char *description =
+                    (device_type == RDPDR_DTYP_SERIAL) ? "serial port" :
+                    (device_type == RDPDR_DTYP_PARALLEL) ? "parallel port" :
+                    (device_type == RDPDR_DTYP_PRINT) ?  "printer" :
+                    /* default */ "unknown device";
+
+                xstream_skip_u8(s, device_data_len);
+                LOG(LOG_LEVEL_INFO, "Remote %s '%s' is not supported"
+                    " and will be ignored",
+                    description, preferred_dos_name);
                 LOG_DEVEL(LOG_LEVEL_DEBUG,
-                          "device_type=UNKNOWN device_id=0x%x dosname=%s",
-                          g_device_id, preferred_dos_name);
-                break;
+                          "description=%s dosname=%s device_id=0x%x",
+                          description, preferred_dos_name, g_device_id);
+            }
+            break;
         }
 
         /* Tell the client wheth or not we're supporting this one */
