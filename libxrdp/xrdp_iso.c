@@ -30,10 +30,51 @@
 
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
+#include "string_calls.h"
 #include "log.h"
 
 
+/*****************************************************************************/
+/**
+ * Converts a protocol mask ([MS-RDPBCGR] 2.2.1.1.1 to a string)
+ *
+ * @param protocol Protocol mask
+ * @param buff Output buffer
+ * @param bufflen total length of buff
+ * @return As for snprintf()
+ *
+ * The string "RDP" is always added to the output, even if other bits
+ * are set
+ */
+static int
+protocol_mask_to_str(int protocol, char *buff, int bufflen)
+{
+    char delim = '|';
 
+    static const struct bitmask_string bits[] =
+    {
+        { PROTOCOL_SSL, "SSL" },
+        { PROTOCOL_HYBRID, "HYBRID" },
+        { PROTOCOL_RDSTLS, "RDSTLS" },
+        { PROTOCOL_HYBRID_EX, "HYBRID_EX"},
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    int rlen = g_bitmask_to_str(protocol, bits, delim, buff, bufflen);
+
+    /* Append "RDP" */
+    if (rlen == 0)
+    {
+        /* String is empty */
+        rlen = g_snprintf(buff, bufflen, "RDP");
+    }
+    else if (rlen < bufflen)
+    {
+        rlen += g_snprintf(buff + rlen, bufflen - rlen, "%cRDP", delim);
+    }
+
+    return rlen;
+}
 
 /*****************************************************************************/
 struct xrdp_iso *
@@ -64,61 +105,96 @@ xrdp_iso_delete(struct xrdp_iso *self)
 static int
 xrdp_iso_negotiate_security(struct xrdp_iso *self)
 {
+    char requested_str[64];
+    const char *selected_str = "";
+    const char *configured_str = "";
+
     int rv = 0;
     struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
 
-    self->selectedProtocol = client_info->security_layer;
+    /* Can we do TLS/SSL? (basic check) */
+    int ssl_capable = g_file_readable(client_info->certificate) &&
+                      g_file_readable(client_info->key_file);
 
+    /* Work out what's actually configured in xrdp.ini. The
+     * selection happens later, but we can do some error checking here */
     switch (client_info->security_layer)
     {
         case PROTOCOL_RDP:
+            configured_str = "RDP";
             break;
+
         case PROTOCOL_SSL:
-            if (self->requestedProtocol & PROTOCOL_SSL)
+            /* We *must* use TLS. Check we can offer it, and it's requested */
+            if (ssl_capable)
             {
-                if (!g_file_readable(client_info->certificate) ||
-                        !g_file_readable(client_info->key_file))
+                configured_str = "SSL";
+                if ((self->requestedProtocol & PROTOCOL_SSL) == 0)
                 {
-                    /* certificate or privkey is not readable */
-                    LOG(LOG_LEVEL_ERROR, "Cannot accept TLS connections because "
-                        "certificate or private key file is not readable. "
-                        "certificate file: [%s], private key file: [%s]",
-                        client_info->certificate, client_info->key_file);
-                    self->failureCode = SSL_CERT_NOT_ON_SERVER;
+                    LOG(LOG_LEVEL_ERROR, "Server requires TLS for security, "
+                        "but the client did not request TLS.");
+                    self->failureCode = SSL_REQUIRED_BY_SERVER;
                     rv = 1; /* error */
-                }
-                else
-                {
-                    self->selectedProtocol = PROTOCOL_SSL;
                 }
             }
             else
             {
-                LOG(LOG_LEVEL_ERROR, "Server requires TLS for security, "
-                    "but the client did not request TLS.");
-                self->failureCode = SSL_REQUIRED_BY_SERVER;
+                configured_str = "";
+                LOG(LOG_LEVEL_ERROR, "Cannot accept TLS connections because "
+                    "certificate or private key file is not readable. "
+                    "certificate file: [%s], private key file: [%s]",
+                    client_info->certificate, client_info->key_file);
+                self->failureCode = SSL_CERT_NOT_ON_SERVER;
                 rv = 1; /* error */
             }
             break;
         case PROTOCOL_HYBRID:
         case PROTOCOL_HYBRID_EX:
         default:
-            if ((self->requestedProtocol & PROTOCOL_SSL) &&
-                    g_file_readable(client_info->certificate) &&
-                    g_file_readable(client_info->key_file))
+            /* We don't yet support CredSSP */
+            if (ssl_capable)
             {
-                /* that's a patch since we don't support CredSSP for now */
-                self->selectedProtocol = PROTOCOL_SSL;
+                configured_str = "SSL|RDP";
             }
             else
             {
-                self->selectedProtocol = PROTOCOL_RDP;
+                /*
+                 * Tell the user we can't offer TLS, but this isn't fatal */
+                configured_str = "RDP";
+                LOG(LOG_LEVEL_WARNING, "Cannot accept TLS connections because "
+                    "certificate or private key file is not readable. "
+                    "certificate file: [%s], private key file: [%s]",
+                    client_info->certificate, client_info->key_file);
             }
             break;
     }
 
-    LOG(LOG_LEVEL_DEBUG, "Security layer: requested %d, selected %d",
-        self->requestedProtocol, self->selectedProtocol);
+    /* Currently the choice comes down to RDP or SSL */
+    if (rv != 0)
+    {
+        self->selectedProtocol = PROTOCOL_RDP;
+        selected_str = "";
+    }
+    else if (ssl_capable && (self->requestedProtocol &
+                             client_info->security_layer &
+                             PROTOCOL_SSL) != 0)
+    {
+        self->selectedProtocol = PROTOCOL_SSL;
+        selected_str = "SSL";
+    }
+    else
+    {
+        self->selectedProtocol = PROTOCOL_RDP;
+        selected_str = "RDP";
+    }
+
+    protocol_mask_to_str(self->requestedProtocol,
+                         requested_str, sizeof(requested_str));
+
+    LOG(LOG_LEVEL_INFO, "Security protocol: configured [%s], requested [%s],"
+        " selected [%s]",
+        configured_str, requested_str, selected_str);
+
     return rv;
 }
 

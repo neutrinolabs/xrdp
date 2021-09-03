@@ -891,3 +891,69 @@ g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int 
 
     return dest;
 }
+
+int
+g_bitmask_to_str(int bitmask, const struct bitmask_string bitdefs[],
+                 char delim, char *buff, int bufflen)
+{
+    int rlen = 0; /* Returned length */
+
+    if (bufflen <= 0) /* Caller error */
+    {
+        rlen = -1;
+    }
+    else
+    {
+        char *p = buff;
+        /* Find the last writeable character in the buffer */
+        const char *last = buff + (bufflen - 1);
+
+        const struct bitmask_string *b;
+
+        for (b = &bitdefs[0] ; b->mask != 0; ++b)
+        {
+            if ((bitmask & b->mask) != 0)
+            {
+                if (p > buff)
+                {
+                    /* Not first item - append separator */
+                    if (p < last)
+                    {
+                        *p++ = delim;
+                    }
+                    ++rlen;
+                }
+
+                int slen = g_strlen(b->str);
+                int copylen = MIN(slen, last - p);
+                g_memcpy(p, b->str, copylen);
+                p += copylen;
+                rlen += slen;
+
+                /* Remove the bit so we can check for undefined bits later*/
+                bitmask &= ~b->mask;
+            }
+        }
+
+        if (bitmask != 0)
+        {
+            /* Bits left which aren't named by the user */
+            if (p > buff)
+            {
+                if (p < last)
+                {
+                    *p++ = delim;
+                }
+                ++rlen;
+            }
+            /* This call will terminate the return buffer */
+            rlen += g_snprintf(p, last - p + 1, "0x%x", bitmask);
+        }
+        else
+        {
+            *p = '\0';
+        }
+    }
+
+    return rlen;
+}
