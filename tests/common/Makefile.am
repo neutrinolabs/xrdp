@@ -12,10 +12,12 @@ check_PROGRAMS = test_common
 test_common_SOURCES = \
     test_common.h \
     test_common_main.c \
-    test_string_calls.c
+    test_string_calls.c \
+    test_os_calls.c
 
 test_common_CFLAGS = \
-    @CHECK_CFLAGS@
+    @CHECK_CFLAGS@ \
+    -D TOP_SRCDIR=\"$(top_srcdir)\"
 
 test_common_LDADD = \
     $(top_builddir)/common/libcommon.la \
