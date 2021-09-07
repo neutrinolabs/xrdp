@@ -42,7 +42,7 @@ static const char *eds_status_msg[] =
  * Returns an error string for an ExtendedDesktopSize status code
  */
 const char *
-get_eds_status_msg(unsigned int response_code)
+rfb_get_eds_status_msg(unsigned int response_code)
 {
     if (response_code >= EDS_STATUS_MSG_COUNT)
     {
