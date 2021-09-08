@@ -827,7 +827,7 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                                       device_data_len);
                 }
 
-                LOG(LOG_LEVEL_INFO, "detected remote drive %s",
+                LOG(LOG_LEVEL_INFO, "Detected remote drive '%s'",
                     preferred_dos_name);
 
                 LOG_DEVEL(LOG_LEVEL_DEBUG,
@@ -868,8 +868,7 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                     /* default */ "unknown device";
 
                 xstream_skip_u8(s, device_data_len);
-                LOG(LOG_LEVEL_INFO, "Remote %s '%s' is not supported"
-                    " and will be ignored",
+                LOG(LOG_LEVEL_INFO, "Detected remote %s '%s' (not supported)",
                     description, preferred_dos_name);
                 LOG_DEVEL(LOG_LEVEL_DEBUG,
                           "description=%s dosname=%s device_id=0x%x",
