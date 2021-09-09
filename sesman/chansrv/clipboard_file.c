@@ -575,7 +575,7 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
     in_uint32_le(s, cfd->lastWriteTimeHigh);
     in_uint32_le(s, cfd->fileSizeHigh);
     in_uint32_le(s, cfd->fileSizeLow);
-    num_chars = 256;
+    num_chars = sizeof(cfd->cFileName);
     clipboard_in_unicode(s, cfd->cFileName, &num_chars);
     ex_bytes = 512 - num_chars * 2;
     ex_bytes -= 2;

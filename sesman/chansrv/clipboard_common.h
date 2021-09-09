@@ -77,7 +77,7 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
     tui32 lastWriteTimeHigh;
     tui32 fileSizeHigh;
     tui32 fileSizeLow;
-    char cFileName[256];
+    char cFileName[260 * 4]; /* Allow each UCS-16 char to become 32 bits */
 };
 
 int clipboard_out_unicode(struct stream *s, const char *text,
