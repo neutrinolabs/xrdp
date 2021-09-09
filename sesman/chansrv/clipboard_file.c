@@ -600,7 +600,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     int lindex;
     int str_len;
     int file_count;
-    struct clip_file_desc *cfd;
+    struct clip_file_desc cfd;
     char *ptr;
 
     if (!s_check_rem(s, 4))
@@ -616,22 +616,20 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     }
     xfuse_clear_clip_dir();
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_files: cItems %d", cItems);
-    cfd = (struct clip_file_desc *)
-          g_malloc(sizeof(struct clip_file_desc), 0);
     file_count = 0;
     ptr = file_list;
     for (lindex = 0; lindex < cItems; lindex++)
     {
-        g_memset(cfd, 0, sizeof(struct clip_file_desc));
-        clipboard_c2s_in_file_info(s, cfd);
-        if ((g_pos(cfd->cFileName, "\\") >= 0) ||
-                (cfd->fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
+        g_memset(&cfd, 0, sizeof(struct clip_file_desc));
+        clipboard_c2s_in_file_info(s, &cfd);
+        if ((g_pos(cfd.cFileName, "\\") >= 0) ||
+                (cfd.fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: skipping directory not "
-                      "supported [%s]", cfd->cFileName);
+                      "supported [%s]", cfd.cFileName);
             continue;
         }
-        if (xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex) == -1)
+        if (xfuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow, lindex) == -1)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: failed to add clip dir item");
             continue;
@@ -654,11 +652,10 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         *ptr = '/';
         ptr++;
 
-        str_len = g_strlen(cfd->cFileName);
-        g_strcpy(ptr, cfd->cFileName);
+        str_len = g_strlen(cfd.cFileName);
+        g_strcpy(ptr, cfd.cFileName);
         ptr += str_len;
     }
     *ptr = 0;
-    g_free(cfd);
     return 0;
 }
