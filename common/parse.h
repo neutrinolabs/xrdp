@@ -498,6 +498,8 @@ parser_stream_overflow_check(const struct stream *s, int n, int is_out,
  *****************************************************************************/
 #define xstream_free(_s) free_stream(_s)
 
+#define xstream_skip_u8(_s, _n)       in_uint8s(_s, _n)
+
 #define xstream_rd_u8(_s, _var)       in_uint8(_s, _var)
 #define xstream_rd_u16_le(_s, _var)   in_uint16_le(_s, _var)
 #define xstream_rd_u32_le(_s, _var)   in_uint32_le(_s, _var)
