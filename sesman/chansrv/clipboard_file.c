@@ -560,7 +560,7 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-/* read in CLIPRDR_FILEDESCRIPTOR */
+/* read in CLIPRDR_FILEDESCRIPTOR [MS-RDPECLIP] 2.2.5.2.3.1 */
 static int
 clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 {
@@ -568,6 +568,11 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
     int filename_bytes;
     int ex_bytes;
 
+    if (!s_check_rem_and_log(s, 4 + 32 + 4 + 16 + 8 + 8 + 520,
+                             "Parsing [MS-RDPECLIP] CLIPRDR_FILEDESCRIPTOR"))
+    {
+        return 1;
+    }
     in_uint32_le(s, cfd->flags);
     in_uint8s(s, 32); /* reserved1 */
     in_uint32_le(s, cfd->fileAttributes);
@@ -592,6 +597,7 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 }
 
 /*****************************************************************************/
+/* See [MS-RDPECLIP] 2.2.5.2.3 */
 int
 clipboard_c2s_in_files(struct stream *s, char *file_list)
 {
@@ -620,7 +626,10 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     for (lindex = 0; lindex < cItems; lindex++)
     {
         g_memset(&cfd, 0, sizeof(struct clip_file_desc));
-        clipboard_c2s_in_file_info(s, &cfd);
+        if (clipboard_c2s_in_file_info(s, &cfd) != 0)
+        {
+            return 1;
+        }
         if ((g_pos(cfd.cFileName, "\\") >= 0) ||
                 (cfd.fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
         {
