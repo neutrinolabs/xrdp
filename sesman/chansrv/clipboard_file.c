@@ -560,13 +560,19 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-/* read in CLIPRDR_FILEDESCRIPTOR */
+/* read in CLIPRDR_FILEDESCRIPTOR [MS-RDPECLIP] 2.2.5.2.3.1 */
 static int
 clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 {
     int num_chars;
+    int filename_bytes;
     int ex_bytes;
 
+    if (!s_check_rem_and_log(s, 4 + 32 + 4 + 16 + 8 + 8 + 520,
+                             "Parsing [MS-RDPECLIP] CLIPRDR_FILEDESCRIPTOR"))
+    {
+        return 1;
+    }
     in_uint32_le(s, cfd->flags);
     in_uint8s(s, 32); /* reserved1 */
     in_uint32_le(s, cfd->fileAttributes);
@@ -575,12 +581,10 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
     in_uint32_le(s, cfd->lastWriteTimeHigh);
     in_uint32_le(s, cfd->fileSizeHigh);
     in_uint32_le(s, cfd->fileSizeLow);
-    num_chars = 256;
-    clipboard_in_unicode(s, cfd->cFileName, &num_chars);
-    ex_bytes = 512 - num_chars * 2;
-    ex_bytes -= 2;
+    num_chars = sizeof(cfd->cFileName);
+    filename_bytes = clipboard_in_unicode(s, cfd->cFileName, &num_chars);
+    ex_bytes = 520 - filename_bytes;
     in_uint8s(s, ex_bytes);
-    in_uint8s(s, 8); /* pad */
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_file_info:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  flags 0x%8.8x", cfd->flags);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  fileAttributes 0x%8.8x", cfd->fileAttributes);
@@ -593,6 +597,7 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 }
 
 /*****************************************************************************/
+/* See [MS-RDPECLIP] 2.2.5.2.3 */
 int
 clipboard_c2s_in_files(struct stream *s, char *file_list)
 {
@@ -600,7 +605,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     int lindex;
     int str_len;
     int file_count;
-    struct clip_file_desc *cfd;
+    struct clip_file_desc cfd;
     char *ptr;
 
     if (!s_check_rem(s, 4))
@@ -616,22 +621,23 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     }
     xfuse_clear_clip_dir();
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_files: cItems %d", cItems);
-    cfd = (struct clip_file_desc *)
-          g_malloc(sizeof(struct clip_file_desc), 0);
     file_count = 0;
     ptr = file_list;
     for (lindex = 0; lindex < cItems; lindex++)
     {
-        g_memset(cfd, 0, sizeof(struct clip_file_desc));
-        clipboard_c2s_in_file_info(s, cfd);
-        if ((g_pos(cfd->cFileName, "\\") >= 0) ||
-                (cfd->fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
+        g_memset(&cfd, 0, sizeof(struct clip_file_desc));
+        if (clipboard_c2s_in_file_info(s, &cfd) != 0)
+        {
+            return 1;
+        }
+        if ((g_pos(cfd.cFileName, "\\") >= 0) ||
+                (cfd.fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: skipping directory not "
-                      "supported [%s]", cfd->cFileName);
+                      "supported [%s]", cfd.cFileName);
             continue;
         }
-        if (xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex) == -1)
+        if (xfuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow, lindex) == -1)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: failed to add clip dir item");
             continue;
@@ -654,11 +660,10 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         *ptr = '/';
         ptr++;
 
-        str_len = g_strlen(cfd->cFileName);
-        g_strcpy(ptr, cfd->cFileName);
+        str_len = g_strlen(cfd.cFileName);
+        g_strcpy(ptr, cfd.cFileName);
         ptr += str_len;
     }
     *ptr = 0;
-    g_free(cfd);
     return 0;
 }
