@@ -597,33 +597,41 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 }
 
 /*****************************************************************************/
-/* See [MS-RDPECLIP] 2.2.5.2.3 */
 int
-clipboard_c2s_in_files(struct stream *s, char *file_list)
+clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size)
 {
-    int cItems;
+    int citems;
     int lindex;
     int str_len;
-    int file_count;
     struct clip_file_desc cfd;
     char *ptr;
+    char *last; /* Last writeable char in buffer */
+    int dropped_files = 0; /* # files we can't add to buffer */
+    const char *prefix = "file://";
 
-    if (!s_check_rem(s, 4))
+    if (file_list_size < 1)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: parse error");
+        LOG(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: No space in string");
         return 1;
     }
-    in_uint32_le(s, cItems);
-    if (cItems > 64 * 1024) /* sanity check */
+    if (!s_check_rem(s, 4))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: error cItems %d too big", cItems);
+        LOG(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: parse error");
+        return 1;
+    }
+    in_uint32_le(s, citems);
+    if (citems < 0 || citems > 64 * 1024) /* sanity check */
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: "
+            "Bad number of files in list (%d)", citems);
         return 1;
     }
     xfuse_clear_clip_dir();
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_files: cItems %d", cItems);
-    file_count = 0;
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_files: cItems %d", citems);
     ptr = file_list;
-    for (lindex = 0; lindex < cItems; lindex++)
+    last = file_list + file_list_size - 1;
+
+    for (lindex = 0; lindex < citems; lindex++)
     {
         g_memset(&cfd, 0, sizeof(struct clip_file_desc));
         if (clipboard_c2s_in_file_info(s, &cfd) != 0)
@@ -633,37 +641,62 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         if ((g_pos(cfd.cFileName, "\\") >= 0) ||
                 (cfd.fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: skipping directory not "
-                      "supported [%s]", cfd.cFileName);
+            LOG(LOG_LEVEL_WARNING, "clipboard_c2s_in_files: skipping "
+                "directory not supported [%s]", cfd.cFileName);
             continue;
         }
+
+        /* Have we already run out of room in the list? */
+        if (dropped_files > 0)
+        {
+            dropped_files += 1;
+            continue;
+        }
+
+        /* Room for this file? */
+        str_len = (ptr == file_list) ? 0 : 1; /* Delimiter */
+        str_len += g_strlen(prefix);
+        str_len += g_strlen(g_fuse_clipboard_path);
+        str_len += 1; /* '/' */
+        str_len += g_strlen(cfd.cFileName);
+        if (str_len > (last - ptr))
+        {
+            dropped_files += 1;
+            continue;
+        }
+
         if (xfuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow, lindex) == -1)
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: failed to add clip dir item");
+            LOG(LOG_LEVEL_WARNING, "clipboard_c2s_in_files: "
+                "failed to add clip dir item %s", cfd.cFileName);
             continue;
         }
 
-        if (file_count > 0)
+        if (ptr > file_list)
         {
-            *ptr = '\n';
-            ptr++;
+            *ptr++ = '\n';
         }
-        file_count++;
 
-        g_strcpy(ptr, "file://");
-        ptr += 7;
+        str_len = g_strlen(prefix);
+        g_strcpy(ptr, prefix);
+        ptr += str_len;
 
         str_len = g_strlen(g_fuse_clipboard_path);
         g_strcpy(ptr, g_fuse_clipboard_path);
         ptr += str_len;
-
-        *ptr = '/';
-        ptr++;
+        *ptr++ = '/';
 
         str_len = g_strlen(cfd.cFileName);
         g_strcpy(ptr, cfd.cFileName);
         ptr += str_len;
     }
-    *ptr = 0;
+    *ptr = '\0';
+
+    if (dropped_files > 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "clipboard_c2s_in_files: "
+            "Dropped %d files from the clip buffer due to insufficient space",
+            dropped_files);
+    }
     return 0;
 }
