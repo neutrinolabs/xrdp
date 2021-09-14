@@ -1244,7 +1244,28 @@ clipboard_process_data_response_for_file(struct stream *s,
     else if ((g_clip_c2s.type == XA_STRING) ||
              (g_clip_c2s.type == g_utf8_atom))
     {
-        rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size, "");
+        if (g_cfg->use_nautilus3_flist_format)
+        {
+            /*
+             * This file list format is only used by GNOME 3
+             * versions >= 3.29.92. It is not used by GNOME 4. Remove
+             * this workaround when GNOME 3 is no longer supported by
+             * long-term distros */
+#define LIST_PREFIX "x-special/nautilus-clipboard\ncopy\n"
+#define LIST_PREFIX_LEN (sizeof(LIST_PREFIX) - 1)
+            g_strcpy(g_clip_c2s.data, LIST_PREFIX);
+            rv = clipboard_c2s_in_files(s,
+                                        g_clip_c2s.data + LIST_PREFIX_LEN,
+                                        flist_size - LIST_PREFIX_LEN - 1,
+                                        "file://");
+            g_strcat(g_clip_c2s.data, "\n");
+#undef LIST_PREFIX_LEN
+#undef LIST_PREFIX
+        }
+        else
+        {
+            rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size, "");
+        }
     }
     else
     {
