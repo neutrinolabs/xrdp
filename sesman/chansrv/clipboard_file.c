@@ -598,7 +598,8 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 
 /*****************************************************************************/
 int
-clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size)
+clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size,
+                       const char *fprefix)
 {
     int citems;
     int lindex;
@@ -607,7 +608,6 @@ clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size)
     char *ptr;
     char *last; /* Last writeable char in buffer */
     int dropped_files = 0; /* # files we can't add to buffer */
-    const char *prefix = "file://";
 
     if (file_list_size < 1)
     {
@@ -655,7 +655,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size)
 
         /* Room for this file? */
         str_len = (ptr == file_list) ? 0 : 1; /* Delimiter */
-        str_len += g_strlen(prefix);
+        str_len += g_strlen(fprefix); /* e.g. "file://" */
         str_len += g_strlen(g_fuse_clipboard_path);
         str_len += 1; /* '/' */
         str_len += g_strlen(cfd.cFileName);
@@ -677,8 +677,8 @@ clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size)
             *ptr++ = '\n';
         }
 
-        str_len = g_strlen(prefix);
-        g_strcpy(ptr, prefix);
+        str_len = g_strlen(fprefix);
+        g_strcpy(ptr, fprefix);
         ptr += str_len;
 
         str_len = g_strlen(g_fuse_clipboard_path);

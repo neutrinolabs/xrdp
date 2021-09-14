@@ -1231,13 +1231,20 @@ clipboard_process_data_response_for_file(struct stream *s,
     /* text/uri-list */
     else if (g_clip_c2s.type == g_file_atom1)
     {
-        rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size);
+        rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size,
+                                    "file://");
     }
     /* x-special/gnome-copied-files */
     else if (g_clip_c2s.type == g_file_atom2)
     {
         g_strcpy(g_clip_c2s.data, "copy\n");
-        rv = clipboard_c2s_in_files(s, g_clip_c2s.data + 5, flist_size - 5);
+        rv = clipboard_c2s_in_files(s, g_clip_c2s.data + 5, flist_size - 5,
+                                    "file://");
+    }
+    else if ((g_clip_c2s.type == XA_STRING) ||
+             (g_clip_c2s.type == g_utf8_atom))
+    {
+        rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size, "");
     }
     else
     {
@@ -2211,11 +2218,24 @@ clipboard_event_selection_request(XEvent *xevent)
     }
     else if ((lxev->target == XA_STRING) || (lxev->target == g_utf8_atom))
     {
-        g_memcpy(&g_saved_selection_req_event, lxev,
-                 sizeof(g_saved_selection_req_event));
-        g_clip_c2s.type = lxev->target;
-        g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
-        clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+        if (clipboard_find_format_id(g_file_format_id) >= 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: "
+                      "text requested when files available");
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = lxev->target;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+            clipboard_send_data_request(g_file_format_id);
+        }
+        else
+        {
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = lxev->target;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
+            clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+        }
         return 0;
     }
     else if (lxev->target == g_image_bmp_atom)
