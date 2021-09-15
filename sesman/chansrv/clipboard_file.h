@@ -35,6 +35,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list);
 
 int
 clipboard_request_file_size(int stream_id, int lindex);
+
 int
 clipboard_request_file_data(int stream_id, int lindex, int offset,
                             int request_bytes);
