@@ -2132,7 +2132,7 @@ cleanup_states(struct xrdp_mm *self)
         self-> chan_trans = NULL; /* connection to chansrv */
         self-> chan_trans_up = 0; /* true once connected to chansrv */
         self-> delete_chan_trans = 0; /* boolean set when done with channel connection */
-        self-> usechansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
+        self-> use_chansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
     }
 }
 
@@ -2465,7 +2465,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             if (g_strcasecmp(value, "-1") == 0)
             {
                 self->sesman_controlled = 1;
-                self->usechansrv = 1;
+                self->use_chansrv = 1;
             }
         }
 
@@ -2496,7 +2496,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         {
             if (parse_chansrvport(value, chansrvport, sizeof(chansrvport)) == 0)
             {
-                self->usechansrv = 1;
+                self->use_chansrv = 1;
             }
         }
     }
@@ -2627,7 +2627,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     }
 
     if ((self->wm->login_state == WMLS_CLEANUP) && (self->sesman_controlled == 0) &&
-            (self->usechansrv != 0))
+            (self->use_chansrv != 0))
     {
         /* if sesman controlled, this will connect later */
         xrdp_mm_connect_chansrv(self, "", chansrvport);
@@ -3021,7 +3021,7 @@ server_chansrv_in_use(struct xrdp_mod *mod)
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    return wm->mm->usechansrv;
+    return wm->mm->use_chansrv;
 }
 
 
@@ -3591,7 +3591,7 @@ server_get_channel_count(struct xrdp_mod *mod)
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         return -1;
     }
@@ -3610,7 +3610,7 @@ server_query_channel(struct xrdp_mod *mod, int index, char *channel_name,
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         return 1;
     }
@@ -3628,7 +3628,7 @@ server_get_channel_id(struct xrdp_mod *mod, const char *name)
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         return -1;
     }
@@ -3646,7 +3646,7 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         /* Modules should not be calling this if chansrv is running -
          * they can use server_chansrv_in_use() to avoid doing this */
