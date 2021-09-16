@@ -45,4 +45,13 @@
 struct trans *
 scp_trans_create(int sck);
 
+/**
+ * @brief Maps SCP_CLIENT_TYPES_E to a string
+ * @param e
+ *
+ * @return Pointer to a string
+ *
+ */
+const char *scp_client_state_to_str(enum SCP_CLIENT_STATES_E e);
+
 #endif

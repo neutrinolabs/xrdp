@@ -29,8 +29,7 @@
 #endif
 
 #include "libscp_connection.h"
-
-//extern struct log_config* s_log;
+#include "string_calls.h"
 
 struct trans *
 scp_trans_create(int sck)
@@ -39,6 +38,63 @@ scp_trans_create(int sck)
     if (result != NULL)
     {
         result->sck = sck;
+    }
+
+    return result;
+}
+
+/*****************************************************************************/
+
+const char *
+scp_client_state_to_str(enum SCP_CLIENT_STATES_E e)
+{
+    const char *result = "SCP_CLIENT_STATE_????";
+
+    /* Some compilers will warn if this switch is missing states */
+    switch (e)
+    {
+        case SCP_CLIENT_STATE_OK:
+            result = "SCP_CLIENT_STATE_OK";
+            break;
+        case SCP_CLIENT_STATE_NETWORK_ERR:
+            result = "SCP_CLIENT_STATE_NETWORK_ERR";
+            break;
+        case SCP_CLIENT_STATE_VERSION_ERR:
+            result = "SCP_CLIENT_STATE_VERSION_ERR";
+            break;
+        case SCP_CLIENT_STATE_SEQUENCE_ERR:
+            result = "SCP_CLIENT_STATE_SEQUENCE_ERR";
+            break;
+        case SCP_CLIENT_STATE_SIZE_ERR:
+            result = "SCP_CLIENT_STATE_SIZE_ERR";
+            break;
+        case SCP_CLIENT_STATE_INTERNAL_ERR:
+            result = "SCP_CLIENT_STATE_INTERNAL_ERR";
+            break;
+        case SCP_CLIENT_STATE_SESSION_LIST:
+            result = "SCP_CLIENT_STATE_SESSION_LIST";
+            break;
+        case SCP_CLIENT_STATE_LIST_OK:
+            result = "SCP_CLIENT_STATE_LIST_OK";
+            break;
+        case SCP_CLIENT_STATE_RESEND_CREDENTIALS:
+            result = "SCP_CLIENT_STATE_RESEND_CREDENTIALS";
+            break;
+        case SCP_CLIENT_STATE_CONNECTION_DENIED:
+            result = "SCP_CLIENT_STATE_CONNECTION_DENIED";
+            break;
+        case SCP_CLIENT_STATE_PWD_CHANGE_REQ:
+            result = "SCP_CLIENT_STATE_PWD_CHANGE_REQ";
+            break;
+        case SCP_CLIENT_STATE_RECONNECT_SINGLE:
+            result = "SCP_CLIENT_STATE_RECONNECT_SINGLE";
+            break;
+        case SCP_CLIENT_STATE_SELECTION_CANCEL:
+            result = "SCP_CLIENT_STATE_SELECTION_CANCEL";
+            break;
+        case SCP_CLIENT_STATE_END:
+            result = "SCP_CLIENT_STATE_END";
+            break;
     }
 
     return result;
