@@ -286,44 +286,39 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     return rv;
 }
 
-/*****************************************************************************/
-/* returns error */
-/* this goes through the login_names looking for one called 'aname'
-   then it copies the corresponding login_values item into 'dest'
-   'dest' must be at least 'dest_len' + 1 bytes in size */
-static int
-xrdp_mm_get_value(struct xrdp_mm *self, const char *aname, char *dest,
-                  int dest_len)
+/**************************************************************************//**
+ * Looks for a value in the login_names/login_values array
+ *
+ * In the event of multiple matches, the LAST value matched is returned.
+ * This currently allows for values to be replaced by writing a new value
+ * to the end of the list
+ *
+ * Returned strings are valid until the module is destroyed.
+ *
+ * @param self This module
+ * @param aname Name to lookup (case-insensitive)
+ *
+ * @return pointer to value, or NULL if not found.
+ */
+static const char *
+xrdp_mm_get_value(struct xrdp_mm *self, const char *aname)
 {
-    char *name;
-    char *value;
-    int index;
-    int count;
-    int rv;
+    const char *name;
+    const char *value = NULL;
+    unsigned int index = self->login_names->count;
 
-    rv = 1;
-    /* find the library name */
-    dest[0] = 0;
-    count = self->login_names->count;
-
-    for (index = 0; index < count; index++)
+    while (index > 0 && value == NULL)
     {
-        name = (char *)list_get_item(self->login_names, index);
-        value = (char *)list_get_item(self->login_values, index);
+        --index;
+        name = (const char *)list_get_item(self->login_names, index);
 
-        if ((name == 0) || (value == 0))
+        if (name != NULL && g_strcasecmp(name, aname) == 0)
         {
-            break;
-        }
-
-        if (g_strcasecmp(name, aname) == 0)
-        {
-            g_strncpy(dest, value, dest_len);
-            rv = 0;
+            value = (const char *)list_get_item(self->login_values, index);
         }
     }
 
-    return rv;
+    return value;
 }
 
 /*****************************************************************************/
@@ -331,7 +326,7 @@ static int
 xrdp_mm_setup_mod1(struct xrdp_mm *self)
 {
     void *func;
-    char lib[256];
+    const char *lib;
     char text[256];
 
     if (self == 0)
@@ -339,9 +334,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
         return 1;
     }
 
-    lib[0] = 0;
-
-    if (xrdp_mm_get_value(self, "lib", lib, 255) != 0)
+    if ((lib = xrdp_mm_get_value(self, "lib")) == NULL)
     {
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
                         "no library name specified in xrdp.ini, please add "
@@ -523,12 +516,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self, const struct guid *pguid)
             {
                 use_uds = 1;
 
-                if (xrdp_mm_get_value(self, "ip", text, 255) == 0)
+                if ((value = xrdp_mm_get_value(self, "ip")) != NULL &&
+                        g_strcmp(value, "127.0.0.1") != 0)
                 {
-                    if (g_strcmp(text, "127.0.0.1") != 0)
-                    {
-                        use_uds = 0;
-                    }
+                    use_uds = 0;
                 }
 
                 if (use_uds)
@@ -1179,19 +1170,17 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self)
 {
-    char enable_dynamic_resize[32];
+    const char *enable_dynamic_resize;
     int error = 0;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_drdynvc_up:");
 
-    xrdp_mm_get_value(self, "enable_dynamic_resizing",
-                      enable_dynamic_resize,
-                      sizeof(enable_dynamic_resize) - 1);
-
+    enable_dynamic_resize = xrdp_mm_get_value(self, "enable_dynamic_resizing");
     /*
      * User can disable dynamic resizing if necessary
      */
-    if (enable_dynamic_resize[0] != '\0' && !g_text2bool(enable_dynamic_resize))
+    if (enable_dynamic_resize != NULL && enable_dynamic_resize[0] != '\0' &&
+            !g_text2bool(enable_dynamic_resize))
     {
         LOG(LOG_LEVEL_INFO, "User has disabled dynamic resizing.");
     }
@@ -1762,9 +1751,9 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     int ok;
     int display;
     int rv;
-    char ip[256];
+    const char *ip;
     char port[256];
-    char username[256];
+    const char *username;
     struct guid guid;
     const struct guid *pguid = NULL;
 
@@ -1777,10 +1766,9 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
         pguid = &guid;
     }
 
-    if (xrdp_mm_get_value(self, "username",
-                          username, sizeof(username) - 1) != 0)
+    if ((username = xrdp_mm_get_value(self, "username")) == NULL)
     {
-        g_strcpy(username, "???");
+        username = "???";
     }
 
     if (ok)
@@ -1794,12 +1782,13 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
         {
             if (xrdp_mm_setup_mod2(self, pguid) == 0)
             {
-                xrdp_mm_get_value(self, "ip", ip, 255);
+                ip = xrdp_mm_get_value(self, "ip");
                 xrdp_wm_set_login_state(self->wm, WMLS_CLEANUP);
                 self->wm->dragging = 0;
 
                 /* connect channel redir */
-                if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
+                if (ip == NULL || (ip[0] == '\0') ||
+                        (g_strcmp(ip, "127.0.0.1") == 0))
                 {
                     g_snprintf(port, 255, XRDP_CHANSRV_STR, display);
                 }
