@@ -30,8 +30,26 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
 int
 clipboard_process_file_response(struct stream *s, int clip_msg_status,
                                 int clip_msg_len);
+/**
+ * Process a CLIPRDR_FILELIST - see [MS-RDPECLIP] 2.2.5.2.3
+ *
+ * Files in the list are added to the xfs filesystem in the clipboard
+ * directory. The filenames names are added to the 'file_list' for the user.
+ * Files are prefixed with '<fprefix><clipboard_dir>/' and separated by '\n'.
+ *
+ * If the list is not big enough, whole filenames are omitted, and a warning
+ * message is logged. This is not an error.
+ *
+ * @param s Input stream containing CLIPRDR_FILELIST
+ * @param file_list Output buffer for filenames
+ * @param file_list_size Size of buffer, including space for '\0'.
+ * @param fprefix Prefix for each file in the file list (e.g. "file://")
+ *
+ * @return Zero for success.
+ */
 int
-clipboard_c2s_in_files(struct stream *s, char *file_list);
+clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size,
+                       const char *fprefix);
 
 int
 clipboard_request_file_size(int stream_id, int lindex);

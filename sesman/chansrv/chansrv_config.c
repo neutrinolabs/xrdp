@@ -39,7 +39,7 @@
 #define DEFAULT_ENABLE_FUSE_MOUNT           1
 #define DEFAULT_FUSE_MOUNT_NAME             "xrdp-client"
 #define DEFAULT_FILE_UMASK                  077
-
+#define DEFAULT_USE_NAUTILUS3_FLIST_FORMAT  0
 /**
  * Type used for passing a logging function about
  */
@@ -161,7 +161,7 @@ read_config_chansrv(log_func_t logmsg,
         {
             cfg->enable_fuse_mount = g_text2bool(value);
         }
-        if (g_strcasecmp(name, "FuseMountName") == 0)
+        else if (g_strcasecmp(name, "FuseMountName") == 0)
         {
             g_free(cfg->fuse_mount_name);
             cfg->fuse_mount_name = g_strdup(value);
@@ -175,6 +175,10 @@ read_config_chansrv(log_func_t logmsg,
         else if (g_strcasecmp(name, "FileUmask") == 0)
         {
             cfg->file_umask = strtol(value, NULL, 0);
+        }
+        else if (g_strcasecmp(name, "UseNautilus3FlistFormat") == 0)
+        {
+            cfg->use_nautilus3_flist_format = g_text2bool(value);
         }
     }
 
@@ -206,6 +210,7 @@ new_config(void)
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
         cfg->fuse_mount_name = fuse_mount_name;
         cfg->file_umask = DEFAULT_FILE_UMASK;
+        cfg->use_nautilus3_flist_format = DEFAULT_USE_NAUTILUS3_FLIST_FORMAT;
     }
 
     return cfg;
@@ -290,6 +295,8 @@ config_dump(struct config_chansrv *config)
               g_bool2text(config->enable_fuse_mount));
     g_writeln("    FuseMountName:             %s", config->fuse_mount_name);
     g_writeln("    FileMask:                  0%o", config->file_umask);
+    g_writeln("    Nautilus 3 Flist Format:   %s",
+              g_bool2text(config->use_nautilus3_flist_format));
 }
 
 /******************************************************************************/
