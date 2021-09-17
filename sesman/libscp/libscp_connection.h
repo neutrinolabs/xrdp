@@ -31,11 +31,12 @@
 
 /**
  *
- * @brief creates a new SCP transport object
- * @param sck the connection socket
- *
- * This is a convenience function which calls trans_create() with the
- * correct parameters.
+ * @brief creates a new SCP connection
+ * @param host Hostname to connect to (NULL for default)
+ * @param port Port to connect to (NULL for default)
+ * @param term_func Transport termination function (or NULL)
+ * @param data_in_func Transport 'data in' function
+ * @param callback_data Closure data for data in function
  *
  * Returned object can be freed with trans_delete()
  *
@@ -43,7 +44,10 @@
  *
  */
 struct trans *
-scp_trans_create(int sck);
+scp_connect(const char *host, const  char *port,
+            tis_term term_func,
+            ttrans_data_in data_in_func,
+            void *callback_data);
 
 /**
  * @brief Maps SCP_CLIENT_TYPES_E to a string

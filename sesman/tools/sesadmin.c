@@ -53,7 +53,6 @@ int main(int argc, char **argv)
     //int end;
     int idx;
     //int sel;
-    int sock;
     char *pwd;
     struct log_config *logging;
 
@@ -128,21 +127,14 @@ int main(int argc, char **argv)
 
     scp_init();
 
-    sock = g_tcp_socket();
-    if (sock < 0)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "Socket open error, g_tcp_socket() failed");
-        return 1;
-    }
-
     s = scp_session_create();
-    t = scp_trans_create(sock);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "Connecting to %s:%s)", serv, port);
+    t = scp_connect(serv, port, NULL, NULL, NULL);
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "Connecting to %s:%s with user %s (%s)", serv, port, user, pass);
 
-    if (0 != trans_connect(t, serv, port, 3000))
+    if (t == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "trans_connect() error");
+        LOG(LOG_LEVEL_ERROR, "scp_connect() error");
         return 1;
     }
 

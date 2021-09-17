@@ -410,10 +410,9 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         in_uint16_be(in_s, height);
         scp_session_set_height(session, height);
         in_uint16_be(in_s, bpp);
-        if (session_type == SCP_SESSION_TYPE_XORG && bpp != 24)
+        if (session_type == SCP_SESSION_TYPE_XORG)
         {
-            LOG(LOG_LEVEL_WARNING,
-                "Setting bpp to 24 from %d for Xorg session", bpp);
+            /* Client value is ignored */
             bpp = 24;
         }
         if (0 != scp_session_set_bpp(session, (tui8)bpp))

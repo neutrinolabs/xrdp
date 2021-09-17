@@ -30,17 +30,54 @@
 
 #include "libscp_connection.h"
 #include "string_calls.h"
+#include "trans.h"
 
+/*****************************************************************************/
 struct trans *
-scp_trans_create(int sck)
+scp_connect(const char *host, const  char *port,
+            tis_term term_func,
+            ttrans_data_in data_in_func,
+            void *callback_data)
 {
-    struct trans *result = trans_create(TRANS_MODE_TCP, 8192, 8192);
-    if (result != NULL)
+    struct trans *t = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    int index;
+
+    if (host == NULL)
     {
-        result->sck = sck;
+        host = "localhost";
     }
 
-    return result;
+    if (port == NULL)
+    {
+        port = "3350";
+    }
+
+    t->is_term = term_func;
+
+    t->trans_data_in = data_in_func;
+    t->header_size = 8;
+    t->no_stream_init_on_data_in = 1;
+    t->callback_data = callback_data;
+
+    /* try to connect up to 4 times
+     *
+     * term_func can be NULL, so check before calling it */
+    index = 4;
+    while (trans_connect(t, host, port, 3000) != 0 &&
+            !(term_func && term_func()) &&
+            --index > 0)
+    {
+        g_sleep(1000);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "Connect failed. Trying again...");
+    }
+
+    if (t->status != TRANS_STATUS_UP)
+    {
+        trans_delete(t);
+        t = NULL;
+    }
+
+    return t;
 }
 
 /*****************************************************************************/

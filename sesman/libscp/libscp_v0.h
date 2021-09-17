@@ -60,6 +60,9 @@ scp_v0c_gateway_request(struct trans *atrans,
                         const char *username,
                         const char *password);
 
+/*
+ * Note client bpp is ignored by the sesman for Xorg sessions
+ */
 enum SCP_CLIENT_STATES_E
 scp_v0c_create_session_request(struct trans *atrans,
                                const char *username,
