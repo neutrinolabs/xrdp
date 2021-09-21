@@ -82,6 +82,37 @@ timeval2wintime(struct timeval *tv)
 }
 #endif
 
+/***
+ * See MS-RDPECLIP 3.1.5.4.7
+ *
+ * Sends a failure response to a CLIPRDR_FILECONTENTS_REQUEST
+ * @param streamId Stream ID from CLIPRDR_FILECONTENTS_REQUEST
+ * @return 0 for success
+ */
+
+static int
+clipboard_send_filecontents_response_fail(int streamId)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "clipboardn_send_filecontents_response_fail:");
+
+    struct stream *s;
+    int size;
+    int rv;
+
+    make_stream(s);
+    init_stream(s, 64);
+
+    out_uint16_le(s, CB_FILECONTENTS_RESPONSE);
+    out_uint16_le(s, CB_RESPONSE_FAIL);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, streamId);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    return rv;
+}
+
 /*****************************************************************************/
 /* this will replace %20 or any hex with the space or correct char
  * returns error */
@@ -318,12 +349,21 @@ clipboard_send_file_size(int streamId, int lindex)
     if (g_files_list == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_size: error g_files_list is nil");
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     cfi = (struct cb_file_info *)list_get_item(g_files_list, lindex);
     if (cfi == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_size: error cfi is nil");
+        clipboard_send_filecontents_response_fail(streamId);
+        return 1;
+    }
+    if (cfi->size < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_size: error cfi->size is negative"
+            "value [%d]", cfi->size);
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     file_size = cfi->size;
@@ -397,12 +437,14 @@ clipboard_send_file_data(int streamId, int lindex,
     if (g_files_list == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: error g_files_list is nil");
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     cfi = (struct cb_file_info *)list_get_item(g_files_list, lindex);
     if (cfi == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: error cfi is nil");
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_file_data: streamId %d lindex %d "
@@ -412,15 +454,17 @@ clipboard_send_file_data(int streamId, int lindex,
     fd = g_file_open_ex(full_fn, 1, 0, 0, 0);
     if (fd == -1)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: file open [%s] failed",
-                  full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_data: file open [%s] failed: %s",
+            full_fn, g_get_strerror());
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     if (g_file_seek(fd, nPositionLow) < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
-                  "in file: %s", full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error in file [%s]: %s",
+            full_fn, g_get_strerror());
         g_file_close(fd);
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     make_stream(s);
@@ -432,6 +476,7 @@ clipboard_send_file_data(int streamId, int lindex,
                   cbRequested, size);
         free_stream(s);
         g_file_close(fd);
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     out_uint16_le(s, CB_FILECONTENTS_RESPONSE); /* 9 */
