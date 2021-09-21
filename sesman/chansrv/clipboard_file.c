@@ -361,7 +361,8 @@ clipboard_send_file_size(int streamId, int lindex)
     }
     if (cfi->size < 0)
     {
-        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_size: failed to get file size");
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_size: error cfi->size is negative"
+            "value [%d]", cfi->size);
         clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
@@ -460,8 +461,8 @@ clipboard_send_file_data(int streamId, int lindex,
     }
     if (g_file_seek(fd, nPositionLow) < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
-                  "in file: %s", full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error in file [%s]: %s",
+            full_fn, g_get_strerror());
         g_file_close(fd);
         clipboard_send_filecontents_response_fail(streamId);
         return 1;
