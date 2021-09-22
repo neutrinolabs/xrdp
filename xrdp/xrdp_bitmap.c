@@ -516,7 +516,7 @@ xrdp_bitmap_draw_focus_box(struct xrdp_bitmap *self,
     painter->brush.pattern[6] = 0xaa;
     painter->brush.pattern[7] = 0x55;
     painter->brush.x_origin = x;
-    painter->brush.x_origin = x;
+    painter->brush.y_origin = y;
     painter->brush.style = 3;
     painter->fg_color = self->wm->black;
     painter->bg_color = self->parent->bg_color;
