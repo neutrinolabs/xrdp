@@ -12,6 +12,7 @@ AM_CPPFLAGS = \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
+  -I$(top_srcdir)/sesman/libscp \
   -I$(top_srcdir)/libxrdp \
   $(IMLIB2_CFLAGS)
 
@@ -61,6 +62,7 @@ xrdp_SOURCES = \
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libscp/libscp.la \
   $(top_builddir)/libxrdp/libxrdp.la \
   $(IMLIB2_LIBS) \
   $(XRDP_EXTRA_LIBS)
