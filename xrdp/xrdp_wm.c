@@ -1977,6 +1977,26 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     return 0;
 }
 
+/******************************************************************************/
+/* this gets called when the module manager finishes a connect
+ * which was initiated by xrdp_mm_connect()
+ */
+void
+xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status)
+{
+    LOG(LOG_LEVEL_DEBUG, "status from xrdp_mm_connect() : %d", status);
+    if (status == 0)
+    {
+        xrdp_wm_set_login_state(self, WMLS_CLEANUP);
+        self->dragging = 0;
+    }
+    else
+    {
+        xrdp_wm_set_login_state(self, WMLS_INACTIVE);
+        xrdp_wm_show_log(self);
+    }
+}
+
 /*****************************************************************************/
 /* this is the log windows notify function */
 static int

@@ -151,6 +151,8 @@ int
 xrdp_wm_check_wait_objs(struct xrdp_wm *self);
 int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state);
+void
+xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status);
 
 /* xrdp_process.c */
 struct xrdp_process *
