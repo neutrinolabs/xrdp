@@ -2191,9 +2191,6 @@ getPAMError(const int pamError, char *text, int text_bytes)
             return "Error connecting to PAM";
         case 32 + 3:
             return "Username okey but group problem";
-        default:
-            g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
-            return text;
 #elif defined(OPENPAM)
         case PAM_SUCCESS: /* 0 */
             return "Success";
@@ -2255,10 +2252,10 @@ getPAMError(const int pamError, char *text, int text_bytes)
             return "Module is unknown";
         case PAM_DOMAIN_UNKNOWN: /* 29 */
             return "Unknown authentication domain";
+#endif
         default:
             g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
             return text;
-#endif
     }
 }
 
@@ -2309,8 +2306,6 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
             {
                 return "Authentication error - Verify that user/password is valid";
             }
-        default:
-            return "No expected error";
 #elif defined(OPENPAM)
         case PAM_SUCCESS: /* 0 */
             return NULL;
@@ -2351,9 +2346,9 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
             {
                 return "Authentication error - Verify that user/password is valid";
             }
+#endif
         default:
             return "No expected error";
-#endif
     }
 }
 #endif
