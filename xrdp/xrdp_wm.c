@@ -1956,16 +1956,13 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     }
     else if (self->login_state == WMLS_START_CONNECT)
     {
-        if (xrdp_mm_connect(self->mm) == 0)
-        {
-            xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
-            xrdp_wm_delete_all_children(self);
-            self->dragging = 0;
-        }
-        else
-        {
-            /* we do nothing on connect error so far */
-        }
+        xrdp_wm_delete_all_children(self);
+        self->dragging = 0;
+        xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
+
+        /* This calls back to xrdp_wm_mod_connect_done() when the
+         * connect is finished*/
+        xrdp_mm_connect(self->mm);
     }
     else if (self->login_state == WMLS_CLEANUP)
     {

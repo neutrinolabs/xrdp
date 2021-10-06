@@ -422,7 +422,7 @@ struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner);
 void
 xrdp_mm_delete(struct xrdp_mm *self);
-int
+void
 xrdp_mm_connect(struct xrdp_mm *self);
 int
 xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
