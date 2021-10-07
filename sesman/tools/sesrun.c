@@ -40,6 +40,8 @@
 #include "string_calls.h"
 #include "guid.h"
 
+#include "libscp_connection.h"
+
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
 #endif
@@ -415,20 +417,6 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
 }
 
 /**************************************************************************//**
- * Helper function for send_scpv0_auth_request()
- *
- * @param s Output string
- * @param str String to write to s
- */
-static void
-out_string16(struct stream *s, const char *str)
-{
-    int i = g_strlen(str);
-    out_uint16_be(s, i);
-    out_uint8a(s, str, i);
-}
-
-/**************************************************************************//**
  * Sends an SCP V0 authorization request
  *
  * @param sck file descriptor to send request on
@@ -438,11 +426,9 @@ out_string16(struct stream *s, const char *str)
  *       xrdp_mm_send_login(). When SCP is reworked, a common library
  *       function should be used
  */
-static void
-send_scpv0_auth_request(int sck, const struct session_params *sp)
+static enum SCP_CLIENT_STATES_E
+send_scpv0_auth_request(struct trans *t, const struct session_params *sp)
 {
-    struct stream *out_s;
-
     LOG(LOG_LEVEL_DEBUG,
         "width:%d  height:%d  bpp:%d  code:%d\n"
         "server:\"%s\"    domain:\"%s\"    directory:\"%s\"\n"
@@ -453,110 +439,72 @@ send_scpv0_auth_request(int sck, const struct session_params *sp)
     /* Only log the password in development builds */
     LOG_DEVEL(LOG_LEVEL_DEBUG, "password:\"%s\"", sp->password);
 
-    make_stream(out_s);
-    init_stream(out_s, 8192);
-
-    s_push_layer(out_s, channel_hdr, 8);
-    out_uint16_be(out_s, sp->session_code);
-    out_string16(out_s, sp->username);
-    out_string16(out_s, sp->password);
-    out_uint16_be(out_s, sp->width);
-    out_uint16_be(out_s, sp->height);
-    out_uint16_be(out_s, sp->bpp);
-    out_string16(out_s, sp->domain);
-    out_string16(out_s, sp->shell);
-    out_string16(out_s, sp->directory);
-    out_string16(out_s, sp->client_ip);
-    s_mark_end(out_s);
-
-    s_pop_layer(out_s, channel_hdr);
-    out_uint32_be(out_s, 0); /* version */
-    out_uint32_be(out_s, out_s->end - out_s->data); /* size */
-    tcp_force_send(sck, out_s->data, out_s->end - out_s->data);
-
-    free_stream(out_s);
+    return scp_v0c_create_session_request(
+        t, sp->username, sp->password, sp->session_code, sp->width, sp->height,
+        sp->bpp, sp->domain, sp->shell, sp->directory, sp->client_ip);
 }
 
 /**************************************************************************//**
  * Receives an SCP V0 authorization reply
  *
- * @param sck file descriptor to receive reply on
- *
- * @todo This code duplicates functionality in the XRDP function
- *       xrdp_mm_process_login_response(). When SCP is reworked, a
- *       common library function should be used
+ * @param t SCP transport to receive reply on
+ * @return 0 for success
  */
 static int
-handle_scpv0_auth_reply(int sck)
+handle_scpv0_auth_reply(struct trans *t)
 {
-    int result = 1;
-    int packet_ok = 0;
+    tbus wobj[1];
+    int ocnt = 0;
 
-    struct stream *in_s;
+    int rv = 1;
 
-    make_stream(in_s);
-    init_stream(in_s, 8192);
-
-    if (tcp_force_recv(sck, in_s->data, 8) == 0)
+    if (trans_get_wait_objs(t, wobj, &ocnt) != 0)
     {
-        int version;
-        int size;
-        int code;
-        int data;
-        int display;
-
-        in_s->end = in_s->data + 8;
-        in_uint32_be(in_s, version);
-        in_uint32_be(in_s, size);
-        if (version == 0 && size >= 14)
+        LOG(LOG_LEVEL_ERROR, "Can't get wait object for sesman transport");
+    }
+    else
+    {
+        while (t->status == TRANS_STATUS_UP)
         {
-            init_stream(in_s, 8192);
-            if (tcp_force_recv(sck, in_s->data, size - 8) == 0)
+            g_obj_wait(wobj, ocnt, NULL, 0, -1);
+            if (trans_check_wait_objs(t) != 0)
             {
-                in_s->end = in_s->data + (size - 8);
+                LOG(LOG_LEVEL_ERROR, "sesman transport down");
+                break;
+            }
 
-                in_uint16_be(in_s, code);
-                in_uint16_be(in_s, data);
-                in_uint16_be(in_s, display);
-
-                if (code == 3)
+            if (scp_v0c_reply_available(t))
+            {
+                struct scp_v0_reply_type msg;
+                enum SCP_CLIENT_STATES_E e = scp_v0c_get_reply(t, &msg);
+                if (e != SCP_CLIENT_STATE_OK)
                 {
-                    packet_ok = 1;
-
-                    if (data == 0)
+                    LOG(LOG_LEVEL_ERROR,
+                        "Error reading response from sesman [%s]",
+                        scp_client_state_to_str(e));
+                }
+                else
+                {
+                    if (msg.auth_result == 0)
                     {
                         g_printf("Connection denied (authentication error)\n");
                     }
                     else
                     {
-                        struct guid guid;
-                        char guid_str[MAX(GUID_STR_SIZE, 16)];
-                        if (s_check_rem(in_s, GUID_SIZE) != 0)
-                        {
-                            in_uint8a(in_s, guid.g, GUID_SIZE);
-                            guid_to_str(&guid, guid_str);
-                        }
-                        else
-                        {
-                            g_strcpy(guid_str, "<none>");
-                        }
-
+                        char guid_str[GUID_STR_SIZE];
                         g_printf("ok data=%d display=:%d GUID=%s\n",
-                                 (int)data, display, guid_str);
-                        result = 0;
+                                 msg.auth_result,
+                                 msg.display,
+                                 guid_to_str(&msg.guid, guid_str));
                     }
+                    rv = 0;
                 }
+                break;
             }
         }
     }
 
-    if (!packet_ok)
-    {
-        LOG(LOG_LEVEL_ERROR, "Corrupt reply packet");
-    }
-    free_stream(in_s);
-
-    return result;
+    return rv;
 }
 
 /******************************************************************************/
@@ -566,11 +514,12 @@ main(int argc, char **argv)
     const char *sesman_ini = XRDP_CFG_PATH "/sesman.ini";
     struct config_sesman *cfg = NULL;
 
-    int sck = -1;
+    struct trans *t = NULL;
+    enum SCP_CLIENT_STATES_E e;
     struct session_params sp;
 
     struct log_config *logging;
-    int status = 1;
+    int rv = 1;
 
     logging = log_config_init_for_console(LOG_LEVEL_WARNING,
                                           g_getenv("SESRUN_LOG_LEVEL"));
@@ -586,32 +535,30 @@ main(int argc, char **argv)
         LOG(LOG_LEVEL_ERROR, "error reading config file %s : %s",
             sesman_ini, g_get_strerror());
     }
+    else if (!(t = scp_connect(sp.server, cfg->listen_port, NULL, NULL, NULL)))
+    {
+        LOG(LOG_LEVEL_ERROR, "connect error - %s", g_get_strerror());
+    }
     else
     {
-        sck = g_tcp_socket();
-        if (sck < 0)
+        e = send_scpv0_auth_request(t, &sp);
+        if (e != SCP_CLIENT_STATE_OK)
         {
-            LOG(LOG_LEVEL_ERROR, "socket error - %s", g_get_strerror());
-        }
-        else if (g_tcp_connect(sck, sp.server, cfg->listen_port) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "connect error - %s", g_get_strerror());
+            LOG(LOG_LEVEL_ERROR,
+                "Error sending create session to sesman [%s]",
+                scp_client_state_to_str(e));
+            rv = 1;
         }
         else
         {
-            send_scpv0_auth_request(sck, &sp);
-            status = handle_scpv0_auth_reply(sck);
+            rv = handle_scpv0_auth_reply(t);
         }
-    }
-
-    if (sck >= 0)
-    {
-        g_tcp_close(sck);
+        trans_delete(t);
     }
 
     g_memset(sp.password, '\0', sizeof(sp.password));
     config_free(cfg);
     log_end();
 
-    return status;
+    return rv;
 }
