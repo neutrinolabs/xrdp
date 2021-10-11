@@ -1006,6 +1006,8 @@ find_matching_extended_rect(struct vnc *v,
         }
     }
 
+    free_stream(s);
+
     return error;
 }
 
