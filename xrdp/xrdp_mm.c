@@ -448,6 +448,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_add_char = server_add_char;
             self->mod->server_draw_text = server_draw_text;
             self->mod->server_reset = server_reset;
+            self->mod->server_get_channel_count = server_get_channel_count;
             self->mod->server_query_channel = server_query_channel;
             self->mod->server_get_channel_id = server_get_channel_id;
             self->mod->server_send_to_channel = server_send_to_channel;
@@ -3567,6 +3568,24 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
     xrdp_wm_load_static_pointers(wm);
     return 0;
 }
+
+/*****************************************************************************/
+/*return -1 if channels are controlled by chansrv */
+int
+server_get_channel_count(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+
+    if (wm->mm->usechansrv)
+    {
+        return -1;
+    }
+
+    return libxrdp_get_channel_count(wm->session);
+}
+
 
 /*****************************************************************************/
 /*return 0 if the index is not found*/

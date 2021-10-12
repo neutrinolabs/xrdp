@@ -92,6 +92,7 @@ struct mod
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
     int (*server_reset)(struct mod *v, int width, int height, int bpp);
+    int (*server_get_channel_count)(struct mod *v);
     int (*server_query_channel)(struct mod *v, int index,
                                 char *channel_name,
                                 int *channel_flags);
@@ -152,7 +153,7 @@ struct mod
                               char *data, int width, int height,
                               int flags, int frame_id);
 
-    tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
