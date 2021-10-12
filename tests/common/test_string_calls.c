@@ -328,8 +328,7 @@ END_TEST
 START_TEST(test_strtrim__trim_left)
 {
     /* setup */
-    const char *input = "\t\t    \tDone is better than perfect.\t\t    \n\n";
-    char *output = g_strdup(input);
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
 
     /* test */
     g_strtrim(output, 1);
@@ -342,8 +341,7 @@ END_TEST
 START_TEST(test_strtrim__trim_right)
 {
     /* setup */
-    const char *input = "\t\t    \tDone is better than perfect.\t\t    \n\n";
-    char *output = g_strdup(input);
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
 
     /* test */
     g_strtrim(output, 2);
@@ -356,8 +354,7 @@ END_TEST
 START_TEST(test_strtrim__trim_both)
 {
     /* setup */
-    const char *input = "\t\t    \tDone is better than perfect.\t\t    \n\n";
-    char *output = g_strdup(input);
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
 
     /* test */
     g_strtrim(output, 3);
@@ -370,8 +367,7 @@ END_TEST
 START_TEST(test_strtrim__trim_through)
 {
     /* setup */
-    const char *input = "\t\t    \tDone is better than perfect.\t\t    \n\n";
-    char *output = g_strdup(input);
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
 
     /* test */
     g_strtrim(output, 4);
