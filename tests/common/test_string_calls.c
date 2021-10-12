@@ -324,12 +324,68 @@ START_TEST(test_bm2str__overflow_some_bits_undefined)
 END_TEST
 
 /******************************************************************************/
+
+START_TEST(test_strtrim__trim_left)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 1);
+
+    /* verify */
+    ck_assert_str_eq(output, "Done is better than perfect.\t\t    \n\n");
+}
+END_TEST
+
+START_TEST(test_strtrim__trim_right)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 2);
+
+    /* verify */
+    ck_assert_str_eq(output, "\t\t    \tDone is better than perfect.");
+}
+END_TEST
+
+START_TEST(test_strtrim__trim_both)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 3);
+
+    /* verify */
+    ck_assert_str_eq(output, "Done is better than perfect.");
+}
+END_TEST
+
+START_TEST(test_strtrim__trim_through)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 4);
+
+    /* verify */
+    ck_assert_str_eq(output, "Doneisbetterthanperfect.");
+}
+END_TEST
+
+/******************************************************************************/
+
 Suite *
 make_suite_test_string(void)
 {
     Suite *s;
     TCase *tc_strnjoin;
     TCase *tc_bm2str;
+    TCase *tc_strtrim;
 
     s = suite_create("String");
 
@@ -354,6 +410,13 @@ make_suite_test_string(void)
     tcase_add_test(tc_bm2str, test_bm2str__some_bits_undefined);
     tcase_add_test(tc_bm2str, test_bm2str__overflow_all_bits_defined);
     tcase_add_test(tc_bm2str, test_bm2str__overflow_some_bits_undefined);
+
+    tc_strtrim = tcase_create("strtrim");
+    suite_add_tcase(s, tc_strtrim);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_left);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_right);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_both);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_through);
 
     return s;
 }
