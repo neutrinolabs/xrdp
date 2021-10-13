@@ -1749,21 +1749,34 @@ lfreerdp_pre_connect(freerdp *instance)
     LOG_DEVEL(LOG_LEVEL_INFO, "lfreerdp_pre_connect:");
     mod = ((struct mod_context *)(instance->context))->modi;
     verifyColorMap(mod);
-    num_chans = 0;
-    index = 0;
-    error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
 
-    while (error == 0)
+    num_chans = mod->server_get_channel_count(mod);
+    if (num_chans < 0)
     {
-        num_chans++;
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_pre_connect: got channel [%s], id [%d], flags [0x%8.8x]",
-                  ch_name, index, ch_flags);
-        dst_ch_name = instance->settings->channels[index].name;
-        g_memset(dst_ch_name, 0, 8);
-        g_snprintf(dst_ch_name, 8, "%s", ch_name);
-        instance->settings->channels[index].options = ch_flags;
-        index++;
+        LOG(LOG_LEVEL_ERROR, "lfreerdp_pre_connect: Can't get channel count");
+        num_chans = 0;
+    }
+
+    for (index = 0 ; index < num_chans; ++index)
+    {
         error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
+        if (error == 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_pre_connect: "
+                      "got channel [%s], id [%d], flags [0x%8.8x]",
+                      ch_name, index, ch_flags);
+            dst_ch_name = instance->settings->channels[index].name;
+            g_memset(dst_ch_name, 0, 8);
+            g_snprintf(dst_ch_name, 8, "%s", ch_name);
+            instance->settings->channels[index].options = ch_flags;
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR, "lfreerdp_pre_connect: "
+                "Expected %d channels, got %d",
+                num_chans, index);
+            num_chans = index;
+        }
     }
 
     instance->settings->num_channels = num_chans;

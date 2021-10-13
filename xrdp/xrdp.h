@@ -513,6 +513,8 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp);
 int
 is_channel_allowed(struct xrdp_wm *wm, int channel_id);
 int
+server_get_channel_count(struct xrdp_mod *mod);
+int
 server_query_channel(struct xrdp_mod *mod, int index, char *channel_name,
                      int *channel_flags);
 int

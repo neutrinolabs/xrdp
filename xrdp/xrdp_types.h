@@ -95,6 +95,7 @@ struct xrdp_mod
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
     int (*server_reset)(struct xrdp_mod *v, int width, int height, int bpp);
+    int (*server_get_channel_count)(struct xrdp_mod *v);
     int (*server_query_channel)(struct xrdp_mod *v, int index,
                                 char *channel_name,
                                 int *channel_flags);
@@ -159,7 +160,7 @@ struct xrdp_mod
                               int flags, int frame_id);
     int (*server_session_info)(struct xrdp_mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 46]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */
