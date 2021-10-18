@@ -926,6 +926,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
             "display :%d.0, width %d, height %d, bpp %d, client ip %s, "
             "user name %s",
             pid, display, s->width, s->height, s->bpp, s->client_ip, s->username);
+        g_signal_child_stop(sig_sesman_session_end); /* SIGCHLD */
         temp->item->pid = pid;
         temp->item->display = display;
         temp->item->width = s->width;
