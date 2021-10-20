@@ -572,6 +572,7 @@ main(int argc, char **argv)
     {
         g_writeln("It looks like xrdp is already running.");
         g_writeln("If not, delete %s and try again.", pid_file);
+        log_end();
         g_deinit();
         g_exit(0);
     }
@@ -591,6 +592,7 @@ main(int argc, char **argv)
         if (fd == -1)
         {
             g_writeln("running in daemon mode with no access to pid files, quitting");
+            log_end();
             g_deinit();
             g_exit(0);
         }
@@ -598,6 +600,7 @@ main(int argc, char **argv)
         if (g_file_write(fd, "0", 1) == -1)
         {
             g_writeln("running in daemon mode with no access to pid files, quitting");
+            log_end();
             g_deinit();
             g_exit(0);
         }
@@ -613,6 +616,7 @@ main(int argc, char **argv)
         {
             LOG(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
                 "possibly address already in use.");
+            log_end();
             g_deinit();
             /* must exit with failure status,
                or systemd cannot detect xrdp daemon couldn't start properly */
@@ -624,6 +628,7 @@ main(int argc, char **argv)
         if (pid == -1)
         {
             g_writeln("problem forking");
+            log_end();
             g_deinit();
             g_exit(1);
         }
@@ -632,6 +637,7 @@ main(int argc, char **argv)
         {
             g_writeln("daemon process %d started ok", pid);
             /* exit, this is the main process */
+            log_end();
             g_deinit();
             g_exit(0);
         }
