@@ -120,8 +120,8 @@ xrdp_cache_create(struct xrdp_wm *owner,
 }
 
 /*****************************************************************************/
-void
-xrdp_cache_delete(struct xrdp_cache *self)
+static void
+clear_all_cached_items(struct xrdp_cache *self)
 {
     int i;
     int j;
@@ -165,7 +165,13 @@ xrdp_cache_delete(struct xrdp_cache *self)
             list16_deinit(&(self->crc16[i][j]));
         }
     }
+}
 
+/*****************************************************************************/
+void
+xrdp_cache_delete(struct xrdp_cache *self)
+{
+    clear_all_cached_items(self);
     g_free(self);
 }
 
@@ -176,30 +182,12 @@ xrdp_cache_reset(struct xrdp_cache *self,
 {
     struct xrdp_wm *wm;
     struct xrdp_session *session;
-    int i;
-    int j;
-
-    /* free all the cached bitmaps */
-    for (i = 0; i < XRDP_MAX_BITMAP_CACHE_ID; i++)
-    {
-        for (j = 0; j < XRDP_MAX_BITMAP_CACHE_IDX; j++)
-        {
-            xrdp_bitmap_delete(self->bitmap_items[i][j].bitmap);
-        }
-    }
-
-    /* free all the cached font items */
-    for (i = 0; i < 12; i++)
-    {
-        for (j = 0; j < 256; j++)
-        {
-            g_free(self->char_items[i][j].font_item.data);
-        }
-    }
 
     /* save these */
     wm = self->wm;
     session = self->session;
+    /* De-allocate any allocated memory */
+    clear_all_cached_items(self);
     /* set whole struct to zero */
     g_memset(self, 0, sizeof(struct xrdp_cache));
     /* set some stuff back */

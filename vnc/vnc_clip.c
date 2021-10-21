@@ -1107,6 +1107,7 @@ vnc_clip_open_clip_channel(struct vnc *v)
         s_mark_end(s);
         send_stream_to_clip_channel(v, s);
 
+        free_stream(s);
         /* Need to complete the startup handshake before we send formats */
         v->vc->startup_complete = 1;
     }
