@@ -3319,7 +3319,7 @@ server_palette(struct xrdp_mod *mod, int *palette)
 
 /*****************************************************************************/
 int
-server_msg(struct xrdp_mod *mod, char *msg, int code)
+server_msg(struct xrdp_mod *mod, const char *msg, int code)
 {
     struct xrdp_wm *wm;
 

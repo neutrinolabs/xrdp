@@ -72,7 +72,7 @@ struct xrdp_mod
     int (*server_set_pointer)(struct xrdp_mod *v, int x, int y,
                               char *data, char *mask);
     int (*server_palette)(struct xrdp_mod *v, int *palette);
-    int (*server_msg)(struct xrdp_mod *v, char *msg, int code);
+    int (*server_msg)(struct xrdp_mod *v, const char *msg, int code);
     int (*server_is_term)(struct xrdp_mod *v);
     int (*server_set_clip)(struct xrdp_mod *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct xrdp_mod *v);
