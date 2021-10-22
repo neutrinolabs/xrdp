@@ -11,15 +11,8 @@ EXTRA_DIST = \
   astyle_config.as \
   bootstrap \
   coding_style.md \
-  description-pak \
-  design.txt \
-  faq-compile.txt \
-  faq-general.txt \
-  file-loc.txt \
   fontdump \
-  install.txt \
   m4 \
-  postinstall-pak \
   vrplayer
 
 if XRDP_NEUTRINORDP
