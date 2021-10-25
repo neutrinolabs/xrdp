@@ -200,17 +200,28 @@ clipboard_get_file(const char *file, int bytes)
     clipboard_check_file(pathname);
     clipboard_check_file(filename);
     g_snprintf(full_fn, 255, "%s/%s", pathname, filename);
+
+    /*
+     * Before we look at the file, see if it's in the FUSE filesystem. If it is,
+     * we can't call normal file checking functions, as these will result in
+     * a deadlock */
+    if (xfuse_path_in_xfuse_fs(full_fn))
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_get_file: Can't add client-side file "
+            "%s to clipboard", full_fn);
+        return 1;
+    }
     if (g_directory_exist(full_fn))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] is a directory, "
-                  "not supported", full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] is a directory, "
+            "not supported", full_fn);
         flags |= CB_FILE_ATTRIBUTE_DIRECTORY;
         return 1;
     }
     if (!g_file_exist(full_fn))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] does not exist",
-                  full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] does not exist",
+            full_fn);
         return 1;
     }
     else
