@@ -87,8 +87,8 @@ scp_v1_process1(struct trans *t, struct SCP_SESSION *s)
              * future-proofing we only log the IP address rather than the
              * connection description */
             LOG(LOG_LEVEL_INFO,
-                "Username or password error for user: %s from %s",
-                s->username, ip);
+                "AUTHFAIL: user=%s ip=%s time=%d",
+                s->username, ip, g_time1());
             scp_v1s_deny_connection(t, "Login failed");
             return SCP_SERVER_STATE_END;
         }

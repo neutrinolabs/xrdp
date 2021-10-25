@@ -1765,6 +1765,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     char port[256];
     tui8 guid[16];
     tui8 *pguid;
+    char username[256];
 
     rv = 0;
     in_uint16_be(s, ok);
@@ -1775,11 +1776,19 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
         in_uint8a(s, guid, 16);
         pguid = guid;
     }
+
+    if (xrdp_mm_get_value(self, "username",
+                          username, sizeof(username) - 1) != 0)
+    {
+        g_strcpy(username, "???");
+    }
+
     if (ok)
     {
         self->display = display;
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "login successful for display %d", display);
+                        "login successful for user %s on display %d",
+                        username, display);
 
         if (xrdp_mm_setup_mod1(self) == 0)
         {
@@ -1804,8 +1813,23 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     }
     else
     {
+        char displayinfo[64];
+
+        if (display == 0)
+        {
+            /* A returned display of zero doesn't mean anything useful, and
+             * can confuse the user. It's most likely authentication has
+             * failed and no display was allocated */
+            displayinfo[0] = '\0';
+        }
+        else
+        {
+            g_snprintf(displayinfo, sizeof(displayinfo),
+                       " on display %d", display);
+        }
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "login failed for display %d", display);
+                        "login failed for user %s%s",
+                        username, displayinfo);
         xrdp_wm_show_log(self->wm);
         if (self->wm->hide_log_window)
         {
