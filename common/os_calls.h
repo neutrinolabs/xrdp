@@ -128,6 +128,8 @@ int      g_create_path(const char *path);
 int      g_remove_dir(const char *dirname);
 int      g_file_delete(const char *filename);
 int      g_file_get_size(const char *filename);
+int      g_file_get_device_number(const char *filename);
+int      g_file_get_inode_num(const char *filename);
 long     g_load_library(char *in);
 int      g_free_library(long lib);
 void    *g_get_proc_address(long lib, const char *name);
