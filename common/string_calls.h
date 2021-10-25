@@ -175,8 +175,9 @@ g_bitmask_to_str(int bitmask, const struct bitmask_string[],
                  char delim, char *buff, int bufflen);
 
 int      g_strlen(const char *text);
-const char *g_strchr(const char *text, int c);
-const char *g_strnchr(const char *text, int c, int len);
+char    *g_strchr(const char *text, int c);
+char    *g_strrchr(const char *text, int c);
+char    *g_strnchr(const char *text, int c, int len);
 char    *g_strcpy(char *dest, const char *src);
 char    *g_strncpy(char *dest, const char *src, int len);
 char    *g_strcat(char *dest, const char *src);
@@ -202,6 +203,7 @@ int      g_htoi(char *str);
 int      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
                            int bytes_out_str);
 int      g_pos(const char *str, const char *to_find);
+char    *g_strstr(const char *haystack, const char *needle);
 int      g_mbstowcs(twchar *dest, const char *src, int n);
 int      g_wcstombs(char *dest, const twchar *src, int n);
 int      g_strtrim(char *str, int trim_flags);
