@@ -114,4 +114,13 @@ void xfuse_devredir_cb_rename_file(struct state_rename *fip,
 
 void xfuse_devredir_cb_file_close(struct state_close *fip);
 
+/*
+ * Returns true if a filesystem path lies in the FUSE filesystem
+ *
+ * Use to prevent deadlocks. For example, if chansrv tries to open
+ * a file in the FUSE filesystem it will fail, as it will call back
+ * into itself to handle the I/O
+ */
+int xfuse_path_in_xfuse_fs(const char *path);
+
 #endif
