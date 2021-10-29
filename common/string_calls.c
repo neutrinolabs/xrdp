@@ -188,7 +188,7 @@ g_strlen(const char *text)
 
 /*****************************************************************************/
 /* locates char in text */
-const char *
+char *
 g_strchr(const char *text, int c)
 {
     if (text == NULL)
@@ -196,12 +196,27 @@ g_strchr(const char *text, int c)
         return 0;
     }
 
-    return strchr(text, c);
+    /* Cast needed to compile with C++ */
+    return (char *)strchr(text, c);
+}
+
+/*****************************************************************************/
+/* locates char in text */
+char *
+g_strrchr(const char *text, int c)
+{
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    /* Cast needed to compile with C++ */
+    return (char *)strrchr(text, c);
 }
 
 /*****************************************************************************/
 /* locates char in text with length */
-const char *
+char *
 g_strnchr(const char *text, int c, int len)
 {
     if (text == NULL || len <= 0)
@@ -209,7 +224,7 @@ g_strnchr(const char *text, int c, int len)
         return NULL;
     }
 
-    return (const char *)memchr(text, c, len);
+    return (char *)memchr(text, c, len);
 }
 
 /*****************************************************************************/
@@ -678,6 +693,20 @@ g_pos(const char *str, const char *to_find)
     }
 
     return (pp - str);
+}
+
+/*****************************************************************************/
+
+char *
+g_strstr(const char *haystack, const char *needle)
+{
+    if (haystack == NULL || needle == NULL)
+    {
+        return NULL;
+    }
+
+    /* Cast needed to compile with C++ */
+    return (char *)strstr(haystack, needle);
 }
 
 /*****************************************************************************/

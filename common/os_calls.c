@@ -2511,6 +2511,50 @@ g_file_get_size(const char *filename)
 }
 
 /*****************************************************************************/
+/* returns device number, -1 on error */
+int
+g_file_get_device_number(const char *filename)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    struct stat st;
+
+    if (stat(filename, &st) == 0)
+    {
+        return (int)(st.st_dev);
+    }
+    else
+    {
+        return -1;
+    }
+
+#endif
+}
+
+/*****************************************************************************/
+/* returns inode number, -1 on error */
+int
+g_file_get_inode_num(const char *filename)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    struct stat st;
+
+    if (stat(filename, &st) == 0)
+    {
+        return (int)(st.st_ino);
+    }
+    else
+    {
+        return -1;
+    }
+
+#endif
+}
+
+/*****************************************************************************/
 long
 g_load_library(char *in)
 {
