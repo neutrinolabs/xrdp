@@ -88,7 +88,8 @@ typedef int bool_t;
       defined(__i386__) || defined(__aarch64__) || \
       defined(__PPC__) || defined(__LITTLE_ENDIAN__) || \
       defined(__s390__) || defined (__s390x__) || \
-      defined(__riscv)
+      defined(__riscv) || \
+      defined(__loongarch__)
 #define NO_NEED_ALIGN
 #else
 #warning unknown arch
