@@ -77,17 +77,18 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
     else if (data)
     {
         s_item = session_get_bydata(s->username, s->width, s->height,
-                                    s->bpp, s->type, s->client_ip);
+                                    s->bpp, s->type, s->connection_description);
 
         if (s_item != 0)
         {
             display = s_item->display;
             g_memcpy(s->guid, s_item->guid, 16);
-            if (0 != s->client_ip)
+            if (0 != s->connection_description)
             {
                 LOG( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
                      "display :%d.0, session_pid %d, ip %s",
-                     s->username, display, s_item->pid, s->client_ip);
+                     s->username, display, s_item->pid,
+                     s->connection_description);
             }
             else
             {
@@ -109,10 +110,10 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
                 g_random((char *)guid, 16);
                 scp_session_set_guid(s, guid);
 
-                if (0 != s->client_ip)
+                if (0 != s->connection_description)
                 {
                     LOG(LOG_LEVEL_INFO, "++ created session (access granted): "
-                        "username %s, ip %s", s->username, s->client_ip);
+                        "username %s, ip %s", s->username, s->connection_description);
                 }
                 else
                 {
@@ -157,8 +158,15 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
     }
     else
     {
-        LOG(LOG_LEVEL_INFO, "Username or password error for user: %s",
-            s->username);
+        char ip[64];
+        g_get_ip_from_description(s->connection_description, ip, sizeof(ip));
+        /*
+         * The message is intended for use by fail2ban, so for
+         * future-proofing we only log the IP address rather than the
+         * connection description */
+        LOG(LOG_LEVEL_INFO,
+            "AUTHFAIL: user=%s ip=%s time=%d",
+            s->username, ip, g_time1());
         scp_v0s_deny_connection(t);
     }
     if (do_auth_end)

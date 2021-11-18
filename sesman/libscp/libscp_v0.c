@@ -355,13 +355,13 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         if (s_check_rem(in_s, 2))
         {
             /* reading client IP address */
-            if (!in_string16(in_s, buf, "client IP"))
+            if (!in_string16(in_s, buf, "connection description"))
             {
                 return SCP_SERVER_STATE_SIZE_ERR;
             }
             if (buf[0] != '\0')
             {
-                scp_session_set_client_ip(session, buf);
+                scp_session_set_connection_description(session, buf);
             }
         }
     }

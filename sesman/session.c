@@ -92,10 +92,11 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 /******************************************************************************/
 struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
-                   const char *client_ip)
+                   const char *connection_description)
 {
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
+    char ip[64];
 
     tmp = g_sessions;
 
@@ -115,27 +116,49 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
             return 0;
     }
 
+    if ((policy & SESMAN_CFG_SESS_POLICY_I) != 0)
+    {
+        /* We'll need to compare on IP addresses */
+        g_get_ip_from_description(connection_description, ip, sizeof(ip));
+    }
+    else
+    {
+        ip[0] = '\0';
+    }
+
     LOG(LOG_LEVEL_DEBUG,
         "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
-        policy, name, width, height, bpp, type, client_ip);
+        policy, name, width, height, bpp, type, connection_description);
 
     while (tmp != 0)
     {
+        char tmp_ip[64];
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_I) != 0)
+        {
+            g_get_ip_from_description(tmp->item->connection_description,
+                                      tmp_ip, sizeof (tmp_ip));
+        }
+        else
+        {
+            tmp_ip[0] = '\0';
+        }
+
         LOG(LOG_LEVEL_DEBUG,
             "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
             tmp->item,
             tmp->item->name,
             tmp->item->width, tmp->item->height,
             tmp->item->bpp, tmp->item->type,
-            tmp->item->client_ip);
+            tmp->item->connection_description);
 
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
                  (tmp->item->width == width && tmp->item->height == height)) &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-                 (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
+                 (g_strcmp(ip, tmp_ip) == 0)) &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
-                 (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
+                 (g_strncmp(connection_description, tmp->item->connection_description, 255) == 0)) &&
                 tmp->item->bpp == bpp &&
                 tmp->item->type == type)
         {
@@ -925,14 +948,14 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         LOG(LOG_LEVEL_INFO, "Starting session: session_pid %d, "
             "display :%d.0, width %d, height %d, bpp %d, client ip %s, "
             "user name %s",
-            pid, display, s->width, s->height, s->bpp, s->client_ip, s->username);
+            pid, display, s->width, s->height, s->bpp, s->connection_description, s->username);
         temp->item->pid = pid;
         temp->item->display = display;
         temp->item->width = s->width;
         temp->item->height = s->height;
         temp->item->bpp = s->bpp;
         temp->item->data = data;
-        g_strncpy(temp->item->client_ip, s->client_ip, 255);   /* store client ip data */
+        g_strncpy(temp->item->connection_description, s->connection_description, 255);   /* store client ip data */
         g_strncpy(temp->item->name, s->username, 255);
         g_memcpy(temp->item->guid, s->guid, 16);
 
@@ -1064,7 +1087,7 @@ session_kill(int pid)
             /* deleting the session */
             LOG(LOG_LEVEL_INFO,
                 "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s",
-                tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+                tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->connection_description);
             g_free(tmp->item);
 
             if (prev == 0)

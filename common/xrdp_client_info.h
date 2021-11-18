@@ -91,7 +91,7 @@ struct xrdp_client_info
     int rdp5_performanceflags;
     int brush_cache_code; /* 0 = no cache 1 = 8x8 standard cache
                            2 = arbitrary dimensions */
-    char client_ip[256];
+    char connection_description[256];
     int max_bpp;
     int jpeg; /* non standard bitmap cache v2 cap */
     int offscreen_support_level;
