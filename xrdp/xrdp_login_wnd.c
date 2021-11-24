@@ -438,7 +438,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
                 /* Use the domain name as the destination IP/DNS
                    This is useful in a gateway setup. */
-                if (g_strncmp(name, "ip", 255) == 0)
+                if (g_strncasecmp(name, "ip", 255) == 0)
                 {
                     /* If the first char in the domain name is '_' we use the
                        domain name as IP */
@@ -453,7 +453,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
                 }
 
-                if (g_strncmp(name, "username", 255) == 0 &&
+                if (g_strncasecmp(name, "username", 255) == 0 &&
                         self->session->client_info->username[0])
                 {
                     g_strncpy(b->caption1, self->session->client_info->username, 255);
@@ -465,7 +465,8 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                     }
                 }
 
-                if ((g_strncmp(name, "password", 255) == 0) || (g_strncmp(name, "pampassword", 255) == 0))
+                if ((g_strncasecmp(name, "password", 255) == 0) ||
+                        (g_strncasecmp(name, "pampassword", 255) == 0))
                 {
                     b->password_char = '*';
 
