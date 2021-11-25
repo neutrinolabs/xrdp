@@ -704,7 +704,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                     q = (char *)list_get_item(names, index);
                     r = (char *)list_get_item(values, index);
 
-                    if (g_strncmp("password", q, 255) == 0)
+                    if (g_strncasecmp("password", q, 255) == 0)
                     {
                         /* if the password has been asked for by the module, use what the
                            client says.
@@ -715,7 +715,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->password;
                         }
                     }
-                    else if (g_strncmp("username", q, 255) == 0)
+                    else if (g_strncasecmp("username", q, 255) == 0)
                     {
                         /* if the username has been asked for by the module, use what the
                            client says.
@@ -726,7 +726,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->username;
                         }
                     }
-                    else if (g_strncmp("ip", q, 255) == 0)
+                    else if (g_strncasecmp("ip", q, 255) == 0)
                     {
                         /* if the ip has been asked for by the module, use what the
                          client says (target ip should be in 'domain' field, when starting with "_")
@@ -742,7 +742,7 @@ xrdp_wm_init(struct xrdp_wm *self)
 
                         }
                     }
-                    else if (g_strncmp("port", q, 255) == 0)
+                    else if (g_strncasecmp("port", q, 255) == 0)
                     {
                         if (g_strncmp("ask3389", r, 7) == 0)
                         {
