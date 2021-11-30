@@ -1202,43 +1202,58 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     bmpdata = 0;
     if (flags == 0) /* screen */
     {
-        if (amod->screen_shmem_id_mapped == 0)
+        /* Do we need to map (or remap) the memory
+         * area shared with the X server ? */
+        if (amod->screen_shmem_id_mapped == 0 ||
+                amod->screen_shmem_id != shmem_id)
         {
-            amod->screen_shmem_id = shmem_id;
-            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+            if (amod->screen_shmem_id_mapped != 0)
+            {
+                g_shmdt(amod->screen_shmem_pixels);
+            }
+            amod->screen_shmem_pixels = (char *) g_shmat(shmem_id);
             if (amod->screen_shmem_pixels == (void *) -1)
             {
                 /* failed */
+                if (amod->screen_shmem_id_mapped == 0)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Can't attach to shared memory id %d [%s]",
+                        shmem_id, g_get_strerror());
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Can't attach to shared memory id %d from id %d [%s]",
+                        shmem_id, amod->screen_shmem_id, g_get_strerror());
+                }
                 amod->screen_shmem_id = 0;
                 amod->screen_shmem_pixels = 0;
                 amod->screen_shmem_id_mapped = 0;
             }
             else
             {
+                amod->screen_shmem_id = shmem_id;
                 amod->screen_shmem_id_mapped = 1;
             }
         }
-        else if (amod->screen_shmem_id != shmem_id)
-        {
-            amod->screen_shmem_id = shmem_id;
-            g_shmdt(amod->screen_shmem_pixels);
-            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-            if (amod->screen_shmem_pixels == (void *) -1)
-            {
-                /* failed */
-                amod->screen_shmem_id = 0;
-                amod->screen_shmem_pixels = 0;
-                amod->screen_shmem_id_mapped = 0;
-            }
-        }
+
         if (amod->screen_shmem_pixels != 0)
         {
             bmpdata = amod->screen_shmem_pixels + shmem_offset;
         }
     }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "process_server_paint_rect_shmem_ex:"
+                  " flags=%d frame_id=%d, shmem_id=%d, shmem_offset=%d,"
+                  " width=%d, height=%d",
+                  flags, frame_id, shmem_id, shmem_offset,
+                  width, height);
+    }
+
     if (bmpdata != 0)
     {
-
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
                                       num_crects, lcrects,
                                       bmpdata, width, height,
