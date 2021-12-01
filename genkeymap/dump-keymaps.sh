@@ -1,6 +1,6 @@
 #!/bin/sh
 
-which setxkbmap
+command -v setxkbmap
 if test $? -ne 0
 then
   echo "error, setxkbmap not found"
