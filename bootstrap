@@ -1,27 +1,27 @@
 #!/bin/sh
 
-which autoconf
+command -v autoconf
 if ! test $? -eq 0
 then
   echo "error, install autoconf"
   exit 1
 fi
 
-which automake
+command -v automake
 if ! test $? -eq 0
 then
   echo "error, install automake"
   exit 1
 fi
 
-which libtool || which libtoolize
+command -v libtool || command -v libtoolize
 if ! test $? -eq 0
 then
   echo "error, install libtool"
   exit 1
 fi
 
-which pkg-config
+command -v pkg-config
 if ! test $? -eq 0
 then
   echo "error, install pkg-config"
