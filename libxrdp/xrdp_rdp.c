@@ -816,6 +816,9 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
         updateHeader = (updateCode & 15) |
                        ((fragmentation & 3) << 4) |
                        ((compression & 3) << 6);
+
+        send_s.end = send_s.p + send_len;
+        send_s.size = send_s.end - send_s.data;
         out_uint8(&send_s, updateHeader);
         if (compression != 0)
         {
@@ -824,7 +827,6 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
         }
         send_len -= header_bytes;
         out_uint16_le(&send_s, send_len);
-        send_s.end = send_s.p + send_len;
         LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_FP_UPDATE "
                   "updateCode %d, fragmentation %d, compression %d, compressionFlags %s, size %d",
                   updateCode, fragmentation, compression,
