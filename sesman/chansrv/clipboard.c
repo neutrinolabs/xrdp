@@ -2061,7 +2061,7 @@ clipboard_event_selection_notify(XEvent *xevent)
             }
             else if (lxevent->target == g_file_atom2)
             {
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: text/uri-list "
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: x-special/gnome-copied-files "
                           "data_size %d", data_size);
                 if ((g_clip_s2c.incr_in_progress == 0) && (data_size > 0))
                 {
