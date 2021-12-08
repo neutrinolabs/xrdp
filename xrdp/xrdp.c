@@ -635,7 +635,6 @@ main(int argc, char **argv)
 
         if (0 != pid)
         {
-            g_writeln("daemon process %d started ok", pid);
             /* exit, this is the main process */
             log_end();
             g_deinit();
