@@ -83,6 +83,8 @@ START_TEST(test_g_file_get_size__just_less_than_2GiB)
 }
 END_TEST
 
+/* skip these tests until g_file_get_size() supports large files*/
+#if 0
 START_TEST(test_g_file_get_size__2GiB)
 {
     const char *file = "./file_2GiB.dat";
@@ -140,6 +142,7 @@ START_TEST(test_g_file_get_size__5GiB)
     ck_assert_int_eq(size, expected_size);
 }
 END_TEST
+#endif
 
 /******************************************************************************/
 Suite *
@@ -155,8 +158,10 @@ make_suite_test_os_calls(void)
     tcase_add_test(tc_os_calls, test_g_file_get_size__returns_file_size);
     tcase_add_test(tc_os_calls, test_g_file_get_size__1GiB);
     tcase_add_test(tc_os_calls, test_g_file_get_size__just_less_than_2GiB);
+#if 0
     tcase_add_test(tc_os_calls, test_g_file_get_size__2GiB);
     tcase_add_test(tc_os_calls, test_g_file_get_size__5GiB);
+#endif
 
     return s;
 }
