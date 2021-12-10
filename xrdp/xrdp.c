@@ -574,7 +574,7 @@ main(int argc, char **argv)
         LOG(LOG_LEVEL_ALWAYS, "If not, delete %s and try again.", pid_file);
         log_end();
         g_deinit();
-        g_exit(0);
+        g_exit(1);
     }
 
     daemon = !startup_params.no_daemon;
@@ -595,7 +595,7 @@ main(int argc, char **argv)
                 "running in daemon mode with no access to pid files, quitting");
             log_end();
             g_deinit();
-            g_exit(0);
+            g_exit(1);
         }
 
         if (g_file_write(fd, "0", 1) == -1)
@@ -604,7 +604,7 @@ main(int argc, char **argv)
                 "running in daemon mode with no access to pid files, quitting");
             log_end();
             g_deinit();
-            g_exit(0);
+            g_exit(1);
         }
 
         g_file_close(fd);
