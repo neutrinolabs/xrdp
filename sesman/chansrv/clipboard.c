@@ -2350,19 +2350,43 @@ clipboard_event_selection_request(XEvent *xevent)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: "
                       "text requested when files available");
-            g_memcpy(&g_saved_selection_req_event, lxev,
-                     sizeof(g_saved_selection_req_event));
-            g_clip_c2s.type = lxev->target;
-            g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
-            clipboard_send_data_request(g_file_format_id);
+
+            if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_FILE)
+            {
+                LOG(LOG_LEVEL_DEBUG,
+                    "inbound clipboard %s is restricted because of config",
+                    lxev->target == XA_STRING ? "XA_STRING" : "UTF8_STRING");
+                clipboard_refuse_selection(lxev);
+            }
+            else
+            {
+                g_memcpy(&g_saved_selection_req_event, lxev,
+                         sizeof(g_saved_selection_req_event));
+                g_clip_c2s.type = lxev->target;
+                g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+                clipboard_send_data_request(g_file_format_id);
+            }
+
         }
         else
         {
-            g_memcpy(&g_saved_selection_req_event, lxev,
-                     sizeof(g_saved_selection_req_event));
-            g_clip_c2s.type = lxev->target;
-            g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
-            clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+
+            if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_TEXT)
+            {
+                LOG(LOG_LEVEL_DEBUG,
+                    "inbound clipboard %s is restricted because of config",
+                    lxev->target == XA_STRING ? "XA_STRING" : "UTF8_STRING");
+                clipboard_refuse_selection(lxev);
+            }
+            else
+            {
+                g_memcpy(&g_saved_selection_req_event, lxev,
+                         sizeof(g_saved_selection_req_event));
+                g_clip_c2s.type = lxev->target;
+                g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
+                clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+            }
+
         }
         return 0;
     }
@@ -2372,15 +2396,37 @@ clipboard_event_selection_request(XEvent *xevent)
         if ((g_clip_c2s.type == lxev->target) && g_clip_c2s.converted)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: -------------------------------------------");
-            clipboard_provide_selection_c2s(lxev, lxev->target);
+
+            if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_IMAGE)
+            {
+                LOG(LOG_LEVEL_DEBUG,
+                    "inbound clipboard image/bmp converted is restricted because of config");
+                clipboard_refuse_selection(lxev);
+            }
+            else
+            {
+                clipboard_provide_selection_c2s(lxev, lxev->target);
+            }
             return 0;
+
         }
-        g_memcpy(&g_saved_selection_req_event, lxev,
-                 sizeof(g_saved_selection_req_event));
-        g_clip_c2s.type = g_image_bmp_atom;
-        g_clip_c2s.xrdp_clip_type = XRDP_CB_BITMAP;
-        clipboard_send_data_request(CB_FORMAT_DIB);
+
+        if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_IMAGE)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "inbound clipboard image/bmp is restricted because of config");
+            clipboard_refuse_selection(lxev);
+        }
+        else
+        {
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = g_image_bmp_atom;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_BITMAP;
+            clipboard_send_data_request(CB_FORMAT_DIB);
+        }
         return 0;
+
     }
     else if (lxev->target == g_file_atom1)
     {
@@ -2388,31 +2434,73 @@ clipboard_event_selection_request(XEvent *xevent)
         if ((g_clip_c2s.type == lxev->target) && g_clip_c2s.converted)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: -------------------------------------------");
-            clipboard_provide_selection_c2s(lxev, lxev->target);
+            if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_FILE)
+            {
+                LOG(LOG_LEVEL_DEBUG,
+                    "inbound clipboard text/uri-list is restricted because of config");
+                clipboard_refuse_selection(lxev);
+                return 0;
+            }
+            else
+            {
+                clipboard_provide_selection_c2s(lxev, lxev->target);
+                return 0;
+            }
+        }
+        if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_FILE)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "inbound clipboard text/uri-list is restricted because of config");
+            clipboard_refuse_selection(lxev);
             return 0;
         }
-        g_memcpy(&g_saved_selection_req_event, lxev,
-                 sizeof(g_saved_selection_req_event));
-        g_clip_c2s.type = g_file_atom1;
-        g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
-        clipboard_send_data_request(g_file_format_id);
-        return 0;
+        else
+        {
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = g_file_atom1;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+            clipboard_send_data_request(g_file_format_id);
+            return 0;
+        }
+
     }
     else if (lxev->target == g_file_atom2)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: g_file_atom2");
+
         if ((g_clip_c2s.type == lxev->target) && g_clip_c2s.converted)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: -------------------------------------------");
-            clipboard_provide_selection_c2s(lxev, lxev->target);
+            if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_FILE)
+            {
+                LOG(LOG_LEVEL_DEBUG,
+                    "inbound clipboard x-special/gnome-copied-files converted is restricted because of config");
+                clipboard_refuse_selection(lxev);
+                return 0;
+            }
+            else
+            {
+                clipboard_provide_selection_c2s(lxev, lxev->target);
+                return 0;
+            }
+        }
+        if (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_FILE)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "inbound clipboard x-special/gnome-copied-files is restricted because of config");
+            clipboard_refuse_selection(lxev);
             return 0;
         }
-        g_memcpy(&g_saved_selection_req_event, lxev,
-                 sizeof(g_saved_selection_req_event));
-        g_clip_c2s.type = g_file_atom2;
-        g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
-        clipboard_send_data_request(g_file_format_id);
-        return 0;
+        else
+        {
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = g_file_atom2;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+            clipboard_send_data_request(g_file_format_id);
+            return 0;
+        }
     }
     else
     {
