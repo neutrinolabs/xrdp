@@ -22,6 +22,13 @@
 #include "parse.h"
 #include "os_calls.h"
 
+/* Define bitmask values for restricting the clipboard */
+#define CLIP_RESTRICT_NONE 0
+#define CLIP_RESTRICT_TEXT (1<<0)
+#define CLIP_RESTRICT_FILE (1<<1)
+#define CLIP_RESTRICT_IMAGE (1<<2)
+#define CLIP_RESTRICT_ALL 0x7fffffff
+
 int read_entire_packet(struct stream *src, struct stream **dest, int chan_flags, int length, int total_length);
 
 #endif

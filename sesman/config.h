@@ -61,6 +61,7 @@
 #define SESMAN_CFG_SEC_ADM_GROUP                   "TerminalServerAdmins"
 #define SESMAN_CFG_SEC_ALWAYSGROUPCHECK            "AlwaysGroupCheck"
 #define SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD "RestrictOutboundClipboard"
+#define SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD  "RestrictInboundClipboard"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
@@ -134,6 +135,12 @@ struct config_security
      * @brief if the clipboard should be enforced restricted. If true only allow client -> server, not vice versa.
      */
     int restrict_outbound_clipboard;
+
+    /**
+     * @var restrict_inbound_clipboard
+     * @brief if the clipboard should be enforced restricted. If true only allow server -> client, not vice versa.
+     */
+    int restrict_inbound_clipboard;
 };
 
 /**
