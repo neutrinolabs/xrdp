@@ -171,6 +171,7 @@ x-special/gnome-copied-files
 #include "os_calls.h"
 #include "string_calls.h"
 #include "chansrv.h"
+#include "chansrv_common.h"
 #include "chansrv_config.h"
 #include "clipboard.h"
 #include "clipboard_file.h"
@@ -2005,14 +2006,33 @@ clipboard_event_selection_notify(XEvent *xevent)
                     g_clip_s2c.data[g_clip_s2c.total_bytes] = 0;
                     if (g_clip_s2c.xrdp_clip_type == XRDP_CB_FILE)
                     {
-                        clipboard_send_data_response_for_file(g_clip_s2c.data,
-                                                              g_clip_s2c.total_bytes);
+                        if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_FILE)
+                        {
+                            LOG(LOG_LEVEL_DEBUG,
+                                "outbound clipboard(file) UTF8_STRING(%s) is restricted because of config",
+                                g_clip_s2c.data);
+                        }
+                        else
+                        {
+                            clipboard_send_data_response_for_file(g_clip_s2c.data,
+                                                                  g_clip_s2c.total_bytes);
+                        }
                     }
                     else
                     {
-                        clipboard_send_data_response_for_text(g_clip_s2c.data,
-                                                              g_clip_s2c.total_bytes);
+                        if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_TEXT)
+                        {
+                            LOG(LOG_LEVEL_DEBUG,
+                                "outbound clipboard(text) UTF8_STRING(%s) is restricted because of config",
+                                g_clip_s2c.data);
+                        }
+                        else
+                        {
+                            clipboard_send_data_response_for_text(g_clip_s2c.data,
+                                                                  g_clip_s2c.total_bytes);
+                        }
                     }
+
                 }
             }
             else if (lxevent->target == XA_STRING)
@@ -2026,8 +2046,18 @@ clipboard_event_selection_notify(XEvent *xevent)
                     g_clip_s2c.data = (char *) g_malloc(g_clip_s2c.total_bytes + 1, 0);
                     g_memcpy(g_clip_s2c.data, data, g_clip_s2c.total_bytes);
                     g_clip_s2c.data[g_clip_s2c.total_bytes] = 0;
-                    clipboard_send_data_response_for_text(g_clip_s2c.data,
-                                                          g_clip_s2c.total_bytes);
+                    if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_TEXT)
+                    {
+                        LOG(LOG_LEVEL_DEBUG,
+                            "outbound clipboard(text) XA_STRING(%s) is restricted because of config",
+                            g_clip_s2c.data);
+                    }
+                    else
+                    {
+                        clipboard_send_data_response_for_text(g_clip_s2c.data,
+                                                              g_clip_s2c.total_bytes);
+                    }
+
                 }
             }
             else if (lxevent->target == g_image_bmp_atom)
@@ -2037,11 +2067,21 @@ clipboard_event_selection_notify(XEvent *xevent)
                 if ((g_clip_s2c.incr_in_progress == 0) && (data_size > 14))
                 {
                     g_free(g_clip_s2c.data);
-                    g_clip_s2c.total_bytes = data_size;
-                    g_clip_s2c.data = (char *) g_malloc(data_size, 0);
-                    g_memcpy(g_clip_s2c.data, data, data_size);
-                    clipboard_send_data_response_for_image(g_clip_s2c.data + 14,
-                                                           data_size - 14);
+
+                    if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_IMAGE)
+                    {
+                        LOG(LOG_LEVEL_DEBUG,
+                            "outbound clipboard(image) image/bmp is restricted because of config");
+                    }
+                    else
+                    {
+                        g_clip_s2c.total_bytes = data_size;
+                        g_clip_s2c.data = (char *) g_malloc(data_size, 0);
+                        g_memcpy(g_clip_s2c.data, data, data_size);
+                        clipboard_send_data_response_for_image(g_clip_s2c.data + 14,
+                                                               data_size - 14);
+                    }
+
                 }
             }
             else if (lxevent->target == g_file_atom1)
@@ -2055,8 +2095,19 @@ clipboard_event_selection_notify(XEvent *xevent)
                     g_clip_s2c.data = (char *) g_malloc(g_clip_s2c.total_bytes + 1, 0);
                     g_memcpy(g_clip_s2c.data, data, g_clip_s2c.total_bytes);
                     g_clip_s2c.data[g_clip_s2c.total_bytes] = 0;
-                    clipboard_send_data_response_for_file(g_clip_s2c.data,
-                                                          g_clip_s2c.total_bytes);
+                    if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_FILE)
+                    {
+                        LOG(LOG_LEVEL_DEBUG,
+                            "outbound clipboard(file) text/uri-list(%s) is restricted because of config",
+                            g_clip_s2c.data);
+                    }
+                    else
+                    {
+                        clipboard_send_data_response_for_file(g_clip_s2c.data,
+                                                              g_clip_s2c.total_bytes);
+
+                    }
+
                 }
             }
             else if (lxevent->target == g_file_atom2)
@@ -2070,8 +2121,18 @@ clipboard_event_selection_notify(XEvent *xevent)
                     g_clip_s2c.data = (char *) g_malloc(g_clip_s2c.total_bytes + 1, 0);
                     g_memcpy(g_clip_s2c.data, data, g_clip_s2c.total_bytes);
                     g_clip_s2c.data[g_clip_s2c.total_bytes] = 0;
-                    clipboard_send_data_response_for_file(g_clip_s2c.data,
-                                                          g_clip_s2c.total_bytes);
+                    if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_FILE)
+                    {
+                        LOG(LOG_LEVEL_DEBUG,
+                            "outbound clipboard(file) x-special/gnome-copied-files(%s) is restricted because of config",
+                            g_clip_s2c.data);
+                    }
+                    else
+                    {
+                        clipboard_send_data_response_for_file(g_clip_s2c.data,
+                                                              g_clip_s2c.total_bytes);
+                    }
+
                 }
             }
             else
@@ -2090,35 +2151,81 @@ clipboard_event_selection_notify(XEvent *xevent)
     if (got_file_atom != 0)
     {
         /* text/uri-list or x-special/gnome-copied-files */
-        g_clip_s2c.type = got_file_atom;
-        g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
-        g_clip_s2c.converted = 0;
-        g_clip_s2c.clip_time = lxevent->time;
-        send_format_announce = 1;
+
+        if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_FILE)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "outbound clipboard(file) is restricted because of config");
+        }
+        else
+        {
+            g_clip_s2c.type = got_file_atom;
+            g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
+            g_clip_s2c.converted = 0;
+            g_clip_s2c.clip_time = lxevent->time;
+            send_format_announce = 1;
+        }
+
     }
     else if (got_utf8)
     {
-        g_clip_s2c.type = g_utf8_atom;
-        g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
-        g_clip_s2c.converted = 0;
-        g_clip_s2c.clip_time = lxevent->time;
-        send_format_announce = 1;
+
+        if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_TEXT)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "outbound clipboard(text) is restricted because of config");
+        }
+        else
+        {
+            g_clip_s2c.type = g_utf8_atom;
+            g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
+            g_clip_s2c.converted = 0;
+            g_clip_s2c.clip_time = lxevent->time;
+            send_format_announce = 1;
+        }
+
     }
     else if (got_string)
     {
-        g_clip_s2c.type = XA_STRING;
-        g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
-        g_clip_s2c.converted = 0;
-        g_clip_s2c.clip_time = lxevent->time;
-        send_format_announce = 1;
+
+        /*
+         * In most cases, when copying text, TARGETS atom and UTF8_STRING atom exists,
+         * it means that this code block which checks STRING atom might not be never executed
+         * in recent platforms.
+         * Use echo foo | xclip -selection clipboard -noutf8 to reproduce it.
+         */
+        if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_TEXT)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "outbound clipboard(text) is restricted because of config");
+        }
+        else
+        {
+            g_clip_s2c.type = XA_STRING;
+            g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
+            g_clip_s2c.converted = 0;
+            g_clip_s2c.clip_time = lxevent->time;
+            send_format_announce = 1;
+        }
+
     }
     else if (got_bmp_image)
     {
-        g_clip_s2c.type = g_image_bmp_atom;
-        g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
-        g_clip_s2c.converted = 0;
-        g_clip_s2c.clip_time = lxevent->time;
-        send_format_announce = 1;
+
+        if (g_cfg->restrict_outbound_clipboard & CLIP_RESTRICT_IMAGE)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "outbound clipboard(image) is restricted because of config");
+        }
+        else
+        {
+            g_clip_s2c.type = g_image_bmp_atom;
+            g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
+            g_clip_s2c.converted = 0;
+            g_clip_s2c.clip_time = lxevent->time;
+            send_format_announce = 1;
+        }
+
     }
 
     if (send_format_announce)
@@ -2527,15 +2634,7 @@ clipboard_xevent(void *xevent)
     switch (lxevent->type)
     {
         case SelectionNotify:
-            if (g_cfg->restrict_outbound_clipboard == 0)
-            {
-                clipboard_event_selection_notify(lxevent);
-            }
-            else
-            {
-                LOG(LOG_LEVEL_INFO, "outbound clipboard is restricted because of config");
-                return 1;
-            }
+            clipboard_event_selection_notify(lxevent);
             break;
         case SelectionRequest:
             clipboard_event_selection_request(lxevent);
