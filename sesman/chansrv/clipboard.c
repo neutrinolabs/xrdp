@@ -2533,7 +2533,7 @@ clipboard_xevent(void *xevent)
             }
             else
             {
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "outbound clipboard is restricted because of config");
+                LOG(LOG_LEVEL_INFO, "outbound clipboard is restricted because of config");
                 return 1;
             }
             break;
