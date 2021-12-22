@@ -348,7 +348,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         {
             alloc_bytes = XRDP_SURCMD_PREFIX_BYTES;
             alloc_bytes += self->max_compressed_bytes;
-            alloc_bytes += sizeof(struct rfx_tile) * enc->num_crects +
+            alloc_bytes += sizeof(struct rfx_tile) * tiles_left +
                            sizeof(struct rfx_rect) * enc->num_drects;
             out_data = g_new(char, alloc_bytes);
             if (out_data != NULL)
