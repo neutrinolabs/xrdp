@@ -136,8 +136,6 @@ int
 callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
          intptr_t param3, intptr_t param4);
 int
-xrdp_wm_drdynvc_up(intptr_t id);
-int
 xrdp_wm_delete_all_children(struct xrdp_wm *self);
 int
 xrdp_wm_show_log(struct xrdp_wm *self);
