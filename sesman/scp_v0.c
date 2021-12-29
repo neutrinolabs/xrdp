@@ -77,7 +77,7 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
     else if (data)
     {
         s_item = session_get_bydata(s->username, s->width, s->height,
-                                    s->bpp, s->type, s->connection_description);
+                                    s->bpp, s->type, s->connection_description, s->clientname);
 
         if (s_item != 0)
         {
@@ -86,9 +86,9 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
             if (0 != s->connection_description)
             {
                 LOG( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
-                     "display :%d.0, session_pid %d, ip %s",
+                     "display :%d.0, session_pid %d, ip %s, clientname %s",
                      s->username, display, s_item->pid,
-                     s->connection_description);
+                     s->connection_description, s->clientname);
             }
             else
             {
@@ -113,7 +113,7 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
                 if (0 != s->connection_description)
                 {
                     LOG(LOG_LEVEL_INFO, "++ created session (access granted): "
-                        "username %s, ip %s", s->username, s->connection_description);
+                        "username %s, ip %s, clientname %s", s->username, s->connection_description, s->clientname);
                 }
                 else
                 {

@@ -266,6 +266,11 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     out_uint16_be(s, index);
     out_uint8a(s, self->wm->client_info->connection_description, index);
 
+    /* send clientname */
+    index = g_strlen(self->wm->client_info->clientname);
+    out_uint16_be(s, index);
+    out_uint8a(s, self->wm->client_info->clientname, index);
+
     s_mark_end(s);
 
     s_pop_layer(s, channel_hdr);

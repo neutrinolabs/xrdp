@@ -91,6 +91,9 @@ int
 scp_session_set_hostname(struct SCP_SESSION *s, const char *str);
 
 int
+scp_session_set_clientname(struct SCP_SESSION *s, const char *str);
+
+int
 scp_session_set_addr(struct SCP_SESSION *s, int type, const void *addr);
 
 int

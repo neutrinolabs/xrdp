@@ -317,6 +317,10 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
             {
                 se->policy = SESMAN_CFG_SESS_POLICY_UBC;
             }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBN_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBN;
+            }
             else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDI_S))
             {
                 se->policy = SESMAN_CFG_SESS_POLICY_UBDI;
@@ -324,6 +328,10 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
             else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDC_S))
             {
                 se->policy = SESMAN_CFG_SESS_POLICY_UBDC;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDN_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBDN;
             }
             else /* silently ignore typos */
             {

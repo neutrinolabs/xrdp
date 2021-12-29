@@ -91,6 +91,7 @@ struct SCP_SESSION
     int return_sid;
     int retries;
     int current_try;
+    char* clientname;
 };
 
 struct SCP_DISCONNECTED_SESSION

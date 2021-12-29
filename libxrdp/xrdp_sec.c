@@ -1951,7 +1951,9 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     int highColorDepth;
     int supportedColorDepths;
     int earlyCapabilityFlags;
-    char clientName[INFO_CLIENT_NAME_BYTES / 2] = { '\0' };
+    self->rdp_layer->client_info.clientname[0] = 0;
+
+//    self->rdp_layer->client_info.clientname[(INFO_CLIENT_NAME_BYTES / 2) - 1] = '\0';
 
     /* TS_UD_CS_CORE requiered fields */
     in_uint8s(s, 4); /* version */
@@ -1970,8 +1972,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint8s(s, 2); /* SASSequence */
     in_uint8s(s, 4); /* keyboardLayout */
     in_uint8s(s, 4); /* clientBuild */
-    unicode_utf16_in(s, INFO_CLIENT_NAME_BYTES - 2, clientName, sizeof(clientName) - 1);  /* clientName */
-    LOG(LOG_LEVEL_INFO, "Connected client computer name: %s", clientName);
+    unicode_utf16_in(s, INFO_CLIENT_NAME_BYTES - 2, self->rdp_layer->client_info.clientname, sizeof(self->rdp_layer->client_info.clientname) - 1);  /* clientname */
+    LOG(LOG_LEVEL_INFO, "Connected client computer name: %s", self->rdp_layer->client_info.clientname);
     in_uint8s(s, 4); /* keyboardType */
     in_uint8s(s, 4); /* keyboardSubType */
     in_uint8s(s, 4); /* keyboardFunctionKey */
@@ -1987,7 +1989,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               self->rdp_layer->client_info.height,
               (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
                colorDepth == 0xca01 ? "RNS_UD_COLOR_8BPP" : "unknown"),
-              clientName);
+			   self->rdp_layer->client_info.clientname);
 
     /* TS_UD_CS_CORE optional fields */
     in_uint16_le(s, postBeta2ColorDepth);
