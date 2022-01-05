@@ -1717,10 +1717,10 @@ lib_mod_connect(struct vnc *v)
                 if (error == 0)
                 {
                     init_stream(s, 8192);
-                    if (v->got_guid)
+                    if (guid_is_set(&v->guid))
                     {
-                        char guid_str[64];
-                        g_bytes_to_hexstr(v->guid, 16, guid_str, 64);
+                        char guid_str[GUID_STR_SIZE];
+                        guid_to_str(&v->guid, guid_str);
                         rfbHashEncryptBytes(s->data, guid_str);
                     }
                     else
@@ -2091,8 +2091,7 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
     }
     else if (g_strcasecmp(name, "guid") == 0)
     {
-        v->got_guid = 1;
-        g_memcpy(v->guid, value, 16);
+        v->guid = *(struct guid *)value;
     }
     else if (g_strcasecmp(name, "disabled_encodings_mask") == 0)
     {

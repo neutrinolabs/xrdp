@@ -26,6 +26,7 @@
 #include "parse.h"
 #include "os_calls.h"
 #include "defines.h"
+#include "guid.h"
 
 #define CURRENT_MOD_VER 4
 
@@ -159,8 +160,7 @@ struct vnc
     struct vnc_clipboard_data *vc;
     int delay_ms;
     struct trans *trans;
-    int got_guid;
-    tui8 guid[16];
+    struct guid guid;
     int suppress_output;
     unsigned int enabled_encodings_mask;
     /* Resizeable support */

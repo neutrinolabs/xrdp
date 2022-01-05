@@ -27,6 +27,7 @@
 #include "xrdp_rail.h"
 #include "xrdp_constants.h"
 #include "fifo.h"
+#include "guid.h"
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
@@ -72,7 +73,7 @@ struct xrdp_mod
     int (*server_set_pointer)(struct xrdp_mod *v, int x, int y,
                               char *data, char *mask);
     int (*server_palette)(struct xrdp_mod *v, int *palette);
-    int (*server_msg)(struct xrdp_mod *v, char *msg, int code);
+    int (*server_msg)(struct xrdp_mod *v, const char *msg, int code);
     int (*server_is_term)(struct xrdp_mod *v);
     int (*server_set_clip)(struct xrdp_mod *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct xrdp_mod *v);
@@ -295,13 +296,40 @@ struct xrdp_cache
 /* defined later */
 struct xrdp_enc_data;
 
+/**
+ * Stages we go through connecting to the session
+ */
+enum mm_connect_state
+{
+    MMCS_CONNECT_TO_SESMAN,
+    MMCS_PAM_AUTH,
+    MMCS_SESSION_AUTH,
+    MMCS_CONNECT_TO_SESSION,
+    MMCS_CONNECT_TO_CHANSRV,
+    MMCS_DONE
+};
+
 struct xrdp_mm
 {
     struct xrdp_wm *wm; /* owner */
-    int connected_state; /* true if connected to sesman else false */
+    enum mm_connect_state connect_state; /* State of connection */
+    /* Other processes we connect to */
+    /* NB : When we move to UDS, the sesman and pam_auth
+     * connection be merged */
+    int use_sesman; /* true if this is a sesman session */
+    int use_pam_auth; /* True if we're to authenticate using PAM */
+    int use_chansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
     struct trans *sesman_trans; /* connection to sesman */
-    int sesman_trans_up; /* true once connected to sesman */
-    int delete_sesman_trans; /* boolean set when done with sesman connection */
+    struct trans *pam_auth_trans; /* connection to pam authenticator */
+    struct trans *chan_trans; /* connection to chansrv */
+
+    /* We can't delete transports while we're in a callback for that
+     * transport, as this causes trans.c to reference undefined memory.
+     * These flags mark transports as needing to be deleted when
+     * we are definitely not in a transport callback */
+    int delete_sesman_trans;
+    int delete_pam_auth_trans;
+
     struct list *login_names;
     struct list *login_values;
     /* mod vars */
@@ -310,12 +338,8 @@ struct xrdp_mm
     int (*mod_exit)(struct xrdp_mod *);
     struct xrdp_mod *mod; /* module interface */
     int display; /* 10 for :10.0, 11 for :11.0, etc */
+    struct guid guid; /* GUID for the session, or all zeros  */
     int code; /* 0=Xvnc session, 10=X11rdp session, 20=xorg driver mode */
-    int sesman_controlled; /* true if this is a sesman session */
-    struct trans *chan_trans; /* connection to chansrv */
-    int chan_trans_up; /* true once connected to chansrv */
-    int delete_chan_trans; /* boolean set when done with channel connection */
-    int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
     struct xrdp_encoder *encoder;
     int cs2xr_cid_map[256];
     int xr2cr_cid_map[256];

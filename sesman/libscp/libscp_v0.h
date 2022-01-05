@@ -28,22 +28,59 @@
 #define LIBSCP_V0_H
 
 #include "libscp.h"
+#include "guid.h"
 
-/*TODO : Replace this (unused) function with something that can be used
- * by xrdp_mm.c and sesrun.c */
-#if 0
 /* client API */
-/**
- *
- * @brief connects to sesman using scp v0
- * @param c connection descriptor
- * @param s session descriptor
- * @param d display
- *
+
+struct scp_v0_reply_type
+{
+    /**
+     * True if this is a reply to a gateway authentication request
+     */
+    int is_gw_auth_response;
+
+    /**
+     * Authentication result. PAM code for gateway request, boolean otherwise
+     */
+    int auth_result;
+
+    /**
+     * Display number for successful non-gateway requests
+     */
+    int display;
+
+    /**
+     * GUID for successful non-gateway requests
+     */
+    struct guid guid;
+};
+
+enum SCP_CLIENT_STATES_E
+scp_v0c_gateway_request(struct trans *atrans,
+                        const char *username,
+                        const char *password);
+
+/*
+ * Note client bpp is ignored by the sesman for Xorg sessions
  */
 enum SCP_CLIENT_STATES_E
-scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
-#endif
+scp_v0c_create_session_request(struct trans *atrans,
+                               const char *username,
+                               const char *password,
+                               unsigned short code,
+                               unsigned short width,
+                               unsigned short height,
+                               unsigned short bpp,
+                               const char *domain,
+                               const char *shell,
+                               const char *directory,
+                               const char *client_ip);
+
+int
+scp_v0c_reply_available(struct trans *atrans);
+
+enum SCP_CLIENT_STATES_E
+scp_v0c_get_reply(struct trans *atrans, struct scp_v0_reply_type *reply);
 
 /* server API */
 /**
@@ -63,7 +100,8 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *s);
  *
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d, const tui8 *guid);
+scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d,
+                         const struct guid *guid);
 
 /**
  *

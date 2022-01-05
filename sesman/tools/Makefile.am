@@ -41,7 +41,8 @@ xrdp_xcon_SOURCES = \
   xcon.c
 
 xrdp_sesrun_LDADD = \
-  $(top_builddir)/common/libcommon.la
+  $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libscp/libscp.la
 
 xrdp_sestest_LDADD = \
   $(top_builddir)/common/libcommon.la \

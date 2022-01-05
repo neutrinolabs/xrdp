@@ -82,7 +82,7 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
         if (s_item != 0)
         {
             display = s_item->display;
-            g_memcpy(s->guid, s_item->guid, 16);
+            s->guid = s_item->guid;
             if (0 != s->connection_description)
             {
                 LOG( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
@@ -105,10 +105,9 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
 
             if (1 == access_login_allowed(s->username))
             {
-                tui8 guid[16];
+                struct guid guid = guid_new();
 
-                g_random((char *)guid, 16);
-                scp_session_set_guid(s, guid);
+                scp_session_set_guid(s, &guid);
 
                 if (0 != s->connection_description)
                 {
@@ -153,7 +152,7 @@ scp_v0_process(struct trans *t, struct SCP_SESSION *s)
         }
         else
         {
-            scp_v0s_allow_connection(t, display, s->guid);
+            scp_v0s_allow_connection(t, display, &s->guid);
         }
     }
     else

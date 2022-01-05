@@ -414,7 +414,7 @@ scp_session_set_addr(struct SCP_SESSION *s, int type, const void *addr)
 
 /*******************************************************************/
 int
-scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
+scp_session_set_guid(struct SCP_SESSION *s, const struct guid *guid)
 {
     if (0 == guid)
     {
@@ -422,7 +422,7 @@ scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
         return 1;
     }
 
-    g_memcpy(s->guid, guid, 16);
+    s->guid = *guid;
 
     return 0;
 }

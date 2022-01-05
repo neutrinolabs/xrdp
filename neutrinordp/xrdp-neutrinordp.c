@@ -257,7 +257,15 @@ lxrdp_connect(struct mod *mod)
             LOG(LOG_LEVEL_INFO, buf);
             mod->server_msg(mod, buf, 0);
         }
-
+#else
+        {
+            /* This version of freerdp returns no useful information at
+             * all */
+            mod->server_msg(mod, "Neutrinordp connect failed.", 0);
+            mod->server_msg(mod, "No more information is available", 0);
+            mod->server_msg(mod, "Check host is up"
+                            " and credentials are correct", 0);
+        }
 #endif
         LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed],"
             " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"

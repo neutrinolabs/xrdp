@@ -149,6 +149,8 @@ int
 xrdp_wm_check_wait_objs(struct xrdp_wm *self);
 int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state);
+void
+xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status);
 
 /* xrdp_process.c */
 struct xrdp_process *
@@ -418,7 +420,7 @@ struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner);
 void
 xrdp_mm_delete(struct xrdp_mm *self);
-int
+void
 xrdp_mm_connect(struct xrdp_mm *self);
 int
 xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
@@ -473,7 +475,7 @@ server_set_pointer_ex(struct xrdp_mod *mod, int x, int y,
 int
 server_palette(struct xrdp_mod *mod, int *palette);
 int
-server_msg(struct xrdp_mod *mod, char *msg, int code);
+server_msg(struct xrdp_mod *mod, const char *msg, int code);
 int
 server_is_term(struct xrdp_mod *mod);
 int

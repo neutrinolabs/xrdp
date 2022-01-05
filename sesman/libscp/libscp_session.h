@@ -100,7 +100,7 @@ int
 scp_session_set_errstr(struct SCP_SESSION *s, const char *str);
 
 int
-scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid);
+scp_session_set_guid(struct SCP_SESSION *s, const struct guid *guid);
 
 /**
  *
