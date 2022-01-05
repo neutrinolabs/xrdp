@@ -316,7 +316,10 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     int cy;
     int out_data_bytes;
     int count;
-    int error;
+    int tiles_written;
+    int all_tiles_written;
+    int tiles_left;
+    int finished;
     char *out_data;
     XRDP_ENC_DATA_DONE *enc_done;
     FIFO *fifo_processed;
@@ -333,87 +336,104 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;
 
-    error = 1;
-    out_data = NULL;
-    out_data_bytes = 0;
-
-    if ((enc->num_crects > 0) && (enc->num_drects > 0))
+    all_tiles_written = 0;
+    do
     {
-        alloc_bytes = XRDP_SURCMD_PREFIX_BYTES;
-        alloc_bytes += self->max_compressed_bytes;
-        alloc_bytes += sizeof(struct rfx_tile) * enc->num_crects +
-                       sizeof(struct rfx_rect) * enc->num_drects;
-        out_data = g_new(char, alloc_bytes);
-        if (out_data != NULL)
+        tiles_written = 0;
+        tiles_left = enc->num_crects - all_tiles_written;
+        out_data = NULL;
+        out_data_bytes = 0;
+
+        if ((tiles_left > 0) && (enc->num_drects > 0))
         {
-            tiles = (struct rfx_tile *)
-                    (out_data + XRDP_SURCMD_PREFIX_BYTES +
-                     self->max_compressed_bytes);
-            rfxrects = (struct rfx_rect *) (tiles + enc->num_crects);
-
-            count = enc->num_crects;
-            for (index = 0; index < count; index++)
+            alloc_bytes = XRDP_SURCMD_PREFIX_BYTES;
+            alloc_bytes += self->max_compressed_bytes;
+            alloc_bytes += sizeof(struct rfx_tile) * tiles_left +
+                           sizeof(struct rfx_rect) * enc->num_drects;
+            out_data = g_new(char, alloc_bytes);
+            if (out_data != NULL)
             {
-                x = enc->crects[index * 4 + 0];
-                y = enc->crects[index * 4 + 1];
-                cx = enc->crects[index * 4 + 2];
-                cy = enc->crects[index * 4 + 3];
-                tiles[index].x = x;
-                tiles[index].y = y;
-                tiles[index].cx = cx;
-                tiles[index].cy = cy;
-                tiles[index].quant_y = 0;
-                tiles[index].quant_cb = 0;
-                tiles[index].quant_cr = 0;
-            }
+                tiles = (struct rfx_tile *)
+                        (out_data + XRDP_SURCMD_PREFIX_BYTES +
+                         self->max_compressed_bytes);
+                rfxrects = (struct rfx_rect *) (tiles + tiles_left);
 
-            count = enc->num_drects;
-            for (index = 0; index < count; index++)
-            {
-                x = enc->drects[index * 4 + 0];
-                y = enc->drects[index * 4 + 1];
-                cx = enc->drects[index * 4 + 2];
-                cy = enc->drects[index * 4 + 3];
-                rfxrects[index].x = x;
-                rfxrects[index].y = y;
-                rfxrects[index].cx = cx;
-                rfxrects[index].cy = cy;
-            }
+                count = tiles_left;
+                for (index = 0; index < count; index++)
+                {
+                    x = enc->crects[(index + all_tiles_written) * 4 + 0];
+                    y = enc->crects[(index + all_tiles_written) * 4 + 1];
+                    cx = enc->crects[(index + all_tiles_written) * 4 + 2];
+                    cy = enc->crects[(index + all_tiles_written) * 4 + 3];
+                    tiles[index].x = x;
+                    tiles[index].y = y;
+                    tiles[index].cx = cx;
+                    tiles[index].cy = cy;
+                    tiles[index].quant_y = 0;
+                    tiles[index].quant_cb = 0;
+                    tiles[index].quant_cr = 0;
+                }
 
-            out_data_bytes = self->max_compressed_bytes;
-            error = rfxcodec_encode(self->codec_handle,
-                                    out_data + XRDP_SURCMD_PREFIX_BYTES,
-                                    &out_data_bytes, enc->data,
-                                    enc->width, enc->height, enc->width * 4,
-                                    rfxrects, enc->num_drects,
-                                    tiles, enc->num_crects, 0, 0);
+                count = enc->num_drects;
+                for (index = 0; index < count; index++)
+                {
+                    x = enc->drects[index * 4 + 0];
+                    y = enc->drects[index * 4 + 1];
+                    cx = enc->drects[index * 4 + 2];
+                    cy = enc->drects[index * 4 + 3];
+                    rfxrects[index].x = x;
+                    rfxrects[index].y = y;
+                    rfxrects[index].cx = cx;
+                    rfxrects[index].cy = cy;
+                }
+
+                out_data_bytes = self->max_compressed_bytes;
+                tiles_written = rfxcodec_encode(self->codec_handle,
+                                                out_data + XRDP_SURCMD_PREFIX_BYTES,
+                                                &out_data_bytes, enc->data,
+                                                enc->width, enc->height, enc->width * 4,
+                                                rfxrects, enc->num_drects,
+                                                tiles, tiles_left, 0, 0);
+            }
         }
-    }
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx: rfxcodec_encode rv %d", error);
-    /* only if enc_done->comp_bytes is not zero is something sent
-       to the client but you must always send something back even
-       on error so Xorg can get ack */
-    enc_done = g_new0(XRDP_ENC_DATA_DONE, 1);
-    if (enc_done == NULL)
-    {
-        return 1;
-    }
-    enc_done->comp_bytes = error == 0 ? out_data_bytes : 0;
-    enc_done->pad_bytes = XRDP_SURCMD_PREFIX_BYTES;
-    enc_done->comp_pad_data = out_data;
-    enc_done->enc = enc;
-    enc_done->last = 1;
-    enc_done->cx = self->mm->wm->screen->width;
-    enc_done->cy = self->mm->wm->screen->height;
+        LOG_DEVEL(LOG_LEVEL_DEBUG,
+                  "process_enc_rfx: rfxcodec_encode tiles_written %d",
+                  tiles_written);
+        /* only if enc_done->comp_bytes is not zero is something sent
+           to the client but you must always send something back even
+           on error so Xorg can get ack */
+        enc_done = g_new0(XRDP_ENC_DATA_DONE, 1);
+        if (enc_done == NULL)
+        {
+            return 1;
+        }
+        enc_done->comp_bytes = tiles_written > 0 ? out_data_bytes : 0;
+        enc_done->pad_bytes = XRDP_SURCMD_PREFIX_BYTES;
+        enc_done->comp_pad_data = out_data;
+        enc_done->enc = enc;
+        enc_done->cx = self->mm->wm->screen->width;
+        enc_done->cy = self->mm->wm->screen->height;
 
-    /* done with msg */
-    /* inform main thread done */
-    tc_mutex_lock(mutex);
-    fifo_add_item(fifo_processed, enc_done);
-    tc_mutex_unlock(mutex);
-    /* signal completion for main thread */
-    g_set_wait_obj(event_processed);
+        enc_done->continuation = all_tiles_written > 0;
+        if (tiles_written > 0)
+        {
+            all_tiles_written += tiles_written;
+        }
+        finished =
+            (all_tiles_written == enc->num_crects) || (tiles_written < 0);
+        enc_done->last = finished;
+
+        /* done with msg */
+        /* inform main thread done */
+        tc_mutex_lock(mutex);
+        fifo_add_item(fifo_processed, enc_done);
+        tc_mutex_unlock(mutex);
+        /* signal completion for main thread */
+        g_set_wait_obj(event_processed);
+
+    }
+    while (!finished);
 
     return 0;
 }
