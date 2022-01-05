@@ -1210,7 +1210,7 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
 {
     int error;
     struct vnc_screen_layout layout = {0};
-    int response_code;
+    int response_code = 0;
 
     error = find_matching_extended_rect(v,
                                         rect_is_reply_to_us,
