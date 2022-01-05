@@ -77,6 +77,7 @@ struct session_item
     struct session_date idle_time;
     char connection_description[256];
     tui8 guid[16];
+    char clientname[256];
 };
 
 struct session_chain
@@ -93,7 +94,7 @@ struct session_chain
  */
 struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
-                   const char *connection_description);
+                   const char *connection_description, const char *clientname);
 #ifndef session_find_item
 #define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
 #endif

@@ -92,7 +92,7 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 /******************************************************************************/
 struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
-                   const char *connection_description)
+                   const char *connection_description, const char *clientname)
 {
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
@@ -127,8 +127,8 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
     }
 
     LOG(LOG_LEVEL_DEBUG,
-        "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
-        policy, name, width, height, bpp, type, connection_description);
+        "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s Name %s",
+        policy, name, width, height, bpp, type, connection_description, clientname);
 
     while (tmp != 0)
     {
@@ -145,12 +145,13 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
         }
 
         LOG(LOG_LEVEL_DEBUG,
-            "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
+            "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s Name %s",
             tmp->item,
             tmp->item->name,
             tmp->item->width, tmp->item->height,
             tmp->item->bpp, tmp->item->type,
-            tmp->item->connection_description);
+            tmp->item->connection_description,
+			tmp->item->clientname);
 
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
@@ -159,6 +160,8 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
                  (g_strcmp(ip, tmp_ip) == 0)) &&
                 (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
                  (g_strncmp(connection_description, tmp->item->connection_description, 255) == 0)) &&
+                (!(policy & SESMAN_CFG_SESS_POLICY_N) ||
+                 (g_strncmp(clientname, tmp->item->clientname, 255) == 0)) &&
                 tmp->item->bpp == bpp &&
                 tmp->item->type == type)
         {
@@ -464,6 +467,9 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
 
     passwd_file = 0;
 
+    LOG(LOG_LEVEL_TRACE, "Check if clientname %s is still correct",
+        s->clientname);
+
     /* check to limit concurrent sessions */
     if (g_session_count >= g_cfg->sess.max_sessions)
     {
@@ -592,6 +598,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                          display,
                          g_cfg->env_names,
                          g_cfg->env_values);
+            g_setenv("CLIENTNAME", s->clientname, 1);
             if (x_server_running(display))
             {
                 auth_set_env(data);
@@ -690,6 +697,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                                  display,
                                  g_cfg->env_names,
                                  g_cfg->env_values);
+                    g_setenv("CLIENTNAME", s->clientname, 1);
                 }
                 else
                 {
@@ -698,6 +706,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                                  display,
                                  g_cfg->env_names,
                                  g_cfg->env_values);
+                    g_setenv("CLIENTNAME", s->clientname, 1);
                 }
 
                 /* setting Xserver environment variables */
@@ -708,6 +717,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 g_snprintf(text, 255, "%d", g_cfg->sess.kill_disconnected);
                 g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
                 g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
+                g_setenv("CLIENTNAME", s->clientname, 1);
 
                 /* prepare the Xauthority stuff */
                 if (g_getenv("XAUTHORITY") != NULL)
@@ -873,15 +883,15 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 chansrv_pid = session_start_chansrv(s->username, display);
 
                 LOG(LOG_LEVEL_INFO,
-                    "Session started successfully for user %s on display %d",
-                    s->username, display);
+                    "Session from client %s started successfully for user %s on display %d",
+                    s->clientname, s->username, display);
 
                 /* Monitor the amount of time we wait for the
                  * window manager. This is approximately how long the window
                  * manager was running for */
-                LOG(LOG_LEVEL_INFO, "Session in progress on display %d, waiting "
+                LOG(LOG_LEVEL_INFO, "Session from client %s in progress on display %d, waiting "
                     "until the window manager (pid %d) exits to end the session",
-                    display, window_manager_pid);
+					s->clientname, display, window_manager_pid);
                 wm_wait_time = g_time1();
                 wm_exit_status = g_waitpid_status(window_manager_pid);
                 wm_wait_time = g_time1() - wm_wait_time;
@@ -945,10 +955,10 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
     }
     else
     {
-        LOG(LOG_LEVEL_INFO, "Starting session: session_pid %d, "
+        LOG(LOG_LEVEL_INFO, "Starting session for client %s: session_pid %d, "
             "display :%d.0, width %d, height %d, bpp %d, client ip %s, "
             "user name %s",
-            pid, display, s->width, s->height, s->bpp, s->connection_description, s->username);
+            s->clientname, pid, display, s->width, s->height, s->bpp, s->connection_description, s->username);
         temp->item->pid = pid;
         temp->item->display = display;
         temp->item->width = s->width;
@@ -956,6 +966,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         temp->item->bpp = s->bpp;
         temp->item->data = data;
         g_strncpy(temp->item->connection_description, s->connection_description, 255);   /* store client ip data */
+        g_strncpy(temp->item->clientname, s->clientname, 255);   /* store clientname */
         g_strncpy(temp->item->name, s->username, 255);
         g_memcpy(temp->item->guid, s->guid, 16);
 

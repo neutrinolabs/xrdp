@@ -359,6 +359,32 @@ scp_session_set_hostname(struct SCP_SESSION *s, const char *str)
 
 /*******************************************************************/
 int
+scp_session_set_clientname(struct SCP_SESSION *s, const char *str)
+{
+    if (0 == str)
+    {
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_clientname: null clientname", __LINE__);
+        return 1;
+    }
+
+    if (0 != s->clientname)
+    {
+        g_free(s->clientname);
+    }
+
+    s->clientname = g_strdup(str);
+
+    if (0 == s->clientname)
+    {
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_clientname: strdup error", __LINE__);
+        return 1;
+    }
+
+    return 0;
+}
+
+/*******************************************************************/
+int
 scp_session_set_errstr(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
@@ -440,6 +466,7 @@ scp_session_destroy(struct SCP_SESSION *s)
         g_free(s->program);
         g_free(s->directory);
         g_free(s->connection_description);
+        g_free(s->clientname);
         g_free(s->errstr);
         g_free(s);
     }
@@ -465,6 +492,7 @@ scp_session_clone(const struct SCP_SESSION *s)
         result->program = g_strdup(s->program);
         result->directory = g_strdup(s->directory);
         result->connection_description = g_strdup(s->connection_description);
+        result->clientname = g_strdup(s->clientname);
 
         /* Did all the string copies succeed? */
         if ((s->username != NULL && result->username == NULL) ||
@@ -474,7 +502,8 @@ scp_session_clone(const struct SCP_SESSION *s)
                 (s->domain != NULL && result->domain == NULL) ||
                 (s->program != NULL && result->program == NULL) ||
                 (s->directory != NULL && result->directory == NULL) ||
-                (s->connection_description != NULL && result->connection_description == NULL))
+                (s->connection_description != NULL && result->connection_description == NULL) ||
+				(s->clientname != NULL && result->clientname == NULL))
         {
             scp_session_destroy(result);
             result = NULL;

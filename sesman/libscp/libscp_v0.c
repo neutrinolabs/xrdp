@@ -364,6 +364,19 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
                 scp_session_set_connection_description(session, buf);
             }
         }
+        if (s_check_rem(in_s, 2))
+        {
+            /* reading clientname */
+            if (!in_string16(in_s, buf, "clientname"))
+            {
+                return SCP_SERVER_STATE_SIZE_ERR;
+            }
+
+            if (buf[0] != '\0')
+            {
+                scp_session_set_clientname(session, buf);
+            }
+        }
     }
     else if (code == SCP_GW_AUTHENTICATION)
     {
