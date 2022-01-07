@@ -1,3 +1,60 @@
+# Release notes for xrdp v0.9.18 (2022/01/10)
+
+## General announcements
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+* Special thanks for @trishume for contributing code to the RFX codec
+
+## New features
+* Backgrounds and logos on the login screen can now be zoomed and scaled (#1962)
+* Small change for Alpine Linux support (#2005)
+* loongarch support (#2057)
+* Improved Fail2ban support (#1976)
+
+## Bug fixes
+* Logging is improved for security protocol level decisions (#1974, #1975)
+* An unnecessary log error message which is always generated when running neutrinordp has been removed (#2016)
+* An incorrect development log message has been fixed (#2074)
+* Some informational and error messages written to the console on stdout have been removed or replaced with log messages (#2078 #2080)
+* Failure to attach to the memory area shared with xorgxrdp is now logged (#2065)
+* A regression in the VNC module logging which might cause a connection to drop out has been identified and fixed (#1989)
+* Remote drive redirection now works if printer redirection is also requested by the client (#327)
+* Some file names could not be copied from the client to the server over the clipboard. This is now fixed (#1992, #1995)
+* A config value has been added which allows copy-pasting of files to work with Nautilus for GNOME 3 versions >= 3.29.92 (#1994, #1996)
+* Clipboard now works properly when files can't be read (#1997 #2001)
+* (xorgxrdp v0.2.18) The screen is fully refreshed after initialising shared memory which should fix black screen problems like #1964
+* An incorrect initialisation reported by @qarmin has been fixed (#1909)
+* Some minor memory leaks have been fixed (#2014 #2028)
+* A hard hang in chansrv when copying files from the remote system has been addressed (#2032)
+* Users can now capitalise username and password on the login screen if required (#2061)
+* Some failed size checks in the fastpath code with `--enable-devel-streamcheck` have been addressed (#2066,#2070)
+* Log level for clipboard restriction has been promoted from DEVEL DEBUG to INFO  (#2088)
+* A buffer overflow in the RFX codec associated with large screens has been fixed (#2087)
+
+## Internal changes
+* Some 64-bit packages are removed during the 32-bit CI build process in an attempt to make this more robust (#1985)
+* Minor improvements to error checking and logging for file copy-paste (#1996)
+* Now uses cppcheck 2.6 for CI builds (#2008)
+* Generated systemd unit files now ignored by git (#2006)
+* More internal tests (#2015)
+* Some unnecessary files have been removed from the distribution (#2030)
+* The `which` command in shell scripts has been replaced with `command -v` (#2067)
+* Additional unit tests added for `g_file_get_size()` (#1988)
+* A compiler warning with -O3 on gcc 11.1 has been addressed (#2105)
+* An unused declaration for xrdp_wm_drdynvc_up has been removed (#2098)
+* The SCP V0 code has been unified, which will make it easier to update and replace (#2011)
+* Monitor processing unit tests for existing xrdp_sec function have been added (#1932)
+* The librfxcodec has been updated as part of #2087, and also to add stack frames to assemble code to assist debugging
+
+## Changes for packagers or developers
+* The `--with-imlib2` option has been added. If xrdp is built with imlib2, the login screen supports more image formats for the background and logo, and better quality zooming and scaling (#1962)
+
+## Known issues
+
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.17 (2021/08/31)
 
 ## General announcements
