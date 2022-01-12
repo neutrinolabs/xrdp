@@ -224,7 +224,7 @@ case "$with_imlib2" in
         use_imlib2=no
         ;;
     yes)
-        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.10],
+        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.5],
             [use_imlib2=yes],
             [AC_MSG_ERROR([please install libimlib2-dev or imlib2-devel])])
         ;;
