@@ -2294,16 +2294,23 @@ clipboard_event_selection_request(XEvent *xevent)
         atom_buf[0] = g_targets_atom;
         atom_buf[1] = g_timestamp_atom;
         atom_buf[2] = g_multiple_atom;
-        atom_buf[3] = XA_STRING;
-        atom_buf[4] = g_utf8_atom;
-        atom_count = 5;
-        if (clipboard_find_format_id(CB_FORMAT_DIB) >= 0)
+        atom_count = 3;
+        if ((g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_TEXT) == 0)
+        {
+            atom_buf[atom_count] = XA_STRING;
+            atom_count++;
+            atom_buf[atom_count] = g_utf8_atom;
+            atom_count++;
+        }
+        if (clipboard_find_format_id(CB_FORMAT_DIB) >= 0 &&
+                (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_IMAGE) == 0)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "  reporting image/bmp");
             atom_buf[atom_count] = g_image_bmp_atom;
             atom_count++;
         }
-        if (clipboard_find_format_id(g_file_format_id) >= 0)
+        if (clipboard_find_format_id(g_file_format_id) >= 0 &&
+                (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_FILE) == 0)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "  reporting text/uri-list");
             atom_buf[atom_count] = g_file_atom1;
