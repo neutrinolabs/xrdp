@@ -95,7 +95,7 @@ you would need **openssl-devel**, **pam-devel**, **libX11-devel**,
 be needed depending on your configuration.
 
 To compile xrdp from a checked out git repository, you would additionally
-need **autoconf**, **automake**, **libtool** and **pkgconfig**.
+need **autoconf**, **automake**, **libtool** and **pkg-config**.
 
 ### Get the source and build it
 
