@@ -221,10 +221,62 @@ login for all users is enabled.
 have session management rights.
 
 .TP
-\fBRestrictOutboundClipboard\fR=\fI[true|false]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR, will restrict the clipboard
+\fBRestrictOutboundClipboard\fR=\fI[all|none|text|file|image]\fR
+If set to \fBall\fR, will restrict the clipboard
 outbound from the server, to prevent data copied inside the xrdp session
-to be be pasted in the client host. Default value is \fBfalse\fR.
+to be pasted in the client. Default value is \fBnone\fR.
+In addition, you can control text/file/image transfer restrictions
+respectively. It also accepts comma separated list such as text,file,image.
+.br
+
+.br
+\fBnone\fR - No restriction about copying inbound clipboard data.
+.br
+\fBall\fR - Restrict to copy inbound clipboard data.
+.br
+\fBtext\fR - Restrict to copy only inbound text clipboard data.
+.br
+\fBfile\fR - Restrict to copy only inbound file clipboard data.
+.br
+\fBimage\fR - Restrict to copy only inbound image clipboard data.
+.br
+
+To keep compatibility, the following aliases are also available.
+.br
+\fBtrue\fR - an alias of \fBall\fR.
+.br
+\fBfalse\fR - an alias of \fBnone\fR.
+.br
+\fByes\fR - an alias of \fBall\fR.
+
+.TP
+\fBRestrictInboundClipboard\fR=\fI[none|all|text|file|image]\fR
+If set to \fBall\fR, will restrict the clipboard
+inbound from the client, to prevent data copied inside the client
+to be pasted in the xrdp session. Default value is \fBnone\fR.
+In addition, you can control text/file/image transfer restrictions
+respectively. It also accepts comma separated list such as text,file,image.
+.br
+
+.br
+\fBnone\fR - No restriction about copying inbound clipboard data.
+.br
+\fBall\fR - Restrict to copy inbound clipboard data.
+.br
+\fBtext\fR - Restrict to copy only inbound text clipboard data.
+.br
+\fBfile\fR - Restrict to copy only inbound file clipboard data.
+.br
+\fBimage\fR - Restrict to copy only inbound image clipboard data.
+.br
+
+To keep compatibility, the following aliases are also available.
+.br
+\fBtrue\fR - an alias of \fBall\fR.
+.br
+\fBfalse\fR - an alias of \fBnone\fR.
+.br
+\fByes\fR - an alias of \fBall\fR.
 
 .TP
 \fBAlwaysGroupCheck\fR=\fI[true|false]\fR

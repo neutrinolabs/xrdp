@@ -986,3 +986,72 @@ g_bitmask_to_str(int bitmask, const struct bitmask_string bitdefs[],
 
     return rlen;
 }
+
+int
+g_str_to_bitmask(const char *str, const struct bitmask_string bitdefs[],
+                 const char *delim, char *unrecognised, int unrecognised_len)
+{
+    char *properties = NULL;
+    char *p = NULL;
+    int mask = 0;
+
+    if (unrecognised_len < 1)
+    {
+        /* No space left to tell unrecognised tokens */
+        return 0;
+    }
+    if (!unrecognised)
+    {
+        return 0;
+    }
+    /* ensure not to return with uninitialized buffer */
+    unrecognised[0] = '\0';
+    if (!str || !bitdefs || !delim)
+    {
+        return 0;
+    }
+    properties = g_strdup(str);
+    if (!properties)
+    {
+        return 0;
+    }
+    p = strtok(properties, delim);
+    while (p != NULL)
+    {
+        g_strtrim(p, 3);
+        const struct bitmask_string *b;
+        int found = 0;
+        for (b = &bitdefs[0] ; b->str != NULL; ++b)
+        {
+            if (0 == g_strcasecmp(p, b->str))
+            {
+                mask |= b->mask;
+                found = 1;
+                break;
+            }
+        }
+        if (found == 0)
+        {
+            int length = g_strlen(unrecognised);
+            if (length > 0)
+            {
+                /* adding ",property" */
+                if (length + g_strlen(p) + 1 < unrecognised_len)
+                {
+                    unrecognised[length] = delim[0];
+                    length += 1;
+                    g_strcpy(unrecognised + length, p);
+                }
+            }
+            else if (g_strlen(p) < unrecognised_len)
+            {
+                g_strcpy(unrecognised, p);
+            }
+        }
+        p = strtok(NULL, delim);
+    }
+
+    g_free(properties);
+    return mask;
+}
+

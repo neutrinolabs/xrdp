@@ -34,6 +34,7 @@
 #include "sesman.h"
 #include "log.h"
 #include "string_calls.h"
+#include "chansrv/chansrv_common.h"
 
 /***************************************************************************//**
  *
@@ -162,6 +163,26 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     return 0;
 }
 
+/*
+  Map clipboard strings into bitmask values.
+  Duplicated definition exists in chansrv_config,
+  because it avoids build failure for xrdp-sesman and xrdp-sesrun.
+  It should be unified in the future.
+*/
+static const struct bitmask_string clip_restrict_map[] =
+{
+    { CLIP_RESTRICT_TEXT, "text"},
+    { CLIP_RESTRICT_FILE, "file"},
+    { CLIP_RESTRICT_IMAGE, "image"},
+    { CLIP_RESTRICT_ALL, "all"},
+    { CLIP_RESTRICT_NONE, "none"},
+    /* Compatibility values */
+    { CLIP_RESTRICT_ALL, "true"},
+    { CLIP_RESTRICT_ALL, "yes"},
+    { CLIP_RESTRICT_NONE, "false"},
+    BITMASK_STRING_END_OF_LIST
+};
+
 /***************************************************************************//**
  *
  * @brief Reads sesman [Security] configuration section
@@ -190,6 +211,7 @@ config_read_security(int file, struct config_security *sc,
     sc->ts_users_enable = 0;
     sc->ts_admins_enable = 0;
     sc->restrict_outbound_clipboard = 0;
+    sc->restrict_inbound_clipboard = 0;
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -231,7 +253,31 @@ config_read_security(int file, struct config_security *sc,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD))
         {
-            sc->restrict_outbound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
+            char unrecognised[256];
+            sc->restrict_outbound_clipboard =
+                g_str_to_bitmask((const char *)list_get_item(param_v, i),
+                                 clip_restrict_map, ",",
+                                 unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictOutboundClipboard' %s",
+                    unrecognised);
+            }
+        }
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD))
+        {
+            char unrecognised[256];
+            sc->restrict_inbound_clipboard =
+                g_str_to_bitmask((const char *)list_get_item(param_v, i),
+                                 clip_restrict_map, ",",
+                                 unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictInboundClipboard' %s",
+                    unrecognised);
+            }
         }
 
     }
@@ -553,12 +599,41 @@ config_dump(struct config_sesman *config)
 
     /* Security configuration */
     g_writeln("Security configuration:");
-    g_writeln("    AllowRootLogin:           %d", sc->allow_root);
-    g_writeln("    MaxLoginRetry:            %d", sc->login_retry);
-    g_writeln("    AlwaysGroupCheck:         %d", sc->ts_always_group_check);
-    g_writeln("    RestrictOutboundClipboard: %d", sc->restrict_outbound_clipboard);
+    g_writeln("    AllowRootLogin:            %d", sc->allow_root);
+    g_writeln("    MaxLoginRetry:             %d", sc->login_retry);
+    g_writeln("    AlwaysGroupCheck:          %d", sc->ts_always_group_check);
+    if (sc->restrict_outbound_clipboard == CLIP_RESTRICT_NONE)
+    {
+        g_writeln("    RestrictOutboundClipboard: %s", "none");
+    }
+    else if (sc->restrict_outbound_clipboard == CLIP_RESTRICT_ALL)
+    {
+        g_writeln("    RestrictOutboundClipboard: %s", "all");
+    }
+    else
+    {
+        char buf[256];
+        g_bitmask_to_str(sc->restrict_outbound_clipboard,
+                         clip_restrict_map, ',', buf, sizeof(buf));
+        g_writeln("    RestrictOutboundClipboard: %s", buf);
+    }
+    if (sc->restrict_inbound_clipboard == CLIP_RESTRICT_NONE)
+    {
+        g_writeln("    RestrictInboundClipboard:  %s", "none");
+    }
+    else if (sc->restrict_inbound_clipboard == CLIP_RESTRICT_ALL)
+    {
+        g_writeln("    RestrictInboundClipboard:  %s", "all");
+    }
+    else
+    {
+        char buf[256];
+        g_bitmask_to_str(sc->restrict_inbound_clipboard,
+                         clip_restrict_map, ',', buf, sizeof(buf));
+        g_writeln("    RestrictInboundClipboard:  %s", buf);
+    }
 
-    g_printf( "    TSUsersGroup:             ");
+    g_printf( "    TSUsersGroup:              ");
     if (sc->ts_users_enable)
     {
         g_printf("%d", sc->ts_users);
@@ -569,7 +644,7 @@ config_dump(struct config_sesman *config)
     }
     g_writeln("%s", "");
 
-    g_printf( "    TSAdminsGroup:            ");
+    g_printf( "    TSAdminsGroup:             ");
     if (sc->ts_admins_enable)
     {
         g_printf("%d", sc->ts_admins);
