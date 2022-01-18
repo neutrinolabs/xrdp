@@ -2,7 +2,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp-questions)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-*Current Version:* 0.9.17
+[![Latest Version](https://img.shields.io/github/v/release/neutrinolabs/xrdp.svg?label=Latest%20Version)](https://github.com/neutrinolabs/xrdp/releases)
 
 # xrdp - an open source RDP server
 
