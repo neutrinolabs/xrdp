@@ -31,7 +31,7 @@ ssl_rc4_info_create(void);
 void
 ssl_rc4_info_delete(void *rc4_info);
 void
-ssl_rc4_set_key(void *rc4_info, char *key, int len);
+ssl_rc4_set_key(void *rc4_info, const char *key, int len);
 void
 ssl_rc4_crypt(void *rc4_info, char *data, int len);
 void *
@@ -51,7 +51,7 @@ ssl_md5_info_delete(void *md5_info);
 void
 ssl_md5_clear(void *md5_info);
 void
-ssl_md5_transform(void *md5_info, char *data, int len);
+ssl_md5_transform(void *md5_info, const char *data, int len);
 void
 ssl_md5_complete(void *md5_info, char *data);
 void *

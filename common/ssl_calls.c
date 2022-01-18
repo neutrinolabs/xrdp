@@ -140,7 +140,7 @@ ssl_rc4_info_delete(void *rc4_info)
 
 /*****************************************************************************/
 void
-ssl_rc4_set_key(void *rc4_info, char *key, int len)
+ssl_rc4_set_key(void *rc4_info, const char *key, int len)
 {
     RC4_set_key((RC4_KEY *)rc4_info, len, (tui8 *)key);
 }
@@ -214,7 +214,7 @@ ssl_md5_clear(void *md5_info)
 
 /*****************************************************************************/
 void
-ssl_md5_transform(void *md5_info, char *data, int len)
+ssl_md5_transform(void *md5_info, const char *data, int len)
 {
     MD5_Update((MD5_CTX *)md5_info, data, len);
 }
