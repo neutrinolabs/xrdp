@@ -2,8 +2,9 @@
 #include "config_ac.h"
 #endif
 
-#include "test_xrdp.h"
 #include "xrdp.h"
+
+#include "test_xrdp.h"
 
 /* Where the image files are located */
 #ifndef IMAGEDIR

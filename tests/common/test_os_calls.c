@@ -4,8 +4,9 @@
 #endif
 
 #include <stdlib.h>
-#include "test_common.h"
 #include "os_calls.h"
+
+#include "test_common.h"
 
 #ifndef TOP_SRCDIR
 #define TOP_SRCDIR "."

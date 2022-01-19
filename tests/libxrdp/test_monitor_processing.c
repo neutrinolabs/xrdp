@@ -2,9 +2,10 @@
 #include "config_ac.h"
 #endif
 
-#include "test_libxrdp.h"
 #include "libxrdp.h"
 #include "os_calls.h"
+
+#include "test_libxrdp.h"
 
 struct xrdp_sec *sec_layer;
 struct xrdp_rdp *rdp_layer;

@@ -3,8 +3,9 @@
 #include "config_ac.h"
 #endif
 
-#include "test_common.h"
 #include "string_calls.h"
+
+#include "test_common.h"
 
 #define RESULT_LEN 1024
 
