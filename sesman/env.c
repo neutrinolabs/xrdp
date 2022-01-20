@@ -55,6 +55,7 @@ env_check_password_file(const char *filename, const char *passwd)
     /* create password hash from password */
     passwd_bytes = g_strlen(passwd);
     sha1 = ssl_sha1_info_create();
+    ssl_sha1_clear(sha1);
     ssl_sha1_transform(sha1, "xrdp_vnc", 8);
     ssl_sha1_transform(sha1, passwd, passwd_bytes);
     ssl_sha1_transform(sha1, passwd, passwd_bytes);

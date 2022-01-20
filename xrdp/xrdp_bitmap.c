@@ -174,6 +174,7 @@ xrdp_bitmap_hash_crc(struct xrdp_bitmap *self)
         return 1;
     }
     hash = ssl_md5_info_create();
+    ssl_md5_clear(hash);
     ssl_md5_transform(hash, self->data, bytes);
     ssl_md5_complete(hash, hash_data);
     ssl_md5_info_delete(hash);
