@@ -6,5 +6,6 @@
 
 Suite *make_suite_test_string(void);
 Suite *make_suite_test_os_calls(void);
+Suite *make_suite_test_ssl_calls(void);
 
 #endif /* TEST_COMMON_H */

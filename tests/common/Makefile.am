@@ -13,7 +13,8 @@ test_common_SOURCES = \
     test_common.h \
     test_common_main.c \
     test_string_calls.c \
-    test_os_calls.c
+    test_os_calls.c \
+    test_ssl_calls.c
 
 test_common_CFLAGS = \
     @CHECK_CFLAGS@ \
