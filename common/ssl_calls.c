@@ -44,6 +44,16 @@
 
 #define SSL_WANT_READ_WRITE_TIMEOUT 100
 
+/*
+ * Globals used by openssl 3 and later */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static EVP_MD *g_md_md5;    /* MD5 message digest */
+static EVP_MD *g_md_sha1;   /* SHA1 message digest */
+static EVP_CIPHER *g_cipher_des_ede3_cbc; /* DES3 CBC cipher */
+static EVP_MAC *g_mac_hmac; /* HMAC MAC */
+#endif
+
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
 HMAC_CTX_new(void)
@@ -106,12 +116,41 @@ DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 
 
+
+/*****************************************************************************/
+static void
+dump_error_stack(const char *prefix)
+{
+    /* Dump the error stack from the SSL library */
+    unsigned long code;
+    char buff[256];
+    while ((code = ERR_get_error()) != 0L)
+    {
+        ERR_error_string_n(code, buff, sizeof(buff));
+        LOG(LOG_LEVEL_ERROR, "%s: %s", prefix, buff);
+    }
+}
+
+/*****************************************************************************/
+/* As above, but used for TLS connection errors where only the first
+   error is logged */
+static void
+dump_ssl_error_stack(struct ssl_tls *self)
+{
+    if (!self->error_logged)
+    {
+        dump_error_stack("SSL");
+        self->error_logged = 1;
+    }
+}
+
 /*****************************************************************************/
 int
 ssl_init(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
+
     return 0;
 }
 
@@ -119,16 +158,44 @@ ssl_init(void)
 int
 ssl_finish(void)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /* De-allocate any allocated globals
+     * For OpenSSL 3, these can all safely be passed a NULL pointer */
+    EVP_MD_free(g_md_md5);
+    EVP_MD_free(g_md_sha1);
+    EVP_CIPHER_free(g_cipher_des_ede3_cbc);
+    EVP_MAC_free(g_mac_hmac);
+#endif
     return 0;
 }
 
-/* rc4 stuff */
+/* rc4 stuff
+ *
+ * For OpenSSL 3.0, the rc4 encryption algorithm is only provided by the
+ * legacy provider (see crypto(7)). Since RC4 is so simple, we can implement
+ * it directly rather than having to load the legacy provider.  This will
+ * avoids problems if running on a system where openssl has been built
+ * without the legacy provider */
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+struct rc4_data
+{
+    /* See https://en.wikipedia.org/wiki/RC4 */
+    unsigned char S[256];
+    int i;
+    int j;
+};
+#endif
 
 /*****************************************************************************/
 void *
 ssl_rc4_info_create(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(RC4_KEY), 1);
+#else
+    return g_malloc(sizeof(struct rc4_data), 1);
+#endif
 }
 
 /*****************************************************************************/
@@ -142,14 +209,75 @@ ssl_rc4_info_delete(void *rc4_info)
 void
 ssl_rc4_set_key(void *rc4_info, const char *key, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     RC4_set_key((RC4_KEY *)rc4_info, len, (tui8 *)key);
+#else
+    unsigned char *S = ((struct rc4_data *)rc4_info)->S;
+    int i;
+    int j = 0;
+    unsigned char t;
+    for (i = 0 ; i < 256; ++i)
+    {
+        S[i] = i;
+    }
+    for (i = 0 ; i < 256; ++i)
+    {
+        j = (j + S[i] + key[i % len]) & 0xff;
+        t = S[i];
+        S[i] = S[j];
+        S[j] = t;
+    }
+    ((struct rc4_data *)rc4_info)->i = 0;
+    ((struct rc4_data *)rc4_info)->j = 0;
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_rc4_crypt(void *rc4_info, char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     RC4((RC4_KEY *)rc4_info, len, (tui8 *)data, (tui8 *)data);
+#else
+    unsigned char *S = ((struct rc4_data *)rc4_info)->S;
+    int i = ((struct rc4_data *)rc4_info)->i;
+    int j = ((struct rc4_data *)rc4_info)->j;
+    unsigned char *p = (unsigned char *)data;
+    unsigned char t;
+    unsigned char k;
+
+    /*
+     * Do some loop-unrolling for performance. Here are the steps
+     * for each byte */
+#define RC4_ROUND \
+    i = (i + 1) & 0xff; \
+    j = (j + S[i]) & 0xff; \
+    t = S[i]; \
+    S[i] = S[j]; \
+    S[j] = t; \
+    k = S[(S[i] + S[j]) & 0xff]; \
+    *p++ ^= k
+
+    while (len >= 8)
+    {
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        len -= 8;
+    }
+    while (len-- > 0)
+    {
+        RC4_ROUND;
+    }
+
+    ((struct rc4_data *)rc4_info)->i = i;
+    ((struct rc4_data *)rc4_info)->j = j;
+#endif
 }
 
 /* sha1 stuff */
@@ -158,35 +286,78 @@ ssl_rc4_crypt(void *rc4_info, char *data, int len)
 void *
 ssl_sha1_info_create(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(SHA_CTX), 1);
+#else
+    /*
+     * If we can't get the digest loaded, there's a problem with the
+     * library providers, so there's no point in us returning anything useful.
+     * If we do load the digest, it's used later */
+    if (g_md_sha1 == NULL)
+    {
+        if ((g_md_sha1 = EVP_MD_fetch(NULL, "sha1", NULL)) == NULL)
+        {
+            dump_error_stack("sha1");
+            return NULL;
+        }
+    }
+
+    return (void *)EVP_MD_CTX_new();
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_info_delete(void *sha1_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     g_free(sha1_info);
+#else
+    EVP_MD_CTX_free((EVP_MD_CTX *)sha1_info);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_clear(void *sha1_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Init((SHA_CTX *)sha1_info);
+#else
+    if (sha1_info != NULL)
+    {
+        EVP_DigestInit_ex(sha1_info, g_md_sha1, NULL);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
+#else
+    if (sha1_info != NULL)
+    {
+        EVP_DigestUpdate((EVP_MD_CTX *)sha1_info, data, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_complete(void *sha1_info, char *data)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Final((tui8 *)data, (SHA_CTX *)sha1_info);
+#else
+    if (sha1_info != NULL)
+    {
+        EVP_DigestFinal_ex((EVP_MD_CTX *)sha1_info, (unsigned char *)data,
+                           NULL);
+    }
+#endif
 }
 
 /* md5 stuff */
@@ -195,35 +366,77 @@ ssl_sha1_complete(void *sha1_info, char *data)
 void *
 ssl_md5_info_create(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(MD5_CTX), 1);
+#else
+    /*
+     * If we can't get the digest loaded, there's a problem with the
+     * library providers, so there's no point in us returning anything useful.
+     * If we do load the digest, it's used later */
+    if (g_md_md5 == NULL)
+    {
+        if ((g_md_md5 = EVP_MD_fetch(NULL, "md5", NULL)) == NULL)
+        {
+            dump_error_stack("md5");
+            return NULL;
+        }
+    }
+
+    return (void *)EVP_MD_CTX_new();
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_info_delete(void *md5_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     g_free(md5_info);
+#else
+    EVP_MD_CTX_free((EVP_MD_CTX *)md5_info);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_clear(void *md5_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Init((MD5_CTX *)md5_info);
+#else
+    if (md5_info != NULL)
+    {
+        EVP_DigestInit_ex(md5_info, g_md_md5, NULL);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_transform(void *md5_info, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Update((MD5_CTX *)md5_info, data, len);
+#else
+    if (md5_info != NULL)
+    {
+        EVP_DigestUpdate((EVP_MD_CTX *)md5_info, data, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_complete(void *md5_info, char *data)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
+#else
+    if (md5_info != NULL)
+    {
+        EVP_DigestFinal_ex((EVP_MD_CTX *)md5_info, (unsigned char *)data, NULL);
+    }
+#endif
 }
 
 /* FIPS stuff */
@@ -236,10 +449,30 @@ ssl_des3_encrypt_info_create(const char *key, const char *ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /*
+     * For these versions of OpenSSL, there are no long-term guarantees the
+     * DES3 cipher will be available. We'll try to load it here so we
+     * can log any errors */
+    if (g_cipher_des_ede3_cbc == NULL)
+    {
+        g_cipher_des_ede3_cbc = EVP_CIPHER_fetch(NULL, "des-ede3-cbc", NULL);
+        if (g_cipher_des_ede3_cbc == NULL)
+        {
+            dump_error_stack("DES-EDE3-CBC");
+            return NULL;
+        }
+    }
+#endif
+
     des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     EVP_EncryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+#else
+    EVP_EncryptInit_ex(des3_ctx, g_cipher_des_ede3_cbc, NULL, lkey, livec);
+#endif
     EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
     return des3_ctx;
 }
@@ -252,10 +485,30 @@ ssl_des3_decrypt_info_create(const char *key, const char *ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /*
+     * For these versions of OpenSSL, there are no long-term guarantees the
+     * DES3 cipher will be available. We'll try to load it here so we
+     * can log any errors */
+    if (g_cipher_des_ede3_cbc == NULL)
+    {
+        g_cipher_des_ede3_cbc = EVP_CIPHER_fetch(NULL, "des-ede3-cbc", NULL);
+        if (g_cipher_des_ede3_cbc == NULL)
+        {
+            dump_error_stack("DES-EDE3-CBC");
+            return NULL;
+        }
+    }
+#endif
+
     des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     EVP_DecryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+#else
+    EVP_DecryptInit_ex(des3_ctx, g_cipher_des_ede3_cbc, NULL, lkey, livec);
+#endif
     EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
     return des3_ctx;
 }
@@ -283,10 +536,13 @@ ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
     tui8 *lout_data;
 
     des3_ctx = (EVP_CIPHER_CTX *) des3;
-    lin_data = (const tui8 *) in_data;
-    lout_data = (tui8 *) out_data;
-    len = 0;
-    EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    if (des3_ctx != NULL)
+    {
+        lin_data = (const tui8 *) in_data;
+        lout_data = (tui8 *) out_data;
+        len = 0;
+        EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    }
     return 0;
 }
 
@@ -300,10 +556,13 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
     tui8 *lout_data;
 
     des3_ctx = (EVP_CIPHER_CTX *) des3;
-    lin_data = (const tui8 *) in_data;
-    lout_data = (tui8 *) out_data;
-    len = 0;
-    EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    if (des3_ctx != NULL)
+    {
+        lin_data = (const tui8 *) in_data;
+        lout_data = (tui8 *) out_data;
+        len = 0;
+        EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    }
     return 0;
 }
 
@@ -311,16 +570,28 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
 void *
 ssl_hmac_info_create(void)
 {
-    HMAC_CTX *hmac_ctx;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    return (HMAC_CTX *)HMAC_CTX_new();
+#else
+    /* Need a MAC algorithm loaded */
+    if (g_mac_hmac == NULL)
+    {
+        if ((g_mac_hmac = EVP_MAC_fetch(NULL, "hmac", NULL)) == NULL)
+        {
+            dump_error_stack("hmac");
+            return NULL;
+        }
+    }
 
-    hmac_ctx = HMAC_CTX_new();
-    return hmac_ctx;
+    return (void *)EVP_MAC_CTX_new(g_mac_hmac);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_info_delete(void *hmac)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
 
     hmac_ctx = (HMAC_CTX *) hmac;
@@ -328,34 +599,61 @@ ssl_hmac_info_delete(void *hmac)
     {
         HMAC_CTX_free(hmac_ctx);
     }
+#else
+    EVP_MAC_CTX_free((EVP_MAC_CTX *)hmac);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_sha1_init(void *hmac, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
 
     hmac_ctx = (HMAC_CTX *) hmac;
     HMAC_Init_ex(hmac_ctx, data, len, EVP_sha1(), NULL);
+#else
+    if (hmac != NULL)
+    {
+        char digest[] = "sha1";
+        OSSL_PARAM params[3];
+        size_t n = 0;
+        params[n++] = OSSL_PARAM_construct_utf8_string("digest", digest, 0);
+        params[n++] = OSSL_PARAM_construct_end();
+        if (EVP_MAC_init((EVP_MAC_CTX *)hmac, (unsigned char *)data,
+                         len, params) == 0)
+        {
+            dump_error_stack("hmac-sha1");
+        }
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_transform(void *hmac, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
     const tui8 *ldata;
 
     hmac_ctx = (HMAC_CTX *) hmac;
     ldata = (const tui8 *) data;
     HMAC_Update(hmac_ctx, ldata, len);
+#else
+    if (hmac != NULL)
+    {
+        EVP_MAC_update((EVP_MAC_CTX *)hmac, (unsigned char *)data, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_complete(void *hmac, char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
     tui8 *ldata;
     tui32 llen;
@@ -364,6 +662,12 @@ ssl_hmac_complete(void *hmac, char *data, int len)
     ldata = (tui8 *) data;
     llen = len;
     HMAC_Final(hmac_ctx, ldata, &llen);
+#else
+    if (hmac != NULL)
+    {
+        EVP_MAC_final((EVP_MAC_CTX *)hmac, (unsigned char *)data, NULL, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
@@ -455,7 +759,6 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
                   char *mod, int mod_len, char *pri, int pri_len)
 {
     BIGNUM *my_e;
-    RSA *my_key;
     char *lexp;
     char *lmod;
     char *lpri;
@@ -477,12 +780,44 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
     ssl_reverse_it(lexp, exp_len);
     my_e = BN_new();
     BN_bin2bn((tui8 *)lexp, exp_len, my_e);
-    my_key = RSA_new();
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    const BIGNUM *n = NULL;
+    const BIGNUM *d = NULL;
+    RSA *my_key = RSA_new();
     error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
 
-    const BIGNUM *n;
-    const BIGNUM *d;
+    /* After this call, n and d point directly into my_key, and are valid
+     * until my_key is free'd */
     RSA_get0_key(my_key, &n, NULL, &d);
+#else
+    BIGNUM *n = NULL;
+    BIGNUM *d = NULL;
+    OSSL_PARAM params[] =
+    {
+        OSSL_PARAM_construct_int("bits", &key_size_in_bits),
+        OSSL_PARAM_construct_end()
+    };
+    EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
+    EVP_PKEY *pkey = NULL;
+
+    if (pctx != NULL &&
+            EVP_PKEY_keygen_init(pctx) > 0 &&
+            EVP_PKEY_CTX_set_params(pctx, params) > 0 &&
+            EVP_PKEY_generate(pctx, &pkey) > 0 &&
+            EVP_PKEY_get_bn_param(pkey, "n", &n) > 0 &&
+            EVP_PKEY_get_bn_param(pkey, "d", &d) > 0)
+    {
+        error = 0;
+    }
+    else
+    {
+        error = 1;
+    }
+
+    EVP_PKEY_CTX_free(pctx);
+    EVP_PKEY_free(pkey);
+#endif
 
     if (error == 0)
     {
@@ -517,7 +852,12 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
     }
 
     BN_free(my_e);
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     RSA_free(my_key);
+#else
+    BN_free(n);
+    BN_clear_free(d);
+#endif
     g_free(lexp);
     g_free(lmod);
     g_free(lpri);
@@ -529,7 +869,11 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
 see also
  * https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_tmp_dh_callback(3)
+ *
+ * We dont do this for OpenSSL 3 - we use SSL_CTX_set_dh_auto() instead, as this
+ * can cater for different key sizes on the certificate
 */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 static DH *ssl_get_dh2236()
 {
     static unsigned char dh2236_p[] =
@@ -591,6 +935,7 @@ static DH *ssl_get_dh2236()
 
     return dh;
 }
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L */
 
 /*****************************************************************************/
 struct ssl_tls *
@@ -613,25 +958,6 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 
     return self;
 }
-
-/*****************************************************************************/
-static void
-dump_ssl_error_stack(struct ssl_tls *self)
-{
-    if (!self->error_logged)
-    {
-        /* Dump the error stack from the SSL library */
-        unsigned long code;
-        char buff[256];
-        while ((code = ERR_get_error()) != 0L)
-        {
-            ERR_error_string_n(code, buff, sizeof(buff));
-            LOG(LOG_LEVEL_ERROR, "SSL: %s", buff);
-        }
-        self->error_logged = 1;
-    }
-}
-
 /*****************************************************************************/
 static int
 ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
@@ -752,6 +1078,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     SSL_CTX_set_options(self->ctx, options);
 
     /* set DH parameters */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     DH *dh = ssl_get_dh2236();
     if (dh == NULL)
     {
@@ -766,7 +1093,14 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
         return 1;
     }
     DH_free(dh); // ok to free, copied into ctx by SSL_CTX_set_tmp_dh()
-
+#else
+    if (!SSL_CTX_set_dh_auto(self->ctx, 1))
+    {
+        LOG(LOG_LEVEL_ERROR, "TLS DHE auto failed to be enabled");
+        dump_ssl_error_stack(self);
+        return 1;
+    }
+#endif
 #if defined(SSL_CTX_set_ecdh_auto)
     if (!SSL_CTX_set_ecdh_auto(self->ctx, 1))
     {
