@@ -2,6 +2,8 @@
 AM_CPPFLAGS = \
   -I$(top_srcdir)/common
 
+PACKAGE_STRING = "memtest"
+
 check_PROGRAMS = \
   memtest
 
