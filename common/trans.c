@@ -179,13 +179,9 @@ trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
     objs[*count] = self->sck;
     (*count)++;
 
-    if (self->tls != 0)
+    if (self->tls != NULL && (objs[*count] = ssl_get_rwo(self->tls)) != 0)
     {
-        if (self->tls->rwo != 0)
-        {
-            objs[*count] = self->tls->rwo;
-            (*count)++;
-        }
+        (*count)++;
     }
 
     return 0;
@@ -995,8 +991,8 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
     self->trans_send = trans_tls_send;
     self->trans_can_recv = trans_tls_can_recv;
 
-    self->ssl_protocol = ssl_get_version(self->tls->ssl);
-    self->cipher_name = ssl_get_cipher_name(self->tls->ssl);
+    self->ssl_protocol = ssl_get_version(self->tls);
+    self->cipher_name = ssl_get_cipher_name(self->tls);
 
     return 0;
 }

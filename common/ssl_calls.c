@@ -53,6 +53,17 @@ static EVP_CIPHER *g_cipher_des_ede3_cbc; /* DES3 CBC cipher */
 static EVP_MAC *g_mac_hmac; /* HMAC MAC */
 #endif
 
+/* definition of ssl_tls */
+struct ssl_tls
+{
+    SSL *ssl; /* SSL * */
+    SSL_CTX *ctx; /* SSL_CTX * */
+    char *cert;
+    char *key;
+    struct trans *trans;
+    tintptr rwo; /* wait obj */
+    int error_logged; /* Error has already been logged */
+};
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
@@ -1392,16 +1403,23 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 
 /*****************************************************************************/
 const char *
-ssl_get_version(const struct ssl_st *ssl)
+ssl_get_version(const struct ssl_tls *ssl)
 {
-    return SSL_get_version(ssl);
+    return SSL_get_version(ssl->ssl);
 }
 
 /*****************************************************************************/
 const char *
-ssl_get_cipher_name(const struct ssl_st *ssl)
+ssl_get_cipher_name(const struct ssl_tls *ssl)
 {
-    return SSL_get_cipher_name(ssl);
+    return SSL_get_cipher_name(ssl->ssl);
+}
+
+/*****************************************************************************/
+tintptr
+ssl_get_rwo(const struct ssl_tls *ssl)
+{
+    return ssl->rwo;
 }
 
 /*****************************************************************************/
