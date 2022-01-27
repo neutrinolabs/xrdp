@@ -10,6 +10,36 @@
 
 #include "test_common.h"
 
+/**
+ * Converts a binary buffer to a hexadecimal representation
+ *
+ * Result must be free'd after use
+ */
+char *
+bin_to_hex(const char *input, int length)
+{
+    int i;
+    char *result = (char *)malloc(length * 2 + 1);
+    if (result != NULL)
+    {
+        char *p = result;
+        const char *hexdigit = "0123456789abcdef";
+        for (i = 0 ; i < length ; ++i)
+        {
+            int c = input[i];
+            if (c < 0)
+            {
+                c += 256;
+            }
+            *p++ = hexdigit[ c / 16];
+            *p++ = hexdigit[ c % 16];
+        }
+        *p = '\0';
+    }
+
+    return result;
+}
+
 int main (void)
 {
     int number_failed;
@@ -18,6 +48,7 @@ int main (void)
     sr = srunner_create (make_suite_test_string());
     srunner_add_suite(sr, make_suite_test_os_calls());
     srunner_add_suite(sr, make_suite_test_ssl_calls());
+    srunner_add_suite(sr, make_suite_test_base64());
     //   srunner_add_suite(sr, make_list_suite());
 
     srunner_set_tap(sr, "-");

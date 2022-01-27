@@ -9,32 +9,6 @@
 
 #include "test_common.h"
 
-static
-char *bin_to_hex(const char *input, int length)
-{
-    int i;
-    char *result = (char *)g_malloc(length * 2 + 1, 0);
-    if (result != NULL)
-    {
-        char *p = result;
-        const char *hexdigit = "0123456789abcdef";
-        for (i = 0 ; i < length ; ++i)
-        {
-            int c = input[i];
-            if (c < 0)
-            {
-                c += 256;
-            }
-            *p++ = hexdigit[ c / 16];
-            *p++ = hexdigit[ c % 16];
-        }
-        *p = '\0';
-    }
-
-    return result;
-}
-
-
 START_TEST(test_rc4_enc_ok)
 {
     const char *key = "16_byte_key-----";
