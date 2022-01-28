@@ -942,11 +942,21 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     /* log non-TLS connections */
     else
     {
+        int crypt_level = self->sec_layer->crypt_level;
+        const char *security_level =
+            (crypt_level == CRYPT_LEVEL_NONE) ? "none" :
+            (crypt_level == CRYPT_LEVEL_LOW) ? "low" :
+            (crypt_level == CRYPT_LEVEL_CLIENT_COMPATIBLE) ? "medium" :
+            (crypt_level == CRYPT_LEVEL_HIGH) ? "high" :
+            (crypt_level == CRYPT_LEVEL_FIPS) ? "fips" :
+            /* default */ "unknown";
+
         LOG(LOG_LEVEL_INFO,
             "Non-TLS connection established from %s port %s: "
-            "encrypted with standard RDP security",
+            "with security level : %s",
             self->client_info.client_addr,
-            self->client_info.client_port);
+            self->client_info.client_port,
+            security_level);
     }
 
     return 0;
