@@ -33,8 +33,9 @@
 
 #include "log.h"
 #include "os_calls.h"
-#include "test_xrdp.h"
 #include <stdlib.h>
+
+#include "test_xrdp.h"
 
 int main (void)
 {
