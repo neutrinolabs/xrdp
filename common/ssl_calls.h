@@ -22,6 +22,10 @@
 
 #include "arch.h"
 
+/* Incomplete types */
+struct ssl_tls;
+struct trans;
+
 int
 ssl_init(void);
 int
@@ -31,7 +35,7 @@ ssl_rc4_info_create(void);
 void
 ssl_rc4_info_delete(void *rc4_info);
 void
-ssl_rc4_set_key(void *rc4_info, char *key, int len);
+ssl_rc4_set_key(void *rc4_info, const char *key, int len);
 void
 ssl_rc4_crypt(void *rc4_info, char *data, int len);
 void *
@@ -51,7 +55,7 @@ ssl_md5_info_delete(void *md5_info);
 void
 ssl_md5_clear(void *md5_info);
 void
-ssl_md5_transform(void *md5_info, char *data, int len);
+ssl_md5_transform(void *md5_info, const char *data, int len);
 void
 ssl_md5_complete(void *md5_info, char *data);
 void *
@@ -81,18 +85,6 @@ int
 ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
                   char *mod, int mod_len, char *pri, int pri_len);
 
-/* ssl_tls */
-struct ssl_tls
-{
-    struct ssl_st *ssl; /* SSL * */
-    struct ssl_ctx_st *ctx; /* SSL_CTX * */
-    char *cert;
-    char *key;
-    struct trans *trans;
-    tintptr rwo; /* wait obj */
-    int error_logged; /* Error has already been logged */
-};
-
 /* xrdp_tls.c */
 struct ssl_tls *
 ssl_tls_create(struct trans *trans, const char *key, const char *cert);
@@ -110,12 +102,14 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length);
 int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis);
 const char *
-ssl_get_version(const struct ssl_st *ssl);
+ssl_get_version(const struct ssl_tls *ssl);
 const char *
-ssl_get_cipher_name(const struct ssl_st *ssl);
+ssl_get_cipher_name(const struct ssl_tls *ssl);
 int
 ssl_get_protocols_from_string(const char *str, long *ssl_protocols);
 const char *
 get_openssl_version();
+tintptr
+ssl_get_rwo(const struct ssl_tls *ssl);
 
 #endif
