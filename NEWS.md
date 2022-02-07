@@ -208,7 +208,7 @@ These changes are likely to impact operating system package builders and those b
 
 This is a security fix release that includes fixes for the following local buffer overflow vulnerability.
 
-* [CVE-2022-4044: Local users can perform a buffer overflow attack against the xrdp-sesman service and then impersonate it](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-4044)
+* [CVE-2020-4044: Local users can perform a buffer overflow attack against the xrdp-sesman service and then impersonate it](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-4044)
 
 This update is recommended for all xrdp users.
 
