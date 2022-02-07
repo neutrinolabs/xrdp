@@ -1,3 +1,17 @@
+# Release notes for xrdp v0.9.18.1 (2022/02/08)
+
+This is a security fix release that includes fixes for the following privilege escalation vulnerability.
+
+* [CVE-2022-23613: Privilege escalation on xrdp-sesman](https://www.cve.org/CVERecord?id=CVE-2022-23613)
+
+Users who uses xrdp v0.9.17 or v0.9.18 are recommended to update to this version.
+
+## Special thanks
+
+Thanks to [Gilad Kleinman](https://github.com/giladkl) reporting the vulnerability and reviewing fix.
+
+-----------------------
+
 # Release notes for xrdp v0.9.18 (2022/01/10)
 
 ## General announcements
