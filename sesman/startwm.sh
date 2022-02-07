@@ -71,6 +71,19 @@ wm_start()
     exit 0
   fi
 
+  # alpine
+  # Don't use /etc/X11/xinit/Xsession - it doesn't work
+  if [ -f /etc/alpine-release ]; then
+    if [ -f /etc/X11/xinit/xinitrc ]; then
+        pre_start
+        /etc/X11/xinit/xinitrc
+        post_start
+    else
+        echo "** xinit package isn't installed" >&2
+        exit 1
+    fi
+  fi
+
   # el
   if [ -r /etc/X11/xinit/Xsession ]; then
     pre_start
@@ -87,14 +100,6 @@ wm_start()
     exit 0
   elif [ -r /usr/etc/X11/xdm/Xsession ]; then
     . /usr/etc/X11/xdm/Xsession
-    exit 0
-  fi
-
-  # alpine
-  if [ -r /etc/X11/xinit/xinitrc ]; then
-    pre_start
-    . /etc/X11/xinit/xinitrc
-    post_start
     exit 0
   fi
 

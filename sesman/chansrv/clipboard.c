@@ -1199,6 +1199,95 @@ clipboard_process_data_response_for_image(struct stream *s,
     return 0;
 }
 
+/**************************************************************************//**
+ * Process a CB_FORMAT_DATA_RESPONSE for an X client requesting a file list
+ *
+ * @param s Stream containing CLIPRDR_FILELIST ([MS-RDPECLIP])
+ * @param clip_msg_status msgFlags from Clipboard PDU Header
+ * @param clip_msg_len dataLen from Clipboard PDU Header
+ *
+ * @return Status
+ */
+static int
+clipboard_process_data_response_for_file(struct stream *s,
+        int clip_msg_status,
+        int clip_msg_len)
+{
+    XSelectionRequestEvent *lxev;
+    int rv = 0;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "clipboard_process_data_response_for_file: ");
+    lxev = &g_saved_selection_req_event;
+
+    const int flist_size = 1024 * 1024;
+    g_free(g_clip_c2s.data);
+    g_clip_c2s.data = (char *)g_malloc(flist_size, 0);
+    if (g_clip_c2s.data == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_process_data_response_for_file: "
+            "Can't allocate memory");
+        rv = 1;
+    }
+    /* text/uri-list */
+    else if (g_clip_c2s.type == g_file_atom1)
+    {
+        rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size,
+                                    "file://");
+    }
+    /* x-special/gnome-copied-files */
+    else if (g_clip_c2s.type == g_file_atom2)
+    {
+        g_strcpy(g_clip_c2s.data, "copy\n");
+        rv = clipboard_c2s_in_files(s, g_clip_c2s.data + 5, flist_size - 5,
+                                    "file://");
+    }
+    else if ((g_clip_c2s.type == XA_STRING) ||
+             (g_clip_c2s.type == g_utf8_atom))
+    {
+        if (g_cfg->use_nautilus3_flist_format)
+        {
+            /*
+             * This file list format is only used by GNOME 3
+             * versions >= 3.29.92. It is not used by GNOME 4. Remove
+             * this workaround when GNOME 3 is no longer supported by
+             * long-term distros */
+#define LIST_PREFIX "x-special/nautilus-clipboard\ncopy\n"
+#define LIST_PREFIX_LEN (sizeof(LIST_PREFIX) - 1)
+            g_strcpy(g_clip_c2s.data, LIST_PREFIX);
+            rv = clipboard_c2s_in_files(s,
+                                        g_clip_c2s.data + LIST_PREFIX_LEN,
+                                        flist_size - LIST_PREFIX_LEN - 1,
+                                        "file://");
+            g_strcat(g_clip_c2s.data, "\n");
+#undef LIST_PREFIX_LEN
+#undef LIST_PREFIX
+        }
+        else
+        {
+            rv = clipboard_c2s_in_files(s, g_clip_c2s.data, flist_size, "");
+        }
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "clipboard_process_data_response_for_file: "
+                  "Unrecognised target");
+        rv = 1;
+    }
+
+    if (rv != 0 && g_clip_c2s.data != NULL)
+    {
+        g_clip_c2s.data[0] = '\0';
+    }
+
+    g_clip_c2s.total_bytes =
+        (g_clip_c2s.data == NULL) ? 0 : g_strlen(g_clip_c2s.data);
+    g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
+    clipboard_provide_selection_c2s(lxev, lxev->target);
+
+    return rv;
+}
+
 /*****************************************************************************/
 /* client to server */
 /* sent as a reply to CB_FORMAT_DATA_REQUEST; used to indicate whether
@@ -1227,26 +1316,8 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     }
     if (g_clip_c2s.xrdp_clip_type == XRDP_CB_FILE)
     {
-        g_free(g_clip_c2s.data);
-        g_clip_c2s.data = (char *)g_malloc(1024 * 1024, 1);
-        /* text/uri-list */
-        if (g_clip_c2s.type == g_file_atom1)
-        {
-            clipboard_c2s_in_files(s, g_clip_c2s.data);
-        }
-        /* x-special/gnome-copied-files */
-        else if (g_clip_c2s.type == g_file_atom2)
-        {
-            g_strcpy(g_clip_c2s.data, "copy\n");
-            clipboard_c2s_in_files(s, g_clip_c2s.data + 5);
-        }
-        else
-        {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_process_data_response: error");
-        }
-        g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
-        g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
-        clipboard_provide_selection_c2s(lxev, lxev->target);
+        clipboard_process_data_response_for_file(s, clip_msg_status,
+                clip_msg_len);
         return 0;
     }
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response: "
@@ -1990,7 +2061,7 @@ clipboard_event_selection_notify(XEvent *xevent)
             }
             else if (lxevent->target == g_file_atom2)
             {
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: text/uri-list "
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: x-special/gnome-copied-files "
                           "data_size %d", data_size);
                 if ((g_clip_s2c.incr_in_progress == 0) && (data_size > 0))
                 {
@@ -2168,11 +2239,24 @@ clipboard_event_selection_request(XEvent *xevent)
     }
     else if ((lxev->target == XA_STRING) || (lxev->target == g_utf8_atom))
     {
-        g_memcpy(&g_saved_selection_req_event, lxev,
-                 sizeof(g_saved_selection_req_event));
-        g_clip_c2s.type = lxev->target;
-        g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
-        clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+        if (clipboard_find_format_id(g_file_format_id) >= 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_request: "
+                      "text requested when files available");
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = lxev->target;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+            clipboard_send_data_request(g_file_format_id);
+        }
+        else
+        {
+            g_memcpy(&g_saved_selection_req_event, lxev,
+                     sizeof(g_saved_selection_req_event));
+            g_clip_c2s.type = lxev->target;
+            g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
+            clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+        }
         return 0;
     }
     else if (lxev->target == g_image_bmp_atom)
@@ -2449,7 +2533,7 @@ clipboard_xevent(void *xevent)
             }
             else
             {
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "outbound clipboard is restricted because of config");
+                LOG(LOG_LEVEL_INFO, "outbound clipboard is restricted because of config");
                 return 1;
             }
             break;

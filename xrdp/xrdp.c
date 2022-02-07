@@ -570,10 +570,11 @@ main(int argc, char **argv)
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
-        g_writeln("It looks like xrdp is already running.");
-        g_writeln("If not, delete %s and try again.", pid_file);
+        LOG(LOG_LEVEL_ALWAYS, "It looks like xrdp is already running.");
+        LOG(LOG_LEVEL_ALWAYS, "If not, delete %s and try again.", pid_file);
+        log_end();
         g_deinit();
-        g_exit(0);
+        g_exit(1);
     }
 
     daemon = !startup_params.no_daemon;
@@ -590,16 +591,20 @@ main(int argc, char **argv)
 
         if (fd == -1)
         {
-            g_writeln("running in daemon mode with no access to pid files, quitting");
+            LOG(LOG_LEVEL_ALWAYS,
+                "running in daemon mode with no access to pid files, quitting");
+            log_end();
             g_deinit();
-            g_exit(0);
+            g_exit(1);
         }
 
         if (g_file_write(fd, "0", 1) == -1)
         {
-            g_writeln("running in daemon mode with no access to pid files, quitting");
+            LOG(LOG_LEVEL_ALWAYS,
+                "running in daemon mode with no access to pid files, quitting");
+            log_end();
             g_deinit();
-            g_exit(0);
+            g_exit(1);
         }
 
         g_file_close(fd);
@@ -611,8 +616,9 @@ main(int argc, char **argv)
         /* if can't listen, exit with failure status */
         if (xrdp_listen_test(&startup_params) != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
+            LOG(LOG_LEVEL_ALWAYS, "Failed to start xrdp daemon, "
                 "possibly address already in use.");
+            log_end();
             g_deinit();
             /* must exit with failure status,
                or systemd cannot detect xrdp daemon couldn't start properly */
@@ -623,15 +629,16 @@ main(int argc, char **argv)
 
         if (pid == -1)
         {
-            g_writeln("problem forking");
+            LOG(LOG_LEVEL_ALWAYS, "problem forking [%s]", g_get_strerror());
+            log_end();
             g_deinit();
             g_exit(1);
         }
 
         if (0 != pid)
         {
-            g_writeln("daemon process %d started ok", pid);
             /* exit, this is the main process */
+            log_end();
             g_deinit();
             g_exit(0);
         }
@@ -643,9 +650,8 @@ main(int argc, char **argv)
 
         if (fd == -1)
         {
-            g_writeln("trying to write process id to xrdp.pid");
-            g_writeln("problem opening xrdp.pid");
-            g_writeln("maybe no rights");
+            LOG(LOG_LEVEL_WARNING, "Can't open %s for writing [%s]",
+                pid_file, g_get_strerror());
         }
         else
         {

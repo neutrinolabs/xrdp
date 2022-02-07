@@ -47,6 +47,8 @@ libcommon_la_SOURCES = \
   fifo.h \
   file.c \
   file.h \
+  guid.c \
+  guid.h \
   list.c \
   list.h \
   list16.c \

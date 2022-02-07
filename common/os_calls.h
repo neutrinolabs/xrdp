@@ -93,7 +93,18 @@ int      g_sck_socket_ok(int sck);
 int      g_sck_can_send(int sck, int millis);
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
-void     g_write_ip_address(int rcv_sck, char *ip_address, int bytes);
+void     g_write_connection_description(int rcv_sck,
+                                        char *description, int bytes);
+/**
+ * Extracts the IP address from the connection description
+ * @param description Connection description (from
+ *                    g_write_connection_description())
+ * @param ip buffer to write IP address to
+ * @param bytes Size of ip buffer
+ * @return Pointer to IP for convenience
+ */
+const char *g_get_ip_from_description(const char *description,
+                                      char *ip, int bytes);
 void     g_sleep(int msecs);
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);
@@ -128,6 +139,8 @@ int      g_create_path(const char *path);
 int      g_remove_dir(const char *dirname);
 int      g_file_delete(const char *filename);
 int      g_file_get_size(const char *filename);
+int      g_file_get_device_number(const char *filename);
+int      g_file_get_inode_num(const char *filename);
 long     g_load_library(char *in);
 int      g_free_library(long lib);
 void    *g_get_proc_address(long lib, const char *name);

@@ -24,8 +24,11 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include "guid.h"
 #include "ms-rdpedisp.h"
 #include "ms-rdpbcgr.h"
+
+#include "libscp_connection.h"
 
 #ifdef USE_PAM
 #if defined(HAVE__PAM_TYPES_H)
@@ -41,6 +44,16 @@
 #include "xrdp_encoder.h"
 #include "xrdp_sockets.h"
 
+
+/* Forward declarations */
+static const char *
+getPAMError(const int pamError, char *text, int text_bytes);
+static const char *
+getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self);
+static int
+xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port);
+static void
+xrdp_mm_connect_sm(struct xrdp_mm *self);
 
 
 /*****************************************************************************/
@@ -115,7 +128,6 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
 
     trans_delete(self->chan_trans);
     self->chan_trans = 0;
-    self->chan_trans_up = 0;
     self->mod_init = 0;
     self->mod_exit = 0;
     self->mod = 0;
@@ -147,178 +159,156 @@ xrdp_mm_delete(struct xrdp_mm *self)
 
     trans_delete(self->sesman_trans);
     self->sesman_trans = 0;
-    self->sesman_trans_up = 0;
+    trans_delete(self->pam_auth_trans);
+    self->pam_auth_trans = 0;
     list_delete(self->login_names);
     list_delete(self->login_values);
     g_free(self);
 }
 
-/*****************************************************************************/
-/* Send login information to sesman */
-/* FIXME : This code duplicates functionality in the sesman tools sesrun.c.
- * When SCP is reworked, a common library function should be used */
-
-static int
-xrdp_mm_send_login(struct xrdp_mm *self)
+/**************************************************************************//**
+ * Looks for a string value in the login_names/login_values array
+ *
+ * In the event of multiple matches, the LAST value matched is returned.
+ * This currently allows for values to be replaced by writing a new value
+ * to the end of the list
+ *
+ * Returned strings are valid until the module is destroyed.
+ *
+ * @param self This module
+ * @param aname Name to lookup (case-insensitive)
+ *
+ * @return pointer to value, or NULL if not found.
+ */
+static const char *
+xrdp_mm_get_value(struct xrdp_mm *self, const char *aname)
 {
-    struct stream *s;
-    int rv;
-    int index;
-    int count;
-    int xserverbpp;
-    char *username;
-    char *password;
-    char *name;
-    char *value;
+    const char *name;
+    const char *value = NULL;
+    unsigned int index = self->login_names->count;
+
+    while (index > 0 && value == NULL)
+    {
+        --index;
+        name = (const char *)list_get_item(self->login_names, index);
+
+        if (name != NULL && g_strcasecmp(name, aname) == 0)
+        {
+            value = (const char *)list_get_item(self->login_values, index);
+        }
+    }
+
+    return value;
+}
+/**************************************************************************//**
+ * Looks for a numeric value in the login_names/login_values array
+ *
+ * Returned strings are valid until the module is destroyed.
+ *
+ * @param self This module
+ * @param aname Name to lookup (case-insensitive)
+ * @param def Default to return if value not found.
+ *
+ * @return value from name, or the specified default.
+ */
+static int
+xrdp_mm_get_value_int(struct xrdp_mm *self, const char *aname, int def)
+{
+    const char *value = xrdp_mm_get_value(self, aname);
+
+    return (value == NULL) ? def : g_atoi(value);
+}
+
+/*****************************************************************************/
+/* Send gateway login information to sesman */
+static int
+xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
+                           const char *password)
+{
+    int rv = 0;
+    enum SCP_CLIENT_STATES_E e;
 
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                     "sending login info to session manager, please wait...");
-    username = 0;
-    password = 0;
-    self->code = 0;
-    xserverbpp = 0;
-    count = self->login_names->count;
 
-    for (index = 0; index < count; index++)
-    {
-        name = (char *)list_get_item(self->login_names, index);
-        value = (char *)list_get_item(self->login_values, index);
+    e = scp_v0c_gateway_request(self->pam_auth_trans, username, password);
 
-        if (g_strcasecmp(name, "username") == 0)
-        {
-            username = value;
-        }
-        else if (g_strcasecmp(name, "password") == 0)
-        {
-            password = value;
-        }
-        else if (g_strcasecmp(name, "code") == 0)
-        {
-            /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
-            self->code = g_atoi(value);
-        }
-        else if (g_strcasecmp(name, "xserverbpp") == 0)
-        {
-            xserverbpp = g_atoi(value);
-        }
-    }
-
-    if ((username == 0) || (password == 0))
-    {
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                        "Error finding username and password");
-        return 1;
-    }
-
-    s = trans_get_out_s(self->sesman_trans, 8192);
-    s_push_layer(s, channel_hdr, 8);
-    /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
-    out_uint16_be(s, self->code);
-    index = g_strlen(username);
-    out_uint16_be(s, index);
-    out_uint8a(s, username, index);
-    index = g_strlen(password);
-
-    out_uint16_be(s, index);
-    out_uint8a(s, password, index);
-    out_uint16_be(s, self->wm->screen->width);
-    out_uint16_be(s, self->wm->screen->height);
-
-    /* select and send X server bpp */
-    if (xserverbpp == 0)
-    {
-        if (self->code == 20)
-        {
-            xserverbpp = 24; /* xorgxrdp is always at 24 bpp */
-        }
-        else
-        {
-            xserverbpp = self->wm->screen->bpp; /* use client's bpp */
-        }
-    }
-    out_uint16_be(s, xserverbpp);
-
-    /* send domain */
-    if (self->wm->client_info->domain[0] != '_')
-    {
-        index = g_strlen(self->wm->client_info->domain);
-        out_uint16_be(s, index);
-        out_uint8a(s, self->wm->client_info->domain, index);
-    }
-    else
-    {
-        out_uint16_be(s, 0);
-        /* out_uint8a(s, "", 0); */
-    }
-
-    /* send program / shell */
-    index = g_strlen(self->wm->client_info->program);
-    out_uint16_be(s, index);
-    out_uint8a(s, self->wm->client_info->program, index);
-
-    /* send directory */
-    index = g_strlen(self->wm->client_info->directory);
-    out_uint16_be(s, index);
-    out_uint8a(s, self->wm->client_info->directory, index);
-
-    /* send client ip */
-    index = g_strlen(self->wm->client_info->client_ip);
-    out_uint16_be(s, index);
-    out_uint8a(s, self->wm->client_info->client_ip, index);
-
-    s_mark_end(s);
-
-    s_pop_layer(s, channel_hdr);
-    /* Version 0 of the protocol to sesman is currently used by XRDP */
-    out_uint32_be(s, 0); /* version */
-    index = (int)(s->end - s->data);
-    out_uint32_be(s, index); /* size */
-
-    rv = trans_force_write(self->sesman_trans);
-
-    if (rv != 0)
+    if (e != SCP_CLIENT_STATE_OK)
     {
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
-                        "xrdp_mm_send_login: xrdp_mm_send_login failed");
+                        "Error sending gateway login request to sesman [%s]",
+                        scp_client_state_to_str(e));
+        rv = 1;
     }
 
     return rv;
 }
 
 /*****************************************************************************/
-/* returns error */
-/* this goes through the login_names looking for one called 'aname'
-   then it copies the corresponding login_values item into 'dest'
-   'dest' must be at least 'dest_len' + 1 bytes in size */
+/* Send login information to sesman */
 static int
-xrdp_mm_get_value(struct xrdp_mm *self, const char *aname, char *dest,
-                  int dest_len)
+xrdp_mm_send_login(struct xrdp_mm *self)
 {
-    char *name;
-    char *value;
-    int index;
-    int count;
-    int rv;
+    enum SCP_CLIENT_STATES_E e;
+    int rv = 0;
+    int xserverbpp;
+    const char *username;
+    const char *password;
 
-    rv = 1;
-    /* find the library name */
-    dest[0] = 0;
-    count = self->login_names->count;
-
-    for (index = 0; index < count; index++)
+    username = xrdp_mm_get_value(self, "username");
+    password = xrdp_mm_get_value(self, "password");
+    if (username == NULL || username[0] == '\0')
     {
-        name = (char *)list_get_item(self->login_names, index);
-        value = (char *)list_get_item(self->login_values, index);
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR, "No username is available");
+        rv = 1;
+    }
+    else if (password == NULL)
+    {
+        /* Can't find a password definition at all - even an empty one */
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                        "No password field is available");
+        rv = 1;
+    }
+    else
+    {
+        const char *domain;
 
-        if ((name == 0) || (value == 0))
+        /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
+        self->code = xrdp_mm_get_value_int(self, "code", 0);
+
+        xserverbpp = xrdp_mm_get_value_int(self, "xserverbpp",
+                                           self->wm->screen->bpp);
+
+        domain = self->wm->client_info->domain;
+        /* Don't send domains starting with '_' - see
+         * xrdp_login_wnd.c:xrdp_wm_parse_domain_information()
+         */
+        if (domain[0] == '_')
         {
-            break;
+            domain = "";
         }
 
-        if (g_strcasecmp(name, aname) == 0)
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                        "sending login info to session manager. "
+                        "Please wait...");
+        e = scp_v0c_create_session_request(self->sesman_trans,
+                                           username,
+                                           password,
+                                           self->code,
+                                           self->wm->screen->width,
+                                           self->wm->screen->height,
+                                           xserverbpp,
+                                           domain,
+                                           self->wm->client_info->program,
+                                           self->wm->client_info->directory,
+                                           self->wm->client_info->connection_description);
+
+        if (e != SCP_CLIENT_STATE_OK)
         {
-            g_strncpy(dest, value, dest_len);
-            rv = 0;
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
+                            "Error sending create session to sesman [%s]",
+                            scp_client_state_to_str(e));
+            rv = 1;
         }
     }
 
@@ -330,7 +320,7 @@ static int
 xrdp_mm_setup_mod1(struct xrdp_mm *self)
 {
     void *func;
-    char lib[256];
+    const char *lib;
     char text[256];
 
     if (self == 0)
@@ -338,9 +328,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
         return 1;
     }
 
-    lib[0] = 0;
-
-    if (xrdp_mm_get_value(self, "lib", lib, 255) != 0)
+    if ((lib = xrdp_mm_get_value(self, "lib")) == NULL)
     {
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
                         "no library name specified in xrdp.ini, please add "
@@ -360,7 +348,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
     if (self->mod_handle == 0)
     {
-        g_snprintf(text, 255, "%s/%s", XRDP_MODULE_PATH, lib);
+        g_snprintf(text, sizeof(text), "%s/%s", XRDP_MODULE_PATH, lib);
         /* Let the main thread load the lib,*/
         self->mod_handle = g_xrdp_sync(xrdp_mm_sync_load, (tintptr)text, 0);
 
@@ -448,6 +436,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_add_char = server_add_char;
             self->mod->server_draw_text = server_draw_text;
             self->mod->server_reset = server_reset;
+            self->mod->server_get_channel_count = server_get_channel_count;
             self->mod->server_query_channel = server_query_channel;
             self->mod->server_get_channel_id = server_get_channel_id;
             self->mod->server_send_to_channel = server_send_to_channel;
@@ -485,7 +474,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
 /*****************************************************************************/
 static int
-xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
+xrdp_mm_setup_mod2(struct xrdp_mm *self)
 {
     char text[256];
     const char *name;
@@ -521,12 +510,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
             {
                 use_uds = 1;
 
-                if (xrdp_mm_get_value(self, "ip", text, 255) == 0)
+                if ((value = xrdp_mm_get_value(self, "ip")) != NULL &&
+                        g_strcmp(value, "127.0.0.1") != 0)
                 {
-                    if (g_strcmp(text, "127.0.0.1") != 0)
-                    {
-                        use_uds = 0;
-                    }
+                    use_uds = 0;
                 }
 
                 if (use_uds)
@@ -565,9 +552,9 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
         self->mod->mod_set_param(self->mod, "hostname", name);
         g_snprintf(text, 255, "%d", self->wm->session->client_info->keylayout);
         self->mod->mod_set_param(self->mod, "keylayout", text);
-        if (guid != 0)
+        if (guid_is_set(&self->guid))
         {
-            self->mod->mod_set_param(self->mod, "guid", (char *) guid);
+            self->mod->mod_set_param(self->mod, "guid", (char *) &self->guid);
         }
 
         for (i = 0; i < self->login_names->count; i++)
@@ -1177,19 +1164,17 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self)
 {
-    char enable_dynamic_resize[32];
+    const char *enable_dynamic_resize;
     int error = 0;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_drdynvc_up:");
 
-    xrdp_mm_get_value(self, "enable_dynamic_resizing",
-                      enable_dynamic_resize,
-                      sizeof(enable_dynamic_resize) - 1);
-
+    enable_dynamic_resize = xrdp_mm_get_value(self, "enable_dynamic_resizing");
     /*
      * User can disable dynamic resizing if necessary
      */
-    if (enable_dynamic_resize[0] != '\0' && !g_text2bool(enable_dynamic_resize))
+    if (enable_dynamic_resize != NULL && enable_dynamic_resize[0] != '\0' &&
+            !g_text2bool(enable_dynamic_resize))
     {
         LOG(LOG_LEVEL_INFO, "User has disabled dynamic resizing.");
     }
@@ -1587,7 +1572,7 @@ xrdp_mm_chan_data_in(struct trans *trans)
     int size;
     int error;
 
-    if (trans == 0)
+    if (trans == NULL)
     {
         return 1;
     }
@@ -1623,85 +1608,13 @@ xrdp_mm_chan_data_in(struct trans *trans)
 }
 
 /*****************************************************************************/
-/* connect to chansrv */
-static int
-xrdp_mm_connect_chansrv(struct xrdp_mm *self, const char *ip, const char *port)
-{
-    int index;
-
-    if (self->wm->client_info->channels_allowed == 0)
-    {
-        LOG(LOG_LEVEL_DEBUG, "%s: "
-            "skip connecting to chansrv because all channels are disabled",
-            __func__);
-        return 0;
-    }
-
-    /* connect channel redir */
-    if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
-    {
-        /* unix socket */
-        self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-    }
-    else
-    {
-        /* tcp */
-        self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-    }
-
-    self->chan_trans->is_term = g_is_term;
-    self->chan_trans->si = &(self->wm->session->si);
-    self->chan_trans->my_source = XRDP_SOURCE_CHANSRV;
-    self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
-    self->chan_trans->header_size = 8;
-    self->chan_trans->callback_data = self;
-    self->chan_trans->no_stream_init_on_data_in = 1;
-    self->chan_trans->extra_flags = 0;
-
-    /* try to connect up to 4 times */
-    for (index = 0; index < 4; index++)
-    {
-        if (trans_connect(self->chan_trans, ip, port, 3000) == 0)
-        {
-            self->chan_trans_up = 1;
-            break;
-        }
-        if (g_is_term())
-        {
-            break;
-        }
-        g_sleep(1000);
-        LOG(LOG_LEVEL_WARNING, "xrdp_mm_connect_chansrv: connect failed "
-            "trying again...");
-    }
-
-    if (!(self->chan_trans_up))
-    {
-        LOG(LOG_LEVEL_ERROR, "xrdp_mm_connect_chansrv: error in "
-            "trans_connect chan");
-    }
-
-    if (self->chan_trans_up)
-    {
-        if (xrdp_mm_trans_send_channel_setup(self, self->chan_trans) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "xrdp_mm_connect_chansrv: error in "
-                "xrdp_mm_trans_send_channel_setup");
-        }
-        else
-        {
-            LOG(LOG_LEVEL_DEBUG, "xrdp_mm_connect_chansrv: chansrv "
-                "connect successful");
-        }
-    }
-
-    return 0;
-}
 
 static void cleanup_sesman_connection(struct xrdp_mm *self)
 {
+    /* Don't delete these transports here - we may be in
+     * an auth callback from one of them */
     self->delete_sesman_trans = 1;
-    self->connected_state = 0;
+    self->delete_pam_auth_trans = 1;
 
     if (self->wm->login_state != WMLS_CLEANUP)
     {
@@ -1749,71 +1662,6 @@ xrdp_mm_update_allowed_channels(struct xrdp_mm *self)
         }
     }
     return 0;
-}
-
-/*****************************************************************************/
-/* FIXME : This code duplicates functionality in the sesman tools sesrun.c.
- * When SCP is reworked, a common library function should be used */
-static int
-xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
-{
-    int ok;
-    int display;
-    int rv;
-    char ip[256];
-    char port[256];
-    tui8 guid[16];
-    tui8 *pguid;
-
-    rv = 0;
-    in_uint16_be(s, ok);
-    in_uint16_be(s, display);
-    pguid = 0;
-    if (s_check_rem(s, 16))
-    {
-        in_uint8a(s, guid, 16);
-        pguid = guid;
-    }
-    if (ok)
-    {
-        self->display = display;
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "login successful for display %d", display);
-
-        if (xrdp_mm_setup_mod1(self) == 0)
-        {
-            if (xrdp_mm_setup_mod2(self, pguid) == 0)
-            {
-                xrdp_mm_get_value(self, "ip", ip, 255);
-                xrdp_wm_set_login_state(self->wm, WMLS_CLEANUP);
-                self->wm->dragging = 0;
-
-                /* connect channel redir */
-                if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
-                {
-                    g_snprintf(port, 255, XRDP_CHANSRV_STR, display);
-                }
-                else
-                {
-                    g_snprintf(port, 255, "%d", 7200 + display);
-                }
-                xrdp_mm_connect_chansrv(self, ip, port);
-            }
-        }
-    }
-    else
-    {
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "login failed for display %d", display);
-        xrdp_wm_show_log(self->wm);
-        if (self->wm->hide_log_window)
-        {
-            rv = 1;
-        }
-    }
-
-    cleanup_sesman_connection(self);
-    return rv;
 }
 
 /*****************************************************************************/
@@ -1891,7 +1739,7 @@ xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
 
     rv = 0;
 
-    if ((self->chan_trans != 0) && self->chan_trans_up)
+    if ((self->chan_trans != 0) && self->chan_trans->status == TRANS_STATUS_UP)
     {
         s = trans_get_out_s(self->chan_trans, 8192);
 
@@ -1927,177 +1775,124 @@ xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
 }
 
 /*****************************************************************************/
-/* This is the callback registered for sesman communication replies. */
-static int
-xrdp_mm_sesman_data_in(struct trans *trans)
+static void
+xrdp_mm_scp_process_msg(struct xrdp_mm *self,
+                        const struct scp_v0_reply_type *msg)
 {
-    struct xrdp_mm *self;
-    struct stream *s;
-    int version;
-    int size;
-    int error;
-    int code;
-
-    if (trans == 0)
+    if (msg->is_gw_auth_response)
     {
-        return 1;
-    }
+        const char *additionalError;
+        char pam_error[128];
 
-    self = (struct xrdp_mm *)(trans->callback_data);
-    s = trans_get_in_s(trans);
+        /* We no longer need the pam_auth transport - it's only used
+         * for the one message */
+        self->delete_pam_auth_trans = 1;
 
-    if (s == 0)
-    {
-        return 1;
-    }
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                        "Reply from access control: %s",
+                        getPAMError(msg->auth_result,
+                                    pam_error, sizeof(pam_error)));
 
-    in_uint32_be(s, version);
-    in_uint32_be(s, size);
-    error = trans_force_read(trans, size - 8);
-
-    if (error == 0)
-    {
-        in_uint16_be(s, code);
-
-        switch (code)
+        if (msg->auth_result != 0)
         {
-            /* even when the request is denied the reply will hold 3 as the command. */
-            case 3:
-                error = xrdp_mm_process_login_response(self, s);
-                break;
-            default:
-                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                                "Undefined reply code %d received from sesman",
-                                code);
-                cleanup_sesman_connection(self);
-                break;
-        }
-    }
-
-    return error;
-}
-
-#ifdef USE_PAM
-/*********************************************************************/
-/* return 0 on success */
-static int
-access_control(char *username, char *password, char *srv)
-{
-    int reply;
-    int rec = 32 + 1; /* 32 is reserved for PAM failures this means connect failure */
-    struct stream *in_s;
-    struct stream *out_s;
-    unsigned long version;
-    unsigned short int dummy;
-    unsigned short int pAM_errorcode;
-    unsigned short int code;
-    unsigned long size;
-    int index;
-    int socket = g_tcp_socket();
-    char port[8];
-
-    if (socket != -1)
-    {
-        xrdp_mm_get_sesman_port(port, sizeof(port));
-        /* we use a blocking socket here */
-        reply = g_tcp_connect(socket, srv, port);
-
-        if (reply == 0)
-        {
-            make_stream(in_s);
-            init_stream(in_s, 500);
-            make_stream(out_s);
-            init_stream(out_s, 500);
-            s_push_layer(out_s, channel_hdr, 8);
-            out_uint16_be(out_s, 4); /*0x04 means SCP_GW_AUTHENTICATION*/
-            index = g_strlen(username);
-            out_uint16_be(out_s, index);
-            out_uint8a(out_s, username, index);
-
-            index = g_strlen(password);
-            out_uint16_be(out_s, index);
-            out_uint8a(out_s, password, index);
-            s_mark_end(out_s);
-            s_pop_layer(out_s, channel_hdr);
-            out_uint32_be(out_s, 0); /* version */
-            index = (int)(out_s->end - out_s->data);
-            out_uint32_be(out_s, index); /* size */
-            LOG(LOG_LEVEL_DEBUG, "Number of data to send : %d", index);
-            reply = g_tcp_send(socket, out_s->data, index, 0);
-            free_stream(out_s);
-
-            if (reply > 0)
+            additionalError = getPAMAdditionalErrorInfo(msg->auth_result, self);
+            if (additionalError && additionalError[0])
             {
-                /* We wait in 5 sec for a reply from sesman*/
-                if (g_sck_can_recv(socket, 5000))
-                {
-                    reply = g_tcp_recv(socket, in_s->end, 500, 0);
-
-                    if (reply > 0)
-                    {
-                        in_s->end =  in_s->end + reply;
-                        in_uint32_be(in_s, version);
-                        LOG(LOG_LEVEL_INFO, "Version number in reply from sesman: %lu", version);
-                        in_uint32_be(in_s, size);
-
-                        if ((size == 14) && (version == 0))
-                        {
-                            in_uint16_be(in_s, code);
-                            in_uint16_be(in_s, pAM_errorcode); /* this variable holds the PAM error code if the variable is >32 it is a "invented" code */
-                            in_uint16_be(in_s, dummy);
-
-                            if (code != 4) /*0x04 means SCP_GW_AUTHENTICATION*/
-                            {
-                                LOG(LOG_LEVEL_ERROR, "Returned cmd code from "
-                                    "sesman is corrupt");
-                            }
-                            else
-                            {
-                                rec = pAM_errorcode; /* here we read the reply from the access control */
-                            }
-                        }
-                        else
-                        {
-                            LOG(LOG_LEVEL_ERROR, "Corrupt reply size or "
-                                "version from sesman: %ld", size);
-                        }
-                    }
-                    else
-                    {
-                        LOG(LOG_LEVEL_ERROR, "No data received from sesman");
-                    }
-                }
-                else
-                {
-                    LOG(LOG_LEVEL_ERROR, "Timeout when waiting for sesman");
-                }
-            }
-            else
-            {
-                LOG(LOG_LEVEL_ERROR, "No success sending to sesman");
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s",
+                                additionalError);
             }
 
-            free_stream(in_s);
-            g_tcp_close(socket);
+            /* TODO : Check this is displayed */
+            cleanup_sesman_connection(self);
+            xrdp_wm_mod_connect_done(self->wm, 1);
         }
         else
         {
-            LOG(LOG_LEVEL_ERROR, "Failure connecting to socket sesman");
+            /* Authentication successful */
+            xrdp_mm_connect_sm(self);
         }
     }
     else
     {
-        LOG(LOG_LEVEL_ERROR, "Failure creating socket - for access control");
-    }
+        const char *username;
+        char displayinfo[64];
+        int auth_successful = (msg->auth_result != 0);
 
-    if (socket != -1)
-    {
-        g_tcp_close(socket);
-    }
+        /* Sort out some logging information */
+        if ((username = xrdp_mm_get_value(self, "username")) == NULL)
+        {
+            username = "???";
+        }
 
-    return rec;
+        if (msg->display == 0)
+        {
+            /* A returned display of zero doesn't mean anything useful, and
+             * can confuse the user. It's most likely authentication has
+             * failed and no display was allocated */
+            displayinfo[0] = '\0';
+        }
+        else
+        {
+            g_snprintf(displayinfo, sizeof(displayinfo),
+                       " on display %d", msg->display);
+        }
+
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                        "login %s for user %s%s",
+                        (auth_successful ? "successful" : "failed"),
+                        username, displayinfo);
+
+        if (!auth_successful)
+        {
+            /* Authentication failure */
+            cleanup_sesman_connection(self);
+            xrdp_wm_mod_connect_done(self->wm, 1);
+        }
+        else
+        {
+            /* Authentication successful - carry on with the connect
+             * state machine */
+            self->display = msg->display;
+            self->guid = msg->guid;
+            xrdp_mm_connect_sm(self);
+        }
+    }
 }
-#endif
+
+/*****************************************************************************/
+/* This is the callback registered for sesman communication replies. */
+static int
+xrdp_mm_scp_data_in(struct trans *trans)
+{
+    int rv = 0;
+
+    if (trans == NULL)
+    {
+        rv = 1;
+    }
+    else if (scp_v0c_reply_available(trans))
+    {
+        struct scp_v0_reply_type reply;
+        struct xrdp_mm *self = (struct xrdp_mm *)(trans->callback_data);
+        enum SCP_CLIENT_STATES_E e = scp_v0c_get_reply(trans, &reply);
+        if (e != SCP_CLIENT_STATE_OK)
+        {
+            const char *src = (trans == self->pam_auth_trans)
+                              ? "PAM authenticator"
+                              : "sesman";
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                            "Error reading response from %s [%s]",
+                            src, scp_client_state_to_str(e));
+            rv = 1;
+        }
+        else
+        {
+            xrdp_mm_scp_process_msg(self, &reply);
+        }
+    }
+
+    return rv;
+}
 
 /*****************************************************************************/
 /* This routine clears all states to make sure that our next login will be
@@ -2108,21 +1903,21 @@ cleanup_states(struct xrdp_mm *self)
 {
     if (self != NULL)
     {
-        self-> connected_state = 0; /* true if connected to sesman else false */
-        self-> sesman_trans = NULL; /* connection to sesman */
-        self-> sesman_trans_up = 0; /* true once connected to sesman */
-        self-> delete_sesman_trans = 0; /* boolean set when done with sesman connection */
-        self-> display = 0; /* 10 for :10.0, 11 for :11.0, etc */
-        self-> code = 0; /* 0 Xvnc session, 10 X11rdp session, 20 Xorg session */
-        self-> sesman_controlled = 0; /* true if this is a sesman session */
-        self-> chan_trans = NULL; /* connection to chansrv */
-        self-> chan_trans_up = 0; /* true once connected to chansrv */
-        self-> delete_chan_trans = 0; /* boolean set when done with channel connection */
-        self-> usechansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
+        self->connect_state = MMCS_CONNECT_TO_SESMAN;
+        self->use_sesman = 0; /* true if this is a sesman session */
+        self->use_chansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
+        self->use_pam_auth = 0; /* true if we're to use the PAM authentication facility */
+        self->sesman_trans = NULL; /* connection to sesman */
+        self->pam_auth_trans = NULL; /* connection to PAM authenticator */
+        self->chan_trans = NULL; /* connection to chansrv */
+        self->delete_sesman_trans = 0;
+        self->delete_pam_auth_trans = 0;
+        self->display = 0; /* 10 for :10.0, 11 for :11.0, etc */
+        guid_clear(&self->guid);
+        self->code = 0; /* 0 Xvnc session, 10 X11rdp session, 20 Xorg session */
     }
 }
 
-#ifdef USE_PAM
 static const char *
 getPAMError(const int pamError, char *text, int text_bytes)
 {
@@ -2191,9 +1986,6 @@ getPAMError(const int pamError, char *text, int text_bytes)
             return "Error connecting to PAM";
         case 32 + 3:
             return "Username okey but group problem";
-        default:
-            g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
-            return text;
 #elif defined(OPENPAM)
         case PAM_SUCCESS: /* 0 */
             return "Success";
@@ -2255,10 +2047,10 @@ getPAMError(const int pamError, char *text, int text_bytes)
             return "Module is unknown";
         case PAM_DOMAIN_UNKNOWN: /* 29 */
             return "Unknown authentication domain";
+#endif
         default:
             g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
             return text;
-#endif
     }
 }
 
@@ -2309,8 +2101,6 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
             {
                 return "Authentication error - Verify that user/password is valid";
             }
-        default:
-            return "No expected error";
 #elif defined(OPENPAM)
         case PAM_SUCCESS: /* 0 */
             return NULL;
@@ -2351,12 +2141,11 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
             {
                 return "Authentication error - Verify that user/password is valid";
             }
+#endif
         default:
             return "No expected error";
-#endif
     }
 }
-#endif
 
 /*************************************************************************//**
  * Parses a chansrvport string
@@ -2407,227 +2196,363 @@ parse_chansrvport(const char *value, char *dest, int dest_size)
 }
 
 /*****************************************************************************/
-int
-xrdp_mm_connect(struct xrdp_mm *self)
+static struct trans *
+xrdp_mm_scp_connect(struct xrdp_mm *self, const char *target, const char *ip)
 {
-    struct list *names;
-    struct list *values;
+    char port[128];
+    struct trans *t;
+
+    xrdp_mm_get_sesman_port(port, sizeof(port));
+    xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                    "connecting to %s on %s:%s", target, ip, port);
+    t = scp_connect(ip, port, g_is_term,
+                    xrdp_mm_scp_data_in, self);
+    if (t != NULL)
+    {
+        /* fully connect */
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s connect ok", target);
+    }
+    else
+    {
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                        "Error connecting to %s on %s:%s",
+                        target, ip, port);
+        trans_delete(t);
+        t = NULL;
+    }
+    return t;
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_pam_auth_connect(struct xrdp_mm *self, const char *ip)
+{
+    trans_delete(self->pam_auth_trans);
+    self->pam_auth_trans = xrdp_mm_scp_connect(self, "PAM authenticator", ip);
+
+    return (self->pam_auth_trans == NULL); /* 0 for success */
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_sesman_connect(struct xrdp_mm *self, const char *ip)
+{
+    trans_delete(self->sesman_trans);
+    self->sesman_trans = xrdp_mm_scp_connect(self, "sesman", ip);
+
+    return (self->sesman_trans == NULL); /* 0 for success */
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port)
+{
     int index;
-    int count;
-    int ok;
-    int rv;
-    char *name;
-    char *value;
-    char ip[256];
-    char port[8];
-    char chansrvport[256];
-#ifdef USE_PAM
-    int use_pam_auth = 0;
-    char pam_auth_sessionIP[256];
-    char pam_auth_password[256];
-    char pam_auth_username[256];
-#endif
-    char username[256];
-    char password[256];
-    username[0] = 0;
-    password[0] = 0;
 
-    /* make sure we start in correct state */
-    cleanup_states(self);
-    g_memset(ip, 0, sizeof(ip));
-    g_memset(port, 0, sizeof(port));
-    g_memset(chansrvport, 0, sizeof(chansrvport));
-    rv = 0; /* success */
-    names = self->login_names;
-    values = self->login_values;
-    count = names->count;
-
-    for (index = 0; index < count; index++)
+    if (self->wm->client_info->channels_allowed == 0)
     {
-        name = (char *)list_get_item(names, index);
-        value = (char *)list_get_item(values, index);
-
-        if (g_strcasecmp(name, "ip") == 0)
-        {
-            g_strncpy(ip, value, 255);
-        }
-        else if (g_strcasecmp(name, "port") == 0)
-        {
-            if (g_strcasecmp(value, "-1") == 0)
-            {
-                self->sesman_controlled = 1;
-                self->usechansrv = 1;
-            }
-        }
-
-#ifdef USE_PAM
-        else if (g_strcasecmp(name, "pamusername") == 0)
-        {
-            use_pam_auth = 1;
-            g_strncpy(pam_auth_username, value, 255);
-        }
-        else if (g_strcasecmp(name, "pamsessionmng") == 0)
-        {
-            g_strncpy(pam_auth_sessionIP, value, 255);
-        }
-        else if (g_strcasecmp(name, "pampassword") == 0)
-        {
-            g_strncpy(pam_auth_password, value, 255);
-        }
-#endif
-        else if (g_strcasecmp(name, "password") == 0)
-        {
-            g_strncpy(password, value, 255);
-        }
-        else if (g_strcasecmp(name, "username") == 0)
-        {
-            g_strncpy(username, value, 255);
-        }
-        else if (g_strcasecmp(name, "chansrvport") == 0)
-        {
-            if (parse_chansrvport(value, chansrvport, sizeof(chansrvport)) == 0)
-            {
-                self->usechansrv = 1;
-            }
-        }
+        LOG(LOG_LEVEL_DEBUG, "%s: "
+            "skip connecting to chansrv because all channels are disabled",
+            __func__);
+        return 0;
     }
 
-    xrdp_mm_update_allowed_channels(self);
-
-#ifdef USE_PAM
-    if (use_pam_auth)
+    /* connect channel redir */
+    if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
     {
-        int reply;
-        char pam_error[128];
-        const char *additionalError;
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
-                        "Please wait, we now perform access control...");
-
-        LOG(LOG_LEVEL_DEBUG, "we use pam modules to check if we can approve this user");
-        if (!g_strncmp(pam_auth_username, "same", 255))
-        {
-            LOG(LOG_LEVEL_DEBUG, "pamusername copied from username - same: %s", username);
-            g_strncpy(pam_auth_username, username, 255);
-        }
-
-        if (!g_strncmp(pam_auth_password, "same", 255))
-        {
-            LOG(LOG_LEVEL_DEBUG, "pam_auth_password copied from username - same: %s", password);
-            g_strncpy(pam_auth_password, password, 255);
-        }
-
-        /* access_control return 0 on success */
-        reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);
-
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "Reply from access control: %s",
-                        getPAMError(reply, pam_error, 127));
-
-        additionalError = getPAMAdditionalErrorInfo(reply, self);
-        if (additionalError && additionalError[0])
-        {
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s", additionalError);
-        }
-
-        if (reply != 0)
-        {
-            rv = 1;
-            return rv;
-        }
+        /* unix socket */
+        self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
     }
-#endif
-
-    if (self->sesman_controlled)
+    else
     {
-        ok = 0;
-        trans_delete(self->sesman_trans);
-        self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-        self->sesman_trans->is_term = g_is_term;
-        xrdp_mm_get_sesman_port(port, sizeof(port));
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
-                        "connecting to sesman ip %s port %s", ip, port);
-        /* xrdp_mm_sesman_data_in is the callback that is called when data arrives */
-        self->sesman_trans->trans_data_in = xrdp_mm_sesman_data_in;
-        self->sesman_trans->header_size = 8;
-        self->sesman_trans->callback_data = self;
-
-        /* try to connect up to 4 times */
-        for (index = 0; index < 4; index++)
-        {
-            if (trans_connect(self->sesman_trans, ip, port, 3000) == 0)
-            {
-                self->sesman_trans_up = 1;
-                ok = 1;
-                break;
-            }
-            if (g_is_term())
-            {
-                break;
-            }
-            g_sleep(1000);
-            LOG(LOG_LEVEL_INFO, "xrdp_mm_connect: connect failed "
-                "trying again...");
-        }
-
-        if (ok)
-        {
-            /* fully connect */
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "sesman connect ok");
-            self->connected_state = 1;
-            rv = xrdp_mm_send_login(self);
-        }
-        else
-        {
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                            "Error connecting to sesman: %s port: %s",
-                            ip, port);
-            trans_delete(self->sesman_trans);
-            self->sesman_trans = 0;
-            self->sesman_trans_up = 0;
-            rv = 1;
-        }
-    }
-    else /* no sesman */
-    {
-        if (xrdp_mm_setup_mod1(self) == 0)
-        {
-            if (xrdp_mm_setup_mod2(self, 0) == 0)
-            {
-                xrdp_wm_set_login_state(self->wm, WMLS_CLEANUP);
-                rv = 0; /*success*/
-            }
-            else
-            {
-                /* connect error */
-                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                                "Error connecting to: %s", ip);
-                rv = 1; /* failure */
-            }
-        }
-        else
-        {
-            LOG(LOG_LEVEL_ERROR, "Failure setting up module");
-        }
-
-        if (self->wm->login_state != WMLS_CLEANUP)
-        {
-            xrdp_wm_set_login_state(self->wm, WMLS_INACTIVE);
-            xrdp_mm_module_cleanup(self);
-            rv = 1; /* failure */
-        }
+        /* tcp */
+        self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
     }
 
-    if ((self->wm->login_state == WMLS_CLEANUP) && (self->sesman_controlled == 0) &&
-            (self->usechansrv != 0))
+    self->chan_trans->is_term = g_is_term;
+    self->chan_trans->si = &(self->wm->session->si);
+    self->chan_trans->my_source = XRDP_SOURCE_CHANSRV;
+    self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
+    self->chan_trans->header_size = 8;
+    self->chan_trans->callback_data = self;
+    self->chan_trans->no_stream_init_on_data_in = 1;
+    self->chan_trans->extra_flags = 0;
+
+    /* try to connect up to 4 times */
+    for (index = 0; index < 4; index++)
     {
-        /* if sesman controlled, this will connect later */
-        xrdp_mm_connect_chansrv(self, "", chansrvport);
+        if (trans_connect(self->chan_trans, ip, port, 3000) == 0)
+        {
+            break;
+        }
+        if (g_is_term())
+        {
+            break;
+        }
+        g_sleep(1000);
+        LOG(LOG_LEVEL_WARNING, "xrdp_mm_chansrv_connect: connect failed "
+            "trying again...");
     }
 
-    LOG(LOG_LEVEL_DEBUG, "return value from xrdp_mm_connect %d", rv);
+    if (self->chan_trans->status != TRANS_STATUS_UP)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_mm_chansrv_connect: error in "
+            "trans_connect chan");
+    }
+    else if (xrdp_mm_trans_send_channel_setup(self, self->chan_trans) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_mm_chansrv_connect: error in "
+            "xrdp_mm_trans_send_channel_setup");
+        trans_delete(self->chan_trans);
+        self->chan_trans = NULL;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_DEBUG, "xrdp_mm_chansrv_connect: chansrv "
+            "connect successful");
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_user_session_connect(struct xrdp_mm *self)
+{
+    int rv = 0;
+
+    if (xrdp_mm_setup_mod1(self) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Failure setting up module");
+        xrdp_mm_module_cleanup(self);
+        rv = 1;
+    }
+    else if (xrdp_mm_setup_mod2(self) != 0)
+    {
+        /* connect error */
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                        "Error connecting to user session");
+        xrdp_mm_module_cleanup(self);
+        rv = 1; /* failure */
+    }
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "return value from %s %d", __func__, rv);
 
     return rv;
 }
+
+/**************************************************************************//**
+ * Initialise and start the connect sequence
+ *
+ * @param self This object
+ */
+void
+xrdp_mm_connect(struct xrdp_mm *self)
+{
+    const char *port = xrdp_mm_get_value(self, "port");
+    const char *gateway_username = xrdp_mm_get_value(self, "pamusername");
+
+    /* make sure we start in correct state */
+    cleanup_states(self);
+
+    /* Look at our module parameters to decide if we need to connect
+     * to sesman or not */
+
+    if (port != NULL && g_strcmp(port, "-1") == 0)
+    {
+        self->use_sesman = 1;
+    }
+
+    if (gateway_username != NULL)
+    {
+#ifdef USE_PAM
+        self->use_pam_auth = 1;
+#else
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
+                        "pamusername parameter ignored - "
+                        "xrdp is compiled without PAM support");
+#endif
+    }
+
+    /* Will we need chansrv ? We use it unconditionally for a
+     * sesman session, but the user can also request it separately */
+    if (self->use_sesman)
+    {
+        self->use_chansrv = 1;
+    }
+    else
+    {
+        const char *csp = xrdp_mm_get_value(self, "chansrvport");
+        /* It's defined, but is it a valid string? */
+        if (csp != NULL && parse_chansrvport(csp, NULL, 0) == 0)
+        {
+            self->use_chansrv = 1;
+        }
+    }
+
+    xrdp_mm_connect_sm(self);
+}
+
+/*****************************************************************************/
+static void
+xrdp_mm_connect_sm(struct xrdp_mm *self)
+{
+    int status = 0;
+    int waiting_for_msg = 0; /* Set this to leave the sm to wait for a reply */
+
+    while (status == 0 && !waiting_for_msg && self->connect_state != MMCS_DONE)
+    {
+        switch (self->connect_state)
+        {
+            case MMCS_CONNECT_TO_SESMAN:
+            {
+                if (self->use_sesman)
+                {
+                    /* Synchronous call */
+                    const char *ip = xrdp_mm_get_value(self, "ip");
+                    status = xrdp_mm_sesman_connect(self, ip);
+                }
+
+                if (status == 0 && self->use_pam_auth)
+                {
+                    /* Synchronous call */
+                    const char *ip = xrdp_mm_get_value(self, "pamsessionmng");
+                    if (ip == NULL)
+                    {
+                        ip = xrdp_mm_get_value(self, "ip");
+                    }
+                    status = xrdp_mm_pam_auth_connect(self, ip);
+                }
+            }
+            break;
+
+            case MMCS_PAM_AUTH:
+            {
+                if (self->use_pam_auth)
+                {
+                    const char *gateway_username;
+                    const char *gateway_password;
+
+                    gateway_username = xrdp_mm_get_value(self, "pamusername");
+                    gateway_password = xrdp_mm_get_value(self, "pampassword");
+                    if (!g_strcmp(gateway_username, "same"))
+                    {
+                        gateway_username = xrdp_mm_get_value(self, "username");
+                    }
+
+                    if (gateway_password == NULL ||
+                            !g_strcmp(gateway_password, "same"))
+                    {
+                        gateway_password = xrdp_mm_get_value(self, "password");
+                    }
+
+                    if (gateway_username == NULL || gateway_password == NULL)
+                    {
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                        "Can't determine username and/or "
+                                        "password for gateway authorization");
+                        status = 1;
+                    }
+                    else
+                    {
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                        "Performing access control for %s",
+                                        gateway_username);
+
+                        status = xrdp_mm_send_gateway_login(self,
+                                                            gateway_username,
+                                                            gateway_password);
+                        if (status == 0)
+                        {
+                            /* Now waiting for a reply from sesman */
+                            waiting_for_msg = 1;
+                        }
+                    }
+                }
+            }
+            break;
+
+            case MMCS_SESSION_AUTH:
+            {
+                if (self->use_sesman)
+                {
+                    if ((status = xrdp_mm_send_login(self)) == 0)
+                    {
+                        /* Now waiting for a reply from sesman */
+                        waiting_for_msg = 1;
+                    }
+                }
+            }
+            break;
+
+            case MMCS_CONNECT_TO_SESSION:
+            {
+                /* This is synchronous - no reply message expected */
+                status = xrdp_mm_user_session_connect(self);
+            }
+            break;
+
+            case MMCS_CONNECT_TO_CHANSRV:
+            {
+                if (self->use_chansrv)
+                {
+                    const char *ip = "";
+                    char portbuff[256];
+
+                    if (self->use_sesman)
+                    {
+                        ip = xrdp_mm_get_value(self, "ip");
+
+                        /* connect channel redir */
+                        if (ip == NULL || (ip[0] == '\0') ||
+                                (g_strcmp(ip, "127.0.0.1") == 0))
+                        {
+                            g_snprintf(portbuff, sizeof(portbuff),
+                                       XRDP_CHANSRV_STR, self->display);
+                        }
+                        else
+                        {
+                            g_snprintf(portbuff, sizeof(portbuff),
+                                       "%d", 7200 + self->display);
+                        }
+                    }
+                    else
+                    {
+                        const char *cp = xrdp_mm_get_value(self, "chansrvport");
+                        portbuff[0] = '\0';
+                        parse_chansrvport(cp, portbuff, sizeof(portbuff));
+
+                    }
+                    xrdp_mm_update_allowed_channels(self);
+                    xrdp_mm_chansrv_connect(self, ip, portbuff);
+                }
+            }
+            break;
+
+            case MMCS_DONE:
+            {
+                /* Shouldn't get here */
+                LOG(LOG_LEVEL_ERROR, "xrdp_mm_connect_sm: state machine error");
+                status = 1;
+            }
+            break;
+        }
+
+        /* Move to the next state */
+        if (self->connect_state < MMCS_DONE)
+        {
+            self->connect_state = (enum mm_connect_state)
+                                  (self->connect_state + 1);
+        }
+    }
+
+    if (!waiting_for_msg)
+    {
+        xrdp_wm_mod_connect_done(self->wm, status);
+        cleanup_sesman_connection(self);
+    }
+}
+
 
 /*****************************************************************************/
 int
@@ -2644,12 +2569,19 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
 
     rv = 0;
 
-    if ((self->sesman_trans != 0) && self->sesman_trans_up)
+    if (self->sesman_trans != 0 &&
+            self->sesman_trans->status == TRANS_STATUS_UP)
     {
         trans_get_wait_objs(self->sesman_trans, read_objs, rcount);
     }
 
-    if ((self->chan_trans != 0) && self->chan_trans_up)
+    if (self->pam_auth_trans != 0 &&
+            self->pam_auth_trans->status == TRANS_STATUS_UP)
+    {
+        trans_get_wait_objs(self->pam_auth_trans, read_objs, rcount);
+    }
+
+    if ((self->chan_trans != 0) && self->chan_trans->status == TRANS_STATUS_UP)
     {
         trans_get_wait_objs_rw(self->chan_trans, read_objs, rcount,
                                write_objs, wcount, timeout);
@@ -2732,20 +2664,17 @@ int
 xrdp_mm_check_chan(struct xrdp_mm *self)
 {
     LOG(LOG_LEVEL_TRACE, "xrdp_mm_check_chan:");
-    if ((self->chan_trans != 0) && self->chan_trans_up)
+    if ((self->chan_trans != 0) && self->chan_trans->status == TRANS_STATUS_UP)
     {
         if (trans_check_wait_objs(self->chan_trans) != 0)
         {
-            self->delete_chan_trans = 1;
+            /* This is safe to do here, as we're not in a chansrv
+             * transport callback */
+            trans_delete(self->chan_trans);
+            self->chan_trans = 0;
         }
     }
-    if (self->delete_chan_trans)
-    {
-        trans_delete(self->chan_trans);
-        self->chan_trans = 0;
-        self->chan_trans_up = 0;
-        self->delete_chan_trans = 0;
-    }
+
     return 0;
 }
 
@@ -2800,8 +2729,11 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         cy = enc_done->cy;
         if (enc_done->comp_bytes > 0)
         {
-            libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
-                                               enc_done->enc->frame_id);
+            if (!enc_done->continuation)
+            {
+                libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
+                                                   enc_done->enc->frame_id);
+            }
             libxrdp_fastpath_send_surface(self->wm->session,
                                           enc_done->comp_pad_data,
                                           enc_done->pad_bytes,
@@ -2809,8 +2741,11 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                                           x, y, x + cx, y + cy,
                                           32, self->encoder->codec_id,
                                           cx, cy);
-            libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
-                                               enc_done->enc->frame_id);
+            if (enc_done->last)
+            {
+                libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
+                                                   enc_done->enc->frame_id);
+            }
         }
         /* free enc_done */
         if (enc_done->last)
@@ -2850,7 +2785,9 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 
     rv = 0;
 
-    if ((self->sesman_trans != NULL) && self->sesman_trans_up)
+    if (self->sesman_trans != NULL &&
+            !self->delete_sesman_trans &&
+            self->sesman_trans->status == TRANS_STATUS_UP)
     {
         if (trans_check_wait_objs(self->sesman_trans) != 0)
         {
@@ -2862,12 +2799,37 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
             }
         }
     }
+    if (self->delete_sesman_trans)
+    {
+        trans_delete(self->sesman_trans);
+        self->sesman_trans = NULL;
+    }
 
-    if ((self->chan_trans != NULL) && self->chan_trans_up)
+    if (self->pam_auth_trans != NULL &&
+            !self->delete_pam_auth_trans &&
+            self->pam_auth_trans->status == TRANS_STATUS_UP)
+    {
+        if (trans_check_wait_objs(self->pam_auth_trans) != 0)
+        {
+            self->delete_pam_auth_trans = 1;
+        }
+    }
+    if (self->delete_pam_auth_trans)
+    {
+        trans_delete(self->pam_auth_trans);
+        self->pam_auth_trans = NULL;
+    }
+
+
+    if (self->chan_trans != NULL &&
+            self->chan_trans->status == TRANS_STATUS_UP)
     {
         if (trans_check_wait_objs(self->chan_trans) != 0)
         {
-            self->delete_chan_trans = 1;
+            /* This is safe to do here, as we're not in a chansrv
+             * transport callback */
+            trans_delete(self->chan_trans);
+            self->chan_trans = NULL;
         }
     }
 
@@ -2877,22 +2839,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         {
             rv = self->mod->mod_check_wait_objs(self->mod);
         }
-    }
-
-    if (self->delete_sesman_trans)
-    {
-        trans_delete(self->sesman_trans);
-        self->sesman_trans = NULL;
-        self->sesman_trans_up = 0;
-        self->delete_sesman_trans = 0;
-    }
-
-    if (self->delete_chan_trans)
-    {
-        trans_delete(self->chan_trans);
-        self->chan_trans = NULL;
-        self->chan_trans_up = 0;
-        self->delete_chan_trans = 0;
     }
 
     if (self->encoder != NULL)
@@ -3012,7 +2958,7 @@ server_chansrv_in_use(struct xrdp_mod *mod)
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    return wm->mm->usechansrv;
+    return wm->mm->use_chansrv;
 }
 
 
@@ -3299,7 +3245,7 @@ server_palette(struct xrdp_mod *mod, int *palette)
 
 /*****************************************************************************/
 int
-server_msg(struct xrdp_mod *mod, char *msg, int code)
+server_msg(struct xrdp_mod *mod, const char *msg, int code)
 {
     struct xrdp_wm *wm;
 
@@ -3574,6 +3520,24 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
 }
 
 /*****************************************************************************/
+/*return -1 if channels are controlled by chansrv */
+int
+server_get_channel_count(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+
+    if (wm->mm->use_chansrv)
+    {
+        return -1;
+    }
+
+    return libxrdp_get_channel_count(wm->session);
+}
+
+
+/*****************************************************************************/
 /*return 0 if the index is not found*/
 int
 server_query_channel(struct xrdp_mod *mod, int index, char *channel_name,
@@ -3583,7 +3547,7 @@ server_query_channel(struct xrdp_mod *mod, int index, char *channel_name,
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         return 1;
     }
@@ -3601,7 +3565,7 @@ server_get_channel_id(struct xrdp_mod *mod, const char *name)
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         return -1;
     }
@@ -3619,7 +3583,7 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->usechansrv)
+    if (wm->mm->use_chansrv)
     {
         /* Modules should not be calling this if chansrv is running -
          * they can use server_chansrv_in_use() to avoid doing this */

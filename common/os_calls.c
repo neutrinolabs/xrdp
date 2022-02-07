@@ -1389,11 +1389,9 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 }
 
 /*****************************************************************************/
-/*
- * TODO: this function writes not only IP address, name is confusing
- */
+
 void
-g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
+g_write_connection_description(int rcv_sck, char *description, int bytes)
 {
     char *addr;
     int port;
@@ -1454,16 +1452,55 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 
         if (ok)
         {
-            g_snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
+            g_snprintf(description, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
         }
     }
 
     if (!ok)
     {
-        g_snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
+        g_snprintf(description, bytes, "NULL:NULL - socket: %d", rcv_sck);
     }
 
     g_free(addr);
+}
+
+/*****************************************************************************/
+
+const char *g_get_ip_from_description(const char *description,
+                                      char *ip, int bytes)
+{
+    if (bytes > 0)
+    {
+        /* Look for the space after ip:port */
+        const char *end = g_strchr(description, ' ');
+        if (end == NULL)
+        {
+            end = description; /* Means we've failed */
+        }
+        else
+        {
+            /* Look back for the last ':' */
+            while (end > description && *end != ':')
+            {
+                --end;
+            }
+        }
+
+        if (end == description)
+        {
+            g_snprintf(ip, bytes, "<unknown>");
+        }
+        else if ((end - description) < (bytes - 1))
+        {
+            g_strncpy(ip, description, end - description);
+        }
+        else
+        {
+            g_strncpy(ip, description, bytes - 1);
+        }
+    }
+
+    return ip;
 }
 
 /*****************************************************************************/
@@ -2501,6 +2538,50 @@ g_file_get_size(const char *filename)
     if (stat(filename, &st) == 0)
     {
         return (int)(st.st_size);
+    }
+    else
+    {
+        return -1;
+    }
+
+#endif
+}
+
+/*****************************************************************************/
+/* returns device number, -1 on error */
+int
+g_file_get_device_number(const char *filename)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    struct stat st;
+
+    if (stat(filename, &st) == 0)
+    {
+        return (int)(st.st_dev);
+    }
+    else
+    {
+        return -1;
+    }
+
+#endif
+}
+
+/*****************************************************************************/
+/* returns inode number, -1 on error */
+int
+g_file_get_inode_num(const char *filename)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    struct stat st;
+
+    if (stat(filename, &st) == 0)
+    {
+        return (int)(st.st_ino);
     }
     else
     {

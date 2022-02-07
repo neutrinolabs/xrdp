@@ -108,7 +108,7 @@ struct mod
                              char *data, int width, int height, int srcx, int srcy);
     int (*server_set_pointer)(struct mod *v, int x, int y, char *data, char *mask);
     int (*server_palette)(struct mod *v, int *palette);
-    int (*server_msg)(struct mod *v, char *msg, int code);
+    int (*server_msg)(struct mod *v, const char *msg, int code);
     int (*server_is_term)(struct mod *v);
     int (*server_set_clip)(struct mod *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct mod *v);
@@ -131,6 +131,7 @@ struct mod
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
     int (*server_reset)(struct mod *v, int width, int height, int bpp);
+    int (*server_get_channel_count)(struct mod *v);
     int (*server_query_channel)(struct mod *v, int index,
                                 char *channel_name,
                                 int *channel_flags);
@@ -194,7 +195,7 @@ struct mod
                               int flags, int frame_id);
     int (*server_session_info)(struct mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 46]; /* align, 100 minus the number of server
                                        functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

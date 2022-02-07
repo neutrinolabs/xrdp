@@ -307,24 +307,24 @@ scp_session_set_directory(struct SCP_SESSION *s, const char *str)
 
 /*******************************************************************/
 int
-scp_session_set_client_ip(struct SCP_SESSION *s, const char *str)
+scp_session_set_connection_description(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
-        LOG(LOG_LEVEL_WARNING, "[session:%d] set_client_ip: null ip", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_connection_description: null description", __LINE__);
         return 1;
     }
 
-    if (0 != s->client_ip)
+    if (0 != s->connection_description)
     {
-        g_free(s->client_ip);
+        g_free(s->connection_description);
     }
 
-    s->client_ip = g_strdup(str);
+    s->connection_description = g_strdup(str);
 
-    if (0 == s->client_ip)
+    if (0 == s->connection_description)
     {
-        LOG(LOG_LEVEL_WARNING, "[session:%d] set_client_ip: strdup error", __LINE__);
+        LOG(LOG_LEVEL_WARNING, "[session:%d] set_connection_description: strdup error", __LINE__);
         return 1;
     }
 
@@ -414,7 +414,7 @@ scp_session_set_addr(struct SCP_SESSION *s, int type, const void *addr)
 
 /*******************************************************************/
 int
-scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
+scp_session_set_guid(struct SCP_SESSION *s, const struct guid *guid)
 {
     if (0 == guid)
     {
@@ -422,7 +422,7 @@ scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
         return 1;
     }
 
-    g_memcpy(s->guid, guid, 16);
+    s->guid = *guid;
 
     return 0;
 }
@@ -439,7 +439,7 @@ scp_session_destroy(struct SCP_SESSION *s)
         g_free(s->domain);
         g_free(s->program);
         g_free(s->directory);
-        g_free(s->client_ip);
+        g_free(s->connection_description);
         g_free(s->errstr);
         g_free(s);
     }
@@ -464,7 +464,7 @@ scp_session_clone(const struct SCP_SESSION *s)
         result->domain = g_strdup(s->domain);
         result->program = g_strdup(s->program);
         result->directory = g_strdup(s->directory);
-        result->client_ip = g_strdup(s->client_ip);
+        result->connection_description = g_strdup(s->connection_description);
 
         /* Did all the string copies succeed? */
         if ((s->username != NULL && result->username == NULL) ||
@@ -474,7 +474,7 @@ scp_session_clone(const struct SCP_SESSION *s)
                 (s->domain != NULL && result->domain == NULL) ||
                 (s->program != NULL && result->program == NULL) ||
                 (s->directory != NULL && result->directory == NULL) ||
-                (s->client_ip != NULL && result->client_ip == NULL))
+                (s->connection_description != NULL && result->connection_description == NULL))
         {
             scp_session_destroy(result);
             result = NULL;

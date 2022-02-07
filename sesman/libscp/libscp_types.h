@@ -30,6 +30,7 @@
 #include "os_calls.h"
 #include "parse.h"
 #include "arch.h"
+#include "guid.h"
 #include "log.h"
 #include "trans.h"
 
@@ -84,8 +85,8 @@ struct SCP_SESSION
     char *domain;
     char *program;
     char *directory;
-    char *client_ip;
-    tui8 guid[16];
+    char *connection_description;
+    struct guid guid;
     /* added for state */
     int current_cmd;
     int return_sid;

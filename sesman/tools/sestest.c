@@ -46,7 +46,6 @@ int main(int argc, char **argv)
     int scnt;
     int idx;
     int sel;
-    int sock;
 
     logging = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
     log_start_from_param(logging);
@@ -54,16 +53,9 @@ int main(int argc, char **argv)
 
     scp_init();
 
-    sock = g_tcp_socket();
-    if (sock < 0)
-    {
-        return 1;
-    }
-
     s = scp_session_create();
-    t = scp_trans_create(sock);
-
-    if (0 != trans_connect(t, "localhost", "3350", 3000))
+    t = scp_connect("localhost", "3350", NULL, NULL, NULL);
+    if (t == NULL)
     {
         g_printf("error connecting");
         return 1;

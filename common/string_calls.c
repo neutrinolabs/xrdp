@@ -188,7 +188,7 @@ g_strlen(const char *text)
 
 /*****************************************************************************/
 /* locates char in text */
-const char *
+char *
 g_strchr(const char *text, int c)
 {
     if (text == NULL)
@@ -196,12 +196,27 @@ g_strchr(const char *text, int c)
         return 0;
     }
 
-    return strchr(text, c);
+    /* Cast needed to compile with C++ */
+    return (char *)strchr(text, c);
+}
+
+/*****************************************************************************/
+/* locates char in text */
+char *
+g_strrchr(const char *text, int c)
+{
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    /* Cast needed to compile with C++ */
+    return (char *)strrchr(text, c);
 }
 
 /*****************************************************************************/
 /* locates char in text with length */
-const char *
+char *
 g_strnchr(const char *text, int c, int len)
 {
     if (text == NULL || len <= 0)
@@ -209,7 +224,7 @@ g_strnchr(const char *text, int c, int len)
         return NULL;
     }
 
-    return (const char *)memchr(text, c, len);
+    return (char *)memchr(text, c, len);
 }
 
 /*****************************************************************************/
@@ -681,6 +696,20 @@ g_pos(const char *str, const char *to_find)
 }
 
 /*****************************************************************************/
+
+char *
+g_strstr(const char *haystack, const char *needle)
+{
+    if (haystack == NULL || needle == NULL)
+    {
+        return NULL;
+    }
+
+    /* Cast needed to compile with C++ */
+    return (char *)strstr(haystack, needle);
+}
+
+/*****************************************************************************/
 int
 g_mbstowcs(twchar *dest, const char *src, int n)
 {
@@ -890,4 +919,70 @@ g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int 
     }
 
     return dest;
+}
+
+int
+g_bitmask_to_str(int bitmask, const struct bitmask_string bitdefs[],
+                 char delim, char *buff, int bufflen)
+{
+    int rlen = 0; /* Returned length */
+
+    if (bufflen <= 0) /* Caller error */
+    {
+        rlen = -1;
+    }
+    else
+    {
+        char *p = buff;
+        /* Find the last writeable character in the buffer */
+        const char *last = buff + (bufflen - 1);
+
+        const struct bitmask_string *b;
+
+        for (b = &bitdefs[0] ; b->mask != 0; ++b)
+        {
+            if ((bitmask & b->mask) != 0)
+            {
+                if (p > buff)
+                {
+                    /* Not first item - append separator */
+                    if (p < last)
+                    {
+                        *p++ = delim;
+                    }
+                    ++rlen;
+                }
+
+                int slen = g_strlen(b->str);
+                int copylen = MIN(slen, last - p);
+                g_memcpy(p, b->str, copylen);
+                p += copylen;
+                rlen += slen;
+
+                /* Remove the bit so we can check for undefined bits later*/
+                bitmask &= ~b->mask;
+            }
+        }
+
+        if (bitmask != 0)
+        {
+            /* Bits left which aren't named by the user */
+            if (p > buff)
+            {
+                if (p < last)
+                {
+                    *p++ = delim;
+                }
+                ++rlen;
+            }
+            /* This call will terminate the return buffer */
+            rlen += g_snprintf(p, last - p + 1, "0x%x", bitmask);
+        }
+        else
+        {
+            *p = '\0';
+        }
+    }
+
+    return rlen;
 }

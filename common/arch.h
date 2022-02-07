@@ -81,7 +81,8 @@ typedef int bool_t;
     defined(__AIX__) || defined(__m68k__) || defined(__mips__) || \
     defined(__ia64__) || defined(__arm__) || defined(__sh__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
-    (defined(__ppc__) && defined(__BIG_ENDIAN__))
+    (defined(__ppc__) && defined(__BIG_ENDIAN__)) || \
+    defined(__loongarch__)
 #define NEED_ALIGN
 #elif defined(__x86__) || defined(__x86_64__) || \
       defined(__AMD64__) || defined(_M_IX86) || defined (_M_AMD64) || \

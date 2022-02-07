@@ -4,4 +4,6 @@ EXTRA_DIST = \
 
 SUBDIRS = \
   common \
-  memtest 
+  libxrdp \
+  memtest \
+  xrdp

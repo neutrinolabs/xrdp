@@ -12,7 +12,9 @@ AM_CPPFLAGS = \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libxrdp
+  -I$(top_srcdir)/sesman/libscp \
+  -I$(top_srcdir)/libxrdp \
+  $(IMLIB2_CFLAGS)
 
 XRDP_EXTRA_LIBS =
 
@@ -43,6 +45,8 @@ xrdp_SOURCES = \
   xrdp.c \
   xrdp.h \
   xrdp_bitmap.c \
+  xrdp_bitmap_load.c \
+  xrdp_bitmap_common.c \
   xrdp_cache.c \
   xrdp_encoder.c \
   xrdp_encoder.h \
@@ -58,7 +62,9 @@ xrdp_SOURCES = \
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libscp/libscp.la \
   $(top_builddir)/libxrdp/libxrdp.la \
+  $(IMLIB2_LIBS) \
   $(XRDP_EXTRA_LIBS)
 
 xrdpsysconfdir=$(sysconfdir)/xrdp

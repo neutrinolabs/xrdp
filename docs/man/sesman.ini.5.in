@@ -290,6 +290,14 @@ features:-
 .P
 -  copying-and-pasting of files
 .RE
+.TP
+\fBUseNautilus3FlistFormat\fR=\fI[false|true]\fR
+Defaults to \fIfalse\fR.
+Set to \fItrue\fR to make file copy-paste compatible with Nautilus from
+GNOME 3 versions later than 3.29.92. Do not use this for any other reason.
+
+This setting will be removed in a later version of xrdp, when GNOME 3 is
+no longer supported.
 
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as

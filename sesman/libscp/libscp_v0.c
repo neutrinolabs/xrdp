@@ -47,177 +47,290 @@ extern struct log_config *s_log;
  * Buffer is null-terminated on success
  *
  * @param s Input stream
- * @param [out] Output buffer (must be >= (STRING16_MAX_LEN+1) chars)
- * @param param Parameter we're reading
+ * @param [out] str Output buffer (must be >= (STRING16_MAX_LEN+1) chars)
+ * @param prefix Logging prefix for errors
  * @return != 0 if string read OK
  */
 static
-int in_string16(struct stream *s, char str[], const char *param)
+int in_string16(struct stream *s, char str[], const char *prefix)
 {
     int result;
+    unsigned int sz;
 
-    if (!s_check_rem(s, 2))
+    if ((result = s_check_rem_and_log(s, 2, prefix)) != 0)
     {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: %s len missing", param);
-        result = 0;
-    }
-    else
-    {
-        unsigned int sz;
-
         in_uint16_be(s, sz);
         if (sz > STRING16_MAX_LEN)
         {
-            LOG(LOG_LEVEL_WARNING,
-                "connection aborted: %s too long (%u chars)",  param, sz);
+            LOG(LOG_LEVEL_ERROR, "%s input string too long (%u chars)",
+                prefix, sz);
             result = 0;
         }
-        else
+        else if ((result = s_check_rem_and_log(s, sz, prefix)) != 0)
         {
-            result = s_check_rem(s, sz);
-            if (!result)
-            {
-                LOG(LOG_LEVEL_WARNING, "connection aborted: %s data missing", param);
-            }
-            else
-            {
-                in_uint8a(s, str, sz);
-                str[sz] = '\0';
-            }
+            in_uint8a(s, str, sz);
+            str[sz] = '\0';
         }
     }
     return result;
 }
-/* client API */
-#if 0
-/******************************************************************************/
-static enum SCP_CLIENT_STATES_E
-scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
+
+/**
+ * Writes a big-endian uint16 followed by a string into a buffer
+ *
+ * @param s Output stream
+ * @param[in] str output string (must be <= (STRING16_MAX_LEN+1) chars)
+ * @param param Parameter we're sending
+ * @return != 0 if string written OK
+ */
+static
+int out_string16(struct stream *out_s, const char *str, const char *prefix)
 {
-    tui32 version;
-    int size;
-    tui16 sz;
+    int result;
 
-    init_stream(c->in_s, c->in_s->size);
-    init_stream(c->out_s, c->in_s->size);
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "starting connection");
-    g_tcp_set_non_blocking(c->in_sck);
-    g_tcp_set_no_delay(c->in_sck);
-    s_push_layer(c->out_s, channel_hdr, 8);
-
-    /* code */
-    if (s->type == SCP_SESSION_TYPE_XVNC)
+    unsigned int sz = g_strlen(str);
+    if (sz > STRING16_MAX_LEN)
     {
-        out_uint16_be(c->out_s, 0);
+        LOG(LOG_LEVEL_WARNING, "%s String too long (%u chars)", prefix, sz);
+        result = 0;
     }
-    else if (s->type == SCP_SESSION_TYPE_XRDP)
+    else if ((result = s_check_rem_out_and_log(out_s, 2 + sz, prefix)) != 0)
     {
-        out_uint16_be(c->out_s, 10);
+        out_uint16_be(out_s, sz);
+        out_uint8a(out_s, str, sz);
     }
-    else if (s->type == SCP_SESSION_TYPE_XORG)
+
+    return result;
+}
+
+/***
+ * Terminates a V0 request, adds the header and sends it.
+ *
+ * On entry, channel_hdr on the transport output stream is expected to
+ * contain the location for the SCP header
+ *
+ * @param atrans Transport for the message
+ * @return error code
+ */
+static enum SCP_CLIENT_STATES_E
+terminate_and_send_v0_request(struct trans *atrans)
+{
+    enum SCP_CLIENT_STATES_E e;
+
+    struct stream *s = atrans->out_s;
+    s_mark_end(s);
+    s_pop_layer(s, channel_hdr);
+
+    /* version */
+    out_uint32_be(s, 0);
+    /* size */
+    out_uint32_be(s, s->end - s->data);
+
+    if (trans_force_write_s(atrans, s) == 0)
     {
-        out_uint16_be(c->out_s, 20);
+        e = SCP_CLIENT_STATE_OK;
     }
     else
     {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: network error");
-        return SCP_CLIENT_STATE_INTERNAL_ERR;
+        LOG(LOG_LEVEL_ERROR, "connection aborted: network error");
+        e = SCP_CLIENT_STATE_NETWORK_ERR;
     }
 
-    sz = g_strlen(s->username);
-    if (sz > STRING16_MAX_LEN)
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: username too long");
-        return SCP_CLIENT_STATE_SIZE_ERR;
-    }
-    out_uint16_be(c->out_s, sz);
-    out_uint8a(c->out_s, s->username, sz);
-
-    sz = g_strlen(s->password);
-    if (sz > STRING16_MAX_LEN)
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: password too long");
-        return SCP_CLIENT_STATE_SIZE_ERR;
-    }
-    out_uint16_be(c->out_s, sz);
-    out_uint8a(c->out_s, s->password, sz);
-    out_uint16_be(c->out_s, s->width);
-    out_uint16_be(c->out_s, s->height);
-    out_uint16_be(c->out_s, s->bpp);
-
-    s_mark_end(c->out_s);
-    s_pop_layer(c->out_s, channel_hdr);
-
-    /* version */
-    out_uint32_be(c->out_s, 0);
-    /* size */
-    out_uint32_be(c->out_s, c->out_s->end - c->out_s->data);
-
-    if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: network error");
-        return SCP_CLIENT_STATE_NETWORK_ERR;
-    }
-
-    if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: network error");
-        return SCP_CLIENT_STATE_NETWORK_ERR;
-    }
-
-    in_uint32_be(c->in_s, version);
-
-    if (0 != version)
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: version error");
-        return SCP_CLIENT_STATE_VERSION_ERR;
-    }
-
-    in_uint32_be(c->in_s, size);
-
-    if (size < (8 + 2 + 2 + 2) || size > SCP_MAX_MESSAGE_SIZE)
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: msg size = %d", size);
-        return SCP_CLIENT_STATE_SIZE_ERR;
-    }
-
-    /* getting payload */
-    init_stream(c->in_s, size - 8);
-
-    if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: network error");
-        return SCP_CLIENT_STATE_NETWORK_ERR;
-    }
-
-    c->in_s->end = c->in_s->data + (size - 8);
-
-    /* check code */
-    in_uint16_be(c->in_s, sz);
-
-    if (3 != sz)
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: sequence error");
-        return SCP_CLIENT_STATE_SEQUENCE_ERR;
-    }
-
-    /* message payload */
-    in_uint16_be(c->in_s, sz);
-
-    if (1 != sz)
-    {
-        LOG(LOG_LEVEL_WARNING, "connection aborted: connection denied");
-        return SCP_CLIENT_STATE_CONNECTION_DENIED;
-    }
-
-    in_uint16_be(c->in_s, sz);
-    s->display = sz;
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "connection terminated");
-    return SCP_CLIENT_STATE_END;
+    return e;
 }
-#endif
+
+/* client API */
+/******************************************************************************/
+enum SCP_CLIENT_STATES_E
+scp_v0c_create_session_request(struct trans *atrans,
+                               const char *username,
+                               const char *password,
+                               unsigned short code,
+                               unsigned short width,
+                               unsigned short height,
+                               unsigned short bpp,
+                               const char *domain,
+                               const char *shell,
+                               const char *directory,
+                               const char *client_ip)
+{
+    enum SCP_CLIENT_STATES_E e;
+
+    struct stream *s = trans_get_out_s(atrans, 8192);
+    s_push_layer(s, channel_hdr, 8);
+
+    out_uint16_be(s, code);
+    if (!out_string16(s, username, "Session username") ||
+            !out_string16(s, password, "Session passwd"))
+    {
+        e = SCP_CLIENT_STATE_SIZE_ERR;
+    }
+    else
+    {
+        out_uint16_be(s, width);
+        out_uint16_be(s, height);
+        out_uint16_be(s, bpp);
+        if (!out_string16(s, domain, "Session domain") ||
+                !out_string16(s, shell, "Session shell") ||
+                !out_string16(s, directory, "Session directory") ||
+                !out_string16(s, client_ip, "Session client IP"))
+        {
+            e = SCP_CLIENT_STATE_SIZE_ERR;
+        }
+        else
+        {
+            e = terminate_and_send_v0_request(atrans);
+        }
+    }
+
+    return e;
+}
+
+enum SCP_CLIENT_STATES_E
+scp_v0c_gateway_request(struct trans *atrans,
+                        const char *username,
+                        const char *password)
+{
+    enum SCP_CLIENT_STATES_E e;
+
+    struct stream *s = trans_get_out_s(atrans, 500);
+    s_push_layer(s, channel_hdr, 8);
+
+    out_uint16_be(s, SCP_GW_AUTHENTICATION);
+    if (!out_string16(s, username, "Gateway username") ||
+            !out_string16(s, password, "Gateway passwd"))
+    {
+        e = SCP_CLIENT_STATE_SIZE_ERR;
+    }
+    else
+    {
+        e = terminate_and_send_v0_request(atrans);
+    }
+
+    return e;
+}
+
+/**************************************************************************//**
+ * Is a reply available from the other end?
+ *
+ * Returns true if it is, or if an error has occurred which needs handling.
+ *
+ * @param trans Transport to be polled
+ * @return True if scp_v0c_get_reply() should be called
+ */
+int
+scp_v0c_reply_available(struct trans *trans)
+{
+    int result = 1;
+    if (trans != NULL && trans->status == TRANS_STATUS_UP)
+    {
+        /* Have we read enough data from the stream? */
+        if ((trans->in_s->end - trans->in_s->data) < trans->header_size)
+        {
+            result = 0;
+        }
+        else if (trans->extra_flags == 0)
+        {
+            int version;
+            int size;
+
+            /* We've read the header only */
+            in_uint32_be(trans->in_s, version);
+            in_uint32_be(trans->in_s, size);
+
+            if (version != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Unexpected version number %d from SCP",
+                    version);
+                trans->status = TRANS_STATUS_DOWN;
+            }
+            else if (size <= 8 || size > trans->in_s->size)
+            {
+                LOG(LOG_LEVEL_ERROR,
+                    "Invalid V0 message length %d from SCP",
+                    size);
+                trans->status = TRANS_STATUS_DOWN;
+            }
+            else
+            {
+                /* Read the rest of the message */
+                trans->header_size = size;
+                trans->extra_flags = 1;
+                result = 0;
+            }
+        }
+    }
+
+
+    return result;
+}
+/**************************************************************************//**
+ * Get a reply from the V0 transport
+ *
+ * Only call this once scp_v0c_reply_available() has returned true
+ *
+ * After a successful call, the transport is ready to be used for the
+ * next incoming message
+ *
+ * @param trans Transport containing the reply
+ * @param[out] reply, provided result is SCP_CLIENT_STATE_OK
+ * @return SCP client state
+ */
+enum SCP_CLIENT_STATES_E
+scp_v0c_get_reply(struct trans *trans, struct scp_v0_reply_type *reply)
+{
+    enum SCP_CLIENT_STATES_E e;
+
+    if (trans == NULL || trans->status != TRANS_STATUS_UP)
+    {
+        e = SCP_CLIENT_STATE_NETWORK_ERR;
+    }
+    else if (!s_check_rem_and_log(trans->in_s, 6, "SCPV0 reply"))
+    {
+        trans->status = TRANS_STATUS_DOWN;
+        e = SCP_CLIENT_STATE_NETWORK_ERR;
+    }
+    else
+    {
+        int word1;
+        int word2;
+        int word3;
+        in_uint16_be(trans->in_s, word1);
+        in_uint16_be(trans->in_s, word2);
+        in_uint16_be(trans->in_s, word3);
+
+        if (word1 == SCP_GW_AUTHENTICATION)
+        {
+            reply->is_gw_auth_response = 1;
+            reply->auth_result = word2;
+            reply->display = 0;
+            guid_clear(&reply->guid);
+        }
+        else
+        {
+            reply->is_gw_auth_response = 0;
+            reply->auth_result = word2;
+            reply->display = word3;
+            if (s_check_rem(trans->in_s, GUID_SIZE))
+            {
+                in_uint8a(trans->in_s, reply->guid.g, GUID_SIZE);
+            }
+            else
+            {
+                guid_clear(&reply->guid);
+            }
+        }
+
+        e = SCP_CLIENT_STATE_OK;
+
+        /* Reset the input stream for the next message */
+        trans->header_size = 8;
+        trans->extra_flags = 0;
+        init_stream(trans->in_s, 0);
+    }
+
+    return e;
+}
 
 /* server API */
 
@@ -265,7 +378,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         scp_session_set_type(session, session_type);
 
         /* reading username */
-        if (!in_string16(in_s, buf, "username"))
+        if (!in_string16(in_s, buf, "Session username"))
         {
             return SCP_SERVER_STATE_SIZE_ERR;
         }
@@ -276,7 +389,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         }
 
         /* reading password */
-        if (!in_string16(in_s, buf, "passwd"))
+        if (!in_string16(in_s, buf, "Session passwd"))
         {
             return SCP_SERVER_STATE_SIZE_ERR;
         }
@@ -297,10 +410,9 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         in_uint16_be(in_s, height);
         scp_session_set_height(session, height);
         in_uint16_be(in_s, bpp);
-        if (session_type == SCP_SESSION_TYPE_XORG && bpp != 24)
+        if (session_type == SCP_SESSION_TYPE_XORG)
         {
-            LOG(LOG_LEVEL_WARNING,
-                "Setting bpp to 24 from %d for Xorg session", bpp);
+            /* Client value is ignored */
             bpp = 24;
         }
         if (0 != scp_session_set_bpp(session, (tui8)bpp))
@@ -313,7 +425,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         if (s_check_rem(in_s, 2))
         {
             /* reading domain */
-            if (!in_string16(in_s, buf, "domain"))
+            if (!in_string16(in_s, buf, "Session domain"))
             {
                 return SCP_SERVER_STATE_SIZE_ERR;
             }
@@ -327,7 +439,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         if (s_check_rem(in_s, 2))
         {
             /* reading program */
-            if (!in_string16(in_s, buf, "program"))
+            if (!in_string16(in_s, buf, "Session program"))
             {
                 return SCP_SERVER_STATE_SIZE_ERR;
             }
@@ -341,7 +453,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         if (s_check_rem(in_s, 2))
         {
             /* reading directory */
-            if (!in_string16(in_s, buf, "directory"))
+            if (!in_string16(in_s, buf, "Session directory"))
             {
                 return SCP_SERVER_STATE_SIZE_ERR;
             }
@@ -355,13 +467,13 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         if (s_check_rem(in_s, 2))
         {
             /* reading client IP address */
-            if (!in_string16(in_s, buf, "client IP"))
+            if (!in_string16(in_s, buf, "connection description"))
             {
                 return SCP_SERVER_STATE_SIZE_ERR;
             }
             if (buf[0] != '\0')
             {
-                scp_session_set_client_ip(session, buf);
+                scp_session_set_connection_description(session, buf);
             }
         }
     }
@@ -369,7 +481,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
     {
         scp_session_set_type(session, SCP_GW_AUTHENTICATION);
         /* reading username */
-        if (!in_string16(in_s, buf, "username"))
+        if (!in_string16(in_s, buf, "Session username"))
         {
             return SCP_SERVER_STATE_SIZE_ERR;
         }
@@ -381,7 +493,7 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
         }
 
         /* reading password */
-        if (!in_string16(in_s, buf, "passwd"))
+        if (!in_string16(in_s, buf, "Session passwd"))
         {
             return SCP_SERVER_STATE_SIZE_ERR;
         }
@@ -403,13 +515,14 @@ scp_v0s_accept(struct trans *atrans, struct SCP_SESSION *session)
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d, const tui8 *guid)
+scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d,
+                         const struct guid *guid)
 {
     int msg_size;
     struct stream *out_s;
 
     out_s = trans_get_out_s(atrans, 0);
-    msg_size = guid == 0 ? 14 : 14 + 16;
+    msg_size = guid_is_set(guid) ? 14 + GUID_SIZE : 14;
     out_uint32_be(out_s, 0);  /* version */
     out_uint32_be(out_s, msg_size); /* size */
     out_uint16_be(out_s, 3);  /* cmd */
@@ -417,7 +530,7 @@ scp_v0s_allow_connection(struct trans *atrans, SCP_DISPLAY d, const tui8 *guid)
     out_uint16_be(out_s, d);  /* data */
     if (msg_size > 14)
     {
-        out_uint8a(out_s, guid, 16);
+        out_uint8a(out_s, guid->g, GUID_SIZE);
     }
     s_mark_end(out_s);
     if (0 != trans_write_copy(atrans))

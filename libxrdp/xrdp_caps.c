@@ -23,9 +23,22 @@
 #include <config_ac.h>
 #endif
 
+#include <limits.h>
+
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "ms-rdperp.h"
+
+/**
+ * The largest supported size for a fastpath update
+ * (TS_MULTIFRAGMENTUPDATE_CAPABILITYSET) we advertise to the client. This
+ * size is big enough for the tiles required for two 3840x2160 monitors
+ * without using multiple update PDUS.
+ *
+ * Consult calculate_multifragmentupdate_len() below before changing this
+ * value.
+ */
+#define MAX_MULTIFRAGMENTUPDATE_SIZE (2U * (3840 * 2160) * 16384 + 16384)
 
 /*****************************************************************************/
 static int
@@ -844,6 +857,46 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Completed processing received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU");
     return 0;
 }
+
+/**************************************************************************//**
+ * Calculate the multifragmentupdate len we advertised to the client
+ * for fastpath updates
+ *
+ * See [MS-RDPBCGR] 2.2.7.2.6
+ *
+ * The basic logic is taken from freerdp 2.4. We try to use the highest
+ * useful request size that will allow us to pack a complete screen
+ * update into a single fast path PDU using any of the supported codecs.
+ * For RemoteFX, the client MUST use at least this value
+ *
+ * A backstop on the maximum advertised size is implemented to prevent
+ * extreme memory usage for large screen configurations. RDP supports a
+ * maximum desktop size of 32768x32768, which would cause overflow for
+ * 32-bit integers using a simple calculation.
+ *
+ * The codecs have to deal with the value returned by the client after
+ * we advertise our own value, and must not assume a complete update
+ * will fit in a single PDU
+ */
+static
+unsigned int calculate_multifragmentupdate_len(const struct xrdp_rdp *self)
+{
+    unsigned int result = MAX_MULTIFRAGMENTUPDATE_SIZE;
+
+    unsigned int x_tiles = (self->client_info.width + 63) / 64;
+    unsigned int y_tiles = (self->client_info.height + 63) / 64;
+
+    /* Check for overflow on calculation if bad parameters are supplied */
+    if ((x_tiles * y_tiles  + 1) < (UINT_MAX / 16384))
+    {
+        result = x_tiles * y_tiles * 16384;
+        /* and add room for headers, regions, frame markers, etc. */
+        result += 16384;
+    }
+
+    return result;
+}
+
 /*****************************************************************************/
 int
 xrdp_caps_send_demand_active(struct xrdp_rdp *self)
@@ -1137,13 +1190,13 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 
     if (self->client_info.use_fast_path & FASTPATH_OUTPUT_SUPPORTED) /* fastpath output on */
     {
-        /* multifragment update */
+        unsigned int max_request_size = calculate_multifragmentupdate_len(self);
         caps_count++;
         out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE);
         out_uint16_le(s, CAPSSETTYPE_MULTIFRAGMENTUPDATE_LEN);
-        out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
+        out_uint32_le(s, max_request_size);
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
-                  "CAPSSETTYPE_MULTIFRAGMENTUPDATE = 3MB");
+                  "CAPSSETTYPE_MULTIFRAGMENTUPDATE = %d", max_request_size);
 
         /* frame acks */
         caps_count++;

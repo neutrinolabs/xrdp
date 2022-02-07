@@ -29,6 +29,7 @@
 #define SESSION_H
 
 #include "libscp_types.h"
+#include "guid.h"
 
 #define SESMAN_SESSION_TYPE_XRDP      1
 #define SESMAN_SESSION_TYPE_XVNC      2
@@ -75,8 +76,8 @@ struct session_item
     struct session_date connect_time;
     struct session_date disconnect_time;
     struct session_date idle_time;
-    char client_ip[256];
-    tui8 guid[16];
+    char connection_description[256];
+    struct guid guid;
 };
 
 struct session_chain
@@ -93,7 +94,7 @@ struct session_chain
  */
 struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
-                   const char *client_ip);
+                   const char *connection_description);
 #ifndef session_find_item
 #define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
 #endif

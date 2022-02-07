@@ -214,11 +214,178 @@ START_TEST(test_strnjoin__when_always__then_doesnt_write_beyond_end_of_destinati
 END_TEST
 
 /******************************************************************************/
+START_TEST(test_bm2str__no_bits_defined)
+{
+    int rv;
+    char buff[64];
+
+    static const struct bitmask_string bits[] =
+    {
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    rv = g_bitmask_to_str(0xffff, bits, ',', buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "0xffff");
+    ck_assert_int_eq(rv, 6);
+}
+END_TEST
+
+START_TEST(test_bm2str__all_bits_defined)
+{
+    int rv;
+    char buff[64];
+
+    static const struct bitmask_string bits[] =
+    {
+        {1 << 0, "BIT_0"},
+        {1 << 1, "BIT_1"},
+        {1 << 6, "BIT_6"},
+        {1 << 7, "BIT_7"},
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 6 | 1 << 7;
+
+    rv = g_bitmask_to_str(bitmask, bits, '|', buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "BIT_0|BIT_1|BIT_6|BIT_7");
+    ck_assert_int_eq(rv, (6 * 4) - 1);
+}
+END_TEST
+
+START_TEST(test_bm2str__some_bits_undefined)
+{
+    int rv;
+    char buff[64];
+
+    static const struct bitmask_string bits[] =
+    {
+        {1 << 0, "BIT_0"},
+        {1 << 1, "BIT_1"},
+        {1 << 6, "BIT_6"},
+        {1 << 7, "BIT_7"},
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 16;
+
+    rv = g_bitmask_to_str(bitmask, bits, ':', buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "BIT_0:BIT_1:0x10000");
+    ck_assert_int_eq(rv, (6 * 2) + 7);
+}
+END_TEST
+
+START_TEST(test_bm2str__overflow_all_bits_defined)
+{
+    int rv;
+    char buff[10];
+
+    static const struct bitmask_string bits[] =
+    {
+        {1 << 0, "BIT_0"},
+        {1 << 1, "BIT_1"},
+        {1 << 6, "BIT_6"},
+        {1 << 7, "BIT_7"},
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 6 | 1 << 7;
+
+    rv = g_bitmask_to_str(bitmask, bits, '+', buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "BIT_0+BIT");
+    ck_assert_int_eq(rv, (4 * 6) - 1);
+}
+END_TEST
+
+START_TEST(test_bm2str__overflow_some_bits_undefined)
+{
+    int rv;
+    char buff[16];
+
+    static const struct bitmask_string bits[] =
+    {
+        {1 << 0, "BIT_0"},
+        {1 << 1, "BIT_1"},
+        {1 << 6, "BIT_6"},
+        {1 << 7, "BIT_7"},
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 16;
+
+    rv = g_bitmask_to_str(bitmask, bits, '#', buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "BIT_0#BIT_1#0x1");
+    ck_assert_int_eq(rv, (6 * 2) + 7);
+}
+END_TEST
+
+/******************************************************************************/
+
+START_TEST(test_strtrim__trim_left)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 1);
+
+    /* verify */
+    ck_assert_str_eq(output, "Done is better than perfect.\t\t    \n\n");
+}
+END_TEST
+
+START_TEST(test_strtrim__trim_right)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 2);
+
+    /* verify */
+    ck_assert_str_eq(output, "\t\t    \tDone is better than perfect.");
+}
+END_TEST
+
+START_TEST(test_strtrim__trim_both)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 3);
+
+    /* verify */
+    ck_assert_str_eq(output, "Done is better than perfect.");
+}
+END_TEST
+
+START_TEST(test_strtrim__trim_through)
+{
+    /* setup */
+    char output[] = "\t\t    \tDone is better than perfect.\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 4);
+
+    /* verify */
+    ck_assert_str_eq(output, "Doneisbetterthanperfect.");
+}
+END_TEST
+
+/******************************************************************************/
+
 Suite *
 make_suite_test_string(void)
 {
     Suite *s;
     TCase *tc_strnjoin;
+    TCase *tc_bm2str;
+    TCase *tc_strtrim;
 
     s = suite_create("String");
 
@@ -235,6 +402,21 @@ make_suite_test_string(void)
     tcase_add_test(tc_strnjoin, test_strnjoin__when_destination_is_shorter_than_src_plus_joiner__returns_partial_joined_string);
     tcase_add_test(tc_strnjoin, test_strnjoin__when_destination_has_contents__returns_joined_string_with_content_overwritten);
     tcase_add_test(tc_strnjoin, test_strnjoin__when_always__then_doesnt_write_beyond_end_of_destination);
+
+    tc_bm2str = tcase_create("bm2str");
+    suite_add_tcase(s, tc_bm2str);
+    tcase_add_test(tc_bm2str, test_bm2str__no_bits_defined);
+    tcase_add_test(tc_bm2str, test_bm2str__all_bits_defined);
+    tcase_add_test(tc_bm2str, test_bm2str__some_bits_undefined);
+    tcase_add_test(tc_bm2str, test_bm2str__overflow_all_bits_defined);
+    tcase_add_test(tc_bm2str, test_bm2str__overflow_some_bits_undefined);
+
+    tc_strtrim = tcase_create("strtrim");
+    suite_add_tcase(s, tc_strtrim);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_left);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_right);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_both);
+    tcase_add_test(tc_strtrim, test_strtrim__trim_through);
 
     return s;
 }

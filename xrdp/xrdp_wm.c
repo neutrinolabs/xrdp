@@ -704,7 +704,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                     q = (char *)list_get_item(names, index);
                     r = (char *)list_get_item(values, index);
 
-                    if (g_strncmp("password", q, 255) == 0)
+                    if (g_strncasecmp("password", q, 255) == 0)
                     {
                         /* if the password has been asked for by the module, use what the
                            client says.
@@ -715,7 +715,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->password;
                         }
                     }
-                    else if (g_strncmp("username", q, 255) == 0)
+                    else if (g_strncasecmp("username", q, 255) == 0)
                     {
                         /* if the username has been asked for by the module, use what the
                            client says.
@@ -726,7 +726,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->username;
                         }
                     }
-                    else if (g_strncmp("ip", q, 255) == 0)
+                    else if (g_strncasecmp("ip", q, 255) == 0)
                     {
                         /* if the ip has been asked for by the module, use what the
                          client says (target ip should be in 'domain' field, when starting with "_")
@@ -742,7 +742,7 @@ xrdp_wm_init(struct xrdp_wm *self)
 
                         }
                     }
-                    else if (g_strncmp("port", q, 255) == 0)
+                    else if (g_strncasecmp("port", q, 255) == 0)
                     {
                         if (g_strncmp("ask3389", r, 7) == 0)
                         {
@@ -1845,7 +1845,7 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 
     if (self->mm->mod != 0)
     {
-        if (self->mm->usechansrv)
+        if (self->mm->use_chansrv)
         {
             rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
                                               param3, param4);
@@ -1956,16 +1956,13 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     }
     else if (self->login_state == WMLS_START_CONNECT)
     {
-        if (xrdp_mm_connect(self->mm) == 0)
-        {
-            xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
-            xrdp_wm_delete_all_children(self);
-            self->dragging = 0;
-        }
-        else
-        {
-            /* we do nothing on connect error so far */
-        }
+        xrdp_wm_delete_all_children(self);
+        self->dragging = 0;
+        xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
+
+        /* This calls back to xrdp_wm_mod_connect_done() when the
+         * connect is finished*/
+        xrdp_mm_connect(self->mm);
     }
     else if (self->login_state == WMLS_CLEANUP)
     {
@@ -1975,6 +1972,26 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     }
 
     return 0;
+}
+
+/******************************************************************************/
+/* this gets called when the module manager finishes a connect
+ * which was initiated by xrdp_mm_connect()
+ */
+void
+xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status)
+{
+    LOG(LOG_LEVEL_DEBUG, "status from xrdp_mm_connect() : %d", status);
+    if (status == 0)
+    {
+        xrdp_wm_set_login_state(self, WMLS_CLEANUP);
+        self->dragging = 0;
+    }
+    else
+    {
+        xrdp_wm_set_login_state(self, WMLS_INACTIVE);
+        xrdp_wm_show_log(self);
+    }
 }
 
 /*****************************************************************************/

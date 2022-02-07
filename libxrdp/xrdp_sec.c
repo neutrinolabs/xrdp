@@ -2330,7 +2330,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 /*****************************************************************************/
 /* Process a [MS-RDPBCGR] TS_UD_CS_MONITOR message.
    reads the client monitors data */
-static int
+int
 xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 {
     int index;
@@ -2374,7 +2374,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
         LOG(LOG_LEVEL_ERROR,
             "[MS-RDPBCGR] Protocol error: TS_UD_CS_MONITOR monitorCount "
             "MUST be less than 16, received: %d", monitorCount);
-        return 1;
+        return 2;
     }
 
     client_info->monitorCount = monitorCount;
@@ -2468,7 +2468,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
             "Allowed height range: min %d, max %d. Height received: %d",
             0xC8, 0x7FFE, client_info->width,
             0xC8, 0x7FFE, client_info->height);
-        return 1; /* error */
+        return 3; /* error */
     }
 
     /* keep a copy of non negative monitor info values for xrdp_wm usage */
