@@ -276,6 +276,7 @@ sesman_close_all(void)
 static int
 sesman_data_in(struct trans *self)
 {
+#define HEADER_SIZE 8
     int version;
     int size;
 
@@ -283,9 +284,9 @@ sesman_data_in(struct trans *self)
     {
         in_uint32_be(self->in_s, version);
         in_uint32_be(self->in_s, size);
-        if (size > self->in_s->size)
+        if (size < HEADER_SIZE || size > self->in_s->size)
         {
-            LOG(LOG_LEVEL_ERROR, "sesman_data_in: bad message size");
+            LOG(LOG_LEVEL_ERROR, "sesman_data_in: bad message size %d", size);
             return 1;
         }
         self->header_size = size;
@@ -302,11 +303,12 @@ sesman_data_in(struct trans *self)
             return 1;
         }
         /* reset for next message */
-        self->header_size = 8;
+        self->header_size = HEADER_SIZE;
         self->extra_flags = 0;
         init_stream(self->in_s, 0); /* Reset input stream pointers */
     }
     return 0;
+#undef HEADER_SIZE
 }
 
 /******************************************************************************/
