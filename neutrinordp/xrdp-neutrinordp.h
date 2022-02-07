@@ -63,6 +63,15 @@ struct pointer_item
 
 struct source_info;
 
+struct kbd_overrides
+{
+    int type;
+    int subtype;
+    int fn_keys;
+    int layout;
+    int layout_mask;
+};
+
 struct mod
 {
     int size; /* size of this struct */
@@ -83,9 +92,9 @@ struct mod
     int (*mod_suppress_output)(struct mod *mod, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct mod *mod,
-                               int width, int height);
+                                     int width, int height);
     int (*mod_server_monitor_full_invalidate)(struct mod *mod,
-                               int width, int height);
+            int width, int height);
     int (*mod_server_version_message)(struct mod *mod);
     tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                  functions above */
@@ -130,6 +139,7 @@ struct mod
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct mod *v);
+    int (*server_chansrv_in_use)(struct mod *v);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct mod *v, int rdpindex,
                                     int width, int height);
@@ -184,7 +194,7 @@ struct mod
                               int flags, int frame_id);
     int (*server_session_info)(struct mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
                                        functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -216,5 +226,11 @@ struct mod
     struct bitmap_item bitmap_cache[4][4096];
     struct brush_item brush_cache[64];
     struct pointer_item pointer_cache[32];
+    char pamusername[255];
 
+    int allow_client_experiencesettings;
+    int perf_settings_override_mask; /* Performance bits overridden in ini file */
+    int perf_settings_values_mask; /* Values of overridden performance bits */
+    int allow_client_kbd_settings;
+    struct kbd_overrides kbd_overrides; /* neutrinordp.overide_kbd_* values */
 };

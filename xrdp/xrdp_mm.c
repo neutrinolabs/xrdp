@@ -427,6 +427,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_begin_update = server_begin_update;
             self->mod->server_end_update = server_end_update;
             self->mod->server_bell_trigger = server_bell_trigger;
+            self->mod->server_chansrv_in_use = server_chansrv_in_use;
             self->mod->server_fill_rect = server_fill_rect;
             self->mod->server_screen_blt = server_screen_blt;
             self->mod->server_paint_rect = server_paint_rect;
@@ -1076,7 +1077,7 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     in_uint32_le(s, msg_type);
     in_uint32_le(s, msg_length);
     LOG(LOG_LEVEL_DEBUG, "dynamic_monitor_data: msg_type %d msg_length %d",
-           msg_type, msg_length);
+        msg_type, msg_length);
 
     rect.left = 8192;
     rect.top = 8192;
@@ -1088,7 +1089,7 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
         in_uint32_le(s, MonitorLayoutSize);
         in_uint32_le(s, NumMonitor);
         LOG(LOG_LEVEL_DEBUG, "  MonitorLayoutSize %d NumMonitor %d",
-               MonitorLayoutSize, NumMonitor);
+            MonitorLayoutSize, NumMonitor);
         for (monitor_index = 0; monitor_index < NumMonitor; monitor_index++)
         {
             monitor_layout = monitor_layouts + monitor_index;
@@ -1103,13 +1104,13 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
             in_uint32_le(s, monitor_layout->desktop_scale_factor);
             in_uint32_le(s, monitor_layout->device_scale_factor);
             LOG_DEVEL(LOG_LEVEL_DEBUG, "    Flags 0x%8.8x Left %d Top %d "
-                   "Width %d Height %d PhysicalWidth %d PhysicalHeight %d "
-                   "Orientation %d DesktopScaleFactor %d DeviceScaleFactor %d",
-                   monitor_layout->flags, monitor_layout->left, monitor_layout->top,
-                   monitor_layout->width, monitor_layout->height,
-                   monitor_layout->physical_width, monitor_layout->physical_height,
-                   monitor_layout->orientation, monitor_layout->desktop_scale_factor,
-                   monitor_layout->device_scale_factor);
+                      "Width %d Height %d PhysicalWidth %d PhysicalHeight %d "
+                      "Orientation %d DesktopScaleFactor %d DeviceScaleFactor %d",
+                      monitor_layout->flags, monitor_layout->left, monitor_layout->top,
+                      monitor_layout->width, monitor_layout->height,
+                      monitor_layout->physical_width, monitor_layout->physical_height,
+                      monitor_layout->orientation, monitor_layout->desktop_scale_factor,
+                      monitor_layout->device_scale_factor);
 
             rect.left = MIN(monitor_layout->left, rect.left);
             rect.top = MIN(monitor_layout->top, rect.top);
@@ -1133,8 +1134,9 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
         /* redraw */
         xrdp_bitmap_invalidate(wm->screen, 0);
 
-        struct xrdp_mod* v = wm->mm->mod;
-        if (v != 0) {
+        struct xrdp_mod *v = wm->mm->mod;
+        if (v != 0)
+        {
             v->mod_server_version_message(v);
             v->mod_server_monitor_resize(v, session_width, session_height);
             v->mod_server_monitor_full_invalidate(v, session_width, session_height);
@@ -1627,8 +1629,6 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, const char *ip, const char *port)
 {
     int index;
 
-    self->usechansrv = 1;
-
     if (self->wm->client_info->channels_allowed == 0)
     {
         LOG(LOG_LEVEL_DEBUG, "%s: "
@@ -1797,7 +1797,6 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
                 {
                     g_snprintf(port, 255, "%d", 7200 + display);
                 }
-                xrdp_mm_update_allowed_channels(self);
                 xrdp_mm_connect_chansrv(self, ip, port);
             }
         }
@@ -2457,6 +2456,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             if (g_strcasecmp(value, "-1") == 0)
             {
                 self->sesman_controlled = 1;
+                self->usechansrv = 1;
             }
         }
 
@@ -2491,6 +2491,8 @@ xrdp_mm_connect(struct xrdp_mm *self)
             }
         }
     }
+
+    xrdp_mm_update_allowed_channels(self);
 
 #ifdef USE_PAM
     if (use_pam_auth)
@@ -3000,6 +3002,17 @@ server_bell_trigger(struct xrdp_mod *mod)
     wm = (struct xrdp_wm *)(mod->wm);
     xrdp_wm_send_bell(wm);
     return 0;
+}
+
+/*****************************************************************************/
+/* Chansrv in use on this configuration? */
+int
+server_chansrv_in_use(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    return wm->mm->usechansrv;
 }
 
 
@@ -3608,14 +3621,13 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
 
     if (wm->mm->usechansrv)
     {
-        /*
-         * Xvnc backend reaches here
-         * should not return 1 as this case is not an error
-         */
-        return 0;
+        /* Modules should not be calling this if chansrv is running -
+         * they can use server_chansrv_in_use() to avoid doing this */
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "Bad call of server_send_to_channel() detected");
+        return 1;
     }
 
-    /* vnc proxy mode reaches here */
     return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
                                    total_data_len, flags);
 }

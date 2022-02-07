@@ -2,7 +2,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp-questions)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-*Current Version:* 0.9.15
+*Current Version:* 0.9.17
 
 # xrdp - an open source RDP server
 
@@ -140,7 +140,6 @@ xrdp
 |├── chansrv ···· channel server for xrdp
 |├── libscp ····· authorization library
 |└── tools ······ session management tools for sys admins
-├── tcutils ····· QT based utility program for thin clients
 ├── tests ······· tests for the code
 ├┬─ tools ······· tools
 |└┬─ devel ······ development tools

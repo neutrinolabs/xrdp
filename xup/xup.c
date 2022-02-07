@@ -1305,8 +1305,8 @@ send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int hei
     out_uint32_le(s, len);
     int rv = lib_send_copy(mod, s);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_resize: sent resize message with following properties to xorgxrdp backend "
-        "width=%d, height=%d, bpp=%d, return value=%d",
-        width, height, bpp, rv);
+              "width=%d, height=%d, bpp=%d, return value=%d",
+              width, height, bpp, rv);
     return rv;
 }
 
@@ -1332,8 +1332,8 @@ send_server_monitor_full_invalidate(struct mod *mod, struct stream *s, int width
     out_uint32_le(s, len);
     int rv = lib_send_copy(mod, s);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_full_invalidate: sent invalidate message with following properties to xorgxrdp backend "
-        "width=%d, height=%d, return value=%d",
-        width, height, rv);
+              "width=%d, height=%d, return value=%d",
+              width, height, rv);
     return rv;
 }
 

@@ -28,6 +28,13 @@
 #include "arch.h"
 #include "log.h"
 
+/* Check the config_ac.h file is included so we know whether to enable the
+ * development macros
+ */
+#ifndef CONFIG_AC_H
+#   error config_ac.h not visible in parse.h
+#endif
+
 #if defined(L_ENDIAN)
 #elif defined(B_ENDIAN)
 #else
@@ -53,6 +60,34 @@ struct stream
     struct stream *next;
     int *source;
 };
+
+/** Check arguments to stream primitives
+ *
+ * This adds a function call overhead to every stream primitive and is
+ * intended for development only
+ *
+ * @param s stream
+ * @param n Bytes being requested for input/output
+ * @param is_out (0=input, !0=output)
+ * @param file __file__for caller
+ * @param line __line__ for caller
+ *
+ * On any kind of violation a message is output and the program is
+ * aborted.
+ */
+void
+parser_stream_overflow_check(const struct stream *s, int n, int is_out,
+                             const char *file, int line);
+
+#ifdef USE_DEVEL_STREAMCHECK
+#   define S_CHECK_REM(s,n) \
+    parser_stream_overflow_check((s), (n), 0, __FILE__, __LINE__)
+#   define S_CHECK_REM_OUT(s,n) \
+    parser_stream_overflow_check((s), (n), 1, __FILE__, __LINE__)
+#else
+#   define S_CHECK_REM(s,n)
+#   define S_CHECK_REM_OUT(s,n)
+#endif
 
 /******************************************************************************/
 #define s_check(s) s_check_rem(s, 0)
@@ -157,6 +192,7 @@ struct stream
 
 #define in_sint8(s, v) do \
     { \
+        S_CHECK_REM((s), 1); \
         (v) = *((signed char*)((s)->p)); \
         (s)->p++; \
     } while (0)
@@ -164,15 +200,21 @@ struct stream
 /******************************************************************************/
 #define in_uint8(s, v) do \
     { \
+        S_CHECK_REM((s), 1); \
         (v) = *((unsigned char*)((s)->p)); \
         (s)->p++; \
     } while (0)
 /******************************************************************************/
-#define in_uint8_peek(s, v) do { v = *s->p; } while (0)
+#define in_uint8_peek(s, v) do \
+    { \
+        S_CHECK_REM((s), 1); \
+        v = *s->p; \
+    } while (0)
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_sint16_le(s, v) do \
     { \
+        S_CHECK_REM((s), 2); \
         (v) = (signed short) \
               ( \
                 (*((unsigned char*)((s)->p + 0)) << 0) | \
@@ -183,6 +225,7 @@ struct stream
 #else
 #define in_sint16_le(s, v) do \
     { \
+        S_CHECK_REM((s), 2); \
         (v) = *((signed short*)((s)->p)); \
         (s)->p += 2; \
     } while (0)
@@ -192,6 +235,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint16_le(s, v) do \
     { \
+        S_CHECK_REM((s), 2); \
         (v) = (unsigned short) \
               ( \
                 (*((unsigned char*)((s)->p + 0)) << 0) | \
@@ -202,6 +246,7 @@ struct stream
 #else
 #define in_uint16_le(s, v) do \
     { \
+        S_CHECK_REM((s), 2); \
         (v) = *((unsigned short*)((s)->p)); \
         (s)->p += 2; \
     } while (0)
@@ -210,6 +255,7 @@ struct stream
 /******************************************************************************/
 #define in_uint16_be(s, v) do \
     { \
+        S_CHECK_REM((s), 2); \
         (v) = *((unsigned char*)((s)->p)); \
         (s)->p++; \
         (v) <<= 8; \
@@ -221,6 +267,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint32_le(s, v) do \
     { \
+        S_CHECK_REM((s), 4); \
         (v) = (unsigned int) \
               ( \
                 (*((unsigned char*)((s)->p + 0)) << 0) | \
@@ -233,6 +280,7 @@ struct stream
 #else
 #define in_uint32_le(s, v) do \
     { \
+        S_CHECK_REM((s), 4); \
         (v) = *((unsigned int*)((s)->p)); \
         (s)->p += 4; \
     } while (0)
@@ -242,6 +290,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint64_le(s, v) do \
     { \
+        S_CHECK_REM((s), 8); \
         (v) = (tui64) \
               ( \
                 (((tui64)(*((unsigned char*)((s)->p + 0)))) << 0) | \
@@ -258,6 +307,7 @@ struct stream
 #else
 #define in_uint64_le(s, v) do \
     { \
+        S_CHECK_REM((s), 8); \
         (v) = *((tui64*)((s)->p)); \
         (s)->p += 8; \
     } while (0)
@@ -266,6 +316,7 @@ struct stream
 /******************************************************************************/
 #define in_uint32_be(s, v) do \
     { \
+        S_CHECK_REM((s), 4); \
         (v) = *((unsigned char*)((s)->p)); \
         (s)->p++; \
         (v) <<= 8; \
@@ -282,6 +333,7 @@ struct stream
 /******************************************************************************/
 #define out_uint8(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 1); \
         *((s)->p) = (unsigned char)(v); \
         (s)->p++; \
     } while (0)
@@ -290,6 +342,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint16_le(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 2); \
         *((s)->p) = (unsigned char)((v) >> 0); \
         (s)->p++; \
         *((s)->p) = (unsigned char)((v) >> 8); \
@@ -298,6 +351,7 @@ struct stream
 #else
 #define out_uint16_le(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 2); \
         *((unsigned short*)((s)->p)) = (unsigned short)(v); \
         (s)->p += 2; \
     } while (0)
@@ -306,6 +360,7 @@ struct stream
 /******************************************************************************/
 #define out_uint16_be(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 2); \
         *((s)->p) = (unsigned char)((v) >> 8); \
         (s)->p++; \
         *((s)->p) = (unsigned char)((v) >> 0); \
@@ -316,6 +371,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint32_le(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 4); \
         *((s)->p) = (unsigned char)((v) >> 0); \
         (s)->p++; \
         *((s)->p) = (unsigned char)((v) >> 8); \
@@ -328,6 +384,7 @@ struct stream
 #else
 #define out_uint32_le(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 4); \
         *((unsigned int*)((s)->p)) = (v); \
         (s)->p += 4; \
     } while (0)
@@ -337,6 +394,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint64_le(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 8); \
         *((s)->p) = (unsigned char)((v) >> 0); \
         (s)->p++; \
         *((s)->p) = (unsigned char)((v) >> 8); \
@@ -357,6 +415,7 @@ struct stream
 #else
 #define out_uint64_le(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 8); \
         *((tui64*)((s)->p)) = (v); \
         (s)->p += 8; \
     } while (0)
@@ -365,6 +424,7 @@ struct stream
 /******************************************************************************/
 #define out_uint32_be(s, v) do \
     { \
+        S_CHECK_REM_OUT((s), 4); \
         *((s)->p) = (unsigned char)((v) >> 24); \
         s->p++; \
         *((s)->p) = (unsigned char)((v) >> 16); \
@@ -378,6 +438,7 @@ struct stream
 /******************************************************************************/
 #define in_uint8p(s, v, n) do \
     { \
+        S_CHECK_REM((s), (n)); \
         (v) = (s)->p; \
         (s)->p += (n); \
     } while (0)
@@ -385,17 +446,22 @@ struct stream
 /******************************************************************************/
 #define in_uint8a(s, v, n) do \
     { \
+        S_CHECK_REM((s), (n)); \
         g_memcpy((v), (s)->p, (n)); \
         (s)->p += (n); \
     } while (0)
 
 /******************************************************************************/
-#define in_uint8s(s, n) \
-    (s)->p += (n)
+#define in_uint8s(s, n) do \
+    { \
+        S_CHECK_REM((s), (n)); \
+        (s)->p += (n); \
+    } while (0);
 
 /******************************************************************************/
 #define out_uint8p(s, v, n) do \
     { \
+        S_CHECK_REM_OUT((s), (n)); \
         g_memcpy((s)->p, (v), (n)); \
         (s)->p += (n); \
     } while (0)
@@ -407,6 +473,7 @@ struct stream
 /******************************************************************************/
 #define out_uint8s(s, n) do \
     { \
+        S_CHECK_REM_OUT((s), (n)); \
         g_memset((s)->p, 0, (n)); \
         (s)->p += (n); \
     } while (0)

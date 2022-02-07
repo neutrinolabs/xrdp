@@ -10,6 +10,7 @@ include_HEADERS = \
   ms-erref.h \
   ms-fscc.h \
   ms-rdpbcgr.h \
+  ms-rdpeclip.h \
   ms-rdpefs.h \
   ms-rdpegdi.h \
   ms-rdpele.h \
@@ -28,10 +29,6 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\"
-
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
 
 # -no-suppress is an automake-specific flag which is needed
 # to prevent us missing compiler errors in some circumstances
@@ -58,6 +55,7 @@ libcommon_la_SOURCES = \
   log.h \
   os_calls.c \
   os_calls.h \
+  parse.c \
   parse.h \
   rail.h \
   ssl_calls.c \

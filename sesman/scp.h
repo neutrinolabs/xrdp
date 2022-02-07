@@ -36,10 +36,10 @@
  * @brief Starts a an scp protocol thread.
  *        Starts a an scp protocol thread.
  *        But does only version control....
- * @param socket the connection socket
+ * @param atrans the connection trans
  *
  */
-void*
-scp_process_start(void* sck);
+enum SCP_SERVER_STATES_E
+scp_process(struct trans *t, struct SCP_SESSION *s);
 
 #endif

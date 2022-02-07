@@ -1,0 +1,66 @@
+************************************************************
+** Notes on the current version of the SCP protocol used  **
+** to communicate with sesman                             **
+**                                                        **
+** This information is for internal documentational use   **
+** only. It may be incomplete. The SCP protocol is        **
+** internal, and may change for even minor releases.      **
+************************************************************
+
+
+message header
+version     4       - version, 0 or 1
+size        4       - size of PDU including header
+cmdset      2       - 0
+
+version 0
+cmdset 2 bytes
+    0   - Xvnc                              client to server
+    3   - response to 0, 10, or 20          server to client
+    4   - SCP_GW_AUTHENTICATION             client to server
+    10  - X11rdp                            client to server
+    20  - Xorg                              client to server
+
+version 1
+cmdset 2 bytes
+    0   - SCP_COMMAND_SET_DEFAULT
+    1   - SCP_COMMAND_SET_MANAGE
+    2   - SCP_COMMAND_SET_RSR
+
+SCP_COMMAND_SET_DEFAULT
+cmd 2 bytes
+    1       - main                          client to server
+    3       - password request              server to client
+    4       - password reply                client to server
+    30      - connect new session
+    40      - list all sessions             server to client
+    41      - list all sessions response    client to server
+    42      - list all sessions             server to client
+    43      - list all sessions response    client to server
+    44      - list all sessions response    client to server
+    45      -                               client to server
+    46      - reconnect session
+    0xFFFF  - SCP_CMD_CONN_ERROR
+
+SCP_COMMAND_SET_MANAGE
+cmd 2 bytes
+    1       - manager login
+    2       - SCP_CMD_MNG_LOGIN_ALLOW
+
+v0
+scp_process                         scp.c
+    scp_vXs_accept                  libscp_vX.c
+        scp_v0s_accept              libscp_v0.c
+    scp_v0_process                  scp_v0.c
+        session_start               session.c
+
+v1
+scp_process                         scp.c
+    scp_vXs_accept                  libscp_vX.c
+        scp_v1s_accept              libscp_v1s.c
+            scp_v1s_mng_accept      libscp_v1s_mng.c
+    scp_v1_process                  scp_v1.c
+        scp_v1s_request_password    libscp_v1s.c
+    or
+    scp_v1_mng_process              scp_v1_mng.c
+

@@ -220,8 +220,8 @@ parse_geometry_string(const char *geom_str, struct session_params *sp)
     }
 
     if (sep_count != 1 || other_count > 0 ||
-        sepp == geom_str ||  /* Separator at start of string */
-        sepp == (p - 1) )    /* Separator at end of string */
+            sepp == geom_str ||  /* Separator at start of string */
+            sepp == (p - 1) )    /* Separator at end of string */
     {
         LOG(LOG_LEVEL_ERROR, "Invalid geometry string '%s'", geom_str);
     }
@@ -504,6 +504,7 @@ handle_scpv0_auth_reply(int sck)
         int data;
         int display;
 
+        in_s->end = in_s->data + 8;
         in_uint32_be(in_s, version);
         in_uint32_be(in_s, size);
         if (version == 0 && size >= 14)

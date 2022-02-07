@@ -35,7 +35,7 @@
  * @param out_s output stream
  *
  */
-void
-scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+enum SCP_SERVER_STATES_E
+scp_v1_process(struct trans *t, struct SCP_SESSION *s);
 
 #endif

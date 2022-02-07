@@ -53,11 +53,11 @@ struct xrdp_mod
     int (*mod_frame_ack)(struct xrdp_mod *v, int flags, int frame_id);
     int (*mod_suppress_output)(struct xrdp_mod *v, int suppress,
                                int left, int top, int right, int bottom);
-    int (*mod_server_monitor_resize)(struct xrdp_mod* v,
-                               int width, int height);
-    int (*mod_server_monitor_full_invalidate)(struct xrdp_mod* v,
-                               int width, int height);
-    int (*mod_server_version_message)(struct xrdp_mod* v);
+    int (*mod_server_monitor_resize)(struct xrdp_mod *v,
+                                     int width, int height);
+    int (*mod_server_monitor_full_invalidate)(struct xrdp_mod *v,
+            int width, int height);
+    int (*mod_server_version_message)(struct xrdp_mod *v);
     tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                   functions above */
     /* server functions */
@@ -103,6 +103,7 @@ struct xrdp_mod
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct xrdp_mod *v);
+    int (*server_chansrv_in_use)(struct xrdp_mod *v);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct xrdp_mod *v, int rdpindex,
                                     int width, int height);
@@ -158,7 +159,7 @@ struct xrdp_mod
                               int flags, int frame_id);
     int (*server_session_info)(struct xrdp_mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */

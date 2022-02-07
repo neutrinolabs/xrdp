@@ -87,7 +87,8 @@ struct mod
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct mod *v);
-    tintptr server_dumby[100 - 25]; /* align, 100 minus the number of server
+    int (*server_chansrv_in_use)(struct mod *v);
+    tintptr server_dumby[100 - 26]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

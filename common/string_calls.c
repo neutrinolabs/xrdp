@@ -200,6 +200,19 @@ g_strchr(const char *text, int c)
 }
 
 /*****************************************************************************/
+/* locates char in text with length */
+const char *
+g_strnchr(const char *text, int c, int len)
+{
+    if (text == NULL || len <= 0)
+    {
+        return NULL;
+    }
+
+    return (const char *)memchr(text, c, len);
+}
+
+/*****************************************************************************/
 /* returns dest */
 char *
 g_strcpy(char *dest, const char *src)
@@ -395,6 +408,30 @@ g_atoi(const char *str)
 }
 
 /*****************************************************************************/
+/* As g_atoi() but allows for hexadecimal too */
+int
+g_atoix(const char *str)
+{
+    int base = 10;
+    if (str == NULL)
+    {
+        str = "0";
+    }
+
+    while (isspace(*str))
+    {
+        ++str;
+    }
+
+    if (*str == '0' && tolower(*(str + 1)) == 'x')
+    {
+        str += 2;
+        base = 16;
+    }
+    return strtol(str, NULL, base);
+}
+
+/*****************************************************************************/
 int
 g_htoi(char *str)
 {
@@ -537,7 +574,7 @@ g_bytes_to_hexdump(const char *src, int len)
                         + HEX_DUMP_NEWLINE_SIZE);
 
     dump_number_lines = (len / HEX_DUMP_SOURCE_BYTES_PER_LINE) + 1; /* +1 to round up */
-    dump_length = (dump_number_lines *dump_line_length    /* hex dump lines */
+    dump_length = (dump_number_lines * dump_line_length   /* hex dump lines */
                    + 1);    /* terminating NULL */
     dump_buffer = (char *)g_malloc(dump_length, 1);
     if (dump_buffer == NULL)
@@ -818,7 +855,7 @@ g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int 
     int dest_remaining;
     char *dest_pos = dest;
     char *dest_end;
-    
+
     if (dest == NULL || dest_len < 1)
     {
         return dest;

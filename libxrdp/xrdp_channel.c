@@ -25,13 +25,6 @@
 #include "libxrdp.h"
 #include "string_calls.h"
 
-/* todo, move these to constants.h */
-//#define CHANNEL_CHUNK_LENGTH 1600 /* todo, why is this so small? */
-#define CHANNEL_CHUNK_LENGTH 8192
-#define CHANNEL_FLAG_FIRST 0x01
-#define CHANNEL_FLAG_LAST 0x02
-#define CHANNEL_FLAG_SHOW_PROTOCOL 0x10
-
 #define CMD_DVC_OPEN_CHANNEL    0x10
 #define CMD_DVC_DATA_FIRST      0x20
 #define CMD_DVC_DATA            0x30
@@ -751,7 +744,7 @@ xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
     s_mark_end(s);
     /* send command to client */
     total_data_len = (int) (s->end - phold);
-    flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
+    flags = XR_CHANNEL_FLAG_FIRST | XR_CHANNEL_FLAG_LAST;
     channel_id = self->drdynvc_channel_id;
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CAPS_VERSION2 "
               "cbId 0, Sp 0, Cmd 0x05, Version 2, PriorityCharge0 0, "
@@ -864,7 +857,7 @@ xrdp_channel_drdynvc_open(struct xrdp_channel *self, const char *name,
     /* cbId (low 2 bits), Pri (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_OPEN_CHANNEL | ((chan_pri << 2) & 0x0c) | cbChId;
     static_channel_id = self->drdynvc_channel_id;
-    static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
+    static_flags = XR_CHANNEL_FLAG_FIRST | XR_CHANNEL_FLAG_LAST;
     s_mark_end(s);
     total_data_len = (int) (s->end - cmd_ptr);
 
@@ -936,7 +929,7 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
     /* cbId (low 2 bits), Sp (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_CLOSE_CHANNEL | cbChId;
     static_channel_id = self->drdynvc_channel_id;
-    static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
+    static_flags = XR_CHANNEL_FLAG_FIRST | XR_CHANNEL_FLAG_LAST;
     s_mark_end(s);
     total_data_len = (int) (s->end - cmd_ptr);
 
@@ -1012,7 +1005,7 @@ xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
     /* cbId (low 2 bits), Len (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_DATA_FIRST | (cbTotalDataSize << 2) | cbChId;
     static_channel_id = self->drdynvc_channel_id;
-    static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
+    static_flags = XR_CHANNEL_FLAG_FIRST | XR_CHANNEL_FLAG_LAST;
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_DATA_FIRST "
               "cbId %d, Len %d, Cmd 0x%2.2x, ChannelId %d, Length %d",
@@ -1083,7 +1076,7 @@ xrdp_channel_drdynvc_data(struct xrdp_channel *self, int chan_id,
     /* cbId (low 2 bits), Sp (2 bits), Cmd (hi 4 bits) */
     cmd_ptr[0] = CMD_DVC_DATA | cbChId;
     static_channel_id = self->drdynvc_channel_id;
-    static_flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST;
+    static_flags = XR_CHANNEL_FLAG_FIRST | XR_CHANNEL_FLAG_LAST;
     s_mark_end(s);
     total_data_len = (int) (s->end - cmd_ptr);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_DATA "

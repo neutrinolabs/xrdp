@@ -22,7 +22,8 @@
  * xfree86(base)->evdev keycode mapping
  */
 
-int xfree86_to_evdev[137-8+1] = {
+int xfree86_to_evdev[137 - 8 + 1] =
+{
     /* MDSW */ 203,
     /* ESC */ 9,
     /* AE01 */ 10,

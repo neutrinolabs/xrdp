@@ -39,7 +39,7 @@
  *
  */
 int
-scp_tcp_force_recv(int sck, char* data, int len);
+scp_tcp_force_recv(int sck, char *data, int len);
 
 /**
  *
@@ -51,7 +51,7 @@ scp_tcp_force_recv(int sck, char* data, int len);
  *
  */
 int
-scp_tcp_force_send(int sck, char* data, int len);
+scp_tcp_force_send(int sck, char *data, int len);
 
 /**
  *
@@ -63,6 +63,6 @@ scp_tcp_force_send(int sck, char* data, int len);
  *
  */
 int
-scp_tcp_bind(int sck, char* addr, char* port);
+scp_tcp_bind(int sck, char *addr, char *port);
 
 #endif

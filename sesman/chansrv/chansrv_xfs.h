@@ -278,7 +278,7 @@ xfs_get_file_open_count(struct xfs_fs *xfs, fuse_ino_t inum);
  */
 void
 xfs_delete_redirected_entries_with_device_id(struct xfs_fs *xfs,
-                                             tui32 device_id);
+        tui32 device_id);
 
 /*
  * Check an entry move will be successful

@@ -49,7 +49,6 @@
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
-extern int g_sck; /* in sesman.c */
 struct session_chain *g_sessions;
 int g_session_count;
 
@@ -351,7 +350,7 @@ wait_for_xserver(int display)
     i = 0;
 
     LOG(LOG_LEVEL_DEBUG, "Waiting for X server to start on display %d", display);
-    
+
     while (!x_server_running(display))
     {
         i++;
@@ -390,7 +389,7 @@ session_start_chansrv(char *username, int display)
         /* building parameters */
         g_snprintf(exe_path, sizeof(exe_path), "%s/xrdp-chansrv",
                    XRDP_SBIN_PATH);
-        
+
         list_add_item(chansrv_params, (intptr_t) g_strdup(exe_path));
         list_add_item(chansrv_params, 0); /* mandatory */
 
@@ -400,7 +399,7 @@ session_start_chansrv(char *username, int display)
 
         /* executing chansrv */
         g_execvp(exe_path, (char **) (chansrv_params->items));
-        
+
         /* should not get here */
         list_delete(chansrv_params);
         g_exit(1);
@@ -411,8 +410,7 @@ session_start_chansrv(char *username, int display)
 /******************************************************************************/
 /* called with the main thread */
 static int
-session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
-                   struct SCP_SESSION *s)
+session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
 {
     int display = 0;
     int pid = 0;
@@ -491,13 +489,21 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     }
     else if (pid == 0)
     {
-        LOG(LOG_LEVEL_INFO, 
+        LOG(LOG_LEVEL_INFO,
             "[session start] (display %d): calling auth_start_session from pid %d",
             display, g_getpid());
+
+        /* Clone the session object, as the passed-in copy will be
+         * deleted by sesman_close_all() */
+        if ((s = scp_session_clone(s)) == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Failed to clone the session data - out of memory");
+            g_exit(1);
+        }
         auth_start_session(data, display);
         g_delete_wait_obj(g_term_event);
-        g_tcp_close(g_sck);
-        g_tcp_close(c->in_sck);
+        sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);
         g_sprintf(screen, ":%d", display);
@@ -525,7 +531,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             if (g_setsid() < 0)
             {
                 LOG(LOG_LEVEL_WARNING,
-                    "[session start] (display %d): setsid failed - pid %d", 
+                    "[session start] (display %d): setsid failed - pid %d",
                     display, g_getpid());
             }
 
@@ -579,7 +585,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     {
                         LOG(LOG_LEVEL_INFO,
                             "Starting user requested window manager on "
-                            "display %d with embeded arguments using a shell: %s", 
+                            "display %d with embeded arguments using a shell: %s",
                             display, s->program);
                         const char *params[] = {"sh", "-c", s->program, NULL};
                         g_execvp("/bin/sh", (char **)params);
@@ -597,7 +603,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     LOG(LOG_LEVEL_DEBUG, "The user session on display %d did "
                         "not request a specific window manager", display);
                 }
-                
+
                 /* try to execute user window manager if enabled */
                 if (g_cfg->enable_user_wm)
                 {
@@ -611,15 +617,15 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     }
                     else
                     {
-                        LOG(LOG_LEVEL_DEBUG, 
+                        LOG(LOG_LEVEL_DEBUG,
                             "The user home directory window manager configuration "
-                            "is enabled but window manager program does not exist: %s", 
+                            "is enabled but window manager program does not exist: %s",
                             text);
                     }
                 }
-                
+
                 LOG(LOG_LEVEL_INFO,
-                    "Starting the default window manager on display %d: %s", 
+                    "Starting the default window manager on display %d: %s",
                     display, g_cfg->default_wm);
                 g_execlp3(g_cfg->default_wm, g_cfg->default_wm, 0);
 
@@ -696,7 +702,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                     LOG(LOG_LEVEL_ERROR,
                         "Error setting the xauth cookie for display %d in file %s",
                         display, authfile);
-                    
+
                     LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting to start "
                         "the X server on display %d, aborting connection",
                         display);
@@ -819,17 +825,17 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 }
 
                 /* fire up X server */
-                LOG(LOG_LEVEL_INFO, "Starting X server on display %d: %s", 
+                LOG(LOG_LEVEL_INFO, "Starting X server on display %d: %s",
                     display, dumpItemsToString(xserver_params, execvpparams, 2048));
                 g_execvp(xserver, pp1);
-                
+
                 /* should not get here */
                 LOG(LOG_LEVEL_ERROR,
                     "Error starting X server on display %d", display);
                 LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting "
                     "to start the X server on display %d, aborting connection",
                     display);
-                
+
                 list_delete(xserver_params);
                 g_exit(1);
             }
@@ -843,7 +849,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 wait_for_xserver(display);
                 chansrv_pid = session_start_chansrv(s->username, display);
 
-                LOG(LOG_LEVEL_INFO, 
+                LOG(LOG_LEVEL_INFO,
                     "Session started successfully for user %s on display %d",
                     s->username, display);
 
@@ -851,7 +857,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                  * window manager. This is approximately how long the window
                  * manager was running for */
                 LOG(LOG_LEVEL_INFO, "Session in progress on display %d, waiting "
-                    "until the window manager (pid %d) exits to end the session", 
+                    "until the window manager (pid %d) exits to end the session",
                     display, window_manager_pid);
                 wm_wait_time = g_time1();
                 wm_exit_status = g_waitpid_status(window_manager_pid);
@@ -878,14 +884,14 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                         "was running for %d seconds.",
                         window_manager_pid, display, wm_wait_time);
                 }
-                LOG(LOG_LEVEL_INFO, 
+                LOG(LOG_LEVEL_INFO,
                     "Calling auth_stop_session and auth_end from pid %d",
                     g_getpid());
                 auth_stop_session(data);
                 auth_end(data);
 
                 LOG(LOG_LEVEL_INFO,
-                    "Terminating X server (pid %d) on display %d", 
+                    "Terminating X server (pid %d) on display %d",
                     display_pid, display);
                 g_sigterm(display_pid);
 
@@ -898,7 +904,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
                 LOG(LOG_LEVEL_INFO,
                     "X server on display %d (pid %d) returned exit code %d "
                     "and signal number %d",
-                    display, display_pid, xserver_exit_status.exit_code, 
+                    display, display_pid, xserver_exit_status.exit_code,
                     xserver_exit_status.signal_no);
 
                 chansrv_exit_status = g_waitpid_status(chansrv_pid);
@@ -987,7 +993,7 @@ session_reconnect_fork(int display, char *username, long data)
             /* should not get here */
             LOG(LOG_LEVEL_ERROR,
                 "Error starting session reconnection script on display %d: %s",
-                display, g_cfg->reconnect_sh);     
+                display, g_cfg->reconnect_sh);
         }
         else
         {
@@ -1008,10 +1014,9 @@ session_reconnect_fork(int display, char *username, long data)
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
 int
-session_start(long data, tui8 type, struct SCP_CONNECTION *c,
-              struct SCP_SESSION *s)
+session_start(long data, tui8 type, struct SCP_SESSION *s)
 {
-    return session_start_fork(data, type, c, s);
+    return session_start_fork(data, type, s);
 }
 
 /******************************************************************************/
@@ -1057,8 +1062,8 @@ session_kill(int pid)
         if (tmp->item->pid == pid)
         {
             /* deleting the session */
-            LOG(LOG_LEVEL_INFO, 
-                "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", 
+            LOG(LOG_LEVEL_INFO,
+                "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s",
                 tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
             g_free(tmp->item);
 

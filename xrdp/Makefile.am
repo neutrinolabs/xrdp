@@ -16,10 +16,6 @@ AM_CPPFLAGS = \
 
 XRDP_EXTRA_LIBS =
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 if XRDP_RFXCODEC
 AM_CPPFLAGS += -DXRDP_RFXCODEC
 AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include

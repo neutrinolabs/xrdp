@@ -34,6 +34,14 @@
 #include "xrdp_configure_options.h"
 #include "string_calls.h"
 
+/**
+ * Maximum number of short-lived connections to sesman
+ *
+ * At the moment, all connections to sesman are short-lived. This may change
+ * in the future
+ */
+#define MAX_SHORT_LIVED_CONNECTIONS 16
+
 struct sesman_startup_params
 {
     const char *sesman_ini;
@@ -44,12 +52,23 @@ struct sesman_startup_params
     int dump_config;
 };
 
-int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct config_sesman *g_cfg; /* defined in config.h */
 
 tintptr g_term_event = 0;
+
+/**
+ * Items stored on the g_con_list
+ */
+struct sesman_con
+{
+    struct trans *t;
+    struct SCP_SESSION *s;
+};
+
+static struct trans *g_list_trans = NULL;
+static struct list *g_con_list = NULL;
 
 /*****************************************************************************/
 /**
@@ -77,6 +96,54 @@ static int nocase_matches(const char *candidate, ...)
     va_end(vl);
     return result;
 }
+
+/**
+ * Allocates a sesman_con struct
+ *
+ * @param trans Pointer to  newly-allocated transport
+ * @return struct sesman_con pointer
+ */
+static struct sesman_con *
+alloc_connection(struct trans *t)
+{
+    struct sesman_con *result;
+    struct SCP_SESSION *s;
+
+    if ((result = g_new(struct sesman_con, 1)) != NULL)
+    {
+        if ((s = scp_session_create()) != NULL)
+        {
+            result->t = t;
+            result->s = s;
+            /* Ensure we can find the connection easily from a callback */
+            t->callback_data = (void *)result;
+        }
+        else
+        {
+            g_free(result);
+            result = NULL;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Deletes a sesman_con struct, freeing resources
+ *
+ * After this call, the passed-in pointer is invalid and must not be
+ * referenced.
+ *
+ * @param sc struct to de-allocate
+ */
+static void
+delete_connection(struct sesman_con *sc)
+{
+    trans_delete(sc->t);
+    scp_session_destroy(sc->s);
+    g_free(sc);
+}
+
 
 /*****************************************************************************/
 /**
@@ -187,6 +254,90 @@ static int sesman_listen_test(struct config_sesman *cfg)
 
     return rv;
 }
+
+/******************************************************************************/
+int
+sesman_close_all(void)
+{
+    int index;
+    struct sesman_con *sc;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "sesman_close_all:");
+    trans_delete(g_list_trans);
+    for (index = 0; index < g_con_list->count; index++)
+    {
+        sc = (struct sesman_con *) list_get_item(g_con_list, index);
+        delete_connection(sc);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+static int
+sesman_data_in(struct trans *self)
+{
+    int version;
+    int size;
+
+    if (self->extra_flags == 0)
+    {
+        in_uint32_be(self->in_s, version);
+        in_uint32_be(self->in_s, size);
+        if (size > self->in_s->size)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_data_in: bad message size");
+            return 1;
+        }
+        self->header_size = size;
+        self->extra_flags = 1;
+    }
+    else
+    {
+        /* process message */
+        struct sesman_con *sc = (struct sesman_con *)self->callback_data;
+        self->in_s->p = self->in_s->data;
+        if (scp_process(self, sc->s) != SCP_SERVER_STATE_OK)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
+            return 1;
+        }
+        /* reset for next message */
+        self->header_size = 8;
+        self->extra_flags = 0;
+        init_stream(self->in_s, 0); /* Reset input stream pointers */
+    }
+    return 0;
+}
+
+/******************************************************************************/
+static int
+sesman_listen_conn_in(struct trans *self, struct trans *new_self)
+{
+    struct sesman_con *sc;
+    if (g_con_list->count >= MAX_SHORT_LIVED_CONNECTIONS)
+    {
+        LOG(LOG_LEVEL_ERROR, "sesman_data_in: error, too many "
+            "connections, rejecting");
+        trans_delete(new_self);
+    }
+    else if ((sc = alloc_connection(new_self)) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "sesman_data_in: No memory to allocate "
+            "new connection");
+        trans_delete(new_self);
+    }
+    else
+    {
+        new_self->header_size = 8;
+        new_self->trans_data_in = sesman_data_in;
+        new_self->no_stream_init_on_data_in = 1;
+        new_self->extra_flags = 0;
+        list_add_item(g_con_list, (intptr_t) sc);
+    }
+
+    return 0;
+}
+
 /******************************************************************************/
 /**
  *
@@ -196,96 +347,124 @@ static int sesman_listen_test(struct config_sesman *cfg)
 static int
 sesman_main_loop(void)
 {
-    int in_sck;
     int error;
     int robjs_count;
+    int wobjs_count;
     int cont;
-    int rv = 0;
-    tbus sck_obj;
-    tbus robjs[8];
+    int timeout;
+    int index;
+    intptr_t robjs[32];
+    intptr_t wobjs[32];
+    struct sesman_con *scon;
 
-    g_sck = g_tcp_socket();
-    if (g_sck < 0)
+    g_con_list = list_create();
+    if (g_con_list == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "error opening socket, g_tcp_socket() failed...");
+        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: list_create failed");
+        return 1;
+    }
+    g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    if (g_list_trans == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: trans_create failed");
+        list_delete(g_con_list);
         return 1;
     }
 
-    g_tcp_set_non_blocking(g_sck);
-    error = scp_tcp_bind(g_sck, g_cfg->listen_address, g_cfg->listen_port);
-
-    if (error == 0)
+    LOG(LOG_LEVEL_DEBUG, "sesman_main_loop: address %s port %s",
+        g_cfg->listen_address, g_cfg->listen_port);
+    error = trans_listen_address(g_list_trans, g_cfg->listen_port,
+                                 g_cfg->listen_address);
+    if (error != 0)
     {
-        error = g_tcp_listen(g_sck);
-
-        if (error == 0)
+        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: trans_listen_address "
+            "failed");
+        trans_delete(g_list_trans);
+        list_delete(g_con_list);
+        return 1;
+    }
+    g_list_trans->trans_conn_in = sesman_listen_conn_in;
+    cont = 1;
+    while (cont)
+    {
+        timeout = -1;
+        robjs_count = 0;
+        robjs[robjs_count++] = g_term_event;
+        wobjs_count = 0;
+        for (index = 0; index < g_con_list->count; index++)
         {
-            LOG(LOG_LEVEL_INFO, "listening to port %s on %s",
-                g_cfg->listen_port, g_cfg->listen_address);
-            sck_obj = g_create_wait_obj_from_socket(g_sck, 0);
-            cont = 1;
-
-            while (cont)
+            scon = (struct sesman_con *)list_get_item(g_con_list, index);
+            if (scon != NULL)
             {
-                /* build the wait obj list */
-                robjs_count = 0;
-                robjs[robjs_count++] = sck_obj;
-                robjs[robjs_count++] = g_term_event;
-
-                /* wait */
-                if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
+                error = trans_get_wait_objs_rw(scon->t,
+                                               robjs, &robjs_count,
+                                               wobjs, &wobjs_count, &timeout);
+                if (error != 0)
                 {
-                    /* error, should not get here */
-                    g_sleep(100);
-                }
-
-                if (g_is_wait_obj_set(g_term_event)) /* term */
-                {
+                    LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                        "trans_get_wait_objs_rw failed");
                     break;
                 }
+            }
+        }
+        if (error != 0)
+        {
+            break;
+        }
+        error = trans_get_wait_objs_rw(g_list_trans, robjs, &robjs_count,
+                                       wobjs, &wobjs_count, &timeout);
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "trans_get_wait_objs_rw failed");
+            break;
+        }
 
-                if (g_is_wait_obj_set(sck_obj)) /* incoming connection */
+        error = g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout);
+        if (error != 0)
+        {
+            /* error, should not get here */
+            g_sleep(100);
+        }
+
+        if (g_is_wait_obj_set(g_term_event)) /* term */
+        {
+            break;
+        }
+
+        for (index = 0; index < g_con_list->count; index++)
+        {
+            scon = (struct sesman_con *)list_get_item(g_con_list, index);
+            if (scon != NULL)
+            {
+                error = trans_check_wait_objs(scon->t);
+                if (error != 0)
                 {
-                    in_sck = g_tcp_accept(g_sck);
-
-                    if ((in_sck == -1) && g_tcp_last_error_would_block(g_sck))
-                    {
-                        /* should not get here */
-                        g_sleep(100);
-                    }
-                    else if (in_sck == -1)
-                    {
-                        /* error, should not get here */
-                        break;
-                    }
-                    else
-                    {
-                        /* we've got a connection, so we pass it to scp code */
-                        LOG_DEVEL(LOG_LEVEL_DEBUG, "new connection");
-                        scp_process_start((void *)(tintptr)in_sck);
-                        g_sck_close(in_sck);
-                    }
+                    LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                        "trans_check_wait_objs failed, removing trans");
+                    delete_connection(scon);
+                    list_remove_item(g_con_list, index);
+                    index--;
+                    continue;
                 }
             }
-
-            g_delete_wait_obj_from_socket(sck_obj);
         }
-        else
+        error = trans_check_wait_objs(g_list_trans);
+        if (error != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "listen error %d (%s)",
-                g_get_errno(), g_get_strerror());
-            rv = 1;
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "trans_check_wait_objs failed");
+            break;
         }
     }
-    else
+    for (index = 0; index < g_con_list->count; index++)
     {
-        LOG(LOG_LEVEL_ERROR, "bind error on "
-            "port '%s': %d (%s)", g_cfg->listen_port,
-            g_get_errno(), g_get_strerror());
-        rv = 1;
+        scon = (struct sesman_con *) list_get_item(g_con_list, index);
+        delete_connection(scon);
     }
-    g_tcp_close(g_sck);
-    return rv;
+    list_delete(g_con_list);
+    trans_delete(g_list_trans);
+    return 0;
 }
 
 /*****************************************************************************/

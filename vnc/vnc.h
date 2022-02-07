@@ -18,6 +18,9 @@
  * libvnc
  */
 
+#ifndef VNC_H
+#define VNC_H
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -58,6 +61,9 @@ enum vnc_resize_status
 
 struct source_info;
 
+/* Defined in vnc_clip.c */
+struct vnc_clipboard_data;
+
 struct vnc
 {
     int size; /* size of this struct */
@@ -78,9 +84,9 @@ struct vnc
     int (*mod_suppress_output)(struct vnc *v, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct vnc *v,
-                               int width, int height);
+                                     int width, int height);
     int (*mod_server_monitor_full_invalidate)(struct vnc *v,
-                               int width, int height);
+            int width, int height);
     int (*mod_server_version_message)(struct vnc *v);
     tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                   functions above */
@@ -125,7 +131,8 @@ struct vnc
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct vnc *v);
-    tintptr server_dumby[100 - 25]; /* align, 100 minus the number of server
+    int (*server_chansrv_in_use)(struct vnc *v);
+    tintptr server_dumby[100 - 26]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -148,7 +155,7 @@ struct vnc
     int shift_state; /* 0 up, 1 down */
     int keylayout;
     int clip_chanid;
-    struct stream *clip_data_s;
+    struct vnc_clipboard_data *vc;
     int delay_ms;
     struct trans *trans;
     int got_guid;
@@ -159,3 +166,13 @@ struct vnc
     struct vnc_screen_layout client_layout;
     enum vnc_resize_status resize_status;
 };
+
+/*
+ * Functions
+ */
+int
+lib_send_copy(struct vnc *v, struct stream *s);
+int
+skip_trans_bytes(struct trans *trans, unsigned int bytes);
+
+#endif /* VNC_H */

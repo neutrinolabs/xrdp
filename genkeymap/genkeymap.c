@@ -44,7 +44,7 @@
 #include <X11/XKBlib.h>
 #include <locale.h>
 
-extern int xfree86_to_evdev[137-8+1];
+extern int xfree86_to_evdev[137 - 8 + 1];
 
 int main(int argc, char **argv)
 {
@@ -52,7 +52,8 @@ int main(int argc, char **argv)
     char text[256];
     char *displayname = NULL;
     char *outfname;
-    const char *sections[8] = {
+    const char *sections[8] =
+    {
         "noshift", "shift", "altgr", "shiftaltgr",
         "capslock", "capslockaltgr", "shiftcapslock", "shiftcapslockaltgr"
     };
@@ -139,9 +140,13 @@ int main(int argc, char **argv)
         for (i = 8; i < 137; i++) /* Keycodes */
         {
             if (is_evdev)
-                e.keycode = xfree86_to_evdev[i-8];
+            {
+                e.keycode = xfree86_to_evdev[i - 8];
+            }
             else
+            {
                 e.keycode = i;
+            }
             nbytes = XLookupString(&e, text, 255, &ks, NULL);
             text[nbytes] = 0;
             char_count = mbstowcs(wtext, text, 255);

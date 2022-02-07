@@ -76,9 +76,9 @@ struct state_close;
 
 /* functions that are invoked from devredir */
 void xfuse_devredir_cb_enum_dir_add_entry(
-                                 struct state_dirscan *fip,
-                                 const char *name,
-                                 const struct file_attr *fattr);
+    struct state_dirscan *fip,
+    const char *name,
+    const struct file_attr *fattr);
 void xfuse_devredir_cb_enum_dir_done(struct state_dirscan *fip,
                                      enum NTSTATUS IoStatus);
 
@@ -101,10 +101,10 @@ void xfuse_devredir_cb_read_file(struct state_read *fip,
                                  enum NTSTATUS IoStatus,
                                  const char *buf, size_t length);
 void xfuse_devredir_cb_write_file(
-                                 struct state_write *fip,
-                                 enum NTSTATUS IoStatus,
-                                 off_t offset,
-                                 size_t length);
+    struct state_write *fip,
+    enum NTSTATUS IoStatus,
+    off_t offset,
+    size_t length);
 
 void xfuse_devredir_cb_rmdir_or_file(struct state_remove *fip,
                                      enum NTSTATUS IoStatus);

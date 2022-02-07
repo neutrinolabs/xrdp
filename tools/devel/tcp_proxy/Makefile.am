@@ -2,10 +2,6 @@
 AM_CPPFLAGS = \
   -I$(top_srcdir)/common
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 noinst_PROGRAMS = \
   tcp_proxy
 

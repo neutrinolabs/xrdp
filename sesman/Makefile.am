@@ -11,10 +11,6 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/sesman/libscp
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 if SESMAN_BSD
 AUTH_C = verify_user_bsd.c
 AUTH_LIB =

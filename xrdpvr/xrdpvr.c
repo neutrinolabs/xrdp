@@ -216,19 +216,19 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
     {
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type ==
-                                                     CODEC_TYPE_VIDEO &&
-            g_psi.p_format_ctx->streams[i]->codec->codec_id ==
-                                                     CODEC_ID_H264 &&
-            g_video_index < 0)
+                CODEC_TYPE_VIDEO &&
+                g_psi.p_format_ctx->streams[i]->codec->codec_id ==
+                CODEC_ID_H264 &&
+                g_video_index < 0)
         {
             g_video_index = i;
         }
 
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type ==
-                                                     CODEC_TYPE_AUDIO &&
-            g_psi.p_format_ctx->streams[i]->codec->codec_id ==
-                                                     CODEC_ID_AAC &&
-            g_audio_index < 0)
+                CODEC_TYPE_AUDIO &&
+                g_psi.p_format_ctx->streams[i]->codec->codec_id ==
+                CODEC_ID_AAC &&
+                g_audio_index < 0)
         {
             g_audio_index = i;
         }
@@ -252,7 +252,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
 
     /* find decoder for audio stream */
     g_psi.p_audio_codec =
-           avcodec_find_decoder(g_psi.p_audio_codec_ctx->codec_id);
+        avcodec_find_decoder(g_psi.p_audio_codec_ctx->codec_id);
 
     if (g_psi.p_audio_codec == NULL)
     {
@@ -261,7 +261,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
 
     /* find decoder for video stream */
     g_psi.p_video_codec =
-             avcodec_find_decoder(g_psi.p_video_codec_ctx->codec_id);
+        avcodec_find_decoder(g_psi.p_video_codec_ctx->codec_id);
 
     if (g_psi.p_video_codec == NULL)
     {
@@ -337,7 +337,9 @@ xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame, int *delay_in_us)
     //printf("xrdpvr_get_frame:\n");
     /* alloc an AVPacket */
     if ((av_pkt = (AVPacket *) malloc(sizeof(AVPacket))) == NULL)
+    {
         return -1;
+    }
 
     /* read one frame into AVPacket */
     if (av_read_frame(g_psi.p_format_ctx, av_pkt) < 0)
@@ -491,7 +493,7 @@ xrdpvr_play_frame(void *channel, int stream_id, int *videoTimeout,
         bsfc = g_psi.bsfc;
         while (bsfc != 0)
         {
-            new_pkt= av_pkt;
+            new_pkt = av_pkt;
             error = av_bitstream_filter_filter(bsfc, g_psi.p_video_codec_ctx, 0,
                                                &new_pkt.data, &new_pkt.size,
                                                av_pkt.data, av_pkt.size,
@@ -552,11 +554,11 @@ xrdpvr_seek_media(int64_t pos, int backward)
 
     seek_target = av_rescale_q(pos * AV_TIME_BASE,
                                AV_TIME_BASE_Q,
-                      g_psi.p_format_ctx->streams[g_video_index]->time_base);
+                               g_psi.p_format_ctx->streams[g_video_index]->time_base);
 
 
     if (av_seek_frame(g_psi.p_format_ctx, g_video_index, seek_target,
-                     seek_flag) < 0)
+                      seek_flag) < 0)
     {
         printf("media seek error\n");
         return -1;
@@ -801,7 +803,7 @@ xrdpvr_create_metadata_file(void *channel, char *filename)
     int     len;
     int     fd;
 
-    if ((fd = open(filename , O_RDONLY)) < 0)
+    if ((fd = open(filename, O_RDONLY)) < 0)
     {
         return -1;
     }

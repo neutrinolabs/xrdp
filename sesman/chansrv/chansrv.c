@@ -365,23 +365,23 @@ process_message_channel_setup(struct stream *s)
         LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
                   "id %d flags %8.8x", ci->name, ci->id, ci->flags);
 
-        if (g_strcasecmp(ci->name, "cliprdr") == 0)
+        if (g_strcasecmp(ci->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
         {
             g_cliprdr_index = g_num_chan_items;
             g_cliprdr_chan_id = ci->id;
         }
-        else if (g_strcasecmp(ci->name, "rdpsnd") == 0)
+        else if (g_strcasecmp(ci->name, RDPSND_SVC_CHANNEL_NAME) == 0)
         {
             g_rdpsnd_index = g_num_chan_items;
             g_rdpsnd_chan_id = ci->id;
         }
-        else if (g_strcasecmp(ci->name, "rdpdr") == 0)
+        else if (g_strcasecmp(ci->name, RDPDR_SVC_CHANNEL_NAME) == 0)
         {
             g_rdpdr_index = g_num_chan_items;
             g_rdpdr_chan_id = ci->id;
         }
         /* disabled for now */
-        else if (g_strcasecmp(ci->name, "rail") == 0)
+        else if (g_strcasecmp(ci->name, RAIL_SVC_CHANNEL_NAME) == 0)
         {
             g_rail_index = g_num_chan_items;
             g_rail_chan_id = ci->id;

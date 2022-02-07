@@ -11,10 +11,6 @@ AM_CPPFLAGS = \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/common
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 CHANSRV_EXTRA_LIBS =
 
 if XRDP_FUSE

@@ -32,7 +32,7 @@
 /* client API */
 /* 001 */
 enum SCP_CLIENT_STATES_E
-scp_v1c_mng_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+scp_v1c_mng_connect(struct trans *t, struct SCP_SESSION *s);
 
 /* 004 * /
 enum SCP_CLIENT_STATES_E
@@ -49,7 +49,7 @@ scp_v1c_pwd_change_cancel(struct SCP_CONNECTION* c);
 
 /* 041 */
 enum SCP_CLIENT_STATES_E
-scp_v1c_mng_get_session_list(struct SCP_CONNECTION* c, int* scount,
-                         struct SCP_DISCONNECTED_SESSION** s);
+scp_v1c_mng_get_session_list(struct trans *t, int *scount,
+                             struct SCP_DISCONNECTED_SESSION **s);
 
 #endif

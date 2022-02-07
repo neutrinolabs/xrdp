@@ -63,6 +63,12 @@ ssl_protocols=TLSv1.2, TLSv1.3
 ; for example when the server is multi homed with SSSd
 #domain_user_separator=@
 
+; The following options will override the keyboard layout settings.
+; These options are for DEBUG and are not recommended for regular use.
+#xrdp.override_keyboard_type=0x04
+#xrdp.override_keyboard_subtype=0x01
+#xrdp.override_keylayout=0x00000409
+
 ; Section name to use for automatic login if the client sends username
 ; and password. If empty, the domain name sent by the client is used.
 ; If empty and no domain name is given, the first suitable section in
@@ -111,6 +117,12 @@ grey=dedede
 ls_top_window_bg_color=009cb5
 
 ; width and height of login screen
+;
+; The default height allows for about 5 fields to be comfortably displayed
+; above the buttons at the bottom. To display more fields, make <ls_height>
+; larger, and also increase <ls_btn_ok_y_pos> and <ls_btn_cancel_y_pos>
+; below
+;
 ls_width=350
 ls_height=430
 
@@ -160,7 +172,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [LoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #xrdp.c=INFO
 #main()=INFO
 
@@ -216,6 +229,9 @@ port=-1
 ; display number of the session
 #chansrvport=DISPLAY(0)
 
+; Generic VNC Proxy
+; Tailor this to specific hosts and VNC instances by specifying an ip
+; and port and setting a suitable name.
 [vnc-any]
 name=vnc-any
 lib=libvnc.@lib_extension@
@@ -228,16 +244,54 @@ password=ask
 #pamsessionmng=127.0.0.1
 #delay_ms=2000
 
+; Generic RDP proxy using NeutrinoRDP
+; Tailor this to specific hosts by specifying an ip and port and setting
+; a suitable name.
 [neutrinordp-any]
 name=neutrinordp-any
+; To use this section, you should build xrdp with configure option
+; --enable-neutrinordp.
 lib=libxrdpneutrinordp.@lib_extension@
 ip=ask
 port=ask3389
 username=ask
 password=ask
+; Uncomment the following lines to enable PAM authentication for proxy
+; connections.
+#pamusername=ask
+#pampassword=ask
+#pamsessionmng=127.0.0.1
 ; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
 ; this line if you're using a client which does.
 #enable_dynamic_resizing=false
+; By default, performance settings requested by the RDP client are ignored
+; and chosen by NeutrinoRDP. Uncomment this line to allow the user to
+; select performance settings in the RDP client.
+#perf.allow_client_experiencesettings=true
+; Override any experience setting by uncommenting one or more of the
+; following lines.
+#perf.wallpaper=false
+#perf.font_smoothing=false
+#perf.desktop_composition=false
+#perf.full_window_drag=false
+#perf.menu_anims=false
+#perf.themes=false
+#perf.cursor_blink=false
+; By default NeutrinoRDP supports cursor shadows. If this is giving
+; you problems (e.g. cursor is a black rectangle) try disabling cursor
+; shadows by uncommenting the following line.
+#perf.cursor_shadow=false
+; By default, NeutrinoRDP uses the keyboard layout of the remote RDP Server.
+; If you want to tell the remote the keyboard layout of the RDP Client,
+; by uncommenting the following line.
+#neutrinordp.allow_client_keyboardLayout=true
+; The following options will override the remote keyboard layout settings.
+; These options are for DEBUG and are not recommended for regular use.
+#neutrinordp.override_keyboardLayout_mask=0x0000FFFF
+#neutrinordp.override_kbd_type=0x04
+#neutrinordp.override_kbd_subtype=0x01
+#neutrinordp.override_kbd_fn_keys=12
+#neutrinordp.override_kbd_layout=0x00000409
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true

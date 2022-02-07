@@ -29,7 +29,27 @@
 
 #include "libscp_commands_mng.h"
 
-#define SCP_CMD_LOGIN        0x0001
-#define SCP_CMD_CONN_ERROR   0xFFFF
+/* Message numbers
+ * SCP_CMD_* are client to server, SCP_REPLY_* are server to client */
+
+/* Login sequence */
+#define SCP_CMD_LOGIN                   1
+#define SCP_REPLY_LOGIN_DENIED          2
+#define SCP_REPLY_REREQUEST_CREDS       3
+#define SCP_CMD_RESEND_CREDS            4
+#define SCP_REPLY_CHANGE_PASSWD        20
+#define SCP_REPLY_NEW_SESSION          30
+#define SCP_REPLY_USER_SESSIONS_EXIST  40
+
+/* List sessions */
+#define SCP_CMD_GET_SESSION_LIST       41
+#define SCP_REPLY_SESSIONS_INFO        42
+#define SCP_CMD_SELECT_SESSION         43
+#define SCP_CMD_SELECT_SESSION_CANCEL  44
+
+/* Other */
+#define SCP_CMD_FORCE_NEW_CONN         45
+#define SCP_REPLY_SESSION_RECONNECTED  46
+#define SCP_REPLY_CMD_CONN_ERROR       0xFFFF
 
 #endif

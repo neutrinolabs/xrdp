@@ -45,6 +45,14 @@
 # For each directory in the command line, process all subdirectories recursively.
 --recursive
 
+# Exclude git submodule directories and generated files.
+--exclude=libpainter
+--exclude=librfxcodec
+--exclude=xrdp_configure_options.h
+
+# ignore errors from generated files that do not exist
+--ignore-exclude-errors
+
 # Preserve the original file's date and time modified.
 --preserve-date
 
@@ -53,4 +61,3 @@
 --formatted
 
 --lineend=linux
-
