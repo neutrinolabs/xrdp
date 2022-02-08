@@ -22,7 +22,8 @@
 
 /*
  * build instructions:
- *     gcc simple.c -o simple -L./.libs -lxrdpapi
+ *     gcc simple.c -o simple -I.. -I../common -L./.libs -L../common/.libs \
+ *                            -DHAVE_CONFIG_H -lxrdpapi -lcommon
  */
 
 #if defined(HAVE_CONFIG_H)
@@ -34,6 +35,8 @@
 #endif
 
 #include "xrdpapi.h"
+#include "log.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -47,25 +50,35 @@ int run_tsmf_test(void);
 int
 main(int argc, char **argv)
 {
-    if (argc < 2)
+    int result;
+    struct log_config *lc;
+
+    if ((lc = log_config_init_for_console(LOG_LEVEL_DEBUG, NULL)) != NULL)
     {
-        printf("usage: simple <echo|tsmf>\n");
-        return 1;
+        log_start_from_param(lc);
     }
 
-    if (strcasecmp(argv[1], "echo") == 0)
+    if (argc > 1 && strcasecmp(argv[1], "echo") == 0)
     {
-        return run_echo_test();
+        result = run_echo_test();
     }
-    else if (strcasecmp(argv[1], "tsmf") == 0)
+    else if (argc > 1 && strcasecmp(argv[1], "tsmf") == 0)
     {
-        return run_tsmf_test();
+        result = run_tsmf_test();
     }
     else
     {
         printf("usage: simple <echo|tsmf>\n");
-        return 1;
+        result = 1;
     }
+
+    if (lc != NULL)
+    {
+        log_config_free(lc);
+        log_end();
+    }
+
+    return result;
 }
 
 /**
