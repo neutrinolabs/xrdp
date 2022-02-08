@@ -48,7 +48,7 @@ fi
 
 # Any options/directories specified?
 if [ $# -eq 0 ]; then
-    set -- .
+    set -- -j 2 .
 fi
 
 # Display the cppcheck version and command for debugging
