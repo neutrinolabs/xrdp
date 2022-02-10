@@ -122,12 +122,16 @@ sig_sesman_session_end(int sig)
         return;
     }
 
-    pid = g_waitchild();
-
-    if (pid > 0)
+    do
     {
-        session_kill(pid);
+        pid = g_waitchild();
+
+        if (pid > 0)
+        {
+            session_kill(pid);
+        }
     }
+    while (pid >= 0);
 }
 
 /******************************************************************************/
