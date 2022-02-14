@@ -22,11 +22,11 @@
 #endif
 
 #include "arch.h"
-#include "libscp.h"
-#include "parse.h"
+#include "trans.h"
 #include "log.h"
-#include "libscp.h"
+#include "os_calls.h"
 #include "string_calls.h"
+#include "tools_common.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -37,23 +37,20 @@ char cmnd[257];
 char serv[257];
 char port[257];
 
-void cmndList(struct trans *t);
-void cmndKill(struct trans *t, struct SCP_SESSION *s);
-void cmndHelp(void);
+static int cmndList(struct trans *t);
+static int cmndKill(struct trans *t);
+static void cmndHelp(void);
 
-int inputSession(struct SCP_SESSION *s);
-unsigned int menuSelect(unsigned int choices);
 
 int main(int argc, char **argv)
 {
-    struct SCP_SESSION *s;
     struct trans *t;
-    enum SCP_CLIENT_STATES_E e;
     //int end;
     int idx;
     //int sel;
     char *pwd;
     struct log_config *logging;
+    int rv = 1;
 
     user[0] = '\0';
     pass[0] = '\0';
@@ -116,56 +113,34 @@ int main(int argc, char **argv)
         pwd = getpass("password:");
         g_strncpy(pass, pwd, 256);
 
-        /* zeroing the password */
-        while ((*pwd) != '\0')
-        {
-            (*pwd) = 0x00;
-            pwd++;
-        }
     }
 
-    scp_init();
-
-    s = scp_session_create();
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "Connecting to %s:%s)", serv, port);
-    t = scp_connect(serv, port, NULL, NULL, NULL);
+    t = scp_connect(serv, port, NULL);
 
 
     if (t == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "scp_connect() error");
-        return 1;
     }
-
-    scp_session_set_type(s, SCP_SESSION_TYPE_MANAGE);
-    scp_session_set_version(s, 1);
-    scp_session_set_username(s, user);
-    scp_session_set_password(s, pass);
-
-    e = scp_v1c_mng_connect(t, s);
-
-    if (SCP_CLIENT_STATE_OK != e)
+    else if (0 == g_strncmp(cmnd, "list", 5))
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "libscp error connecting: %s %d", s->errstr, (int)e);
-    }
-
-    if (0 == g_strncmp(cmnd, "list", 5))
-    {
-        cmndList(t);
+        rv = cmndList(t);
     }
     else if (0 == g_strncmp(cmnd, "kill:", 5))
     {
-        cmndKill(t, s);
+        rv = cmndKill(t);
     }
 
-    scp_session_destroy(s);
+    g_memset(pass, '\0', sizeof(pass));
+
     trans_delete(t);
     log_end();
 
-    return 0;
+    return rv;
 }
 
-void cmndHelp(void)
+static void
+cmndHelp(void)
 {
     fprintf(stderr, "sesadmin - a console sesman administration tool\n");
     fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");
@@ -180,50 +155,93 @@ void cmndHelp(void)
 }
 
 static void
-print_session(const struct SCP_DISCONNECTED_SESSION *s)
+print_session(const struct scp_session_info *s)
 {
-    printf("Session ID: %d\n", s->SID);
-    printf("\tSession type: %d\n", s->type);
+    printf("Session ID: %d\n", s->sid);
+    printf("\tDisplay: :%u\n", s->display);
+    printf("\tUser: %s\n", s->username);
+    printf("\tSession type: %s\n", SCP_SESSION_TYPE_TO_STR(s->type));
     printf("\tScreen size: %dx%d, color depth %d\n",
            s->width, s->height, s->bpp);
-    printf("\tIdle time: %d day(s) %d hour(s) %d minute(s)\n",
-           s->idle_days, s->idle_hours, s->idle_minutes);
-    printf("\tConnected: %04d/%02d/%02d %02d:%02d\n",
-           s->conn_year, s->conn_month, s->conn_day, s->conn_hour,
-           s->conn_minute);
+    printf("\tStarted: %s", ctime(&s->start_time));
+    if (s->connection_description[0] != '\0')
+    {
+        printf("\tConnection Description: %s\n", s->connection_description);
+    }
 }
 
-void cmndList(struct trans *t)
+static int
+cmndList(struct trans *t)
 {
-    struct SCP_DISCONNECTED_SESSION *dsl;
-    enum SCP_CLIENT_STATES_E e;
-    int scnt;
-    int idx;
+    struct list *sessions = list_create();
+    int end_of_list = 0;
 
-    e = scp_v1c_mng_get_session_list(t, &scnt, &dsl);
+    enum scp_list_sessions_status status;
+    struct scp_session_info *p;
 
-    if (e != SCP_CLIENT_STATE_LIST_OK)
+    int rv = scp_send_list_sessions_request(t, user, pass);
+
+    sessions->auto_free = 1;
+
+    while (rv == 0 && !end_of_list)
     {
-        printf("Error getting session list.\n");
-        return;
+        rv = wait_for_sesman_reply(t, E_SCP_LIST_SESSIONS_RESPONSE);
+        if (rv != 0)
+        {
+            break;
+        }
+
+        rv = scp_get_list_sessions_response(t, &status, &p);
+        if (rv != 0)
+        {
+            break;
+        }
+
+        switch (status)
+        {
+            case E_SCP_LS_AUTHENTICATION_FAIL:
+                printf("Connection denied (authentication error)\n");
+                rv = 1;
+                break;
+
+            case E_SCP_LS_SESSION_INFO:
+                list_add_item(sessions, (tintptr)p);
+                break;
+
+            case E_SCP_LS_END_OF_LIST:
+                end_of_list = 1;
+                break;
+
+            default:
+                printf("Unexpected return code %d\n", status);
+                rv = 1;
+        }
+        scp_msg_in_reset(t);
     }
 
-    if (scnt > 0)
+    if (rv == 0)
     {
-        for (idx = 0; idx < scnt; idx++)
+        if (sessions->count == 0)
         {
-            print_session(&dsl[idx]);
+            printf("No sessions.\n");
+        }
+        else
+        {
+            int i;
+            for (i = 0 ; i < sessions->count; ++i)
+            {
+                print_session((struct scp_session_info *)sessions->items[i]);
+            }
         }
     }
-    else
-    {
-        printf("No sessions.\n");
-    }
 
-    g_free(dsl);
+    list_delete(sessions);
+    return rv;
 }
 
-void cmndKill(struct trans *t, struct SCP_SESSION *s)
+static int
+cmndKill(struct trans *t)
 {
-
+    fprintf(stderr, "not yet implemented\n");
+    return 1;
 }
