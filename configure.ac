@@ -484,6 +484,7 @@ AC_CONFIG_FILES([
   instfiles/pulse/Makefile
   instfiles/rc.d/Makefile
   keygen/Makefile
+  libipm/Makefile
   libxrdp/Makefile
   Makefile
   mc/Makefile

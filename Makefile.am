@@ -45,6 +45,7 @@ SUBDIRS = \
   xup \
   mc \
   $(NEUTRINORDPDIR) \
+  libipm \
   libxrdp \
   $(PAINTERDIR) \
   $(RFXCODECDIR) \
