@@ -36,7 +36,6 @@
 #include "os_calls.h"
 #include "config.h"
 #include "log.h"
-#include "tcp.h"
 #include "string_calls.h"
 #include "guid.h"
 

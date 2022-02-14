@@ -22,7 +22,6 @@
 #endif
 
 #include "arch.h"
-#include "tcp.h"
 #include "libscp.h"
 #include "parse.h"
 #include "log.h"
