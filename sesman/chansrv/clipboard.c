@@ -1334,7 +1334,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
         return 0;
     }
     index = 0;
-    while (s_check(s))
+    while (s_check_rem(s, 2))
     {
         in_uint16_le(s, wchr);
         wtext[index] = wchr;
