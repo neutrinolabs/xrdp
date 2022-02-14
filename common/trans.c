@@ -120,6 +120,12 @@ trans_delete(struct trans *self)
         return;
     }
 
+    /* Call the user-specified destructor if one exists */
+    if (self->extra_destructor != NULL)
+    {
+        self->extra_destructor(self);
+    }
+
     free_stream(self->in_s);
     free_stream(self->out_s);
 
