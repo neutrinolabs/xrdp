@@ -39,8 +39,6 @@
 #include "access.h"
 #include "scp.h"
 
-#include "libscp.h"
-
 /* Globals */
 extern struct config_sesman *g_cfg;
 extern unsigned char g_fixedkey[8];

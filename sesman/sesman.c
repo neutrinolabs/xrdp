@@ -33,6 +33,9 @@
 #include "sesman.h"
 #include "xrdp_configure_options.h"
 #include "string_calls.h"
+#include "trans.h"
+
+#include "scp_process.h"
 
 /**
  * Maximum number of short-lived connections to sesman
@@ -64,7 +67,6 @@ tintptr g_reload_event = 0;
 struct sesman_con
 {
     struct trans *t;
-    struct SCP_SESSION *s;
 };
 
 static struct trans *g_list_trans;
@@ -108,22 +110,10 @@ static struct sesman_con *
 alloc_connection(struct trans *t)
 {
     struct sesman_con *result;
-    struct SCP_SESSION *s;
 
     if ((result = g_new(struct sesman_con, 1)) != NULL)
     {
-        if ((s = scp_session_create()) != NULL)
-        {
-            result->t = t;
-            result->s = s;
-            /* Ensure we can find the connection easily from a callback */
-            t->callback_data = (void *)result;
-        }
-        else
-        {
-            g_free(result);
-            result = NULL;
-        }
+        result->t = t;
     }
 
     return result;
@@ -141,7 +131,6 @@ static void
 delete_connection(struct sesman_con *sc)
 {
     trans_delete(sc->t);
-    scp_session_destroy(sc->s);
     g_free(sc);
 }
 
@@ -232,7 +221,7 @@ static int sesman_listen_test(struct config_sesman *cfg)
     LOG(LOG_LEVEL_DEBUG, "Testing if xrdp-sesman can listen on %s port %s.",
         cfg->listen_address, cfg->listen_port);
     g_tcp_set_non_blocking(sck);
-    error = scp_tcp_bind(sck, cfg->listen_address, cfg->listen_port);
+    error = g_tcp_bind_address(sck, cfg->listen_port, cfg->listen_address);
     if (error == 0)
     {
         /* try to listen */
@@ -277,39 +266,21 @@ sesman_close_all(void)
 static int
 sesman_data_in(struct trans *self)
 {
-#define HEADER_SIZE 8
-    int version;
-    int size;
+    int rv;
+    int available;
 
-    if (self->extra_flags == 0)
+    rv = scp_msg_in_check_available(self, &available);
+
+    if (rv == 0 && available)
     {
-        in_uint32_be(self->in_s, version);
-        in_uint32_be(self->in_s, size);
-        if (size < HEADER_SIZE || size > self->in_s->size)
-        {
-            LOG(LOG_LEVEL_ERROR, "sesman_data_in: bad message size %d", size);
-            return 1;
-        }
-        self->header_size = size;
-        self->extra_flags = 1;
-    }
-    else
-    {
-        /* process message */
-        struct sesman_con *sc = (struct sesman_con *)self->callback_data;
-        self->in_s->p = self->in_s->data;
-        if (scp_process(self, sc->s) != SCP_SERVER_STATE_OK)
+        if ((rv = scp_process(self)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
-            return 1;
         }
-        /* reset for next message */
-        self->header_size = HEADER_SIZE;
-        self->extra_flags = 0;
-        init_stream(self->in_s, 0); /* Reset input stream pointers */
+        scp_msg_in_reset(self);
     }
-    return 0;
-#undef HEADER_SIZE
+
+    return rv;
 }
 
 /******************************************************************************/
@@ -323,7 +294,8 @@ sesman_listen_conn_in(struct trans *self, struct trans *new_self)
             "connections, rejecting");
         trans_delete(new_self);
     }
-    else if ((sc = alloc_connection(new_self)) == NULL)
+    else if ((sc = alloc_connection(new_self)) == NULL ||
+             scp_init_trans(new_self) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "sesman_data_in: No memory to allocate "
             "new connection");
@@ -331,10 +303,8 @@ sesman_listen_conn_in(struct trans *self, struct trans *new_self)
     }
     else
     {
-        new_self->header_size = 8;
+        new_self->callback_data = (void *)sc;
         new_self->trans_data_in = sesman_data_in;
-        new_self->no_stream_init_on_data_in = 1;
-        new_self->extra_flags = 0;
         list_add_item(g_con_list, (intptr_t) sc);
     }
 
@@ -774,10 +744,6 @@ main(int argc, char **argv)
         {
         }
     }
-
-    /* libscp initialization */
-    scp_init();
-
 
     if (daemon)
     {

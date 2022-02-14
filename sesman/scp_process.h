@@ -18,28 +18,24 @@
 
 /**
  *
- * @file scp.h
- * @brief scp (sesman control protocol) common definitions
+ * @file scp_process.h
+ * @brief scp (sesman control protocol) handler function
  * @author Simone Fedele
  *
  */
 
-#ifndef SCP_H
-#define SCP_H
+#ifndef SCP_PROCESS_H
+#define SCP_PROCESS_H
 
-#include "scp_v0.h"
-#include "scp_v1.h"
-#include "scp_v1_mng.h"
+struct trans;
 
 /**
  *
- * @brief Starts a an scp protocol thread.
- *        Starts a an scp protocol thread.
- *        But does only version control....
- * @param atrans the connection trans
+ * @brief Processes an SCP message
+ * @param t the connection trans
  *
  */
-enum SCP_SERVER_STATES_E
-scp_process(struct trans *t, struct SCP_SESSION *s);
+int
+scp_process(struct trans *t);
 
 #endif

@@ -28,12 +28,10 @@
 #ifndef SESSION_H
 #define SESSION_H
 
-#include "libscp_types.h"
-#include "guid.h"
+#include <time.h>
 
-#define SESMAN_SESSION_TYPE_XRDP      1
-#define SESMAN_SESSION_TYPE_XVNC      2
-#define SESMAN_SESSION_TYPE_XORG      3
+#include "guid.h"
+#include "scp_application_types.h"
 
 #define SESMAN_SESSION_STATUS_ACTIVE        0x01
 #define SESMAN_SESSION_STATUS_IDLE          0x02
@@ -43,20 +41,14 @@
 */
 #define SESMAN_SESSION_STATUS_ALL           0xFF
 
-#define SESMAN_SESSION_KILL_OK        0
-#define SESMAN_SESSION_KILL_NULLITEM  1
-#define SESMAN_SESSION_KILL_NOTFOUND  2
-
-struct session_date
+enum session_kill_status
 {
-    tui16 year;
-    tui8  month;
-    tui8  day;
-    tui8  hour;
-    tui8  minute;
+    SESMAN_SESSION_KILL_OK = 0,
+    SESMAN_SESSION_KILL_NULLITEM,
+    SESMAN_SESSION_KILL_NOTFOUND
 };
 
-#define zero_time(s) { (s)->year=0; (s)->month=0; (s)->day=0; (s)->hour=0; (s)->minute=0; }
+struct scp_session_info;
 
 struct session_item
 {
@@ -70,12 +62,12 @@ struct session_item
 
     /* status info */
     unsigned char status;
-    unsigned char type;
+    enum scp_session_type type;
 
     /* time data  */
-    struct session_date connect_time;
-    struct session_date disconnect_time;
-    struct session_date idle_time;
+    time_t start_time;
+    // struct session_date disconnect_time; // Currently unused
+    // struct session_date idle_time; // Currently unused
     char connection_description[256];
     struct guid guid;
 };
@@ -86,6 +78,22 @@ struct session_chain
     struct session_item *item;
 };
 
+
+/**
+ * Information used to start or find a session
+ */
+struct session_parameters
+{
+    enum scp_session_type type;
+    unsigned short height;
+    unsigned short width;
+    unsigned char  bpp;
+    const char *username;
+    const char *shell;
+    const char *directory;
+    const char *connection_description;
+};
+
 /**
  *
  * @brief finds a session matching the supplied parameters
@@ -93,10 +101,9 @@ struct session_chain
  *
  */
 struct session_item *
-session_get_bydata(const char *name, int width, int height, int bpp, int type,
-                   const char *connection_description);
+session_get_bydata(const struct session_parameters *params);
 #ifndef session_find_item
-#define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
+#define session_find_item(a) session_get_bydata(a)
 #endif
 
 /**
@@ -106,10 +113,12 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
  *
  */
 int
-session_start(long data, tui8 type, struct SCP_SESSION *s);
+session_start(long authdata,
+              const struct session_parameters *params,
+              struct guid *guid);
 
 int
-session_reconnect(int display, char *username, long data);
+session_reconnect(int display, const char *username, long data);
 
 /**
  *
@@ -118,7 +127,7 @@ session_reconnect(int display, char *username, long data);
  * @return
  *
  */
-int
+enum session_kill_status
 session_kill(int pid);
 
 /**
@@ -142,13 +151,24 @@ session_get_bypid(int pid);
 
 /**
  *
- * @brief retrieves a session's descriptor
- * @param pid the session pid
- * @return a pointer to the session descriptor on success, NULL otherwise
+ * @brief retrieves session descriptions
+ * @param user the user for the sessions
+ * @return A block of session descriptions
+ *
+ * Pass the return result to free_session_info_list() after use
  *
  */
-struct SCP_DISCONNECTED_SESSION *
-session_get_byuser(const char *user, int *cnt, unsigned char flags);
+struct scp_session_info *
+session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags);
+
+/**
+ *
+ * @brief Frees the result of session_get_byuser()
+ * @param sesslist Resuit of session_get_byuser()
+ * @param cnt  Number of entries in sess
+ */
+void
+free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt);
 
 /**
  *
@@ -157,4 +177,15 @@ session_get_byuser(const char *user, int *cnt, unsigned char flags);
  * @return non-zero value (number of errors) if failed
  */
 int cleanup_sockets(int display);
+
+/**
+ * Clone a session_parameters structure
+ *
+ * @param sp Parameters to clone
+ * @return Cloned parameters, or NULL if no memory
+ *
+ * The cloned structure can be free'd with a single call to g_free()
+ */
+struct session_parameters *
+clone_session_params(const struct session_parameters *sp);
 #endif
