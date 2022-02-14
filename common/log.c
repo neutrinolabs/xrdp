@@ -495,6 +495,11 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
 {
     int i;
 
+    if (src == NULL || dest == NULL)
+    {
+        return;
+    }
+
     dest->enable_syslog = src->enable_syslog;
     dest->fd = src->fd;
     dest->log_file = g_strdup(src->log_file);
@@ -508,6 +513,21 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
     dest->console_level = src->console_level;
     dest->enable_pid = src->enable_pid;
     dest->dump_on_start = src->dump_on_start;
+
+    if (src->per_logger_level == NULL)
+    {
+        return;
+    }
+    if (dest->per_logger_level == NULL)
+    {
+        dest->per_logger_level = list_create();
+        if (dest->per_logger_level == NULL)
+        {
+            return;
+        }
+        dest->per_logger_level->auto_free = 1;
+    }
+
     for (i = 0; i < src->per_logger_level->count; ++i)
     {
         struct log_logger_level *dst_logger =
