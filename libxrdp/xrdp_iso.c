@@ -428,7 +428,8 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
             out_uint16_le(s, 8);                          /* length (must be 8) */
             out_uint32_le(s, self->selectedProtocol);     /* selectedProtocol */
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding structure [MS-RDPBCGR] RDP_NEG_RSP "
-                      "flags 0, length 8, selectedProtocol 0x%8.8x",
+                      "flags 0x%02x, length 8, selectedProtocol 0x%8.8x",
+                      EXTENDED_CLIENT_DATA_SUPPORTED,
                       self->selectedProtocol);
         }
     }

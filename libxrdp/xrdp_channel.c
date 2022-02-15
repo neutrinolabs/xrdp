@@ -923,7 +923,7 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CLOSE "
               "cbId %d, Sp 0, Cmd 0x%2.2x, ChannelId %d",
-              cbChId, CMD_DVC_OPEN_CHANNEL, ChId);
+              cbChId, CMD_DVC_CLOSE_CHANNEL, ChId);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {
