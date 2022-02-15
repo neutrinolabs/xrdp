@@ -131,7 +131,7 @@ sig_sesman_session_end(int sig)
             session_kill(pid);
         }
     }
-    while (pid >= 0);
+    while (pid > 0);
 }
 
 /******************************************************************************/
