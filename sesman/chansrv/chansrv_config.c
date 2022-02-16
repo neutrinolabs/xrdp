@@ -341,7 +341,7 @@ config_dump(struct config_chansrv *config)
                          clip_restrict_map, ',', buf, sizeof(buf));
         g_writeln("    RestrictOutboundClipboard: %s", buf);
     }
-    g_writeln("    RestrictInboundClipboard:  %s", buf);
+
     if (config->restrict_inbound_clipboard == CLIP_RESTRICT_NONE)
     {
         g_writeln("    RestrictInboundClipboard:  %s", "none");
