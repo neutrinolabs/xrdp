@@ -163,7 +163,7 @@ xrdp_shutdown(int sig)
 static void
 xrdp_child(int sig)
 {
-    while (g_waitchild() >= 0)
+    while (g_waitchild() > 0)
     {
     }
 }
