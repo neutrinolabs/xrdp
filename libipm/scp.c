@@ -159,16 +159,18 @@ scp_msg_in_start(struct trans *trans)
 int
 scp_send_gateway_request(struct trans *trans,
                          const char *username,
-                         const char *password)
+                         const char *password,
+                         const char *connection_description)
 {
     int rv;
 
     rv = libipm_msg_out_simple_send(
              trans,
              (int)E_SCP_GATEWAY_REQUEST,
-             "ss",
+             "sss",
              username,
-             password);
+             password,
+             connection_description);
 
     /* Wipe the output buffer to remove the password */
     libipm_msg_out_erase(trans);
@@ -181,12 +183,14 @@ scp_send_gateway_request(struct trans *trans,
 int
 scp_get_gateway_request(struct trans *trans,
                         const char **username,
-                        const char **password)
+                        const char **password,
+                        const char **connection_description)
 {
     /* Make sure the buffer is cleared after processing this message */
     libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
 
-    return libipm_msg_in_parse(trans, "ss", username, password);
+    return libipm_msg_in_parse(trans, "sss", username, password,
+                               connection_description);
 }
 
 /*****************************************************************************/

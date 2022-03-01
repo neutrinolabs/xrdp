@@ -228,7 +228,9 @@ xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                     "sending login info to session manager, please wait...");
 
-    return scp_send_gateway_request(self->pam_auth_trans, username, password);
+    return scp_send_gateway_request(
+               self->pam_auth_trans, username, password,
+               self->wm->client_info->connection_description);
 }
 
 /*****************************************************************************/

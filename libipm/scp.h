@@ -150,6 +150,7 @@ scp_msg_in_reset(struct trans *trans);
  * @param trans SCP transport
  * @param username Username
  * @param password Password
+ * @param connection_description Description of the connection
  * @return != 0 for error
  *
  * Server replies with E_SCP_GATEWAY_RESPONSE
@@ -157,7 +158,8 @@ scp_msg_in_reset(struct trans *trans);
 int
 scp_send_gateway_request(struct trans *trans,
                          const char *username,
-                         const char *password);
+                         const char *password,
+                         const char *connection_description);
 
 /**
  * Parse an incoming E_SCP_GATEWAY_REQUEST message (SCP server)
@@ -165,12 +167,14 @@ scp_send_gateway_request(struct trans *trans,
  * @param trans SCP transport
  * @param[out] username Username
  * @param[out] password Password
+ * @param[out] connection_description Description of the connection
  * @return != 0 for error
  */
 int
 scp_get_gateway_request(struct trans *trans,
                         const char **username,
-                        const char **password);
+                        const char **password,
+                        const char **connection_description);
 
 /**
  * Send an E_SCP_GATEWAY_RESPONSE (SCP server)

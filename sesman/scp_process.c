@@ -37,6 +37,33 @@
 #include "auth.h"
 #include "session.h"
 
+/**************************************************************************//**
+ * Logs an authentication failure message
+ *
+ * @param username Username
+ * @param connection_description Connection details
+ *
+ * The message is intended for use by fail2ban. Make changes with care.
+ */
+static void
+log_authfail_message(const char *username, const char *connection_description)
+{
+    char ip[64];
+    const char *ipp;
+    if (connection_description != NULL &&
+            connection_description[0] != '\0')
+    {
+        g_get_ip_from_description(connection_description, ip, sizeof(ip));
+        ipp = ip;
+    }
+    else
+    {
+        ipp = "unknown";
+    }
+    LOG(LOG_LEVEL_INFO, "AUTHFAIL: user=%s ip=%s time=%d",
+        username, ipp, g_time1());
+}
+
 /******************************************************************************/
 
 static int
@@ -45,8 +72,11 @@ process_gateway_request(struct trans *trans)
     int rv;
     const char *username;
     const char *password;
+    const char *connection_description;
 
-    if ((rv = scp_get_gateway_request(trans, &username, &password)) == 0)
+    rv = scp_get_gateway_request(trans, &username, &password,
+                                 &connection_description);
+    if (rv == 0)
     {
         int errorcode = 0;
         tbus data;
@@ -73,9 +103,7 @@ process_gateway_request(struct trans *trans)
         }
         else
         {
-            /* g_writeln("username or password error"); */
-            LOG(LOG_LEVEL_INFO, "Username or password error for user: %s",
-                username);
+            log_authfail_message(username, connection_description);
         }
         rv = scp_send_gateway_response(trans, errorcode);
         auth_end(data);
@@ -168,16 +196,7 @@ process_create_session_request(struct trans *trans)
         }
         else
         {
-            char ip[64];
-            g_get_ip_from_description(sp.connection_description,
-                                      ip, sizeof(ip));
-            /*
-             * The message is intended for use by fail2ban, so for
-             * future-proofing we only log the IP address rather than the
-             * connection description */
-            LOG(LOG_LEVEL_INFO,
-                "AUTHFAIL: user=%s ip=%s time=%d",
-                sp.username, ip, g_time1());
+            log_authfail_message(sp.username, sp.connection_description);
         }
 
         if (do_auth_end)
