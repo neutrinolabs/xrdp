@@ -589,6 +589,17 @@ g_sck_local_socket(void)
 
 /*****************************************************************************/
 int
+g_sck_local_socketpair(int sck[2])
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return socketpair(PF_LOCAL, SOCK_STREAM, 0, sck);
+#endif
+}
+
+/*****************************************************************************/
+int
 g_sck_vsock_socket(void)
 {
 #if defined(XRDP_ENABLE_VSOCK)
