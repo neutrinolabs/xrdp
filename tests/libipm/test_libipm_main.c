@@ -63,8 +63,6 @@ suite_test_libipm_calls_start(void)
         enum libipm_status init1;
         enum libipm_status init2;
 
-        g_sck_set_non_blocking(sck[1]);
-
         t1->sck = sck[0];
         t1->type1 = TRANS_TYPE_CLIENT;
         t1->status = TRANS_STATUS_UP;

@@ -86,6 +86,8 @@ libipm_init_trans(struct trans *trans,
         trans->extra_data = priv;
         trans->extra_destructor = libipm_trans_destructor;
 
+        g_sck_set_non_blocking(trans->sck);
+
         libipm_msg_in_reset(trans);
 
         rv = E_LI_SUCCESS;
