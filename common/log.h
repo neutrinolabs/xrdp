@@ -162,6 +162,7 @@ enum logReturns
 
 #endif
 
+#ifdef LOG_PER_LOGGER_LEVEL
 enum log_logger_type
 {
     LOG_TYPE_FILE = 0,
@@ -174,6 +175,7 @@ struct log_logger_level
     enum log_logger_type logger_type;
     char logger_name[LOGGER_NAME_SIZE + 1];
 };
+#endif
 
 struct log_config
 {
@@ -185,11 +187,15 @@ struct log_config
     enum logLevels console_level;
     int enable_syslog;
     enum logLevels syslog_level;
+#ifdef LOG_PER_LOGGER_LEVEL
     struct list *per_logger_level;
+#endif
     int dump_on_start;
     int enable_pid;
+#ifdef LOG_ENABLE_THREAD
     pthread_mutex_t log_lock;
     pthread_mutexattr_t log_lock_attr;
+#endif
 };
 
 /* internal functions, only used in log.c if this ifdef is defined.*/

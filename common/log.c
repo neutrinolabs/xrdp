@@ -470,6 +470,7 @@ internalInitAndAllocStruct(void)
     {
         ret->fd = -1;
         ret->enable_syslog = 0;
+#ifdef LOG_PER_LOGGER_LEVEL
         ret->per_logger_level = list_create();
         if (ret->per_logger_level != NULL)
         {
@@ -481,6 +482,7 @@ internalInitAndAllocStruct(void)
             g_free(ret);
             ret = NULL;
         }
+#endif
     }
     else
     {
@@ -493,8 +495,6 @@ internalInitAndAllocStruct(void)
 void
 internal_log_config_copy(struct log_config *dest, const struct log_config *src)
 {
-    int i;
-
     if (src == NULL || dest == NULL)
     {
         return;
@@ -504,8 +504,10 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
     dest->fd = src->fd;
     dest->log_file = g_strdup(src->log_file);
     dest->log_level = src->log_level;
+#ifdef ENABLE_THREAD
     dest->log_lock = src->log_lock;
     dest->log_lock_attr = src->log_lock_attr;
+#endif
     dest->program_name = src->program_name;
     dest->enable_syslog = src->enable_syslog;
     dest->syslog_level = src->syslog_level;
@@ -514,6 +516,7 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
     dest->enable_pid = src->enable_pid;
     dest->dump_on_start = src->dump_on_start;
 
+#ifdef LOG_PER_LOGGER_LEVEL
     if (src->per_logger_level == NULL)
     {
         return;
@@ -528,6 +531,8 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
         dest->per_logger_level->auto_free = 1;
     }
 
+    int i;
+
     for (i = 0; i < src->per_logger_level->count; ++i)
     {
         struct log_logger_level *dst_logger =
@@ -539,6 +544,7 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
 
         list_add_item(dest->per_logger_level, (tbus) dst_logger);
     }
+#endif
 }
 
 bool_t
@@ -591,6 +597,7 @@ internal_log_location_overrides_level(const char *function_name,
                                       const char *file_name,
                                       enum logLevels *log_level_return)
 {
+#ifdef LOG_PER_LOGGER_LEVEL
     struct log_logger_level *logger = NULL;
     int i;
 
@@ -611,6 +618,7 @@ internal_log_location_overrides_level(const char *function_name,
             return 1;
         }
     }
+#endif
 
     return 0;
 }
@@ -682,11 +690,13 @@ log_config_free(struct log_config *config)
 {
     if (config != NULL)
     {
+#ifdef LOG_PER_LOGGER_LEVEL
         if (config->per_logger_level != NULL)
         {
             list_delete(config->per_logger_level);
             config->per_logger_level = NULL;
         }
+#endif
 
         if (0 != config->log_file)
         {
