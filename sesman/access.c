@@ -31,8 +31,6 @@
 #include "sesman.h"
 #include "string_calls.h"
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 /******************************************************************************/
 int
 access_login_allowed(const char *user)

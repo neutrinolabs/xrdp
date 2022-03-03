@@ -41,6 +41,13 @@
 
 #include "libscp.h"
 
+/* Globals */
+extern struct config_sesman *g_cfg;
+extern unsigned char g_fixedkey[8];
+extern tintptr g_term_event;
+extern int g_pid;
+
+
 /*
  * Close all file descriptors used by sesman.
  *

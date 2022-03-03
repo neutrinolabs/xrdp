@@ -47,8 +47,6 @@
 #define PR_SET_NO_NEW_PRIVS 38
 #endif
 
-extern unsigned char g_fixedkey[8];
-extern struct config_sesman *g_cfg; /* in sesman.c */
 struct session_chain *g_sessions;
 int g_session_count;
 

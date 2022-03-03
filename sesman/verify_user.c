@@ -42,8 +42,6 @@
 #define SECS_PER_DAY (24L*3600L)
 #endif
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 static int
 auth_crypt_pwd(const char *pwd, const char *pln, char *crp);
 
