@@ -627,8 +627,9 @@ main(int argc, char **argv)
     }
 
     /* starting logging subsystem */
-    log_error = log_start(startup_params.sesman_ini, "xrdp-sesman",
-                          startup_params.dump_config);
+    log_error = log_start(
+                    startup_params.sesman_ini, "xrdp-sesman",
+                    (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
 
     if (log_error != LOG_STARTUP_OK)
     {

@@ -538,7 +538,7 @@ main(int argc, char **argv)
 
     /* starting logging subsystem */
     error = log_start(startup_params.xrdp_ini, "xrdp",
-                      startup_params.dump_config);
+                      (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
 
     if (error != LOG_STARTUP_OK)
     {

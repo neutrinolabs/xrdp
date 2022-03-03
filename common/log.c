@@ -224,7 +224,7 @@ internal_log_end(struct log_config *l_cfg)
 }
 
 /**
- * Converts a string representing th log level to a value
+ * Converts a string representing the log level to a value
  * @param buf
  * @return
  */
@@ -492,35 +492,21 @@ internalInitAndAllocStruct(void)
     return ret;
 }
 
-void
-internal_log_config_copy(struct log_config *dest, const struct log_config *src)
-{
-    if (src == NULL || dest == NULL)
-    {
-        return;
-    }
+/**
+ * Copies logging levels only from one log_config structure to another
+ **/
 
-    dest->enable_syslog = src->enable_syslog;
-    dest->fd = src->fd;
-    dest->log_file = g_strdup(src->log_file);
+static void
+internal_log_config_copy_levels(struct log_config *dest,
+                                const struct log_config *src)
+{
     dest->log_level = src->log_level;
-#ifdef ENABLE_THREAD
-    dest->log_lock = src->log_lock;
-    dest->log_lock_attr = src->log_lock_attr;
-#endif
-    dest->program_name = src->program_name;
     dest->enable_syslog = src->enable_syslog;
     dest->syslog_level = src->syslog_level;
     dest->enable_console = src->enable_console;
     dest->console_level = src->console_level;
-    dest->enable_pid = src->enable_pid;
-    dest->dump_on_start = src->dump_on_start;
 
 #ifdef LOG_PER_LOGGER_LEVEL
-    if (src->per_logger_level == NULL)
-    {
-        return;
-    }
     if (dest->per_logger_level == NULL)
     {
         dest->per_logger_level = list_create();
@@ -530,6 +516,15 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
         }
         dest->per_logger_level->auto_free = 1;
     }
+    else
+    {
+        list_clear(dest->per_logger_level);
+    }
+
+    if (src->per_logger_level == NULL)
+    {
+        return;
+    }
 
     int i;
 
@@ -538,13 +533,31 @@ internal_log_config_copy(struct log_config *dest, const struct log_config *src)
         struct log_logger_level *dst_logger =
             (struct log_logger_level *)g_malloc(sizeof(struct log_logger_level), 1);
 
-        g_memcpy(dst_logger,
-                 (struct log_logger_level *) list_get_item(src->per_logger_level, i),
-                 sizeof(struct log_logger_level));
+        *dst_logger = *(struct log_logger_level *) list_get_item(src->per_logger_level, i),
 
-        list_add_item(dest->per_logger_level, (tbus) dst_logger);
+         list_add_item(dest->per_logger_level, (tbus) dst_logger);
     }
 #endif
+}
+
+void
+internal_log_config_copy(struct log_config *dest, const struct log_config *src)
+{
+    if (src != NULL && dest != NULL)
+    {
+        dest->fd = src->fd;
+        g_free(dest->log_file);
+        dest->log_file = g_strdup(src->log_file);
+#ifdef LOG_ENABLE_THREAD
+        dest->log_lock = src->log_lock;
+        dest->log_lock_attr = src->log_lock_attr;
+#endif
+        dest->program_name = src->program_name;
+        dest->enable_pid = src->enable_pid;
+        dest->dump_on_start = src->dump_on_start;
+
+        internal_log_config_copy_levels(dest, src);
+    }
 }
 
 bool_t
@@ -710,6 +723,62 @@ log_config_free(struct log_config *config)
     return LOG_STARTUP_OK;
 }
 
+/**
+ * Restarts the logging.
+ *
+ * The logging file is never changed, as it is common in xrdp to share a
+ * log file between parents and children. The end result would be
+ * confusing for the user.
+ */
+static enum logReturns
+log_restart_from_param(const struct log_config *lc)
+{
+    enum logReturns rv = LOG_GENERAL_ERROR;
+
+    if (g_staticLogConfig == NULL)
+    {
+        log_message(LOG_LEVEL_ALWAYS, "Log not already initialized");
+    }
+    else if (lc == NULL)
+    {
+        g_writeln("lc to log_start_from_param is NULL");
+    }
+    else
+    {
+        if (g_staticLogConfig->fd >= 0 &&
+                g_strcmp(g_staticLogConfig->log_file, lc->log_file) != 0)
+        {
+            log_message(LOG_LEVEL_WARNING,
+                        "Unable to change log file name from %s to %s",
+                        g_staticLogConfig->log_file,
+                        lc->log_file);
+        }
+        /* Reconfigure syslog logging, allowing for a program_name change */
+        if (g_staticLogConfig->enable_syslog)
+        {
+            closelog();
+        }
+        if (lc->enable_syslog)
+        {
+            openlog(lc->program_name, LOG_CONS | LOG_PID, LOG_DAEMON);
+        }
+
+        /* Copy over simple values... */
+#ifdef LOG_ENABLE_THREAD
+        g_staticLogConfig->log_lock = lc->log_lock;
+        g_staticLogConfig->log_lock_attr = lc->log_lock_attr;
+#endif
+        g_staticLogConfig->program_name = lc->program_name;
+        g_staticLogConfig->enable_pid = lc->enable_pid;
+        g_staticLogConfig->dump_on_start = lc->dump_on_start;
+
+        /* ... and the log levels */
+        internal_log_config_copy_levels(g_staticLogConfig, lc);
+        rv = LOG_STARTUP_OK;
+    }
+    return rv;
+}
+
 enum logReturns
 log_start_from_param(const struct log_config *src_log_config)
 {
@@ -758,7 +827,7 @@ log_start_from_param(const struct log_config *src_log_config)
  */
 enum logReturns
 log_start(const char *iniFile, const char *applicationName,
-          bool_t dump_on_start)
+          unsigned int flags)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
     struct log_config *config;
@@ -767,14 +836,24 @@ log_start(const char *iniFile, const char *applicationName,
 
     if (config != NULL)
     {
-        config->dump_on_start = dump_on_start;
-        ret = log_start_from_param(config);
-        log_config_free(config);
-
-        if (ret != LOG_STARTUP_OK)
+        config->dump_on_start = (flags & LOG_START_DUMP_CONFIG) ? 1 : 0;
+        if (flags & LOG_START_RESTART)
         {
-            g_writeln("Could not start log");
+            ret = log_restart_from_param(config);
+            if (ret != LOG_STARTUP_OK)
+            {
+                g_writeln("Could not restart log");
+            }
         }
+        else
+        {
+            ret = log_start_from_param(config);
+            if (ret != LOG_STARTUP_OK)
+            {
+                g_writeln("Could not start log");
+            }
+        }
+        log_config_free(config);
     }
     else
     {
@@ -824,7 +903,7 @@ log_hexdump_with_location(const char *function_name,
 {
     char *dump_buffer;
     enum logReturns rv = LOG_STARTUP_OK;
-    enum logLevels override_log_level;
+    enum logLevels override_log_level = LOG_LEVEL_NEVER;
     bool_t override_destination_level = 0;
 
     override_destination_level = internal_log_location_overrides_level(
