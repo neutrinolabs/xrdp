@@ -311,6 +311,30 @@ enum mm_connect_state
     MMCS_DONE
 };
 
+enum display_resize_state
+{
+    WMRZ_ENCODER_DELETE = 0,
+    WMRZ_SERVER_MONITOR_RESIZE,
+    WMRZ_SERVER_VERSION_MESSAGE,
+    WMRZ_XRDP_CORE_RESIZE,
+    WMRZ_ENCODER_CREATE,
+    WMRZ_SERVER_INVALIDATE,
+    WMRZ_COMPLETE,
+    WMRZ_ERROR
+};
+
+#define XRDP_DISPLAY_RESIZE_STATE_TO_STR(status) \
+    ((status) == WMRZ_ENCODER_DELETE ? "WMRZ_ENCODER_DELETE" : \
+     (status) == WMRZ_SERVER_MONITOR_RESIZE ? "WMRZ_SERVER_MONITOR_RESIZE" : \
+     (status) == WMRZ_SERVER_VERSION_MESSAGE ? "WMRZ_SERVER_VERSION_MESSAGE" : \
+     (status) == WMRZ_XRDP_CORE_RESIZE ? "WMRZ_XRDP_CORE_RESIZE" : \
+     (status) == WMRZ_ENCODER_CREATE ? "WMRZ_ENCODER_CREATE" : \
+     (status) == WMRZ_SERVER_INVALIDATE ? "WMRZ_SERVER_INVALIDATE" : \
+     (status) == WMRZ_COMPLETE ? "WMRZ_COMPLETE" : \
+     (status) == WMRZ_ERROR ? "WMRZ_ERROR" : \
+     "unknown" \
+    )
+
 struct xrdp_mm
 {
     struct xrdp_wm *wm; /* owner */
@@ -344,6 +368,11 @@ struct xrdp_mm
     int cs2xr_cid_map[256];
     int xr2cr_cid_map[256];
     int dynamic_monitor_chanid;
+
+    /* Resize on-the-fly control */
+    struct display_control_monitor_layout_data *resize_data;
+    struct list *resize_queue;
+    tbus resize_ready;
 };
 
 struct xrdp_key_info

@@ -28,10 +28,12 @@
 #include "string_calls.h"
 
 static int
-send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int height, int bpp);
+send_server_monitor_resize(
+    struct mod *mod, struct stream *s, int width, int height, int bpp);
 
 static int
-send_server_monitor_full_invalidate(struct mod *mod, struct stream *s, int width, int height);
+send_server_monitor_full_invalidate(
+    struct mod *mod, struct stream *s, int width, int height);
 
 static int
 send_server_version_message(struct mod *v, struct stream *s);
@@ -154,10 +156,15 @@ lib_mod_connect(struct mod *mod)
     mod->server_msg(mod, "started connecting", 0);
 
     /* only support 8, 15, 16, 24, and 32 bpp connections from rdp client */
-    if (mod->bpp != 8 && mod->bpp != 15 && mod->bpp != 16 && mod->bpp != 24 && mod->bpp != 32)
+    if (mod->bpp != 8
+            && mod->bpp != 15
+            && mod->bpp != 16
+            && mod->bpp != 24
+            && mod->bpp != 32)
     {
         mod->server_msg(mod,
-                        "error - only supporting 8, 15, 16, 24, and 32 bpp rdp connections", 0);
+                        "error - only supporting 8, 15, 16, 24, and 32"
+                        " bpp rdp connections", 0);
         return 1;
     }
 
@@ -220,12 +227,14 @@ lib_mod_connect(struct mod *mod)
     if (error == 0)
     {
         /* send screen size message */
-        error = send_server_monitor_resize(mod, s, mod->width, mod->height, mod->bpp);
+        error = send_server_monitor_resize(
+                    mod, s, mod->width, mod->height, mod->bpp);
     }
 
     if (error == 0)
     {
-        error = send_server_monitor_full_invalidate(mod, s, mod->width, mod->height);
+        error = send_server_monitor_full_invalidate(
+                    mod, s, mod->width, mod->height);
     }
 
     free_stream(s);
@@ -1261,7 +1270,8 @@ send_server_version_message(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
-send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int height, int bpp)
+send_server_monitor_resize(
+    struct mod *mod, struct stream *s, int width, int height, int bpp)
 {
     /* send screen size message */
     init_stream(s, 8192);
@@ -1271,8 +1281,9 @@ send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int hei
     out_uint32_le(s, width);
     out_uint32_le(s, height);
     /*
-        TODO: The bpp here is only necessary for initial creation. We should modify XUP to require this
-        only on server initialization, but not on resize. Microsoft's RDP protocol does not support changing
+        TODO: The bpp here is only necessary for initial creation. We should
+        modify XUP to require this only on server initialization, but not on
+        resize. Microsoft's RDP protocol does not support changing
         the bpp on resize.
     */
     out_uint32_le(s, bpp);
@@ -1282,14 +1293,16 @@ send_server_monitor_resize(struct mod *mod, struct stream *s, int width, int hei
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
     int rv = lib_send_copy(mod, s);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_resize: sent resize message with following properties to xorgxrdp backend "
-              "width=%d, height=%d, bpp=%d, return value=%d",
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_resize:"
+              " sent resize message with following properties to"
+              " xorgxrdp backend width=%d, height=%d, bpp=%d, return value=%d",
               width, height, bpp, rv);
     return rv;
 }
 
 static int
-send_server_monitor_full_invalidate(struct mod *mod, struct stream *s, int width, int height)
+send_server_monitor_full_invalidate(
+    struct mod *mod, struct stream *s, int width, int height)
 {
     /* send invalidate message */
     init_stream(s, 8192);
@@ -1309,8 +1322,10 @@ send_server_monitor_full_invalidate(struct mod *mod, struct stream *s, int width
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
     int rv = lib_send_copy(mod, s);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_full_invalidate: sent invalidate message with following properties to xorgxrdp backend "
-              "width=%d, height=%d, return value=%d",
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_full_invalidate:"
+              " sent invalidate message with following"
+              " properties to xorgxrdp backend"
+              " width=%d, height=%d, return value=%d",
               width, height, rv);
     return rv;
 }
@@ -1456,7 +1471,8 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             rv = process_server_paint_rect_shmem_ex(mod, s);
             break;
         default:
-            LOG_DEVEL(LOG_LEVEL_WARNING, "lib_mod_process_orders: unknown order type %d", type);
+            LOG_DEVEL(LOG_LEVEL_WARNING,
+                      "lib_mod_process_orders: unknown order type %d", type);
             rv = 0;
             break;
     }
@@ -1523,7 +1539,8 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
         }
         else if (type == 2) /* caps */
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: type 2 len %d", len);
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "lib_mod_process_message: type 2 len %d", len);
             for (index = 0; index < num_orders; index++)
             {
                 phold = s->p;
@@ -1533,7 +1550,9 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                 switch (type)
                 {
                     default:
-                        LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: unknown cap type %d len %d",
+                        LOG_DEVEL(LOG_LEVEL_TRACE,
+                                  "lib_mod_process_message: unknown"
+                                  " cap type %d len %d",
                                   type, len);
                         break;
                 }
@@ -1661,7 +1680,8 @@ lib_mod_check_wait_objs(struct mod *mod)
 int
 lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 {
-    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id);
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id);
     send_paint_rect_ex_ack(amod, flags, frame_id);
     return 0;
 }
@@ -1672,7 +1692,8 @@ int
 lib_mod_suppress_output(struct mod *amod, int suppress,
                         int left, int top, int right, int bottom)
 {
-    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_suppress_output: suppress 0x%8.8x left %d top %d "
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "lib_mod_suppress_output: suppress 0x%8.8x left %d top %d "
               "right %d bottom %d", suppress, left, top, right, bottom);
     send_suppress_output(amod, suppress, left, top, right, bottom);
     return 0;
@@ -1699,7 +1720,8 @@ mod_init(void)
     mod->mod_frame_ack = lib_mod_frame_ack;
     mod->mod_suppress_output = lib_mod_suppress_output;
     mod->mod_server_monitor_resize = lib_send_server_monitor_resize;
-    mod->mod_server_monitor_full_invalidate = lib_send_server_monitor_full_invalidate;
+    mod->mod_server_monitor_full_invalidate
+        = lib_send_server_monitor_full_invalidate;
     mod->mod_server_version_message = lib_send_server_version_message;
     return (tintptr) mod;
 }
