@@ -43,8 +43,6 @@
 #define SECS_PER_DAY (24L*3600L)
 #endif
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 /******************************************************************************/
 /* returns boolean */
 long

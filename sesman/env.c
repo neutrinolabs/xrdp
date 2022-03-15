@@ -36,9 +36,6 @@
 #include "ssl_calls.h"
 #include "string_calls.h"
 
-extern unsigned char g_fixedkey[8]; /* in sesman.c */
-extern struct config_sesman *g_cfg;  /* in sesman.c */
-
 /******************************************************************************/
 int
 env_check_password_file(const char *filename, const char *passwd)

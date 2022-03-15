@@ -29,37 +29,18 @@
 
 /**
  *
- * @brief Shutdown signal code
- * @param sig The received signal
- *
- */
-void
-sig_sesman_shutdown(int sig);
-
-/**
- *
  * @brief SIGHUP handling code
- * @param sig The received signal
  *
  */
 void
-sig_sesman_reload_cfg(int sig);
+sig_sesman_reload_cfg(void);
 
 /**
  *
  * @brief SIGCHLD handling code
- * @param sig The received signal
  *
  */
 void
-sig_sesman_session_end(int sig);
-
-/**
- *
- * @brief signal handling thread
- *
- */
-void *
-sig_handler_thread(void *arg);
+sig_sesman_session_end(void);
 
 #endif
