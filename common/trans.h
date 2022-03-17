@@ -108,6 +108,9 @@ struct trans
     char port[256];
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
+    void *extra_data; /* user defined */
+    void (*extra_destructor)(struct trans *); /* user defined */
+
     struct ssl_tls *tls;
     const char *ssl_protocol; /* e.g. TLSv1, TLSv1.1, TLSv1.2, unknown */
     const char *cipher_name;  /* e.g. AES256-GCM-SHA384 */

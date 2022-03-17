@@ -18,18 +18,24 @@
 
 /**
  *
- * @file scp_v0.h
- * @brief scp version 0 declarations
+ * @file scp_process.h
+ * @brief scp (sesman control protocol) handler function
  * @author Simone Fedele
  *
  */
 
-#ifndef SCP_V0_H
-#define SCP_V0_H
+#ifndef SCP_PROCESS_H
+#define SCP_PROCESS_H
 
-#include "libscp.h"
+struct trans;
 
-enum SCP_SERVER_STATES_E
-scp_v0_process(struct trans *t, struct SCP_SESSION *s);
+/**
+ *
+ * @brief Processes an SCP message
+ * @param t the connection trans
+ *
+ */
+int
+scp_process(struct trans *t);
 
 #endif

@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/sesman/libscp
+  -I$(top_srcdir)/libipm
 
 if SESMAN_BSD
 AUTH_C = verify_user_bsd.c
@@ -45,14 +45,8 @@ xrdp_sesman_SOURCES = \
   config.h \
   env.c \
   env.h \
-  scp.c \
-  scp.h \
-  scp_v0.c \
-  scp_v0.h \
-  scp_v1.c \
-  scp_v1.h \
-  scp_v1_mng.c \
-  scp_v1_mng.h \
+  scp_process.c \
+  scp_process.h \
   sesman.c \
   sesman.h \
   session.c \
@@ -64,8 +58,8 @@ xrdp_sesman_SOURCES = \
   $(AUTH_C)
 
 xrdp_sesman_LDADD = \
+  $(top_builddir)/libipm/libipm.la \
   $(top_builddir)/common/libcommon.la \
-  $(top_builddir)/sesman/libscp/libscp.la \
   $(AUTH_LIB) \
   -lpthread
 
@@ -90,6 +84,5 @@ dist_sesmansysconf_SCRIPTS = \
   reconnectwm.sh
 
 SUBDIRS = \
-  libscp \
   tools \
   chansrv

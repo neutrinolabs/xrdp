@@ -28,7 +28,7 @@
 #include "ms-rdpedisp.h"
 #include "ms-rdpbcgr.h"
 
-#include "libscp_connection.h"
+#include "scp.h"
 
 #ifdef USE_PAM
 #if defined(HAVE__PAM_TYPES_H)
@@ -225,23 +225,12 @@ static int
 xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
                            const char *password)
 {
-    int rv = 0;
-    enum SCP_CLIENT_STATES_E e;
-
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                     "sending login info to session manager, please wait...");
 
-    e = scp_v0c_gateway_request(self->pam_auth_trans, username, password);
-
-    if (e != SCP_CLIENT_STATE_OK)
-    {
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
-                        "Error sending gateway login request to sesman [%s]",
-                        scp_client_state_to_str(e));
-        rv = 1;
-    }
-
-    return rv;
+    return scp_send_gateway_request(
+               self->pam_auth_trans, username, password,
+               self->wm->client_info->connection_description);
 }
 
 /*****************************************************************************/
@@ -249,7 +238,6 @@ xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
 static int
 xrdp_mm_send_login(struct xrdp_mm *self)
 {
-    enum SCP_CLIENT_STATES_E e;
     int rv = 0;
     int xserverbpp;
     const char *username;
@@ -271,44 +259,48 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     }
     else
     {
-        const char *domain;
-
+        enum scp_session_type type;
         /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
         self->code = xrdp_mm_get_value_int(self, "code", 0);
-
-        xserverbpp = xrdp_mm_get_value_int(self, "xserverbpp",
-                                           self->wm->screen->bpp);
-
-        domain = self->wm->client_info->domain;
-        /* Don't send domains starting with '_' - see
-         * xrdp_login_wnd.c:xrdp_wm_parse_domain_information()
-         */
-        if (domain[0] == '_')
+        switch (self->code)
         {
-            domain = "";
+            case 0:
+                type = SCP_SESSION_TYPE_XVNC;
+                break;
+
+            case 10:
+                type = SCP_SESSION_TYPE_XRDP;
+                break;
+
+            case 20:
+                type = SCP_SESSION_TYPE_XORG;
+                break;
+
+            default:
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                "Unrecognised session code %d", self->code);
+                rv = 1;
         }
 
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
-                        "sending login info to session manager. "
-                        "Please wait...");
-        e = scp_v0c_create_session_request(self->sesman_trans,
-                                           username,
-                                           password,
-                                           self->code,
-                                           self->wm->screen->width,
-                                           self->wm->screen->height,
-                                           xserverbpp,
-                                           domain,
-                                           self->wm->client_info->program,
-                                           self->wm->client_info->directory,
-                                           self->wm->client_info->connection_description);
-
-        if (e != SCP_CLIENT_STATE_OK)
+        if (rv == 0)
         {
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
-                            "Error sending create session to sesman [%s]",
-                            scp_client_state_to_str(e));
-            rv = 1;
+            xserverbpp = xrdp_mm_get_value_int(self, "xserverbpp",
+                                               self->wm->screen->bpp);
+
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                            "sending login info to session manager. "
+                            "Please wait...");
+            rv = scp_send_create_session_request(
+                     self->sesman_trans,
+                     username,
+                     password,
+                     type,
+                     self->wm->screen->width,
+                     self->wm->screen->height,
+                     xserverbpp,
+                     self->wm->client_info->program,
+                     self->wm->client_info->directory,
+                     self->wm->client_info->connection_description);
         }
     }
 
@@ -1775,11 +1767,14 @@ xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
 }
 
 /*****************************************************************************/
-static void
-xrdp_mm_scp_process_msg(struct xrdp_mm *self,
-                        const struct scp_v0_reply_type *msg)
+static int
+xrdp_mm_process_gateway_response(struct xrdp_mm *self)
 {
-    if (msg->is_gw_auth_response)
+    int auth_result;
+    int rv;
+
+    rv = scp_get_gateway_response(self->pam_auth_trans, &auth_result);
+    if (rv == 0)
     {
         const char *additionalError;
         char pam_error[128];
@@ -1790,12 +1785,12 @@ xrdp_mm_scp_process_msg(struct xrdp_mm *self,
 
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                         "Reply from access control: %s",
-                        getPAMError(msg->auth_result,
+                        getPAMError(auth_result,
                                     pam_error, sizeof(pam_error)));
 
-        if (msg->auth_result != 0)
+        if (auth_result != 0)
         {
-            additionalError = getPAMAdditionalErrorInfo(msg->auth_result, self);
+            additionalError = getPAMAdditionalErrorInfo(auth_result, self);
             if (additionalError && additionalError[0])
             {
                 xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s",
@@ -1812,11 +1807,26 @@ xrdp_mm_scp_process_msg(struct xrdp_mm *self,
             xrdp_mm_connect_sm(self);
         }
     }
-    else
+
+    return rv;
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_process_create_session_response(struct xrdp_mm *self)
+{
+    int auth_result;
+    int display;
+    struct guid guid;
+
+    int rv;
+
+    rv = scp_get_create_session_response(self->sesman_trans, &auth_result,
+                                         &display, &guid);
+    if (rv == 0)
     {
         const char *username;
         char displayinfo[64];
-        int auth_successful = (msg->auth_result != 0);
 
         /* Sort out some logging information */
         if ((username = xrdp_mm_get_value(self, "username")) == NULL)
@@ -1824,7 +1834,7 @@ xrdp_mm_scp_process_msg(struct xrdp_mm *self,
             username = "???";
         }
 
-        if (msg->display == 0)
+        if (display == 0)
         {
             /* A returned display of zero doesn't mean anything useful, and
              * can confuse the user. It's most likely authentication has
@@ -1834,15 +1844,15 @@ xrdp_mm_scp_process_msg(struct xrdp_mm *self,
         else
         {
             g_snprintf(displayinfo, sizeof(displayinfo),
-                       " on display %d", msg->display);
+                       " on display %d", display);
         }
 
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                         "login %s for user %s%s",
-                        (auth_successful ? "successful" : "failed"),
+                        ((auth_result == 0) ? "successful" : "failed"),
                         username, displayinfo);
 
-        if (!auth_successful)
+        if (auth_result != 0)
         {
             /* Authentication failure */
             cleanup_sesman_connection(self);
@@ -1852,11 +1862,13 @@ xrdp_mm_scp_process_msg(struct xrdp_mm *self,
         {
             /* Authentication successful - carry on with the connect
              * state machine */
-            self->display = msg->display;
-            self->guid = msg->guid;
+            self->display = display;
+            self->guid = guid;
             xrdp_mm_connect_sm(self);
         }
     }
+
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1865,30 +1877,37 @@ static int
 xrdp_mm_scp_data_in(struct trans *trans)
 {
     int rv = 0;
+    int available;
 
-    if (trans == NULL)
+    rv = scp_msg_in_check_available(trans, &available);
+    if (rv == 0 && available)
     {
-        rv = 1;
-    }
-    else if (scp_v0c_reply_available(trans))
-    {
-        struct scp_v0_reply_type reply;
         struct xrdp_mm *self = (struct xrdp_mm *)(trans->callback_data);
-        enum SCP_CLIENT_STATES_E e = scp_v0c_get_reply(trans, &reply);
-        if (e != SCP_CLIENT_STATE_OK)
+        enum scp_msg_code msgno;
+
+        switch ((msgno = scp_msg_in_start(trans)))
         {
-            const char *src = (trans == self->pam_auth_trans)
-                              ? "PAM authenticator"
-                              : "sesman";
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                            "Error reading response from %s [%s]",
-                            src, scp_client_state_to_str(e));
-            rv = 1;
+            case E_SCP_GATEWAY_RESPONSE:
+                rv = xrdp_mm_process_gateway_response(self);
+                break;
+
+            case E_SCP_CREATE_SESSION_RESPONSE:
+                rv = xrdp_mm_process_create_session_response(self);
+                break;
+
+            default:
+            {
+                char buff[64];
+                scp_msgno_to_str(msgno, buff, sizeof(buff));
+                const char *src = (trans == self->pam_auth_trans)
+                                  ? "PAM authenticator"
+                                  : "sesman";
+                LOG(LOG_LEVEL_ERROR, "Ignored SCP message %s from %s",
+                    buff, src);
+            }
         }
-        else
-        {
-            xrdp_mm_scp_process_msg(self, &reply);
-        }
+
+        scp_msg_in_reset(trans);
     }
 
     return rv;
@@ -2205,11 +2224,13 @@ xrdp_mm_scp_connect(struct xrdp_mm *self, const char *target, const char *ip)
     xrdp_mm_get_sesman_port(port, sizeof(port));
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                     "connecting to %s on %s:%s", target, ip, port);
-    t = scp_connect(ip, port, g_is_term,
-                    xrdp_mm_scp_data_in, self);
+    t = scp_connect(ip, port, g_is_term);
     if (t != NULL)
     {
-        /* fully connect */
+        /* fully connected */
+        t->trans_data_in = xrdp_mm_scp_data_in;
+        t->callback_data = self;
+
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s connect ok", target);
     }
     else

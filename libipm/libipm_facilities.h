@@ -1,7 +1,5 @@
 /**
- * xrdp: A Remote Desktop Protocol server.
- *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) 2022 Matt Burt, all xrdp contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,29 +15,20 @@
  */
 
 /**
- *
- * @file scp.h
- * @brief scp (sesman control protocol) common definitions
- * @author Simone Fedele
- *
+ * @file    libipm/libipm_facilities.h
+ * @brief   Facilities numbers for facilities built on top of libipm
  */
 
-#ifndef SCP_H
-#define SCP_H
-
-#include "scp_v0.h"
-#include "scp_v1.h"
-#include "scp_v1_mng.h"
+#if !defined(LIBIPM__FACILITIES_H)
+#define LIBIPM__FACILITIES_H
 
 /**
- *
- * @brief Starts a an scp protocol thread.
- *        Starts a an scp protocol thread.
- *        But does only version control....
- * @param atrans the connection trans
- *
+ * Facilities layered on top of libipm (16 bits)
  */
-enum SCP_SERVER_STATES_E
-scp_process(struct trans *t, struct SCP_SESSION *s);
+enum libipm_facility
+{
+    LIBIPM_FAC_SCP = 1, /**< SCP - Sesman Control Protocol */
+    LIBIPM_FAC_TEST = 65535 /**< Used for unit testing */
+};
 
-#endif
+#endif /* LIBIPM_FACILITIES_H */

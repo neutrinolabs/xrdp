@@ -405,23 +405,17 @@ xrdp_sanity_check(void)
 #endif
 
     /* check long, int and void* sizes */
-    if (sizeof(int) != 4)
-    {
-        g_writeln("unusable int size, must be 4");
-        return 1;
-    }
+#if SIZEOF_INT != 4
+#   error unusable int size, must be 4
+#endif
 
-    if (sizeof(long) != sizeof(void *))
-    {
-        g_writeln("long size must match void* size");
-        return 1;
-    }
+#if SIZEOF_LONG != SIZEOF_VOID_P
+#   error sizeof(long) must match sizeof(void*)
+#endif
 
-    if (sizeof(long) != 4 && sizeof(long) != 8)
-    {
-        g_writeln("unusable long size, must be 4 or 8");
-        return 1;
-    }
+#if SIZEOF_LONG != 4 && SIZEOF_LONG != 8
+#   error sizeof(long), must be 4 or 8
+#endif
 
     if (sizeof(tui64) != 8)
     {
