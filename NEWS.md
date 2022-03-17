@@ -1,3 +1,40 @@
+# Release notes for xrdp v0.9.19 (2022/03/17)
+
+## General announcements
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## New features
+* Both inbound and outbound clipboards can now be restricted for text, files or images [Sponsored by @CyberTrust @clear-code and @kenhys] (#2087)
+
+## Bug fixes
+* [CVE-2022-23613](https://www.cve.org/CVERecord?id=CVE-2022-23613): Privilege escalation on xrdp-sesman (This fix is also in the out-of-band v0.9.18.1 release)
+* The versions of imlib2 used on RHEL 7 and 8 are now detected correctly (#2118)
+* Some situations where zombie processes could exist have been resolved (#2146, #2151, #2168)
+* Some null-pointer exceptions which can happen in the logging module have been addressed (#2149)
+* Some minor logging errors have been corrected (#2152)
+* The signal handling in sesman has been reworked to prevent race conditions when a child exits. This has also made it possible to reliably reload the sesman configuration with SIGHUP (#1729, #2168)
+
+## Internal changes
+* Versions 0.13 and later of checklib can undefine the pre-processor symbol `HAVE_STDINT_H`. The xrdp tests now build successfully against these versions (#2124)
+* OpenSSL packaging changes (#2130):-
+   - The OpenSSL 3 EVP interface is now fully supported
+   - When building against OpenSSL 3, an internal implementation of the RC4 cipher is used instead of the implementation from the OpenSSL legacy provider
+   - The wrapping of the OpenSSL library has been improved which should make it simpler to provide an alternative cryptographic provider in the future, if required
+   - The logging of TLS/non-TLS security negotiation has been improved
+* cppcheck version used for CI bumped to 2.7 (#2140)
+* The `s_check()` macro which is easily mis-used has been removed (#2144)
+* Status values for the DRDYNVC channel are now available in `libxrdp/xrdp_channel.h`
+
+## Changes for packagers or developers
+* On OpenSSL 3 systems, there is now no need to build with the `-Wno-error=deprecated-declarations` flag
+
+## Known issues
+
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.18.1 (2022/02/08)
 
 This is a security fix release that includes fixes for the following privilege escalation vulnerability.
@@ -222,7 +259,7 @@ These changes are likely to impact operating system package builders and those b
 
 This is a security fix release that includes fixes for the following local buffer overflow vulnerability.
 
-* [CVE-2022-4044: Local users can perform a buffer overflow attack against the xrdp-sesman service and then impersonate it](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-4044)
+* [CVE-2020-4044: Local users can perform a buffer overflow attack against the xrdp-sesman service and then impersonate it](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-4044)
 
 This update is recommended for all xrdp users.
 

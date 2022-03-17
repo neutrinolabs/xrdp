@@ -174,6 +174,20 @@ int
 g_bitmask_to_str(int bitmask, const struct bitmask_string[],
                  char delim, char *buff, int bufflen);
 
+/***
+ * Converts a string containing a series of tokens to a bitmask.
+ * @param str Input string
+ * @param bitmask_string Array mapping tokens to bitmask values
+ * @param delim Delimiter for tokens in str
+ * @param[out] unrecognised Buffer for any unrecognised tokens
+ * @param unrecognised_len Length of unrecognised including '\0';
+ * @return bitmask value for recognised tokens
+ */
+int
+g_str_to_bitmask(const char *str, const struct bitmask_string[],
+                 const char *delim, char *unrecognised,
+                 int unrecognised_len);
+
 int      g_strlen(const char *text);
 char    *g_strchr(const char *text, int c);
 char    *g_strrchr(const char *text, int c);

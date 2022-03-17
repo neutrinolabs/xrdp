@@ -6,6 +6,8 @@ AM_CPPFLAGS = \
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/tap-driver.sh
 
+PACKAGE_STRING = "libcommon"
+
 TESTS = test_common
 check_PROGRAMS = test_common
 
@@ -13,7 +15,9 @@ test_common_SOURCES = \
     test_common.h \
     test_common_main.c \
     test_string_calls.c \
-    test_os_calls.c
+    test_os_calls.c \
+    test_ssl_calls.c \
+    test_base64.c
 
 test_common_CFLAGS = \
     @CHECK_CFLAGS@ \

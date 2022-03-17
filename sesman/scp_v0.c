@@ -30,8 +30,6 @@
 
 #include "sesman.h"
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
 scp_v0_process(struct trans *t, struct SCP_SESSION *s)

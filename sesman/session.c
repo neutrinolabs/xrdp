@@ -47,12 +47,8 @@
 #define PR_SET_NO_NEW_PRIVS 38
 #endif
 
-extern unsigned char g_fixedkey[8];
-extern struct config_sesman *g_cfg; /* in sesman.c */
-struct session_chain *g_sessions;
-int g_session_count;
-
-extern tbus g_term_event; /* in sesman.c */
+static struct session_chain *g_sessions;
+static int g_session_count;
 
 /**
  * Creates a string consisting of all parameters that is hosted in the param list
@@ -524,8 +520,13 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 "Failed to clone the session data - out of memory");
             g_exit(1);
         }
-        auth_start_session(data, display);
+
+        /* Wait objects created in a parent are not valid in a child */
+        g_delete_wait_obj(g_reload_event);
+        g_delete_wait_obj(g_sigchld_event);
         g_delete_wait_obj(g_term_event);
+
+        auth_start_session(data, display);
         sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);

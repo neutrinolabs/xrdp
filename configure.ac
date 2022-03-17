@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.65)
-AC_INIT([xrdp], [0.9.18.1], [xrdp-devel@googlegroups.com])
+AC_INIT([xrdp], [0.9.19], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
@@ -224,7 +224,7 @@ case "$with_imlib2" in
         use_imlib2=no
         ;;
     yes)
-        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.10],
+        PKG_CHECK_MODULES([IMLIB2], [imlib2 >= 1.4.5],
             [use_imlib2=yes],
             [AC_MSG_ERROR([please install libimlib2-dev or imlib2-devel])])
         ;;

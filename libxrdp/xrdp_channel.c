@@ -24,25 +24,13 @@
 
 #include "libxrdp.h"
 #include "string_calls.h"
+#include "xrdp_channel.h"
 
 #define CMD_DVC_OPEN_CHANNEL    0x10
 #define CMD_DVC_DATA_FIRST      0x20
 #define CMD_DVC_DATA            0x30
 #define CMD_DVC_CLOSE_CHANNEL   0x40
 #define CMD_DVC_CAPABILITY      0x50
-
-#define XRDP_DRDYNVC_STATUS_CLOSED          0
-#define XRDP_DRDYNVC_STATUS_OPEN_SENT       1
-#define XRDP_DRDYNVC_STATUS_OPEN            2
-#define XRDP_DRDYNVC_STATUS_CLOSE_SENT      3
-
-#define XRDP_DRDYNVC_STATUS_TO_STR(status) \
-    ((status) == XRDP_DRDYNVC_STATUS_CLOSED ? "CLOSED" : \
-     (status) == XRDP_DRDYNVC_STATUS_OPEN_SENT ? "OPEN_SENT" : \
-     (status) == XRDP_DRDYNVC_STATUS_OPEN ? "OPEN" : \
-     (status) == XRDP_DRDYNVC_STATUS_CLOSE_SENT ? "CLOSE_SENT" : \
-     "unknown" \
-    )
 
 #define XRDP_DRDYNVC_CHANNEL_ID_TO_NAME(self, chan_id) \
     (xrdp_channel_get_item((self), (chan_id)) != NULL \
@@ -935,7 +923,7 @@ xrdp_channel_drdynvc_close(struct xrdp_channel *self, int chan_id)
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPEDYC] DYNVC_CLOSE "
               "cbId %d, Sp 0, Cmd 0x%2.2x, ChannelId %d",
-              cbChId, CMD_DVC_OPEN_CHANNEL, ChId);
+              cbChId, CMD_DVC_CLOSE_CHANNEL, ChId);
     if (xrdp_channel_send(self, s, static_channel_id, total_data_len,
                           static_flags) != 0)
     {

@@ -2973,7 +2973,7 @@ g_waitchild(void)
 
 /*****************************************************************************/
 /* does not work in win32
-   returns pid of process that exits or zero if signal occurred */
+   returns pid of process that exits or <= 0 if no process was found */
 int
 g_waitpid(int pid)
 {
@@ -2989,14 +2989,6 @@ g_waitpid(int pid)
     else
     {
         rv = waitpid(pid, 0, 0);
-
-        if (rv == -1)
-        {
-            if (errno == EINTR) /* signal occurred */
-            {
-                rv = 0;
-            }
-        }
     }
 
     return rv;

@@ -41,6 +41,13 @@
 
 #include "libscp.h"
 
+/* Globals */
+extern struct config_sesman *g_cfg;
+extern unsigned char g_fixedkey[8];
+extern tintptr g_term_event;
+extern tintptr g_sigchld_event;
+extern tintptr g_reload_event;
+
 /*
  * Close all file descriptors used by sesman.
  *
@@ -52,5 +59,21 @@
  */
 int
 sesman_close_all(void);
+
+/*
+ * Remove the listening transport
+ *
+ * Needed if reloading the config and the listener has changed
+ */
+void
+sesman_delete_listening_transport(void);
+
+/*
+ * Create the listening socket transport
+ *
+ * @return 0 for success
+ */
+int
+sesman_create_listening_transport(const struct config_sesman *cfg);
 
 #endif

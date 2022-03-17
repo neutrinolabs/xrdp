@@ -45,6 +45,7 @@ libxrdp_la_SOURCES = \
   xrdp_bitmap_compress.c \
   xrdp_caps.c \
   xrdp_channel.c \
+  xrdp_channel.h \
   xrdp_fastpath.c \
   xrdp_iso.c \
   xrdp_jpeg_compress.c \

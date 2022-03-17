@@ -52,11 +52,11 @@ struct sesman_startup_params
     int dump_config;
 };
 
-int g_pid;
+struct config_sesman *g_cfg;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-struct config_sesman *g_cfg; /* defined in config.h */
-
 tintptr g_term_event = 0;
+tintptr g_sigchld_event = 0;
+tintptr g_reload_event = 0;
 
 /**
  * Items stored on the g_con_list
@@ -67,8 +67,9 @@ struct sesman_con
     struct SCP_SESSION *s;
 };
 
-static struct trans *g_list_trans = NULL;
+static struct trans *g_list_trans;
 static struct list *g_con_list = NULL;
+static int g_pid;
 
 /*****************************************************************************/
 /**
@@ -263,7 +264,7 @@ sesman_close_all(void)
     struct sesman_con *sc;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "sesman_close_all:");
-    trans_delete(g_list_trans);
+    sesman_delete_listening_transport();
     for (index = 0; index < g_con_list->count; index++)
     {
         sc = (struct sesman_con *) list_get_item(g_con_list, index);
@@ -342,6 +343,86 @@ sesman_listen_conn_in(struct trans *self, struct trans *new_self)
 
 /******************************************************************************/
 /**
+ * Informs the main loop a termination signal has been received
+ */
+static void
+set_term_event(int sig)
+{
+    /* Don't try to use a wait obj in a child process */
+    if (g_getpid() == g_pid)
+    {
+        g_set_wait_obj(g_term_event);
+    }
+}
+
+/******************************************************************************/
+/**
+ * Informs the main loop a SIGCHLD has been received
+ */
+static void
+set_sigchld_event(int sig)
+{
+    /* Don't try to use a wait obj in a child process */
+    if (g_getpid() == g_pid)
+    {
+        g_set_wait_obj(g_sigchld_event);
+    }
+}
+
+/******************************************************************************/
+/**
+ * Informs the main loop a SIGHUP has been received
+ */
+static void
+set_reload_event(int sig)
+{
+    /* Don't try to use a wait obj in a child process */
+    if (g_getpid() == g_pid)
+    {
+        g_set_wait_obj(g_reload_event);
+    }
+}
+
+/******************************************************************************/
+void
+sesman_delete_listening_transport(void)
+{
+    trans_delete(g_list_trans);
+    g_list_trans = NULL;
+}
+
+/******************************************************************************/
+int
+sesman_create_listening_transport(const struct config_sesman *cfg)
+{
+    int rv = 1;
+    g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    if (g_list_trans == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "%s: trans_create failed", __func__);
+    }
+    else
+    {
+        LOG(LOG_LEVEL_DEBUG, "%s: address %s port %s",
+            __func__, cfg->listen_address, cfg->listen_port);
+        rv = trans_listen_address(g_list_trans, cfg->listen_port,
+                                  cfg->listen_address);
+        if (rv != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "%s: trans_listen_address failed", __func__);
+            sesman_delete_listening_transport();
+        }
+        else
+        {
+            g_list_trans->trans_conn_in = sesman_listen_conn_in;
+        }
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+/**
  *
  * @brief Starts sesman main loop
  *
@@ -352,7 +433,6 @@ sesman_main_loop(void)
     int error;
     int robjs_count;
     int wobjs_count;
-    int cont;
     int timeout;
     int index;
     intptr_t robjs[32];
@@ -365,33 +445,22 @@ sesman_main_loop(void)
         LOG(LOG_LEVEL_ERROR, "sesman_main_loop: list_create failed");
         return 1;
     }
-    g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-    if (g_list_trans == NULL)
+    if (sesman_create_listening_transport(g_cfg) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: trans_create failed");
+        LOG(LOG_LEVEL_ERROR,
+            "sesman_main_loop: sesman_create_listening_transport failed");
         list_delete(g_con_list);
         return 1;
     }
 
-    LOG(LOG_LEVEL_DEBUG, "sesman_main_loop: address %s port %s",
-        g_cfg->listen_address, g_cfg->listen_port);
-    error = trans_listen_address(g_list_trans, g_cfg->listen_port,
-                                 g_cfg->listen_address);
-    if (error != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "sesman_main_loop: trans_listen_address "
-            "failed");
-        trans_delete(g_list_trans);
-        list_delete(g_con_list);
-        return 1;
-    }
-    g_list_trans->trans_conn_in = sesman_listen_conn_in;
-    cont = 1;
-    while (cont)
+    error = 0;
+    while (!error)
     {
         timeout = -1;
         robjs_count = 0;
         robjs[robjs_count++] = g_term_event;
+        robjs[robjs_count++] = g_sigchld_event;
+        robjs[robjs_count++] = g_reload_event;
         wobjs_count = 0;
         for (index = 0; index < g_con_list->count; index++)
         {
@@ -413,25 +482,45 @@ sesman_main_loop(void)
         {
             break;
         }
-        error = trans_get_wait_objs_rw(g_list_trans, robjs, &robjs_count,
-                                       wobjs, &wobjs_count, &timeout);
-        if (error != 0)
+        if (g_list_trans != NULL)
         {
-            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                "trans_get_wait_objs_rw failed");
-            break;
+            /* g_list_trans might be NULL on a reconfigure if sesman
+             * is unable to listen again */
+            error = trans_get_wait_objs_rw(g_list_trans, robjs, &robjs_count,
+                                           wobjs, &wobjs_count, &timeout);
+            if (error != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                    "trans_get_wait_objs_rw failed");
+                break;
+            }
         }
 
-        error = g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout);
-        if (error != 0)
+        if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
         {
-            /* error, should not get here */
+            /* should not get here */
+            LOG(LOG_LEVEL_WARNING, "sesman_main_loop: "
+                "Unexpected error from g_obj_wait()");
             g_sleep(100);
         }
 
         if (g_is_wait_obj_set(g_term_event)) /* term */
         {
+            LOG(LOG_LEVEL_INFO, "sesman_main_loop: "
+                "sesman asked to terminate");
             break;
+        }
+
+        if (g_is_wait_obj_set(g_sigchld_event)) /* A child has exited */
+        {
+            g_reset_wait_obj(g_sigchld_event);
+            sig_sesman_session_end();
+        }
+
+        if (g_is_wait_obj_set(g_reload_event)) /* We're asked to reload */
+        {
+            g_reset_wait_obj(g_reload_event);
+            sig_sesman_reload_cfg();
         }
 
         for (index = 0; index < g_con_list->count; index++)
@@ -439,8 +528,7 @@ sesman_main_loop(void)
             scon = (struct sesman_con *)list_get_item(g_con_list, index);
             if (scon != NULL)
             {
-                error = trans_check_wait_objs(scon->t);
-                if (error != 0)
+                if (trans_check_wait_objs(scon->t) != 0)
                 {
                     LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
                         "trans_check_wait_objs failed, removing trans");
@@ -451,12 +539,16 @@ sesman_main_loop(void)
                 }
             }
         }
-        error = trans_check_wait_objs(g_list_trans);
-        if (error != 0)
+
+        if (g_list_trans != NULL)
         {
-            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                "trans_check_wait_objs failed");
-            break;
+            error = trans_check_wait_objs(g_list_trans);
+            if (error != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                    "trans_check_wait_objs failed");
+                break;
+            }
         }
     }
     for (index = 0; index < g_con_list->count; index++)
@@ -465,7 +557,7 @@ sesman_main_loop(void)
         delete_connection(scon);
     }
     list_delete(g_con_list);
-    trans_delete(g_list_trans);
+    sesman_delete_listening_transport();
     return 0;
 }
 
@@ -627,8 +719,9 @@ main(int argc, char **argv)
     }
 
     /* starting logging subsystem */
-    log_error = log_start(startup_params.sesman_ini, "xrdp-sesman",
-                          startup_params.dump_config);
+    log_error = log_start(
+                    startup_params.sesman_ini, "xrdp-sesman",
+                    (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
 
     if (log_error != LOG_STARTUP_OK)
     {
@@ -709,20 +802,17 @@ main(int argc, char **argv)
 
     /* signal handling */
     g_pid = g_getpid();
-    /* old style signal handling is now managed synchronously by a
-     * separate thread. uncomment this block if you need old style
-     * signal handling and comment out thread_sighandler_start()
-     * going back to old style for the time being
-     * problem with the sigaddset functions in sig.c - jts */
-#if 1
-    g_signal_hang_up(sig_sesman_reload_cfg); /* SIGHUP  */
-    g_signal_user_interrupt(sig_sesman_shutdown); /* SIGINT  */
-    g_signal_terminate(sig_sesman_shutdown); /* SIGTERM */
-    g_signal_child_stop(sig_sesman_session_end); /* SIGCHLD */
-#endif
-#if 0
-    thread_sighandler_start();
-#endif
+    g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_term", g_pid);
+    g_term_event = g_create_wait_obj(text);
+    g_snprintf(text, 255, "xrdp_sesman_%8.8x_sigchld", g_pid);
+    g_sigchld_event = g_create_wait_obj(text);
+    g_snprintf(text, 255, "xrdp_sesman_%8.8x_reload", g_pid);
+    g_reload_event = g_create_wait_obj(text);
+
+    g_signal_hang_up(set_reload_event); /* SIGHUP  */
+    g_signal_user_interrupt(set_term_event); /* SIGINT  */
+    g_signal_terminate(set_term_event); /* SIGTERM */
+    g_signal_child_stop(set_sigchld_event); /* SIGCHLD */
 
     if (daemon)
     {
@@ -764,9 +854,6 @@ main(int argc, char **argv)
         g_chmod_hex("/tmp/.X11-unix", 0x1777);
     }
 
-    g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_term", g_pid);
-    g_term_event = g_create_wait_obj(text);
-
     error = sesman_main_loop();
 
     /* clean up PID file on exit */
@@ -775,6 +862,8 @@ main(int argc, char **argv)
         g_file_delete(pid_file);
     }
 
+    g_delete_wait_obj(g_reload_event);
+    g_delete_wait_obj(g_sigchld_event);
     g_delete_wait_obj(g_term_event);
 
     if (!daemon)

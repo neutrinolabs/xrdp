@@ -346,6 +346,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     struct xrdp_cfg_globals *globals;
     char resultIP[256];
     char *plain; /* base64 decoded string */
+    size_t plain_length; /* length of decoded base64 string */
     size_t base64_length; /* length of base64 string */
 
     globals = &self->xrdp_config->cfg_globals;
@@ -379,8 +380,9 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
             {
                 base64_length = g_strlen(value + BASE64PREFIX_LEN);
                 plain = (char *)g_malloc(base64_length, 0);
-                base64_decode(plain, value + BASE64PREFIX_LEN, base64_length);
-                g_strncpy(value, plain, g_strlen(plain));
+                base64_decode(value + BASE64PREFIX_LEN,
+                              plain, base64_length, &plain_length);
+                g_strncpy(value, plain, plain_length);
                 g_free(plain);
             }
             else if (g_strncmp(ASK, value, ASK_LEN) == 0)
@@ -421,7 +423,9 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 {
                     base64_length = g_strlen(value + ASK_LEN + BASE64PREFIX_LEN);
                     plain = (char *)g_malloc(base64_length, 0);
-                    base64_decode(plain, value + ASK_LEN + BASE64PREFIX_LEN, base64_length);
+                    base64_decode(value + ASK_LEN + BASE64PREFIX_LEN,
+                                  plain, base64_length, &plain_length);
+                    plain[plain_length] = '\0';
                     g_strncpy(b->caption1, plain, 255);
                     g_free(plain);
                 }

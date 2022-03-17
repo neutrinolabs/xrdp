@@ -6,6 +6,8 @@ AM_CPPFLAGS = \
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/tap-driver.sh
 
+PACKAGE_STRING = "libxrdp"
+
 TESTS = test_libxrdp
 check_PROGRAMS = test_libxrdp
 

@@ -36,9 +36,6 @@
 #include "ssl_calls.h"
 #include "string_calls.h"
 
-extern unsigned char g_fixedkey[8]; /* in sesman.c */
-extern struct config_sesman *g_cfg;  /* in sesman.c */
-
 /******************************************************************************/
 int
 env_check_password_file(const char *filename, const char *passwd)
@@ -55,6 +52,7 @@ env_check_password_file(const char *filename, const char *passwd)
     /* create password hash from password */
     passwd_bytes = g_strlen(passwd);
     sha1 = ssl_sha1_info_create();
+    ssl_sha1_clear(sha1);
     ssl_sha1_transform(sha1, "xrdp_vnc", 8);
     ssl_sha1_transform(sha1, passwd, passwd_bytes);
     ssl_sha1_transform(sha1, passwd, passwd_bytes);

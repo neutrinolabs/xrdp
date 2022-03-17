@@ -163,9 +163,7 @@ xrdp_shutdown(int sig)
 static void
 xrdp_child(int sig)
 {
-    int safety;
-
-    for (safety = 0; (g_waitchild() >= 0) && (safety <= 10); safety++)
+    while (g_waitchild() > 0)
     {
     }
 }
@@ -540,7 +538,7 @@ main(int argc, char **argv)
 
     /* starting logging subsystem */
     error = log_start(startup_params.xrdp_ini, "xrdp",
-                      startup_params.dump_config);
+                      (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
 
     if (error != LOG_STARTUP_OK)
     {

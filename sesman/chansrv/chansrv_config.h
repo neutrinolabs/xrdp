@@ -31,6 +31,8 @@ struct config_chansrv
 
     /** RestrictOutboundClipboard setting from sesman.ini */
     int restrict_outbound_clipboard;
+    /** RestrictInboundClipboard setting from sesman.ini */
+    int restrict_inbound_clipboard;
 
     /** * FuseMountName from sesman.ini */
     char *fuse_mount_name;

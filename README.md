@@ -2,7 +2,7 @@
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neutrinolabs/xrdp-questions)
 ![Apache-License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 
-*Current Version:* 0.9.18.1
+[![Latest Version](https://img.shields.io/github/v/release/neutrinolabs/xrdp.svg?label=Latest%20Version)](https://github.com/neutrinolabs/xrdp/releases)
 
 # xrdp - an open source RDP server
 
@@ -95,7 +95,7 @@ you would need **openssl-devel**, **pam-devel**, **libX11-devel**,
 be needed depending on your configuration.
 
 To compile xrdp from a checked out git repository, you would additionally
-need **autoconf**, **automake**, **libtool** and **pkgconfig**.
+need **autoconf**, **automake**, **libtool** and **pkg-config**.
 
 ### Get the source and build it
 

@@ -30,12 +30,14 @@
 #include "file.h"
 #include "os_calls.h"
 
+#include "chansrv_common.h"
 #include "chansrv_config.h"
 #include "string_calls.h"
 
 /* Default settings */
 #define DEFAULT_USE_UNIX_SOCKET             0
 #define DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD 0
+#define DEFAULT_RESTRICT_INBOUND_CLIPBOARD  0
 #define DEFAULT_ENABLE_FUSE_MOUNT           1
 #define DEFAULT_FUSE_MOUNT_NAME             "xrdp-client"
 #define DEFAULT_FILE_UMASK                  077
@@ -47,6 +49,21 @@ typedef
 printflike(2, 3)
 enum logReturns (*log_func_t)(const enum logLevels lvl,
                               const char *msg, ...);
+
+/* Map clipboard strings into bitmask values */
+static const struct bitmask_string clip_restrict_map[] =
+{
+    { CLIP_RESTRICT_TEXT, "text"},
+    { CLIP_RESTRICT_FILE, "file"},
+    { CLIP_RESTRICT_IMAGE, "image"},
+    { CLIP_RESTRICT_ALL, "all"},
+    { CLIP_RESTRICT_NONE, "none"},
+    /* Compatibility values */
+    { CLIP_RESTRICT_ALL, "true"},
+    { CLIP_RESTRICT_ALL, "yes"},
+    { CLIP_RESTRICT_NONE, "false"},
+    BITMASK_STRING_END_OF_LIST
+};
 
 /***************************************************************************//**
  * @brief Error logging function to use to log to stdout
@@ -125,9 +142,30 @@ read_config_security(log_func_t logmsg,
         const char *name = (const char *)list_get_item(names, index);
         const char *value = (const char *)list_get_item(values, index);
 
+        char unrecognised[256];
         if (g_strcasecmp(name, "RestrictOutboundClipboard") == 0)
         {
-            cfg->restrict_outbound_clipboard = g_text2bool(value);
+            cfg->restrict_outbound_clipboard =
+                g_str_to_bitmask(value, clip_restrict_map, ",",
+                                 unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictOutboundClipboard' %s",
+                    unrecognised);
+            }
+        }
+        if (g_strcasecmp(name, "RestrictInboundClipboard") == 0)
+        {
+            cfg->restrict_inbound_clipboard =
+                g_str_to_bitmask(value, clip_restrict_map, ",",
+                                 unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictInboundClipboard' %s",
+                    unrecognised);
+            }
         }
     }
 
@@ -208,6 +246,7 @@ new_config(void)
         cfg->use_unix_socket = DEFAULT_USE_UNIX_SOCKET;
         cfg->enable_fuse_mount = DEFAULT_ENABLE_FUSE_MOUNT;
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
+        cfg->restrict_inbound_clipboard = DEFAULT_RESTRICT_INBOUND_CLIPBOARD;
         cfg->fuse_mount_name = fuse_mount_name;
         cfg->file_umask = DEFAULT_FILE_UMASK;
         cfg->use_nautilus3_flist_format = DEFAULT_USE_NAUTILUS3_FLIST_FORMAT;
@@ -286,10 +325,37 @@ config_dump(struct config_chansrv *config)
     g_writeln("    UseUnixSocket (derived):   %s",
               g_bool2text(config->use_unix_socket));
 
+    char buf[256];
     g_writeln("\nSecurity configuration:");
-    g_writeln("    RestrictOutboundClipboard: %s",
-              g_bool2text(config->restrict_outbound_clipboard));
+    if (config->restrict_outbound_clipboard == CLIP_RESTRICT_NONE)
+    {
+        g_writeln("    RestrictOutboundClipboard: %s", "none");
+    }
+    else if (config->restrict_outbound_clipboard == CLIP_RESTRICT_ALL)
+    {
+        g_writeln("    RestrictOutboundClipboard: %s", "all");
+    }
+    else
+    {
+        g_bitmask_to_str(config->restrict_outbound_clipboard,
+                         clip_restrict_map, ',', buf, sizeof(buf));
+        g_writeln("    RestrictOutboundClipboard: %s", buf);
+    }
 
+    if (config->restrict_inbound_clipboard == CLIP_RESTRICT_NONE)
+    {
+        g_writeln("    RestrictInboundClipboard:  %s", "none");
+    }
+    else if (config->restrict_inbound_clipboard == CLIP_RESTRICT_ALL)
+    {
+        g_writeln("    RestrictInboundClipboard:  %s", "all");
+    }
+    else
+    {
+        g_bitmask_to_str(config->restrict_inbound_clipboard,
+                         clip_restrict_map, ',', buf, sizeof(buf));
+        g_writeln("    RestrictInboundClipboard:  %s", buf);
+    }
     g_writeln("\nChansrv configuration:");
     g_writeln("    EnableFuseMount            %s",
               g_bool2text(config->enable_fuse_mount));

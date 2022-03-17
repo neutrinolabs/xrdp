@@ -33,8 +33,6 @@
 //#include "libscp_types.h"
 #include "libscp.h"
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 static void
 parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f);
 

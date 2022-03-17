@@ -575,7 +575,7 @@ handle_cb_format_data_response(struct vnc *v, struct stream *s)
             {
                 case CF_TEXT:
                     lastc = '\0';
-                    while (s_check(s))
+                    while (s_check_rem(s, 1))
                     {
                         in_uint8(s, c);
                         if (c == '\n' && lastc == '\r')
