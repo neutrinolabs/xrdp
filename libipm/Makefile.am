@@ -1,5 +1,6 @@
 
 AM_CPPFLAGS = \
+  -DSESMAN_RUNTIME_PATH=\"${sesmanruntimedir}\" \
   -I$(top_srcdir)/common
 
 module_LTLIBRARIES = \

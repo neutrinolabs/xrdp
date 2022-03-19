@@ -51,7 +51,7 @@ getPAMError(const int pamError, char *text, int text_bytes);
 static const char *
 getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self);
 static int
-xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port);
+xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port);
 static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
 
@@ -159,8 +159,6 @@ xrdp_mm_delete(struct xrdp_mm *self)
 
     trans_delete(self->sesman_trans);
     self->sesman_trans = 0;
-    trans_delete(self->pam_auth_trans);
-    self->pam_auth_trans = 0;
     list_delete(self->login_names);
     list_delete(self->login_values);
     g_free(self);
@@ -229,7 +227,7 @@ xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
                     "sending login info to session manager, please wait...");
 
     return scp_send_gateway_request(
-               self->pam_auth_trans, username, password,
+               self->sesman_trans, username, password,
                self->wm->client_info->connection_description);
 }
 
@@ -475,7 +473,6 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
     int rv;
     int key_flags;
     int device_flags;
-    int use_uds;
 
     rv = 1; /* failure */
     g_memset(text, 0, sizeof(text));
@@ -500,22 +497,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             }
             else if (self->code == 10 || self->code == 20) /* X11rdp/Xorg */
             {
-                use_uds = 1;
-
-                if ((value = xrdp_mm_get_value(self, "ip")) != NULL &&
-                        g_strcmp(value, "127.0.0.1") != 0)
-                {
-                    use_uds = 0;
-                }
-
-                if (use_uds)
-                {
-                    g_snprintf(text, 255, XRDP_X11RDP_STR, self->display);
-                }
-                else
-                {
-                    g_snprintf(text, 255, "%d", 6200 + self->display);
-                }
+                g_snprintf(text, 255, XRDP_X11RDP_STR, self->display);
             }
             else
             {
@@ -1691,10 +1673,9 @@ xrdp_mm_chan_data_in(struct trans *trans)
 
 static void cleanup_sesman_connection(struct xrdp_mm *self)
 {
-    /* Don't delete these transports here - we may be in
+    /* Don't delete any transports here - we may be in
      * an auth callback from one of them */
     self->delete_sesman_trans = 1;
-    self->delete_pam_auth_trans = 1;
 
     if (self->wm->login_state != WMLS_CLEANUP)
     {
@@ -1861,15 +1842,11 @@ xrdp_mm_process_gateway_response(struct xrdp_mm *self)
     int auth_result;
     int rv;
 
-    rv = scp_get_gateway_response(self->pam_auth_trans, &auth_result);
+    rv = scp_get_gateway_response(self->sesman_trans, &auth_result);
     if (rv == 0)
     {
         const char *additionalError;
         char pam_error[128];
-
-        /* We no longer need the pam_auth transport - it's only used
-         * for the one message */
-        self->delete_pam_auth_trans = 1;
 
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                         "Reply from access control: %s",
@@ -1987,11 +1964,8 @@ xrdp_mm_scp_data_in(struct trans *trans)
             {
                 char buff[64];
                 scp_msgno_to_str(msgno, buff, sizeof(buff));
-                const char *src = (trans == self->pam_auth_trans)
-                                  ? "PAM authenticator"
-                                  : "sesman";
-                LOG(LOG_LEVEL_ERROR, "Ignored SCP message %s from %s",
-                    buff, src);
+                LOG(LOG_LEVEL_ERROR, "Ignored SCP message %s from sesman",
+                    buff);
             }
         }
 
@@ -2015,10 +1989,8 @@ cleanup_states(struct xrdp_mm *self)
         self->use_chansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
         self->use_pam_auth = 0; /* true if we're to use the PAM authentication facility */
         self->sesman_trans = NULL; /* connection to sesman */
-        self->pam_auth_trans = NULL; /* connection to PAM authenticator */
         self->chan_trans = NULL; /* connection to chansrv */
         self->delete_sesman_trans = 0;
-        self->delete_pam_auth_trans = 0;
         self->display = 0; /* 10 for :10.0, 11 for :11.0, etc */
         guid_clear(&self->guid);
         self->code = 0; /* 0 Xvnc session, 10 X11rdp session, 20 Xorg session */
@@ -2304,28 +2276,31 @@ parse_chansrvport(const char *value, char *dest, int dest_size)
 
 /*****************************************************************************/
 static struct trans *
-xrdp_mm_scp_connect(struct xrdp_mm *self, const char *target, const char *ip)
+xrdp_mm_scp_connect(struct xrdp_mm *self)
 {
     char port[128];
+    char port_description[128];
     struct trans *t;
 
     xrdp_mm_get_sesman_port(port, sizeof(port));
+    scp_port_to_display_string(port,
+                               port_description, sizeof(port_description));
+
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
-                    "connecting to %s on %s:%s", target, ip, port);
-    t = scp_connect(ip, port, g_is_term);
+                    "connecting to sesman on %s", port_description);
+    t = scp_connect(port, g_is_term);
     if (t != NULL)
     {
         /* fully connected */
         t->trans_data_in = xrdp_mm_scp_data_in;
         t->callback_data = self;
 
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s connect ok", target);
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "sesman connect ok");
     }
     else
     {
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                        "Error connecting to %s on %s:%s",
-                        target, ip, port);
+                        "Error connecting to sesman on %s", port_description);
         trans_delete(t);
         t = NULL;
     }
@@ -2334,27 +2309,17 @@ xrdp_mm_scp_connect(struct xrdp_mm *self, const char *target, const char *ip)
 
 /*****************************************************************************/
 static int
-xrdp_mm_pam_auth_connect(struct xrdp_mm *self, const char *ip)
-{
-    trans_delete(self->pam_auth_trans);
-    self->pam_auth_trans = xrdp_mm_scp_connect(self, "PAM authenticator", ip);
-
-    return (self->pam_auth_trans == NULL); /* 0 for success */
-}
-
-/*****************************************************************************/
-static int
-xrdp_mm_sesman_connect(struct xrdp_mm *self, const char *ip)
+xrdp_mm_sesman_connect(struct xrdp_mm *self)
 {
     trans_delete(self->sesman_trans);
-    self->sesman_trans = xrdp_mm_scp_connect(self, "sesman", ip);
+    self->sesman_trans = xrdp_mm_scp_connect(self);
 
     return (self->sesman_trans == NULL); /* 0 for success */
 }
 
 /*****************************************************************************/
 static int
-xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port)
+xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port)
 {
     if (self->wm->client_info->channels_allowed == 0)
     {
@@ -2365,16 +2330,7 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port)
     }
 
     /* connect channel redir */
-    if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
-    {
-        /* unix socket */
-        self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-    }
-    else
-    {
-        /* tcp */
-        self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-    }
+    self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
 
     self->chan_trans->is_term = g_is_term;
     self->chan_trans->si = &(self->wm->session->si);
@@ -2386,7 +2342,7 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port)
     self->chan_trans->extra_flags = 0;
 
     /* try to connect for up to 10 seconds */
-    trans_connect(self->chan_trans, ip, port, 10 * 1000);
+    trans_connect(self->chan_trans, NULL, port, 10 * 1000);
     if (self->chan_trans->status != TRANS_STATUS_UP)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_mm_chansrv_connect: error in "
@@ -2454,10 +2410,26 @@ xrdp_mm_connect(struct xrdp_mm *self)
     if (port != NULL && g_strcmp(port, "-1") == 0)
     {
         self->use_sesman = 1;
+        /* Connecting to a remote sesman is no longer supported */
+        if (xrdp_mm_get_value(self, "ip") != NULL)
+        {
+            xrdp_wm_log_msg(self->wm,
+                            LOG_LEVEL_WARNING,
+                            "Parameter 'ip' is obsolete for sesman connections."
+                            " Please remove from config");
+        }
     }
 
     if (gateway_username != NULL)
     {
+        /* Connecting to a remote sesman is no longer supported */
+        if (xrdp_mm_get_value(self, "pamsessionmng") != NULL)
+        {
+            xrdp_wm_log_msg(self->wm,
+                            LOG_LEVEL_WARNING,
+                            "Parameter 'pamsessionmng' is obsolete."
+                            " Please remove from config");
+        }
 #ifdef USE_PAM
         self->use_pam_auth = 1;
 #else
@@ -2499,22 +2471,10 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
         {
             case MMCS_CONNECT_TO_SESMAN:
             {
-                if (self->use_sesman)
+                if (self->use_sesman || self->use_pam_auth)
                 {
                     /* Synchronous call */
-                    const char *ip = xrdp_mm_get_value(self, "ip");
-                    status = xrdp_mm_sesman_connect(self, ip);
-                }
-
-                if (status == 0 && self->use_pam_auth)
-                {
-                    /* Synchronous call */
-                    const char *ip = xrdp_mm_get_value(self, "pamsessionmng");
-                    if (ip == NULL)
-                    {
-                        ip = xrdp_mm_get_value(self, "ip");
-                    }
-                    status = xrdp_mm_pam_auth_connect(self, ip);
+                    status = xrdp_mm_sesman_connect(self);
                 }
             }
             break;
@@ -2589,25 +2549,12 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
             {
                 if (self->use_chansrv)
                 {
-                    const char *ip = "";
                     char portbuff[256];
 
                     if (self->use_sesman)
                     {
-                        ip = xrdp_mm_get_value(self, "ip");
-
-                        /* connect channel redir */
-                        if (ip == NULL || (ip[0] == '\0') ||
-                                (g_strcmp(ip, "127.0.0.1") == 0))
-                        {
-                            g_snprintf(portbuff, sizeof(portbuff),
-                                       XRDP_CHANSRV_STR, self->display);
-                        }
-                        else
-                        {
-                            g_snprintf(portbuff, sizeof(portbuff),
-                                       "%d", 7200 + self->display);
-                        }
+                        g_snprintf(portbuff, sizeof(portbuff),
+                                   XRDP_CHANSRV_STR, self->display);
                     }
                     else
                     {
@@ -2617,7 +2564,7 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
 
                     }
                     xrdp_mm_update_allowed_channels(self);
-                    xrdp_mm_chansrv_connect(self, ip, portbuff);
+                    xrdp_mm_chansrv_connect(self, portbuff);
                 }
             }
             break;
@@ -2666,12 +2613,6 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
             self->sesman_trans->status == TRANS_STATUS_UP)
     {
         trans_get_wait_objs(self->sesman_trans, read_objs, rcount);
-    }
-
-    if (self->pam_auth_trans != 0 &&
-            self->pam_auth_trans->status == TRANS_STATUS_UP)
-    {
-        trans_get_wait_objs(self->pam_auth_trans, read_objs, rcount);
     }
 
     if ((self->chan_trans != 0) && self->chan_trans->status == TRANS_STATUS_UP)
@@ -2897,22 +2838,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         trans_delete(self->sesman_trans);
         self->sesman_trans = NULL;
     }
-
-    if (self->pam_auth_trans != NULL &&
-            !self->delete_pam_auth_trans &&
-            self->pam_auth_trans->status == TRANS_STATUS_UP)
-    {
-        if (trans_check_wait_objs(self->pam_auth_trans) != 0)
-        {
-            self->delete_pam_auth_trans = 1;
-        }
-    }
-    if (self->delete_pam_auth_trans)
-    {
-        trans_delete(self->pam_auth_trans);
-        self->pam_auth_trans = NULL;
-    }
-
 
     if (self->chan_trans != NULL &&
             self->chan_trans->status == TRANS_STATUS_UP)

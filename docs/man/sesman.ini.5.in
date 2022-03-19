@@ -50,13 +50,19 @@ outside their proper section will be \fIignored\fR.
 Following parameters can be used in the \fB[Globals]\fR section.
 
 .TP
-\fBListenAddress\fR=\fIip address\fR
-xrdp-sesman listening address. If not specified, defaults to \fI0.0.0.0\fR
-(all interfaces).
-
-.TP
-\fBListenPort\fR=\fIport number\fR
-xrdp-sesman listening port. If not specified, defaults to \fI3350\fR.
+\fBListenPort\fR=\fIpath-to-socket\fR
+UNIX domain socket for xrdp-sesman(8) to listen on.
+.PP
+.RS
+The default value of this setting is 'sesman.socket'.
+.PP
+An absoute path can be specified by starting this parameter with a '/'.
+In this instance, the system administrator is responsible for ensuring
+the socket can only be created by a suitably privileged process.
+.PP
+If the parameter does not start with a '/', a name within
+@sesmanruntimedir@ is used.
+.RE
 
 .TP
 \fBEnableUserWindowManager\fR=\fI[true|false]\fR

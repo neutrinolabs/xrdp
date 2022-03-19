@@ -36,6 +36,7 @@
 #include "trans.h"
 
 #include "scp_process.h"
+#include "lock_uds.h"
 
 /**
  * Maximum number of short-lived connections to sesman
@@ -70,6 +71,10 @@ struct sesman_con
 };
 
 static struct trans *g_list_trans;
+
+/* Variables used to lock g_list_trans */
+static struct lock_uds *g_list_trans_lock;
+
 static struct list *g_con_list = NULL;
 static int g_pid;
 
@@ -206,43 +211,50 @@ sesman_process_params(int argc, char **argv,
 }
 
 /******************************************************************************/
-static int sesman_listen_test(struct config_sesman *cfg)
+static int
+create_sesman_runtime_dir(void)
 {
-    int error;
-    int sck;
-    int rv = 0;
+    int rv = -1;
+    /* Make sure if we create the directory, there's no gap where it
+    * may have the wrong permissions */
+    int entry_umask = g_umask_hex(0x755);
 
-    sck = g_tcp_socket();
-    if (sck < 0)
+    if (!g_directory_exist(SESMAN_RUNTIME_PATH) &&
+            !g_create_dir(SESMAN_RUNTIME_PATH))
     {
-        return 1;
+        LOG(LOG_LEVEL_ERROR,
+            "Can't create runtime directory '"
+            SESMAN_RUNTIME_PATH "' [%s]", g_get_strerror());
     }
-
-    LOG(LOG_LEVEL_DEBUG, "Testing if xrdp-sesman can listen on %s port %s.",
-        cfg->listen_address, cfg->listen_port);
-    g_tcp_set_non_blocking(sck);
-    error = g_tcp_bind_address(sck, cfg->listen_port, cfg->listen_address);
-    if (error == 0)
+    else if (g_chown(SESMAN_RUNTIME_PATH, g_getuid(), g_getuid()) != 0)
     {
-        /* try to listen */
-        error = g_tcp_listen(sck);
-
-        if (error == 0)
-        {
-            /* if listen succeeded, stop listen immediately */
-            g_sck_close(sck);
-        }
-        else
-        {
-            rv = 1;
-        }
+        LOG(LOG_LEVEL_ERROR,
+            "Can't set ownership of sesman runtime directory [%s]",
+            g_get_strerror());
+    }
+    else if (g_chmod_hex(SESMAN_RUNTIME_PATH, 0x755) != 0)
+    {
+        /* This might seem redundant, but there's a chance the
+         * directory already exists */
+        LOG(LOG_LEVEL_ERROR,
+            "Can't set permissions of sesman runtime directory [%s]",
+            g_get_strerror());
     }
     else
     {
-        rv = 1;
+        rv = 0;
     }
+    g_umask_hex(entry_umask);
 
     return rv;
+}
+
+/******************************************************************************/
+static int sesman_listen_test(struct config_sesman *cfg)
+{
+    int status = sesman_create_listening_transport(cfg);
+    sesman_delete_listening_transport();
+    return status;
 }
 
 /******************************************************************************/
@@ -357,8 +369,18 @@ set_reload_event(int sig)
 void
 sesman_delete_listening_transport(void)
 {
-    trans_delete(g_list_trans);
+    if (g_getpid() == g_pid)
+    {
+        trans_delete(g_list_trans);
+    }
+    else
+    {
+        trans_delete_from_child(g_list_trans);
+    }
     g_list_trans = NULL;
+
+    unlock_uds(g_list_trans_lock);
+    g_list_trans_lock = NULL;
 }
 
 /******************************************************************************/
@@ -366,26 +388,43 @@ int
 sesman_create_listening_transport(const struct config_sesman *cfg)
 {
     int rv = 1;
-    g_list_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+    g_list_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
     if (g_list_trans == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "%s: trans_create failed", __func__);
     }
-    else
+    else if ((g_list_trans_lock = lock_uds(cfg->listen_port)) != NULL)
     {
-        LOG(LOG_LEVEL_DEBUG, "%s: address %s port %s",
-            __func__, cfg->listen_address, cfg->listen_port);
-        rv = trans_listen_address(g_list_trans, cfg->listen_port,
-                                  cfg->listen_address);
+        /* Make sure the file is always created with the correct
+         * permissions, if it's not there */
+        int entry_umask = g_umask_hex(0x666);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "%s: port %s", __func__, cfg->listen_port);
+        rv = trans_listen_address(g_list_trans, cfg->listen_port, NULL);
         if (rv != 0)
         {
             LOG(LOG_LEVEL_ERROR, "%s: trans_listen_address failed", __func__);
-            sesman_delete_listening_transport();
+        }
+        else if (g_chown(cfg->listen_port, g_getuid(), g_getuid()) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Can't set ownership of '%s' [%s]",
+                cfg->listen_port, g_get_strerror());
+        }
+        else if ((rv = g_chmod_hex(cfg->listen_port, 0x666)) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "%s: Can't set permissions on '%s' [%s]",
+                __func__, cfg->listen_port, g_get_strerror());
         }
         else
         {
             g_list_trans->trans_conn_in = sesman_listen_conn_in;
         }
+        g_umask_hex(entry_umask);
+    }
+
+    if (rv != 0)
+    {
+        sesman_delete_listening_transport();
     }
 
     return rv;
@@ -422,6 +461,7 @@ sesman_main_loop(void)
         list_delete(g_con_list);
         return 1;
     }
+    LOG(LOG_LEVEL_INFO, "Sesman now listening on %s", g_cfg->listen_port);
 
     error = 0;
     while (!error)
@@ -722,7 +762,6 @@ main(int argc, char **argv)
 
     LOG(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
     LOG(LOG_LEVEL_TRACE, "    sesman_ini        = %s", g_cfg->sesman_ini);
-    LOG(LOG_LEVEL_TRACE, "    listen_address    = %s", g_cfg->listen_address);
     LOG(LOG_LEVEL_TRACE, "    listen_port       = %s", g_cfg->listen_port);
     LOG(LOG_LEVEL_TRACE, "    enable_user_wm    = %d", g_cfg->enable_user_wm);
     LOG(LOG_LEVEL_TRACE, "    default_wm        = %s", g_cfg->default_wm);
@@ -751,6 +790,16 @@ main(int argc, char **argv)
         }
     }
 
+    /* Create the runtime directory before we try to listen (or
+     * test-listen), so there's somewhere for the default socket to live */
+    if (create_sesman_runtime_dir() != 0)
+    {
+        config_free(g_cfg);
+        log_end();
+        g_deinit();
+        g_exit(1);
+    }
+
     if (daemon)
     {
         /* start of daemonizing code */
@@ -759,6 +808,7 @@ main(int argc, char **argv)
             LOG(LOG_LEVEL_ERROR, "Failed to start xrdp-sesman daemon, "
                 "possibly address already in use.");
             config_free(g_cfg);
+            log_end();
             g_deinit();
             g_exit(1);
         }
@@ -766,14 +816,17 @@ main(int argc, char **argv)
         if (0 != g_fork())
         {
             config_free(g_cfg);
+            log_end();
             g_deinit();
             g_exit(0);
         }
 
     }
 
-    /* signal handling */
+    /* Now we've forked (if necessary), we can get the prgram PID */
     g_pid = g_getpid();
+
+    /* signal handling */
     g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_term", g_pid);
     g_term_event = g_create_wait_obj(text);
     g_snprintf(text, 255, "xrdp_sesman_%8.8x_sigchld", g_pid);

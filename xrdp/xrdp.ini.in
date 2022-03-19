@@ -223,7 +223,6 @@ name=Xorg
 lib=libxup.@lib_extension@
 username=ask
 password=ask
-ip=127.0.0.1
 port=-1
 code=20
 
@@ -232,7 +231,6 @@ name=Xvnc
 lib=libvnc.@lib_extension@
 username=ask
 password=ask
-ip=127.0.0.1
 port=-1
 #xserverbpp=24
 #delay_ms=2000
@@ -256,7 +254,6 @@ username=na
 password=ask
 #pamusername=asksame
 #pampassword=asksame
-#pamsessionmng=127.0.0.1
 #delay_ms=2000
 
 ; Generic RDP proxy using NeutrinoRDP
@@ -275,7 +272,6 @@ password=ask
 ; connections.
 #pamusername=ask
 #pampassword=ask
-#pamsessionmng=127.0.0.1
 ; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
 ; this line if you're using a client which does.
 #enable_dynamic_resizing=false

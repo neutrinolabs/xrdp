@@ -29,11 +29,6 @@ option may not do what you expect.
 Set session bits-per-pixel (colour depth). Some session types (i.e. Xorg)
 will ignore this setting.
 .TP
-.B -s <server>
-Server on which sesman is running (probably 'localhost').
-.br
-Use of this option is discouraged as it will be removed in the future.
-.TP
 .B -t <session-type>
 Session type - one of Xorg, Xvnc or X11rdp. Alternatively, for testing
 only, use the numeric session code.

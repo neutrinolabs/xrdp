@@ -58,6 +58,8 @@ to read it.
 @localstatedir@/log/xrdp\-sesman.log
 .br
 @localstatedir@/run/xrdp\-sesman.pid
+.br
+@sesmanruntimedir@/sesman.socket
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>
