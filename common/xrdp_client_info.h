@@ -39,14 +39,14 @@ struct monitor_info
     int flags;
 
     /* From 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT */
-    int physical_width;
-    int physical_height;
-    int orientation;
-    int desktop_scale_factor;
-    int device_scale_factor;
+    unsigned int physical_width;
+    unsigned int physical_height;
+    unsigned int orientation;
+    unsigned int desktop_scale_factor;
+    unsigned int device_scale_factor;
 
     /* Derived setting */
-    int is_primary;
+    unsigned int is_primary;
 };
 
 /* xrdp keyboard overrids */
@@ -59,11 +59,11 @@ struct xrdp_keyboard_overrides
 
 struct display_size_description
 {
-    int monitorCount; /* number of monitors detected (max = 16) */
+    unsigned int monitorCount; /* 2.2.2.2 DISPLAYCONTROL_MONITOR_LAYOUT_PDU: number of monitors detected (max = 16) */
     struct monitor_info minfo[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS]; /* client monitor data */
     struct monitor_info minfo_wm[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS]; /* client monitor data, non-negative values */
-    int session_width;
-    int session_height;
+    unsigned int session_width;
+    unsigned int session_height;
 };
 
 /**
@@ -79,8 +79,6 @@ struct xrdp_client_info
     int size; /* bytes for this structure */
     int version; /* Should be CLIENT_INFO_CURRENT_VERSION */
     int bpp;
-    int width;
-    int height;
     /* bitmap cache info */
     int cache1_entries;
     int cache1_size;
@@ -153,9 +151,7 @@ struct xrdp_client_info
 
     int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
     int multimon; /* 0 = deny , 1 = allow */
-    int monitorCount; /* number of monitors detected (max = 16) */
-    struct monitor_info minfo[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS]; /* client monitor data */
-    struct monitor_info minfo_wm[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS]; /* client monitor data, non-negative values */
+    struct display_size_description display_sizes;
 
     int keyboard_type;
     int keyboard_subtype;
@@ -211,6 +207,6 @@ struct xrdp_client_info
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
-#define CLIENT_INFO_CURRENT_VERSION 20210723
+#define CLIENT_INFO_CURRENT_VERSION 20220320
 
 #endif

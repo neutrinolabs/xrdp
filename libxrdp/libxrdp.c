@@ -1134,7 +1134,7 @@ libxrdp_orders_send_font(struct xrdp_session *session,
  * to a single monitor */
 int EXPORT_CC
 libxrdp_reset(struct xrdp_session *session,
-              int width, int height, int bpp)
+              unsigned int width, unsigned int height, int bpp)
 {
     if (session->client_info != 0)
     {
@@ -1147,18 +1147,18 @@ libxrdp_reset(struct xrdp_session *session,
         }
 
         /* if same (and only one monitor on client) don't need to do anything */
-        if (client_info->width == width &&
-                client_info->height == height &&
+        if (client_info->display_sizes.session_width == width &&
+                client_info->display_sizes.session_height == height &&
                 client_info->bpp == bpp &&
-                (client_info->monitorCount == 0 || client_info->multimon == 0))
+                (client_info->display_sizes.monitorCount == 0 || client_info->multimon == 0))
         {
             return 0;
         }
 
-        client_info->width = width;
-        client_info->height = height;
+        client_info->display_sizes.session_width = width;
+        client_info->display_sizes.session_height = height;
+        client_info->display_sizes.monitorCount = 0;
         client_info->bpp = bpp;
-        client_info->monitorCount = 0;
         client_info->multimon = 0;
     }
     else
@@ -1908,8 +1908,39 @@ libxrdp_process_monitor_stream(struct stream *s,
             in_uint32_le(s, monitor_layout->physical_width);
             in_uint32_le(s, monitor_layout->physical_height);
 
+            /* Per spec (2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT),
+             * if EITHER physical_width or physical_height are
+             * out of range, BOTH must be ignored.
+             */
+            if (monitor_layout->physical_width > 10000
+                    || monitor_layout->physical_width < 10)
+            {
+                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
+                    " physical_width is not within valid range."
+                    " Setting physical_width to 0mm,"
+                    " Setting physical_height to 0mm,"
+                    " physical_width was: %d",
+                    monitor_layout->physical_width);
+                monitor_layout->physical_width = 0;
+                monitor_layout->physical_height = 0;
+            }
+
+            if (monitor_layout->physical_height > 10000
+                    || monitor_layout->physical_height < 10)
+            {
+                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
+                    " physical_height is not within valid range."
+                    " Setting physical_width to 0mm,"
+                    " Setting physical_height to 0mm,"
+                    " physical_height was: %d",
+                    monitor_layout->physical_height);
+                monitor_layout->physical_width = 0;
+                monitor_layout->physical_height = 0;
+            }
+
             in_uint32_le(s, monitor_layout->orientation);
-            switch (monitor_layout->orientation) {
+            switch (monitor_layout->orientation)
+            {
                 case ORIENTATION_LANDSCAPE:
                 case ORIENTATION_PORTRAIT:
                 case ORIENTATION_LANDSCAPE_FLIPPED:
@@ -1918,21 +1949,47 @@ libxrdp_process_monitor_stream(struct stream *s,
                 default:
                     LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
                         " Orientation is not one of %d, %d, %d, or %d."
-                        " Value was %d and ignored.",
+                        " Value was %d and ignored and set to default value of LANDSCAPE.",
                         ORIENTATION_LANDSCAPE,
                         ORIENTATION_PORTRAIT,
                         ORIENTATION_LANDSCAPE_FLIPPED,
                         ORIENTATION_PORTRAIT_FLIPPED,
                         monitor_layout->orientation);
+                    monitor_layout->orientation = ORIENTATION_LANDSCAPE;
             }
 
             in_uint32_le(s, monitor_layout->desktop_scale_factor);
+            if (monitor_layout->desktop_scale_factor < 100
+                    || monitor_layout->desktop_scale_factor > 500
+                    || (monitor_layout->desktop_scale_factor != 100
+                        && monitor_layout->desktop_scale_factor != 140
+                        && monitor_layout->desktop_scale_factor != 180))
+            {
+                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
+                    " desktop_scale_factor is not within valid range. Assuming 100."
+                    " Value was: %d",
+                    monitor_layout->desktop_scale_factor);
+                monitor_layout->desktop_scale_factor = 100;
+            }
+
             in_uint32_le(s, monitor_layout->device_scale_factor);
+            if (monitor_layout->device_scale_factor < 100
+                    || monitor_layout->device_scale_factor > 500
+                    || (monitor_layout->device_scale_factor != 100
+                        && monitor_layout->device_scale_factor != 140
+                        && monitor_layout->device_scale_factor != 180))
+            {
+                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
+                    " device_scale_factor is not within valid range. Assuming 100."
+                    " Value was: %d",
+                    monitor_layout->device_scale_factor);
+                monitor_layout->device_scale_factor = 100;
+            }
 
             /*
              * 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT
              */
-            LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_monitor_stream:"
+            LOG_DEVEL(LOG_LEVEL_INFO, "libxrdp_process_monitor_stream:"
                       " Received [MS-RDPEDISP] 2.2.2.2.1"
                       " DISPLAYCONTROL_MONITOR_LAYOUT_PDU"
                       ".DISPLAYCONTROL_MONITOR_LAYOUT"

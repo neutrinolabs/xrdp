@@ -1953,8 +1953,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 
     /* TS_UD_CS_CORE requiered fields */
     in_uint8s(s, 4); /* version */
-    in_uint16_le(s, self->rdp_layer->client_info.width);
-    in_uint16_le(s, self->rdp_layer->client_info.height);
+    in_uint16_le(s, self->rdp_layer->client_info.display_sizes.session_width);
+    in_uint16_le(s, self->rdp_layer->client_info.display_sizes.session_height);
     in_uint16_le(s, colorDepth);
     switch (colorDepth)
     {
@@ -1981,8 +1981,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               "clientName %s, keyboardType (ignored), "
               "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
               "imeFileName (ignroed)",
-              self->rdp_layer->client_info.width,
-              self->rdp_layer->client_info.height,
+              self->rdp_layer->client_info.display_sizes.session_width,
+              self->rdp_layer->client_info.display_sizes.session_height,
               (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
                colorDepth == 0xca01 ? "RNS_UD_COLOR_8BPP" : "unknown"),
               clientName);
@@ -2370,17 +2370,17 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     error = libxrdp_process_monitor_stream(s, description, 0);
     if (error == 0)
     {
-        client_info->monitorCount = description->monitorCount;
+        client_info->display_sizes.monitorCount = description->monitorCount;
 
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:"
                   " Received [MS-RDPBCGR] TS_UD_CS_MONITOR"
                   " flags 0x%8.8x, monitorCount %d",
                   flags, description->monitorCount);
 
-        client_info->width = description->session_width;
-        client_info->height = description->session_height;
-        g_memcpy(client_info->minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
-        g_memcpy(client_info->minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        client_info->display_sizes.session_width = description->session_width;
+        client_info->display_sizes.session_height = description->session_height;
+        g_memcpy(client_info->display_sizes.minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        g_memcpy(client_info->display_sizes.minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
     }
 
     g_free(description);

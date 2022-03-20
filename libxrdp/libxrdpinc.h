@@ -193,7 +193,7 @@ libxrdp_orders_send_font(struct xrdp_session *session,
                          int font_index, int char_index);
 int
 libxrdp_reset(struct xrdp_session *session,
-              int width, int height, int bpp);
+              unsigned int width, unsigned int height, int bpp);
 int
 libxrdp_orders_send_raw_bitmap2(struct xrdp_session *session,
                                 int width, int height, int bpp, char *data,

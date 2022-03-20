@@ -1144,14 +1144,14 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
         }
     }
 
-    wm->client_info->monitorCount = description->monitorCount;
-    wm->client_info->width = description->session_width;
-    wm->client_info->height = description->session_height;
-    g_memcpy(wm->client_info->minfo,
+    wm->client_info->display_sizes.monitorCount = description->monitorCount;
+    wm->client_info->display_sizes.session_width = description->session_width;
+    wm->client_info->display_sizes.session_height = description->session_height;
+    g_memcpy(wm->client_info->display_sizes.minfo,
              description->minfo,
              sizeof(struct monitor_info)
              * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
-    g_memcpy(wm->client_info->minfo_wm,
+    g_memcpy(wm->client_info->display_sizes.minfo_wm,
              description->minfo_wm,
              sizeof(struct monitor_info)
              * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
@@ -3603,10 +3603,10 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
     }
 
     /* if same (and only one monitor on client) don't need to do anything */
-    if (wm->client_info->width == width &&
-            wm->client_info->height == height &&
+    if (wm->client_info->display_sizes.session_width == (uint32_t)width &&
+            wm->client_info->display_sizes.session_height == (uint32_t)height &&
             wm->client_info->bpp == bpp &&
-            (wm->client_info->monitorCount == 0 || wm->client_info->multimon == 0))
+            (wm->client_info->display_sizes.monitorCount == 0 || wm->client_info->multimon == 0))
     {
         return 0;
     }
@@ -3620,8 +3620,8 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
     /* reset cache */
     xrdp_cache_reset(wm->cache, wm->client_info);
     /* resize the main window */
-    xrdp_bitmap_resize(wm->screen, wm->client_info->width,
-                       wm->client_info->height);
+    xrdp_bitmap_resize(wm->screen, wm->client_info->display_sizes.session_width,
+                       wm->client_info->display_sizes.session_height);
     /* load some stuff */
     xrdp_wm_load_static_colors_plus(wm, 0);
     xrdp_wm_load_static_pointers(wm);
