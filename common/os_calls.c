@@ -2323,6 +2323,55 @@ g_file_lock(int fd, int start, int len)
 }
 
 /*****************************************************************************/
+/* Converts a hex mask to a mode_t value */
+#if !defined(_WIN32)
+static mode_t
+hex_to_mode_t(int hex)
+{
+    mode_t mode = 0;
+
+    mode |= (hex & 0x4000) ? S_ISUID : 0;
+    mode |= (hex & 0x2000) ? S_ISGID : 0;
+    mode |= (hex & 0x1000) ? S_ISVTX : 0;
+    mode |= (hex & 0x0400) ? S_IRUSR : 0;
+    mode |= (hex & 0x0200) ? S_IWUSR : 0;
+    mode |= (hex & 0x0100) ? S_IXUSR : 0;
+    mode |= (hex & 0x0040) ? S_IRGRP : 0;
+    mode |= (hex & 0x0020) ? S_IWGRP : 0;
+    mode |= (hex & 0x0010) ? S_IXGRP : 0;
+    mode |= (hex & 0x0004) ? S_IROTH : 0;
+    mode |= (hex & 0x0002) ? S_IWOTH : 0;
+    mode |= (hex & 0x0001) ? S_IXOTH : 0;
+    return mode;
+}
+#endif
+
+/*****************************************************************************/
+/* Converts a mode_t value to a hex mask */
+#if !defined(_WIN32)
+static int
+mode_t_to_hex(mode_t mode)
+{
+    int hex = 0;
+
+    hex |= (mode & S_ISUID) ?  0x4000 : 0;
+    hex |= (mode & S_ISGID) ?  0x2000 : 0;
+    hex |= (mode & S_ISVTX) ?  0x1000 : 0;
+    hex |= (mode & S_IRUSR) ?  0x0400 : 0;
+    hex |= (mode & S_IWUSR) ?  0x0200 : 0;
+    hex |= (mode & S_IXUSR) ?  0x0100 : 0;
+    hex |= (mode & S_IRGRP) ?  0x0040 : 0;
+    hex |= (mode & S_IWGRP) ?  0x0020 : 0;
+    hex |= (mode & S_IXGRP) ?  0x0010 : 0;
+    hex |= (mode & S_IROTH) ?  0x0004 : 0;
+    hex |= (mode & S_IWOTH) ?  0x0002 : 0;
+    hex |= (mode & S_IXOTH) ?  0x0001 : 0;
+
+    return hex;
+}
+#endif
+
+/*****************************************************************************/
 /* returns error */
 int
 g_chmod_hex(const char *filename, int flags)
@@ -2330,22 +2379,22 @@ g_chmod_hex(const char *filename, int flags)
 #if defined(_WIN32)
     return 0;
 #else
-    int fl;
+    mode_t m = hex_to_mode_t(flags);
+    return chmod(filename, m);
+#endif
+}
 
-    fl = 0;
-    fl |= (flags & 0x4000) ? S_ISUID : 0;
-    fl |= (flags & 0x2000) ? S_ISGID : 0;
-    fl |= (flags & 0x1000) ? S_ISVTX : 0;
-    fl |= (flags & 0x0400) ? S_IRUSR : 0;
-    fl |= (flags & 0x0200) ? S_IWUSR : 0;
-    fl |= (flags & 0x0100) ? S_IXUSR : 0;
-    fl |= (flags & 0x0040) ? S_IRGRP : 0;
-    fl |= (flags & 0x0020) ? S_IWGRP : 0;
-    fl |= (flags & 0x0010) ? S_IXGRP : 0;
-    fl |= (flags & 0x0004) ? S_IROTH : 0;
-    fl |= (flags & 0x0002) ? S_IWOTH : 0;
-    fl |= (flags & 0x0001) ? S_IXOTH : 0;
-    return chmod(filename, fl);
+/*****************************************************************************/
+/* returns error */
+int
+g_umask_hex(int flags)
+{
+#if defined(_WIN32)
+    return flags;
+#else
+    mode_t m = hex_to_mode_t(flags);
+    m = umask(m);
+    return mode_t_to_hex(m);
 #endif
 }
 

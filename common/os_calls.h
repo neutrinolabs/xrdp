@@ -128,6 +128,7 @@ int      g_file_write(int fd, const char *ptr, int len);
 int      g_file_seek(int fd, int offset);
 int      g_file_lock(int fd, int start, int len);
 int      g_chmod_hex(const char *filename, int flags);
+int      g_umask_hex(int flags);
 int      g_chown(const char *name, int uid, int gid);
 int      g_mkdir(const char *dirname);
 char    *g_get_current_dir(char *dirname, int maxlen);
