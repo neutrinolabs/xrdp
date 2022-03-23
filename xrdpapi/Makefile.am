@@ -13,3 +13,6 @@ module_LTLIBRARIES = \
 libxrdpapi_la_SOURCES = \
   xrdpapi.c \
   xrdpapi.h
+
+libxrdpapi_la_LIBADD = \
+  $(top_builddir)/common/libcommon.la
