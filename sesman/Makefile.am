@@ -45,6 +45,8 @@ xrdp_sesman_SOURCES = \
   config.h \
   env.c \
   env.h \
+  lock_uds.c \
+  lock_uds.h \
   scp_process.c \
   scp_process.h \
   sesman.c \
