@@ -704,21 +704,13 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-    /* reading config */
-    if ((g_cfg = config_read(startup_params.sesman_ini)) == NULL)
+    /* starting logging subsystem */
+    if (!g_file_exist(startup_params.sesman_ini))
     {
-        g_printf("error reading config %s: %s\nquitting.\n",
-                 startup_params.sesman_ini, g_get_strerror());
+        g_printf("Config file %s does not exist\n", startup_params.sesman_ini);
         g_deinit();
         g_exit(1);
     }
-
-    if (startup_params.dump_config)
-    {
-        config_dump(g_cfg);
-    }
-
-    /* starting logging subsystem */
     log_error = log_start(
                     startup_params.sesman_ini, "xrdp-sesman",
                     (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
@@ -735,13 +727,27 @@ main(int argc, char **argv)
                           getLogFile(text, 255));
                 break;
             default:
-                g_writeln("error");
+                // Assume sufficient messages have already been generated
                 break;
         }
 
-        config_free(g_cfg);
         g_deinit();
         g_exit(1);
+    }
+
+    /* reading config */
+    if ((g_cfg = config_read(startup_params.sesman_ini)) == NULL)
+    {
+        LOG(LOG_LEVEL_ALWAYS, "error reading config %s: %s",
+            startup_params.sesman_ini, g_get_strerror());
+        log_end();
+        g_deinit();
+        g_exit(1);
+    }
+
+    if (startup_params.dump_config)
+    {
+        config_dump(g_cfg);
     }
 
     LOG(LOG_LEVEL_TRACE, "config loaded in %s at %s:%d", __func__, __FILE__, __LINE__);
