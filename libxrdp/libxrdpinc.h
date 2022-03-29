@@ -86,6 +86,9 @@ struct xrdp_drdynvc_procs
     int (*data)(intptr_t id, int chan_id, char *data, int bytes);
 };
 
+/* Defined in xrdp_client_info.h */
+struct display_size_description;
+
 /***
  * Initialise the XRDP library
  *
@@ -190,7 +193,7 @@ libxrdp_orders_send_font(struct xrdp_session *session,
                          int font_index, int char_index);
 int
 libxrdp_reset(struct xrdp_session *session,
-              int width, int height, int bpp);
+              unsigned int width, unsigned int height, int bpp);
 int
 libxrdp_orders_send_raw_bitmap2(struct xrdp_session *session,
                                 int width, int height, int bpp, char *data,
@@ -303,5 +306,22 @@ libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
 int EXPORT_CC
 libxrdp_send_session_info(struct xrdp_session *session, const char *data,
                           int data_bytes);
+
+/**
+ * Processes a stream that is based on either
+ *  2.2.1.3.6 Client Monitor Data (TS_UD_CS_MONITOR) or 2.2.2.2 DISPLAYCONTROL_MONITOR_LAYOUT_PDU
+ *  and then stores the processed monitor data into the description parameter.
+ * @param s
+ *      The stream to process.
+ * @param description
+ *      Must be pre-allocated. Monitor data is filled in as part of processing the stream.
+ * @param full_parameters
+ *      0 if the monitor stream is from 2.2.1.3.6 Client Monitor Data (TS_UD_CS_MONITOR)
+ *      1 if the monitor stream is from 2.2.2.2 DISPLAYCONTROL_MONITOR_LAYOUT_PDU
+ * @return 0 if the data is processed, non-zero if there is an error.
+ */
+int EXPORT_CC
+libxrdp_process_monitor_stream(struct stream *s, struct display_size_description *description,
+                               int full_parameters);
 
 #endif

@@ -2039,25 +2039,25 @@ static void
 init_client_layout(struct vnc_screen_layout *layout,
                    const struct xrdp_client_info *client_info)
 {
-    int i;
+    uint32_t i;
 
-    layout->total_width = client_info->width;
-    layout->total_height = client_info->height;
+    layout->total_width = client_info->display_sizes.session_width;
+    layout->total_height = client_info->display_sizes.session_height;
 
-    layout->count = client_info->monitorCount;
+    layout->count = client_info->display_sizes.monitorCount;
     layout->s = g_new(struct vnc_screen, layout->count);
 
-    for (i = 0 ; i < client_info->monitorCount ; ++i)
+    for (i = 0 ; i < client_info->display_sizes.monitorCount ; ++i)
     {
         /* Use minfo_wm, as this is normalised for a top-left of (0,0)
          * as required by RFC6143 */
         layout->s[i].id = i;
-        layout->s[i].x = client_info->minfo_wm[i].left;
-        layout->s[i].y = client_info->minfo_wm[i].top;
-        layout->s[i].width =  client_info->minfo_wm[i].right -
-                              client_info->minfo_wm[i].left + 1;
-        layout->s[i].height = client_info->minfo_wm[i].bottom -
-                              client_info->minfo_wm[i].top + 1;
+        layout->s[i].x = client_info->display_sizes.minfo_wm[i].left;
+        layout->s[i].y = client_info->display_sizes.minfo_wm[i].top;
+        layout->s[i].width =  client_info->display_sizes.minfo_wm[i].right -
+                              client_info->display_sizes.minfo_wm[i].left + 1;
+        layout->s[i].height = client_info->display_sizes.minfo_wm[i].bottom -
+                              client_info->display_sizes.minfo_wm[i].top + 1;
         layout->s[i].flags = 0;
     }
 }
@@ -2106,11 +2106,11 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
         g_free(v->client_layout.s);
 
         /* Save monitor information from the client */
-        if (!client_info->multimon || client_info->monitorCount < 1)
+        if (!client_info->multimon || client_info->display_sizes.monitorCount < 1)
         {
             set_single_screen_layout(&v->client_layout,
-                                     client_info->width,
-                                     client_info->height);
+                                     client_info->display_sizes.session_width,
+                                     client_info->display_sizes.session_height);
         }
         else
         {

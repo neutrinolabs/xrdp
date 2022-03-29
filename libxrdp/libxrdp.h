@@ -359,6 +359,18 @@ int
 xrdp_mcs_disconnect(struct xrdp_mcs *self);
 
 /* xrdp_sec.c */
+
+/*
+    These are error return codes for both:
+        1. xrdp_sec_process_mcs_data_monitors
+        2. libxrdp_process_monitor_stream
+    To clarify any reason for a non-zero response code.
+*/
+#define SEC_PROCESS_MONITORS_ERR 1
+#define SEC_PROCESS_MONITORS_ERR_TOO_MANY_MONITORS 2
+#define SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP 3
+#define SEC_PROCESS_MONITORS_ERR_INVALID_MONITOR 4
+
 struct xrdp_sec *
 xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans);
 void
@@ -383,6 +395,8 @@ int
 xrdp_sec_incoming(struct xrdp_sec *self);
 int
 xrdp_sec_disconnect(struct xrdp_sec *self);
+int
+xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s);
 
 /* xrdp_rdp.c */
 struct xrdp_rdp *

@@ -652,7 +652,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     int primary_height;
     int primary_x_offset;  /* Offset of centre of primary screen */
     int primary_y_offset;
-    int index;
+    uint32_t index;
     int x;
     int y;
     int cx;
@@ -684,16 +684,16 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     }
 
     /* multimon scenario, draw login window on primary monitor */
-    if (self->client_info->monitorCount > 1)
+    if (self->client_info->display_sizes.monitorCount > 1)
     {
-        for (index = 0; index < self->client_info->monitorCount; index++)
+        for (index = 0; index < self->client_info->display_sizes.monitorCount; index++)
         {
-            if (self->client_info->minfo_wm[index].is_primary)
+            if (self->client_info->display_sizes.minfo_wm[index].is_primary)
             {
-                x = self->client_info->minfo_wm[index].left;
-                y = self->client_info->minfo_wm[index].top;
-                cx = self->client_info->minfo_wm[index].right;
-                cy = self->client_info->minfo_wm[index].bottom;
+                x = self->client_info->display_sizes.minfo_wm[index].left;
+                y = self->client_info->display_sizes.minfo_wm[index].top;
+                cx = self->client_info->display_sizes.minfo_wm[index].right;
+                cy = self->client_info->display_sizes.minfo_wm[index].bottom;
 
                 primary_width = cx - x;
                 primary_height = cy - y;

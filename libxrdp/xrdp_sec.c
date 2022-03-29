@@ -27,8 +27,6 @@
 #include "log.h"
 #include "string_calls.h"
 
-
-
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
 {
@@ -1955,8 +1953,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 
     /* TS_UD_CS_CORE requiered fields */
     in_uint8s(s, 4); /* version */
-    in_uint16_le(s, self->rdp_layer->client_info.width);
-    in_uint16_le(s, self->rdp_layer->client_info.height);
+    in_uint16_le(s, self->rdp_layer->client_info.display_sizes.session_width);
+    in_uint16_le(s, self->rdp_layer->client_info.display_sizes.session_height);
     in_uint16_le(s, colorDepth);
     switch (colorDepth)
     {
@@ -1983,8 +1981,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               "clientName %s, keyboardType (ignored), "
               "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
               "imeFileName (ignroed)",
-              self->rdp_layer->client_info.width,
-              self->rdp_layer->client_info.height,
+              self->rdp_layer->client_info.display_sizes.session_width,
+              self->rdp_layer->client_info.display_sizes.session_height,
               (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
                colorDepth == 0xca01 ? "RNS_UD_COLOR_8BPP" : "unknown"),
               clientName);
@@ -2333,155 +2331,61 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 int
 xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 {
-    int index;
-    int monitorCount;
     int flags;
-    int x1;
-    int y1;
-    int x2;
-    int y2;
-    int got_primary;
-    struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
+    int error = 0;
+    struct xrdp_client_info *client_info = &(self->rdp_layer->client_info);
 
-    client_info = &(self->rdp_layer->client_info);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:");
 
     /* this is an option set in xrdp.ini */
     if (client_info->multimon != 1) /* are multi-monitors allowed ? */
     {
-        LOG(LOG_LEVEL_INFO, "Multi-monitor is disabled by server config");
+        LOG(LOG_LEVEL_INFO,
+            "xrdp_sec_process_mcs_data_monitors:"
+            " Multi-monitor is disabled by server config");
         return 0;
     }
-    if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR"))
+    if (!s_check_rem_and_log(s, 4,
+                             "xrdp_sec_process_mcs_data_monitors:"
+                             " Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR"))
     {
-        return 1;
+        return SEC_PROCESS_MONITORS_ERR;
     }
     in_uint32_le(s, flags); /* flags */
-    in_uint32_le(s, monitorCount);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_MONITOR "
-              "flags 0x%8.8x, monitorCount %d", flags, monitorCount);
 
     //verify flags - must be 0x0
     if (flags != 0)
     {
         LOG(LOG_LEVEL_ERROR,
-            "[MS-RDPBCGR] Protocol error: TS_UD_CS_MONITOR flags MUST be zero, "
-            "received: 0x%8.8x", flags);
-        return 1;
+            "xrdp_sec_process_mcs_data_monitors: [MS-RDPBCGR]"
+            " Protocol error: TS_UD_CS_MONITOR flags MUST be zero,"
+            " received: 0x%8.8x", flags);
+        return SEC_PROCESS_MONITORS_ERR;
     }
-    //verify monitorCount - max 16
-    if (monitorCount > 16)
+
+    struct display_size_description *description =
+        (struct display_size_description *)
+        g_malloc(sizeof(struct display_size_description), 1);
+
+    error = libxrdp_process_monitor_stream(s, description, 0);
+    if (error == 0)
     {
-        LOG(LOG_LEVEL_ERROR,
-            "[MS-RDPBCGR] Protocol error: TS_UD_CS_MONITOR monitorCount "
-            "MUST be less than 16, received: %d", monitorCount);
-        return 2;
+        client_info->display_sizes.monitorCount = description->monitorCount;
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:"
+                  " Received [MS-RDPBCGR] TS_UD_CS_MONITOR"
+                  " flags 0x%8.8x, monitorCount %d",
+                  flags, description->monitorCount);
+
+        client_info->display_sizes.session_width = description->session_width;
+        client_info->display_sizes.session_height = description->session_height;
+        g_memcpy(client_info->display_sizes.minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        g_memcpy(client_info->display_sizes.minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
     }
 
-    client_info->monitorCount = monitorCount;
+    g_free(description);
 
-    x1 = 0;
-    y1 = 0;
-    x2 = 0;
-    y2 = 0;
-    got_primary = 0;
-    /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
-    for (index = 0; index < monitorCount; index++)
-    {
-        if (!s_check_rem_and_log(s, 20, "Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR.TS_MONITOR_DEF"))
-        {
-            return 1;
-        }
-        in_uint32_le(s, client_info->minfo[index].left);
-        in_uint32_le(s, client_info->minfo[index].top);
-        in_uint32_le(s, client_info->minfo[index].right);
-        in_uint32_le(s, client_info->minfo[index].bottom);
-        in_uint32_le(s, client_info->minfo[index].is_primary);
-
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] "
-                  "TS_UD_CS_MONITOR.TS_MONITOR_DEF %d "
-                  "left %d, top %d, right %d, bottom %d, flags 0x%8.8x",
-                  index,
-                  client_info->minfo[index].left,
-                  client_info->minfo[index].top,
-                  client_info->minfo[index].right,
-                  client_info->minfo[index].bottom,
-                  client_info->minfo[index].is_primary);
-
-        if (index == 0)
-        {
-            x1 = client_info->minfo[index].left;
-            y1 = client_info->minfo[index].top;
-            x2 = client_info->minfo[index].right;
-            y2 = client_info->minfo[index].bottom;
-        }
-        else
-        {
-            x1 = MIN(x1, client_info->minfo[index].left);
-            y1 = MIN(y1, client_info->minfo[index].top);
-            x2 = MAX(x2, client_info->minfo[index].right);
-            y2 = MAX(y2, client_info->minfo[index].bottom);
-        }
-
-        if (client_info->minfo[index].is_primary)
-        {
-            got_primary = 1;
-        }
-
-        LOG(LOG_LEVEL_DEBUG,
-            "Client monitor [%d]: left= %d, top= %d, right= %d, bottom= %d, "
-            "is_primary?= %d",
-            index,
-            client_info->minfo[index].left,
-            client_info->minfo[index].top,
-            client_info->minfo[index].right,
-            client_info->minfo[index].bottom,
-            client_info->minfo[index].is_primary);
-    }
-
-    if (!got_primary)
-    {
-        /* no primary monitor was set, choose the leftmost monitor as primary */
-        for (index = 0; index < monitorCount; index++)
-        {
-            if (client_info->minfo[index].left == x1 &&
-                    client_info->minfo[index].top == y1)
-            {
-                client_info->minfo[index].is_primary = 1;
-                break;
-            }
-        }
-    }
-
-    /* set wm geometry */
-    if ((x2 > x1) && (y2 > y1))
-    {
-        client_info->width = (x2 - x1) + 1;
-        client_info->height = (y2 - y1) + 1;
-    }
-    /* make sure virtual desktop size is ok */
-    if (client_info->width > 0x7FFE || client_info->width < 0xC8 ||
-            client_info->height > 0x7FFE || client_info->height < 0xC8)
-    {
-        LOG(LOG_LEVEL_ERROR,
-            "Client supplied virtual desktop width or height is invalid. "
-            "Allowed width range: min %d, max %d. Width received: %d. "
-            "Allowed height range: min %d, max %d. Height received: %d",
-            0xC8, 0x7FFE, client_info->width,
-            0xC8, 0x7FFE, client_info->height);
-        return 3; /* error */
-    }
-
-    /* keep a copy of non negative monitor info values for xrdp_wm usage */
-    for (index = 0; index < monitorCount; index++)
-    {
-        client_info->minfo_wm[index].left =  client_info->minfo[index].left - x1;
-        client_info->minfo_wm[index].top =  client_info->minfo[index].top - y1;
-        client_info->minfo_wm[index].right =  client_info->minfo[index].right - x1;
-        client_info->minfo_wm[index].bottom =  client_info->minfo[index].bottom - y1;
-        client_info->minfo_wm[index].is_primary =  client_info->minfo[index].is_primary;
-    }
-
-    return 0;
+    return error;
 }
 
 /*****************************************************************************/

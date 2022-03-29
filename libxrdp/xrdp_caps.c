@@ -45,7 +45,8 @@ static int
 xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
 {
     struct stream *s;
-    int i;
+    uint32_t i;
+    struct display_size_description *description;
 
     make_stream(s);
     init_stream(s, 8192);
@@ -56,16 +57,18 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
         return 1;
     }
 
-    out_uint32_le(s, self->client_info.monitorCount); /* monitorCount (4 bytes) */
+    description = &self->client_info.display_sizes;
+
+    out_uint32_le(s, description->monitorCount); /* monitorCount (4 bytes) */
 
     /* TODO: validate for allowed monitors in terminal server (maybe by config?) */
-    for (i = 0; i < self->client_info.monitorCount; i++)
+    for (i = 0; i < description->monitorCount; i++)
     {
-        out_uint32_le(s, self->client_info.minfo[i].left);
-        out_uint32_le(s, self->client_info.minfo[i].top);
-        out_uint32_le(s, self->client_info.minfo[i].right);
-        out_uint32_le(s, self->client_info.minfo[i].bottom);
-        out_uint32_le(s, self->client_info.minfo[i].is_primary);
+        out_uint32_le(s, description->minfo[i].left);
+        out_uint32_le(s, description->minfo[i].top);
+        out_uint32_le(s, description->minfo[i].right);
+        out_uint32_le(s, description->minfo[i].bottom);
+        out_uint32_le(s, description->minfo[i].is_primary);
     }
 
     s_mark_end(s);
@@ -883,8 +886,8 @@ unsigned int calculate_multifragmentupdate_len(const struct xrdp_rdp *self)
 {
     unsigned int result = MAX_MULTIFRAGMENTUPDATE_SIZE;
 
-    unsigned int x_tiles = (self->client_info.width + 63) / 64;
-    unsigned int y_tiles = (self->client_info.height + 63) / 64;
+    unsigned int x_tiles = (self->client_info.display_sizes.session_width + 63) / 64;
+    unsigned int y_tiles = (self->client_info.display_sizes.session_height + 63) / 64;
 
     /* Check for overflow on calculation if bad parameters are supplied */
     if ((x_tiles * y_tiles  + 1) < (UINT_MAX / 16384))
@@ -979,8 +982,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 1); /* Receive 1 BPP */
     out_uint16_le(s, 1); /* Receive 4 BPP */
     out_uint16_le(s, 1); /* Receive 8 BPP */
-    out_uint16_le(s, self->client_info.width); /* width */
-    out_uint16_le(s, self->client_info.height); /* height */
+    out_uint16_le(s, self->client_info.display_sizes.session_width); /* width */
+    out_uint16_le(s, self->client_info.display_sizes.session_height); /* height */
     out_uint16_le(s, 0); /* Pad */
     out_uint16_le(s, 1); /* Allow resize */
     out_uint16_le(s, 1); /* bitmap compression */
@@ -1242,7 +1245,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     }
 
     /* send Monitor Layout PDU for dual monitor */
-    if (self->client_info.monitorCount > 0 &&
+    if (self->client_info.display_sizes.monitorCount > 0 &&
             self->client_info.multimon == 1)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending monitor layout pdu");
