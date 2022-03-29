@@ -1932,15 +1932,17 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->ignore_certificate = 1;
 
     // Multi Monitor Settings
-    instance->settings->num_monitors = mod->client_info.monitorCount;
+    const struct display_size_description *display_sizes =
+            &mod->client_info.display_sizes;
+    instance->settings->num_monitors = display_sizes->monitorCount;
 
-    for (index = 0; index < mod->client_info.monitorCount; index++)
+    for (index = 0; index < display_sizes->monitorCount; index++)
     {
-        instance->settings->monitors[index].x = mod->client_info.minfo[index].left;
-        instance->settings->monitors[index].y = mod->client_info.minfo[index].top;
-        instance->settings->monitors[index].width = mod->client_info.minfo[index].right;
-        instance->settings->monitors[index].height = mod->client_info.minfo[index].bottom;
-        instance->settings->monitors[index].is_primary = mod->client_info.minfo[index].is_primary;
+        instance->settings->monitors[index].x = display_sizes->minfo[index].left;
+        instance->settings->monitors[index].y = display_sizes->minfo[index].top;
+        instance->settings->monitors[index].width = display_sizes->minfo[index].right;
+        instance->settings->monitors[index].height = display_sizes->minfo[index].bottom;
+        instance->settings->monitors[index].is_primary = display_sizes->minfo[index].is_primary;
     }
 
     instance->update->BeginPaint = lfreerdp_begin_paint;
