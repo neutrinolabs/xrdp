@@ -109,7 +109,7 @@ struct mod
     int (*server_set_pointer)(struct mod *v, int x, int y, char *data, char *mask);
     int (*server_palette)(struct mod *v, int *palette);
     int (*server_msg)(struct mod *v, const char *msg, int code);
-    int (*server_is_term)(struct mod *v);
+    int (*server_is_term)(void);
     int (*server_set_clip)(struct mod *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct mod *v);
     int (*server_set_fgcolor)(struct mod *v, int fgcolor);

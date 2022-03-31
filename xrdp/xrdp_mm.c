@@ -415,7 +415,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_set_pointer_ex = server_set_pointer_ex;
             self->mod->server_palette = server_palette;
             self->mod->server_msg = server_msg;
-            self->mod->server_is_term = server_is_term;
+            self->mod->server_is_term = g_is_term;
             self->mod->server_set_clip = server_set_clip;
             self->mod->server_reset_clip = server_reset_clip;
             self->mod->server_set_fgcolor = server_set_fgcolor;
@@ -2356,8 +2356,6 @@ xrdp_mm_sesman_connect(struct xrdp_mm *self, const char *ip)
 static int
 xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port)
 {
-    int index;
-
     if (self->wm->client_info->channels_allowed == 0)
     {
         LOG(LOG_LEVEL_DEBUG, "%s: "
@@ -2387,22 +2385,8 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port)
     self->chan_trans->no_stream_init_on_data_in = 1;
     self->chan_trans->extra_flags = 0;
 
-    /* try to connect up to 4 times */
-    for (index = 0; index < 4; index++)
-    {
-        if (trans_connect(self->chan_trans, ip, port, 3000) == 0)
-        {
-            break;
-        }
-        if (g_is_term())
-        {
-            break;
-        }
-        g_sleep(1000);
-        LOG(LOG_LEVEL_WARNING, "xrdp_mm_chansrv_connect: connect failed "
-            "trying again...");
-    }
-
+    /* try to connect for up to 10 seconds */
+    trans_connect(self->chan_trans, ip, port, 10 * 1000);
     if (self->chan_trans->status != TRANS_STATUS_UP)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_mm_chansrv_connect: error in "
@@ -3366,13 +3350,6 @@ server_msg(struct xrdp_mod *mod, const char *msg, int code)
 
     wm = (struct xrdp_wm *)(mod->wm);
     return xrdp_wm_log_msg(wm, LOG_LEVEL_DEBUG, "%s", msg);
-}
-
-/*****************************************************************************/
-int
-server_is_term(struct xrdp_mod *mod)
-{
-    return g_is_term();
 }
 
 /*****************************************************************************/

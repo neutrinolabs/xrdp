@@ -147,6 +147,20 @@ int
 trans_write_copy(struct trans *self);
 int
 trans_write_copy_s(struct trans *self, struct stream *out_s);
+/**
+ * Connect the transport to the specified destination
+ *
+ * @param self Transport
+ * @param server Destination server (TCP transports only)
+ * @param port TCP port, or UNIX socket to connect to
+ * @param timeout in milli-seconds for the operation
+ * @return 0 for success
+ *
+ * Multiple connection attempts may be made within the timeout period.
+ *
+ * If the operation is successful, 0 is returned and self->status will
+ * be TRANS_STATUS_UP
+ */
 int
 trans_connect(struct trans *self, const char *server, const char *port,
               int timeout);
