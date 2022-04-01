@@ -863,7 +863,7 @@ trans_connect(struct trans *self, const char *server, const char *port,
 int
 trans_listen_address(struct trans *self, const char *port, const char *address)
 {
-    if (self->sck != 0)
+    if (self->sck >= 0)
     {
         g_tcp_close(self->sck);
     }
