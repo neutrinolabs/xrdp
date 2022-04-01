@@ -1383,7 +1383,7 @@ close_rdp_socket(struct xrdp_mcs *self)
         {
             trans_shutdown_tls_mode(self->iso_layer->trans);
             g_tcp_close(self->iso_layer->trans->sck);
-            self->iso_layer->trans->sck = 0 ;
+            self->iso_layer->trans->sck = -1;
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mcs_disconnect - socket closed");
             return;
         }
