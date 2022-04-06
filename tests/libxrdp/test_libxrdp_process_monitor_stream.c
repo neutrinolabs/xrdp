@@ -146,7 +146,7 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
 {
     struct stream *s = (struct stream *)NULL;
     make_stream(s);
-    init_stream(s, 233);
+    init_stream(s, 8192);
 
     out_uint32_le(s, 6); //monitorCount
 
