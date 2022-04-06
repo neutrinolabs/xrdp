@@ -323,7 +323,8 @@ make_suite_test_bitmap_load(void)
     tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_4_bit__ok);
     tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_8_bit__ok);
     tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_24_bit__ok);
-
+    /* test_bitmap_load__max_width_* can take more than 4 seconds */
+    tcase_set_timeout(tc_bitmap_load, 20);
     suite_add_tcase(s, tc_bitmap_load);
 
 #ifdef USE_IMLIB2

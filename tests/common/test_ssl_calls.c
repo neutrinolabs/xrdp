@@ -386,6 +386,8 @@ make_suite_test_ssl_calls(void)
     tcase_add_test(tc_ssl_calls, test_des3_enc_ok);
     tcase_add_test(tc_ssl_calls, test_hmac_sha1_dgst_ok);
     tcase_add_test(tc_ssl_calls, test_gen_key_xrdp1);
+    /* test_gen_key_xrdp1 generates a RSA key, it can take a while */
+    tcase_set_timeout(tc_ssl_calls, 60);
 
     return s;
 }
