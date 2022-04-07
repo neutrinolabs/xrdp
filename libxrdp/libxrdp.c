@@ -1881,29 +1881,29 @@ libxrdp_process_monitor_stream(struct stream *s,
              * 200 <= width <= 8192 and must not be odd.
              * Ex: in_uint32_le(s, monitor_layout->width);
              */
-            in_uint32_le(s, monitor_layout->right);
-            if (monitor_layout->right
-                    > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_MONITOR_WIDTH
-                    || monitor_layout->right
-                    < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_MONITOR_WIDTH
-                    || monitor_layout->right % 2 != 0)
+            int width;
+            in_uint32_le(s, width);
+            if (width > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_MONITOR_WIDTH ||
+                    width < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_MONITOR_WIDTH ||
+                    width % 2 != 0)
             {
                 return SEC_PROCESS_MONITORS_ERR_INVALID_MONITOR;
             }
+            monitor_layout->right = monitor_layout->left + width - 1;
 
             /* Per spec (2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT),
              * this is the height.
              * 200 <= height <= 8192
              * Ex: in_uint32_le(s, monitor_layout->height);
              */
-            in_uint32_le(s, monitor_layout->bottom);
-            if (monitor_layout->bottom
-                    > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_MONITOR_HEIGHT
-                    || monitor_layout->bottom
-                    < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_MONITOR_HEIGHT)
+            int height;
+            in_uint32_le(s, height);
+            if (height > CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_MONITOR_HEIGHT ||
+                    height < CLIENT_MONITOR_DATA_MINIMUM_VIRTUAL_MONITOR_HEIGHT)
             {
                 return SEC_PROCESS_MONITORS_ERR_INVALID_MONITOR;
             }
+            monitor_layout->bottom = monitor_layout->top + height - 1;
 
             in_uint32_le(s, monitor_layout->physical_width);
             in_uint32_le(s, monitor_layout->physical_height);
@@ -2001,18 +2001,13 @@ libxrdp_process_monitor_stream(struct stream *s,
                       monitor_layout->flags,
                       monitor_layout->left,
                       monitor_layout->top,
-                      monitor_layout->right,
-                      monitor_layout->bottom,
+                      width,
+                      height,
                       monitor_layout->physical_width,
                       monitor_layout->physical_height,
                       monitor_layout->orientation,
                       monitor_layout->desktop_scale_factor,
                       monitor_layout->device_scale_factor);
-
-            monitor_layout->right =
-                monitor_layout->left + monitor_layout->right;
-            monitor_layout->bottom =
-                monitor_layout->top + monitor_layout->bottom;
 
             if (monitor_layout->flags == DISPLAYCONTROL_MONITOR_PRIMARY)
             {
