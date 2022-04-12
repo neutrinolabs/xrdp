@@ -51,7 +51,8 @@ auth_account_disabled(struct spwd *stp);
 /******************************************************************************/
 /* returns boolean */
 long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass,
+              const struct peer *peer_details, int *errorcode)
 {
     const char *encr;
     const char *epass;

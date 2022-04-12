@@ -32,11 +32,13 @@
  * @brief Validates user's password
  * @param user user's login name
  * @param pass user's password
+ * @param peer_details Details of connecting peer
  * @return non-zero handle on success, 0 on failure
  *
  */
 long
-auth_userpass(const char *user, const char *pass, int *errorcode);
+auth_userpass(const char *user, const char *pass,
+              const struct peer *peer_details, int *errorcode);
 
 /**
  *

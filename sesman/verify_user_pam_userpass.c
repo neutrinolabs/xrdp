@@ -38,8 +38,9 @@
 
 /******************************************************************************/
 /* returns boolean */
-int
-auth_userpass(const char *user, const char *pass, int *errorcode)
+long
+auth_userpass(const char *user, const char *pass,
+              const struct peer *peer_details, int *errorcode)
 {
     pam_handle_t *pamh;
     pam_userpass_t userpass;

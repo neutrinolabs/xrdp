@@ -82,7 +82,7 @@ process_gateway_request(struct trans *trans)
             "Received authentication request for user: %s ip: %s",
             username, peer_details.ip);
 
-        data = auth_userpass(username, password, &errorcode);
+        data = auth_userpass(username, password, &peer_details, &errorcode);
         if (data)
         {
             if (1 == access_login_allowed(username))
@@ -140,7 +140,7 @@ process_create_session_request(struct trans *trans)
             SCP_SESSION_TYPE_TO_STR(sp.type),
             sp.username, sp.peer_details.ip);
 
-        data = auth_userpass(sp.username, password, &errorcode);
+        data = auth_userpass(sp.username, password, &sp.peer_details, &errorcode);
         if (data)
         {
             s_item = session_get_bydata(&sp);
@@ -233,7 +233,7 @@ process_list_sessions_request(struct trans *trans)
         LOG(LOG_LEVEL_INFO,
             "Received request to list sessions for user %s", username);
 
-        data = auth_userpass(username, password, &errorcode);
+        data = auth_userpass(username, password, NULL, &errorcode);
         if (data)
         {
             struct scp_session_info *info = NULL;
