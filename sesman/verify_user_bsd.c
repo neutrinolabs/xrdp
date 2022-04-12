@@ -46,7 +46,8 @@
 /******************************************************************************/
 /* returns boolean */
 long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass,
+              const char *client_ip, int *errorcode)
 {
     int ret = auth_userokay(user, NULL, "auth-xrdp", pass);
     return ret;

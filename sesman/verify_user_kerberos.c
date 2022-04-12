@@ -400,8 +400,9 @@ cleanup:
 
 /******************************************************************************/
 /* returns boolean */
-int
-auth_userpass(const char *user, const char *pass, int *errorcode)
+long
+auth_userpass(const char *user, const char *pass,
+              const char *client_ip, int *errorcode)
 {
     struct k_opts opts;
     struct k5_data k5;
