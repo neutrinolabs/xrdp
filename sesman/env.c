@@ -144,6 +144,9 @@ env_set_user(const char *username, char **passwd_file, int display,
             /* XRDP_SOCKET_PATH should be set even here. It's used by
              * xorgxrdp and the pulseaudio plugin */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
+            /* env varibale used by PCSC to get remote smartcard reader socket */
+            g_sprintf(text, XRDP_PCSC_STR, display);
+            g_setenv("PCSCLITE_CSOCK_NAME", text, 1);
             /* pulse sink socket */
             g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_OUT_BASE_STR, display);
             g_setenv("XRDP_PULSE_SINK_SOCKET", text, 1);
