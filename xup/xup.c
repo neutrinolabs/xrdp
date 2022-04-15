@@ -148,8 +148,7 @@ int
 lib_mod_connect(struct mod *mod)
 {
     int error;
-    int i;
-    int use_uds;
+    int socket_mode;
     struct stream *s;
     char con_port[256];
 
@@ -171,82 +170,47 @@ lib_mod_connect(struct mod *mod)
 
     make_stream(s);
     g_sprintf(con_port, "%s", mod->port);
-    use_uds = 0;
-
-    if (con_port[0] == '/')
-    {
-        use_uds = 1;
-    }
 
     error = 0;
     mod->sck_closed = 0;
-    i = 0;
 
-    if (use_uds)
+    if (con_port[0] == '/')
     {
+        socket_mode = TRANS_MODE_UNIX;
         LOG(LOG_LEVEL_INFO, "lib_mod_connect: connecting via UNIX socket");
-        mod->trans = trans_create(TRANS_MODE_UNIX, 8 * 8192, 8192);
-        if (mod->trans == 0)
-        {
-            free_stream(s);
-            return 1;
-        }
     }
     else
     {
+        socket_mode = TRANS_MODE_TCP;
         LOG(LOG_LEVEL_INFO, "lib_mod_connect: connecting via TCP socket");
-        mod->trans = trans_create(TRANS_MODE_TCP, 8 * 8192, 8192);
-        if (mod->trans == 0)
-        {
-            free_stream(s);
-            return 1;
-        }
     }
 
+    mod->trans = trans_create(socket_mode, 8 * 8192, 8192);
+    if (mod->trans == 0)
+    {
+        free_stream(s);
+        return 1;
+    }
     mod->trans->si = mod->si;
     mod->trans->my_source = XRDP_SOURCE_MOD;
+    mod->trans->is_term = mod->server_is_term;
 
-    while (1)
+    /* Give the X server a bit of time to start */
+    if (trans_connect(mod->trans, mod->ip, con_port, 30 * 1000) == 0)
     {
-
-        /* mod->server_msg(mod, "connecting...", 0); */
-
-        error = -1;
-        if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
-        {
-            LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_connect: connected to Xserver "
-                      "(Xorg or X11rdp) sck %lld",
-                      (long long) (mod->trans->sck));
-            error = 0;
-        }
-
-        if (error == 0)
-        {
-            break;
-        }
-
-        if (mod->server_is_term(mod))
-        {
-            break;
-        }
-
-        i++;
-
-        if (i >= 60)
-        {
-            mod->server_msg(mod, "connection problem, giving up", 0);
-            break;
-        }
-
-        g_sleep(500);
+        LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_connect: connected to Xserver "
+                  "(Xorg or X11rdp) sck %lld",
+                  (long long) (mod->trans->sck));
+    }
+    else
+    {
+        mod->server_msg(mod, "connection problem, giving up", 0);
+        error = 1;
     }
 
-    if (error == 0)
+    if (error == 0 && socket_mode == TRANS_MODE_UNIX)
     {
-        if (use_uds)
-        {
-            lib_mod_log_peer(mod);
-        }
+        lib_mod_log_peer(mod);
     }
 
     if (error == 0)

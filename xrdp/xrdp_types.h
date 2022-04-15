@@ -74,7 +74,9 @@ struct xrdp_mod
                               char *data, char *mask);
     int (*server_palette)(struct xrdp_mod *v, int *palette);
     int (*server_msg)(struct xrdp_mod *v, const char *msg, int code);
-    int (*server_is_term)(struct xrdp_mod *v);
+    /* This one can be assigned directly into the is_term member of
+     * a struct trans */
+    int (*server_is_term)(void);
     int (*server_set_clip)(struct xrdp_mod *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct xrdp_mod *v);
     int (*server_set_fgcolor)(struct xrdp_mod *v, int fgcolor);

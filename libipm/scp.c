@@ -74,8 +74,6 @@ scp_connect(const char *host, const  char *port,
     struct trans *t;
     if ((t = trans_create(TRANS_MODE_TCP, 128, 128)) != NULL)
     {
-        int index;
-
         if (host == NULL)
         {
             host = "localhost";
@@ -88,18 +86,7 @@ scp_connect(const char *host, const  char *port,
 
         t->is_term = term_func;
 
-        /* try to connect up to 4 times
-         *
-         * term_func can be NULL, so check before calling it */
-        index = 4;
-        while (trans_connect(t, host, port, 3000) != 0 &&
-                !(term_func && term_func()) &&
-                --index > 0)
-        {
-            g_sleep(1000);
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "Connect failed. Trying again...");
-        }
-
+        trans_connect(t, host, port, 3000);
         if (t->status != TRANS_STATUS_UP)
         {
             trans_delete(t);
