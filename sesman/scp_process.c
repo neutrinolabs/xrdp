@@ -41,20 +41,17 @@
  * Logs an authentication failure message
  *
  * @param username Username
- * @param connection_description Connection details
+ * @param peer_details Details of connecting peer
  *
  * The message is intended for use by fail2ban. Make changes with care.
  */
 static void
-log_authfail_message(const char *username, const char *connection_description)
+log_authfail_message(const char *username, const struct peer *peer_details)
 {
-    char ip[64];
     const char *ipp;
-    if (connection_description != NULL &&
-            connection_description[0] != '\0')
+    if (peer_details->ip[0] != '\0')
     {
-        g_get_ip_from_description(connection_description, ip, sizeof(ip));
-        ipp = ip;
+        ipp = peer_details->ip;
     }
     else
     {
@@ -72,17 +69,18 @@ process_gateway_request(struct trans *trans)
     int rv;
     const char *username;
     const char *password;
-    const char *connection_description;
+    struct peer peer_details;
 
     rv = scp_get_gateway_request(trans, &username, &password,
-                                 &connection_description);
+                                 &peer_details);
     if (rv == 0)
     {
         int errorcode = 0;
         tbus data;
 
-        LOG(LOG_LEVEL_INFO, "Received authentication request for user: %s",
-            username);
+        LOG(LOG_LEVEL_INFO,
+            "Received authentication request for user: %s ip: %s",
+            username, peer_details.ip);
 
         data = auth_userpass(username, password, &errorcode);
         if (data)
@@ -103,7 +101,7 @@ process_gateway_request(struct trans *trans)
         }
         else
         {
-            log_authfail_message(username, connection_description);
+            log_authfail_message(username, &peer_details);
         }
         rv = scp_send_gateway_response(trans, errorcode);
         auth_end(data);
@@ -128,7 +126,7 @@ process_create_session_request(struct trans *trans)
              trans,
              &sp.username, &password,
              &sp.type, &sp.width, &sp.height, &sp.bpp,
-             &sp.shell, &sp.directory, &sp.connection_description);
+             &sp.shell, &sp.directory, &sp.peer_details);
 
     if (rv == 0)
     {
@@ -138,9 +136,9 @@ process_create_session_request(struct trans *trans)
         bool_t do_auth_end = 1;
 
         LOG(LOG_LEVEL_INFO,
-            "Received request to create %s session for user: %s",
+            "Received request to create %s session for user: %s ip: %s",
             SCP_SESSION_TYPE_TO_STR(sp.type),
-            sp.username);
+            sp.username, sp.peer_details.ip);
 
         data = auth_userpass(sp.username, password, &errorcode);
         if (data)
@@ -150,12 +148,12 @@ process_create_session_request(struct trans *trans)
             {
                 display = s_item->display;
                 guid = s_item->guid;
-                if (sp.connection_description[0] != '\0')
+                if (sp.peer_details.ip[0] != '\0')
                 {
                     LOG( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
                          "display :%d.0, session_pid %d, ip %s",
                          sp.username, display, s_item->pid,
-                         sp.connection_description);
+                         sp.peer_details.ip);
                 }
                 else
                 {
@@ -163,6 +161,11 @@ process_create_session_request(struct trans *trans)
                         "display :%d.0, session_pid %d", sp.username, display,
                         s_item->pid);
                 }
+
+                /*
+                 * Update the last connected peer
+                 * TODO: Clear this field on disconnection */
+                s_item->peer_details = sp.peer_details;
 
                 session_reconnect(display, sp.username, data);
             }
@@ -172,12 +175,12 @@ process_create_session_request(struct trans *trans)
 
                 if (1 == access_login_allowed(sp.username))
                 {
-                    if (sp.connection_description[0] != '\0')
+                    if (sp.peer_details.ip[0] != '\0')
                     {
                         LOG(LOG_LEVEL_INFO,
                             "++ created session (access granted): "
                             "username %s, ip %s", sp.username,
-                            sp.connection_description);
+                            sp.peer_details.ip);
                     }
                     else
                     {
@@ -196,7 +199,7 @@ process_create_session_request(struct trans *trans)
         }
         else
         {
-            log_authfail_message(sp.username, sp.connection_description);
+            log_authfail_message(sp.username, &sp.peer_details);
         }
 
         if (do_auth_end)

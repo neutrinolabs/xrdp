@@ -32,6 +32,16 @@ struct exit_status
     uint8_t signal_no;
 };
 
+/**
+ * Structure describing an IP peer connection
+ */
+#define PEER_IP_MAXLEN 46  /* Currently POSIX INET6_ADDRSTRLEN */
+struct peer
+{
+    char ip[PEER_IP_MAXLEN];
+    unsigned short port;
+};
+
 #define g_tcp_can_recv g_sck_can_recv
 #define g_tcp_can_send g_sck_can_send
 #define g_tcp_recv g_sck_recv
@@ -94,18 +104,17 @@ int      g_sck_socket_ok(int sck);
 int      g_sck_can_send(int sck, int millis);
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
-void     g_write_connection_description(int rcv_sck,
-                                        char *description, int bytes);
 /**
- * Extracts the IP address from the connection description
- * @param description Connection description (from
- *                    g_write_connection_description())
- * @param ip buffer to write IP address to
- * @param bytes Size of ip buffer
- * @return Pointer to IP for convenience
+ * Extracts the details of the socket peer (IP4 or IPv6)
+ *
+ * @param sck Socket we wish to extract details for
+ * @param peer Connection details for peer
+ * @return boolean != 0 is OK.
+ *
+ * In the event of a failure, p->ip is an empty string
  */
-const char *g_get_ip_from_description(const char *description,
-                                      char *ip, int bytes);
+int      g_get_peer_details(int sck, struct peer *p);
+
 void     g_sleep(int msecs);
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);

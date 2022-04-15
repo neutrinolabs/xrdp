@@ -360,7 +360,6 @@ struct xrdp_rdp *
 xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
 {
     struct xrdp_rdp *self = (struct xrdp_rdp *)NULL;
-    int bytes;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_rdp_create");
     self = (struct xrdp_rdp *)g_malloc(sizeof(struct xrdp_rdp), 1);
@@ -378,10 +377,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     self->client_info.cache3_entries = 262;
     self->client_info.cache3_size = 4096;
     /* load client ip info */
-    bytes = sizeof(self->client_info.connection_description) - 1;
-    g_write_connection_description(trans->sck,
-                                   self->client_info.connection_description,
-                                   bytes);
+    g_get_peer_details(trans->sck, &self->client_info.peer_details);
     self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
 #if defined(XRDP_NEUTRINORDP)
     self->rfx_enc = rfx_context_new();

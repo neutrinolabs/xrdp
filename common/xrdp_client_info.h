@@ -114,7 +114,7 @@ struct xrdp_client_info
     int rdp5_performanceflags;
     int brush_cache_code; /* 0 = no cache 1 = 8x8 standard cache
                            2 = arbitrary dimensions */
-    char connection_description[256];
+    struct peer peer_details; /* Details of peer on other end of connection */
     int max_bpp;
     int jpeg; /* non standard bitmap cache v2 cap */
     int offscreen_support_level;
@@ -207,6 +207,6 @@ struct xrdp_client_info
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
-#define CLIENT_INFO_CURRENT_VERSION 20220320
+#define CLIENT_INFO_CURRENT_VERSION 20220421
 
 #endif

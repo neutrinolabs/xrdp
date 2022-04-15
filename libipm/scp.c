@@ -217,17 +217,25 @@ int
 scp_send_gateway_request(struct trans *trans,
                          const char *username,
                          const char *password,
-                         const char *connection_description)
+                         const struct peer *peer_details)
 {
     int rv;
+    const char *ip = "";
+    uint16_t port = 0;
+
+    if (peer_details != NULL)
+    {
+        ip = peer_details->ip;
+        port = peer_details->port;
+    }
 
     rv = libipm_msg_out_simple_send(
              trans,
              (int)E_SCP_GATEWAY_REQUEST,
-             "sss",
+             "sssq",
              username,
              password,
-             connection_description);
+             ip, port);
 
     /* Wipe the output buffer to remove the password */
     libipm_msg_out_erase(trans);
@@ -241,13 +249,26 @@ int
 scp_get_gateway_request(struct trans *trans,
                         const char **username,
                         const char **password,
-                        const char **connection_description)
+                        struct peer *peer_details)
 {
+    int rv;
+    /* Intermediate values */
+    const char *i_ip;
+    uint16_t i_port;
+
     /* Make sure the buffer is cleared after processing this message */
     libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
 
-    return libipm_msg_in_parse(trans, "sss", username, password,
-                               connection_description);
+    rv = libipm_msg_in_parse(trans, "sssq", username, password,
+                             &i_ip, &i_port);
+
+    if (rv == 0)
+    {
+        g_snprintf(peer_details->ip, sizeof(peer_details->ip), "%s", i_ip);
+        peer_details->port = i_port;
+    }
+
+    return rv;
 }
 
 /*****************************************************************************/
@@ -290,12 +311,21 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *connection_description)
+                                const struct peer *peer_details)
 {
+    const char *ip = "";
+    uint16_t port = 0;
+
+    if (peer_details != NULL)
+    {
+        ip = peer_details->ip;
+        port = peer_details->port;
+    }
+
     int rv = libipm_msg_out_simple_send(
                  trans,
                  (int)E_SCP_CREATE_SESSION_REQUEST,
-                 "ssyqqysss",
+                 "ssyqqysssq",
                  username,
                  password,
                  type,
@@ -304,7 +334,7 @@ scp_send_create_session_request(struct trans *trans,
                  bpp,
                  shell,
                  directory,
-                 connection_description);
+                 ip, port);
 
     /* Wipe the output buffer to remove the password */
     libipm_msg_out_erase(trans);
@@ -324,20 +354,22 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **connection_description)
+                               struct peer *peer_details)
 {
     /* Intermediate values */
     uint8_t i_type;
     uint16_t i_width;
     uint16_t i_height;
     uint8_t i_bpp;
+    const char *i_ip;
+    uint16_t i_port;
 
     /* Make sure the buffer is cleared after processing this message */
     libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "ssyqqysss",
+                 "ssyqqysssq",
                  username,
                  password,
                  &i_type,
@@ -346,7 +378,7 @@ scp_get_create_session_request(struct trans *trans,
                  &i_bpp,
                  shell,
                  directory,
-                 connection_description);
+                 &i_ip, &i_port);
 
     if (rv == 0)
     {
@@ -355,6 +387,8 @@ scp_get_create_session_request(struct trans *trans,
         *height = i_height;
         /* bpp is fixed for Xorg session types */
         *bpp = (*type == SCP_SESSION_TYPE_XORG) ? 24 : i_bpp;
+        g_snprintf(peer_details->ip, sizeof(peer_details->ip), "%s", i_ip);
+        peer_details->port = i_port;
     }
 
     return rv;
@@ -465,7 +499,7 @@ scp_send_list_sessions_response(
         rv = libipm_msg_out_simple_send(
                  trans,
                  (int)E_SCP_LIST_SESSIONS_RESPONSE,
-                 "iiuyqqyxss",
+                 "iiuyqqyxssq",
                  status,
                  info->sid,
                  info->display,
@@ -475,7 +509,7 @@ scp_send_list_sessions_response(
                  info->bpp,
                  info->start_time,
                  info->username,
-                 info->connection_description);
+                 info->peer_details.ip, info->peer_details.port);
     }
 
     return rv;
@@ -512,11 +546,12 @@ scp_get_list_sessions_response(
             uint8_t i_bpp;
             int64_t i_start_time;
             char *i_username;
-            char *i_connection_description;
+            char *i_ip;
+            uint16_t i_port;
 
             rv = libipm_msg_in_parse(
                      trans,
-                     "iuyqqyxss",
+                     "iuyqqyxssq",
                      &i_sid,
                      &i_display,
                      &i_type,
@@ -525,15 +560,14 @@ scp_get_list_sessions_response(
                      &i_bpp,
                      &i_start_time,
                      &i_username,
-                     &i_connection_description);
+                     &i_ip, &i_port);
 
             if (rv == 0)
             {
                 /* Allocate a block of memory large enough for the
                  * structure result, and the strings it contains */
                 unsigned int len = sizeof(struct scp_session_info) +
-                                   g_strlen(i_username) + 1 +
-                                   g_strlen(i_connection_description) + 1;
+                                   g_strlen(i_username) + 1;
                 if ((p = (struct scp_session_info *)g_malloc(len, 1)) == NULL)
                 {
                     *status = E_SCP_LS_NO_MEMORY;
@@ -543,8 +577,6 @@ scp_get_list_sessions_response(
                     /* Set up the string pointers in the block to point
                      * into the memory allocated after the block */
                     p->username = (char *)p + sizeof(struct scp_session_info);
-                    p->connection_description =
-                        p->username + g_strlen(i_username) + 1;
 
                     /* Copy the data over */
                     p->sid = i_sid;
@@ -555,8 +587,9 @@ scp_get_list_sessions_response(
                     p->bpp = i_bpp;
                     p->start_time = i_start_time;
                     g_strcpy(p->username, i_username);
-                    g_strcpy(p->connection_description,
-                             i_connection_description);
+                    g_snprintf(p->peer_details.ip, sizeof(p->peer_details.ip),
+                               "%s", i_ip);
+                    p->peer_details.port = i_port;
                 }
             }
         }

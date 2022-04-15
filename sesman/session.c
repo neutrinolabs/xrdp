@@ -90,46 +90,28 @@ session_get_bydata(const struct session_parameters *sp)
 {
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
-    char ip[64];
-    char tmp_ip[64];
-
-    if ((policy & SESMAN_CFG_SESS_POLICY_I) != 0)
-    {
-        /* We'll need to compare on IP addresses */
-        g_get_ip_from_description(sp->connection_description,
-                                  ip, sizeof(ip));
-    }
-    else
-    {
-        ip[0] = '\0';
-        tmp_ip[0] = '\0';
-    }
 
     LOG(LOG_LEVEL_DEBUG,
-        "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
+        "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d"
+        " IP %s port %d",
         policy, sp->username, sp->width, sp->height, sp->bpp,
-        sp->type, sp->connection_description);
+        sp->type, sp->peer_details.ip, (int)sp->peer_details.port);
 
     for (tmp = g_sessions ; tmp != 0 ; tmp = tmp->next)
     {
-
-        if ((policy & SESMAN_CFG_SESS_POLICY_I) != 0)
-        {
-            g_get_ip_from_description(tmp->item->connection_description,
-                                      tmp_ip, sizeof (tmp_ip));
-        }
-
+        struct session_item *item = tmp->item;
         LOG(LOG_LEVEL_DEBUG,
-            "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
-            tmp->item,
-            tmp->item->name,
-            tmp->item->width, tmp->item->height,
-            tmp->item->bpp, tmp->item->type,
-            tmp->item->connection_description);
+            "session_get_bydata: try %p U %s W %d H %d bpp %d T %d"
+            " IP %s port %d",
+            item,
+            item->name,
+            item->width, item->height,
+            item->bpp, item->type,
+            item->peer_details.ip, (int)item->peer_details.port);
 
-        if (g_strncmp(sp->username, tmp->item->name, 255) != 0 ||
-                tmp->item->bpp != sp->bpp ||
-                tmp->item->type != sp->type)
+        if (g_strncmp(sp->username, item->name, 255) != 0 ||
+                item->bpp != sp->bpp ||
+                item->type != sp->type)
         {
             LOG(LOG_LEVEL_DEBUG,
                 "session_get_bydata: Basic parameters don't match");
@@ -137,14 +119,15 @@ session_get_bydata(const struct session_parameters *sp)
         }
 
         if ((policy & SESMAN_CFG_SESS_POLICY_D) &&
-                (tmp->item->width != sp->width || tmp->item->height != sp->height))
+                (item->width != sp->width || item->height != sp->height))
         {
             LOG(LOG_LEVEL_DEBUG,
                 "session_get_bydata: Dimensions don't match for 'D' policy");
             continue;
         }
 
-        if ((policy & SESMAN_CFG_SESS_POLICY_I) && g_strcmp(ip, tmp_ip) != 0)
+        if ((policy & SESMAN_CFG_SESS_POLICY_I) &&
+                g_strcmp(item->peer_details.ip, sp->peer_details.ip) != 0)
         {
             LOG(LOG_LEVEL_DEBUG,
                 "session_get_bydata: IPs don't match for 'I' policy");
@@ -152,17 +135,19 @@ session_get_bydata(const struct session_parameters *sp)
         }
 
         if ((policy & SESMAN_CFG_SESS_POLICY_C) &&
-                g_strncmp(sp->connection_description, tmp->item->connection_description, 255) != 0)
+                (g_strcmp(item->peer_details.ip, sp->peer_details.ip) != 0 ||
+                 item->peer_details.port != sp->peer_details.port))
+
         {
             LOG(LOG_LEVEL_DEBUG,
                 "session_get_bydata: connections don't match for 'C' policy");
         }
 
         LOG(LOG_LEVEL_DEBUG, "session_get_bydata: Got match");
-        return tmp->item;
+        return item;
     }
 
-    return 0;
+    return NULL;
 }
 
 /******************************************************************************/
@@ -949,14 +934,15 @@ session_start(long data,
         LOG(LOG_LEVEL_INFO, "Starting session: session_pid %d, "
             "display :%d.0, width %d, height %d, bpp %d, client ip %s, "
             "user name %s",
-            pid, display, s->width, s->height, s->bpp, s->connection_description, s->username);
+            pid, display, s->width, s->height, s->bpp,
+            s->peer_details.ip, s->username);
         temp->item->pid = pid;
         temp->item->display = display;
         temp->item->width = s->width;
         temp->item->height = s->height;
         temp->item->bpp = s->bpp;
         temp->item->data = data;
-        g_strncpy(temp->item->connection_description, s->connection_description, 255);   /* store client ip data */
+        temp->item->peer_details = s->peer_details;
         g_strncpy(temp->item->name, s->username, 255);
         temp->item->guid = *guid;
 
@@ -1061,7 +1047,8 @@ session_kill(int pid)
             /* deleting the session */
             LOG(LOG_LEVEL_INFO,
                 "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s",
-                tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->connection_description);
+                tmp->item->name, tmp->item->display, tmp->item->pid,
+                tmp->item->peer_details.ip);
             g_free(tmp->item);
 
             if (prev == 0)
@@ -1217,11 +1204,9 @@ session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags)
                 (sess[index]).bpp = tmp->item->bpp;
                 (sess[index]).start_time = tmp->item->start_time;
                 (sess[index]).username = g_strdup(tmp->item->name);
-                (sess[index]).connection_description =
-                    g_strdup(tmp->item->connection_description);
+                (sess[index]).peer_details = tmp->item->peer_details;
 
-                if ((sess[index]).username == NULL ||
-                        (sess[index]).connection_description == NULL)
+                if ((sess[index]).username == NULL)
                 {
                     free_session_info_list(sess, *cnt);
                     (*cnt) = 0;
@@ -1249,7 +1234,6 @@ free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt)
         for (i = 0 ; i < cnt ; ++i)
         {
             g_free(sesslist[i].username);
-            g_free(sesslist[i].connection_description);
         }
     }
 
@@ -1364,7 +1348,6 @@ clone_session_params(const struct session_parameters *sp)
     len += g_strlen(sp->username) + 1;
     len += g_strlen(sp->shell) + 1;
     len += g_strlen(sp->directory) + 1;
-    len += g_strlen(sp->connection_description) + 1;
 
     if ((result = (struct session_parameters *)g_malloc(len, 0)) != NULL)
     {
@@ -1384,8 +1367,6 @@ clone_session_params(const struct session_parameters *sp)
         COPY_STRING_MEMBER(sp->username, result->username);
         COPY_STRING_MEMBER(sp->shell, result->shell);
         COPY_STRING_MEMBER(sp->directory, result->directory);
-        COPY_STRING_MEMBER(sp->connection_description,
-                           result->connection_description);
 
 #undef COPY_STRING_MEMBER
     }

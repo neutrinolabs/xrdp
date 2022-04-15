@@ -26,6 +26,9 @@
 #ifndef SCP_APPLICATION_TYPES_H
 #define SCP_APPLICATION_TYPES_H
 
+#include "arch.h"
+#include "os_calls.h"
+
 #include <time.h>
 
 /**
@@ -58,7 +61,7 @@ struct scp_session_info
     unsigned char bpp;  ///< Session bits-per-pixel
     time_t start_time;  ///< When sesion was created
     char *username;     ///< Username for session
-    char *connection_description; ///< Initial connection to session
+    struct peer peer_details;
 };
 
 

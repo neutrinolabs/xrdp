@@ -94,7 +94,6 @@ struct session_params
 
     const char *directory;
     const char *shell;
-    const char *connection_description;
 
     const char *username;
     char password[MAX_PASSWORD_LEN + 1];
@@ -286,7 +285,6 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
 
     sp->directory = "";
     sp->shell = "";
-    sp->connection_description = "";
 
     sp->username = NULL;
     sp->password[0] = '\0';
@@ -406,17 +404,17 @@ send_create_session_request(struct trans *t, const struct session_params *sp)
     LOG(LOG_LEVEL_DEBUG,
         "width:%d  height:%d  bpp:%d  code:%d\n"
         "directory:\"%s\"\n"
-        "shell:\"%s\"    connection_description:\"%s\"",
+        "shell:\"%s\"",
         sp->width, sp->height, sp->bpp, sp->session_type,
         sp->directory,
-        sp->shell, sp->connection_description);
+        sp->shell);
     /* Only log the password in development builds */
     LOG_DEVEL(LOG_LEVEL_DEBUG, "password:\"%s\"", sp->password);
 
     return scp_send_create_session_request(
                t, sp->username, sp->password, sp->session_type,
                sp->width, sp->height, sp->bpp, sp->shell, sp->directory,
-               sp->connection_description);
+               NULL);
 }
 
 /**************************************************************************//**

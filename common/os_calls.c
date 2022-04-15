@@ -1401,12 +1401,10 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 
 /*****************************************************************************/
 
-void
-g_write_connection_description(int rcv_sck, char *description, int bytes)
+int
+g_get_peer_details(int sck, struct peer *p)
 {
-    char *addr;
-    int port;
-    int ok;
+    int ok = 0;
 
     union
     {
@@ -1420,38 +1418,32 @@ g_write_connection_description(int rcv_sck, char *description, int bytes)
 
     ok = 0;
     socklen_t sock_len = sizeof(sock_info);
-    memset(&sock_info, 0, sock_len);
-#if defined(XRDP_ENABLE_IPV6)
-    addr = (char *)g_malloc(INET6_ADDRSTRLEN, 1);
-#else
-    addr = (char *)g_malloc(INET_ADDRSTRLEN, 1);
-#endif
+    memset(&sock_info, 0, sizeof(sock_info));
 
-    if (getpeername(rcv_sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
+    if (getpeername(sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
     {
         switch (sock_info.sock_addr.sa_family)
         {
             case AF_INET:
             {
                 struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-                g_snprintf(addr, INET_ADDRSTRLEN, "%s", inet_ntoa(sock_addr_in->sin_addr));
-                port = ntohs(sock_addr_in->sin_port);
+                inet_ntop(sock_info.sock_addr.sa_family,
+                          &sock_addr_in->sin_addr, p->ip, sizeof(p->ip));
+                p->port = ntohs(sock_addr_in->sin_port);
                 ok = 1;
                 break;
             }
 
 #if defined(XRDP_ENABLE_IPV6)
-
             case AF_INET6:
             {
                 struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, INET6_ADDRSTRLEN);
-                port = ntohs(sock_addr_in6->sin6_port);
+                inet_ntop(sock_info.sock_addr.sa_family,
+                          &sock_addr_in6->sin6_addr, p->ip, sizeof(p->ip));
+                p->port = ntohs(sock_addr_in6->sin6_port);
                 ok = 1;
                 break;
             }
-
 #endif
 
             default:
@@ -1461,18 +1453,14 @@ g_write_connection_description(int rcv_sck, char *description, int bytes)
 
         }
 
-        if (ok)
+        if (!ok)
         {
-            g_snprintf(description, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
+            p->ip[0] = '\0';
+            p->port = 0;
         }
     }
 
-    if (!ok)
-    {
-        g_snprintf(description, bytes, "NULL:NULL - socket: %d", rcv_sck);
-    }
-
-    g_free(addr);
+    return ok;
 }
 
 /*****************************************************************************/

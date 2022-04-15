@@ -68,7 +68,7 @@ struct session_item
     time_t start_time;
     // struct session_date disconnect_time; // Currently unused
     // struct session_date idle_time; // Currently unused
-    char connection_description[256];
+    struct peer peer_details;
     struct guid guid;
 };
 
@@ -91,7 +91,7 @@ struct session_parameters
     const char *username;
     const char *shell;
     const char *directory;
-    const char *connection_description;
+    struct peer peer_details;
 };
 
 /**

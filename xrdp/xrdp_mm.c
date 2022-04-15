@@ -228,7 +228,7 @@ xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
 
     return scp_send_gateway_request(
                self->sesman_trans, username, password,
-               self->wm->client_info->connection_description);
+               &self->wm->client_info->peer_details);
 }
 
 /*****************************************************************************/
@@ -298,7 +298,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
                      xserverbpp,
                      self->wm->client_info->program,
                      self->wm->client_info->directory,
-                     self->wm->client_info->connection_description);
+                     &self->wm->client_info->peer_details);
         }
     }
 

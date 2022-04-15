@@ -37,6 +37,7 @@
 
 struct guid;
 struct trans;
+struct peer;
 
 #include "scp_application_types.h"
 
@@ -177,7 +178,7 @@ scp_msg_in_reset(struct trans *trans);
  * @param trans SCP transport
  * @param username Username
  * @param password Password
- * @param connection_description Description of the connection
+ * @param peer_details Details of client sending request. May be NULL.
  * @return != 0 for error
  *
  * Server replies with E_SCP_GATEWAY_RESPONSE
@@ -186,7 +187,7 @@ int
 scp_send_gateway_request(struct trans *trans,
                          const char *username,
                          const char *password,
-                         const char *connection_description);
+                         const struct peer *peer_details);
 
 /**
  * Parse an incoming E_SCP_GATEWAY_REQUEST message (SCP server)
@@ -194,15 +195,20 @@ scp_send_gateway_request(struct trans *trans,
  * @param trans SCP transport
  * @param[out] username Username
  * @param[out] password Password
- * @param[out] connection_description Description of the connection
+ * @param[out] peer_details Connection details of peer.
  * @return != 0 for error
+ *
+ * Returned string pointers are valid until scp_msg_in_reset() is
+ * called for the transport
+ *
+ * The sender may not have sent peer details. If so, the ip field of the
+ * peer_details parameter will be ""
  */
 int
 scp_get_gateway_request(struct trans *trans,
                         const char **username,
                         const char **password,
-                        const char **connection_description);
-
+                        struct peer *peer_details);
 /**
  * Send an E_SCP_GATEWAY_RESPONSE (SCP server)
  *
@@ -239,7 +245,7 @@ scp_get_gateway_response(struct trans *trans,
  * @param bpp Session bits-per-pixel (ignored for Xorg sessions)
  * @param shell User program to run. May be ""
  * @param directory Directory to run the program in. May be ""
- * @param connection_description Description of the connection
+ * @param peer_details Details of client sending request. May be NULL.
  * @return != 0 for error
  *
  * Server replies with E_SCP_CREATE_SESSION_RESPONSE
@@ -254,7 +260,7 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *connection_description);
+                                const struct peer *peer_details);
 
 
 /**
@@ -269,11 +275,14 @@ scp_send_create_session_request(struct trans *trans,
  * @param[out] bpp Session bits-per-pixel (ignored for Xorg sessions)
  * @param[out] shell User program to run. May be ""
  * @param[out] directory Directory to run the program in. May be ""
- * @param[out] connection_description Description of the connection
+ * @param[out] peer_details Connection details of peer.
  * @return != 0 for error
  *
  * Returned string pointers are valid until scp_msg_in_reset() is
  * called for the transport
+ *
+ * The sender may not have sent a peer. If so, the ip field of the
+ * peer_details parameter will be ""
  */
 int
 scp_get_create_session_request(struct trans *trans,
@@ -285,7 +294,7 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **connection_description);
+                               struct peer *peer_details);
 
 /**
  * Send an E_SCP_CREATE_SESSION_RESPONSE (SCP server)

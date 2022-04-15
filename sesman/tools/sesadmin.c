@@ -153,9 +153,10 @@ print_session(const struct scp_session_info *s)
     printf("\tScreen size: %dx%d, color depth %d\n",
            s->width, s->height, s->bpp);
     printf("\tStarted: %s", ctime(&s->start_time));
-    if (s->connection_description[0] != '\0')
+    if (s->peer_details.ip[0] != '\0')
     {
-        printf("\tConnection Description: %s\n", s->connection_description);
+        printf("\tConnected Client: %s:%d\n",
+               s->peer_details.ip, (int)s->peer_details.port);
     }
 }
 
