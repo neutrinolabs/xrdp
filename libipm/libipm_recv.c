@@ -280,7 +280,7 @@ not_enough_input_msg = "Input buffer overflow for '%c'";
  * The value must be a 0 or 1 on-the-wire, or an error is returned.
  */
 static enum libipm_status
-extract_bool_type(char c, struct trans *trans, va_list argptr)
+extract_bool_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -301,7 +301,7 @@ extract_bool_type(char c, struct trans *trans, va_list argptr)
         }
         else
         {
-            int *tmp = va_arg(argptr, int *);
+            int *tmp = va_arg(*argptr, int *);
             *tmp = b;
         }
     }
@@ -317,7 +317,7 @@ extract_bool_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-extract_int8_type(char c, struct trans *trans, va_list argptr)
+extract_int8_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -329,7 +329,7 @@ extract_int8_type(char c, struct trans *trans, va_list argptr)
     }
     else
     {
-        unsigned char *tmp = va_arg(argptr, unsigned char *);
+        unsigned char *tmp = va_arg(*argptr, unsigned char *);
         in_uint8(s, *tmp);
     }
     return rv;
@@ -345,7 +345,7 @@ extract_int8_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-extract_int16_type(char c, struct trans *trans, va_list argptr)
+extract_int16_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -357,7 +357,7 @@ extract_int16_type(char c, struct trans *trans, va_list argptr)
     }
     else
     {
-        uint16_t *tmp = va_arg(argptr, uint16_t *);
+        uint16_t *tmp = va_arg(*argptr, uint16_t *);
         /*
          * C99 7.18.1.1 requires int16_t (if present) to be a two's
          * complement representation, so this line is valid for both
@@ -376,7 +376,7 @@ extract_int16_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-extract_int32_type(char c, struct trans *trans, va_list argptr)
+extract_int32_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -388,7 +388,7 @@ extract_int32_type(char c, struct trans *trans, va_list argptr)
     }
     else
     {
-        uint32_t *tmp = va_arg(argptr, uint32_t *);
+        uint32_t *tmp = va_arg(*argptr, uint32_t *);
         /*
          * C99 7.18.1.1 requires int32_t (if present) to be a two's
          * complement representation, so this line is valid for both
@@ -407,7 +407,7 @@ extract_int32_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-extract_int64_type(char c, struct trans *trans, va_list argptr)
+extract_int64_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -419,7 +419,7 @@ extract_int64_type(char c, struct trans *trans, va_list argptr)
     }
     else
     {
-        uint64_t *tmp = va_arg(argptr, uint64_t *);
+        uint64_t *tmp = va_arg(*argptr, uint64_t *);
         /*
          * C99 7.18.1.1 requires int64_t (if present) to be a two's
          * complement representation, so this line is valid for both
@@ -438,7 +438,7 @@ extract_int64_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-extract_char_ptr_type(char c, struct trans *trans, va_list argptr)
+extract_char_ptr_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -453,7 +453,7 @@ extract_char_ptr_type(char c, struct trans *trans, va_list argptr)
     }
     else
     {
-        char **tmp = va_arg(argptr, char **);
+        char **tmp = va_arg(*argptr, char **);
 
         *tmp = s->p;
         s->p = termptr + 1;
@@ -470,11 +470,11 @@ extract_char_ptr_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-extract_fsb_type(char c, struct trans *trans, va_list argptr)
+extract_fsb_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
-    const struct libipm_fsb *fsb = va_arg(argptr, const struct libipm_fsb *);
+    const struct libipm_fsb *fsb = va_arg(*argptr, const struct libipm_fsb *);
 
     if (fsb == NULL || fsb->data == NULL)
     {
@@ -521,7 +521,7 @@ extract_fsb_type(char c, struct trans *trans, va_list argptr)
  * @return != 0 for error
  */
 static enum libipm_status
-libipm_msg_in_parsev(struct trans *trans, const char *format, va_list argptr)
+libipm_msg_in_parsev(struct trans *trans, const char *format, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->in_s;
@@ -623,7 +623,7 @@ libipm_msg_in_parse(struct trans *trans, const char *format, ...)
         va_list argptr;
 
         va_start(argptr, format);
-        rv = libipm_msg_in_parsev(trans, format, argptr);
+        rv = libipm_msg_in_parsev(trans, format, &argptr);
         va_end(argptr);
     }
 

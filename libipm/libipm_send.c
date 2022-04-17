@@ -94,7 +94,7 @@ bad_value_msg = "Type '%c' has unsupported value '%d'";
  * The boolean value must be a 0 or a 1.
  */
 static enum libipm_status
-append_bool_type(char c, va_list argptr, struct trans *trans)
+append_bool_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -105,7 +105,7 @@ append_bool_type(char c, va_list argptr, struct trans *trans)
     }
     else
     {
-        int tmp = va_arg(argptr, int);
+        int tmp = va_arg(*argptr, int);
         if (tmp < 0 || tmp > 1)
         {
             log_append_error(trans, bad_value_msg, c, tmp);
@@ -129,7 +129,7 @@ append_bool_type(char c, va_list argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int8_type(char c, va_list argptr, struct trans *trans)
+append_int8_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -140,7 +140,7 @@ append_int8_type(char c, va_list argptr, struct trans *trans)
     }
     else
     {
-        int tmp = va_arg(argptr, int);
+        int tmp = va_arg(*argptr, int);
         if (tmp < 0 || tmp > 255)
         {
             log_append_error(trans, bad_value_msg, c, tmp);
@@ -164,7 +164,7 @@ append_int8_type(char c, va_list argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int16_type(char c, va_list argptr, struct trans *trans)
+append_int16_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -175,7 +175,7 @@ append_int16_type(char c, va_list argptr, struct trans *trans)
     }
     else
     {
-        int tmp = va_arg(argptr, int);
+        int tmp = va_arg(*argptr, int);
         if ((c == 'n' && (tmp < -0x8000 || tmp > 0x7fff)) ||
                 (c == 'q' && (tmp < 0 || tmp > 0xffff)))
         {
@@ -200,7 +200,7 @@ append_int16_type(char c, va_list argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int32_type(char c, va_list argptr, struct trans *trans)
+append_int32_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -216,7 +216,7 @@ append_int32_type(char c, va_list argptr, struct trans *trans)
          * and we will need to check the specified value is in range.
          */
 #if SIZEOF_INT > 4
-        int tmp = va_arg(argptr, int);
+        int tmp = va_arg(*argptr, int);
         if ((c == 'i' && (tmp < -0x80000000 || tmp > 0x7fffffff)) ||
                 (c == 'u' && (tmp < 0 || tmp > 0xffffffff)))
         {
@@ -229,7 +229,7 @@ append_int32_type(char c, va_list argptr, struct trans *trans)
             out_uint32_le(s, tmp);
         }
 #else
-        uint32_t tmp = va_arg(argptr, uint32_t);
+        uint32_t tmp = va_arg(*argptr, uint32_t);
         out_uint8(s, c);
         out_uint32_le(s, tmp);
 #endif
@@ -246,7 +246,7 @@ append_int32_type(char c, va_list argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int64_type(char c, va_list argptr, struct trans *trans)
+append_int64_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -257,7 +257,7 @@ append_int64_type(char c, va_list argptr, struct trans *trans)
     }
     else
     {
-        uint64_t tmp = va_arg(argptr, uint64_t);
+        uint64_t tmp = va_arg(*argptr, uint64_t);
         out_uint8(s, c);
         out_uint64_le(s, tmp);
     }
@@ -275,11 +275,11 @@ append_int64_type(char c, va_list argptr, struct trans *trans)
  * NULL pointers are not allowed for the string.
  */
 static enum libipm_status
-append_char_ptr_type(char c, va_list argptr, struct trans *trans)
+append_char_ptr_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
-    const char *str = va_arg(argptr, const char *);
+    const char *str = va_arg(*argptr, const char *);
     if (str == NULL)
     {
         log_append_error(trans, "String cannot be NULL");
@@ -315,11 +315,11 @@ append_char_ptr_type(char c, va_list argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_fsb_type(char c, va_list argptr, struct trans *trans)
+append_fsb_type(char c, va_list *argptr, struct trans *trans)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
-    const struct libipm_fsb *fsb = va_arg(argptr, const struct libipm_fsb *);
+    const struct libipm_fsb *fsb = va_arg(*argptr, const struct libipm_fsb *);
     if (fsb == NULL || fsb->data == NULL)
     {
         log_append_error(trans, "Malformed descriptor for '%c'", c);
@@ -356,7 +356,7 @@ append_fsb_type(char c, va_list argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-libipm_msg_out_appendv(struct trans *trans, const char *format, va_list argptr)
+libipm_msg_out_appendv(struct trans *trans, const char *format, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
@@ -463,7 +463,7 @@ libipm_msg_out_init(struct trans *trans, unsigned short msgno,
         init_output_buffer(trans, msgno);
 
         va_start(argptr, format);
-        rv = libipm_msg_out_appendv(trans, format, argptr);
+        rv = libipm_msg_out_appendv(trans, format, &argptr);
         va_end(argptr);
     }
 
@@ -487,7 +487,7 @@ libipm_msg_out_append(struct trans *trans, const char *format, ...)
         va_list argptr;
 
         va_start(argptr, format);
-        rv = libipm_msg_out_appendv(trans, format, argptr);
+        rv = libipm_msg_out_appendv(trans, format, &argptr);
         va_end(argptr);
     }
 
@@ -542,7 +542,7 @@ libipm_msg_out_simple_send(struct trans *trans, unsigned short msgno,
         va_start(argptr, format);
         init_output_buffer(trans, msgno);
 
-        rv = libipm_msg_out_appendv(trans, format, argptr);
+        rv = libipm_msg_out_appendv(trans, format, &argptr);
         if (rv == E_LI_SUCCESS)
         {
             libipm_msg_out_mark_end(trans);
