@@ -63,10 +63,6 @@
 #   define DEFAULT_BPP 32
 #endif
 
-#ifndef DEFAULT_SERVER
-#   define DEFAULT_SERVER "localhost"
-#endif
-
 #ifndef DEFAULT_TYPE
 #   define DEFAULT_TYPE "Xorg"
 #endif
@@ -95,7 +91,6 @@ struct session_params
     int height;
     int bpp;
     enum scp_session_type session_type;
-    const char *server;
 
     const char *directory;
     const char *shell;
@@ -175,9 +170,6 @@ usage(void)
     g_printf("    -g <geometry>         Default:%dx%d\n",
              DEFAULT_WIDTH, DEFAULT_HEIGHT);
     g_printf("    -b <bits-per-pixel>   Default:%d\n", DEFAULT_BPP);
-    /* Don't encourage use of this one - we need to move to local sockets */
-    g_printf("    -s <server>           Default:%s (Deprecated)\n",
-             DEFAULT_SERVER);
     g_printf("    -t <type>             Default:%s\n", DEFAULT_TYPE);
     g_printf("    -D <directory>        Default: $HOME\n"
              "    -S <shell>            Default: Defined window manager\n"
@@ -291,7 +283,6 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
     sp->height = DEFAULT_HEIGHT;
     sp->bpp = DEFAULT_BPP;
     (void)string_to_session_type(DEFAULT_TYPE, &sp->session_type);
-    sp->server = DEFAULT_SERVER;
 
     sp->directory = "";
     sp->shell = "";
@@ -313,11 +304,6 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
 
             case 'b':
                 sp->bpp = atoi(optarg);
-                break;
-
-            case 's':
-                LOG(LOG_LEVEL_WARNING, "Using deprecated option '-s'");
-                sp->server = optarg;
                 break;
 
             case 't':
@@ -419,10 +405,10 @@ send_create_session_request(struct trans *t, const struct session_params *sp)
 {
     LOG(LOG_LEVEL_DEBUG,
         "width:%d  height:%d  bpp:%d  code:%d\n"
-        "server:\"%s\"   directory:\"%s\"\n"
+        "directory:\"%s\"\n"
         "shell:\"%s\"    connection_description:\"%s\"",
         sp->width, sp->height, sp->bpp, sp->session_type,
-        sp->server, sp->directory,
+        sp->directory,
         sp->shell, sp->connection_description);
     /* Only log the password in development builds */
     LOG_DEVEL(LOG_LEVEL_DEBUG, "password:\"%s\"", sp->password);
@@ -498,7 +484,7 @@ main(int argc, char **argv)
         LOG(LOG_LEVEL_ERROR, "error reading config file %s : %s",
             sesman_ini, g_get_strerror());
     }
-    else if (!(t = scp_connect(sp.server, cfg->listen_port, NULL)))
+    else if (!(t = scp_connect(cfg->listen_port, NULL)))
     {
         LOG(LOG_LEVEL_ERROR, "connect error - %s", g_get_strerror());
     }

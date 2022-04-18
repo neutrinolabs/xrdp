@@ -35,6 +35,7 @@
 #include "log.h"
 #include "string_calls.h"
 #include "chansrv/chansrv_common.h"
+#include "scp.h"
 
 /***************************************************************************//**
  *
@@ -51,14 +52,11 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
                     struct list *param_v)
 {
     int i;
-    int length;
-    char *buf;
 
     list_clear(param_v);
     list_clear(param_n);
 
     /* resetting the struct */
-    cf->listen_address[0] = '\0';
     cf->listen_port[0] = '\0';
     cf->enable_user_wm = 0;
     cf->user_wm[0] = '\0';
@@ -70,47 +68,50 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
 
     for (i = 0; i < param_n->count; i++)
     {
-        buf = (char *)list_get_item(param_n, i);
+        const char *param = (const char *)list_get_item(param_n, i);
+        const char *val = (const char *)list_get_item(param_v, i);
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_DEFWM))
+        if (0 == g_strcasecmp(param, SESMAN_CFG_DEFWM))
         {
-            cf->default_wm = g_strdup((char *)list_get_item(param_v, i));
+            cf->default_wm = g_strdup(val);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_USERWM))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_USERWM))
         {
-            g_strncpy(cf->user_wm, (char *)list_get_item(param_v, i), 31);
+            g_strncpy(cf->user_wm, val, sizeof(cf->user_wm) - 1);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_ENABLE_USERWM))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_ENABLE_USERWM))
         {
-            cf->enable_user_wm = g_text2bool((char *)list_get_item(param_v, i));
+            cf->enable_user_wm = g_text2bool(val);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_PORT))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_PORT))
         {
-            g_strncpy(cf->listen_port, (char *)list_get_item(param_v, i), 15);
+            scp_port_to_unix_domain_path(val, cf->listen_port,
+                                         sizeof(cf->listen_port));
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_ADDRESS))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_AUTH_FILE_PATH))
         {
-            g_strncpy(cf->listen_address, (char *)list_get_item(param_v, i), 31);
+            cf->auth_file_path = g_strdup(val);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_AUTH_FILE_PATH))
+        else if (g_strcasecmp(param, SESMAN_CFG_RECONNECT_SH) == 0)
         {
-            cf->auth_file_path = g_strdup((char *)list_get_item(param_v, i));
+            cf->reconnect_sh = g_strdup(val);
         }
-        else if (g_strcasecmp(buf, SESMAN_CFG_RECONNECT_SH) == 0)
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_ADDRESS))
         {
-            cf->reconnect_sh = g_strdup((char *)list_get_item(param_v, i));
+            /* Config must be updated for Unix Domain Sockets */
+            LOG(LOG_LEVEL_WARNING, "Obsolete setting' " SESMAN_CFG_ADDRESS
+                "' in [" SESMAN_CFG_GLOBALS "] should be removed.");
+            LOG(LOG_LEVEL_WARNING, "Review setting' " SESMAN_CFG_PORT "' in ["
+                SESMAN_CFG_GLOBALS "]");
         }
     }
 
     /* checking for missing required parameters */
-    if ('\0' == cf->listen_address[0])
-    {
-        g_strncpy(cf->listen_address, "0.0.0.0", 8);
-    }
-
     if ('\0' == cf->listen_port[0])
     {
-        g_strncpy(cf->listen_port, "3350", 5);
+        /* Load the default value */
+        scp_port_to_unix_domain_path(NULL, cf->listen_port,
+                                     sizeof(cf->listen_port));
     }
 
     if ('\0' == cf->user_wm[0])
@@ -118,46 +119,40 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         cf->enable_user_wm = 0;
     }
 
-    if (cf->default_wm == 0)
-    {
-        cf->default_wm = g_strdup("startwm.sh");
-    }
-    else if (g_strlen(cf->default_wm) == 0)
+    if (cf->default_wm == 0 || cf->default_wm[0] == '\0')
     {
         g_free(cf->default_wm);
         cf->default_wm = g_strdup("startwm.sh");
     }
-    /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    /* if default_wm doesn't begin with '/', it's a relative path to
+     * XRDP_CFG_PATH */
     if (cf->default_wm[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(cf->default_wm) + 1; /* '/' */
-        buf = (char *)g_malloc(length, 0);
+        int length = (sizeof(XRDP_CFG_PATH) +
+                      g_strlen(cf->default_wm) + 1); /* '/' */
+        char *buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, cf->default_wm);
         g_free(cf->default_wm);
-        cf->default_wm = g_strdup(buf);
-        g_free(buf);
+        cf->default_wm = buf;
     }
 
-    if (cf->reconnect_sh == 0)
-    {
-        cf->reconnect_sh = g_strdup("reconnectwm.sh");
-    }
-    else if (g_strlen(cf->reconnect_sh) == 0)
+    if (cf->reconnect_sh == 0 || cf->reconnect_sh[0] == '\0')
     {
         g_free(cf->reconnect_sh);
         cf->reconnect_sh = g_strdup("reconnectwm.sh");
     }
-    /* if reconnect_sh doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    /* if reconnect_sh doesn't begin with '/', it's a relative path to
+     * XRDP_CFG_PATH */
     if (cf->reconnect_sh[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(cf->reconnect_sh) + 1; /* '/' */
-        buf = (char *)g_malloc(length, 0);
+        int length = (sizeof(XRDP_CFG_PATH) +
+                      g_strlen(cf->reconnect_sh) + 1); /* '/' */
+        char *buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, cf->reconnect_sh);
         g_free(cf->reconnect_sh);
-        cf->reconnect_sh = g_strdup(buf);
-        g_free(buf);
+        cf->reconnect_sh = buf;
     }
 
     return 0;
@@ -530,6 +525,7 @@ config_read(const char *sesman_ini)
                 param_n->auto_free = 1;
                 param_v = list_create();
                 param_v->auto_free = 1;
+                all_ok = 1;
 
                 /* read global config */
                 config_read_globals(fd, cfg, param_n, param_v);
@@ -552,7 +548,6 @@ config_read(const char *sesman_ini)
                 list_delete(param_v);
                 list_delete(param_n);
                 g_file_close(fd);
-                all_ok = 1;
             }
         }
     }
@@ -579,14 +574,13 @@ config_dump(struct config_sesman *config)
     /* Global sesman configuration */
     g_writeln("Filename:                     %s", config->sesman_ini);
     g_writeln("Global configuration:");
-    g_writeln("    ListenAddress:            %s", config->listen_address);
     g_writeln("    ListenPort:               %s", config->listen_port);
     g_writeln("    EnableUserWindowManager:  %d", config->enable_user_wm);
     g_writeln("    UserWindowManager:        %s", config->user_wm);
     g_writeln("    DefaultWindowManager:     %s", config->default_wm);
     g_writeln("    ReconnectScript:          %s", config->reconnect_sh);
     g_writeln("    AuthFilePath:             %s",
-              ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
+              (config->auth_file_path ? config->auth_file_path : "disabled"));
 
     /* Session configuration */
     g_writeln("Session configuration:");

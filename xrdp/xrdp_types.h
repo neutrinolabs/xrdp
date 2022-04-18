@@ -322,7 +322,6 @@ struct xrdp_mm
     int use_pam_auth; /* True if we're to authenticate using PAM */
     int use_chansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
     struct trans *sesman_trans; /* connection to sesman */
-    struct trans *pam_auth_trans; /* connection to pam authenticator */
     struct trans *chan_trans; /* connection to chansrv */
 
     /* We can't delete transports while we're in a callback for that
@@ -330,7 +329,6 @@ struct xrdp_mm
      * These flags mark transports as needing to be deleted when
      * we are definitely not in a transport callback */
     int delete_sesman_trans;
-    int delete_pam_auth_trans;
 
     struct list *login_names;
     struct list *login_values;

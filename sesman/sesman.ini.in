@@ -1,8 +1,8 @@
 ;; See `man 5 sesman.ini` for details
 
 [Globals]
-ListenAddress=127.0.0.1
-ListenPort=3350
+; listening port
+#ListenPort=sesman.socket
 EnableUserWindowManager=true
 ; Give in relative path to user's home directory
 UserWindowManager=startwm.sh

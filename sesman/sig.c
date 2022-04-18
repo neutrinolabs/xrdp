@@ -47,16 +47,19 @@ sig_sesman_reload_cfg(void)
     }
 
     /* Deal with significant config changes */
-    if (g_strcmp(g_cfg->listen_address, cfg->listen_address) != 0 ||
-            g_strcmp(g_cfg->listen_port, cfg->listen_port) != 0)
+    if (g_strcmp(g_cfg->listen_port, cfg->listen_port) != 0)
     {
-        LOG(LOG_LEVEL_INFO, "sesman listen address changed to %s:%s",
-            cfg->listen_address, cfg->listen_port);
+        LOG(LOG_LEVEL_INFO, "sesman listen port changed to %s",
+            cfg->listen_port);
 
         /* We have to delete the old port before listening to the new one
          * in case they overlap in scope */
         sesman_delete_listening_transport();
-        sesman_create_listening_transport(cfg);
+        if (sesman_create_listening_transport(cfg) == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Sesman now listening on %s",
+                g_cfg->listen_port);
+        }
     }
 
     /* free old config data */

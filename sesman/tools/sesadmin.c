@@ -34,7 +34,6 @@
 char user[257];
 char pass[257];
 char cmnd[257];
-char serv[257];
 char port[257];
 
 static int cmndList(struct trans *t);
@@ -55,7 +54,6 @@ int main(int argc, char **argv)
     user[0] = '\0';
     pass[0] = '\0';
     cmnd[0] = '\0';
-    serv[0] = '\0';
     port[0] = '\0';
 
     logging = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
@@ -72,10 +70,6 @@ int main(int argc, char **argv)
         {
             g_strncpy(pass, (argv[idx]) + 3, 256);
         }
-        else if (0 == g_strncmp(argv[idx], "-s=", 3))
-        {
-            g_strncpy(serv, (argv[idx]) + 3, 256);
-        }
         else if (0 == g_strncmp(argv[idx], "-i=", 3))
         {
             g_strncpy(port, (argv[idx]) + 3, 256);
@@ -84,11 +78,6 @@ int main(int argc, char **argv)
         {
             g_strncpy(cmnd, (argv[idx]) + 3, 256);
         }
-    }
-
-    if (0 == g_strncmp(serv, "", 1))
-    {
-        g_strncpy(serv, "localhost", 256);
     }
 
     if (0 == g_strncmp(port, "", 1))
@@ -115,7 +104,7 @@ int main(int argc, char **argv)
 
     }
 
-    t = scp_connect(serv, port, NULL);
+    t = scp_connect(port, NULL);
 
 
     if (t == NULL)

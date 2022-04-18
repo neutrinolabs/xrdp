@@ -66,10 +66,37 @@ scp_msgno_to_str(enum scp_msg_code n, char *buff, unsigned int buff_size);
 /* Connection management facilities */
 
 /**
+ * Maps a port definition to a UNIX domain socket path
+ * @param port Port definition (e.g. from sesman.ini). Can be "" or NULL
+ * @param buff Buffer for result
+ * @param bufflen Length of buff
+ *
+ * @return Number of chars needed for result, excluding the '\0'
+ */
+int
+scp_port_to_unix_domain_path(const char *port, char *buff,
+                             unsigned int bufflen);
+
+/**
+ * Maps a port definition to a displayable string
+ * @param port Port definition (e.g. from sesman.ini). Can be "" or NULL
+ * @param buff Buffer for result
+ * @param bufflen Length of buff
+ *
+ * @return Number of chars needed for result, excluding the '\0'
+ *
+ * This differs from scp_port_to_unix_domain_path() in that the result is
+ * for displaying to the user (i.e. in a status message), rather than for
+ * connecting to. For log messages, use the result of
+ * scp_port_to_unix_domain_path()
+ */
+int
+scp_port_to_display_string(const char *port, char *buff, unsigned int bufflen);
+
+/**
  * Connect to an SCP server
  *
- * @param host Host providing SCP service
- * @param port TCP port for SCP service
+ * @param port Port definition (e.g. from sesman.ini)
  * @param term_func Function to poll during connection for program
  *         termination, or NULL for none.
  * @return Initialised SCP transport
@@ -77,7 +104,7 @@ scp_msgno_to_str(enum scp_msg_code n, char *buff, unsigned int buff_size);
  * The returned tranport has the is_term member set to term_func.
  */
 struct trans *
-scp_connect(const char *host, const  char *port,
+scp_connect(const  char *port,
             int (*term_func)(void));
 
 /**

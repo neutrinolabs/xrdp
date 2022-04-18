@@ -33,6 +33,7 @@
 #include "trans.h"
 #include "os_calls.h"
 #include "string_calls.h"
+#include "xrdp_sockets.h"
 
 /*****************************************************************************/
 static const char *
@@ -67,27 +68,96 @@ scp_msgno_to_str(enum scp_msg_code n, char *buff, unsigned int buff_size)
 }
 
 /*****************************************************************************/
+int
+scp_port_to_unix_domain_path(const char *port, char *buff,
+                             unsigned int bufflen)
+{
+    /* GOTCHA: Changes to this logic should be mirrored in
+     * scp_port_to_display_string() */
+
+    int result;
+
+    /* Make sure we can safely de-reference 'port' */
+    if (port == NULL)
+    {
+        port = "";
+    }
+
+    if (port[0] == '/')
+    {
+        result = g_snprintf(buff, bufflen, "%s", port);
+    }
+    else
+    {
+        const char *sep;
+        if ((sep = g_strrchr(port, '/')) != NULL && sep != port)
+        {
+            /* We allow the user to specify an absolute path, but not
+             * a relative one with embedded '/' characters */
+            LOG(LOG_LEVEL_WARNING, "Ignoring path elements of '%s'", port);
+            port = sep + 1;
+        }
+
+        if (port[0] == '\0')
+        {
+            port = SCP_LISTEN_PORT_BASE_STR;
+        }
+        else if (g_strcmp(port, "3350") == 0)
+        {
+            /* Version v0.9.x and earlier of xrdp used a TCP port
+             * number. If we come across this, we'll ignore it for
+             * compatibility with old config files */
+            LOG(LOG_LEVEL_WARNING,
+                "Ignoring obsolete SCP port value '%s'", port);
+            port = SCP_LISTEN_PORT_BASE_STR;
+        }
+
+        result = g_snprintf(buff, bufflen, SESMAN_RUNTIME_PATH "/%s", port);
+    }
+
+    return result;
+}
+
+/*****************************************************************************/
+int
+scp_port_to_display_string(const char *port, char *buff, unsigned int bufflen)
+{
+    /* Make sure we can safely de-reference 'port' */
+    if (port == NULL)
+    {
+        port = "";
+    }
+
+    /* Ignore any directories for the display */
+    const char *sep;
+    if ((sep = g_strrchr(port, '/')) != NULL)
+    {
+        port = sep + 1;
+    }
+
+    /* Check for a default */
+    if (port[0] == '\0' || g_strcmp(port, "3350") == 0)
+    {
+        port = SCP_LISTEN_PORT_BASE_STR;
+    }
+
+    return g_snprintf(buff, bufflen, "%s", port);
+}
+
+/*****************************************************************************/
 struct trans *
-scp_connect(const char *host, const  char *port,
+scp_connect(const  char *port,
             int (*term_func)(void))
 {
+    char sock_path[256];
     struct trans *t;
-    if ((t = trans_create(TRANS_MODE_TCP, 128, 128)) != NULL)
+
+    (void)scp_port_to_unix_domain_path(port, sock_path, sizeof(sock_path));
+    if ((t = trans_create(TRANS_MODE_UNIX, 128, 128)) != NULL)
     {
-        if (host == NULL)
-        {
-            host = "localhost";
-        }
-
-        if (port == NULL)
-        {
-            port = "3350";
-        }
-
         t->is_term = term_func;
 
-        trans_connect(t, host, port, 3000);
-        if (t->status != TRANS_STATUS_UP)
+        if (trans_connect(t, NULL, sock_path, 3000) != 0)
         {
             trans_delete(t);
             t = NULL;
