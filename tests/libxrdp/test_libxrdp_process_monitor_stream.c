@@ -86,8 +86,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_single_monitor_happy_path)
     out_uint32_le(s, TS_MONITOR_PRIMARY); //flags
     out_uint32_le(s, 0); //monitor left
     out_uint32_le(s, 0); //monitor top
-    out_uint32_le(s, 3840); //monitor right
-    out_uint32_le(s, 2160); //monitor bottom
+    out_uint32_le(s, 3840); //monitor width
+    out_uint32_le(s, 2160); //monitor height
     out_uint32_le(s, 2000); //physical width
     out_uint32_le(s, 2000); //physical height
     out_uint32_le(s, 0); //orientation
@@ -112,8 +112,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_single_monitor_happy_path)
     // Verify normal monitor
     ck_assert_int_eq(description->minfo[0].left, 0);
     ck_assert_int_eq(description->minfo[0].top, 0);
-    ck_assert_int_eq(description->minfo[0].right, 3840);
-    ck_assert_int_eq(description->minfo[0].bottom, 2160);
+    ck_assert_int_eq(description->minfo[0].right, 3839);
+    ck_assert_int_eq(description->minfo[0].bottom, 2159);
     ck_assert_int_eq(description->minfo[0].physical_width, 2000);
     ck_assert_int_eq(description->minfo[0].physical_height, 2000);
     ck_assert_int_eq(description->minfo[0].orientation, 0);
@@ -124,8 +124,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_single_monitor_happy_path)
     // Verify normalized monitor
     ck_assert_int_eq(description->minfo_wm[0].left, 0);
     ck_assert_int_eq(description->minfo_wm[0].top, 0);
-    ck_assert_int_eq(description->minfo_wm[0].right, 3840);
-    ck_assert_int_eq(description->minfo_wm[0].bottom, 2160);
+    ck_assert_int_eq(description->minfo_wm[0].right, 3839);
+    ck_assert_int_eq(description->minfo_wm[0].bottom, 2159);
     ck_assert_int_eq(description->minfo_wm[0].physical_width, 2000);
     ck_assert_int_eq(description->minfo_wm[0].physical_height, 2000);
     ck_assert_int_eq(description->minfo_wm[0].orientation, 0);
@@ -134,8 +134,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_single_monitor_happy_path)
     ck_assert_int_eq(description->minfo_wm[0].is_primary, 1);
 
     // Verify geometry (+1 greater than )
-    ck_assert_int_eq(description->session_width, 3841);
-    ck_assert_int_eq(description->session_height, 2161);
+    ck_assert_int_eq(description->session_width, 3840);
+    ck_assert_int_eq(description->session_height, 2160);
 
     free(description);
     free_stream(s);
@@ -144,9 +144,12 @@ END_TEST
 
 START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path)
 {
+#define MONITOR_WIDTH 3840
+#define MONITOR_HEIGHT 2160
+
     struct stream *s = (struct stream *)NULL;
     make_stream(s);
-    init_stream(s, 233);
+    init_stream(s, 8192);
 
     out_uint32_le(s, 6); //monitorCount
 
@@ -154,8 +157,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     out_uint32_le(s, 0); //flags
     out_uint32_le(s, 0); //monitor left
     out_uint32_le(s, 0); //monitor top
-    out_uint32_le(s, 3840); //monitor width
-    out_uint32_le(s, 2160); //monitor height
+    out_uint32_le(s, MONITOR_WIDTH); //monitor width
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor height
     out_uint32_le(s, 9); //physical width
     out_uint32_le(s, 9); //physical height
     out_uint32_le(s, -10); //orientation
@@ -164,10 +167,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
 
     // 4k monitor at position (1, 0)
     out_uint32_le(s, TS_MONITOR_PRIMARY); //flags
-    out_uint32_le(s, 3841); //monitor left
+    out_uint32_le(s, MONITOR_WIDTH); //monitor left
     out_uint32_le(s, 0); //monitor top
-    out_uint32_le(s, 3840); //monitor right
-    out_uint32_le(s, 2160); //monitor bottom
+    out_uint32_le(s, MONITOR_WIDTH); //monitor width
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor height
     out_uint32_le(s, 5); //physical width
     out_uint32_le(s, 11000); //physical height
     out_uint32_le(s, 10); //orientation (Expect to be reset to 0)
@@ -176,10 +179,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
 
     // 4k monitor at position (2, 0)
     out_uint32_le(s, 0); //flags
-    out_uint32_le(s, 7682); //monitor left
+    out_uint32_le(s, (2 * MONITOR_WIDTH)); //monitor left
     out_uint32_le(s, 0); //monitor top
-    out_uint32_le(s, 3840); //monitor width
-    out_uint32_le(s, 2160); //monitor height
+    out_uint32_le(s, MONITOR_WIDTH); //monitor width
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor height
     out_uint32_le(s, 1000); //physical width
     out_uint32_le(s, 1000); //physical height
     out_uint32_le(s, 5000); //orientation
@@ -189,9 +192,9 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     // 4k monitor at position (0, 1)
     out_uint32_le(s, 0); //flags
     out_uint32_le(s, 0); //monitor left
-    out_uint32_le(s, 2161); //monitor top
-    out_uint32_le(s, 3840); //monitor width
-    out_uint32_le(s, 2160); //monitor height
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor top
+    out_uint32_le(s, MONITOR_WIDTH); //monitor width
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor height
     out_uint32_le(s, 1000); //physical width
     out_uint32_le(s, 1000); //physical height
     out_uint32_le(s, 91); //orientation
@@ -200,10 +203,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
 
     // 4k monitor at position (1, 1)
     out_uint32_le(s, 0); //flags
-    out_uint32_le(s, 3841); //monitor left
-    out_uint32_le(s, 2161); //monitor top
-    out_uint32_le(s, 3840); //monitor width
-    out_uint32_le(s, 2160); //monitor height
+    out_uint32_le(s, MONITOR_WIDTH); //monitor left
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor top
+    out_uint32_le(s, MONITOR_WIDTH); //monitor width
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor height
     out_uint32_le(s, 1000); //physical width
     out_uint32_le(s, 1000); //physical height
     out_uint32_le(s, 0); //orientation
@@ -212,10 +215,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
 
     // 4k monitor at position (2, 1)
     out_uint32_le(s, 0); //flags
-    out_uint32_le(s, 7682); //monitor left
-    out_uint32_le(s, 2161); //monitor top
-    out_uint32_le(s, 3840); //monitor width
-    out_uint32_le(s, 2160); //monitor height
+    out_uint32_le(s, (2 * MONITOR_WIDTH)); //monitor left
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor top
+    out_uint32_le(s, MONITOR_WIDTH); //monitor width
+    out_uint32_le(s, MONITOR_HEIGHT); //monitor height
     out_uint32_le(s, 1000); //physical width
     out_uint32_le(s, 1000); //physical height
     out_uint32_le(s, 0); //orientation
@@ -242,8 +245,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
      *************************************************/
     ck_assert_int_eq(description->minfo[0].left, 0);
     ck_assert_int_eq(description->minfo[0].top, 0);
-    ck_assert_int_eq(description->minfo[0].right, 3840);
-    ck_assert_int_eq(description->minfo[0].bottom, 2160);
+    ck_assert_int_eq(description->minfo[0].right, MONITOR_WIDTH - 1);
+    ck_assert_int_eq(description->minfo[0].bottom, MONITOR_HEIGHT - 1);
     ck_assert_int_eq(description->minfo[0].physical_width, 0);
     ck_assert_int_eq(description->minfo[0].physical_height, 0);
     ck_assert_int_eq(description->minfo[0].orientation, 0);
@@ -251,10 +254,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo[0].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo[0].is_primary, 0);
 
-    ck_assert_int_eq(description->minfo[1].left, 3841);
+    ck_assert_int_eq(description->minfo[1].left, MONITOR_WIDTH);
     ck_assert_int_eq(description->minfo[1].top, 0);
-    ck_assert_int_eq(description->minfo[1].right, 7681);
-    ck_assert_int_eq(description->minfo[1].bottom, 2160);
+    ck_assert_int_eq(description->minfo[1].right, (2 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo[1].bottom, MONITOR_HEIGHT - 1);
     ck_assert_int_eq(description->minfo[1].physical_width, 0);
     ck_assert_int_eq(description->minfo[1].physical_height, 0);
     ck_assert_int_eq(description->minfo[1].orientation, 0);
@@ -262,10 +265,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo[1].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo[1].is_primary, 1);
 
-    ck_assert_int_eq(description->minfo[2].left, 7682);
+    ck_assert_int_eq(description->minfo[2].left, (2 * MONITOR_WIDTH));
     ck_assert_int_eq(description->minfo[2].top, 0);
-    ck_assert_int_eq(description->minfo[2].right, 11522);
-    ck_assert_int_eq(description->minfo[2].bottom, 2160);
+    ck_assert_int_eq(description->minfo[2].right, (3 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo[2].bottom, MONITOR_HEIGHT - 1);
     ck_assert_int_eq(description->minfo[2].physical_width, 1000);
     ck_assert_int_eq(description->minfo[2].physical_height, 1000);
     ck_assert_int_eq(description->minfo[2].orientation, 0);
@@ -274,9 +277,9 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo[2].is_primary, 0);
 
     ck_assert_int_eq(description->minfo[3].left, 0);
-    ck_assert_int_eq(description->minfo[3].top, 2161);
-    ck_assert_int_eq(description->minfo[3].right, 3840);
-    ck_assert_int_eq(description->minfo[3].bottom, 4321);
+    ck_assert_int_eq(description->minfo[3].top, MONITOR_HEIGHT);
+    ck_assert_int_eq(description->minfo[3].right, MONITOR_WIDTH - 1);
+    ck_assert_int_eq(description->minfo[3].bottom, (2 * MONITOR_HEIGHT - 1));
     ck_assert_int_eq(description->minfo[3].physical_width, 1000);
     ck_assert_int_eq(description->minfo[3].physical_height, 1000);
     ck_assert_int_eq(description->minfo[3].orientation, 0);
@@ -284,10 +287,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo[3].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo[3].is_primary, 0);
 
-    ck_assert_int_eq(description->minfo[4].left, 3841);
-    ck_assert_int_eq(description->minfo[4].top, 2161);
-    ck_assert_int_eq(description->minfo[4].right, 7681);
-    ck_assert_int_eq(description->minfo[4].bottom, 4321);
+    ck_assert_int_eq(description->minfo[4].left, MONITOR_WIDTH);
+    ck_assert_int_eq(description->minfo[4].top, MONITOR_HEIGHT);
+    ck_assert_int_eq(description->minfo[4].right, (2 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo[4].bottom, (2 * MONITOR_HEIGHT - 1));
     ck_assert_int_eq(description->minfo[4].physical_width, 1000);
     ck_assert_int_eq(description->minfo[4].physical_height, 1000);
     ck_assert_int_eq(description->minfo[4].orientation, 0);
@@ -295,10 +298,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo[4].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo[4].is_primary, 0);
 
-    ck_assert_int_eq(description->minfo[5].left, 7682);
-    ck_assert_int_eq(description->minfo[5].top, 2161);
-    ck_assert_int_eq(description->minfo[5].right, 11522);
-    ck_assert_int_eq(description->minfo[5].bottom, 4321);
+    ck_assert_int_eq(description->minfo[5].left, (2 * MONITOR_WIDTH));
+    ck_assert_int_eq(description->minfo[5].top, MONITOR_HEIGHT);
+    ck_assert_int_eq(description->minfo[5].right, (3 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo[5].bottom, (2 * MONITOR_HEIGHT - 1));
     ck_assert_int_eq(description->minfo[5].physical_width, 1000);
     ck_assert_int_eq(description->minfo[5].physical_height, 1000);
     ck_assert_int_eq(description->minfo[5].orientation, 0);
@@ -311,8 +314,8 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
      *************************************************/
     ck_assert_int_eq(description->minfo_wm[0].left, 0);
     ck_assert_int_eq(description->minfo_wm[0].top, 0);
-    ck_assert_int_eq(description->minfo_wm[0].right, 3840);
-    ck_assert_int_eq(description->minfo_wm[0].bottom, 2160);
+    ck_assert_int_eq(description->minfo_wm[0].right, MONITOR_WIDTH - 1);
+    ck_assert_int_eq(description->minfo_wm[0].bottom, MONITOR_HEIGHT - 1);
     ck_assert_int_eq(description->minfo_wm[0].physical_width, 0);
     ck_assert_int_eq(description->minfo_wm[0].physical_height, 0);
     ck_assert_int_eq(description->minfo_wm[0].orientation, 0);
@@ -320,10 +323,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[0].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo_wm[0].is_primary, 0);
 
-    ck_assert_int_eq(description->minfo_wm[1].left, 3841);
+    ck_assert_int_eq(description->minfo_wm[1].left, MONITOR_WIDTH);
     ck_assert_int_eq(description->minfo_wm[1].top, 0);
-    ck_assert_int_eq(description->minfo_wm[1].right, 7681);
-    ck_assert_int_eq(description->minfo_wm[1].bottom, 2160);
+    ck_assert_int_eq(description->minfo_wm[1].right, (2 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo_wm[1].bottom, MONITOR_HEIGHT - 1);
     ck_assert_int_eq(description->minfo_wm[1].physical_width, 0);
     ck_assert_int_eq(description->minfo_wm[1].physical_height, 0);
     ck_assert_int_eq(description->minfo_wm[1].orientation, 0);
@@ -331,10 +334,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[1].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo_wm[1].is_primary, 1);
 
-    ck_assert_int_eq(description->minfo_wm[2].left, 7682);
+    ck_assert_int_eq(description->minfo_wm[2].left, (2 * MONITOR_WIDTH));
     ck_assert_int_eq(description->minfo_wm[2].top, 0);
-    ck_assert_int_eq(description->minfo_wm[2].right, 11522);
-    ck_assert_int_eq(description->minfo_wm[2].bottom, 2160);
+    ck_assert_int_eq(description->minfo_wm[2].right, (3 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo_wm[2].bottom, MONITOR_HEIGHT - 1);
     ck_assert_int_eq(description->minfo_wm[2].physical_width, 1000);
     ck_assert_int_eq(description->minfo_wm[2].physical_height, 1000);
     ck_assert_int_eq(description->minfo_wm[2].orientation, 0);
@@ -343,9 +346,9 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[2].is_primary, 0);
 
     ck_assert_int_eq(description->minfo_wm[3].left, 0);
-    ck_assert_int_eq(description->minfo_wm[3].top, 2161);
-    ck_assert_int_eq(description->minfo_wm[3].right, 3840);
-    ck_assert_int_eq(description->minfo_wm[3].bottom, 4321);
+    ck_assert_int_eq(description->minfo_wm[3].top, MONITOR_HEIGHT);
+    ck_assert_int_eq(description->minfo_wm[3].right, MONITOR_WIDTH - 1);
+    ck_assert_int_eq(description->minfo_wm[3].bottom, (2 * MONITOR_HEIGHT - 1));
     ck_assert_int_eq(description->minfo_wm[3].physical_width, 1000);
     ck_assert_int_eq(description->minfo_wm[3].physical_height, 1000);
     ck_assert_int_eq(description->minfo_wm[3].orientation, 0);
@@ -353,10 +356,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[3].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo_wm[3].is_primary, 0);
 
-    ck_assert_int_eq(description->minfo_wm[4].left, 3841);
-    ck_assert_int_eq(description->minfo_wm[4].top, 2161);
-    ck_assert_int_eq(description->minfo_wm[4].right, 7681);
-    ck_assert_int_eq(description->minfo_wm[4].bottom, 4321);
+    ck_assert_int_eq(description->minfo_wm[4].left, MONITOR_WIDTH);
+    ck_assert_int_eq(description->minfo_wm[4].top, MONITOR_HEIGHT);
+    ck_assert_int_eq(description->minfo_wm[4].right, (2 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo_wm[4].bottom, (2 * MONITOR_HEIGHT - 1));
     ck_assert_int_eq(description->minfo_wm[4].physical_width, 1000);
     ck_assert_int_eq(description->minfo_wm[4].physical_height, 1000);
     ck_assert_int_eq(description->minfo_wm[4].orientation, 0);
@@ -364,10 +367,10 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[4].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo_wm[4].is_primary, 0);
 
-    ck_assert_int_eq(description->minfo_wm[5].left, 7682);
-    ck_assert_int_eq(description->minfo_wm[5].top, 2161);
-    ck_assert_int_eq(description->minfo_wm[5].right, 11522);
-    ck_assert_int_eq(description->minfo_wm[5].bottom, 4321);
+    ck_assert_int_eq(description->minfo_wm[5].left, (2 * MONITOR_WIDTH));
+    ck_assert_int_eq(description->minfo_wm[5].top, MONITOR_HEIGHT);
+    ck_assert_int_eq(description->minfo_wm[5].right, (3 * MONITOR_WIDTH - 1));
+    ck_assert_int_eq(description->minfo_wm[5].bottom, (2 * MONITOR_HEIGHT - 1));
     ck_assert_int_eq(description->minfo_wm[5].physical_width, 1000);
     ck_assert_int_eq(description->minfo_wm[5].physical_height, 1000);
     ck_assert_int_eq(description->minfo_wm[5].orientation, 0);
@@ -376,11 +379,13 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[5].is_primary, 0);
 
     // Verify geometry
-    ck_assert_int_eq(description->session_width, 11523);
-    ck_assert_int_eq(description->session_height, 4322);
+    ck_assert_int_eq(description->session_width, (3 * MONITOR_WIDTH));
+    ck_assert_int_eq(description->session_height, (2 * MONITOR_HEIGHT));
 
     free(description);
     free_stream(s);
+#undef MONITOR_WIDTH
+#undef MONITOR_HEIGHT
 }
 END_TEST
 
