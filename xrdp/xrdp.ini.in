@@ -231,6 +231,7 @@ name=Xvnc
 lib=libvnc.@lib_extension@
 username=ask
 password=ask
+ip=127.0.0.1
 port=-1
 #xserverbpp=24
 #delay_ms=2000
