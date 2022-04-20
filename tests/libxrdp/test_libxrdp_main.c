@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <check.h>
+#include "log.h"
 #include "test_libxrdp.h"
 
 int main (void)
@@ -15,8 +16,16 @@ int main (void)
     srunner_add_suite(sr, make_suite_test_monitor_processing());
 
     srunner_set_tap(sr, "-");
+
+    /*
+     * Set up console logging */
+    struct log_config *lc = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
+    log_start_from_param(lc);
+    log_config_free(lc);
+
     srunner_run_all (sr, CK_ENV);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
+    log_end();
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
