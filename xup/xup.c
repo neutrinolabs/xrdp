@@ -162,12 +162,6 @@ lib_mod_connect(struct mod *mod)
         return 1;
     }
 
-    if (g_strcmp(mod->ip, "") == 0)
-    {
-        mod->server_msg(mod, "error - no ip set", 0);
-        return 1;
-    }
-
     make_stream(s);
     g_sprintf(con_port, "%s", mod->port);
 
@@ -183,6 +177,12 @@ lib_mod_connect(struct mod *mod)
     {
         socket_mode = TRANS_MODE_TCP;
         LOG(LOG_LEVEL_INFO, "lib_mod_connect: connecting via TCP socket");
+        if (g_strcmp(mod->ip, "") == 0)
+        {
+            mod->server_msg(mod, "error - no ip set", 0);
+            free_stream(s);
+            return 1;
+        }
     }
 
     mod->trans = trans_create(socket_mode, 8 * 8192, 8192);
