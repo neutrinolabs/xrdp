@@ -718,6 +718,8 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 {
     int opcode;
     struct stream *s;
+    int initiator;
+    int channel_id;
 
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
@@ -753,8 +755,8 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
         return 1;
     }
 
-    in_uint8s(s, 4); /* initiator (2 bytes)
-                        channelId (2 bytes) */
+    in_uint16_be(s, initiator);
+    in_uint16_be(s, channel_id);
 
     /*
      * [MS-RDPBCGR] 2.2.1.8 says that the mcsAUrq field is 5 bytes (which have
@@ -772,8 +774,9 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     }
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
-              "initiator (ignored), channelId (ignored), "
+              "initiator %d, channelId %d, "
               "nonStandard (%s)",
+              initiator, channel_id,
               (opcode & 2) ? "present" : "not present");
 
     if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] ChannelJoinRequest"))
