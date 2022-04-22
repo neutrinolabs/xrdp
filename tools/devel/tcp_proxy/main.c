@@ -112,7 +112,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
     {
         while ((!g_terminated) && (error == 0))
         {
-            acc_sck = g_tcp_accept(lis_sck);
+            acc_sck = g_sck_accept(lis_sck);
 
             if ((acc_sck == -1) && g_tcp_last_error_would_block(lis_sck))
             {

@@ -683,12 +683,11 @@ xrdp_wm_init(struct xrdp_wm *self)
             if (file_read_section(fd, section_name, names, values) != 0)
             {
                 LOG(LOG_LEVEL_INFO,
-                    "Module \"%s\" specified by %s from %s port %s "
+                    "Module \"%s\" specified by %s from %s "
                     "is not configured. Using \"%s\" instead.",
                     section_name,
                     self->session->client_info->username,
-                    self->session->client_info->client_addr,
-                    self->session->client_info->client_port,
+                    self->session->client_info->client_description,
                     default_section_name);
                 list_clear(names);
                 list_clear(values);

@@ -73,10 +73,9 @@ lib_mod_log_peer(struct mod *mod)
     {
         LOG(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp_pid=%d connected "
             "to X11rdp_pid=%d X11rdp_uid=%d X11rdp_gid=%d "
-            "client_ip=%s client_port=%s",
+            "client=%s",
             my_pid, pid, uid, gid,
-            mod->client_info.client_addr,
-            mod->client_info.client_port);
+            mod->client_info.client_description);
     }
     else
     {

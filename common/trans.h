@@ -104,8 +104,6 @@ struct trans
     char *listen_filename;
     tis_term is_term; /* used to test for exit */
     struct stream *wait_s;
-    char addr[256];
-    char port[256];
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
     void *extra_data; /* user defined */

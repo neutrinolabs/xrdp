@@ -360,7 +360,6 @@ struct xrdp_rdp *
 xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
 {
     struct xrdp_rdp *self = (struct xrdp_rdp *)NULL;
-    int bytes;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_rdp_create");
     self = (struct xrdp_rdp *)g_malloc(sizeof(struct xrdp_rdp), 1);
@@ -378,10 +377,13 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     self->client_info.cache3_entries = 262;
     self->client_info.cache3_size = 4096;
     /* load client ip info */
-    bytes = sizeof(self->client_info.connection_description) - 1;
-    g_write_connection_description(trans->sck,
-                                   self->client_info.connection_description,
-                                   bytes);
+    g_sck_get_peer_ip_address(trans->sck,
+                              self->client_info.client_ip,
+                              sizeof(self->client_info.client_ip),
+                              NULL);
+    g_sck_get_peer_description(trans->sck,
+                               self->client_info.client_description,
+                               sizeof(self->client_info.client_description));
     self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
 #if defined(XRDP_NEUTRINORDP)
     self->rfx_enc = rfx_context_new();
@@ -914,6 +916,7 @@ int
 xrdp_rdp_incoming(struct xrdp_rdp *self)
 {
     struct xrdp_iso *iso;
+
     iso = self->sec_layer->mcs_layer->iso_layer;
 
     if (xrdp_sec_incoming(self->sec_layer) != 0)
@@ -924,18 +927,13 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     self->mcs_channel = self->sec_layer->mcs_layer->userid +
                         MCS_USERCHANNEL_BASE;
     LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_rdp->mcs_channel %d", self->mcs_channel);
-    g_strncpy(self->client_info.client_addr, iso->trans->addr,
-              sizeof(self->client_info.client_addr) - 1);
-    g_strncpy(self->client_info.client_port, iso->trans->port,
-              sizeof(self->client_info.client_port) - 1);
 
     /* log TLS version and cipher of TLS connections */
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         LOG(LOG_LEVEL_INFO,
-            "TLS connection established from %s port %s: %s with cipher %s",
-            self->client_info.client_addr,
-            self->client_info.client_port,
+            "TLS connection established from %s %s with cipher %s",
+            self->client_info.client_description,
             iso->trans->ssl_protocol,
             iso->trans->cipher_name);
     }
@@ -952,11 +950,8 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
             /* default */ "unknown";
 
         LOG(LOG_LEVEL_INFO,
-            "Non-TLS connection established from %s port %s: "
-            "with security level : %s",
-            self->client_info.client_addr,
-            self->client_info.client_port,
-            security_level);
+            "Non-TLS connection established from %s with security level : %s",
+            self->client_info.client_description, security_level);
     }
 
     return 0;

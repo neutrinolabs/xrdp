@@ -177,7 +177,7 @@ scp_msg_in_reset(struct trans *trans);
  * @param trans SCP transport
  * @param username Username
  * @param password Password
- * @param connection_description Description of the connection
+ * @param ip_addr IP address for the client (or "" if not known)
  * @return != 0 for error
  *
  * Server replies with E_SCP_GATEWAY_RESPONSE
@@ -186,7 +186,7 @@ int
 scp_send_gateway_request(struct trans *trans,
                          const char *username,
                          const char *password,
-                         const char *connection_description);
+                         const char *ip_addr);
 
 /**
  * Parse an incoming E_SCP_GATEWAY_REQUEST message (SCP server)
@@ -194,14 +194,14 @@ scp_send_gateway_request(struct trans *trans,
  * @param trans SCP transport
  * @param[out] username Username
  * @param[out] password Password
- * @param[out] connection_description Description of the connection
+ * @param[out] ip_addr IP address for the client. May be ""
  * @return != 0 for error
  */
 int
 scp_get_gateway_request(struct trans *trans,
                         const char **username,
                         const char **password,
-                        const char **connection_description);
+                        const char **ip_addr);
 
 /**
  * Send an E_SCP_GATEWAY_RESPONSE (SCP server)
@@ -239,7 +239,7 @@ scp_get_gateway_response(struct trans *trans,
  * @param bpp Session bits-per-pixel (ignored for Xorg sessions)
  * @param shell User program to run. May be ""
  * @param directory Directory to run the program in. May be ""
- * @param connection_description Description of the connection
+ * @param ip_addr IP address for the client (or "" if not known)
  * @return != 0 for error
  *
  * Server replies with E_SCP_CREATE_SESSION_RESPONSE
@@ -254,7 +254,7 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *connection_description);
+                                const char *ip_addr);
 
 
 /**
@@ -269,7 +269,7 @@ scp_send_create_session_request(struct trans *trans,
  * @param[out] bpp Session bits-per-pixel (ignored for Xorg sessions)
  * @param[out] shell User program to run. May be ""
  * @param[out] directory Directory to run the program in. May be ""
- * @param[out] connection_description Description of the connection
+ * @param[out] ip_addr IP address for the client. May be ""
  * @return != 0 for error
  *
  * Returned string pointers are valid until scp_msg_in_reset() is
@@ -285,7 +285,7 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **connection_description);
+                               const char **ip_addr);
 
 /**
  * Send an E_SCP_CREATE_SESSION_RESPONSE (SCP server)
