@@ -88,17 +88,31 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 struct session_item *
 session_get_bydata(const struct session_parameters *sp)
 {
+    char policy_str[64];
     struct session_chain *tmp;
-    enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
+    int policy = g_cfg->sess.policy;
+
+    if ((policy & SESMAN_CFG_SESS_POLICY_DEFAULT) != 0)
+    {
+        /* In the past (i.e. xrdp before v0.9.14), the default
+         * session policy varied by sp->type. If this is needed again
+         * in the future, here is the place to add it */
+        policy = SESMAN_CFG_SESS_POLICY_U | SESMAN_CFG_SESS_POLICY_B;
+    }
+
+    config_output_policy_string(policy, policy_str, sizeof(policy_str));
 
     LOG(LOG_LEVEL_DEBUG,
-        "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
-        policy, sp->username, sp->width, sp->height, sp->bpp,
-        sp->type, sp->ip_addr);
+        "%s: search policy=%s type=%s U=%s B=%d D=(%dx%d) I=%s",
+        __func__,
+        policy_str, SCP_SESSION_TYPE_TO_STR(sp->type),
+        sp->username, sp->bpp, sp->width, sp->height,
+        sp->ip_addr);
 
-    if ((policy & SESMAN_CFG_SESS_POLICY_C) != 0)
+    /* 'Separate' policy never matches */
+    if (policy & SESMAN_CFG_SESS_POLICY_SEPARATE)
     {
-        /* Never matches */
+        LOG(LOG_LEVEL_DEBUG, "%s: No matches possible", __func__);
         return NULL;
     }
 
@@ -107,19 +121,33 @@ session_get_bydata(const struct session_parameters *sp)
         struct session_item *item = tmp->item;
 
         LOG(LOG_LEVEL_DEBUG,
-            "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
+            "%s: try %p type=%s U=%s B=%d D=(%dx%d) I=%s",
+            __func__,
             item,
+            SCP_SESSION_TYPE_TO_STR(item->type),
             item->name,
+            item->bpp,
             item->width, item->height,
-            item->bpp, item->type,
             item->start_ip_addr);
 
-        if (g_strncmp(sp->username, item->name, 255) != 0 ||
-                item->bpp != sp->bpp ||
-                item->type != sp->type)
+        if (item->type != sp->type)
+        {
+            LOG(LOG_LEVEL_DEBUG, "%s: Type doesn't match", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_U) &&
+                g_strncmp(sp->username, item->name, sizeof(item->name) - 1) != 0)
         {
             LOG(LOG_LEVEL_DEBUG,
-                "session_get_bydata: Basic parameters don't match");
+                "%s: Username doesn't match for 'U' policy", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_B) && item->bpp != sp->bpp)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "%s: bpp doesn't match for 'B' policy", __func__);
             continue;
         }
 
@@ -127,7 +155,7 @@ session_get_bydata(const struct session_parameters *sp)
                 (item->width != sp->width || item->height != sp->height))
         {
             LOG(LOG_LEVEL_DEBUG,
-                "session_get_bydata: Dimensions don't match for 'D' policy");
+                "%s: Dimensions don't match for 'D' policy", __func__);
             continue;
         }
 
@@ -135,14 +163,16 @@ session_get_bydata(const struct session_parameters *sp)
                 g_strcmp(item->start_ip_addr, sp->ip_addr) != 0)
         {
             LOG(LOG_LEVEL_DEBUG,
-                "session_get_bydata: IPs don't match for 'I' policy");
+                "%s: IPs don't match for 'I' policy", __func__);
             continue;
         }
 
-        LOG(LOG_LEVEL_DEBUG, "session_get_bydata: Got match");
+        LOG(LOG_LEVEL_DEBUG,
+            "%s: Got match, display=%d", __func__, item->display);
         return item;
     }
 
+    LOG(LOG_LEVEL_DEBUG, "%s: No matches found", __func__);
     return 0;
 }
 

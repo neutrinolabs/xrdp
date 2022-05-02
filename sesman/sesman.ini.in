@@ -69,13 +69,20 @@ DisconnectedTimeLimit=0
 IdleTimeLimit=0
 
 ;; Policy - session allocation policy
-; Type: enum [ "Default" | "UBD" | "UBI" | "UBC" | "UBDI" | "UBDC" ]
-; "Default" session per <User,BitPerPixel>
-; "UBD" session per <User,BitPerPixel,DisplaySize>
-; "UBI" session per <User,BitPerPixel,IPAddr>
-; "UBC" session per <User,BitPerPixel,Connection>
-; "UBDI" session per <User,BitPerPixel,DisplaySize,IPAddr>
-; "UBDC" session per <User,BitPerPixel,DisplaySize,Connection>
+;
+;  Type: enum [ "Default" | "Separate" | Combination from {UBDI} ]
+;  "Default"    Currently same as "UB"
+;  "Separate"   All sessions are separate. Sessions can never be rejoined,
+;               and will need to be cleaned up manually, or automatically
+;               by setting other sesman options.
+;
+;   Combination options:-
+;      U        Sessions are separated per user
+;      B        Sessions are separated by bits-per-pixel
+;      D        Sessions are separated by initial display size
+;      I        Sessions are separated by IP address
+;
+;   The options U and B are always active, and cannot be de-selected.
 Policy=Default
 
 [Logging]
