@@ -1057,3 +1057,88 @@ g_str_to_bitmask(const char *str, const struct bitmask_string bitdefs[],
     return mask;
 }
 
+/*****************************************************************************/
+int
+g_bitmask_to_charstr(int bitmask, const struct bitmask_char bitdefs[],
+                     char *buff, int bufflen, int *rest)
+{
+    int rlen = 0; /* Returned length */
+
+    if (bufflen <= 0) /* Caller error */
+    {
+        rlen = -1;
+    }
+    else
+    {
+        char *p = buff;
+        /* Find the last writeable character in the buffer */
+        const char *last = buff + (bufflen - 1);
+
+        const struct bitmask_char *b;
+
+        for (b = &bitdefs[0] ; b->c != '\0'; ++b)
+        {
+            if ((bitmask & b->mask) != 0)
+            {
+                if (p < last)
+                {
+                    *p++ = b->c;
+                }
+                ++rlen;
+
+                /* Remove the bit so we don't report it back */
+                bitmask &= ~b->mask;
+            }
+        }
+        *p = '\0';
+
+        if (rest != NULL)
+        {
+            *rest = bitmask;
+        }
+    }
+
+    return rlen;
+}
+
+/*****************************************************************************/
+int
+g_charstr_to_bitmask(const char *str, const struct bitmask_char bitdefs[],
+                     char *unrecognised, int unrecognised_len)
+{
+    int bitmask = 0;
+    const char *cp;
+    int j = 0;
+
+    if (str != NULL && bitdefs != NULL)
+    {
+        for (cp = str ; *cp != '\0' ; ++cp)
+        {
+            const struct bitmask_char *b;
+            char c = toupper(*cp);
+
+            for (b = &bitdefs[0] ; b->c != '\0'; ++b)
+            {
+                if (toupper(b->c) == c)
+                {
+                    bitmask |= b->mask;
+                    break;
+                }
+            }
+            if (b->c == '\0')
+            {
+                if (unrecognised != NULL && j < (unrecognised_len - 1))
+                {
+                    unrecognised[j++] = *cp;
+                }
+            }
+        }
+    }
+
+    if (unrecognised != NULL && j < unrecognised_len)
+    {
+        unrecognised[j] = '\0';
+    }
+
+    return bitmask;
+}
