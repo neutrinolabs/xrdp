@@ -171,7 +171,7 @@ g_get_display_num_from_display(const char *display_text);
  *       a hexadecimal constant.
  */
 int
-g_bitmask_to_str(int bitmask, const struct bitmask_string[],
+g_bitmask_to_str(int bitmask, const struct bitmask_string bitdefs[],
                  char delim, char *buff, int bufflen);
 
 /***
@@ -184,7 +184,7 @@ g_bitmask_to_str(int bitmask, const struct bitmask_string[],
  * @return bitmask value for recognised tokens
  */
 int
-g_str_to_bitmask(const char *str, const struct bitmask_string[],
+g_str_to_bitmask(const char *str, const struct bitmask_string bitdefs[],
                  const char *delim, char *unrecognised,
                  int unrecognised_len);
 

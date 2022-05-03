@@ -921,6 +921,7 @@ g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int 
     return dest;
 }
 
+/*****************************************************************************/
 int
 g_bitmask_to_str(int bitmask, const struct bitmask_string bitdefs[],
                  char delim, char *buff, int bufflen)
@@ -987,6 +988,7 @@ g_bitmask_to_str(int bitmask, const struct bitmask_string bitdefs[],
     return rlen;
 }
 
+/*****************************************************************************/
 int
 g_str_to_bitmask(const char *str, const struct bitmask_string bitdefs[],
                  const char *delim, char *unrecognised, int unrecognised_len)
