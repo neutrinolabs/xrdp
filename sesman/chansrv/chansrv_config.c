@@ -35,7 +35,6 @@
 #include "string_calls.h"
 
 /* Default settings */
-#define DEFAULT_USE_UNIX_SOCKET             0
 #define DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD 0
 #define DEFAULT_RESTRICT_INBOUND_CLIPBOARD  0
 #define DEFAULT_ENABLE_FUSE_MOUNT           1
@@ -82,41 +81,6 @@ log_to_stdout(const enum logLevels lvl, const char *msg, ...)
     g_writeln("%s", buff);
 
     return LOG_STARTUP_OK;
-}
-
-/***************************************************************************//**
- * Reads the config values we need from the [Globals] section
- *
- * @param logmsg Function to use to log messages
- * @param names List of definitions in the section
- * @params values List of corresponding values for the names
- * @params cfg Pointer to structure we're filling in
- *
- * @return 0 for success
- */
-static int
-read_config_globals(log_func_t logmsg,
-                    struct list *names, struct list *values,
-                    struct config_chansrv *cfg)
-{
-    int error = 0;
-    int index;
-
-    for (index = 0; index < names->count; ++index)
-    {
-        const char *name = (const char *)list_get_item(names, index);
-        const char *value = (const char *)list_get_item(values, index);
-
-        if (g_strcasecmp(name, "ListenAddress") == 0)
-        {
-            if (g_strcasecmp(value, "127.0.0.1") == 0)
-            {
-                cfg->use_unix_socket = 1;
-            }
-        }
-    }
-
-    return error;
 }
 
 /***************************************************************************//**
@@ -243,7 +207,6 @@ new_config(void)
     }
     else
     {
-        cfg->use_unix_socket = DEFAULT_USE_UNIX_SOCKET;
         cfg->enable_fuse_mount = DEFAULT_ENABLE_FUSE_MOUNT;
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
         cfg->restrict_inbound_clipboard = DEFAULT_RESTRICT_INBOUND_CLIPBOARD;
@@ -285,12 +248,6 @@ config_read(int use_logger, const char *sesman_ini)
             names->auto_free = 1;
             values->auto_free = 1;
 
-            if (!error && file_read_section(fd, "Globals", names, values) == 0)
-            {
-                error = read_config_globals(logmsg, names, values, cfg);
-            }
-
-
             if (!error && file_read_section(fd, "Security", names, values) == 0)
             {
                 error = read_config_security(logmsg, names, values, cfg);
@@ -322,8 +279,6 @@ void
 config_dump(struct config_chansrv *config)
 {
     g_writeln("Global configuration:");
-    g_writeln("    UseUnixSocket (derived):   %s",
-              g_bool2text(config->use_unix_socket));
 
     char buf[256];
     g_writeln("\nSecurity configuration:");
