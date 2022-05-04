@@ -55,6 +55,10 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port);
 static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
 
+/* Code values used in 'code=' settings */
+#define XVNC_SESSION_CODE 0
+#define XRDP_SESSION_CODE 10
+#define XORG_SESSION_CODE 20
 
 /*****************************************************************************/
 struct xrdp_mm *
@@ -258,19 +262,18 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     else
     {
         enum scp_session_type type;
-        /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
-        self->code = xrdp_mm_get_value_int(self, "code", 0);
+        /* Map the session code to an SCP session type */
         switch (self->code)
         {
-            case 0:
+            case XVNC_SESSION_CODE:
                 type = SCP_SESSION_TYPE_XVNC;
                 break;
 
-            case 10:
+            case XRDP_SESSION_CODE:
                 type = SCP_SESSION_TYPE_XRDP;
                 break;
 
-            case 20:
+            case  XORG_SESSION_CODE:
                 type = SCP_SESSION_TYPE_XORG;
                 break;
 
@@ -491,11 +494,12 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
     {
         if (self->display > 0)
         {
-            if (self->code == 0) /* Xvnc */
+            if (self->code == XVNC_SESSION_CODE)
             {
                 g_snprintf(text, 255, "%d", 5900 + self->display);
             }
-            else if (self->code == 10 || self->code == 20) /* X11rdp/Xorg */
+            else if (self->code == XRDP_SESSION_CODE ||
+                     self->code == XORG_SESSION_CODE)
             {
                 g_snprintf(text, 255, XRDP_X11RDP_STR, self->display);
             }
@@ -1993,7 +1997,7 @@ cleanup_states(struct xrdp_mm *self)
         self->delete_sesman_trans = 0;
         self->display = 0; /* 10 for :10.0, 11 for :11.0, etc */
         guid_clear(&self->guid);
-        self->code = 0; /* 0 Xvnc session, 10 X11rdp session, 20 Xorg session */
+        self->code = 0; /* ???_SESSION_CODE value */
     }
 }
 
@@ -2404,19 +2408,28 @@ xrdp_mm_connect(struct xrdp_mm *self)
     /* make sure we start in correct state */
     cleanup_states(self);
 
+    self->code = xrdp_mm_get_value_int(self, "code", 0);
+
     /* Look at our module parameters to decide if we need to connect
      * to sesman or not */
 
     if (port != NULL && g_strcmp(port, "-1") == 0)
     {
         self->use_sesman = 1;
-        /* Connecting to a remote sesman is no longer supported */
+        /* Connecting to a remote sesman is no longer supported. For purely
+         * local session types, this setting could be removed.
+         * The 'ip' value is still used for Xvnc sessions, to find the TCP
+         * address that the X server is listening on */
         if (xrdp_mm_get_value(self, "ip") != NULL)
         {
-            xrdp_wm_log_msg(self->wm,
-                            LOG_LEVEL_WARNING,
-                            "Parameter 'ip' is obsolete for sesman connections."
-                            " Please remove from config");
+            if (self->code == XRDP_SESSION_CODE ||
+                    self->code == XORG_SESSION_CODE)
+            {
+                xrdp_wm_log_msg(self->wm,
+                                LOG_LEVEL_WARNING,
+                                "'ip' is not needed for this connection"
+                                " - please remove");
+            }
         }
     }
 
