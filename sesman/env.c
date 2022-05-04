@@ -112,12 +112,10 @@ env_set_user(const char *username, char **passwd_file, int display,
     if (error == 0)
     {
         g_rm_temp_dir();
+        /*
+         * Set the primary group. Note that secondary groups should already
+         * have been set */
         error = g_setgid(pw_gid);
-
-        if (error == 0)
-        {
-            error = g_initgroups(username, pw_gid);
-        }
 
         if (error == 0)
         {

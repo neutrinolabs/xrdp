@@ -525,6 +525,16 @@ session_start(long data,
         g_delete_wait_obj(g_sigchld_event);
         g_delete_wait_obj(g_term_event);
 
+        /* Set the secondary groups before starting the session to prevent
+         * problems on PAM-based systems (see pam_setcred(3)) */
+        if (g_initgroups(s->username) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Failed to initialise secondary groups for %s: %s",
+                s->username, g_get_strerror());
+            g_exit(1);
+        }
+
         auth_start_session(data, display);
         sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
