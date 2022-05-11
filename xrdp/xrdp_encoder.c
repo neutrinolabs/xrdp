@@ -36,6 +36,10 @@
 #include "xrdp_encoder_x264.h"
 #endif
 
+#ifdef XRDP_VIDEOTOOLBOX
+#include "xrdp_encoder_videotoolbox.h"
+#endif
+
 #define XRDP_SURCMD_PREFIX_BYTES 256
 
 #ifdef XRDP_RFXCODEC
@@ -105,6 +109,9 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->gfx = 1;
 #if defined(XRDP_X264)
         self->codec_handle = xrdp_encoder_x264_create();
+#endif
+#if defined(XRDP_VIDEOTOOLBOX)
+        self->codec_handle = xrdp_encoder_videotoolbox_create();
 #endif
     }
 #ifdef XRDP_RFXCODEC
@@ -249,6 +256,12 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     else if (self->process_enc == process_enc_h264)
     {
         xrdp_encoder_x264_delete(self->codec_handle);
+    }
+#endif
+#if defined(XRDP_VIDEOTOOLBOX)
+    else if (self->process_enc == process_enc_h264)
+    {
+        xrdp_encoder_videotoolbox_delete(self->codec_handle);
     }
 #endif
     /* destroy wait objects used for signalling */

@@ -32,6 +32,12 @@ XRDP_EXTRA_LIBS += $(XRDP_X264_LIBS)
 XRDP_EXTRA_SOURCES += xrdp_encoder_x264.c xrdp_encoder_x264.h
 endif
 
+if XRDP_VIDEOTOOLBOX
+AM_CPPFLAGS += -DXRDP_VIDEOTOOLBOX
+XRDP_EXTRA_LIBS += VideoToolbox
+XRDP_EXTRA_SOURCES += xrdp_encoder_videotoolbox.m xrdp_encoder_videotoolbox.h
+endif
+
 if XRDP_PIXMAN
 AM_CPPFLAGS += -DXRDP_PIXMAN
 AM_CPPFLAGS += $(PIXMAN_CFLAGS)
