@@ -52,12 +52,14 @@ jobs:
             DISTCHECK: true
 
           # Maximal debug 64-bit arch builds
+          # Check we can also do a static build without
+          # installing .a files
           - CC: gcc
             feature_set: max
             arch: amd64
             os: ubuntu-latest
             name_extra: and DEBUG
-            CONF_FLAGS_EXTRA: "--enable-devel-all"
+            CONF_FLAGS_EXTRA: "--enable-devel-all --disable-static"
 
           # Maximal 32-bit arch builds
           - CC: gcc
