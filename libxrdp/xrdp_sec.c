@@ -1946,6 +1946,7 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
 static int
 xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 {
+    int version;
     int colorDepth;
     int postBeta2ColorDepth;
     int highColorDepth;
@@ -1953,8 +1954,10 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     int earlyCapabilityFlags;
     char clientName[INFO_CLIENT_NAME_BYTES / 2] = { '\0' };
 
+    UNUSED_VAR(version);
+
     /* TS_UD_CS_CORE requiered fields */
-    in_uint8s(s, 4); /* version */
+    in_uint32_le(s, version);
     in_uint16_le(s, self->rdp_layer->client_info.width);
     in_uint16_le(s, self->rdp_layer->client_info.height);
     in_uint16_le(s, colorDepth);
@@ -1977,12 +1980,13 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint8s(s, 4); /* keyboardFunctionKey */
     in_uint8s(s, 64); /* imeFileName */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
-              "<Requiered fields> version (ignored), desktopWidth %d, "
+              "<Required fields> version %08x, desktopWidth %d, "
               "desktopHeight %d, colorDepth %s, SASSequence (ingored), "
               "keyboardLayout (ignored), clientBuild (ignored), "
               "clientName %s, keyboardType (ignored), "
               "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
-              "imeFileName (ignroed)",
+              "imeFileName (ignored)",
+              version,
               self->rdp_layer->client_info.width,
               self->rdp_layer->client_info.height,
               (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
