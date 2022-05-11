@@ -37,6 +37,7 @@ case $host_os in
 		;;
 	*darwin*)
 		macos=yes
+		AC_PROG_OBJC
 		;;
 esac
 
@@ -167,6 +168,12 @@ AC_ARG_ENABLE(nvenc, AS_HELP_STRING([--enable-nvenc],
                XRDP_NVENC_LIBS should be set if used]),
               [], [enable_nvenc=no])
 AM_CONDITIONAL(XRDP_NVENC, [test x$enable_nvenc = xyes])
+
+AC_ARG_ENABLE(nvenc, AS_HELP_STRING([--enable-videotoolbox],
+              [Use macOS VideoToolbox (default: no)]),
+              [], [enable_videotoolbox=no])
+AM_CONDITIONAL(XRDP_VIDEOTOOLBOX, [test x$enable_videotoolbox = xyes])
+
 AC_ARG_ENABLE(yami, AS_HELP_STRING([--enable-yami],
               [Use yami library (default: no)]),
               [], [enable_yami=no])
