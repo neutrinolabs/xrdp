@@ -2267,6 +2267,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     int index;
     struct xrdp_client_info *client_info;
     struct mcs_channel_item *channel_item;
+    int next_mcs_channel_id;
 
     client_info = &(self->rdp_layer->client_info);
     /* this is an option set in xrdp.ini */
@@ -2288,6 +2289,13 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             "max 31, received %d", num_channels);
         return 1;
     }
+
+    /* GOTCHA: When adding a channel the MCS channel ID is set to
+     * MCS_GLOBAL_CHANNEL + (index + 1). This is assumed by
+     * xrdp_channel_process(), when mapping an incoming PDU into an
+     * entry in this array */
+    next_mcs_channel_id = MCS_GLOBAL_CHANNEL + 1;
+
     for (index = 0; index < num_channels; index++)
     {
         channel_item = g_new0(struct mcs_channel_item, 1);
@@ -2304,7 +2312,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] "
                       "TS_UD_CS_NET.CHANNEL_DEF %d, name %s, options 0x%8.8x",
                       index, channel_item->name, channel_item->flags);
-            channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
+            channel_item->chanid = next_mcs_channel_id++;
             list_add_item(self->mcs_layer->channel_list,
                           (intptr_t) channel_item);
             LOG(LOG_LEVEL_DEBUG,
@@ -2322,6 +2330,13 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             g_free(channel_item);
         }
     }
+
+    /* Set the user channel as well */
+    self->mcs_layer->chanid = next_mcs_channel_id++;
+    self->mcs_layer->userid = self->mcs_layer->chanid - MCS_USERCHANNEL_BASE;
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS user is %d, channel id is %d",
+              self->mcs_layer->userid, self->mcs_layer->chanid);
+
     return 0;
 }
 
