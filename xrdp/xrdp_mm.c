@@ -1213,7 +1213,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     }
     if (best_h264_index >= 0) /* prefer h264, todo use setting in xrdp.ini for this */
     {
-#if defined(XRDP_X264) || defined(XRDP_NVENC)
+#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_VIDEOTOOLBOX)
         best_index = best_h264_index;
         self->egfx_flags = 1;
 #endif
@@ -1385,7 +1385,7 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
     struct xrdp_mm *mm;
     struct xrdp_mod *module;
 
-#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_RFXCODEC)
+#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_VIDEOTOOLBOX) || defined(XRDP_RFXCODEC)
     struct xrdp_rdp *rdp;
     struct xrdp_sec *sec;
     struct xrdp_channel *chan;
@@ -1440,13 +1440,13 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
     switch (description->state)
     {
         case WMRZ_QUEUED:
-#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_RFXCODEC)
+#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_VIDEOTOOLBOX) || defined(XRDP_RFXCODEC)
             advance_resize_state_machine(mm->resize_state_machine, description, WMRZ_ENCODER_DELETE);
 #else
             advance_resize_state_machine(mm->resize_state_machine, description, WMRZ_SERVER_MONITOR_RESIZE);
 #endif
             break;
-#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_RFXCODEC)
+#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_VIDEOTOOLBOX) || defined(XRDP_RFXCODEC)
         case WMRZ_ENCODER_DELETE:
             // Disable the encoder until the resize is complete.
             xrdp_encoder_delete(mm->encoder);
@@ -1511,7 +1511,7 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
                 LOG_DEVEL(LOG_LEVEL_INFO, "process_dynamic_monitor_description: mod_server_version_message failed %d", error);
                 goto exit;
             }
-#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_RFXCODEC)
+#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_VIDEOTOOLBOX) || defined(XRDP_RFXCODEC)
             if (trans_use_helper())
             {
                 advance_resize_state_machine(mm->resize_state_machine, description, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING);
@@ -1574,7 +1574,7 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
             advance_resize_state_machine(mm->resize_state_machine, description, WMRZ_EGFX_INITIALIZE);
             break;
         case WMRZ_EGFX_INITIALIZE:
-#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_RFXCODEC)
+#if defined(XRDP_X264) || defined(XRDP_NVENC) || defined(XRDP_VIDEOTOOLBOX) || defined(XRDP_RFXCODEC)
             if (error == 0 && mm->egfx == NULL && mm->egfx_up == 0)
             {
                 egfx_initialize(mm);
