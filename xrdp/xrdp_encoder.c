@@ -111,7 +111,9 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->codec_handle = xrdp_encoder_x264_create();
 #endif
 #if defined(XRDP_VIDEOTOOLBOX)
-        self->codec_handle = xrdp_encoder_videotoolbox_create();
+        self->codec_handle = xrdp_encoder_videotoolbox_create(
+            mm->wm->screen->width,
+            mm->wm->screen->height);
 #endif
     }
 #ifdef XRDP_RFXCODEC
@@ -176,6 +178,11 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->process_enc = process_enc_h264;
 #if defined(XRDP_X264)
         self->codec_handle = xrdp_encoder_x264_create();
+#endif
+#if defined(XRDP_VIDEOTOOLBOX)
+        self->codec_handle = xrdp_encoder_videotoolbox_create(
+            mm->wm->screen->width,
+            mm->wm->screen->height);
 #endif
     }
     else
@@ -588,7 +595,7 @@ static int n_save_data(const char *data, int data_size, int width, int height)
 }
 #endif
 
-#if defined(XRDP_X264)
+#if defined(XRDP_X264) || defined(XRDP_VIDEOTOOLBOX)
 
 /*****************************************************************************/
 /* called from encoder thread */
@@ -715,6 +722,17 @@ process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                                          enc->width, enc->height, 0,
                                          enc->data,
                                          s->p, &out_data_bytes);
+#endif
+#if defined(XRDP_VIDEOTOOLBOX)
+        LOG(LOG_LEVEL_DEBUG,
+            "process_enc_h264: calling xrdp_encoder_videotoolbox_encode");
+        error = xrdp_encoder_videotoolbox_encode(
+            self->codec_handle, 0,
+            enc->frame_id,
+            enc->width, enc->height, 0,
+            enc->data,
+            s->p, &out_data_bytes
+        );
 #endif
     }
     LOG_DEVEL(LOG_LEVEL_TRACE,
