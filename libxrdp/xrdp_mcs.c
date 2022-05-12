@@ -109,7 +109,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
     out_uint16_be(s, chanid); /* channelId (OPTIONAL) */
     s_mark_end(s);
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sening [ITU-T T.125] ChannelJoinConfirm "
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [ITU-T T.125] ChannelJoinConfirm "
               "result SUCCESS, initiator %d, requested %d, "
               "channelId %d",  userid, chanid, chanid);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
@@ -714,12 +714,11 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
  *
  * returns error */
 static int
-xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
+xrdp_mcs_recv_cjrq(struct xrdp_mcs *self, int *channel_id)
 {
     int opcode;
     struct stream *s;
     int initiator;
-    int channel_id;
 
     s = libxrdp_force_read(self->iso_layer->trans);
     if (s == 0)
@@ -756,7 +755,7 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     }
 
     in_uint16_be(s, initiator);
-    in_uint16_be(s, channel_id);
+    in_uint16_be(s, *channel_id);
 
     /*
      * [MS-RDPBCGR] 2.2.1.8 says that the mcsAUrq field is 5 bytes (which have
@@ -776,7 +775,7 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
               "initiator %d, channelId %d, "
               "nonStandard (%s)",
-              initiator, channel_id,
+              initiator, *channel_id,
               (opcode & 2) ? "present" : "not present");
 
     if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] ChannelJoinRequest"))
@@ -1237,18 +1236,22 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
+    /*
+     * Expect a channel join request PDU for each of the static virtual channels, plus
+     * the user channel (self->chanid) and the I/O channel (MCS_GLOBAL_CHANNEL)
+     */
     for (index = 0; index < self->channel_list->count + 2; index++)
     {
+        int channel_id;
         LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive channel join request");
-        if (xrdp_mcs_recv_cjrq(self) != 0)
+        if (xrdp_mcs_recv_cjrq(self, &channel_id) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive channel join request failed");
             return 1;
         }
 
         LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send channel join confirm");
-        if (xrdp_mcs_send_cjcf(self, self->userid,
-                               self->userid + MCS_USERCHANNEL_BASE + index) != 0)
+        if (xrdp_mcs_send_cjcf(self, self->userid, channel_id) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send channel join confirm failed");
             return 1;
