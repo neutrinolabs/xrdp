@@ -34,7 +34,15 @@ endif
 
 if XRDP_VIDEOTOOLBOX
 AM_CPPFLAGS += -DXRDP_VIDEOTOOLBOX
-XRDP_EXTRA_LIBS += VideoToolbox
+AM_LDFLAGS = \
+    -ObjC \
+    -all_load \
+	-framework CoreFoundation \
+	-framework Foundation \
+	-framework CoreMedia \
+	-framework CoreVideo \
+	-framework VideoToolbox
+
 XRDP_EXTRA_SOURCES += xrdp_encoder_videotoolbox.m xrdp_encoder_videotoolbox.h
 endif
 
