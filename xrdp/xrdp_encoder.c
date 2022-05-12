@@ -649,6 +649,7 @@ process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     g_memset(s, 0, sizeof(struct stream));
     ls.data = out_data + 256;
     ls.p = ls.data;
+    ls.size = (out_data_bytes + index) - 256;
 
     if (self->gfx)
     {
