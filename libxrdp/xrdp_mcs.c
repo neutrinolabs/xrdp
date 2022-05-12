@@ -27,6 +27,11 @@
 #include "ms-rdpbcgr.h"
 #include "log.h"
 
+/* Forward references */
+static int
+handle_non_tls_client_channel_join_requests(struct xrdp_mcs *self,
+        struct stream *s, int *appid);
+
 /*****************************************************************************/
 struct xrdp_mcs *
 xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
@@ -124,6 +129,34 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
 }
 
 /*****************************************************************************/
+/* Reads the header of a DomainMCSPDU and gets the appid
+ *
+ * @return 0 for success */
+static int
+get_domain_mcs_pdu_header(struct xrdp_mcs *self, struct stream *s, int *appid)
+{
+    int opcode;
+    if (xrdp_iso_recv(self->iso_layer, s) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: xrdp_iso_recv failed");
+        return 1;
+    }
+
+    if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
+    {
+        return 1;
+    }
+
+    /* The DomainMCSPDU choice index is a 6-bit int with the 2 least
+       significant bits of the byte as padding */
+    in_uint8(s, opcode);
+    *appid = opcode >> 2; /* 2-bit padding */
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "Received [ITU-T T.125] DomainMCSPDU choice index %d", *appid);
+    return 0;
+}
+
+/*****************************************************************************/
 /*
  * Processes an [ITU-T T.125] DomainMCSPDU message.
  *
@@ -136,69 +169,31 @@ int
 xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 {
     int appid;
-    int opcode;
     int len;
-    int userid;
-    int chanid;
 
-
-    while (1)
+    if (get_domain_mcs_pdu_header(self, s, &appid) != 0)
     {
-        if (xrdp_iso_recv(self->iso_layer, s) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: xrdp_iso_recv failed");
-            return 1;
-        }
-
-        if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
-        {
-            return 1;
-        }
-
-        /* The DomainMCSPDU choice index is a 6-bit int with the 2 least
-           significant bits of the byte as padding */
-        in_uint8(s, opcode);
-        appid = opcode >> 2; /* 2-bit padding */
-        LOG_DEVEL(LOG_LEVEL_TRACE,
-                  "Received [ITU-T T.125] DomainMCSPDU choice index %d", appid);
-
-        if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
-        {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DisconnectProviderUltimatum");
-            LOG(LOG_LEVEL_DEBUG, "Recieved disconnection request");
-            return 1;
-        }
-
-        /* MCS_CJRQ: Channel Join ReQuest
-           this is channels getting added from the client */
-        if (appid == MCS_CJRQ)
-        {
-            if (!s_check_rem_and_log(s, 4, "Parsing [ITU-T T.125] ChannelJoinRequest"))
-            {
-                return 1;
-            }
-
-            in_uint16_be(s, userid);
-            in_uint16_be(s, chanid);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
-                      "initiator 0x%4.4x, channelId 0x%4.4x",  userid, chanid);
-
-            if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
-            {
-                LOG(LOG_LEVEL_WARNING, "[ITU-T T.125] Channel join sequence: failed");
-            }
-
-            s = libxrdp_force_read(self->iso_layer->trans);
-            if (s == 0)
-            {
-                LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: libxrdp_force_read failed");
-                return 1;
-            }
-
-            continue;
-        }
-        break;
+        return 1;
     }
+
+    if (self->expecting_channel_join_requests)
+    {
+        if (handle_non_tls_client_channel_join_requests(self, s, &appid) != 0)
+        {
+            return 1;
+        }
+        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] completed");
+        self->expecting_channel_join_requests = 0;
+    }
+
+    if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
+    {
+        LOG_DEVEL(LOG_LEVEL_TRACE,
+                  "Received [ITU-T T.125] DisconnectProviderUltimatum");
+        LOG(LOG_LEVEL_DEBUG, "Recieved disconnection request");
+        return 1;
+    }
+
 
     if (appid != MCS_SDRQ)
     {
@@ -1177,6 +1172,127 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 }
 
 /*****************************************************************************/
+/* Handle all client channel join requests for a non-TLS connection
+ *
+ * @param self MCS structure
+ * @param s Input stream
+ * @param[in,out] appid Type of the MCS PDU whose header has just been read.
+ * @return 0 for success
+ *
+ * For non-TLS connections, the channel join MCS PDUs are followed by
+ * another MCS PDU. This not the case for TLS connections.
+ *
+ * Called when an MCS PDU header has been read, but the PDU has not
+ * been processed.
+ *
+ * If the PDU is a channel join request, it is processed, and the next
+ * PDU header is read. When we've exhausted all the channel join requests,
+ * the type of the next PDU is passed back to the caller for the caller
+ * to process.
+ *
+ * In order to cater for older clients which may not conform exactly to
+ * the specification, we simply take all the join requests which come in,
+ * and respond to them.
+ *
+ * See :-
+ * - https://github.com/neutrinolabs/xrdp/issues/2166
+ * - [MS-RDPBCGR] 3.2.5.3.8 and 3.2.5.3.8
+ */
+static int
+handle_non_tls_client_channel_join_requests(struct xrdp_mcs *self,
+        struct stream *s, int *appid)
+{
+    int rv = 0;
+    while (*appid == MCS_CJRQ)
+    {
+        int userid;
+        int chanid;
+
+        if (!s_check_rem_and_log(s, 4, "Parsing [ITU-T T.125] "
+                                 "ChannelJoinRequest"))
+        {
+            rv = 1;
+            break;
+        }
+
+        in_uint16_be(s, userid);
+        in_uint16_be(s, chanid);
+        LOG_DEVEL(LOG_LEVEL_TRACE,
+                  "Received [ITU-T T.125] ChannelJoinRequest "
+                  "initiator 0x%4.4x, channelId 0x%4.4x", userid, chanid);
+
+        if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "[ITU-T T.125] Channel join sequence: failed");
+        }
+
+        /* Get the next PDU header */
+        s = libxrdp_force_read(self->iso_layer->trans);
+        if (s == 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_mcs_recv: libxrdp_force_read failed");
+            rv = 1;
+            break;
+        }
+        if (get_domain_mcs_pdu_header(self, s, appid) != 0)
+        {
+            rv = 1;
+            break;
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+/* Handle all client channel join requests for a TLS connection
+ *
+ * @param self MCS structure
+ * @return 0 for success
+ *
+ * When were are about to negotiate a TLS connection, it is important that
+ * we agree on the exact number of client join request / client join confirm
+ * PDUs, so that we get the TLS 'client hello' message exactly when
+ * expected.
+ *
+ * See [MS-RDPBCGR] 3.2.5.3.8 and 3.2.5.3.8
+ */
+static int
+handle_tls_client_channel_join_requests(struct xrdp_mcs *self)
+{
+    int index;
+    int rv = 0;
+
+    static const char *tag = "[MCS Connection Sequence (TLS)]";
+    /*
+     * Expect a channel join request PDU for each of the static virtual
+     * channels, plus the user channel (self->chanid) and the I/O channel
+     * (MCS_GLOBAL_CHANNEL) */
+    for (index = 0; index < self->channel_list->count + 2; index++)
+    {
+        int channel_id;
+        LOG(LOG_LEVEL_DEBUG, "%s receive channel join request", tag);
+        if (xrdp_mcs_recv_cjrq(self, &channel_id) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "%s receive channel join request failed", tag);
+            rv = 1;
+            break;
+        }
+
+        LOG(LOG_LEVEL_DEBUG, "%s send channel join confirm", tag);
+        if (xrdp_mcs_send_cjcf(self, self->userid, channel_id) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "%s send channel join confirm failed", tag);
+            rv = 1;
+            break;
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 /* Process and send the MCS messages for the RDP Connection Sequence
  * [MS-RDPBCGR] 1.3.1.1
  *
@@ -1185,8 +1301,6 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 int
 xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
-    int index;
-
     LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive connection request");
     if (xrdp_mcs_recv_connect_initial(self) != 0)
     {
@@ -1236,29 +1350,25 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
-    /*
-     * Expect a channel join request PDU for each of the static virtual channels, plus
-     * the user channel (self->chanid) and the I/O channel (MCS_GLOBAL_CHANNEL)
-     */
-    for (index = 0; index < self->channel_list->count + 2; index++)
+    if (self->iso_layer->selectedProtocol > PROTOCOL_RDP)
     {
-        int channel_id;
-        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] receive channel join request");
-        if (xrdp_mcs_recv_cjrq(self, &channel_id) != 0)
+        /* TLS connection. Client and server have to agree on MCS channel
+         * join messages, and these have to be processed before the TLS
+         * client hello */
+        if (handle_tls_client_channel_join_requests(self) != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] receive channel join request failed");
             return 1;
         }
 
-        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send channel join confirm");
-        if (xrdp_mcs_send_cjcf(self, self->userid, channel_id) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send channel join confirm failed");
-            return 1;
-        }
+        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence (TLS)] completed");
+    }
+    else
+    {
+        /* Non-TLS connection - channel joins handled in MCS PDU
+         * processing loop */
+        self->expecting_channel_join_requests = 1;
     }
 
-    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] completed");
     return 0;
 }
 
