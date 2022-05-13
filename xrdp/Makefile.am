@@ -43,7 +43,7 @@ AM_LDFLAGS = \
 	-framework CoreVideo \
 	-framework VideoToolbox
 
-XRDP_EXTRA_SOURCES += xrdp_encoder_videotoolbox.m xrdp_encoder_videotoolbox.h
+XRDP_EXTRA_SOURCES += xrdp_encoder_videotoolbox.c xrdp_encoder_videotoolbox.h
 endif
 
 if XRDP_PIXMAN

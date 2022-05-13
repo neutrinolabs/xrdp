@@ -37,7 +37,6 @@ case $host_os in
 		;;
 	*darwin*)
 		macos=yes
-		AC_PROG_OBJC
 		;;
 esac
 
