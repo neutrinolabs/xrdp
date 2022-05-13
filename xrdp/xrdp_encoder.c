@@ -111,9 +111,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->codec_handle = xrdp_encoder_x264_create();
 #endif
 #if defined(XRDP_VIDEOTOOLBOX)
-        self->codec_handle = xrdp_encoder_videotoolbox_create(
-            mm->wm->screen->width,
-            mm->wm->screen->height);
+        self->codec_handle = xrdp_encoder_videotoolbox_create();
 #endif
     }
 #ifdef XRDP_RFXCODEC
@@ -180,9 +178,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->codec_handle = xrdp_encoder_x264_create();
 #endif
 #if defined(XRDP_VIDEOTOOLBOX)
-        self->codec_handle = xrdp_encoder_videotoolbox_create(
-            mm->wm->screen->width,
-            mm->wm->screen->height);
+        self->codec_handle = xrdp_encoder_videotoolbox_create();
 #endif
     }
     else

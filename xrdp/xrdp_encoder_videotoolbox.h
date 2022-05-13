@@ -2,7 +2,7 @@
 #define _XRDP_ENCODER_VIDEOTOOLBOX_H
 
 void *
-xrdp_encoder_videotoolbox_create(int width, int height);
+xrdp_encoder_videotoolbox_create(void);
 
 int
 xrdp_encoder_videotoolbox_delete(void *handle);

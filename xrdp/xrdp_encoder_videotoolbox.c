@@ -131,7 +131,9 @@ xrdp_encoder_videotoolbox_initialize_session(struct videotoolbox_encoder *encode
 {
     CFDictionaryRef encoder_specifications = xrdp_encoder_videotoolbox_create_encoder_specifications();
     
-    OSStatus retval = VTCompressionSessionCreate(
+    OSStatus retval = noErr;
+    
+    retval = VTCompressionSessionCreate(
         kCFAllocatorDefault,
         width, height,
         kCMVideoCodecType_H264,
@@ -149,6 +151,9 @@ xrdp_encoder_videotoolbox_initialize_session(struct videotoolbox_encoder *encode
         );
     } else {
         xrdp_encoder_videotoolbox_set_default_properties(encoder->compression_session);
+        
+        encoder->out_width = width;
+        encoder->out_height = height;
     }
     
     if (encoder_specifications != NULL) {
@@ -167,7 +172,11 @@ xrdp_encoder_videotoolbox_release_session(struct videotoolbox_encoder *encoder)
     }
     
     VTCompressionSessionInvalidate(encoder->compression_session);
+    
     encoder->compression_session = NULL;
+    encoder->out_width = 0;
+    encoder->out_height = 0;
+    
 }
 
 OSStatus
@@ -285,7 +294,7 @@ xrdp_encoder_videotoolbox_avcc_to_annex_b(const void *in_avcc_nalus,
 
 /*****************************************************************************/
 void *
-xrdp_encoder_videotoolbox_create(int width, int height)
+xrdp_encoder_videotoolbox_create(void)
 {
     struct videotoolbox_encoder *encoder;
     
@@ -296,12 +305,7 @@ xrdp_encoder_videotoolbox_create(int width, int height)
         LOG(LOG_LEVEL_WARNING, "could not allocate memory");
         return NULL;
     }
-    
-    xrdp_encoder_videotoolbox_initialize_session(
-        encoder,
-        width, height
-    );
-    
+   
     return encoder;
 }
 
@@ -334,7 +338,6 @@ xrdp_encoder_videotoolbox_encode(void *handle, int session,
                                  int width, int height,
                                  int format, const char *data,
                                  char *cdata, int *cdata_bytes) {
-
     struct videotoolbox_encoder *encoder = handle;
 
     CVPixelBufferRef input_frame = nil;
@@ -354,6 +357,15 @@ xrdp_encoder_videotoolbox_encode(void *handle, int session,
     if (encoder == NULL) {
         LOG(LOG_LEVEL_WARNING, "couldn't call encode function: is *handle instance of VideoToolboxEncoder?");
         return -1;
+    }
+    
+    if (encoder->compression_session == NULL ||
+        encoder->out_width  != width ||
+        encoder->out_height != height) {
+        LOG(LOG_LEVEL_DEBUG, "frame size is changed or compression session is not initialized");
+        
+        xrdp_encoder_videotoolbox_release_session(encoder);
+        xrdp_encoder_videotoolbox_initialize_session(encoder, width, height);
     }
 
     retval = CVPixelBufferCreateWithBytes(
