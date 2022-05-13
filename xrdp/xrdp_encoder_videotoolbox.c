@@ -58,7 +58,22 @@ xrdp_encoder_videotoolbox_output_callback(void *maybe_encoder,
 CFDictionaryRef
 xrdp_encoder_videotoolbox_create_encoder_specifications(void)
 {
-    return NULL;
+    const void *keys[1] = {
+        kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder
+    };
+    const void *values[1] = {
+        kCFBooleanTrue
+    };
+    
+    CFDictionaryRef specifications = CFDictionaryCreate(
+        kCFAllocatorDefault,
+        keys, values,
+        1,
+        &kCFTypeDictionaryKeyCallBacks,
+        &kCFTypeDictionaryValueCallBacks
+    );
+    
+    return specifications;
 }
 
 
