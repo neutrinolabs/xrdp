@@ -7,7 +7,6 @@
 #endif
 
 #include <CoreFoundation/CoreFoundation.h>
-#include <Foundation/Foundation.h>
 #include <VideoToolbox/VideoToolbox.h>
 
 #include "xrdp_encoder_videotoolbox.h"
