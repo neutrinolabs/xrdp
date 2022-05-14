@@ -724,12 +724,12 @@ process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         LOG(LOG_LEVEL_DEBUG,
             "process_enc_h264: calling xrdp_encoder_videotoolbox_encode");
         error = xrdp_encoder_videotoolbox_encode(
-            self->codec_handle, 0,
-            enc->frame_id,
-            enc->width, enc->height, 0,
-            enc->data,
-            s->p, &out_data_bytes
-        );
+                    self->codec_handle, 0,
+                    enc->frame_id,
+                    enc->width, enc->height, 0,
+                    enc->data,
+                    s->p, &out_data_bytes
+                );
 #endif
     }
     LOG_DEVEL(LOG_LEVEL_TRACE,
