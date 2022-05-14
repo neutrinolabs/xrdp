@@ -26,7 +26,7 @@ struct videotoolbox_encoder
     short out_height;
 
     tintptr wait_until_frame_processed;
-    CMSampleBufferRef output_buffer;
+    CMSampleBufferRef output_frame;
 };
 
 
@@ -53,7 +53,7 @@ xrdp_encoder_videotoolbox_output_callback(void *maybe_encoder,
 
     CMSampleBufferCreateCopy(
         kCFAllocatorDefault,
-        output_buffer, &encoder->output_buffer
+        output_buffer, &encoder->output_frame
     );
     g_set_wait_obj(encoder->wait_until_frame_processed);
 }
@@ -207,8 +207,7 @@ xrdp_encoder_videotoolbox_release_session(struct videotoolbox_encoder *encoder)
 OSStatus
 xrdp_encoder_videotoolbox_encode_frame_sync(struct videotoolbox_encoder *encoder,
         CVImageBufferRef input_frame,
-        CMTime timestamp,
-        CMSampleBufferRef output_frame)
+        CMTime timestamp)
 {
     OSStatus retval = 0;
     VTEncodeInfoFlags info_flags = 0;
@@ -305,7 +304,7 @@ xrdp_encoder_videotoolbox_avcc_to_annex_b(const void *in_avcc_nalus,
     while (pos < in_avcc_nalus_length)
     {
 
-        memcpy(&unit_length, in_avcc_nalus + pos, sizeof(uint32_t));
+        g_memcpy(&unit_length, in_avcc_nalus + pos, sizeof(uint32_t));
 #if defined(LITTLE_ENDIAN)
         unit_length = CFSwapInt32(unit_length);
 #endif
@@ -315,7 +314,7 @@ xrdp_encoder_videotoolbox_avcc_to_annex_b(const void *in_avcc_nalus,
             break;
         }
 
-        memcpy(out_annex_b_nalus + pos, H264_NALU_START_BYTES, 4);
+        g_memcpy(out_annex_b_nalus + pos, H264_NALU_START_BYTES, 4);
         pos += (4 + unit_length);
     }
 
@@ -337,6 +336,8 @@ xrdp_encoder_videotoolbox_create(void)
         LOG(LOG_LEVEL_WARNING, "could not allocate memory");
         return NULL;
     }
+
+    encoder->wait_until_frame_processed = g_create_wait_obj("videotoolbox_condvar");
 
     return encoder;
 }
@@ -375,7 +376,6 @@ xrdp_encoder_videotoolbox_encode(void *handle, int session,
     struct videotoolbox_encoder *encoder = handle;
 
     CVPixelBufferRef input_frame = nil;
-    CMSampleBufferRef output_frame = nil;
 
     uint8_t *output_frame_ptr = nil;
     size_t output_frame_length = 0;
@@ -422,8 +422,7 @@ xrdp_encoder_videotoolbox_encode(void *handle, int session,
     retval = xrdp_encoder_videotoolbox_encode_frame_sync(
                  encoder,
                  input_frame,
-                 timestamp,
-                 output_frame
+                 timestamp
              );
 
     if (retval != noErr)
@@ -432,7 +431,7 @@ xrdp_encoder_videotoolbox_encode(void *handle, int session,
     }
 
     CMBlockBufferGetDataPointer(
-        CMSampleBufferGetDataBuffer(output_frame),
+        CMSampleBufferGetDataBuffer(encoder->output_frame),
         0, nil,
         &output_frame_length, &output_frame_ptr
     );
@@ -440,7 +439,7 @@ xrdp_encoder_videotoolbox_encode(void *handle, int session,
 
     offset += xrdp_encoder_videotoolbox_write_sps_pps_into_stream(
                   cdata + offset,
-                  output_frame
+                  encoder->output_frame
               );
     offset += xrdp_encoder_videotoolbox_avcc_to_annex_b(
                   output_frame_ptr, output_frame_length,
