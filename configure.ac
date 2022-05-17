@@ -50,6 +50,11 @@ AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
 AC_CHECK_SIZEOF([void *])
 
+# runstatedir not available for autoconf <= 2.69
+if test "x$runstatedir" = "x" ; then
+    runstatedir='${localstatedir}/run'
+fi
+
 AC_ARG_WITH([socketdir],
   [AS_HELP_STRING([--with-socketdir=DIR],
                   [Use directory for UNIX sockets for XRDP sessions (default: RUNSTATEDIR/xrdp)])],
@@ -58,7 +63,7 @@ AC_SUBST([socketdir], [$with_socketdir])
 
 AC_ARG_WITH([sesmanruntimedir],
   [AS_HELP_STRING([--with-sesmanruntimedir=DIR],
-                  [Use directory for sesman runtime data (default: RUNSTATEDIR/xrdp-sesman))])],
+                  [Use directory for sesman runtime data (default: RUNSTATEDIR/xrdp-sesman)])],
                   [], [with_sesmanruntimedir="$runstatedir/xrdp-sesman"])
 AC_SUBST([sesmanruntimedir], [$with_sesmanruntimedir])
 
