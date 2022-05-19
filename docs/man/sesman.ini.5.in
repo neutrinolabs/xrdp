@@ -176,30 +176,34 @@ If set to \fI0\fR, idle sessions will never be disconnected by timeout.
 This works only with xorgxrdp sessions. Moreover, xorgxrdp must be v0.2.9 or later.
 
 .TP
-\fBPolicy\fR=\fI[Default|UBD|UBI|UBC|UBDI|UBDC]\fR
+\fBPolicy\fR=\fI[Default|Separate|{UBDI}]\fR
 Session allocation policy. Used to decide when to allocate a
 new session. Set to one of the following values:
 .br
 
-.br
-\fBDefault\fR - session per <User,BitPerPixel>
-.br
-\fBUBD\fR - session per <User,BitPerPixel,DisplaySize>
-.br
-\fBUBI\fR - session per <User,BitPerPixel,IPAddr>
-.br
-\fBUBC\fR - session per <User,BitPerPixel,Connection>
-.br
-\fBUBDI\fR - session per <User,BitPerPixel,DisplaySize,IPAddr>
-.br
-\fBUBDC\fR - session per <User,BitPerPixel,DisplaySize,Connection>
-.br
+.RS
+.HP 12
+\fBDefault\fR -   Currently the same as "UB" for all session types
+.HP 12
+\fBSeparate\fR -  All sessions are separate. Sessions can never be rejoined,
+and will need to be cleaned up manually, or automatically by setting other
+sesman options.
+.P
+Alternatively combine one-or-more of the following options
+.HP 4
+\fBU\fR - Sessions are separated per user
+.HP 4
+\fBB\fR - Sessions are separated by bits-per-pixel
+.HP 4
+\fBD\fR - Sessions are separated by initial display size
+.HP 4
+\fBI\fR - Sessions are separated by IP address
+.RE
 
-.br
-Note that the \fBUser\fR and \fBBitPerPixel\fR criteria cannot be turned
+.IP
+Note that the \fBU\fR and \fBB\fR criteria cannot be turned
 off. \fBDisplaySize\fR refers to the initial geometry of a connection,
 as actual display sizes can change dynamically.
-.br
 
 .SH "SECURITY"
 Following parameters can be used in the \fB[Security]\fR section.

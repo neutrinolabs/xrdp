@@ -217,7 +217,7 @@ int
 scp_send_gateway_request(struct trans *trans,
                          const char *username,
                          const char *password,
-                         const char *connection_description)
+                         const char *ip_addr)
 {
     int rv;
 
@@ -227,7 +227,7 @@ scp_send_gateway_request(struct trans *trans,
              "sss",
              username,
              password,
-             connection_description);
+             ip_addr);
 
     /* Wipe the output buffer to remove the password */
     libipm_msg_out_erase(trans);
@@ -241,13 +241,13 @@ int
 scp_get_gateway_request(struct trans *trans,
                         const char **username,
                         const char **password,
-                        const char **connection_description)
+                        const char **ip_addr)
 {
     /* Make sure the buffer is cleared after processing this message */
     libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
 
     return libipm_msg_in_parse(trans, "sss", username, password,
-                               connection_description);
+                               ip_addr);
 }
 
 /*****************************************************************************/
@@ -290,7 +290,7 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *connection_description)
+                                const char *ip_addr)
 {
     int rv = libipm_msg_out_simple_send(
                  trans,
@@ -304,7 +304,7 @@ scp_send_create_session_request(struct trans *trans,
                  bpp,
                  shell,
                  directory,
-                 connection_description);
+                 ip_addr);
 
     /* Wipe the output buffer to remove the password */
     libipm_msg_out_erase(trans);
@@ -324,7 +324,7 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **connection_description)
+                               const char **ip_addr)
 {
     /* Intermediate values */
     uint8_t i_type;
@@ -346,7 +346,7 @@ scp_get_create_session_request(struct trans *trans,
                  &i_bpp,
                  shell,
                  directory,
-                 connection_description);
+                 ip_addr);
 
     if (rv == 0)
     {
@@ -475,7 +475,7 @@ scp_send_list_sessions_response(
                  info->bpp,
                  info->start_time,
                  info->username,
-                 info->connection_description);
+                 info->start_ip_addr);
     }
 
     return rv;
@@ -512,7 +512,7 @@ scp_get_list_sessions_response(
             uint8_t i_bpp;
             int64_t i_start_time;
             char *i_username;
-            char *i_connection_description;
+            char *i_start_ip_addr;
 
             rv = libipm_msg_in_parse(
                      trans,
@@ -525,7 +525,7 @@ scp_get_list_sessions_response(
                      &i_bpp,
                      &i_start_time,
                      &i_username,
-                     &i_connection_description);
+                     &i_start_ip_addr);
 
             if (rv == 0)
             {
@@ -533,7 +533,7 @@ scp_get_list_sessions_response(
                  * structure result, and the strings it contains */
                 unsigned int len = sizeof(struct scp_session_info) +
                                    g_strlen(i_username) + 1 +
-                                   g_strlen(i_connection_description) + 1;
+                                   g_strlen(i_start_ip_addr) + 1;
                 if ((p = (struct scp_session_info *)g_malloc(len, 1)) == NULL)
                 {
                     *status = E_SCP_LS_NO_MEMORY;
@@ -543,7 +543,7 @@ scp_get_list_sessions_response(
                     /* Set up the string pointers in the block to point
                      * into the memory allocated after the block */
                     p->username = (char *)p + sizeof(struct scp_session_info);
-                    p->connection_description =
+                    p->start_ip_addr =
                         p->username + g_strlen(i_username) + 1;
 
                     /* Copy the data over */
@@ -555,8 +555,7 @@ scp_get_list_sessions_response(
                     p->bpp = i_bpp;
                     p->start_time = i_start_time;
                     g_strcpy(p->username, i_username);
-                    g_strcpy(p->connection_description,
-                             i_connection_description);
+                    g_strcpy(p->start_ip_addr, i_start_ip_addr);
                 }
             }
         }

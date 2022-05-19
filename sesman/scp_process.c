@@ -41,27 +41,19 @@
  * Logs an authentication failure message
  *
  * @param username Username
- * @param connection_description Connection details
+ * @param ip_addr IP address, if known
  *
  * The message is intended for use by fail2ban. Make changes with care.
  */
 static void
-log_authfail_message(const char *username, const char *connection_description)
+log_authfail_message(const char *username, const char *ip_addr)
 {
-    char ip[64];
-    const char *ipp;
-    if (connection_description != NULL &&
-            connection_description[0] != '\0')
+    if (ip_addr == NULL || ip_addr[0] == '\0')
     {
-        g_get_ip_from_description(connection_description, ip, sizeof(ip));
-        ipp = ip;
-    }
-    else
-    {
-        ipp = "unknown";
+        ip_addr = "unknown";
     }
     LOG(LOG_LEVEL_INFO, "AUTHFAIL: user=%s ip=%s time=%d",
-        username, ipp, g_time1());
+        username, ip_addr, g_time1());
 }
 
 /******************************************************************************/
@@ -72,10 +64,9 @@ process_gateway_request(struct trans *trans)
     int rv;
     const char *username;
     const char *password;
-    const char *connection_description;
+    const char *ip_addr;
 
-    rv = scp_get_gateway_request(trans, &username, &password,
-                                 &connection_description);
+    rv = scp_get_gateway_request(trans, &username, &password, &ip_addr);
     if (rv == 0)
     {
         int errorcode = 0;
@@ -84,7 +75,7 @@ process_gateway_request(struct trans *trans)
         LOG(LOG_LEVEL_INFO, "Received authentication request for user: %s",
             username);
 
-        data = auth_userpass(username, password, &errorcode);
+        data = auth_userpass(username, password, ip_addr, &errorcode);
         if (data)
         {
             if (1 == access_login_allowed(username))
@@ -103,7 +94,7 @@ process_gateway_request(struct trans *trans)
         }
         else
         {
-            log_authfail_message(username, connection_description);
+            log_authfail_message(username, ip_addr);
         }
         rv = scp_send_gateway_response(trans, errorcode);
         auth_end(data);
@@ -128,7 +119,7 @@ process_create_session_request(struct trans *trans)
              trans,
              &sp.username, &password,
              &sp.type, &sp.width, &sp.height, &sp.bpp,
-             &sp.shell, &sp.directory, &sp.connection_description);
+             &sp.shell, &sp.directory, &sp.ip_addr);
 
     if (rv == 0)
     {
@@ -142,7 +133,7 @@ process_create_session_request(struct trans *trans)
             SCP_SESSION_TYPE_TO_STR(sp.type),
             sp.username);
 
-        data = auth_userpass(sp.username, password, &errorcode);
+        data = auth_userpass(sp.username, password, sp.ip_addr, &errorcode);
         if (data)
         {
             s_item = session_get_bydata(&sp);
@@ -150,12 +141,11 @@ process_create_session_request(struct trans *trans)
             {
                 display = s_item->display;
                 guid = s_item->guid;
-                if (sp.connection_description[0] != '\0')
+                if (sp.ip_addr[0] != '\0')
                 {
                     LOG( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
                          "display :%d.0, session_pid %d, ip %s",
-                         sp.username, display, s_item->pid,
-                         sp.connection_description);
+                         sp.username, display, s_item->pid, sp.ip_addr);
                 }
                 else
                 {
@@ -172,12 +162,11 @@ process_create_session_request(struct trans *trans)
 
                 if (1 == access_login_allowed(sp.username))
                 {
-                    if (sp.connection_description[0] != '\0')
+                    if (sp.ip_addr[0] != '\0')
                     {
                         LOG(LOG_LEVEL_INFO,
                             "++ created session (access granted): "
-                            "username %s, ip %s", sp.username,
-                            sp.connection_description);
+                            "username %s, ip %s", sp.username, sp.ip_addr);
                     }
                     else
                     {
@@ -196,7 +185,7 @@ process_create_session_request(struct trans *trans)
         }
         else
         {
-            log_authfail_message(sp.username, sp.connection_description);
+            log_authfail_message(sp.username, sp.ip_addr);
         }
 
         if (do_auth_end)
@@ -230,7 +219,7 @@ process_list_sessions_request(struct trans *trans)
         LOG(LOG_LEVEL_INFO,
             "Received request to list sessions for user %s", username);
 
-        data = auth_userpass(username, password, &errorcode);
+        data = auth_userpass(username, password, NULL, &errorcode);
         if (data)
         {
             struct scp_session_info *info = NULL;

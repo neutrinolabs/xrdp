@@ -78,6 +78,7 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "log.h"
+#include "xrdp_constants.h"
 
 /* for clearenv() */
 #if defined(_WIN32)
@@ -102,6 +103,22 @@ extern char **environ;
 #if !defined(INADDR_NONE)
 #define INADDR_NONE ((unsigned long)-1)
 #endif
+
+/**
+ * Type big enough to hold socket address information for any connecting type
+ */
+union sock_info
+{
+    struct sockaddr sa;
+    struct sockaddr_in sa_in;
+#if defined(XRDP_ENABLE_IPV6)
+    struct sockaddr_in6 sa_in6;
+#endif
+    struct sockaddr_un sa_un;
+#if defined(XRDP_ENABLE_VSOCK)
+    struct sockaddr_vm sa_vm;
+#endif
+};
 
 /*****************************************************************************/
 int
@@ -670,83 +687,98 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 }
 
 /*****************************************************************************/
+
+static const char *
+get_peer_description(const union sock_info *sock_info,
+                     char *desc, unsigned int bytes)
+{
+    if (bytes > 0)
+    {
+        int family = sock_info->sa.sa_family;
+        switch (family)
+        {
+            case AF_INET:
+            {
+                char ip[INET_ADDRSTRLEN];
+                const struct sockaddr_in *sa_in = &sock_info->sa_in;
+                if (inet_ntop(family, &sa_in->sin_addr,
+                              ip, sizeof(ip)) != NULL)
+                {
+                    g_snprintf(desc, bytes, "%s:%d", ip,
+                               ntohs(sa_in->sin_port));
+                }
+                else
+                {
+                    g_snprintf(desc, bytes, "<unknown AF_INET>:%d",
+                               ntohs(sa_in->sin_port));
+                }
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+            case AF_INET6:
+            {
+                char ip[INET6_ADDRSTRLEN];
+                const struct sockaddr_in6 *sa_in6 = &sock_info->sa_in6;
+                if (inet_ntop(family, &sa_in6->sin6_addr,
+                              ip, sizeof(ip)) != NULL)
+                {
+                    g_snprintf(desc, bytes, "[%s]:%d", ip,
+                               ntohs(sa_in6->sin6_port));
+                }
+                else
+                {
+                    g_snprintf(desc, bytes, "[<unknown AF_INET6>]:%d",
+                               ntohs(sa_in6->sin6_port));
+                }
+                break;
+            }
+#endif
+
+            case AF_UNIX:
+            {
+                g_snprintf(desc, bytes, "AF_UNIX");
+                break;
+            }
+
+#if defined(XRDP_ENABLE_VSOCK)
+
+            case AF_VSOCK:
+            {
+                const struct sockaddr_vm *sa_vm = &sock_info->sa_vm;
+
+                g_snprintf(desc, bytes, "AF_VSOCK:cid=%u/port=%u",
+                           sa_vm->svm_cid, sa_vm->svm_port);
+
+                break;
+            }
+
+#endif
+            default:
+                g_snprintf(desc, bytes, "Unknown address family %d", family);
+                break;
+        }
+    }
+
+    return desc;
+}
+
+/*****************************************************************************/
 void
 g_sck_close(int sck)
 {
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    char sockname[128];
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-#if defined(XRDP_ENABLE_VSOCK)
-        struct sockaddr_vm sock_addr_vm;
-#endif
-    } sock_info;
-    socklen_t sock_len = sizeof(sock_info);
+    char sockname[MAX_PEER_DESCSTRLEN];
 
+    union sock_info sock_info;
+    socklen_t sock_len = sizeof(sock_info);
     memset(&sock_info, 0, sizeof(sock_info));
 
-    if (getsockname(sck, &sock_info.sock_addr, &sock_len) == 0)
+    if (getsockname(sck, &sock_info.sa, &sock_len) == 0)
     {
-        switch (sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-
-                g_snprintf(sockname, sizeof(sockname), "AF_INET %s:%d",
-                           inet_ntoa(sock_addr_in->sin_addr),
-                           ntohs(sock_addr_in->sin_port));
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                char addr[48];
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-
-                g_snprintf(sockname, sizeof(sockname), "AF_INET6 %s port %d",
-                           inet_ntop(sock_addr_in6->sin6_family,
-                                     &sock_addr_in6->sin6_addr, addr, sizeof(addr)),
-                           ntohs(sock_addr_in6->sin6_port));
-                break;
-            }
-
-#endif
-
-            case AF_UNIX:
-                g_snprintf(sockname, sizeof(sockname), "AF_UNIX");
-                break;
-
-#if defined(XRDP_ENABLE_VSOCK)
-
-            case AF_VSOCK:
-            {
-                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
-
-                g_snprintf(sockname,
-                           sizeof(sockname),
-                           "AF_VSOCK cid %d port %d",
-                           sock_addr_vm->svm_cid,
-                           sock_addr_vm->svm_port);
-                break;
-            }
-
-#endif
-
-            default:
-                g_snprintf(sockname, sizeof(sockname), "unknown family %d",
-                           sock_info.sock_addr.sa_family);
-                break;
-        }
+        get_peer_description(&sock_info, sockname, sizeof(sockname));
     }
     else
     {
@@ -1238,19 +1270,10 @@ g_sck_listen(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_accept(int sck)
+g_sck_accept(int sck)
 {
     int ret;
-    char msg[256];
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-    } sock_info;
-
+    union sock_info sock_info;
     socklen_t sock_len = sizeof(sock_info);
     memset(&sock_info, 0, sock_len);
 
@@ -1258,141 +1281,10 @@ g_tcp_accept(int sck)
 
     if (ret > 0)
     {
-        switch (sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-
-                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                           inet_ntoa(sock_addr_in->sin_addr),
-                           ntohs(sock_addr_in->sin_port));
-                LOG(LOG_LEVEL_INFO, "%s", msg);
-
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-                char addr[256];
-
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, sizeof(addr));
-                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                           addr, ntohs(sock_addr_in6->sin6_port));
-                LOG(LOG_LEVEL_INFO, "%s", msg);
-
-                break;
-
-            }
-
-#endif
-        }
-    }
-
-    return ret;
-}
-
-/*****************************************************************************/
-int
-g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
-{
-    int ret;
-    char msg[256];
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-        struct sockaddr_un sock_addr_un;
-#if defined(XRDP_ENABLE_VSOCK)
-        struct sockaddr_vm sock_addr_vm;
-#endif
-    } sock_info;
-
-    socklen_t sock_len = sizeof(sock_info);
-    memset(&sock_info, 0, sock_len);
-
-    ret = accept(sck, (struct sockaddr *)&sock_info, &sock_len);
-
-    if (ret > 0)
-    {
-        switch (sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-
-                g_snprintf(addr, addr_bytes, "%s", inet_ntoa(sock_addr_in->sin_addr));
-                g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in->sin_port));
-                g_snprintf(msg, sizeof(msg),
-                           "AF_INET connection received from %s port %s",
-                           addr, port);
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, addr_bytes);
-                g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in6->sin6_port));
-                g_snprintf(msg, sizeof(msg),
-                           "AF_INET6 connection received from %s port %s",
-                           addr, port);
-                break;
-            }
-
-#endif
-
-            case AF_UNIX:
-            {
-                g_strncpy(addr, "", addr_bytes - 1);
-                g_strncpy(port, "", port_bytes - 1);
-                g_snprintf(msg, sizeof(msg), "AF_UNIX connection received");
-                break;
-            }
-
-#if defined(XRDP_ENABLE_VSOCK)
-
-            case AF_VSOCK:
-            {
-                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
-
-                g_snprintf(addr, addr_bytes - 1, "%d", sock_addr_vm->svm_cid);
-                g_snprintf(port, addr_bytes - 1, "%d", sock_addr_vm->svm_port);
-
-                g_snprintf(msg,
-                           sizeof(msg),
-                           "AF_VSOCK connection received from cid: %s port: %s",
-                           addr,
-                           port);
-
-                break;
-            }
-
-#endif
-            default:
-            {
-                g_strncpy(addr, "", addr_bytes - 1);
-                g_strncpy(port, "", port_bytes - 1);
-                g_snprintf(msg, sizeof(msg),
-                           "connection received, unknown socket family %d",
-                           sock_info.sock_addr.sa_family);
-                break;
-            }
-        }
-
-
-        LOG(LOG_LEVEL_INFO, "Socket %d: %s", ret, msg);
+        char description[MAX_PEER_DESCSTRLEN];
+        get_peer_description(&sock_info, description, sizeof(description));
+        LOG(LOG_LEVEL_INFO, "Socket %d: connection accepted from %s",
+            ret, description);
 
     }
 
@@ -1401,117 +1293,85 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 
 /*****************************************************************************/
 
-void
-g_write_connection_description(int rcv_sck, char *description, int bytes)
-{
-    char *addr;
-    int port;
-    int ok;
-
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-        struct sockaddr_un sock_addr_un;
-    } sock_info;
-
-    ok = 0;
-    socklen_t sock_len = sizeof(sock_info);
-    memset(&sock_info, 0, sock_len);
-#if defined(XRDP_ENABLE_IPV6)
-    addr = (char *)g_malloc(INET6_ADDRSTRLEN, 1);
-#else
-    addr = (char *)g_malloc(INET_ADDRSTRLEN, 1);
-#endif
-
-    if (getpeername(rcv_sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
-    {
-        switch (sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-                g_snprintf(addr, INET_ADDRSTRLEN, "%s", inet_ntoa(sock_addr_in->sin_addr));
-                port = ntohs(sock_addr_in->sin_port);
-                ok = 1;
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, INET6_ADDRSTRLEN);
-                port = ntohs(sock_addr_in6->sin6_port);
-                ok = 1;
-                break;
-            }
-
-#endif
-
-            default:
-            {
-                break;
-            }
-
-        }
-
-        if (ok)
-        {
-            g_snprintf(description, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
-        }
-    }
-
-    if (!ok)
-    {
-        g_snprintf(description, bytes, "NULL:NULL - socket: %d", rcv_sck);
-    }
-
-    g_free(addr);
-}
-
-/*****************************************************************************/
-
-const char *g_get_ip_from_description(const char *description,
-                                      char *ip, int bytes)
+const char *
+g_sck_get_peer_ip_address(int sck,
+                          char *ip, unsigned int bytes,
+                          unsigned short *port)
 {
     if (bytes > 0)
     {
-        /* Look for the space after ip:port */
-        const char *end = g_strchr(description, ' ');
-        if (end == NULL)
+        int ok = 0;
+        union sock_info sock_info;
+
+        socklen_t sock_len = sizeof(sock_info);
+        memset(&sock_info, 0, sock_len);
+
+        if (getpeername(sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
         {
-            end = description; /* Means we've failed */
-        }
-        else
-        {
-            /* Look back for the last ':' */
-            while (end > description && *end != ':')
+            int family = sock_info.sa.sa_family;
+            switch (family)
             {
-                --end;
+                case AF_INET:
+                {
+                    struct sockaddr_in *sa_in = &sock_info.sa_in;
+                    if (inet_ntop(family, &sa_in->sin_addr, ip, bytes) != NULL)
+                    {
+                        ok = 1;
+                        if (port != NULL)
+                        {
+                            *port = ntohs(sa_in->sin_port);
+                        }
+                    }
+                    break;
+                }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+                case AF_INET6:
+                {
+                    struct sockaddr_in6 *sa_in6 = &sock_info.sa_in6;
+                    if (inet_ntop(family, &sa_in6->sin6_addr, ip, bytes) != NULL)
+                    {
+                        ok = 1;
+                        if (port != NULL)
+                        {
+                            *port = ntohs(sa_in6->sin6_port);
+                        }
+                    }
+                    break;
+                }
+
+#endif
+                default:
+                    break;
             }
         }
 
-        if (end == description)
+        if (!ok)
         {
-            g_snprintf(ip, bytes, "<unknown>");
-        }
-        else if ((end - description) < (bytes - 1))
-        {
-            g_strncpy(ip, description, end - description);
-        }
-        else
-        {
-            g_strncpy(ip, description, bytes - 1);
+            ip[0] = '\0';
         }
     }
 
     return ip;
+}
+
+/*****************************************************************************/
+
+const char *
+g_sck_get_peer_description(int sck,
+                           char *desc, unsigned int bytes)
+{
+    union sock_info sock_info;
+    socklen_t sock_len = sizeof(sock_info);
+    memset(&sock_info, 0, sock_len);
+
+    if (getpeername(sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
+    {
+        get_peer_description(&sock_info, desc, bytes);
+    }
+
+    return desc;
 }
 
 /*****************************************************************************/

@@ -72,27 +72,18 @@
 
 #define SESMAN_CFG_SESS_POLICY_S "Policy"
 #define SESMAN_CFG_SESS_POLICY_DFLT_S "Default"
-#define SESMAN_CFG_SESS_POLICY_UBD_S "UBD"
-#define SESMAN_CFG_SESS_POLICY_UBI_S "UBI"
-#define SESMAN_CFG_SESS_POLICY_UBC_S "UBC"
-#define SESMAN_CFG_SESS_POLICY_UBDI_S "UBDI"
-#define SESMAN_CFG_SESS_POLICY_UBDC_S "UBDC"
+#define SESMAN_CFG_SESS_POLICY_SEP_S "Separate"
 
 enum SESMAN_CFG_SESS_POLICY_BITS
 {
-    SESMAN_CFG_SESS_POLICY_D = 0x01,
-    SESMAN_CFG_SESS_POLICY_I = 0x02,
-    SESMAN_CFG_SESS_POLICY_C = 0x04
-};
-
-enum SESMAN_CFG_SESS_POLICY
-{
-    SESMAN_CFG_SESS_POLICY_DFLT = 0,
-    SESMAN_CFG_SESS_POLICY_UBD = SESMAN_CFG_SESS_POLICY_D,
-    SESMAN_CFG_SESS_POLICY_UBI = SESMAN_CFG_SESS_POLICY_I,
-    SESMAN_CFG_SESS_POLICY_UBC = SESMAN_CFG_SESS_POLICY_C,
-    SESMAN_CFG_SESS_POLICY_UBDI = SESMAN_CFG_SESS_POLICY_D | SESMAN_CFG_SESS_POLICY_I,
-    SESMAN_CFG_SESS_POLICY_UBDC = SESMAN_CFG_SESS_POLICY_D | SESMAN_CFG_SESS_POLICY_C
+    /* If these two are set, they override everything else */
+    SESMAN_CFG_SESS_POLICY_DEFAULT = (1 << 0),
+    SESMAN_CFG_SESS_POLICY_SEPARATE = (1 << 1),
+    /* Configuration bits */
+    SESMAN_CFG_SESS_POLICY_U = (1 << 2),
+    SESMAN_CFG_SESS_POLICY_B = (1 << 3),
+    SESMAN_CFG_SESS_POLICY_D = (1 << 4),
+    SESMAN_CFG_SESS_POLICY_I = (1 << 5)
 };
 
 /**
@@ -180,7 +171,7 @@ struct config_sessions
      * @var policy
      * @brief session allocation policy
      */
-    enum SESMAN_CFG_SESS_POLICY policy;
+    unsigned int policy;
 };
 
 /**
@@ -303,5 +294,17 @@ config_dump(struct config_sesman *config);
  */
 void
 config_free(struct config_sesman *cs);
+
+/**
+ * Converts a session allocation Policy value to a strin
+ * @param value - Session allocation policy value
+ * @param buff - Buffer for result
+ * @param bufflen - Length of buffer
+ * @return Length of string that would be required without a terminator
+ *         to write the whole output (like snprintf())
+ */
+int
+config_output_policy_string(unsigned int value,
+                            char *buff, unsigned int bufflen);
 
 #endif

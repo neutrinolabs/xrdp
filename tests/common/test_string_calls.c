@@ -650,6 +650,336 @@ START_TEST(test_str2bm__empty_token)
 END_TEST
 
 /******************************************************************************/
+START_TEST(test_bm2char__no_bits_defined)
+{
+    int rv;
+    char buff[64];
+    int rest;
+
+    static const struct bitmask_char bits[] =
+    {
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    rv = g_bitmask_to_charstr(0xffff, bits, buff, sizeof(buff), &rest);
+
+    ck_assert_str_eq(buff, "");
+    ck_assert_int_eq(rv, 0);
+    ck_assert_int_eq(rest, 0xffff);
+}
+END_TEST
+
+START_TEST(test_bm2char__all_bits_defined)
+{
+    int rv;
+    char buff[64];
+    int rest;
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 6, 'C'},
+        {1 << 7, 'D'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 6 | 1 << 7;
+
+    rv = g_bitmask_to_charstr(bitmask, bits, buff, sizeof(buff), &rest);
+
+    ck_assert_str_eq(buff, "ABCD");
+    ck_assert_int_eq(rv, 4);
+    ck_assert_int_eq(rest, 0);
+}
+END_TEST
+
+START_TEST(test_bm2char__some_bits_undefined)
+{
+    int rv;
+    char buff[64];
+    int rest;
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 6, 'C'},
+        {1 << 7, 'D'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 16;
+
+    rv = g_bitmask_to_charstr(bitmask, bits, buff, sizeof(buff), &rest);
+
+    ck_assert_str_eq(buff, "AB");
+    ck_assert_int_eq(rv, 2);
+    ck_assert_int_eq(rest, (1 << 16));
+}
+END_TEST
+
+START_TEST(test_bm2char__overflow_all_bits_defined)
+{
+    int rv;
+    char buff[3];
+    int rest;
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 6, 'C'},
+        {1 << 7, 'D'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 6 | 1 << 7;
+
+    rv = g_bitmask_to_charstr(bitmask, bits, buff, sizeof(buff), &rest);
+
+    ck_assert_str_eq(buff, "AB");
+    ck_assert_int_eq(rv, 4);
+    ck_assert_int_eq(rest, 0);
+}
+END_TEST
+
+START_TEST(test_bm2char__overflow_some_bits_undefined)
+{
+    int rv;
+    char buff[2];
+    int rest;
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 6, 'C'},
+        {1 << 7, 'D'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 16;
+
+    rv = g_bitmask_to_charstr(bitmask, bits, buff, sizeof(buff), &rest);
+
+    ck_assert_str_eq(buff, "A");
+    ck_assert_int_eq(rv, 2);
+    ck_assert_int_eq(rest, (1 << 16));
+}
+END_TEST
+
+START_TEST(test_bm2char__null_rest_param)
+{
+    int rv;
+    char buff[10];
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 6, 'C'},
+        {1 << 7, 'D'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1 | 1 << 16;
+
+    rv = g_bitmask_to_charstr(bitmask, bits, buff, sizeof(buff), NULL);
+
+    ck_assert_str_eq(buff, "AB");
+    ck_assert_int_eq(rv, 2);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_char2bm__null_string)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    rv = g_charstr_to_bitmask(NULL, bits, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "");
+    ck_assert_int_eq(rv, 0);
+}
+END_TEST
+
+START_TEST(test_char2bm__empty_string)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    rv = g_charstr_to_bitmask("", bits, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "");
+    ck_assert_int_eq(rv, 0);
+}
+END_TEST
+
+START_TEST(test_char2bm__null_bitdefs)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    rv = g_charstr_to_bitmask("A", NULL, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "");
+    ck_assert_int_eq(rv, 0);
+}
+END_TEST
+
+START_TEST(test_char2bm__null_buffer)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    rv = g_charstr_to_bitmask("B", bits, NULL, sizeof(buff));
+
+    ck_assert_str_eq(buff, "dummy");
+    ck_assert_int_eq(rv, 0);
+}
+END_TEST
+
+START_TEST(test_char2bm__zero_buffer)
+{
+    int rv;
+    char buff[1];
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    rv = g_charstr_to_bitmask("B", bits, buff, 0);
+
+    ck_assert_int_eq(rv, 0);
+}
+END_TEST
+
+START_TEST(test_char2bm__zero_mask)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {0,      'A'}, /* mask 0 should not be detected as end of list */
+        {1 << 0, 'B'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0;
+    rv = g_charstr_to_bitmask("B", bits, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "");
+    ck_assert_int_eq(rv, bitmask);
+}
+END_TEST
+
+START_TEST(test_char2bm__all_defined)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 0 | 1 << 1;
+    rv = g_charstr_to_bitmask("AB", bits, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "");
+    ck_assert_int_eq(rv, bitmask);
+}
+END_TEST
+
+START_TEST(test_char2bm__no_defined)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 0;
+    rv = g_charstr_to_bitmask("CD", bits, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "CD");
+    ck_assert_int_eq(rv, bitmask);
+}
+END_TEST
+
+START_TEST(test_char2bm__some_defined)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 2, 'C'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 1;
+    rv = g_charstr_to_bitmask("0B1", bits, buff, sizeof(buff));
+
+    ck_assert_str_eq(buff, "01");
+    ck_assert_int_eq(rv, bitmask);
+}
+END_TEST
+
+START_TEST(test_char2bm__overflow_undefined)
+{
+    int rv;
+    char buff[16] = { 'd', 'u', 'm', 'm', 'y' };
+
+    static const struct bitmask_char bits[] =
+    {
+        {1 << 0, 'A'},
+        {1 << 1, 'B'},
+        {1 << 2, 'C'},
+        BITMASK_CHAR_END_OF_LIST
+    };
+
+    int bitmask = 1 << 1;
+    rv = g_charstr_to_bitmask("123456789Bvwxyz", bits, buff, 10);
+
+    /* vwxyz is not filled */
+    ck_assert_str_eq(buff, "123456789");
+    ck_assert_int_eq(rv, bitmask);
+}
+END_TEST
+
+/******************************************************************************/
 
 START_TEST(test_strtrim__trim_left)
 {
@@ -712,6 +1042,8 @@ make_suite_test_string(void)
     TCase *tc_strnjoin;
     TCase *tc_bm2str;
     TCase *tc_str2bm;
+    TCase *tc_bm2char;
+    TCase *tc_char2bm;
     TCase *tc_strtrim;
 
     s = suite_create("String");
@@ -756,6 +1088,27 @@ make_suite_test_string(void)
     tcase_add_test(tc_str2bm, test_str2bm__multiple_delim);
     tcase_add_test(tc_str2bm, test_str2bm__first_delim_is_semicolon);
     tcase_add_test(tc_str2bm, test_str2bm__empty_token);
+
+    tc_bm2char = tcase_create("bm2char");
+    suite_add_tcase(s, tc_bm2char);
+    tcase_add_test(tc_bm2char, test_bm2char__no_bits_defined);
+    tcase_add_test(tc_bm2char, test_bm2char__all_bits_defined);
+    tcase_add_test(tc_bm2char, test_bm2char__some_bits_undefined);
+    tcase_add_test(tc_bm2char, test_bm2char__overflow_all_bits_defined);
+    tcase_add_test(tc_bm2char, test_bm2char__overflow_some_bits_undefined);
+    tcase_add_test(tc_bm2char, test_bm2char__null_rest_param);
+    tc_char2bm = tcase_create("char2bm");
+    suite_add_tcase(s, tc_char2bm);
+    tcase_add_test(tc_char2bm, test_char2bm__null_string);
+    tcase_add_test(tc_char2bm, test_char2bm__empty_string);
+    tcase_add_test(tc_char2bm, test_char2bm__null_bitdefs);
+    tcase_add_test(tc_char2bm, test_char2bm__null_buffer);
+    tcase_add_test(tc_char2bm, test_char2bm__zero_buffer);
+    tcase_add_test(tc_char2bm, test_char2bm__zero_mask);
+    tcase_add_test(tc_char2bm, test_char2bm__all_defined);
+    tcase_add_test(tc_char2bm, test_char2bm__no_defined);
+    tcase_add_test(tc_char2bm, test_char2bm__some_defined);
+    tcase_add_test(tc_char2bm, test_char2bm__overflow_undefined);
 
     tc_strtrim = tcase_create("strtrim");
     suite_add_tcase(s, tc_strtrim);

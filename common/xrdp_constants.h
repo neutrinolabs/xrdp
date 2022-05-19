@@ -37,7 +37,22 @@
  * ms-erref.h
  ******************************************************************************/
 
+/**
+ * Size of buffer including terminator for an IP address as returned
+ * by g_sck_get_peer_ip_address(). See POSIX INET6_ADDRSTRLEN
+ */
+#define MAX_PEER_ADDRSTRLEN 46
+
+/**
+ * Size of buffer including terminator for a socket description, as
+ * returned by g_sck_get_peer_description()
+ * Currently the largest is an IPv6 address (INET6_ADDRSTRLEN), plus
+ * []:<port> characters
+ */
+#define MAX_PEER_DESCSTRLEN (46 + 2 + 1 + 5)
+
 #define INFO_CLIENT_NAME_BYTES  32
+
 /**
  * Maximum length of a string including the mandatory null terminator
  * [MS-RDPBCGR] TS_INFO_PACKET(2.2.1.11.1.1)

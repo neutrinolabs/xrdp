@@ -114,7 +114,7 @@ struct xrdp_client_info
     int rdp5_performanceflags;
     int brush_cache_code; /* 0 = no cache 1 = 8x8 standard cache
                            2 = arbitrary dimensions */
-    char connection_description[256];
+
     int max_bpp;
     int jpeg; /* non standard bitmap cache v2 cap */
     int offscreen_support_level;
@@ -146,8 +146,6 @@ struct xrdp_client_info
     int pointer_flags; /* 0 color, 1 new, 2 no new */
     int use_fast_path;
     int require_credentials; /* when true, credentials *must* be passed on cmd line */
-    char client_addr[256];
-    char client_port[256];
 
     int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
     int multimon; /* 0 = deny , 1 = allow */
@@ -191,6 +189,9 @@ struct xrdp_client_info
     long ssl_protocols;
     char *tls_ciphers;
 
+    char client_ip[MAX_PEER_ADDRSTRLEN];
+    char client_description[MAX_PEER_DESCSTRLEN];
+
     int client_os_major;
     int client_os_minor;
 
@@ -207,6 +208,6 @@ struct xrdp_client_info
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
-#define CLIENT_INFO_CURRENT_VERSION 20220320
+#define CLIENT_INFO_CURRENT_VERSION 20220428
 
 #endif

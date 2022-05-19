@@ -268,10 +268,9 @@ lxrdp_connect(struct mod *mod)
         }
 #endif
         LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed],"
-            " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+            " RDP client [%s], RDP server [%s:%d], RDP server username [%s],"
             " xrdp pamusername [%s], xrdp process id [%d]",
-            mod->client_info.client_addr,
-            mod->client_info.client_port,
+            mod->client_info.client_description,
             mod->inst->settings->hostname,
             mod->inst->settings->port,
             mod->inst->settings->username,
@@ -282,10 +281,9 @@ lxrdp_connect(struct mod *mod)
     else
     {
         LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Success],"
-            " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+            " RDP client [%s], RDP server [%s:%d], RDP server username [%s],"
             " xrdp pamusername [%s], xrdp process id [%d]",
-            mod->client_info.client_addr,
-            mod->client_info.client_port,
+            mod->client_info.client_description,
             mod->inst->settings->hostname,
             mod->inst->settings->port,
             mod->inst->settings->username,
@@ -531,10 +529,9 @@ lxrdp_end(struct mod *mod)
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_end:");
     LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Disconnect],"
-        " RDP client [%s:%s], RDP server [%s:%d], RDP server username [%s],"
+        " RDP client [%s], RDP server [%s:%d], RDP server username [%s],"
         " xrdp pamusername [%s], xrdp process id [%d]",
-        mod->client_info.client_addr,
-        mod->client_info.client_port,
+        mod->client_info.client_description,
         mod->inst->settings->hostname,
         mod->inst->settings->port,
         mod->inst->settings->username,

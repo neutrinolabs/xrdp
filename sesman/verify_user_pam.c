@@ -32,6 +32,7 @@
 #include "os_calls.h"
 #include "log.h"
 #include "string_calls.h"
+#include "auth.h"
 
 #include <stdio.h>
 #include <security/pam_appl.h>
@@ -212,7 +213,8 @@ get_service_name(char *service_name)
  Stores the detailed error code in the errorcode variable*/
 
 long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass,
+              const char *client_ip, int *errorcode)
 {
     int error;
     struct t_auth_info *auth_info;
@@ -239,10 +241,20 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
         return 0;
     }
 
+    if (client_ip != NULL && client_ip[0] != '\0')
+    {
+        error = pam_set_item(auth_info->ph, PAM_RHOST, client_ip);
+        if (error != PAM_SUCCESS)
+        {
+            LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_RHOST) failed: %s",
+                pam_strerror(auth_info->ph, error));
+        }
+    }
+
     error = pam_set_item(auth_info->ph, PAM_TTY, service_name);
     if (error != PAM_SUCCESS)
     {
-        LOG(LOG_LEVEL_ERROR, "pam_set_item failed: %s",
+        LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_TTY) failed: %s",
             pam_strerror(auth_info->ph, error));
     }
 

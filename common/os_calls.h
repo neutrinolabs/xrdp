@@ -84,9 +84,7 @@ int      g_sck_vsock_bind(int sck, const char *port);
 int      g_sck_vsock_bind_address(int sck, const char *port, const char *address);
 int      g_tcp_bind_address(int sck, const char *port, const char *address);
 int      g_sck_listen(int sck);
-int      g_tcp_accept(int sck);
-int      g_sck_accept(int sck, char *addr, int addr_bytes,
-                      char *port, int port_bytes);
+int      g_sck_accept(int sck);
 int      g_sck_recv(int sck, void *ptr, int len, int flags);
 int      g_sck_send(int sck, const void *ptr, int len, int flags);
 int      g_sck_last_error_would_block(int sck);
@@ -94,18 +92,35 @@ int      g_sck_socket_ok(int sck);
 int      g_sck_can_send(int sck, int millis);
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
-void     g_write_connection_description(int rcv_sck,
-                                        char *description, int bytes);
 /**
- * Extracts the IP address from the connection description
- * @param description Connection description (from
- *                    g_write_connection_description())
+ * Gets the IP address of a connected peer, if it has one
+ * @param sck File descriptor for peer
  * @param ip buffer to write IP address to
- * @param bytes Size of ip buffer
+ * @param bytes Size of ip buffer. Should be at least MAX_IP_ADDRSTRLEN
+ * @param[out] portptr Optional variable to receive the port number
  * @return Pointer to IP for convenience
+ *
+ * If the peer has no IP address (for example, it is a Unix Domain Socket),
+ * or the specified buffer is too small, the returned string is ""
  */
-const char *g_get_ip_from_description(const char *description,
-                                      char *ip, int bytes);
+const char *
+g_sck_get_peer_ip_address(int sck,
+                          char *ip, unsigned int bytes,
+                          unsigned short *port);
+/**
+ * Gets a description for a connected peer
+ * @param sck File descriptor for peer
+ * @param desc buffer to write description to
+ * @param bytes Size of description buffer. Should be at least
+ *              MAX_PEER_DESCSTRLEN
+ * @return Pointer to desc for convenience
+ *
+ * Unlike g_sck_get_peer_ip_address(), this will return a
+ * description of some sort for any socket type.
+ */
+const char *
+g_sck_get_peer_description(int sck,
+                           char *desc, unsigned int bytes);
 void     g_sleep(int msecs);
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);

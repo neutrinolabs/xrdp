@@ -32,6 +32,7 @@
 
 #include "guid.h"
 #include "scp_application_types.h"
+#include "xrdp_constants.h"
 
 #define SESMAN_SESSION_STATUS_ACTIVE        0x01
 #define SESMAN_SESSION_STATUS_IDLE          0x02
@@ -68,7 +69,7 @@ struct session_item
     time_t start_time;
     // struct session_date disconnect_time; // Currently unused
     // struct session_date idle_time; // Currently unused
-    char connection_description[256];
+    char start_ip_addr[MAX_PEER_ADDRSTRLEN];
     struct guid guid;
 };
 
@@ -91,7 +92,7 @@ struct session_parameters
     const char *username;
     const char *shell;
     const char *directory;
-    const char *connection_description;
+    const char *ip_addr;
 };
 
 /**
