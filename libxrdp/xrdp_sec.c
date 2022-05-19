@@ -1946,6 +1946,7 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
 static int
 xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 {
+    int version;
     int colorDepth;
     int postBeta2ColorDepth;
     int highColorDepth;
@@ -1953,8 +1954,10 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     int earlyCapabilityFlags;
     char clientName[INFO_CLIENT_NAME_BYTES / 2] = { '\0' };
 
+    UNUSED_VAR(version);
+
     /* TS_UD_CS_CORE requiered fields */
-    in_uint8s(s, 4); /* version */
+    in_uint32_le(s, version);
     in_uint16_le(s, self->rdp_layer->client_info.width);
     in_uint16_le(s, self->rdp_layer->client_info.height);
     in_uint16_le(s, colorDepth);
@@ -1977,12 +1980,13 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint8s(s, 4); /* keyboardFunctionKey */
     in_uint8s(s, 64); /* imeFileName */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
-              "<Requiered fields> version (ignored), desktopWidth %d, "
+              "<Required fields> version %08x, desktopWidth %d, "
               "desktopHeight %d, colorDepth %s, SASSequence (ingored), "
               "keyboardLayout (ignored), clientBuild (ignored), "
               "clientName %s, keyboardType (ignored), "
               "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
-              "imeFileName (ignroed)",
+              "imeFileName (ignored)",
+              version,
               self->rdp_layer->client_info.width,
               self->rdp_layer->client_info.height,
               (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
@@ -2269,6 +2273,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     int index;
     struct xrdp_client_info *client_info;
     struct mcs_channel_item *channel_item;
+    int next_mcs_channel_id;
 
     client_info = &(self->rdp_layer->client_info);
     /* this is an option set in xrdp.ini */
@@ -2290,6 +2295,13 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             "max 31, received %d", num_channels);
         return 1;
     }
+
+    /* GOTCHA: When adding a channel the MCS channel ID is set to
+     * MCS_GLOBAL_CHANNEL + (index + 1). This is assumed by
+     * xrdp_channel_process(), when mapping an incoming PDU into an
+     * entry in this array */
+    next_mcs_channel_id = MCS_GLOBAL_CHANNEL + 1;
+
     for (index = 0; index < num_channels; index++)
     {
         channel_item = g_new0(struct mcs_channel_item, 1);
@@ -2306,7 +2318,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] "
                       "TS_UD_CS_NET.CHANNEL_DEF %d, name %s, options 0x%8.8x",
                       index, channel_item->name, channel_item->flags);
-            channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
+            channel_item->chanid = next_mcs_channel_id++;
             list_add_item(self->mcs_layer->channel_list,
                           (intptr_t) channel_item);
             LOG(LOG_LEVEL_DEBUG,
@@ -2324,6 +2336,13 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             g_free(channel_item);
         }
     }
+
+    /* Set the user channel as well */
+    self->mcs_layer->chanid = next_mcs_channel_id++;
+    self->mcs_layer->userid = self->mcs_layer->chanid - MCS_USERCHANNEL_BASE;
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS user is %d, channel id is %d",
+              self->mcs_layer->userid, self->mcs_layer->chanid);
+
     return 0;
 }
 
