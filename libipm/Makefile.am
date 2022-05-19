@@ -15,7 +15,8 @@ libipm_la_SOURCES = \
   libipm_private.h \
   scp.h \
   scp.c \
-  scp_application_types.h
+  scp_application_types.h \
+  scp_application_types.c
 
 libipm_la_LIBADD = \
   $(top_builddir)/common/libcommon.la
