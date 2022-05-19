@@ -38,4 +38,9 @@ then
   git submodule update --init librfxcodec
 fi
 
+if ! test -f ulalaca/Makefile.am
+then
+  git submodule update --init ulalaca
+fi
+
 autoreconf -fvi
