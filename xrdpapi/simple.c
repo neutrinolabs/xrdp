@@ -102,18 +102,18 @@ run_echo_test(void)
     int     rv;
     int     count;
     int     pkt_count;
-    int     i;
-    int     bytes_written;
-    int     bytes_read;
+    unsigned int i;
+    unsigned int bytes_written;
+    unsigned int bytes_read;
 
     unsigned char c;
-    unsigned char *rd_ptr;
-    unsigned char *wr_ptr;
+    char *rd_ptr;
+    char *wr_ptr;
 
     /* fill out_buf[] with incremental values */
     for (i = 0, c = 0; i < 8192; i++, c++)
     {
-        out_buf[i] = c;
+        out_buf[i] = (char)c;
     }
 
     /* open a virtual channel named ECHO */
