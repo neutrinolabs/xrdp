@@ -136,7 +136,7 @@ AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
 AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$enable_neutrinordp = xyes])
 
 AC_ARG_ENABLE(ulalaca, AS_HELP_STRING([--enable-ulalaca],
-              [Build ulalaca module (default: no)]),
+              [Build ulalaca module (experimental) (default: no)]),
               [], [enable_ulalaca=no])
 AM_CONDITIONAL(XRDP_ULALACA, [test x$enable_ulalaca = xyes])
 
