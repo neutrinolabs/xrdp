@@ -636,7 +636,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     {
                         LOG(LOG_LEVEL_INFO,
                             "Starting window manager on display %d"
-                            "from user home directory: %s", display, text);
+                            " from user home directory: %s", display, text);
                         g_execlp3(text, g_cfg->user_wm, 0);
                     }
                     else
