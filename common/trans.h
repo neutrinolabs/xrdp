@@ -57,6 +57,8 @@ enum xrdp_source
     XRDP_SOURCE_SESMAN,
     XRDP_SOURCE_CHANSRV,
     XRDP_SOURCE_MOD,
+    XORGXRDP_SOURCE_XORG,
+    XORGXRDP_SOURCE_XRDP,
 
     XRDP_SOURCE_MAX_COUNT
 };
@@ -177,5 +179,7 @@ int
 trans_shutdown_tls_mode(struct trans *self);
 int
 trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size);
+int
+trans_use_helper();
 
 #endif

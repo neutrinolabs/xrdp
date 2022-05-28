@@ -71,7 +71,6 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     /* to store configuration from xrdp.ini */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
-
     return self;
 }
 
@@ -83,7 +82,7 @@ xrdp_wm_delete(struct xrdp_wm *self)
     {
         return;
     }
-
+    xrdp_region_delete(self->screen_dirty_region);
     xrdp_mm_delete(self->mm);
     xrdp_cache_delete(self->cache);
     xrdp_painter_delete(self->painter);
@@ -753,10 +752,19 @@ xrdp_wm_init(struct xrdp_wm *self)
                     list_add_item(self->mm->login_values, (long)g_strdup(r));
                 }
 
-                /*
-                 * Skip the login box and go straight to the connection phase
-                 */
-                xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
+                if (self->session->client_info->gfx && !self->mm->egfx_up)
+                {
+                    /* gfx session but have not recieved caps advertise yet,
+                       set flag so we will connect to backend later */
+                    self->mm->gfx_delay_autologin = 1;
+                }
+                else
+                {
+                    /*
+                    * Skip the login box and go straight to the connection phase
+                    */
+                    xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
+                }
             }
             else
             {
@@ -2230,9 +2238,8 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-
-static const char *
-wm_login_state_to_str(enum wm_login_state login_state)
+const char *
+xrdp_wm_login_state_to_str(enum wm_login_state login_state)
 {
     const char *result = "unknown";
     /* Use a switch for this, as some compilers will warn about missing states
@@ -2266,10 +2273,29 @@ int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
 {
     LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
-        wm_login_state_to_str(self->login_state),
-        wm_login_state_to_str(login_state));
+        xrdp_wm_login_state_to_str(self->login_state),
+        xrdp_wm_login_state_to_str(login_state));
 
     self->login_state = login_state;
     g_set_wait_obj(self->login_state_event);
     return 0;
+}
+
+int
+xrdp_wm_can_resize(struct xrdp_wm *self)
+{
+    if (self->login_state != WMLS_CLEANUP
+            && self->login_state != WMLS_INACTIVE)
+    {
+        LOG(LOG_LEVEL_INFO, "Not trying to resize while logging in!");
+        LOG_DEVEL(LOG_LEVEL_INFO,
+                  "State is %s", xrdp_wm_login_state_to_str(self->login_state));
+        return 0;
+    }
+    if (self->client_info->suppress_output == 1)
+    {
+        LOG(LOG_LEVEL_INFO, "Not allowing resize. Suppress output is active.");
+        return 0;
+    }
+    return 1;
 }

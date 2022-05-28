@@ -147,8 +147,12 @@ xrdp_wm_get_wait_objs(struct xrdp_wm *self, tbus *robjs, int *rc,
                       tbus *wobjs, int *wc, int *timeout);
 int
 xrdp_wm_check_wait_objs(struct xrdp_wm *self);
+const char *
+xrdp_wm_login_state_to_str(enum wm_login_state login_state);
 int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state);
+int
+xrdp_wm_can_resize(struct xrdp_wm *self);
 void
 xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status);
 
@@ -184,6 +188,10 @@ xrdp_region_intersect_rect(struct xrdp_region *self, struct xrdp_rect *rect);
 int
 xrdp_region_get_rect(struct xrdp_region *self, int index,
                      struct xrdp_rect *rect);
+int
+xrdp_region_get_bounds(struct xrdp_region *self, struct xrdp_rect *rect);
+int
+xrdp_region_not_empty(struct xrdp_region *self);
 
 /* xrdp_bitmap_common.c */
 struct xrdp_bitmap *
@@ -397,20 +405,6 @@ xrdp_bitmap_compress(char *in_data, int width, int height,
 
 /* xrdp_mm.c */
 
-struct dynamic_monitor_layout
-{
-    int flags;
-    int left;
-    int top;
-    int width;
-    int height;
-    int physical_width;
-    int physical_height;
-    int orientation;
-    int desktop_scale_factor;
-    int device_scale_factor;
-};
-
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self);
 int
@@ -435,6 +429,12 @@ int
 xrdp_mm_check_wait_objs(struct xrdp_mm *self);
 int
 xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id);
+int
+xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
+                                struct xrdp_bitmap *bitmap,
+                                struct xrdp_rect *rect);
+int
+xrdp_mm_can_resize(struct xrdp_mm *self);
 int
 server_begin_update(struct xrdp_mod *mod);
 int

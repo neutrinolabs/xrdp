@@ -223,7 +223,7 @@ lib_mod_connect(struct mod *mod)
         error = send_server_monitor_resize(mod, s, mod->width, mod->height, mod->bpp);
     }
 
-    if (error == 0)
+    if (!trans_use_helper() && error == 0)
     {
         error = send_server_monitor_full_invalidate(mod, s, mod->width, mod->height);
     }
@@ -1112,6 +1112,8 @@ send_suppress_output(struct mod *mod, int suppress,
 static int
 process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 {
+    LOG(LOG_LEVEL_TRACE, "process_server_paint_rect_shmem_ex:");
+
     int num_drects;
     int num_crects;
     int flags;
@@ -1163,47 +1165,33 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     in_uint16_le(s, height);
 
     bmpdata = 0;
-    if (flags == 0) /* screen */
+    if (amod->screen_shmem_id_mapped == 0)
     {
-        /* Do we need to map (or remap) the memory
-         * area shared with the X server ? */
-        if (amod->screen_shmem_id_mapped == 0 ||
-                amod->screen_shmem_id != shmem_id)
+        amod->screen_shmem_id = shmem_id;
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+        if (amod->screen_shmem_pixels == (void *) -1)
         {
-            if (amod->screen_shmem_id_mapped != 0)
-            {
-                g_shmdt(amod->screen_shmem_pixels);
-            }
-            amod->screen_shmem_pixels = (char *) g_shmat(shmem_id);
-            if (amod->screen_shmem_pixels == (void *) -1)
-            {
-                /* failed */
-                if (amod->screen_shmem_id_mapped == 0)
-                {
-                    LOG(LOG_LEVEL_ERROR,
-                        "Can't attach to shared memory id %d [%s]",
-                        shmem_id, g_get_strerror());
-                }
-                else
-                {
-                    LOG(LOG_LEVEL_ERROR,
-                        "Can't attach to shared memory id %d from id %d [%s]",
-                        shmem_id, amod->screen_shmem_id, g_get_strerror());
-                }
-                amod->screen_shmem_id = 0;
-                amod->screen_shmem_pixels = 0;
-                amod->screen_shmem_id_mapped = 0;
-            }
-            else
-            {
-                amod->screen_shmem_id = shmem_id;
-                amod->screen_shmem_id_mapped = 1;
-            }
+            /* failed */
+            amod->screen_shmem_id = 0;
+            amod->screen_shmem_pixels = 0;
+            amod->screen_shmem_id_mapped = 0;
         }
-
-        if (amod->screen_shmem_pixels != 0)
+        else
         {
-            bmpdata = amod->screen_shmem_pixels + shmem_offset;
+            amod->screen_shmem_id_mapped = 1;
+        }
+    }
+    else if (amod->screen_shmem_id != shmem_id)
+    {
+        amod->screen_shmem_id = shmem_id;
+        g_shmdt(amod->screen_shmem_pixels);
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+        if (amod->screen_shmem_pixels == (void *) -1)
+        {
+            /* failed */
+            amod->screen_shmem_id = 0;
+            amod->screen_shmem_pixels = 0;
+            amod->screen_shmem_id_mapped = 0;
         }
     }
     else
@@ -1214,7 +1202,10 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
                   flags, frame_id, shmem_id, shmem_offset,
                   width, height);
     }
-
+    if (amod->screen_shmem_pixels != 0)
+    {
+        bmpdata = amod->screen_shmem_pixels + shmem_offset;
+    }
     if (bmpdata != 0)
     {
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
@@ -1227,7 +1218,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
         rv = 1;
     }
 
-    //LOG_DEVEL(LOG_LEVEL_TRACE, "frame_id %d", frame_id);
+    //g_writeln("frame_id %d", frame_id);
     //send_paint_rect_ex_ack(amod, flags, frame_id);
 
     g_free(lcrects);
@@ -1361,7 +1352,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "lib_mod_process_orders: type %d", type);
+    LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_orders: type %d", type);
     rv = 0;
     switch (type)
     {
@@ -1499,14 +1490,20 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int type;
     char *phold;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message:");
+    int width;
+    int height;
+    int magic;
+    int con_id;
+    int mon_id;
+
+    LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_message:");
     rv = 0;
     if (rv == 0)
     {
         in_uint16_le(s, type);
         in_uint16_le(s, num_orders);
         in_uint32_le(s, len);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: type %d", type);
+        LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_message: type %d", type);
 
         if (type == 1) /* original order list */
         {
@@ -1523,7 +1520,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
         }
         else if (type == 2) /* caps */
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: type 2 len %d", len);
+            LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_message: type 2 len %d", len);
             for (index = 0; index < num_orders; index++)
             {
                 phold = s->p;
@@ -1533,7 +1530,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                 switch (type)
                 {
                     default:
-                        LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: unknown cap type %d len %d",
+                        LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_message: unknown cap type %d len %d",
                                   type, len);
                         break;
                 }
@@ -1545,6 +1542,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
         }
         else if (type == 3) /* order list with len after type */
         {
+            LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_message: type 3 len %d", len);
             for (index = 0; index < num_orders; index++)
             {
                 phold = s->p;
@@ -1557,6 +1555,34 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                     break;
                 }
 
+                s->p = phold + len;
+            }
+        }
+        else if (type == 100) // xorgxrdp_helper commands.
+        {
+            LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_process_message: type 100 len %d", len);
+            for (index = 0; index < num_orders; index++)
+            {
+                phold = s->p;
+                in_uint16_le(s, type);
+                in_uint16_le(s, len);
+                switch (type)
+                {
+                    case 1: // xorgxrdp_helper_x11_delete_all_pixmaps
+                        // No-op for now.
+                        break;
+                    case 2: // xorgxrdp_helper_x11_create_pixmap
+                        in_uint16_le(s, width);
+                        in_uint16_le(s, height);
+                        in_uint32_le(s, magic);
+                        in_uint32_le(s, con_id);
+                        in_uint32_le(s, mon_id);
+
+                        LOG(LOG_LEVEL_DEBUG, "Received xorgxrdp_helper_x11_create_pixmap command. width: %d, height: %d, magic: %d, con_id %d, mon_id %d",
+                            width, height, magic, con_id, mon_id);
+                        mod->server_reset(mod, width, height, 0);
+                        break;
+                }
                 s->p = phold + len;
             }
         }
