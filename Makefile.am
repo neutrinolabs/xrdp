@@ -39,6 +39,12 @@ else
 RFXCODECDIR =
 endif
 
+if XRDP_ULALACA
+ULALACADIR = ulalaca
+else
+ULALACADIR =
+endif
+
 SUBDIRS = \
   common \
   vnc \
@@ -58,6 +64,7 @@ SUBDIRS = \
   xrdpapi \
   pkgconfig \
   $(XRDPVRDIR) \
+  $(ULALACADIR) \
   tests \
   tools
 

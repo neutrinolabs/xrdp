@@ -6,6 +6,7 @@ AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
+AC_PROG_CXX
 AC_C_CONST
 AC_PROG_LIBTOOL
 
@@ -133,6 +134,12 @@ AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [Build neutrinordp module (default: no)]),
               [], [enable_neutrinordp=no])
 AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$enable_neutrinordp = xyes])
+
+AC_ARG_ENABLE(ulalaca, AS_HELP_STRING([--enable-ulalaca],
+              [Build ulalaca module (experimental) (default: no)]),
+              [], [enable_ulalaca=no])
+AM_CONDITIONAL(XRDP_ULALACA, [test x$enable_ulalaca = xyes])
+
 AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
               [], [enable_jpeg=no])
@@ -500,6 +507,7 @@ AC_CONFIG_FILES([
   Makefile
   mc/Makefile
   neutrinordp/Makefile
+  ulalaca/Makefile
   pkgconfig/Makefile
   pkgconfig/xrdp.pc
   pkgconfig/xrdp-uninstalled.pc
