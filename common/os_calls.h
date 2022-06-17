@@ -62,6 +62,7 @@ void g_write(const char *format, ...) printflike(1, 2);
 void     g_hexdump(const char *p, int len);
 void     g_memset(void *ptr, int val, int size);
 void     g_memcpy(void *d_ptr, const void *s_ptr, int size);
+void     g_memmove(void *d_ptr, const void *s_ptr, int size);
 int      g_getchar(void);
 int      g_tcp_set_no_delay(int sck);
 int      g_tcp_set_keepalive(int sck);

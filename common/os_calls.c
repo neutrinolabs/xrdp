@@ -344,6 +344,13 @@ g_memcpy(void *d_ptr, const void *s_ptr, int size)
 }
 
 /*****************************************************************************/
+void
+g_memmove(void *d_ptr, const void *s_ptr, int size)
+{
+    memmove(d_ptr, s_ptr, size);
+}
+
+/*****************************************************************************/
 int
 g_getchar(void)
 {
