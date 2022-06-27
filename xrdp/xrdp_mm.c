@@ -1130,6 +1130,17 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
         }
     }
 
+    // Need to recreate the encoder for connections that use it.
+    if (mm->encoder != NULL)
+    {
+        xrdp_encoder_delete(mm->encoder);
+        mm->encoder = NULL;
+    }
+    if (mm->encoder == NULL)
+    {
+        mm->encoder = xrdp_encoder_create(mm);
+    }
+
     wm->client_info->display_sizes.monitorCount = description->monitorCount;
     wm->client_info->display_sizes.session_width = description->session_width;
     wm->client_info->display_sizes.session_height = description->session_height;
