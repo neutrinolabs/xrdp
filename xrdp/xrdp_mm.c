@@ -1127,6 +1127,17 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
             v->mod_server_version_message(v);
             v->mod_server_monitor_resize(v, session_width, session_height);
             v->mod_server_monitor_full_invalidate(v, session_width, session_height);
+
+            // Need to recreate the encoder for connections that use it.
+            if (wm->mm->encoder != NULL)
+            {
+                xrdp_encoder_delete(wm->mm->encoder);
+                wm->mm->encoder = NULL;
+            }
+            if (wm->mm->encoder == NULL)
+            {
+                wm->mm->encoder = xrdp_encoder_create(wm->mm);
+            }
         }
     }
     return 0;
