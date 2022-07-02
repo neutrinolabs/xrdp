@@ -273,7 +273,7 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo[2].physical_height, 1000);
     ck_assert_int_eq(description->minfo[2].orientation, 0);
     ck_assert_int_eq(description->minfo[2].desktop_scale_factor, 100);
-    ck_assert_int_eq(description->minfo[2].device_scale_factor, 140);
+    ck_assert_int_eq(description->minfo[2].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo[2].is_primary, 0);
 
     ck_assert_int_eq(description->minfo[3].left, 0);
@@ -342,7 +342,7 @@ START_TEST(test_libxrdp_process_monitor_stream__with_sextuple_monitor_happy_path
     ck_assert_int_eq(description->minfo_wm[2].physical_height, 1000);
     ck_assert_int_eq(description->minfo_wm[2].orientation, 0);
     ck_assert_int_eq(description->minfo_wm[2].desktop_scale_factor, 100);
-    ck_assert_int_eq(description->minfo_wm[2].device_scale_factor, 140);
+    ck_assert_int_eq(description->minfo_wm[2].device_scale_factor, 100);
     ck_assert_int_eq(description->minfo_wm[2].is_primary, 0);
 
     ck_assert_int_eq(description->minfo_wm[3].left, 0);
