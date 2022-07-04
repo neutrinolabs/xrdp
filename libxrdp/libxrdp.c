@@ -1959,30 +1959,33 @@ libxrdp_process_monitor_stream(struct stream *s,
             }
 
             in_uint32_le(s, monitor_layout->desktop_scale_factor);
-            if (monitor_layout->desktop_scale_factor < 100
-                    || monitor_layout->desktop_scale_factor > 500
-                    || (monitor_layout->desktop_scale_factor != 100
-                        && monitor_layout->desktop_scale_factor != 140
-                        && monitor_layout->desktop_scale_factor != 180))
+            int check_desktop_scale_factor
+                = monitor_layout->desktop_scale_factor < 100
+                  || monitor_layout->desktop_scale_factor > 500;
+            if (check_desktop_scale_factor)
             {
                 LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                    " desktop_scale_factor is not within valid range. Assuming 100."
-                    " Value was: %d",
+                    " desktop_scale_factor is not within valid range"
+                    " of [100, 500]. Assuming 100. Value was: %d",
                     monitor_layout->desktop_scale_factor);
-                monitor_layout->desktop_scale_factor = 100;
             }
 
             in_uint32_le(s, monitor_layout->device_scale_factor);
-            if (monitor_layout->device_scale_factor < 100
-                    || monitor_layout->device_scale_factor > 500
-                    || (monitor_layout->device_scale_factor != 100
-                        && monitor_layout->device_scale_factor != 140
-                        && monitor_layout->device_scale_factor != 180))
+            int check_device_scale_factor
+                = monitor_layout->device_scale_factor != 100
+                  && monitor_layout->device_scale_factor != 140
+                  && monitor_layout->device_scale_factor != 180;
+            if (check_device_scale_factor)
             {
                 LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                    " device_scale_factor is not within valid range. Assuming 100."
-                    " Value was: %d",
+                    " device_scale_factor a valid value (One of 100, 140, 180)."
+                    " Assuming 100. Value was: %d",
                     monitor_layout->device_scale_factor);
+            }
+
+            if (check_desktop_scale_factor || check_device_scale_factor)
+            {
+                monitor_layout->desktop_scale_factor = 100;
                 monitor_layout->device_scale_factor = 100;
             }
 
