@@ -38,7 +38,8 @@ struct monitor_info
     int bottom;
     int flags;
 
-    /* From 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT */
+    /* From [MS-RDPEDISP] 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT, or
+     * [MS-RDPBCGR] 2.2.1.3.9.1 (TS_MONITOR_ATTRIBUTES) */
     unsigned int physical_width;
     unsigned int physical_height;
     unsigned int orientation;
@@ -205,6 +206,13 @@ struct xrdp_client_info
 
     /* xrdp.override_* values */
     struct xrdp_keyboard_overrides xrdp_keyboard_overrides;
+
+    /* These values are optionally send over as part of TS_UD_CS_CORE.
+     * They can be used as a fallback for a single monitor session
+     * if physical sizes are not available in the monitor-specific
+     * data */
+    unsigned int session_physical_width; /* in mm */
+    unsigned int session_physical_height; /* in mm */
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */

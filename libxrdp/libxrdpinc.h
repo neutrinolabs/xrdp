@@ -324,4 +324,19 @@ int EXPORT_CC
 libxrdp_process_monitor_stream(struct stream *s, struct display_size_description *description,
                                int full_parameters);
 
+/**
+ * Processes a stream that is based on [MS-RDPBCGR] 2.2.1.3.9 Client
+ * Monitor Extended Data (TS_UD_CS_MONITOR_EX)
+ *
+ * Data is stored in a struct which has already been read by
+ * libxrdp_process_monitor_stream() withj full_parameters set to 0.
+ *
+ * @param s Stream to read data from. Stream is read up to monitorAttributeSize
+ * @param description Result of reading TS_UD_CS_MONITOR PDU
+ * @return 0 if the data is processed, non-zero if there is an error.
+ */
+int EXPORT_CC
+libxrdp_process_monitor_ex_stream(struct stream *s,
+                                  struct display_size_description *description);
+
 #endif
