@@ -1009,6 +1009,29 @@ dynamic_monitor_data_first(intptr_t id, int chan_id, char *data, int bytes,
 }
 
 /******************************************************************************/
+static const int MAXIMUM_MONITOR_SIZE
+    = sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS;
+
+/******************************************************************************/
+static void
+sync_dynamic_monitor_data(struct xrdp_wm *wm,
+                          struct display_size_description *description)
+{
+    struct display_size_description *display_sizes
+        = &(wm->client_info->display_sizes);
+
+    display_sizes->monitorCount = description->monitorCount;
+    display_sizes->session_width = description->session_width;
+    display_sizes->session_height = description->session_height;
+    g_memcpy(display_sizes->minfo,
+             description->minfo,
+             MAXIMUM_MONITOR_SIZE);
+    g_memcpy(display_sizes->minfo_wm,
+             description->minfo_wm,
+             MAXIMUM_MONITOR_SIZE);
+}
+
+/******************************************************************************/
 static int
 process_dynamic_monitor_description(struct xrdp_wm *wm,
                                     struct display_size_description *description)
@@ -1039,6 +1062,18 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
             "process_dynamic_monitor_description: Not allowing resize due to"
             " invalid dimensions (w: %d x h: %d)",
             description->session_width, description->session_height);
+        return 0;
+    }
+    if (description->session_width
+            == wm->client_info->display_sizes.session_width
+            && description->session_height
+            == wm->client_info->display_sizes.session_height)
+    {
+        LOG(LOG_LEVEL_WARNING, "process_dynamic_monitor_description:"
+            " Not resizing. Already this size. (w: %d x h: %d)",
+            description->session_width,
+            description->session_height);
+        sync_dynamic_monitor_data(wm, description);
         return 0;
     }
 
@@ -1141,17 +1176,7 @@ process_dynamic_monitor_description(struct xrdp_wm *wm,
         mm->encoder = xrdp_encoder_create(mm);
     }
 
-    wm->client_info->display_sizes.monitorCount = description->monitorCount;
-    wm->client_info->display_sizes.session_width = description->session_width;
-    wm->client_info->display_sizes.session_height = description->session_height;
-    g_memcpy(wm->client_info->display_sizes.minfo,
-             description->minfo,
-             sizeof(struct monitor_info)
-             * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
-    g_memcpy(wm->client_info->display_sizes.minfo_wm,
-             description->minfo_wm,
-             sizeof(struct monitor_info)
-             * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+    sync_dynamic_monitor_data(wm, description);
     return 0;
 }
 
