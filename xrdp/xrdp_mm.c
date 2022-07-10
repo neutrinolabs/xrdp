@@ -1113,7 +1113,7 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
         return 0;
     }
     if (session_width == wm->client_info->width
-        && session_height == wm->client_info->height)
+            && session_height == wm->client_info->height)
     {
         return 0;
     }
