@@ -2230,9 +2230,8 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-
-static const char *
-wm_login_state_to_str(enum wm_login_state login_state)
+const char *
+xrdp_wm_login_state_to_str(enum wm_login_state login_state)
 {
     const char *result = "unknown";
     /* Use a switch for this, as some compilers will warn about missing states
@@ -2266,10 +2265,24 @@ int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
 {
     LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
-        wm_login_state_to_str(self->login_state),
-        wm_login_state_to_str(login_state));
+        xrdp_wm_login_state_to_str(self->login_state),
+        xrdp_wm_login_state_to_str(login_state));
 
     self->login_state = login_state;
     g_set_wait_obj(self->login_state_event);
     return 0;
+}
+
+int
+xrdp_wm_can_resize(struct xrdp_wm *self)
+{
+    if (self->login_state != WMLS_CLEANUP
+            && self->login_state != WMLS_INACTIVE)
+    {
+        LOG(LOG_LEVEL_INFO, "Not allowing resize. Login in progress.");
+        LOG_DEVEL(LOG_LEVEL_INFO,
+                  "State is %s", xrdp_wm_login_state_to_str(self->login_state));
+        return 0;
+    }
+    return 1;
 }
