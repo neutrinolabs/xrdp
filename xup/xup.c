@@ -1250,6 +1250,55 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
+process_server_set_pointer_shm(struct mod *amod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int bpp;
+    int Bpp;
+    int width;
+    int height;
+    int shmem_id;
+    int shmem_offset;
+    char *cur_data;
+    char *cur_mask;
+    char *shmemptr;
+
+    cur_data = g_new0(char, 96 * 96 * 4 + 96 * 96 / 8);
+    if (cur_data == NULL)
+    {
+        return 1;
+    }
+    cur_mask = cur_data + 96 * 96 * 4;
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, bpp);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_uint32_le(s, shmem_id);
+    in_uint32_le(s, shmem_offset);
+    Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
+    shmemptr = (char *) g_shmat(shmem_id);
+    if ((shmemptr == (void *) -1) || (shmemptr == NULL))
+    {
+        g_free(cur_data);
+        return 1;
+    }
+    shmemptr += shmem_offset;
+    g_memcpy(cur_data, shmemptr, width * height * Bpp);
+    shmemptr += width * height * Bpp;
+    g_memcpy(cur_mask, shmemptr, width * height / 8);
+    g_shmdt(shmemptr);
+    rv = amod->server_set_pointer_large(amod, x, y, cur_data, cur_mask, bpp,
+                                        width, height);
+    g_free(cur_data);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
 send_server_version_message(struct mod *mod, struct stream *s)
 {
     /* send version message */
@@ -1471,6 +1520,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 61: /* server_paint_rect_shmem_ex */
             rv = process_server_paint_rect_shmem_ex(mod, s);
+            break;
+        case 63: /* server_set_pointer_shm */
+            rv = process_server_set_pointer_shm(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,

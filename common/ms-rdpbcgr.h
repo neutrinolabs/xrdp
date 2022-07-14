@@ -567,4 +567,8 @@
 #define RDP_MPPC_FLUSH                 0x80
 #define RDP_MPPC_DICT_SIZE             8192 /* RDP 4.0 | MS-RDPBCGR 3.1.8 */
 
+/* largePointerSupprtFlags (2.2.7.2.7) */
+#define LARGE_POINTER_FLAG_96x96   0x00000001
+#define LARGE_POINTER_FLAG_384x384 0x00000002
+
 #endif /* MS_RDPBCGR_H */

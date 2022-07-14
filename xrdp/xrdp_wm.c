@@ -199,23 +199,26 @@ xrdp_wm_get_pixel(char *data, int x, int y, int width, int bpp)
 /*****************************************************************************/
 int
 xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
-                int bpp)
+                int bpp, int width, int height)
 {
     int bytes;
-    struct xrdp_pointer_item pointer_item;
+    struct xrdp_pointer_item *pointer_item;
 
     if (bpp == 0)
     {
         bpp = 24;
     }
-    bytes = ((bpp + 7) / 8) * 32 * 32;
-    g_memset(&pointer_item, 0, sizeof(struct xrdp_pointer_item));
-    pointer_item.x = x;
-    pointer_item.y = y;
-    pointer_item.bpp = bpp;
-    g_memcpy(pointer_item.data, data, bytes);
-    g_memcpy(pointer_item.mask, mask, 32 * 32 / 8);
-    self->screen->pointer = xrdp_cache_add_pointer(self->cache, &pointer_item);
+    bytes = ((bpp + 7) / 8) * width * height;
+    pointer_item = g_new0(struct xrdp_pointer_item, 1);
+    pointer_item->x = x;
+    pointer_item->y = y;
+    pointer_item->bpp = bpp;
+    pointer_item->width = width;
+    pointer_item->height = height;
+    g_memcpy(pointer_item->data, data, bytes);
+    g_memcpy(pointer_item->mask, mask, width * height / 8);
+    self->screen->pointer = xrdp_cache_add_pointer(self->cache, pointer_item);
+    g_free(pointer_item);
     return 0;
 }
 
@@ -334,10 +337,11 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 /*****************************************************************************/
 int
 xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
-                     char *data, char *mask, int x, int y, int bpp)
+                     char *data, char *mask, int x, int y, int bpp,
+                     int width, int height)
 {
     return libxrdp_send_pointer(self->session, cache_idx, data, mask,
-                                x, y, bpp);
+                                x, y, bpp, width, height);
 }
 
 /*****************************************************************************/

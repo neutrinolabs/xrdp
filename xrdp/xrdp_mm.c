@@ -422,6 +422,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_composite = server_composite;
             self->mod->server_paint_rects = server_paint_rects;
             self->mod->server_session_info = server_session_info;
+            self->mod->server_set_pointer_large = server_set_pointer_large;
             self->mod->si = &(self->wm->session->si);
         }
     }
@@ -3463,7 +3464,7 @@ server_set_pointer(struct xrdp_mod *mod, int x, int y,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    xrdp_wm_pointer(wm, data, mask, x, y, 0);
+    xrdp_wm_pointer(wm, data, mask, x, y, 0, 32, 32);
     return 0;
 }
 
@@ -3475,7 +3476,20 @@ server_set_pointer_ex(struct xrdp_mod *mod, int x, int y,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    xrdp_wm_pointer(wm, data, mask, x, y, bpp);
+    xrdp_wm_pointer(wm, data, mask, x, y, bpp, 32, 32);
+    return 0;
+}
+
+/*****************************************************************************/
+int
+server_set_pointer_large(struct xrdp_mod *mod, int x, int y,
+                         char *data, char *mask, int bpp,
+                         int width, int height)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    xrdp_wm_pointer(wm, data, mask, x, y, bpp, width, height);
     return 0;
 }
 
