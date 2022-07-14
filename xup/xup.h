@@ -155,8 +155,12 @@ struct mod
                               int num_crects, short *crects,
                               char *data, int width, int height,
                               int flags, int frame_id);
-
-    tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
+    int (*server_session_info)(struct mod *v, const char *data,
+                               int data_bytes);
+    int (*server_set_pointer_large)(struct mod *v, int x, int y,
+                                    char *data, char *mask, int bpp,
+                                    int width, int height);
+    tintptr server_dumby[100 - 47]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

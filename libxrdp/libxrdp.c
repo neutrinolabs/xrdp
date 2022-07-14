@@ -705,7 +705,8 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 /*****************************************************************************/
 int EXPORT_CC
 libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
-                     char *data, char *mask, int x, int y, int bpp)
+                     char *data, char *mask, int x, int y, int bpp,
+                     int width, int height)
 {
     struct stream *s;
     char *p;
@@ -714,11 +715,20 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     int i;
     int j;
     int data_bytes;
+    int mask_bytes;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "sending cursor");
     if (bpp == 0)
     {
         bpp = 24;
+    }
+    if (width == 0)
+    {
+        width = 32;
+    }
+    if (height == 0)
+    {
+        height = 32;
     }
     /* error check */
     if ((session->client_info->pointer_flags & 1) == 0)
@@ -731,16 +741,17 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
         }
     }
 
-    if ((bpp != 16) && (bpp != 24) && (bpp != 32))
+    if ((bpp != 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
     {
         LOG(LOG_LEVEL_ERROR,
-            "Send pointer: invalid bpp value. Expected 16 or 24 or 32, "
+            "Send pointer: invalid bpp value. Expected 15, 16, 24 or 32, "
             "received %d", bpp);
         return 1;
     }
     make_stream(s);
-    init_stream(s, 8192);
-
+    data_bytes = width * height * ((bpp + 7) / 8);
+    mask_bytes = width * height / 8;
+    init_stream(s, data_bytes + mask_bytes + 8192);
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "libxrdp_send_pointer: fastpath");
@@ -751,13 +762,8 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             return 1;
         }
 
-        if ((session->client_info->pointer_flags & 1) == 0)
+        if ((session->client_info->pointer_flags & 1) != 0)
         {
-            data_bytes = 3072;
-        }
-        else
-        {
-            data_bytes = ((bpp + 7) / 8) * 32 * 32;
             out_uint16_le(s, bpp); /* TS_FP_POINTERATTRIBUTE -> newPointerUpdateData.xorBpp */
         }
     }
@@ -769,7 +775,6 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
         {
             out_uint16_le(s, RDP_POINTER_COLOR);
             out_uint16_le(s, 0); /* pad */
-            data_bytes = 3072;
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_POINTER_PDU "
                       "messageType %d (TS_PTRMSGTYPE_COLOR), pad2Octets <ignored>",
                       RDP_POINTER_COLOR);
@@ -783,7 +788,6 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                       RDP_POINTER_POINTER);
 
             out_uint16_le(s, bpp); /* TS_POINTERATTRIBUTE -> xorBpp */
-            data_bytes = ((bpp + 7) / 8) * 32 * 32;
         }
     }
 
@@ -792,20 +796,21 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     out_uint16_le(s, cache_idx);  /* cache_idx */
     out_uint16_le(s, x);          /* hotSpot.xPos */
     out_uint16_le(s, y);          /* hotSpot.yPos */
-    out_uint16_le(s, 32);         /* width */
-    out_uint16_le(s, 32);         /* height */
-    out_uint16_le(s, 128);        /* lengthAndMask */
+    out_uint16_le(s, width);      /* width */
+    out_uint16_le(s, height);     /* height */
+    out_uint16_le(s, mask_bytes); /* lengthAndMask */
     out_uint16_le(s, data_bytes); /* lengthXorMask */
 
     /* xorMaskData */
     switch (bpp)
     {
-        //case 15: /* coverity: this is logically dead code */
+        case 15:
+        /* fallthrough */
         case 16:
             p16 = (tui16 *) data;
-            for (i = 0; i < 32; i++)
+            for (i = 0; i < height; i++)
             {
-                for (j = 0; j < 32; j++)
+                for (j = 0; j < width; j++)
                 {
                     out_uint16_le(s, *p16);
                     p16++;
@@ -814,9 +819,9 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             break;
         case 24:
             p = data;
-            for (i = 0; i < 32; i++)
+            for (i = 0; i < height; i++)
             {
-                for (j = 0; j < 32; j++)
+                for (j = 0; j < width; j++)
                 {
                     out_uint8(s, *p);
                     p++;
@@ -829,9 +834,9 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             break;
         case 32:
             p32 = (tui32 *) data;
-            for (i = 0; i < 32; i++)
+            for (i = 0; i < height; i++)
             {
-                for (j = 0; j < 32; j++)
+                for (j = 0; j < width; j++)
                 {
                     out_uint32_le(s, *p32);
                     p32++;
@@ -840,7 +845,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             break;
     }
 
-    out_uint8a(s, mask, 128); /* andMaskData */
+    out_uint8a(s, mask, mask_bytes); /* andMaskData */
     out_uint8(s, 0); /* pad */
     s_mark_end(s);
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
@@ -849,11 +854,11 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_COLORPOINTERATTRIBUTE "
                       "cachedPointerUpdateData = { cacheIndex %d, "
-                      "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
-                      "height 32, lengthAndMask 128, lengthXorMask %d, "
+                      "hotSpot.xPos %d, hotSpot.yPos %d, width %d, "
+                      "height %d, lengthAndMask %d, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
                       "andMaskData <omitted from log> }",
-                      cache_idx, x, y, data_bytes);
+                      cache_idx, x, y, width, height, mask_bytes, data_bytes);
             if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                        FASTPATH_UPDATETYPE_COLOR) != 0)
             {
@@ -867,11 +872,11 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_POINTERATTRIBUTE "
                       "newPointerUpdateData.xorBpp %d, "
                       "newPointerUpdateData.colorPtrAttr = { cacheIndex %d, "
-                      "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
-                      "height 32, lengthAndMask 128, lengthXorMask %d, "
+                      "hotSpot.xPos %d, hotSpot.yPos %d, width %d, "
+                      "height %d, lengthAndMask %d, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
                       "andMaskData <omitted from log> }",
-                      bpp, cache_idx, x, y, data_bytes);
+                      bpp, cache_idx, x, y, width, height, mask_bytes, data_bytes);
             if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                        FASTPATH_UPDATETYPE_POINTER) != 0)
             {
@@ -887,21 +892,21 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_COLORPOINTERATTRIBUTE "
                       "cacheIndex %d, "
-                      "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
-                      "height 32, lengthAndMask 128, lengthXorMask %d, "
+                      "hotSpot.xPos %d, hotSpot.yPos %d, width %d, "
+                      "height %d, lengthAndMask %d, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
                       "andMaskData <omitted from log>",
-                      cache_idx, x, y, data_bytes);
+                      cache_idx, x, y, width, height, mask_bytes, data_bytes);
         }
         else
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_POINTERATTRIBUTE "
                       "xorBpp %d, colorPtrAttr = { cacheIndex %d, "
-                      "hotSpot.xPos %d, hotSpot.yPos %d, width 32, "
-                      "height 32, lengthAndMask 128, lengthXorMask %d, "
+                      "hotSpot.xPos %d, hotSpot.yPos %d, width %d, "
+                      "height %d, lengthAndMask %d, lengthXorMask %d, "
                       "xorMaskData <omitted from log>, "
                       "andMaskData <omitted from log> }",
-                      bpp, cache_idx, x, y, data_bytes);
+                      bpp, cache_idx, x, y, width, height, mask_bytes, data_bytes);
         }
         xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
                            RDP_DATA_PDU_POINTER);

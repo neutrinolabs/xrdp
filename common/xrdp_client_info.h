@@ -213,9 +213,12 @@ struct xrdp_client_info
      * data */
     unsigned int session_physical_width; /* in mm */
     unsigned int session_physical_height; /* in mm */
+
+    int large_pointer_support_flags;
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
-#define CLIENT_INFO_CURRENT_VERSION 20220428
+/* also used for changes to all the xrdp installed headers */
+#define CLIENT_INFO_CURRENT_VERSION 20230425
 
 #endif
