@@ -29,6 +29,7 @@
 #include "ms-rdpbcgr.h"
 
 #define MAX_BITMAP_BUF_SIZE (16 * 1024) /* 16K */
+#define TS_MONITOR_ATTRIBUTES_SIZE 20 /* [MS-RDPBCGR] 2.2.1.3.9 */
 
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
@@ -1766,6 +1767,97 @@ libxrdp_send_session_info(struct xrdp_session *session, const char *data,
 
 /*****************************************************************************/
 /*
+   Sanitise extended monitor attributes
+
+   The extended attributes are received from either
+   [MS-RDPEDISP] 2.2.2.2.1 (DISPLAYCONTROL_MONITOR_LAYOUT), or
+   [MS-RDPBCGR] 2.2.1.3.9.1 (TS_MONITOR_ATTRIBUTES)
+
+   @param monitor_layout struct containing extended attributes
+*/
+static void
+sanitise_extended_monitor_attributes(struct monitor_info *monitor_layout)
+{
+    /* if EITHER physical_width or physical_height are
+     * out of range, BOTH must be ignored.
+     */
+    if (monitor_layout->physical_width > 10000
+            || monitor_layout->physical_width < 10)
+    {
+        LOG(LOG_LEVEL_WARNING, "sanitise_extended_monitor_attributes:"
+            " physical_width is not within valid range."
+            " Setting physical_width to 0mm,"
+            " Setting physical_height to 0mm,"
+            " physical_width was: %d",
+            monitor_layout->physical_width);
+        monitor_layout->physical_width = 0;
+        monitor_layout->physical_height = 0;
+    }
+
+    if (monitor_layout->physical_height > 10000
+            || monitor_layout->physical_height < 10)
+    {
+        LOG(LOG_LEVEL_WARNING, "sanitise_extended_monitor_attributes:"
+            " physical_height is not within valid range."
+            " Setting physical_width to 0mm,"
+            " Setting physical_height to 0mm,"
+            " physical_height was: %d",
+            monitor_layout->physical_height);
+        monitor_layout->physical_width = 0;
+        monitor_layout->physical_height = 0;
+    }
+
+    switch (monitor_layout->orientation)
+    {
+        case ORIENTATION_LANDSCAPE:
+        case ORIENTATION_PORTRAIT:
+        case ORIENTATION_LANDSCAPE_FLIPPED:
+        case ORIENTATION_PORTRAIT_FLIPPED:
+            break;
+        default:
+            LOG(LOG_LEVEL_WARNING, "sanitise_extended_monitor_attributes:"
+                " Orientation is not one of %d, %d, %d, or %d."
+                " Value was %d and ignored and set to default value of LANDSCAPE.",
+                ORIENTATION_LANDSCAPE,
+                ORIENTATION_PORTRAIT,
+                ORIENTATION_LANDSCAPE_FLIPPED,
+                ORIENTATION_PORTRAIT_FLIPPED,
+                monitor_layout->orientation);
+            monitor_layout->orientation = ORIENTATION_LANDSCAPE;
+    }
+
+    int check_desktop_scale_factor
+        = monitor_layout->desktop_scale_factor < 100
+          || monitor_layout->desktop_scale_factor > 500;
+    if (check_desktop_scale_factor)
+    {
+        LOG(LOG_LEVEL_WARNING, "sanitise_extended_monitor_attributes:"
+            " desktop_scale_factor is not within valid range"
+            " of [100, 500]. Assuming 100. Value was: %d",
+            monitor_layout->desktop_scale_factor);
+    }
+
+    int check_device_scale_factor
+        = monitor_layout->device_scale_factor != 100
+          && monitor_layout->device_scale_factor != 140
+          && monitor_layout->device_scale_factor != 180;
+    if (check_device_scale_factor)
+    {
+        LOG(LOG_LEVEL_WARNING, "sanitise_extended_monitor_attributes:"
+            " device_scale_factor a valid value (One of 100, 140, 180)."
+            " Assuming 100. Value was: %d",
+            monitor_layout->device_scale_factor);
+    }
+
+    if (check_desktop_scale_factor || check_device_scale_factor)
+    {
+        monitor_layout->desktop_scale_factor = 100;
+        monitor_layout->device_scale_factor = 100;
+    }
+}
+
+/*****************************************************************************/
+/*
    Process a [MS-RDPBCGR] TS_UD_CS_MONITOR message.
    reads the client monitors data
 */
@@ -1907,87 +1999,11 @@ libxrdp_process_monitor_stream(struct stream *s,
 
             in_uint32_le(s, monitor_layout->physical_width);
             in_uint32_le(s, monitor_layout->physical_height);
-
-            /* Per spec (2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT),
-             * if EITHER physical_width or physical_height are
-             * out of range, BOTH must be ignored.
-             */
-            if (monitor_layout->physical_width > 10000
-                    || monitor_layout->physical_width < 10)
-            {
-                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                    " physical_width is not within valid range."
-                    " Setting physical_width to 0mm,"
-                    " Setting physical_height to 0mm,"
-                    " physical_width was: %d",
-                    monitor_layout->physical_width);
-                monitor_layout->physical_width = 0;
-                monitor_layout->physical_height = 0;
-            }
-
-            if (monitor_layout->physical_height > 10000
-                    || monitor_layout->physical_height < 10)
-            {
-                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                    " physical_height is not within valid range."
-                    " Setting physical_width to 0mm,"
-                    " Setting physical_height to 0mm,"
-                    " physical_height was: %d",
-                    monitor_layout->physical_height);
-                monitor_layout->physical_width = 0;
-                monitor_layout->physical_height = 0;
-            }
-
             in_uint32_le(s, monitor_layout->orientation);
-            switch (monitor_layout->orientation)
-            {
-                case ORIENTATION_LANDSCAPE:
-                case ORIENTATION_PORTRAIT:
-                case ORIENTATION_LANDSCAPE_FLIPPED:
-                case ORIENTATION_PORTRAIT_FLIPPED:
-                    break;
-                default:
-                    LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                        " Orientation is not one of %d, %d, %d, or %d."
-                        " Value was %d and ignored and set to default value of LANDSCAPE.",
-                        ORIENTATION_LANDSCAPE,
-                        ORIENTATION_PORTRAIT,
-                        ORIENTATION_LANDSCAPE_FLIPPED,
-                        ORIENTATION_PORTRAIT_FLIPPED,
-                        monitor_layout->orientation);
-                    monitor_layout->orientation = ORIENTATION_LANDSCAPE;
-            }
-
             in_uint32_le(s, monitor_layout->desktop_scale_factor);
-            int check_desktop_scale_factor
-                = monitor_layout->desktop_scale_factor < 100
-                  || monitor_layout->desktop_scale_factor > 500;
-            if (check_desktop_scale_factor)
-            {
-                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                    " desktop_scale_factor is not within valid range"
-                    " of [100, 500]. Assuming 100. Value was: %d",
-                    monitor_layout->desktop_scale_factor);
-            }
-
             in_uint32_le(s, monitor_layout->device_scale_factor);
-            int check_device_scale_factor
-                = monitor_layout->device_scale_factor != 100
-                  && monitor_layout->device_scale_factor != 140
-                  && monitor_layout->device_scale_factor != 180;
-            if (check_device_scale_factor)
-            {
-                LOG(LOG_LEVEL_WARNING, "libxrdp_process_monitor_stream:"
-                    " device_scale_factor a valid value (One of 100, 140, 180)."
-                    " Assuming 100. Value was: %d",
-                    monitor_layout->device_scale_factor);
-            }
 
-            if (check_desktop_scale_factor || check_device_scale_factor)
-            {
-                monitor_layout->desktop_scale_factor = 100;
-                monitor_layout->device_scale_factor = 100;
-            }
+            sanitise_extended_monitor_attributes(monitor_layout);
 
             /*
              * 2.2.2.2.1 DISPLAYCONTROL_MONITOR_LAYOUT
@@ -2137,5 +2153,108 @@ libxrdp_process_monitor_stream(struct stream *s,
         monitor_layout->bottom =
             monitor_layout->bottom - all_monitors_encompassing_bounds.top;
     }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int
+libxrdp_process_monitor_ex_stream(struct stream *s,
+                                  struct display_size_description *description)
+{
+    uint32_t num_monitor;
+    uint32_t monitor_index;
+    uint32_t attribute_size;
+    struct monitor_info *monitor_layout;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_process_monitor_ex_stream:");
+    if (description == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "libxrdp_process_monitor_ex_stream: "
+                  "description was null. "
+                  " Valid pointer to allocated description expected.");
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    if (!s_check_rem_and_log(s, 4,
+                             "libxrdp_process_monitor_ex_stream:"
+                             " Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR_EX"))
+    {
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    in_uint32_le(s, attribute_size);
+    if (attribute_size != TS_MONITOR_ATTRIBUTES_SIZE)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "libxrdp_process_monitor_ex_stream: [MS-RDPBCGR] Protocol"
+            " error: TS_UD_CS_MONITOR_EX monitorAttributeSize"
+            " MUST be %d, received: %d",
+            TS_MONITOR_ATTRIBUTES_SIZE, attribute_size);
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    in_uint32_le(s, num_monitor);
+    LOG(LOG_LEVEL_DEBUG, "libxrdp_process_monitor_ex_stream:"
+        " The number of monitors received is: %d",
+        num_monitor);
+
+    if (num_monitor != description->monitorCount)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "libxrdp_process_monitor_ex_stream: [MS-RDPBCGR] Protocol"
+            " error: TS_UD_CS_MONITOR monitorCount"
+            " MUST be %d, received: %d",
+            description->monitorCount, num_monitor);
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    for (monitor_index = 0; monitor_index < num_monitor; ++monitor_index)
+    {
+        if (!s_check_rem_and_log(s, attribute_size,
+                                 "libxrdp_process_monitor_ex_stream:"
+                                 " Parsing TS_UD_CS_MONITOR_EX"))
+        {
+            return SEC_PROCESS_MONITORS_ERR;
+        }
+
+        monitor_layout = description->minfo + monitor_index;
+
+        in_uint32_le(s, monitor_layout->physical_width);
+        in_uint32_le(s, monitor_layout->physical_height);
+        in_uint32_le(s, monitor_layout->orientation);
+        in_uint32_le(s, monitor_layout->desktop_scale_factor);
+        in_uint32_le(s, monitor_layout->device_scale_factor);
+
+        sanitise_extended_monitor_attributes(monitor_layout);
+
+        LOG_DEVEL(LOG_LEVEL_INFO, "libxrdp_process_monitor_ex_stream:"
+                  " Received [MS-RDPBCGR] 2.2.1.3.9.1 "
+                  " TS_MONITOR_ATTRIBUTES"
+                  " Index: %d, PhysicalWidth %d, PhysicalHeight %d,"
+                  " Orientation %d, DesktopScaleFactor %d,"
+                  " DeviceScaleFactor %d",
+                  monitor_index,
+                  monitor_layout->physical_width,
+                  monitor_layout->physical_height,
+                  monitor_layout->orientation,
+                  monitor_layout->desktop_scale_factor,
+                  monitor_layout->device_scale_factor);
+    }
+
+    /* Update non negative monitor info values */
+    const struct monitor_info *src = description->minfo;
+    struct monitor_info *dst = description->minfo_wm;
+    for (monitor_index = 0; monitor_index < num_monitor; ++monitor_index)
+    {
+        dst->physical_width = src->physical_width;
+        dst->physical_height = src->physical_height;
+        dst->orientation = src->orientation;
+        dst->desktop_scale_factor = src->desktop_scale_factor;
+        dst->device_scale_factor = src->device_scale_factor;
+        ++src;
+        ++dst;
+    }
+
     return 0;
 }

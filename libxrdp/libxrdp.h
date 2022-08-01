@@ -364,9 +364,10 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self);
 /* xrdp_sec.c */
 
 /*
-    These are error return codes for both:
+    These are error return codes for:-
         1. xrdp_sec_process_mcs_data_monitors
         2. libxrdp_process_monitor_stream
+        3. libxrdp_process_monitor_ex_stream
     To clarify any reason for a non-zero response code.
 */
 #define SEC_PROCESS_MONITORS_ERR 1

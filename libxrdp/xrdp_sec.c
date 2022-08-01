@@ -1953,19 +1953,23 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     char clientName[INFO_CLIENT_NAME_BYTES / 2] = { '\0' };
 
     UNUSED_VAR(version);
+    struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
+    /* Clear physical sizes. These are optional and may not be read later */
+    client_info->session_physical_width = 0;
+    client_info->session_physical_height = 0;
 
-    /* TS_UD_CS_CORE requiered fields */
+    /* TS_UD_CS_CORE required fields */
     in_uint32_le(s, version);
-    in_uint16_le(s, self->rdp_layer->client_info.display_sizes.session_width);
-    in_uint16_le(s, self->rdp_layer->client_info.display_sizes.session_height);
+    in_uint16_le(s, client_info->display_sizes.session_width);
+    in_uint16_le(s, client_info->display_sizes.session_height);
     in_uint16_le(s, colorDepth);
     switch (colorDepth)
     {
         case RNS_UD_COLOR_4BPP:
-            self->rdp_layer->client_info.bpp = 4;
+            client_info->bpp = 4;
             break;
         case RNS_UD_COLOR_8BPP:
-            self->rdp_layer->client_info.bpp = 8;
+            client_info->bpp = 8;
             break;
     }
     in_uint8s(s, 2); /* SASSequence */
@@ -1985,8 +1989,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
               "imeFileName (ignored)",
               version,
-              self->rdp_layer->client_info.display_sizes.session_width,
-              self->rdp_layer->client_info.display_sizes.session_height,
+              client_info->display_sizes.session_width,
+              client_info->display_sizes.session_height,
               (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
                colorDepth == 0xca01 ? "RNS_UD_COLOR_8BPP" : "unknown"),
               clientName);
@@ -2005,19 +2009,19 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     switch (postBeta2ColorDepth)
     {
         case RNS_UD_COLOR_4BPP:
-            self->rdp_layer->client_info.bpp = 4;
+            client_info->bpp = 4;
             break;
         case RNS_UD_COLOR_8BPP :
-            self->rdp_layer->client_info.bpp = 8;
+            client_info->bpp = 8;
             break;
         case RNS_UD_COLOR_16BPP_555:
-            self->rdp_layer->client_info.bpp = 15;
+            client_info->bpp = 15;
             break;
         case RNS_UD_COLOR_16BPP_565:
-            self->rdp_layer->client_info.bpp = 16;
+            client_info->bpp = 16;
             break;
         case RNS_UD_COLOR_24BPP:
-            self->rdp_layer->client_info.bpp = 24;
+            client_info->bpp = 24;
             break;
     }
     if (!s_check_rem(s, 2))
@@ -2049,7 +2053,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               highColorDepth == 0x0010 ? "HIGH_COLOR_16BPP" :
               highColorDepth == 0x0018 ? "HIGH_COLOR_24BPP" :
               "unknown");
-    self->rdp_layer->client_info.bpp = highColorDepth;
+    client_info->bpp = highColorDepth;
 
     if (!s_check_rem(s, 2))
     {
@@ -2069,13 +2073,13 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
         return 0;
     }
     in_uint16_le(s, earlyCapabilityFlags);
-    self->rdp_layer->client_info.mcs_early_capability_flags = earlyCapabilityFlags;
+    client_info->mcs_early_capability_flags = earlyCapabilityFlags;
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> earlyCapabilityFlags 0x%4.4x",
               earlyCapabilityFlags);
     if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
     {
-        self->rdp_layer->client_info.bpp = 32;
+        client_info->bpp = 32;
     }
 
     if (!s_check_rem(s, 64))
@@ -2090,10 +2094,10 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     {
         return 0;
     }
-    in_uint8(s, self->rdp_layer->client_info.mcs_connection_type); /* connectionType */
+    in_uint8(s, client_info->mcs_connection_type); /* connectionType */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> connectionType 0x%2.2x",
-              self->rdp_layer->client_info.mcs_connection_type);
+              client_info->mcs_connection_type);
 
     if (!s_check_rem(s, 1))
     {
@@ -2111,22 +2115,43 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> serverSelectedProtocol (ignored)");
 
+    /*
+     * Non-zero values for the desktop physical width and height values
+     * are only sent if the client has a single monitor. For multiple
+     * monitors, the physical size of each monitor is sent in the
+     * TS_UD_CS_MONITOR_EX PDU */
     if (!s_check_rem(s, 4))
     {
         return 0;
     }
-    in_uint8s(s, 4); /* desktopPhysicalWidth */
+    in_uint32_le(s, client_info->session_physical_width);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
-              "<Optional Field> desktopPhysicalWidth (ignored)");
+              "<Optional Field> desktopPhysicalWidth %u",
+              client_info->session_physical_width);
 
     if (!s_check_rem(s, 4))
     {
+        client_info->session_physical_width = 0;
         return 0;
     }
-    in_uint8s(s, 4); /* desktopPhysicalHeight */
+    in_uint32_le(s, client_info->session_physical_height);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
-              "<Optional Field> desktopPhysicalHeight (ignored)");
+              "<Optional Field> desktopPhysicalHeight %u",
+              client_info->session_physical_height);
 
+    /* MS-RDPBCGR 2.2.1.3.2 */
+    if (client_info->session_physical_width < 10 ||
+            client_info->session_physical_width > 10000 ||
+            client_info->session_physical_height < 10 ||
+            client_info->session_physical_height > 10000)
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "Physical desktop dimensions (%ux%u) are invalid",
+            client_info->session_physical_width,
+            client_info->session_physical_height);
+        client_info->session_physical_width = 0;
+        client_info->session_physical_height = 0;
+    }
     if (!s_check_rem(s, 2))
     {
         return 0;
@@ -2408,6 +2433,45 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 }
 
 /*****************************************************************************/
+/* Process a [MS-RDPBCGR] TS_UD_CS_MONITOR_EX message.
+   reads the client monitor's extended data */
+int
+xrdp_sec_process_mcs_data_monitors_ex(struct xrdp_sec *self, struct stream *s)
+{
+    int flags;
+    struct xrdp_client_info *client_info = &(self->rdp_layer->client_info);
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors_ex:");
+
+    /* this is an option set in xrdp.ini */
+    if (client_info->multimon != 1) /* are multi-monitors allowed ? */
+    {
+        /* This should already be logged in
+           xrdp_sec_process_mcs_data_monitors() */
+        return 0;
+    }
+    if (!s_check_rem_and_log(s, 4,
+                             "xrdp_sec_process_mcs_data_monitors_ex:"
+                             " Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR_EX"))
+    {
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+    in_uint32_le(s, flags); /* flags */
+
+    //verify flags - must be 0x0
+    if (flags != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_process_mcs_data_monitors_ex: [MS-RDPBCGR]"
+            " Protocol error: TS_UD_CS_MONITOR_EX flags MUST be zero,"
+            " received: 0x%8.8x", flags);
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    return libxrdp_process_monitor_ex_stream(s, &client_info->display_sizes);
+}
+
+/*****************************************************************************/
 /* Process a Client MCS Connect Initial PDU with GCC Conference Create Request.
    process client mcs data, we need some things in here to create the server
    mcs data */
@@ -2418,6 +2482,7 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
     char *hold_p = (char *)NULL;
     int tag = 0;
     int size = 0;
+    struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
 
     s = &(self->client_mcs_data);
     /* set p to beginning */
@@ -2486,8 +2551,15 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
                     return 1;
                 }
                 break;
+            case SEC_TAG_CLI_MONITOR_EX:  /* CS_MONITOR_EX     0xC008 */
+                if (xrdp_sec_process_mcs_data_monitors_ex(self, s) != 0)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Processing [MS-RDPBCGR] TS_UD_CS_MONITOR_EX failed");
+                    return 1;
+                }
+                break;
             /* CS_MCS_MSGCHANNEL 0xC006
-               CS_MONITOR_EX     0xC008
                CS_MULTITRANSPORT 0xC00A
                SC_CORE           0x0C01
                SC_SECURITY       0x0C02
@@ -2504,19 +2576,17 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
         s->p = hold_p + size;
     }
 
-    if (self->rdp_layer->client_info.max_bpp > 0)
+    if (client_info->max_bpp > 0)
     {
-        if (self->rdp_layer->client_info.bpp >
-                self->rdp_layer->client_info.max_bpp)
+        if (client_info->bpp > client_info->max_bpp)
         {
             LOG(LOG_LEVEL_WARNING, "Client requested %d bpp color depth, "
                 "but the server configuration is limited to %d bpp. "
                 "Downgrading the color depth to %d bits-per-pixel.",
-                self->rdp_layer->client_info.bpp,
-                self->rdp_layer->client_info.max_bpp,
-                self->rdp_layer->client_info.max_bpp);
-            self->rdp_layer->client_info.bpp =
-                self->rdp_layer->client_info.max_bpp;
+                client_info->bpp,
+                client_info->max_bpp,
+                client_info->max_bpp);
+            client_info->bpp = client_info->max_bpp;
         }
     }
 

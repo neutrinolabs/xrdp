@@ -57,6 +57,7 @@
 #define SEC_TAG_CLI_CHANNELS           0xc003 /* CS_CHANNELS? */
 #define SEC_TAG_CLI_4                  0xc004 /* CS_CLUSTER? */
 #define SEC_TAG_CLI_MONITOR            0xc005 /* CS_MONITOR */
+#define SEC_TAG_CLI_MONITOR_EX         0xc008 /* CS_MONITOR_EX */
 
 /* Client Core Data: colorDepth, postBeta2ColorDepth (2.2.1.3.2) */
 #define RNS_UD_COLOR_4BPP              0xCA00
