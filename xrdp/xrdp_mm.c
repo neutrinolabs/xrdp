@@ -1118,7 +1118,8 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
                 break;
             default:
                 LOG(LOG_LEVEL_ERROR, "dynamic_monitor_data: Received neither"
-                    " nor DISPLAYCONTROL_PDU_TYPE_CAPS. Ignoring message.");
+                    " DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT nor"
+                    " DISPLAYCONTROL_PDU_TYPE_CAPS. Ignoring message.");
                 break;
         }
         return 0;
