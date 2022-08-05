@@ -72,20 +72,32 @@ xrdp_wm_login_help_notify(struct xrdp_bitmap *wnd,
 
         if (p != 0)
         {
+            const int x = 10;
+            int y = xrdp_painter_font_body_height(p) * 2;
+            const int row_height = xrdp_painter_font_body_height(p);
+            const int end_para_height = row_height * 3 / 2;
+
             p->fg_color = wnd->wm->black;
-            xrdp_painter_draw_text(p, wnd, 10, 30, "You must be authenticated \
+            xrdp_painter_draw_text(p, wnd, x, y, "You must be authenticated \
 before using this");
-            xrdp_painter_draw_text(p, wnd, 10, 46, "session.");
-            xrdp_painter_draw_text(p, wnd, 10, 78, "Enter a valid username in \
+            y += row_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "session.");
+            y += end_para_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "Enter a valid username in \
 the username edit box.");
-            xrdp_painter_draw_text(p, wnd, 10, 94, "Enter the password in \
+            y += end_para_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "Enter the password in \
 the password edit box.");
-            xrdp_painter_draw_text(p, wnd, 10, 110, "Both the username and \
+            y += end_para_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "Both the username and \
 password are case");
-            xrdp_painter_draw_text(p, wnd, 10, 126, "sensitive.");
-            xrdp_painter_draw_text(p, wnd, 10, 158, "Contact your system \
+            y += row_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "sensitive.");
+            y += end_para_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "Contact your system \
 administrator if you are");
-            xrdp_painter_draw_text(p, wnd, 10, 174, "having problems \
+            y += row_height;
+            xrdp_painter_draw_text(p, wnd, x, y, "having problems \
 logging on.");
         }
     }

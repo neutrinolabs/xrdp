@@ -111,6 +111,7 @@ int
 xrdp_bitmap_set_focus(struct xrdp_bitmap *self, int focused)
 {
     struct xrdp_painter *painter = (struct xrdp_painter *)NULL;
+    unsigned int font_height;
 
     if (self == 0)
     {
@@ -125,19 +126,22 @@ xrdp_bitmap_set_focus(struct xrdp_bitmap *self, int focused)
     painter = xrdp_painter_create(self->wm, self->wm->session);
     xrdp_painter_font_needed(painter);
     xrdp_painter_begin_update(painter);
+    font_height = xrdp_painter_font_body_height(painter);
 
     if (focused)
     {
         /* active title bar */
         painter->fg_color = self->wm->blue;
-        xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+        xrdp_painter_fill_rect(painter, self, 3, 3,
+                               self->width - 5, font_height + 5);
         painter->fg_color = self->wm->white;
     }
     else
     {
         /* inactive title bar */
         painter->fg_color = self->wm->dark_grey;
-        xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+        xrdp_painter_fill_rect(painter, self, 3, 3,
+                               self->width - 5, font_height + 5);
         painter->fg_color = self->wm->black;
     }
 
@@ -616,6 +620,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
     struct xrdp_rect r1;
     struct xrdp_rect r2;
     struct xrdp_painter *painter;
+    unsigned int font_height;
     twchar wtext[256];
     char text[256];
     char *p;
@@ -632,6 +637,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
 
     painter = xrdp_painter_create(self->wm, self->wm->session);
     xrdp_painter_font_needed(painter);
+    font_height = xrdp_painter_font_body_height(painter);
     painter->rop = 0xcc; /* copy */
 
     if (rect == 0)
@@ -684,14 +690,16 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
         {
             /* active title bar */
             painter->fg_color = self->wm->blue;
-            xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+            xrdp_painter_fill_rect(painter, self, 3, 3,
+                                   self->width - 5, font_height + 5);
             painter->fg_color = self->wm->white;
         }
         else
         {
             /* inactive title bar */
             painter->fg_color = self->wm->dark_grey;
-            xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+            xrdp_painter_fill_rect(painter, self, 3, 3,
+                                   self->width - 5, font_height + 5);
             painter->fg_color = self->wm->black;
         }
 
@@ -742,7 +750,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
             xrdp_bitmap_draw_button(self, painter, 0, 0,
                                     self->width, self->height, 0);
             w = xrdp_painter_text_width(painter, self->caption1);
-            h = xrdp_painter_text_height(painter, self->caption1);
+            h = xrdp_painter_font_body_height(painter);
             painter->fg_color = self->wm->black;
             xrdp_painter_draw_text(painter, self, self->width / 2 - w / 2,
                                    self->height / 2 - h / 2, self->caption1);
@@ -764,7 +772,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
             xrdp_bitmap_draw_button(self, painter, 0, 0,
                                     self->width, self->height, 1);
             w = xrdp_painter_text_width(painter, self->caption1);
-            h = xrdp_painter_text_height(painter, self->caption1);
+            h = xrdp_painter_font_body_height(painter);
             painter->fg_color = self->wm->black;
             xrdp_painter_draw_text(painter, self, (self->width / 2 - w / 2) + 1,
                                    (self->height / 2 - h / 2) + 1, self->caption1);
@@ -941,7 +949,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
         if (self->popped_from != 0)
         {
             /* change height if there are too many items in the list */
-            i = xrdp_painter_text_height(painter, "W");
+            i = xrdp_painter_font_body_height(painter);
             i = self->popped_from->string_list->count * i;
 
             if (i > self->height)
@@ -961,7 +969,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
             for (i = 0; i < self->popped_from->string_list->count; i++)
             {
                 p = (char *)list_get_item(self->popped_from->string_list, i);
-                h = xrdp_painter_text_height(painter, p);
+                h = xrdp_painter_font_body_height(painter);
                 self->item_height = h;
 
                 if (i == self->item_index)

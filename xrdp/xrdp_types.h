@@ -626,6 +626,8 @@ struct xrdp_font
     struct xrdp_font_char font_items[NUM_FONTS];
     char name[32];
     int size;
+    /** Body height in pixels */
+    int body_height;
     int style;
 };
 

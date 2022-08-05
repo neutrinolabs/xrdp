@@ -30,7 +30,6 @@
 #endif
 
 
-
 #if defined(XRDP_PAINTER)
 
 /*****************************************************************************/
@@ -464,41 +463,10 @@ xrdp_painter_text_width(struct xrdp_painter *self, const char *text)
 }
 
 /*****************************************************************************/
-int
-xrdp_painter_text_height(struct xrdp_painter *self, const char *text)
+unsigned int
+xrdp_painter_font_body_height(const struct xrdp_painter *self)
 {
-    int index;
-    int rv;
-    int len;
-    struct xrdp_font_char *font_item;
-    twchar *wstr;
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_text_height:");
-    xrdp_painter_font_needed(self);
-
-    if (self->font == 0)
-    {
-        return 0;
-    }
-
-    if (text == 0)
-    {
-        return 0;
-    }
-
-    rv = 0;
-    len = g_mbstowcs(0, text, 0);
-    wstr = (twchar *)g_malloc((len + 2) * sizeof(twchar), 0);
-    g_mbstowcs(wstr, text, len + 1);
-
-    for (index = 0; index < len; index++)
-    {
-        font_item = self->font->font_items + wstr[index];
-        rv = MAX(rv, font_item->height);
-    }
-
-    g_free(wstr);
-    return rv;
+    return (self->font == NULL) ? 0 : self->font->body_height;
 }
 
 /*****************************************************************************/
@@ -830,7 +798,6 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
         return 0;
     }
 
-
     len = g_mbstowcs(0, text, 0);
 
     if (len < 1)
@@ -873,7 +840,11 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
                 font_item = font->font_items + wstr[index];
                 k = font_item->incby;
                 total_width += k;
-                total_height = MAX(total_height, font_item->height);
+                /* Use the nominal height of the font to work out the
+                 * actual height of this glyph */
+                int glyph_height =
+                    font->body_height + font_item->baseline + font_item->height;
+                total_height = MAX(total_height, glyph_height);
             }
             xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
             region = xrdp_region_create(self->wm);
@@ -912,12 +883,12 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
                         pat.height = font_item->height;
                         pat.data = font_item->data;
                         x1 = x + font_item->offset;
-                        y1 = y + (font_item->height + font_item->baseline);
+                        y1 = y + (font->body_height + font_item->baseline);
                         painter_fill_pattern(self->painter, &dst_pb, &pat,
                                              0, 0, x1, y1,
                                              font_item->width,
                                              font_item->height);
-                        xrdp_painter_add_dirty_rect(self, x, y,
+                        xrdp_painter_add_dirty_rect(self, x1, y1,
                                                     font_item->width,
                                                     font_item->height,
                                                     &draw_rect);
@@ -954,7 +925,11 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
         data[index * 2 + 1] = k;
         k = font_item->incby;
         total_width += k;
-        total_height = MAX(total_height, font_item->height);
+        /* Use the nominal height of the font to work out the
+         * actual height of this glyph */
+        int glyph_height =
+            font->body_height + font_item->baseline + font_item->height;
+        total_height = MAX(total_height, glyph_height);
     }
 
     xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
@@ -979,7 +954,7 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
         if (rect_intersect(&rect, &clip_rect, &draw_rect))
         {
             x1 = x;
-            y1 = y + total_height;
+            y1 = y + font->body_height;
             flags = 0x03; /* 0x03 0x73; TEXT2_IMPLICIT_X and something else */
             libxrdp_orders_text(self->session, f, flags, 0,
                                 self->fg_color, 0,

@@ -301,8 +301,8 @@ xrdp_painter_draw_bitmap(struct xrdp_painter *self,
                          int x, int y, int cx, int cy);
 int
 xrdp_painter_text_width(struct xrdp_painter *self, const char *text);
-int
-xrdp_painter_text_height(struct xrdp_painter *self, const char *text);
+unsigned int
+xrdp_painter_font_body_height(const struct xrdp_painter *self);
 int
 xrdp_painter_draw_text(struct xrdp_painter *self,
                        struct xrdp_bitmap *bitmap,

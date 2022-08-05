@@ -157,7 +157,15 @@ xrdp_font_create(struct xrdp_wm *wm)
 
                 index++;
             }
+
+            if (self->body_height == 0 && index > 32)
+            {
+                /* Older font made for xrdp v0.9.x. Synthesise this
+                 * value from the first glyph */
+                self->body_height = -self->font_items[32].baseline + 1;
+            }
         }
+
     }
 
     free_stream(s);
