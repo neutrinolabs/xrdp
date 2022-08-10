@@ -190,6 +190,8 @@ AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
 AC_ARG_WITH(imlib2, AC_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
+AC_ARG_WITH(freetype2, AC_HELP_STRING([--with-freetype2=ARG], [freetype2 library to use for rendering fonts (ARG=yes/no/<abs-path>)]),,)
+
 # Obsolete options
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [This option is no longer supported - use --enable-devel-all]))
@@ -277,6 +279,41 @@ esac
 if test x$use_imlib2 = xyes; then
     AC_DEFINE([USE_IMLIB2],1, [Compile with imlib2 support])
 fi
+
+# Find freetype2
+case "$with_freetype2" in
+    '' | no) AC_MSG_NOTICE([freetype2 will not be supported])
+        use_freetype2=no
+        ;;
+    yes)
+        PKG_CHECK_MODULES([FREETYPE2], [freetype2 >= 2.8],
+            [use_freetype2=yes],
+            [AC_MSG_ERROR([please install libfreetype6-dev or freetype-devel])])
+        ;;
+    /*) AC_MSG_CHECKING([for freetype2 in $with_freetype2])
+        if test -d $with_freetype2/lib; then
+            FREETYPE2_LIBS="-L$with_freetype2/lib -llibfreetype"
+        elif test -d $with_freetype2/lib64; then
+            FREETYPE2_LIBS="-L$with_freetype2/lib64 -llibfreetype"
+        else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([Can't find libfreetype in $with_freetype2])
+        fi
+
+        if test -f $with_freetype2/include/freetype2/ft2build.h; then
+            FREETYPE2_CFLAGS="-I $with_freetype2/include/freetype2"
+        else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([Can't find $with_freetype2/include/freetype2/ft2build.h])
+        fi
+        AC_MSG_RESULT([yes])
+        AC_SUBST([FREETYPE2_LIBS])
+        AC_SUBST([FREETYPE2_CFLAGS])
+        use_freetype2=yes
+        ;;
+    *)  AC_MSG_ERROR([--with-freetype2 needs yes/no or absolute path])
+esac
+AM_CONDITIONAL([USE_FREETYPE2], [test "x$use_freetype2" = xyes])
 
 # Check only one auth mechanism is specified, and give it a name
 auth_cnt=0
@@ -494,6 +531,7 @@ AC_CONFIG_FILES([
   common/Makefile
   docs/Makefile
   docs/man/Makefile
+  fontutils/Makefile
   genkeymap/Makefile
   instfiles/default/Makefile
   instfiles/init.d/Makefile
@@ -551,11 +589,9 @@ echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
 echo
-if test x$use_imlib2 = xyes; then
-    echo "  with imlib2             yes"
-else
-    echo "  with imlib2             no"
-fi
+echo "  with imlib2             $use_imlib2"
+echo "  with freetype2          $use_freetype2"
+
 echo
 echo "  development logging     $devel_logging"
 echo "  development streamcheck $devel_streamcheck"

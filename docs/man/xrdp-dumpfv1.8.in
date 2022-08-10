@@ -1,0 +1,58 @@
+.TH "xrdp-dumpfv1" "8" "@PACKAGE_VERSION@" "xrdp team"
+.SH NAME
+xrdp\-dumpfv1 \- Display content of .fv1 font files
+
+.SH SYNOPSIS
+\fBxrdp-dumpfv1\fR [ options ] fv1_file
+
+.SH DESCRIPTION
+\fBxrdp\-dumpfv1\fP can be used to display the contents of an fv1 file.
+
+.SH OPTIONS
+A summary of options is included below.
+
+One of \fB\-i\fR, \fB\-t\fR, or \fB\-c\fR must be specified.
+.TP
+\fB\-i\fR
+Displays general information about the fv1 file.
+
+.TP
+\fB\-t\fR
+Displays a CSV table of all the glyphs in the font. This table can be
+imported into a spreadsheet program for further manipulation.
+
+.TP
+\fB\-c\fR <character>
+Displays detailed information about a particular glyph in the font,
+including a representation of the bitmap for the glyph.
+
+Specify the character using one of the following strings:
+
+\fBU+<hex>\fR - Unicode character, e.g. \fBU+25\fR for a percentage symbol (%).
+
+\fB@<char>\fR - Unicode character, e.g. \fB@%\fR for a percentage symbol.
+
+\fBnumber\fR - Unicode value as an integer, e.g. \fB37\fR for a
+percentage symbol
+
+Note that the row numbers shown in the font data are relative to the
+natural font baseline. If comparing two fonts, be aware that when the
+glyph is drawn, the row number may be affected by the global descender
+value for the font (displayed with \fB\-i\fR).
+
+.SH "EXAMPLES"
+.TP
+\fBxrdp\-dumpfv1 -i @xrdpdatadir@/sans-10.fv1\fR
+Displays global information about the sans 10 font file distributed with xrdp.
+
+.TP
+\fBxrdp\-dumpfv1 -c @'*' @xrdpdatadir@/sans-10.fv1\fR
+Displays information about the asterisk symbol in the sans 10 font file distributed with xrdp.
+
+.SH SEE ALSO
+.BR xrdp\-mkfv1(8).
+
+More info on \fBxrdp\fR can be found on the
+.UR @xrdphomeurl@
+xrdp homepage
+.UE

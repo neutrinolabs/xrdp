@@ -124,7 +124,7 @@ pulseaudio modules. The build instructions can be found at wiki.
 xrdp
 ├── common ······ common code
 ├── docs ········ documentation
-├── fontdump ···· font dump for Windows
+├── fontutils ··· font handling utilities
 ├── genkeymap ··· keymap generator
 ├── instfiles ··· installable data file
 ├── keygen ······ xrdp RSA key pair generator
