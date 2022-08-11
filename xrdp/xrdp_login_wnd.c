@@ -669,6 +669,81 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 }
 
 /******************************************************************************/
+unsigned int
+xrdp_login_wnd_get_monitor_dpi(struct xrdp_wm *self)
+{
+    unsigned int result = 0;
+    const struct display_size_description *display_sizes =
+            &self->client_info->display_sizes;
+    unsigned int height_pixels = 0;
+    unsigned int height_mm = 0;
+
+    unsigned int i;
+
+    /* Look at the monitor data first */
+    for (i = 0; i < display_sizes->monitorCount; ++i)
+    {
+        const struct monitor_info *mi = &display_sizes->minfo_wm[i];
+        {
+            if (mi->is_primary)
+            {
+                height_pixels = mi->bottom - mi->top + 1;
+                height_mm = mi->physical_height;
+                break;
+            }
+        }
+    }
+
+    /* No primary monitor, or values not defined - use the desktop size */
+    if (height_mm == 0)
+    {
+        height_pixels = display_sizes->session_height;
+        height_mm = self->client_info->session_physical_height;
+
+        if (height_mm == 0)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "No information is available to determine login screen DPI");
+        }
+        else if (height_pixels < 768)
+        {
+            /* A bug was encountered with mstsc.exe version
+               10.0.19041.1682 where the full physical monitor size was
+               sent in TS_UD_CS_CORE when the desktop size was set to
+               less than the screen size.
+               To generate the bug, make a connection with a full-screen
+               single window, cancel the login, and reconnect at
+               (e.g.) 800x600.
+               We can't detect that exact situation here, but if the
+               session height is so small as to likely be in a window
+               (rather than full screen), we should ignore the physical
+               size */
+            LOG(LOG_LEVEL_WARNING,
+                "Ignoring unlikely physical session size %u "
+                "for height of %u pixels", height_mm, height_pixels);
+            height_mm = 0;
+        }
+    }
+
+    if (height_mm != 0)
+    {
+        /*
+         * DPI = height_pixels / (height_mm / 25.4)
+         *     = (height_pixels * 25.4) / height_mm
+         *     = (height_pixels * 127) / (height_mm * 5)
+         */
+        result = (height_pixels * 127 ) / (height_mm * 5);
+        LOG(LOG_LEVEL_INFO,
+            "Login screen monitor height is %u pixels over %u mm (%u DPI)",
+            height_pixels,
+            height_mm,
+            result);
+    }
+    return result;
+}
+
+
+/******************************************************************************/
 int
 xrdp_login_wnd_create(struct xrdp_wm *self)
 {
@@ -989,6 +1064,7 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
 
     /* set default values in case we can't get them from xrdp.ini file */
     globals->ini_version = 1;
+    globals->default_dpi = 96;
 
     globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi("009cb5"));
     globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
@@ -1217,6 +1293,16 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         }
 
         /* login screen values */
+        else if (g_strcmp(n, "default_dpi") == 0)
+        {
+            globals->default_dpi = g_atoi(v);
+        }
+
+        else if (g_strcmp(n, "fv1_select") == 0)
+        {
+            g_strncpy(globals->fv1_select, v, sizeof(globals->fv1_select) - 1);
+        }
+
         else if (g_strncmp(n, "ls_top_window_bg_color", 64) == 0)
         {
             globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));

@@ -606,6 +606,7 @@ struct xrdp_bitmap
 #define NUM_FONTS 0x4e00
 #define DEFAULT_FONT_NAME "sans-10.fv1"
 #define DEFAULT_FONT_PIXEL_SIZE 16
+#define DEFAULT_FV1_SELECT "130:sans-18.fv1,0:" DEFAULT_FONT_NAME
 
 #define DEFAULT_BUTTON_MARGIN_H 12
 #define DEFAULT_BUTTON_MARGIN_W 12
@@ -726,6 +727,8 @@ struct xrdp_cfg_globals
     int  background;
 
     /* login screen */
+    unsigned int  default_dpi;   /* Default DPI to use if nothing from client */
+    char fv1_select[256];        /* Selection string for fv1 font */
     int  ls_top_window_bg_color; /* top level window background color */
     int  ls_bg_color;            /* background color */
     char ls_background_image[256];  /* background image file name */

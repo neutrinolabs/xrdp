@@ -107,6 +107,17 @@ grey=dedede
 #background=626c72
 
 ;
+; Select a default fv1 font
+;
+; This parameter is a comma-separated list of DPI:name pairs.
+; The list is scanned from left-to-right. The font used is the first
+; font whose DPI value is less-than-or-equal to the vertical DPI of
+; the monitor used for the login screen.
+#fv1_select=130:sans-18.fv1,0:sans-10.fv1
+; Default DPI used for a monitor when that information is unknown
+#default_dpi=96
+
+;
 ; configure login screen
 ;
 
@@ -117,6 +128,10 @@ grey=dedede
 ls_top_window_bg_color=009cb5
 
 ; width and height of login screen
+;
+; When the sans-10.fv1 font is selected, these values are in pixels.
+; For other fonts, these values (and other size values) will be scaled
+; appropriately to preserve the proportions of the login screen.
 ;
 ; The default height allows for about 5 fields to be comfortably displayed
 ; above the buttons at the bottom. To display more fields, make <ls_height>
@@ -147,15 +162,15 @@ ls_bg_color=dedede
 ; For transform values, see 'ls_background_transform'. The logo width and
 ; logo height are ignored for a transform of 'none'.
 ls_logo_filename=
-#ls_logo_transform=none
-#ls_logo_width=240
-#ls_logo_height=140
+ls_logo_transform=scale
+ls_logo_width=240
+ls_logo_height=140
 ls_logo_x_pos=55
 ls_logo_y_pos=50
 
 ; for positioning labels such as username, password etc
 ls_label_x_pos=30
-ls_label_width=65
+ls_label_width=68
 
 ; for positioning text and combo boxes next to above labels
 ls_input_x_pos=110

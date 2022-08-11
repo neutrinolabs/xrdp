@@ -343,7 +343,7 @@ xrdp_painter_line(struct xrdp_painter *self,
 
 /* xrdp_font.c */
 struct xrdp_font *
-xrdp_font_create(struct xrdp_wm *wm);
+xrdp_font_create(struct xrdp_wm *wm, unsigned int dpi);
 void
 xrdp_font_delete(struct xrdp_font *self);
 int
@@ -387,13 +387,20 @@ int
 get_keymaps(int keylayout, struct xrdp_keymap *keymap);
 
 /* xrdp_login_wnd.c */
+/**
+ * Gets the DPI of the login (primary) monitor
+ *
+ * @param self xrdp_wm instance
+ * @return DPI of primary monitor, or 0 if unavailable.
+ */
+unsigned int
+xrdp_login_wnd_get_monitor_dpi(struct xrdp_wm *self);
 int
 xrdp_login_wnd_create(struct xrdp_wm *self);
 int
 load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp);
 void
 xrdp_login_wnd_scale_config_values(struct xrdp_wm *self);
-
 
 /* xrdp_bitmap_compress.c */
 int

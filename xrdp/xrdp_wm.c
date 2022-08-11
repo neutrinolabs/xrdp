@@ -569,6 +569,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     char default_section_name[256];
     char section_name[256];
     char autorun_name[256];
+    int dpi;
 
     LOG(LOG_LEVEL_DEBUG, "in xrdp_wm_init: ");
 
@@ -576,7 +577,8 @@ xrdp_wm_init(struct xrdp_wm *self)
                      self->screen->bpp);
 
     /* Load the font */
-    self->default_font = xrdp_font_create(self);
+    dpi = xrdp_login_wnd_get_monitor_dpi(self);
+    self->default_font = xrdp_font_create(self, dpi);
 
     /* Scale the login screen values */
     xrdp_login_wnd_scale_config_values(self);
