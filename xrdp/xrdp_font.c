@@ -18,23 +18,7 @@
  * fonts
  */
 
-/*
-  The fv1 files contain
-  Font File Header (just one)
-    FNT1       4 bytes
-    Font Name  32 bytes
-    Font Size  2 bytes
-    Font Style 2 bytes
-    Pad        8 bytes
-  Font Data (repeats)
-    Width      2 bytes
-    Height     2 bytes
-    Baseline   2 bytes
-    Offset     2 bytes
-    Incby      2 bytes
-    Pad        6 bytes
-    Glyph Data var, see FONT_DATASIZE macro
-*/
+/* fv1 files are described in fontutils/README_fv1.txt */
 
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
@@ -46,22 +30,22 @@
 #if 0 /* not used */
 static char w_char[] =
 {
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x08, 0x20, 0x80,
-    0x08, 0x50, 0x80,
-    0x04, 0x51, 0x00,
-    0x04, 0x51, 0x00,
-    0x04, 0x51, 0x00,
-    0x02, 0x8a, 0x00,
-    0x02, 0x8a, 0x00,
-    0x02, 0x8a, 0x00,
-    0x01, 0x04, 0x00,
-    0x01, 0x04, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
+    0x08, 0x20, 0x80, // ....X.....X.....X.......
+    0x08, 0x50, 0x80, // ....X....X.X....X.......
+    0x04, 0x51, 0x00, // .....X...X.X...X........
+    0x04, 0x51, 0x00, // .....X...X.X...X........
+    0x04, 0x51, 0x00, // .....X...X.X...X........
+    0x02, 0x8a, 0x00, // ......X.X...X.X.........
+    0x02, 0x8a, 0x00, // ......X.X...X.X.........
+    0x02, 0x8a, 0x00, // ......X.X...X.X.........
+    0x01, 0x04, 0x00, // .......X.....X..........
+    0x01, 0x04, 0x00, // .......X.....X..........
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
 };
 #endif
 
@@ -78,6 +62,7 @@ xrdp_font_create(struct xrdp_wm *wm)
     int datasize;
     int file_size;
     struct xrdp_font_char *f;
+    int min_descender;
     char file_path[256];
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_font_create");
@@ -117,7 +102,9 @@ xrdp_font_create(struct xrdp_wm *wm)
             in_uint8a(s, self->name, 32);
             in_uint16_le(s, self->size);
             in_uint16_le(s, self->style);
-            in_uint8s(s, 8);
+            in_uint16_le(s, self->body_height);
+            in_sint16_le(s, min_descender);
+            in_uint8s(s, 4);
             index = 32;
 
             while (s_check_rem(s, 16))
@@ -128,7 +115,8 @@ xrdp_font_create(struct xrdp_wm *wm)
                 in_sint16_le(s, i);
                 f->height = i;
                 in_sint16_le(s, i);
-                f->baseline = i;
+                /* Move the glyph up so there are no descenders */
+                f->baseline = i + min_descender;
                 in_sint16_le(s, i);
                 f->offset = i;
                 in_sint16_le(s, i);
@@ -145,7 +133,15 @@ xrdp_font_create(struct xrdp_wm *wm)
                     break;
                 }
 
-                if (s_check_rem(s, datasize))
+                if (datasize == 0)
+                {
+                    /* Allocate a single blank pixel for the glyph, so
+                     * that it can be added to the glyph cache if required */
+                    f->width = 1;
+                    f->height = 1;
+                    f->data = (char *)g_malloc(1, 1);
+                }
+                else if (s_check_rem(s, datasize))
                 {
                     f->data = (char *)g_malloc(datasize, 0);
                     in_uint8a(s, f->data, datasize);
