@@ -391,6 +391,9 @@ int
 xrdp_login_wnd_create(struct xrdp_wm *self);
 int
 load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp);
+void
+xrdp_login_wnd_scale_config_values(struct xrdp_wm *self);
+
 
 /* xrdp_bitmap_compress.c */
 int
