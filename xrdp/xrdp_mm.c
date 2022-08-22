@@ -1107,27 +1107,47 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     }
     session_width = rect.right - rect.left;
     session_height = rect.bottom - rect.top;
-    if ((session_width > 0) && (session_height > 0))
-    {
-        // TODO: Unify this logic with server_reset
-        libxrdp_reset(wm->session, session_width, session_height, wm->screen->bpp);
-        /* reset cache */
-        xrdp_cache_reset(wm->cache, wm->client_info);
-        /* resize the main window */
-        xrdp_bitmap_resize(wm->screen, session_width, session_height);
-        /* load some stuff */
-        xrdp_wm_load_static_colors_plus(wm, 0);
-        xrdp_wm_load_static_pointers(wm);
-        /* redraw */
-        xrdp_bitmap_invalidate(wm->screen, 0);
 
-        struct xrdp_mod *v = wm->mm->mod;
-        if (v != 0)
-        {
-            v->mod_server_version_message(v);
-            v->mod_server_monitor_resize(v, session_width, session_height);
-            v->mod_server_monitor_full_invalidate(v, session_width, session_height);
-        }
+    if (session_width <= 0 && session_height <= 0)
+    {
+        return 0;
+    }
+    if (session_width == wm->client_info->width
+            && session_height == wm->client_info->height)
+    {
+        return 0;
+    }
+
+    // TODO: Unify this logic with server_reset
+    libxrdp_reset(wm->session, session_width, session_height, wm->screen->bpp);
+    /* reset cache */
+    xrdp_cache_reset(wm->cache, wm->client_info);
+    /* resize the main window */
+    xrdp_bitmap_resize(wm->screen, session_width, session_height);
+    /* load some stuff */
+    xrdp_wm_load_static_colors_plus(wm, 0);
+    xrdp_wm_load_static_pointers(wm);
+    /* redraw */
+    xrdp_bitmap_invalidate(wm->screen, 0);
+
+    struct xrdp_mod *v = wm->mm->mod;
+    if (v == 0)
+    {
+        return 0;
+    }
+    v->mod_server_version_message(v);
+    v->mod_server_monitor_resize(v, session_width, session_height);
+    v->mod_server_monitor_full_invalidate(v, session_width, session_height);
+
+    // Need to recreate the encoder for connections that use it.
+    if (wm->mm->encoder != NULL)
+    {
+        xrdp_encoder_delete(wm->mm->encoder);
+        wm->mm->encoder = NULL;
+    }
+    if (wm->mm->encoder == NULL)
+    {
+        wm->mm->encoder = xrdp_encoder_create(wm->mm);
     }
     return 0;
 }
