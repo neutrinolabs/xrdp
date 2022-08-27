@@ -116,6 +116,7 @@ EnableSyslog=true
 ; Arch Linux            :  param=/usr/lib/Xorg
 ; CentOS 7              :  param=/usr/bin/Xorg or param=Xorg
 ; CentOS 8              :  param=/usr/libexec/Xorg
+; FreeBSD (from 2022Q4) :  param=/usr/local/libexec/Xorg
 ;
 param=Xorg
 ; Leave the rest paramaters as-is unless you understand what will happen.
