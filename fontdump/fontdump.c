@@ -72,14 +72,18 @@ msg(char *msg1, ...)
 static int
 show_last_error(void)
 {
-    LPVOID lpMsgBuf;
-
-    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                   NULL, GetLastError(),
-                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                   (LPSTR)&lpMsgBuf, 0, NULL);
-    msg("GetLastError - %s", lpMsgBuf);
-    LocalFree(lpMsgBuf);
+    LPVOID lpMsgBuf = NULL;
+    DWORD len;
+    len = FormatMessageA(
+              FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+              NULL, GetLastError(),
+              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+              (LPSTR)&lpMsgBuf, 0, NULL);
+    if (len > 0)
+    {
+        msg("GetLastError - %s", lpMsgBuf);
+        LocalFree(lpMsgBuf);
+    }
     return 0;
 }
 
