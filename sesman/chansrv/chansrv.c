@@ -197,7 +197,7 @@ check_timeout(void)
     struct timeout_obj *temp_tobj;
     int count;
     tui32 now;
-
+    UNUSED_VAR(count);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "check_timeout:");
     count = 0;
     tobj = g_timeout_head;
