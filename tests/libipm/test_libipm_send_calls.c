@@ -64,7 +64,7 @@ static const unsigned char all_test_expected_buff[] =
 };
 
 /* Type used to map small test values (i.e. simple types that fit in an int)
- * to expected status codes if we try to output them for a given tyoe */
+ * to expected status codes if we try to output them for a given type */
 struct int_test_value
 {
     int value;

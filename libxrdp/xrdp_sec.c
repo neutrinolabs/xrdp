@@ -1012,7 +1012,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
              && len_password == 0
              && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
     {
-        LOG(LOG_LEVEL_DEBUG, "Client supplied a Logon token. Overwritting password with logon token.");
+        LOG(LOG_LEVEL_DEBUG, "Client supplied a Logon token. Overwriting password with logon token.");
         g_strncpy(self->rdp_layer->client_info.password, sep + 1,
                   sizeof(self->rdp_layer->client_info.password) - 1);
         self->rdp_layer->client_info.username[sep - self->rdp_layer->client_info.username] = '\0';
@@ -1036,7 +1036,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
             && self->rdp_layer->client_info.domain[0] != '\0')
     {
-        LOG(LOG_LEVEL_DEBUG, "Client supplied domain with user name. Overwritting user name with user name parsed from domain.");
+        LOG(LOG_LEVEL_DEBUG, "Client supplied domain with user name. Overwriting user name with user name parsed from domain.");
         int size = sizeof(self->rdp_layer->client_info.username);
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain_user_separator, size - 1 - g_strlen(self->rdp_layer->client_info.domain_user_separator));
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
@@ -1079,7 +1079,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         {
             return 1;
         }
-        /* TS_EXTENDED_INFO_PACKET requiered fields */
+        /* TS_EXTENDED_INFO_PACKET required fields */
         in_uint8s(s, 2);         /* clientAddressFamily */
         in_uint16_le(s, len_ip);
         if (unicode_utf16_in(s, len_ip - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
@@ -1098,7 +1098,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET "
-                  "<Requiered Fields> clientAddressFamily (ignored), "
+                  "<Required Fields> clientAddressFamily (ignored), "
                   "cbClientAddress (ignored), clientAddress (ignored), "
                   "cbClientDir (ignored), clientDir (ignored)");
 
@@ -1983,7 +1983,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint8s(s, 64); /* imeFileName */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Required fields> version %08x, desktopWidth %d, "
-              "desktopHeight %d, colorDepth %s, SASSequence (ingored), "
+              "desktopHeight %d, colorDepth %s, SASSequence (ignored), "
               "keyboardLayout (ignored), clientBuild (ignored), "
               "clientName %s, keyboardType (ignored), "
               "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
@@ -2668,12 +2668,12 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     in_uint32_le(s, client_info->keyboard_type); /* [MS-RDPBCGR] TS_UD_CS_CORE keyboardType */
     in_uint32_le(s, client_info->keyboard_subtype); /* [MS-RDPBCGR] TS_UD_CS_CORE keyboardSubType */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
-              "<Requiered fields> version (ignored), desktopWidth (ignored), "
-              "desktopHeight (ignored), colorDepth (ignored), SASSequence (ingored), "
+              "<Required fields> version (ignored), desktopWidth (ignored), "
+              "desktopHeight (ignored), colorDepth (ignored), SASSequence (ignored), "
               "keyboardLayout 0x%8.8x, clientBuild %d, "
               "clientName %s, keyboardType 0x%8.8x, "
               "keyboardSubType 0x%8.8x, keyboardFunctionKey (ignored), "
-              "imeFileName (ignroed)",
+              "imeFileName (ignored)",
               client_info->keylayout,
               client_info->build,
               client_info->hostname,

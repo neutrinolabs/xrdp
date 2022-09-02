@@ -40,7 +40,7 @@
 struct lock_uds
 {
     char *filename; ///<< Name of the lock file
-    int fd; ///<< File decriptor for open file
+    int fd; ///<< File descriptor for open file
     int pid; ///<< PID of process originally taking out lock
 };
 

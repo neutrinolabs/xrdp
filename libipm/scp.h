@@ -101,7 +101,7 @@ scp_port_to_display_string(const char *port, char *buff, unsigned int bufflen);
  *         termination, or NULL for none.
  * @return Initialised SCP transport
  *
- * The returned tranport has the is_term member set to term_func.
+ * The returned transport has the is_term member set to term_func.
  */
 struct trans *
 scp_connect(const  char *port,
@@ -113,7 +113,7 @@ scp_connect(const  char *port,
  * @param trans connected endpoint
  * @return != 0 for error
  *
- * The returned tranport has the is_term member set to term_func.
+ * The returned transport has the is_term member set to term_func.
  */
 int
 scp_init_trans(struct trans *trans);

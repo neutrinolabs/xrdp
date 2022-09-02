@@ -56,7 +56,7 @@ UNIX domain socket for xrdp-sesman(8) to listen on.
 .RS
 The default value of this setting is 'sesman.socket'.
 .PP
-An absoute path can be specified by starting this parameter with a '/'.
+An absolute path can be specified by starting this parameter with a '/'.
 In this instance, the system administrator is responsible for ensuring
 the socket can only be created by a suitably privileged process.
 .PP
@@ -334,8 +334,8 @@ drive. To fix this, consult the docs for your chosen desktop.
 \fBFileUmask\fR=\fImode\fR
 Additional umask to apply to files in the \fBFuseMountName\fR directory.
 The default value of 077 prevents other users on the system from reading
-files on your redirected drives. This may not be approprate for all
-environents, and so you can change this value to allow other users to
+files on your redirected drives. This may not be appropriate for all
+environments, and so you can change this value to allow other users to
 access your remote files if required.
 
 .TP

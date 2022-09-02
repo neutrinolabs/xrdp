@@ -62,7 +62,7 @@ enum libipm_status
 {
     E_LI_SUCCESS = 0,
     E_LI_PROGRAM_ERROR, /***< Programming error */
-    E_LI_NO_MEMORY, /***< Memory allocaton failure */
+    E_LI_NO_MEMORY, /***< Memory allocation failure */
     E_LI_UNSUPPORTED_TYPE, /***< Specified type code is unsupported */
     E_LI_UNIMPLEMENTED_TYPE, /***< Specified type code is unimplemented */
     E_LI_UNEXPECTED_TYPE, /***< Encountered unexpected type on input */

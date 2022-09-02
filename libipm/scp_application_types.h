@@ -56,7 +56,7 @@ struct scp_session_info
     unsigned short width; ///< Initial session width
     unsigned short height; ///< Initial session height
     unsigned char bpp;  ///< Session bits-per-pixel
-    time_t start_time;  ///< When sesion was created
+    time_t start_time;  ///< When session was created
     char *username;     ///< Username for session
     char *start_ip_addr; ///< IP address of starting client
 };

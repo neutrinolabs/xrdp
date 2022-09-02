@@ -823,7 +823,7 @@ main(int argc, char **argv)
 
     }
 
-    /* Now we've forked (if necessary), we can get the prgram PID */
+    /* Now we've forked (if necessary), we can get the program PID */
     g_pid = g_getpid();
 
     /* signal handling */

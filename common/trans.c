@@ -700,7 +700,7 @@ poll_for_async_connect(struct trans *self, int start_time, int timeout)
     while (ms_remaining > 0)
     {
         int poll_time = ms_remaining;
-        /* Lower bound for waititng for a result */
+        /* Lower bound for waiting for a result */
         if (poll_time < 100)
         {
             poll_time = 100;

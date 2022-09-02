@@ -90,11 +90,11 @@ case "$1" in
             value=$?
             [ $value -gt 0 ] && exitval=$value
         fi
-        # Make pidfile readables for all users (for status to work)
+        # Make pidfile readable for all users (for status to work)
         [ -e $PIDDIR/xrdp-sesman.pid ] && chmod 0644 $PIDDIR/xrdp-sesman.pid
         [ -e $PIDDIR/$NAME.pid ] && chmod 0644 $PIDDIR/$NAME.pid
         # Note: Unfortunately, xrdp currently takes too long to create
-        # the pidffile unless properly patched
+        # the pidfile unless properly patched
         log_end_msg $exitval
 	;;
   stop)

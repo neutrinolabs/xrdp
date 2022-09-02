@@ -706,8 +706,8 @@ struct xrdp_cfg_globals
     /* transform to apply to logo */
     int  ls_logo_width;          /* logo width (optional) */
     int  ls_logo_height;          /* logo height (optional) */
-    int  ls_logo_x_pos;          /* logo x co-ordinate */
-    int  ls_logo_y_pos;          /* logo y co-ordinate */
+    int  ls_logo_x_pos;          /* logo x coordinate */
+    int  ls_logo_y_pos;          /* logo y coordinate */
     int  ls_label_x_pos;         /* x pos of labels */
     int  ls_label_width;         /* width of labels */
     int  ls_input_x_pos;         /* x pos of text and combo boxes */
