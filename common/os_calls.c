@@ -2695,7 +2695,7 @@ g_execvp(const char *p1, char *args[])
     g_strnjoin(args_str, ARGS_STR_LEN, " ", (const char **) args, args_len);
 
     LOG(LOG_LEVEL_DEBUG,
-        "Calling exec (excutable: %s, arguments: %s)",
+        "Calling exec (executable: %s, arguments: %s)",
         p1, args_str);
 
     g_rm_temp_dir();
@@ -2703,7 +2703,7 @@ g_execvp(const char *p1, char *args[])
 
     /* should not get here */
     LOG(LOG_LEVEL_ERROR,
-        "Error calling exec (excutable: %s, arguments: %s) "
+        "Error calling exec (executable: %s, arguments: %s) "
         "returned errno: %d, description: %s",
         p1, args_str, g_get_errno(), g_get_strerror());
 
@@ -2727,7 +2727,7 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
     g_strnjoin(args_str, ARGS_STR_LEN, " ", args, 2);
 
     LOG(LOG_LEVEL_DEBUG,
-        "Calling exec (excutable: %s, arguments: %s)",
+        "Calling exec (executable: %s, arguments: %s)",
         a1, args_str);
 
     g_rm_temp_dir();
@@ -2735,7 +2735,7 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
 
     /* should not get here */
     LOG(LOG_LEVEL_ERROR,
-        "Error calling exec (excutable: %s, arguments: %s) "
+        "Error calling exec (executable: %s, arguments: %s) "
         "returned errno: %d, description: %s",
         a1, args_str, g_get_errno(), g_get_strerror());
 

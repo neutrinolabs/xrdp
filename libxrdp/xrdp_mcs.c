@@ -190,7 +190,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE,
                   "Received [ITU-T T.125] DisconnectProviderUltimatum");
-        LOG(LOG_LEVEL_DEBUG, "Recieved disconnection request");
+        LOG(LOG_LEVEL_DEBUG, "Received disconnection request");
         return 1;
     }
 
@@ -971,7 +971,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
               SEC_TAG_SRV_INFO,
               self->mcs_layer->iso_layer->rdpNegData ? 12 : 8);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
-              "<Requiered fields> version 0x%8.8x", 0x00080004);
+              "<Required fields> version 0x%8.8x", 0x00080004);
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
         /* RequestedProtocol */
@@ -1315,17 +1315,17 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
-    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] construct connection reponse");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] construct connection response");
     if (xrdp_mcs_out_gcc_data(self->sec_layer) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] construct connection reponse failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] construct connection response failed");
         return 1;
     }
 
-    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send connection reponse");
+    LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence] send connection response");
     if (xrdp_mcs_send_connect_response(self) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send connection reponse failed");
+        LOG(LOG_LEVEL_ERROR, "[MCS Connection Sequence] send connection response failed");
         return 1;
     }
 

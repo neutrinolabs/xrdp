@@ -425,7 +425,7 @@ resize_client(struct vnc *v, int update_in_progress, int width, int height)
  *
  * This has some limitations. We have no way to move multiple screens about
  * on a connected client, and so we are not able to change the client unless
- * we're changing to a single screeen layout.
+ * we're changing to a single screen layout.
  */
 static int
 resize_client_from_layout(struct vnc *v,

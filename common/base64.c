@@ -32,7 +32,7 @@
  * Values for invalid and padding characters, used in the charmap
  * for converting base64 to binary
  *
- * Thse value are specially chosen to make it easy to detect padding or
+ * These values are specially chosen to make it easy to detect padding or
  * invalid characters by or-ing together the values looked up in
  * a base64 quantum */
 #define E_INVALID 0x40

@@ -342,7 +342,7 @@ context_add_card(struct pcsc_uds_client *uds_client,
     if (pcscCard == 0)
     {
         LOG(LOG_LEVEL_ERROR,
-            "context_add_card: failed to allocate memmory for pcsc_card");
+            "context_add_card: failed to allocate memory for pcsc_card");
         return 0;
     }
     g_autoinc++;
@@ -355,7 +355,7 @@ context_add_card(struct pcsc_uds_client *uds_client,
         if (acontext->cards == 0)
         {
             LOG(LOG_LEVEL_ERROR, "context_add_card: failed to allocate "
-                "memmory for uds_client->contexts->cards");
+                "memory for uds_client->contexts->cards");
             return 0;
         }
     }

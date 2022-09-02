@@ -503,7 +503,7 @@ clipboard_send_file_data(int streamId, int lindex,
     g_file_close(fd);
 
     /* Log who transferred which file via clipboard for the purpose of audit */
-    LOG(LOG_LEVEL_INFO, "S2C: Transfered a file: filename=%s, uid=%d", full_fn, g_getuid());
+    LOG(LOG_LEVEL_INFO, "S2C: Transferred a file: filename=%s, uid=%d", full_fn, g_getuid());
 
     return rv;
 }

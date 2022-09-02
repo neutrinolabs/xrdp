@@ -106,7 +106,7 @@ struct irp
 };
 
 IRP *devredir_irp_new(void);
-/* As above, but allocates sufficent space for the specified
+/* As above, but allocates sufficient space for the specified
  * pathname, and copies it in to the pathname field */
 IRP *devredir_irp_with_pathname_new(const char *pathname);
 /* As above, but specifies a pathname length with pathname

@@ -83,12 +83,12 @@ jobs:
     env:
       CC: ${{ matrix.CC }}
 
-      # HACK (2020-11-16): github actions dosen't support YAML anchors/aliases to
+      # HACK (2020-11-16): github actions doesn't support YAML anchors/aliases to
       # avoid repeating long config values. So instead the config values are defined
       # as environment variables using a naming convention with fields that come from
-      # the job config. These environment variables are then referenced as regualr
+      # the job config. These environment variables are then referenced as regular
       # environment variables via the naming convention in the "define env" step to
-      # define the stardard environment variable used in the rest of the steps.
+      # define the standard environment variable used in the rest of the steps.
       CONF_FLAGS_amd64_min: "--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
                   --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
                   --disable-pixman"

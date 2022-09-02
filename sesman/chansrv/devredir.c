@@ -211,9 +211,9 @@ const char *completion_type_to_str(enum COMPLETION_TYPE cid)
 /*****************************************************************************/
 
 /*
- * Convert Windows permssions to Linux permissions.
+ * Convert Windows permissions to Linux permissions.
  *
- * We can't curently support group or other permissions as separate from the
+ * We can't currently support group or other permissions as separate from the
  * owner (not that there's much point). We'll assume our caller will provide
  * a umask if appropriate
  */
