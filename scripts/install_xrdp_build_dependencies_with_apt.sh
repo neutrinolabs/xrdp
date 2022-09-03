@@ -70,7 +70,7 @@ in
             libx11-dev \
             libxrandr-dev \
             libxfixes-dev"
-        
+
         case "$FEATURE_SET"
         in
             min)
@@ -112,7 +112,7 @@ in
             libxrandr-dev:i386 \
             libxrender-dev:i386 \
             libfuse-dev:i386"
-        
+
         dpkg --add-architecture i386
         dpkg --print-architecture
         dpkg --print-foreign-architectures

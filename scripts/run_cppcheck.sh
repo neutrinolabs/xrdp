@@ -53,6 +53,6 @@ fi
 
 # Display the cppcheck version and command for debugging
 "$CPPCHECK" --version && {
-    echo Command: $CPPCHECK $CPPCHECK_FLAGS "$@"
+    echo "Command: $CPPCHECK $CPPCHECK_FLAGS" "$@"
     "$CPPCHECK" $CPPCHECK_FLAGS "$@"
 }
