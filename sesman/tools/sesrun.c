@@ -369,7 +369,7 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
 
     if (argc <= optind)
     {
-        LOG(LOG_LEVEL_ERROR, "No user name speciified");
+        LOG(LOG_LEVEL_ERROR, "No user name specified");
         params_ok = 0;
     }
     else if ((argc - optind) > 1)

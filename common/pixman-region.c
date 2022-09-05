@@ -1652,7 +1652,7 @@ quick_sort_rects (
  *
  * Side Effects:
  *      The passed-in ``region'' may be modified.
- *      overlap set to TRUE if any retangles overlapped,
+ *      overlap set to TRUE if any rectangles overlapped,
  *      else FALSE;
  *
  * Strategy:

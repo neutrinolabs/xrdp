@@ -29,7 +29,7 @@
  *
  * xrdp constants
  *
- * Constants defined in publically available Microsoft documents are not
+ * Constants defined in publicly available Microsoft documents are not
  * stored here, but are stored in the include files ms-*.h, where the name
  * of the file is the name of the document defining the constant.
  *

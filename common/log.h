@@ -81,7 +81,7 @@ enum logReturns
  * @brief Logging macro for messages that are for an XRDP developer to
  * understand and debug XRDP code.
  *
- * Note: all log levels are relavant to help a developer understand XRDP at
+ * Note: all log levels are relevant to help a developer understand XRDP at
  *      different levels of granularity.
  *
  * Note: the logging function calls are removed when USE_DEVEL_LOGGING is
@@ -107,7 +107,7 @@ enum logReturns
     log_message_with_location(__func__, __FILE__, __LINE__, log_level, args)
 
 /**
- * @brief Logging macro for messages that are for a systeam administrator to
+ * @brief Logging macro for messages that are for a system administrator to
  * configure and run XRDP on their machine.
  *
  * Note: the logging function calls contain additional code location info when
@@ -297,8 +297,8 @@ internal_log_is_enabled_for_level(const enum logLevels log_level,
                                   const enum logLevels override_log_level);
 
 /**
- * @param function_name, the function name (typicaly the __func__ macro)
- * @param file_name, the file name (typicaly the __FILE__ macro)
+ * @param function_name, the function name (typically the __func__ macro)
+ * @param file_name, the file name (typically the __FILE__ macro)
  * @param[out] log_level_return, the log level to use instead of the destination log level
  * @return true if the logger location overrides the destination log levels
  */
@@ -402,9 +402,9 @@ log_hexdump(const enum logLevels log_level,
  *
  * Please prefer to use the LOG and LOG_DEVEL macros instead of this function directly.
  *
- * @param function_name, the function name (typicaly the __func__ macro)
- * @param file_name, the file name (typicaly the __FILE__ macro)
- * @param line_number, the line number in the file (typicaly the __LINE__ macro)
+ * @param function_name, the function name (typically the __func__ macro)
+ * @param file_name, the file name (typically the __FILE__ macro)
+ * @param line_number, the line number in the file (typically the __LINE__ macro)
  * @param lvl, the loglevel
  * @param msg, the logtext.
  * @param ...

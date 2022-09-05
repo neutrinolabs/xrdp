@@ -36,7 +36,7 @@ struct trans;
  *
  * Any other incoming messages are ignored.
  *
- * Following this call, the mesage can be parsed in the usual way.
+ * Following this call, the message can be parsed in the usual way.
  *
  * @param t SCP transport
  * @param wait_msgno Code of the message we're waiting for.

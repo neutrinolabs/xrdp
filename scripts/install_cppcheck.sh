@@ -34,12 +34,12 @@ call_make()
     status=1
     log=`mktemp /tmp/cppcheck-log.XXXXXXXXXX`
     if [ -n "$log" ]; then
-        make "$@" >$log 2>&1
+        make "$@" >"$log" 2>&1
         status=$?
         if [ $status -ne 0 ]; then
-            cat $log >&2
+            cat "$log" >&2
         fi
-        rm $log
+        rm "$log"
     fi
 
     # Re-enable `set -e` if active before
@@ -119,9 +119,9 @@ fi
 
     # See https://stackoverflow.com/questions/
     #     791959/download-a-specific-tag-with-git
-    git clone -b $CPPCHECK_VER --depth 1 $REPO_URL $workdir
+    git clone -b "$CPPCHECK_VER" --depth 1 "$REPO_URL" "$workdir"
 
-    cd $workdir
+    cd "$workdir"
 
     case "$CPPCHECK_VER" in
         1.*)
@@ -145,13 +145,13 @@ fi
     call_make $make_args
 
     echo "Installing cppcheck..."
-    mkdir -p $FILESDIR
+    mkdir -p "$FILESDIR"
     call_make install $make_args
 )
 status=$?
 
 if [ $status -eq 0 ]; then
-    rm -rf $workdir
+    rm -rf "$workdir"
 else
     "** Script failed. Work dir is $workdir" >&2
 fi

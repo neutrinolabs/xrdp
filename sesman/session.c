@@ -454,7 +454,7 @@ session_start(long data,
     char **pp1 = (char **)NULL;
     struct session_chain *temp = (struct session_chain *)NULL;
     struct list *xserver_params = (struct list *)NULL;
-    char authfile[256]; /* The filename for storing xauth informations */
+    char authfile[256]; /* The filename for storing xauth information */
     int chansrv_pid;
     int display_pid;
     int window_manager_pid;
@@ -594,7 +594,7 @@ session_start(long data,
             g_exit(0);
             /*
              * intermediate sesman should exit here after WM exits.
-             * do not execure the following codes.
+             * do not execute the following codes.
              */
         }
 #endif
@@ -629,7 +629,7 @@ session_start(long data,
                     {
                         LOG(LOG_LEVEL_INFO,
                             "Starting user requested window manager on "
-                            "display %d with embeded arguments using a shell: %s",
+                            "display %d with embedded arguments using a shell: %s",
                             display, s->shell);
                         const char *argv[] = {"sh", "-c", s->shell, NULL};
                         g_execvp("/bin/sh", (char **)argv);
@@ -688,7 +688,7 @@ session_start(long data,
                     "There is no X server active on display %d", display);
             }
 
-            LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting to start "
+            LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting to start "
                 "the window manager on display %d, aborting connection",
                 display);
             g_exit(0);
@@ -747,7 +747,7 @@ session_start(long data,
                         "Error setting the xauth cookie for display %d in file %s",
                         display, authfile);
 
-                    LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting to start "
+                    LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting to start "
                         "the X server on display %d, aborting connection",
                         display);
                     g_exit(1);
@@ -863,7 +863,7 @@ session_start(long data,
                 {
                     LOG(LOG_LEVEL_ERROR, "Unknown session type: %d",
                         s->type);
-                    LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting "
+                    LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
                         "to start the X server on display %d, aborting connection",
                         display);
                     g_exit(1);
@@ -877,7 +877,7 @@ session_start(long data,
                 /* should not get here */
                 LOG(LOG_LEVEL_ERROR,
                     "Error starting X server on display %d", display);
-                LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting "
+                LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
                     "to start the X server on display %d, aborting connection",
                     display);
 

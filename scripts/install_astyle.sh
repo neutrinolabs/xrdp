@@ -34,12 +34,12 @@ call_make()
     status=1
     log=`mktemp /tmp/astyle-log.XXXXXXXXXX`
     if [ -n "$log" ]; then
-        make "$@" >$log 2>&1
+        make "$@" >"$log" 2>&1
         status=$?
         if [ $status -ne 0 ]; then
-            cat $log >&2
+            cat "$log" >&2
         fi
-        rm $log
+        rm "$log"
     fi
 
     # Re-enable `set -e` if active before
@@ -80,27 +80,27 @@ fi
     # Put everything in this directory
     FILESDIR=$INSTALL_ROOT/$ASTYLE_VER
 
-    svn checkout ${REPO_URL}/${ASTYLE_VER}/AStyle $workdir
+    svn checkout ${REPO_URL}/${ASTYLE_VER}/AStyle "$workdir"
 
-    cd $workdir
+    cd "$workdir"
 
     make_args="DESTDIR=$FILESDIR"
-    
+
     echo "Creating Makefiles..."
     cmake .
-    
+
     echo "Making astyle..."
     call_make $make_args
 
     echo "Installing astyle..."
-    mkdir -p $FILESDIR
+    mkdir -p "$FILESDIR"
     call_make install $make_args
     # make install DESTDIR=~/astyle.local/3.1
 )
 status=$?
 
 if [ $status -eq 0 ]; then
-    rm -rf $workdir
+    rm -rf "$workdir"
 else
     "** Script failed. Work dir is $workdir" >&2
 fi

@@ -27,7 +27,7 @@
  * Map a character to a string value
  *
  * This structure is used by g_format_info_string() to specify the
- * string which chould be output for %'ch', where ch is a character
+ * string which could be output for %'ch', where ch is a character
  */
 struct info_string_tag
 {
@@ -132,7 +132,7 @@ g_text2bool(const char *s);
  * @param[in] src An array of strings to join. The array must be non-null.
  *      Array items may be NULL and are processed as zero length strings.
  * @param[in] src_len The number of strings to join in the src array. Must be > 0
- * @return A pointer to the begining of the joined string (ie. returns dest).
+ * @return A pointer to the beginning of the joined string (ie. returns dest).
  */
 char *
 g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int src_len);

@@ -607,7 +607,7 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
     }
 
     /* Validate the bit count for the file, read any palette, and
-     * dtermine the row size and row processing function */
+     * determine the row size and row processing function */
     switch (header.bit_count)
     {
         case 24:
@@ -749,7 +749,7 @@ log_imlib2_error(enum logLevels level, const char *filename,
             msg = " No memory";
             break;
         case IMLIB_LOAD_ERROR_OUT_OF_FILE_DESCRIPTORS:
-            msg = "No file decriptors";
+            msg = "No file descriptors";
             break;
         case IMLIB_LOAD_ERROR_OUT_OF_DISK_SPACE:
             msg = "No disk space";

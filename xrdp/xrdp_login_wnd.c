@@ -737,7 +737,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
         /* Load the background image. */
         /* If no file is specified no default image will be loaded. */
         /* We only load the image if bpp > 8, and if the user hasn't
-         * disabled wallpaer in the performance settings */
+         * disabled wallpaper in the performance settings */
         if (globals->ls_background_image[0] != 0)
         {
             if (self->screen->bpp <= 8)

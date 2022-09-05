@@ -67,7 +67,7 @@ struct xrdp_mcs
     struct stream *client_mcs_data;
     struct stream *server_mcs_data;
     struct list *channel_list;
-    /* This boolean is set to indicate we're expecing channel join
+    /* This boolean is set to indicate we're expecting channel join
      * requests as part of the connect sequence */
     int expecting_channel_join_requests;
 };

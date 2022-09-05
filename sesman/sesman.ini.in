@@ -107,7 +107,7 @@ EnableSyslog=true
 
 [Xorg]
 ; Specify the path of non-suid Xorg executable. It might differ depending
-; on your distribution and version. Find out the appropreate path for your
+; on your distribution and version. Find out the appropriate path for your
 ; environment. The typical path is known as follows:
 ;
 ; Fedora 26 or later    :  param=/usr/libexec/Xorg
@@ -119,7 +119,7 @@ EnableSyslog=true
 ; FreeBSD (from 2022Q4) :  param=/usr/local/libexec/Xorg
 ;
 param=Xorg
-; Leave the rest paramaters as-is unless you understand what will happen.
+; Leave the rest parameters as-is unless you understand what will happen.
 param=-config
 param=xrdp/xorg.conf
 param=-noreset
@@ -143,7 +143,7 @@ param=96
 #FuseMountName=/run/user/%u/thinclient_drives
 #FuseMountName=/media/thinclient_drives/%U/thinclient_drives
 FuseMountName=thinclient_drives
-; this value allows only the user to acess their own mapped drives.
+; this value allows only the user to access their own mapped drives.
 ; Make this more permissive (e.g. 022) if required.
 FileUmask=077
 ; Can be used to disable FUSE functionality - see sesman.ini(5)
@@ -154,8 +154,8 @@ FileUmask=077
 #UseNautilus3FlistFormat=true
 
 [ChansrvLogging]
-; Note: one log file is created per display and the LogFile config value 
-; is ignored. The channel server log file names follow the naming convention: 
+; Note: one log file is created per display and the LogFile config value
+; is ignored. The channel server log file names follow the naming convention:
 ; xrdp-chansrv.${DISPLAY}.log
 ;
 ; Note: Log levels can be any of: core, error, warning, info, debug, or trace

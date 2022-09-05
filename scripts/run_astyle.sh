@@ -69,6 +69,6 @@ ASTYLE_FLAGS="--options=astyle_config.as ./\*.c ./\*.h"
 
 # Display the astyle version and command for debugging
 "$ASTYLE" --version && {
-    echo Command: $ASTYLE $ASTYLE_FLAGS
+    echo "Command: $ASTYLE $ASTYLE_FLAGS"
     "$ASTYLE" $ASTYLE_FLAGS
 }

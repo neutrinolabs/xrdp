@@ -799,7 +799,7 @@ scard_send_get_attrib(void *user_data, char *card, int card_bytes,
 ******************************************************************************/
 
 /**
- * Crate a new stream and insert specified IOCTL
+ * Create a new stream and insert specified IOCTL
  *
  * @param  irp    information about the I/O
  * @param  ioctl  the IOCTL code
