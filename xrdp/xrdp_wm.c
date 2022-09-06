@@ -62,7 +62,6 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->log = list_create();
     self->log->auto_free = 1;
     self->mm = xrdp_mm_create(self);
-    self->default_font = xrdp_font_create(self);
     /* this will use built in keymap or load from file */
     get_keymaps(self->session->client_info->keylayout, &(self->keymap));
     xrdp_wm_set_login_state(self, WMLS_RESET);
@@ -570,11 +569,19 @@ xrdp_wm_init(struct xrdp_wm *self)
     char default_section_name[256];
     char section_name[256];
     char autorun_name[256];
+    int dpi;
 
     LOG(LOG_LEVEL_DEBUG, "in xrdp_wm_init: ");
 
     load_xrdp_config(self->xrdp_config, self->session->xrdp_ini,
                      self->screen->bpp);
+
+    /* Load the font */
+    dpi = xrdp_login_wnd_get_monitor_dpi(self);
+    self->default_font = xrdp_font_create(self, dpi);
+
+    /* Scale the login screen values */
+    xrdp_login_wnd_scale_config_values(self);
 
     /* global channels allow */
     names = list_create();
@@ -2047,12 +2054,14 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
 
         if (painter != 0)
         {
+            unsigned int row_height = xrdp_painter_font_body_height(painter);
             painter->fg_color = wnd->wm->black;
 
             for (index = 0; index < wnd->wm->log->count; index++)
             {
                 text = (char *)list_get_item(wnd->wm->log, index);
-                xrdp_painter_draw_text(painter, wnd, 10, 30 + index * 15, text);
+                xrdp_painter_draw_text(painter, wnd, 10,
+                                       (index  + 2) * row_height, text);
             }
         }
     }
@@ -2102,8 +2111,9 @@ xrdp_wm_show_log(struct xrdp_wm *self)
 
     if (self->log_wnd == 0)
     {
-        w = DEFAULT_WND_LOG_W;
-        h = DEFAULT_WND_LOG_H;
+        w = self->xrdp_config->cfg_globals.ls_scaled.log_wnd_width;
+        h = self->xrdp_config->cfg_globals.ls_scaled.log_wnd_height;
+
         xoffset = 10;
         yoffset = 10;
 
@@ -2147,12 +2157,19 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         self->log_wnd->top = primary_y_offset + yoffset;
         set_string(&(self->log_wnd->caption1), "Connection Log");
         /* ok button */
-        but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
+        const char *ok_string = "OK";
+        const int ok_height =
+            self->xrdp_config->cfg_globals.ls_scaled.default_btn_height;
+        const int ok_width = xrdp_painter_text_width(self->painter, ok_string) +
+                             DEFAULT_BUTTON_MARGIN_W;
+
+        but = xrdp_bitmap_create(ok_width, ok_height, self->screen->bpp,
+                                 WND_TYPE_BUTTON, self);
         list_insert_item(self->log_wnd->child_list, 0, (long)but);
         but->parent = self->log_wnd;
         but->owner = self->log_wnd;
-        but->left = (w - DEFAULT_BUTTON_W) - xoffset;
-        but->top = (h - DEFAULT_BUTTON_H) - yoffset;
+        but->left = (w - ok_width) - xoffset;
+        but->top = (h - ok_height) - yoffset;
         but->id = 1;
         but->tab_stop = 1;
         set_string(&but->caption1, "OK");

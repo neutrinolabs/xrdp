@@ -11,7 +11,6 @@ EXTRA_DIST = \
   astyle_config.as \
   bootstrap \
   coding_style.md \
-  fontdump \
   m4 \
   vrplayer
 
@@ -57,6 +56,7 @@ SUBDIRS = \
   $(RFXCODECDIR) \
   sesman \
   xrdp \
+  fontutils \
   keygen \
   docs \
   instfiles \

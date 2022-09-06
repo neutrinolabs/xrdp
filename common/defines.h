@@ -91,8 +91,10 @@
         b = (c) & 0xff; \
     }
 /* font macros */
-#define FONT_DATASIZE(f) \
-    ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
+#define FONT_DATASIZE_FROM_GEOMETRY(width,height) \
+    ((((height) * (((width) + 7) / 8)) + 3) & ~3)
+#define FONT_DATASIZE(f) FONT_DATASIZE_FROM_GEOMETRY((f->width), (f->height))
+
 /* use crc for bitmap cache lookups */
 #define USE_CRC
 

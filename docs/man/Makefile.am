@@ -1,3 +1,9 @@
+if USE_FREETYPE2
+  MKFV1_MAN = xrdp-mkfv1.8
+else
+  MKFV1_MAN =
+endif
+
 man_MANS = \
   xrdp-dis.1 \
   sesman.ini.5 \
@@ -8,7 +14,9 @@ man_MANS = \
   xrdp-keygen.8 \
   xrdp-sesadmin.8 \
   xrdp-sesman.8 \
-  xrdp-sesrun.8
+  xrdp-sesrun.8 \
+  xrdp-dumpfv1.8 \
+  $(MKFV1_MAN)
 
 EXTRA_DIST = $(man_MANS:=.in)
 
@@ -21,6 +29,7 @@ SUBST_VARS = sed \
    -e 's|@socketdir[@]|$(socketdir)|g' \
    -e 's|@sesmanruntimedir[@]|$(sesmanruntimedir)|g' \
    -e 's|@xrdpconfdir[@]|$(sysconfdir)/xrdp|g' \
+   -e 's|@xrdpdatadir[@]|$(datadir)/xrdp|g' \
    -e 's|@xrdphomeurl[@]|http://www.xrdp.org/|g'
 
 subst_verbose = $(subst_verbose_@AM_V@)

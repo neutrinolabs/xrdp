@@ -605,12 +605,13 @@ struct xrdp_bitmap
 
 #define NUM_FONTS 0x4e00
 #define DEFAULT_FONT_NAME "sans-10.fv1"
+#define DEFAULT_FONT_PIXEL_SIZE 16
+#define DEFAULT_FV1_SELECT "130:sans-18.fv1,0:" DEFAULT_FONT_NAME
 
-#define DEFAULT_ELEMENT_TOP   35
-#define DEFAULT_BUTTON_W      60
-#define DEFAULT_BUTTON_H      23
-#define DEFAULT_COMBO_H       21
-#define DEFAULT_EDIT_H        21
+#define DEFAULT_BUTTON_MARGIN_H 12
+#define DEFAULT_BUTTON_MARGIN_W 12
+#define DEFAULT_COMBO_MARGIN_H 6
+#define DEFAULT_EDIT_MARGIN_H  6
 #define DEFAULT_WND_LOGIN_W   425
 #define DEFAULT_WND_LOGIN_H   475
 #define DEFAULT_WND_HELP_W    340
@@ -626,6 +627,8 @@ struct xrdp_font
     struct xrdp_font_char font_items[NUM_FONTS];
     char name[32];
     int size;
+    /** Body height in pixels */
+    int body_height;
     int style;
 };
 
@@ -655,8 +658,38 @@ struct xrdp_startup_params
 };
 
 /*
- * For storing xrdp.ini configuration settings
+ * For storing xrdp.ini (and other) configuration settings
  */
+
+struct xrdp_ls_dimensions
+{
+    int  width;               /* window width */
+    int  height;              /* window height */
+    int  logo_width;          /* logo width (optional) */
+    int  logo_height;          /* logo height (optional) */
+    int  logo_x_pos;          /* logo x co-ordinate */
+    int  logo_y_pos;          /* logo y co-ordinate */
+    int  label_x_pos;         /* x pos of labels */
+    int  label_width;         /* width of labels */
+    int  input_x_pos;         /* x pos of text and combo boxes */
+    int  input_width;         /* width of input and combo boxes */
+    int  input_y_pos;         /* y pos for for first label and combo box */
+    int  btn_ok_x_pos;        /* x pos for OK button */
+    int  btn_ok_y_pos;        /* y pos for OK button */
+    int  btn_ok_width;        /* width of OK button */
+    int  btn_ok_height;       /* height of OK button */
+    int  btn_cancel_x_pos;    /* x pos for Cancel button */
+    int  btn_cancel_y_pos;    /* y pos for Cancel button */
+    int  btn_cancel_width;    /* width of Cancel button */
+    int  btn_cancel_height;   /* height of Cancel button */
+    int default_btn_height;   /* Default button height (e.g. OK on login box) */
+    int log_wnd_width;        /* Width of log window */
+    int log_wnd_height;       /* Height of log window */
+    int edit_height;          /* Height of an edit box */
+    int combo_height;         /* Height of a combo box */
+    int help_wnd_width;        /* Width of login help window */
+    int help_wnd_height;       /* Height of login help window */
+};
 
 struct xrdp_cfg_globals
 {
@@ -694,34 +727,21 @@ struct xrdp_cfg_globals
     int  background;
 
     /* login screen */
+    unsigned int  default_dpi;   /* Default DPI to use if nothing from client */
+    char fv1_select[256];        /* Selection string for fv1 font */
     int  ls_top_window_bg_color; /* top level window background color */
-    int  ls_width;               /* window width */
-    int  ls_height;              /* window height */
     int  ls_bg_color;            /* background color */
     char ls_background_image[256];  /* background image file name */
-    enum xrdp_bitmap_load_transform ls_background_transform;
     /* transform to apply to background image */
+    enum xrdp_bitmap_load_transform ls_background_transform;
     char ls_logo_filename[256];  /* logo filename */
-    enum xrdp_bitmap_load_transform ls_logo_transform;
     /* transform to apply to logo */
-    int  ls_logo_width;          /* logo width (optional) */
-    int  ls_logo_height;          /* logo height (optional) */
-    int  ls_logo_x_pos;          /* logo x coordinate */
-    int  ls_logo_y_pos;          /* logo y coordinate */
-    int  ls_label_x_pos;         /* x pos of labels */
-    int  ls_label_width;         /* width of labels */
-    int  ls_input_x_pos;         /* x pos of text and combo boxes */
-    int  ls_input_width;         /* width of input and combo boxes */
-    int  ls_input_y_pos;         /* y pos for for first label and combo box */
-    int  ls_btn_ok_x_pos;        /* x pos for OK button */
-    int  ls_btn_ok_y_pos;        /* y pos for OK button */
-    int  ls_btn_ok_width;        /* width of OK button */
-    int  ls_btn_ok_height;       /* height of OK button */
-    int  ls_btn_cancel_x_pos;    /* x pos for Cancel button */
-    int  ls_btn_cancel_y_pos;    /* y pos for Cancel button */
-    int  ls_btn_cancel_width;    /* width of Cancel button */
-    int  ls_btn_cancel_height;   /* height of Cancel button */
+    enum xrdp_bitmap_load_transform ls_logo_transform;
     char ls_title[256];          /* loginscreen window title */
+    /* Login screen dimensions, unscaled (from config) */
+    struct xrdp_ls_dimensions ls_unscaled;
+    /* Login screen dimensions, scaled (after font is loaded) */
+    struct xrdp_ls_dimensions ls_scaled;
 };
 
 struct xrdp_cfg_logging
