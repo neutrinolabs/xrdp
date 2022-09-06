@@ -61,6 +61,14 @@ PACKAGES=" \
     check \
     "
 
+# libfreetype-dev package was renamed from libfreetype6-dev in older
+# versions
+case `lsb_release -si`/`lsb_release -sr` in
+    Debian/10) LIBFREETYPE_DEV=libfreetype6-dev ;;
+    Ubuntu/18.*) LIBFREETYPE_DEV=libfreetype6-dev ;;
+    *) LIBFREETYPE_DEV=libfreetype-dev
+esac
+
 case "$ARCH"
 in
     amd64)
@@ -79,6 +87,7 @@ in
             max)
                 PACKAGES="$PACKAGES \
                     $PACKAGES_AMD64_MIN
+                    $LIBFREETYPE_DEV \
                     libfuse-dev \
                     libjpeg-dev \
                     libmp3lame-dev \
@@ -97,6 +106,7 @@ in
         PACKAGES="$PACKAGES \
             g++-multilib \
             gcc-multilib \
+            $LIBFREETYPE_DEV:i386 \
             libgl1-mesa-dev:i386 \
             libglu1-mesa-dev:i386 \
             libjpeg-dev:i386 \
