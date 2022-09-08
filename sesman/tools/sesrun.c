@@ -94,7 +94,7 @@ struct session_params
 
     const char *directory;
     const char *shell;
-    const char *connection_description;
+    const char *ip_addr;
 
     const char *username;
     char password[MAX_PASSWORD_LEN + 1];
@@ -165,7 +165,9 @@ usage(void)
 
     g_printf("xrdp session starter v" PACKAGE_VERSION "\n");
     g_printf("\nusage:\n");
-    g_printf("sesrun [options] username\n\n");
+    g_printf("sesrun --help\n"
+             "\nor\n"
+             "sesrun [options] [username]\n\n");
     g_printf("options:\n");
     g_printf("    -g <geometry>         Default:%dx%d\n",
              DEFAULT_WIDTH, DEFAULT_HEIGHT);
@@ -176,9 +178,11 @@ usage(void)
              "    -p <password>         TESTING ONLY - DO NOT USE IN PRODUCTION\n"
              "    -F <file-descriptor>  Read password from this file descriptor\n"
              "    -c <sesman_ini>       Alternative sesman.ini file\n");
-    g_printf("Supported types are %s\n",
+    g_printf("\nSupported types are %s\n",
              sesstype_list);
-    g_printf("Password is prompted if -p or -F are not specified\n");
+    g_printf("\nIf username is omitted, the current user is used.\n"
+             "If username is provided, password is needed.\n"
+             "    Password is prompted for if -p or -F are not specified\n");
 }
 
 
@@ -286,7 +290,7 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
 
     sp->directory = "";
     sp->shell = "";
-    sp->connection_description = "";
+    sp->ip_addr = "";
 
     sp->username = NULL;
     sp->password[0] = '\0';
@@ -367,32 +371,108 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
         }
     }
 
-    if (argc <= optind)
+    if (argc == optind)
     {
-        LOG(LOG_LEVEL_ERROR, "No user name specified");
-        params_ok = 0;
+        // No username was specified
+        if (password_set)
+        {
+            LOG(LOG_LEVEL_WARNING, "No username - ignoring specified password");
+            sp->password[0] = '\0';
+        }
+        sp->username = NULL;
     }
     else if ((argc - optind) > 1)
     {
         LOG(LOG_LEVEL_ERROR, "Unexpected arguments after username");
         params_ok = 0;
     }
-    else
+    else if (params_ok)
     {
+        // A username is specified
         sp->username = argv[optind];
-    }
-
-    if (params_ok && !password_set)
-    {
-        const char *p = getpass("Password: ");
-        if (p != NULL)
+        if (!password_set)
         {
-            g_strcpy(sp->password, p);
+            const char *p = getpass("Password: ");
+            if (p == NULL)
+            {
+                params_ok = 0;
+            }
+            else
+            {
+                g_snprintf(sp->password, sizeof(sp->password), "%s", p);
+            }
         }
     }
 
     return params_ok;
 }
+
+/**************************************************************************//**
+ * Sends an SCP login request
+ *
+ * A sys login request (i.e. username / password) is used if a username
+ * is specified. Otherwise we use a uds login request for the current user.
+ *
+ * @param t SCP connection
+ * @param sp Data for request
+ */
+static int
+send_login_request(struct trans *t, const struct session_params *sp)
+{
+    int rv;
+    LOG(LOG_LEVEL_DEBUG, "ip_addr:\"%s\"", sp->ip_addr);
+    if (sp->username != NULL)
+    {
+        /* Only log the password in development builds */
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "password:\"%s\"", sp->password);
+
+        rv = scp_send_sys_login_request(t, sp->username,
+                                        sp->password, sp->ip_addr);
+    }
+    else
+    {
+        rv = scp_send_uds_login_request(t);
+    }
+
+    return rv;
+}
+
+/**************************************************************************//**
+ * Receives an SCP login response
+ *
+ * @param t SCP transport to receive reply on
+ * @param[out] server_closed != 0 if server has gone away
+ * @return 0 for successful authentication
+ */
+static int
+handle_login_response(struct trans *t, int *server_closed)
+{
+    enum scp_login_status login_result;
+
+    int rv = wait_for_sesman_reply(t, E_SCP_LOGIN_RESPONSE);
+    if (rv != 0)
+    {
+        *server_closed = 1;
+    }
+    else
+    {
+        rv = scp_get_login_response(t, &login_result, server_closed);
+        if (rv == 0)
+        {
+            if (login_result != E_SCP_LOGIN_OK)
+            {
+                char msg[256];
+                scp_login_status_to_str(login_result, msg, sizeof(msg));
+                g_printf("Login failed; %s\n", msg);
+                rv = 1;
+            }
+        }
+        scp_msg_in_reset(t); // Done with this message
+    }
+
+    return rv;
+}
+
 
 /**************************************************************************//**
  * Sends an SCP create session request
@@ -405,18 +485,13 @@ send_create_session_request(struct trans *t, const struct session_params *sp)
 {
     LOG(LOG_LEVEL_DEBUG,
         "width:%d  height:%d  bpp:%d  code:%d\n"
-        "directory:\"%s\"\n"
-        "shell:\"%s\"    connection_description:\"%s\"",
+        "directory:\"%s\" shell:\"%s\"",
         sp->width, sp->height, sp->bpp, sp->session_type,
-        sp->directory,
-        sp->shell, sp->connection_description);
-    /* Only log the password in development builds */
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "password:\"%s\"", sp->password);
+        sp->directory, sp->shell);
 
     return scp_send_create_session_request(
-               t, sp->username, sp->password, sp->session_type,
-               sp->width, sp->height, sp->bpp, sp->shell, sp->directory,
-               sp->connection_description);
+               t, sp->session_type,
+               sp->width, sp->height, sp->bpp, sp->shell, sp->directory);
 }
 
 /**************************************************************************//**
@@ -428,21 +503,24 @@ send_create_session_request(struct trans *t, const struct session_params *sp)
 static int
 handle_create_session_response(struct trans *t)
 {
-    int auth_result;
+    enum scp_screate_status status;
     int display;
     struct guid guid;
 
     int rv = wait_for_sesman_reply(t, E_SCP_CREATE_SESSION_RESPONSE);
     if (rv == 0)
     {
-        rv = scp_get_create_session_response(t, &auth_result,
+        rv = scp_get_create_session_response(t, &status,
                                              &display, &guid);
 
         if (rv == 0)
         {
-            if (auth_result != 0)
+            if (status != E_SCP_SCREATE_OK)
             {
-                g_printf("Connection denied (authentication error)\n");
+                char msg[256];
+                scp_screate_status_to_str(status, msg, sizeof(msg));
+                g_printf("Connection failed; %s\n", msg);
+                rv = 1;
             }
             else
             {
@@ -452,6 +530,7 @@ handle_create_session_response(struct trans *t)
                          guid_to_str(&guid, guid_str));
             }
         }
+        scp_msg_in_reset(t); // Done with this message
     }
 
     return rv;
@@ -475,7 +554,12 @@ main(int argc, char **argv)
     log_start_from_param(logging);
     log_config_free(logging);
 
-    if (!parse_program_args(argc, argv, &sp, &sesman_ini))
+    if (argc == 2 && g_strcmp(argv[1], "--help") == 0)
+    {
+        usage();
+        rv = 0;
+    }
+    else if (!parse_program_args(argc, argv, &sp, &sesman_ini))
     {
         usage();
     }
@@ -484,20 +568,44 @@ main(int argc, char **argv)
         LOG(LOG_LEVEL_ERROR, "error reading config file %s : %s",
             sesman_ini, g_get_strerror());
     }
-    else if (!(t = scp_connect(cfg->listen_port, NULL)))
+    else if (!(t = scp_connect(cfg->listen_port, "xrdp-sesrun", NULL)))
     {
         LOG(LOG_LEVEL_ERROR, "connect error - %s", g_get_strerror());
     }
     else
     {
-        rv = send_create_session_request(t, &sp);
-        if (rv != 0)
+        int server_closed = 0;
+        while (!server_closed)
         {
-            LOG(LOG_LEVEL_ERROR, "Error sending create session to sesman");
+            rv = send_login_request(t, &sp);
+            if (rv != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Error sending login request to sesman");
+                break;
+            }
+
+            rv = handle_login_response(t, &server_closed);
+            if (rv == 0)
+            {
+                break; /* Successful authentication */
+            }
+            if (!server_closed)
+            {
+                const char *p = getpass("Password: ");
+                if (p == NULL)
+                {
+                    break;
+                }
+                g_snprintf(sp.password, sizeof(sp.password), "%s", p);
+            }
         }
-        else
+
+        if (rv == 0)
         {
-            rv = handle_create_session_response(t);
+            if ((rv = send_create_session_request(t, &sp)) == 0)
+            {
+                rv = handle_create_session_response(t);
+            }
         }
         trans_delete(t);
     }
