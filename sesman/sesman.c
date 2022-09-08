@@ -30,13 +30,18 @@
 
 #include <stdarg.h>
 
+#include "arch.h"
 #include "sesman.h"
-#include "xrdp_configure_options.h"
+
+#include "config.h"
+#include "lock_uds.h"
+#include "os_calls.h"
+#include "scp.h"
+#include "scp_process.h"
+#include "sig.h"
 #include "string_calls.h"
 #include "trans.h"
-
-#include "scp_process.h"
-#include "lock_uds.h"
+#include "xrdp_configure_options.h"
 
 /**
  * Maximum number of short-lived connections to sesman
@@ -71,14 +76,6 @@ unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 tintptr g_term_event = 0;
 tintptr g_sigchld_event = 0;
 tintptr g_reload_event = 0;
-
-/**
- * Items stored on the g_con_list
- */
-struct sesman_con
-{
-    struct trans *t;
-};
 
 static struct trans *g_list_trans;
 

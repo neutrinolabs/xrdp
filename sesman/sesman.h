@@ -27,17 +27,13 @@
 #ifndef SESMAN_H
 #define SESMAN_H
 
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "log.h"
-#include "env.h"
-#include "auth.h"
-#include "config.h"
-#include "sig.h"
-#include "session.h"
-#include "access.h"
-#include "scp.h"
+/**
+ * Type for managing sesman connections from xrdp (etc)
+ */
+struct sesman_con
+{
+    struct trans *t;
+};
 
 /* Globals */
 extern struct config_sesman *g_cfg;

@@ -30,11 +30,15 @@
 
 #include <grp.h>
 
-#include "xrdp_sockets.h"
+#include "env.h"
+#include "config.h"
 #include "list.h"
+#include "log.h"
+#include "os_calls.h"
 #include "sesman.h"
 #include "ssl_calls.h"
 #include "string_calls.h"
+#include "xrdp_sockets.h"
 
 /******************************************************************************/
 int

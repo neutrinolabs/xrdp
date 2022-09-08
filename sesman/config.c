@@ -29,9 +29,10 @@
 #endif
 
 #include "arch.h"
+#include "config.h"
+
 #include "list.h"
 #include "file.h"
-#include "sesman.h"
 #include "log.h"
 #include "string_calls.h"
 #include "chansrv/chansrv_common.h"

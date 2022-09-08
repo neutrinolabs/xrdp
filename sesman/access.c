@@ -28,7 +28,13 @@
 #include <config_ac.h>
 #endif
 
+#include "arch.h"
+
+#include "access.h"
+#include "config.h"
+#include "log.h"
 #include "sesman.h"
+#include "os_calls.h"
 #include "string_calls.h"
 
 /******************************************************************************/

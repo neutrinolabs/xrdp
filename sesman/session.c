@@ -37,10 +37,19 @@
 #include <sys/prctl.h>
 #endif
 
+#include "arch.h"
+#include "session.h"
+
+#include "auth.h"
+#include "config.h"
+#include "env.h"
+#include "list.h"
+#include "log.h"
+#include "os_calls.h"
 #include "sesman.h"
+#include "string_calls.h"
 #include "xauth.h"
 #include "xrdp_sockets.h"
-#include "string_calls.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
