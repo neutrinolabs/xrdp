@@ -107,7 +107,8 @@ env_set_user(const char *username, char **passwd_file, int display,
     pw_shell = 0;
     pw_dir = 0;
 
-    error = g_getuser_info(username, &pw_gid, &pw_uid, &pw_shell, &pw_dir, 0);
+    error = g_getuser_info_by_name(username, &pw_uid, &pw_gid, &pw_shell,
+                                   &pw_dir, 0);
 
     if (error == 0)
     {

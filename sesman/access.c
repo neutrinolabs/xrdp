@@ -51,7 +51,7 @@ access_login_allowed(const char *user)
         return 1;
     }
 
-    if (0 != g_getuser_info(user, &gid, 0, 0, 0, 0))
+    if (0 != g_getuser_info_by_name(user, 0, &gid, 0, 0, 0))
     {
         LOG(LOG_LEVEL_ERROR, "Cannot read user info! - login denied");
         return 0;
@@ -100,7 +100,7 @@ access_login_mng_allowed(const char *user)
         return 1;
     }
 
-    if (0 != g_getuser_info(user, &gid, 0, 0, 0, 0))
+    if (0 != g_getuser_info_by_name(user, 0, &gid, 0, 0, 0))
     {
         LOG(LOG_LEVEL_ERROR, "[MNG] Cannot read user info! - login denied");
         return 0;

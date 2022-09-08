@@ -2797,7 +2797,7 @@ g_initgroups(const char *username)
     return 0;
 #else
     int gid;
-    int error = g_getuser_info(username, &gid, NULL, NULL, NULL, NULL);
+    int error = g_getuser_info_by_name(username, NULL, &gid, NULL, NULL, NULL);
     if (error == 0)
     {
         error = initgroups(username, gid);
@@ -3060,36 +3060,90 @@ g_sighup(int pid)
 /* the caller is responsible to free the buffs */
 /* does not work in win32 */
 int
-g_getuser_info(const char *username, int *gid, int *uid, char **shell,
-               char **dir, char **gecos)
+g_getuser_info_by_name(const char *username, int *uid, int *gid,
+                       char **shell, char **dir, char **gecos)
+{
+    int rv = 1;
+#if !defined(_WIN32)
+
+    if (username == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "g_getuser_info_by_name() called for NULL user");
+    }
+    else
+    {
+        struct passwd *pwd_1 = getpwnam(username);
+
+        if (pwd_1 != 0)
+        {
+            rv = 0;
+
+            if (uid != 0)
+            {
+                *uid = pwd_1->pw_uid;
+            }
+
+            if (gid != 0)
+            {
+                *gid = pwd_1->pw_gid;
+            }
+
+            if (shell != 0)
+            {
+                *shell = g_strdup(pwd_1->pw_shell);
+            }
+
+            if (dir != 0)
+            {
+                *dir = g_strdup(pwd_1->pw_dir);
+            }
+
+            if (gecos != 0)
+            {
+                *gecos = g_strdup(pwd_1->pw_gecos);
+            }
+        }
+    }
+#endif
+    return rv;
+}
+
+
+/*****************************************************************************/
+/* returns 0 if ok */
+/* the caller is responsible to free the buffs */
+/* does not work in win32 */
+int
+g_getuser_info_by_uid(int uid, char **username, int *gid,
+                      char **shell, char **dir, char **gecos)
 {
 #if defined(_WIN32)
     return 1;
 #else
     struct passwd *pwd_1;
 
-    pwd_1 = getpwnam(username);
+    pwd_1 = getpwuid(uid);
 
     if (pwd_1 != 0)
     {
+        if (username != NULL)
+        {
+            *username = g_strdup(pwd_1->pw_name);
+        }
+
         if (gid != 0)
         {
             *gid = pwd_1->pw_gid;
         }
 
-        if (uid != 0)
+        if (shell != 0)
         {
-            *uid = pwd_1->pw_uid;
+            *shell = g_strdup(pwd_1->pw_shell);
         }
 
         if (dir != 0)
         {
             *dir = g_strdup(pwd_1->pw_dir);
-        }
-
-        if (shell != 0)
-        {
-            *shell = g_strdup(pwd_1->pw_shell);
         }
 
         if (gecos != 0)
