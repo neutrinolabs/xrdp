@@ -662,7 +662,7 @@ xfs_readdir(struct xfs_fs *xfs, struct xfs_dir_handle *handle, off_t *off)
     XFS_INODE_ALL *dxino = NULL;
     XFS_INODE_ALL *xino = NULL;
 
-    /* Check the direcory is still valid */
+    /* Check the directory is still valid */
     if (handle->inum < xfs->inode_count &&
             ((dxino = xfs->inode_table[handle->inum]) != NULL) &&
             (dxino->pub.mode & S_IFDIR) != 0 &&

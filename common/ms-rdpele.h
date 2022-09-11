@@ -24,7 +24,7 @@
 
 /* LicensingMessage (MS-RDPELE 2.2.2) */
 /* TODO: to be renamed */
-#define LICENCE_TAG_DEMAND             0x01 /* LICNSE_REQUEST */
+#define LICENCE_TAG_DEMAND             0x01 /* LICENSE_REQUEST */
 #define LICENCE_TAG_AUTHREQ            0x02 /* PLATFORM_CHALLENGE */
 #define LICENCE_TAG_ISSUE              0x03 /* NEW_LICENSE */
 #define LICENCE_TAG_REISSUE            0x04 /* UPGRADE_LICENSE */

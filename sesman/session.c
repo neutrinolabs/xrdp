@@ -445,7 +445,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
     struct list *xserver_params = (struct list *)NULL;
     struct tm stime;
     time_t ltime;
-    char authfile[256]; /* The filename for storing xauth informations */
+    char authfile[256]; /* The filename for storing xauth information */
     int chansrv_pid;
     int display_pid;
     int window_manager_pid;
@@ -574,7 +574,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
             g_exit(0);
             /*
              * intermediate sesman should exit here after WM exits.
-             * do not execure the following codes.
+             * do not execute the following codes.
              */
         }
 #endif
@@ -609,7 +609,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     {
                         LOG(LOG_LEVEL_INFO,
                             "Starting user requested window manager on "
-                            "display %d with embeded arguments using a shell: %s",
+                            "display %d with embedded arguments using a shell: %s",
                             display, s->program);
                         const char *params[] = {"sh", "-c", s->program, NULL};
                         g_execvp("/bin/sh", (char **)params);
@@ -636,7 +636,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     {
                         LOG(LOG_LEVEL_INFO,
                             "Starting window manager on display %d"
-                            "from user home directory: %s", display, text);
+                            " from user home directory: %s", display, text);
                         g_execlp3(text, g_cfg->user_wm, 0);
                     }
                     else
@@ -668,7 +668,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     "There is no X server active on display %d", display);
             }
 
-            LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting to start "
+            LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting to start "
                 "the window manager on display %d, aborting connection",
                 display);
             g_exit(0);
@@ -727,7 +727,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                         "Error setting the xauth cookie for display %d in file %s",
                         display, authfile);
 
-                    LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting to start "
+                    LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting to start "
                         "the X server on display %d, aborting connection",
                         display);
                     g_exit(1);
@@ -842,7 +842,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 else
                 {
                     LOG(LOG_LEVEL_ERROR, "Unknown session type: %d", type);
-                    LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting "
+                    LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
                         "to start the X server on display %d, aborting connection",
                         display);
                     g_exit(1);
@@ -856,7 +856,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 /* should not get here */
                 LOG(LOG_LEVEL_ERROR,
                     "Error starting X server on display %d", display);
-                LOG(LOG_LEVEL_ERROR, "A fatal error has occured attempting "
+                LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
                     "to start the X server on display %d, aborting connection",
                     display);
 

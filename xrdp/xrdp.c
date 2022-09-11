@@ -144,7 +144,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
 /*****************************************************************************/
 /* Signal handler for SIGINT and SIGTERM
  * Note: only signal safe code (eg. setting wait event) should be executed in
- * this funciton. For more details see `man signal-safety`
+ * this function. For more details see `man signal-safety`
  */
 static void
 xrdp_shutdown(int sig)
@@ -158,7 +158,7 @@ xrdp_shutdown(int sig)
 /*****************************************************************************/
 /* Signal handler for SIGCHLD
  * Note: only signal safe code (eg. setting wait event) should be executed in
- * this funciton. For more details see `man signal-safety`
+ * this function. For more details see `man signal-safety`
  */
 static void
 xrdp_child(int sig)
@@ -171,7 +171,7 @@ xrdp_child(int sig)
 /*****************************************************************************/
 /* No-op signal handler.
  * Note: only signal safe code (eg. setting wait event) should be executed in
- * this funciton. For more details see `man signal-safety`
+ * this function. For more details see `man signal-safety`
  */
 static void
 xrdp_sig_no_op(int sig)

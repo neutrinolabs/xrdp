@@ -22,8 +22,8 @@ find_pam_module_dir()
   # Looks for the pam security module directory
   set -- $pam_module_dir_searchpath
   for d in "$@"; do
-    if [ -s $d/pam_unix.so ]; then
-      echo $d
+    if [ -s "$d/pam_unix.so" ]; then
+      echo "$d"
       break
     fi
   done
@@ -34,7 +34,7 @@ can_apply_unix_config()
   result=0
   module_dir="$1"
   for m in $unix_modules_needed; do
-    if [ ! -s $module_dir/$m ]; then
+    if [ ! -s "$module_dir/$m" ]; then
       echo "  ** $m not found" >&2
       result=1
     fi

@@ -244,7 +244,7 @@ lxrdp_connect(struct mod *mod)
                         break;
 
                     case INSUFFICIENTPRIVILEGESERROR:
-                        g_snprintf(buf, 128, "Insufficent privileges on target server");
+                        g_snprintf(buf, 128, "Insufficient privileges on target server");
                         break;
 
                     default:
