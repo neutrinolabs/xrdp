@@ -438,7 +438,7 @@ session_start_chansrv(const char *username, int display)
 /******************************************************************************/
 
 int
-session_start(long data,
+session_start(struct auth_info *auth_info,
               const struct session_parameters *s,
               struct guid *guid)
 {
@@ -546,7 +546,7 @@ session_start(long data,
             g_exit(1);
         }
 
-        auth_start_session(data, display);
+        auth_start_session(auth_info, display);
         sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);
@@ -615,7 +615,7 @@ session_start(long data,
                          g_cfg->env_values);
             if (x_server_running(display))
             {
-                auth_set_env(data);
+                auth_set_env(auth_info);
                 if (s->directory != 0)
                 {
                     if (s->directory[0] != 0)
@@ -932,8 +932,8 @@ session_start(long data,
                 LOG(LOG_LEVEL_INFO,
                     "Calling auth_stop_session and auth_end from pid %d",
                     g_getpid());
-                auth_stop_session(data);
-                auth_end(data);
+                auth_stop_session(auth_info);
+                auth_end(auth_info);
 
                 LOG(LOG_LEVEL_INFO,
                     "Terminating X server (pid %d) on display %d",
@@ -976,7 +976,7 @@ session_start(long data,
         temp->item->width = s->width;
         temp->item->height = s->height;
         temp->item->bpp = s->bpp;
-        temp->item->data = data;
+        temp->item->auth_info = auth_info;
         g_strncpy(temp->item->start_ip_addr, s->ip_addr,
                   sizeof(temp->item->start_ip_addr) - 1);
         g_strncpy(temp->item->name, s->username, 255);
@@ -1001,7 +1001,8 @@ session_start(long data,
 
 /******************************************************************************/
 int
-session_reconnect(int display, const char *username, long data)
+session_reconnect(int display, const char *username,
+                  struct auth_info *auth_info)
 {
     int pid;
 
@@ -1018,7 +1019,7 @@ session_reconnect(int display, const char *username, long data)
                      display,
                      g_cfg->env_names,
                      g_cfg->env_values);
-        auth_set_env(data);
+        auth_set_env(auth_info);
 
         if (g_file_exist(g_cfg->reconnect_sh))
         {

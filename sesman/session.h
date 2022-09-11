@@ -59,7 +59,7 @@ struct session_item
     int width;
     int height;
     int bpp;
-    long data;
+    struct auth_info *auth_info;
 
     /* status info */
     unsigned char status;
@@ -114,12 +114,13 @@ session_get_bydata(const struct session_parameters *params);
  *
  */
 int
-session_start(long authdata,
+session_start(struct auth_info *auth_info,
               const struct session_parameters *params,
               struct guid *guid);
 
 int
-session_reconnect(int display, const char *username, long data);
+session_reconnect(int display, const char *username,
+                  struct auth_info *auth_info);
 
 /**
  *

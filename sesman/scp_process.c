@@ -70,13 +70,13 @@ process_gateway_request(struct trans *trans)
     if (rv == 0)
     {
         int errorcode = 0;
-        tbus data;
+        struct auth_info *auth_info;
 
         LOG(LOG_LEVEL_INFO, "Received authentication request for user: %s",
             username);
 
-        data = auth_userpass(username, password, ip_addr, &errorcode);
-        if (data)
+        auth_info = auth_userpass(username, password, ip_addr, &errorcode);
+        if (auth_info != NULL)
         {
             if (1 == access_login_allowed(username))
             {
@@ -97,7 +97,7 @@ process_gateway_request(struct trans *trans)
             log_authfail_message(username, ip_addr);
         }
         rv = scp_send_gateway_response(trans, errorcode);
-        auth_end(data);
+        auth_end(auth_info);
     }
     return rv;
 }
@@ -123,7 +123,7 @@ process_create_session_request(struct trans *trans)
 
     if (rv == 0)
     {
-        tbus data;
+        struct auth_info *auth_info;
         struct session_item *s_item;
         int errorcode = 0;
         bool_t do_auth_end = 1;
@@ -133,8 +133,8 @@ process_create_session_request(struct trans *trans)
             SCP_SESSION_TYPE_TO_STR(sp.type),
             sp.username);
 
-        data = auth_userpass(sp.username, password, sp.ip_addr, &errorcode);
-        if (data)
+        auth_info = auth_userpass(sp.username, password, sp.ip_addr, &errorcode);
+        if (auth_info != NULL)
         {
             s_item = session_get_bydata(&sp);
             if (s_item != 0)
@@ -154,7 +154,7 @@ process_create_session_request(struct trans *trans)
                         s_item->pid);
                 }
 
-                session_reconnect(display, sp.username, data);
+                session_reconnect(display, sp.username, auth_info);
             }
             else
             {
@@ -175,7 +175,7 @@ process_create_session_request(struct trans *trans)
                             "username %s", sp.username);
                     }
 
-                    display = session_start(data, &sp, &guid);
+                    display = session_start(auth_info, &sp, &guid);
 
                     /* if the session started up ok, auth_end will be called on
                        sig child */
@@ -190,7 +190,7 @@ process_create_session_request(struct trans *trans)
 
         if (do_auth_end)
         {
-            auth_end(data);
+            auth_end(auth_info);
         }
 
         rv = scp_send_create_session_response(trans, errorcode, display, &guid);
@@ -214,13 +214,13 @@ process_list_sessions_request(struct trans *trans)
     {
         enum scp_list_sessions_status status;
         int errorcode = 0;
-        tbus data;
+        struct auth_info *auth_info;
 
         LOG(LOG_LEVEL_INFO,
             "Received request to list sessions for user %s", username);
 
-        data = auth_userpass(username, password, NULL, &errorcode);
-        if (data)
+        auth_info = auth_userpass(username, password, NULL, &errorcode);
+        if (auth_info != NULL)
         {
             struct scp_session_info *info = NULL;
             unsigned int cnt = 0;
@@ -241,7 +241,7 @@ process_list_sessions_request(struct trans *trans)
         {
             status = E_SCP_LS_AUTHENTICATION_FAIL;
         }
-        auth_end(data);
+        auth_end(auth_info);
 
         if (rv == 0)
         {

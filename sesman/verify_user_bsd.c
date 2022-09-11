@@ -28,7 +28,8 @@
 #include <config_ac.h>
 #endif
 
-#include "sesman.h"
+#include "arch.h"
+#include "auth.h"
 
 #define _XOPEN_SOURCE
 #include <stdio.h>
@@ -43,34 +44,49 @@
 #define SECS_PER_DAY (24L*3600L)
 #endif
 
+/*
+ * Need a complete type for struct auth_info, even though we're
+ * not really using it if this module (BSD authentication) is selected */
+struct auth_info
+{
+    char dummy;
+};
+
 /******************************************************************************/
-/* returns boolean */
-long
+/* returns non-NULL for success */
+struct auth_info *
 auth_userpass(const char *user, const char *pass,
               const char *client_ip, int *errorcode)
 {
-    int ret = auth_userokay(user, NULL, "auth-xrdp", pass);
+    /* Need a non-NULL pointer to return to indicate success */
+    static struct auth_info success = {0};
+    struct auth_info *ret = NULL;
+
+    if (auth_userokay(user, NULL, "auth-xrdp", pass))
+    {
+        ret = &success;
+    }
     return ret;
 }
 
 /******************************************************************************/
 /* returns error */
 int
-auth_start_session(long in_val, int in_display)
+auth_start_session(struct auth_info *auth_info, int display_num)
 {
     return 0;
 }
 
 /******************************************************************************/
 int
-auth_end(long in_val)
+auth_end(struct auth_info *auth_info)
 {
     return 0;
 }
 
 /******************************************************************************/
 int
-auth_set_env(long in_val)
+auth_set_env(struct auth_info *auth_info)
 {
     return 0;
 }
@@ -89,33 +105,7 @@ auth_change_pwd(const char *user, const char *newpwd)
 }
 
 int
-auth_stop_session(long in_val)
-{
-    return 0;
-}
-
-/**
- *
- * @brief Password encryption
- * @param pwd Old password
- * @param pln Plaintext new password
- * @param crp Crypted new password
- *
- */
-
-static int
-auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
-{
-    return 0;
-}
-
-/**
- *
- * @return 1 if the account is disabled, 0 otherwise
- *
- */
-static int
-auth_account_disabled(struct spwd *stp)
+auth_stop_session(struct auth_info *auth_info)
 {
     return 0;
 }
