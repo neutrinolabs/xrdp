@@ -1234,7 +1234,7 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
 int
 xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
 {
-    LOG(LOG_LEVEL_INFO, "mouse touch event gesture %d param %d", gesture, param);
+    LOG(LOG_LEVEL_DEBUG, "mouse touch event gesture %d param %d", gesture, param);
 
     switch (gesture) {
         // vertical scroll
