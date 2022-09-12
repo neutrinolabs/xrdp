@@ -1800,6 +1800,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
+            // [MS-RDPBCGR] In negative scrolling, rotation distance is negative.
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
             if (delta != 0) 
             {
@@ -1832,13 +1833,31 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
      */
     if (device_flags & PTRFLAGS_HWHEEL)
     {
+        int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+            // [MS-RDPBCGR] In negative scrolling, rotation distance is negative.
+            delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
+            if (delta != 0) 
+            {
+                xrdp_wm_mouse_touch(self, 1, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+            }
         }
         else
         {
-            xrdp_wm_mouse_click(self, 0, 0, 7, 0);
+            delta = device_flags & WheelRotationMask;
+            if (delta != 0)
+            {
+                xrdp_wm_mouse_touch(self, 1, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 7, 0);
+            }
         }
     }
 
