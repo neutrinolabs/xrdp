@@ -1226,6 +1226,29 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
 
 /*****************************************************************************/
 int
+xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
+{
+    LOG(LOG_LEVEL_DEBUG, "mouse touch event gesture %d param %d", gesture, param);
+
+    switch (gesture)
+    {
+        case TOUCH_TWO_FINGERS_UP:
+        case TOUCH_TWO_FINGERS_DOWN:
+            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_VSCROLL,
+                                     self->mouse_x, self->mouse_y, param, 0);
+            break;
+        case TOUCH_TWO_FINGERS_RIGHT:
+        case TOUCH_TWO_FINGERS_LEFT:
+            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_HSCROLL,
+                                     self->mouse_x, self->mouse_y, param, 0);
+            break;
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int
 xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 {
     struct xrdp_bitmap *control;
@@ -1769,13 +1792,41 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
     /* vertical mouse wheel */
     if (device_flags & PTRFLAGS_WHEEL)
     {
+        int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+            /**
+             * [MS-RDPBCGR] 2.2.8.1.1.3.1.1.3 Mouse Event (TS_POINTER_EVENT)
+             * In negative scrolling, rotation distance is negative and the delta
+             * is represented by the lowest byte.
+             * Examples:
+             * device_flags = 0x020a, positive vertical scrolling, distance 10
+             * device_flags = 0x03f6, negative vertical scrolling, distance -10
+             *
+             * The negative number is represented by complement.
+             */
+            delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
+            if (delta != 0)
+            {
+                // Use nature scrolling, up direction is negative.
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_UP, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+            }
         }
         else
         {
-            xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+            delta = device_flags & WheelRotationMask;
+            if (delta != 0)
+            {
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_DOWN, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+            }
         }
     }
 
@@ -1787,13 +1838,41 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
      */
     if (device_flags & PTRFLAGS_HWHEEL)
     {
+        int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+            /**
+             * [MS-RDPBCGR] 2.2.8.1.1.3.1.1.3 Mouse Event (TS_POINTER_EVENT)
+             * In negative scrolling, rotation distance is negative and the delta
+             * is represented by the lowest byte.
+             * Examples:
+             * device_flags = 0x040a, positive horizontal scrolling, distance 10
+             * device_flags = 0x05f6, negative horizontal scrolling, distance -10
+             *
+             * The negative number is represented by complement.
+             */
+            delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
+            if (delta != 0)
+            {
+                // Use nature scrolling, right direction is negative.
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_RIGHT, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+            }
         }
         else
         {
-            xrdp_wm_mouse_click(self, 0, 0, 7, 0);
+            delta = device_flags & WheelRotationMask;
+            if (delta != 0)
+            {
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_LEFT, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 7, 0);
+            }
         }
     }
 
