@@ -1232,6 +1232,28 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
 
 /*****************************************************************************/
 int
+xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
+{
+    LOG(LOG_LEVEL_INFO, "mouse touch event gesture %d param %d", gesture, param);
+
+    switch (gesture) {
+        // vertical scroll
+        case 0:
+            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_VSCROLL,
+                                            self->mouse_x, self->mouse_y, param, 0);
+            break;
+        // horizantal scroll
+        case 1:
+            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_HSCROLL,
+                                            self->mouse_x, self->mouse_y, param, 0);
+            break;
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int
 xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 {
     struct xrdp_bitmap *control;
@@ -1775,13 +1797,30 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
     /* vertical mouse wheel */
     if (device_flags & PTRFLAGS_WHEEL)
     {
+        int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+            delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
+            if (delta != 0) 
+            {
+                xrdp_wm_mouse_touch(self, 0, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+            }
         }
         else
         {
-            xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+            delta = device_flags & WheelRotationMask;
+            if (delta != 0)
+            {
+                xrdp_wm_mouse_touch(self, 0, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+            }
         }
     }
 
