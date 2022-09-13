@@ -910,7 +910,13 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
         /* if logo image not specified, use default */
         if (globals->ls_logo_filename[0] == 0)
         {
-            g_snprintf(globals->ls_logo_filename, 255, "%s/xrdp_logo.bmp", XRDP_SHARE_PATH);
+#ifdef USE_IMLIB2
+            g_snprintf(globals->ls_logo_filename, 255, "%s/xrdp_logo.png",
+                       XRDP_SHARE_PATH);
+#else
+            g_snprintf(globals->ls_logo_filename, 255, "%s/xrdp_logo.bmp",
+                       XRDP_SHARE_PATH);
+#endif
         }
 
         /* logo image */
@@ -920,6 +926,8 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
         {
             g_snprintf(globals->ls_logo_filename, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
         }
+
+        LOG(LOG_LEVEL_DEBUG, "ls_logo_filename: %s", globals->ls_logo_filename);
 
         xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette,
                          globals->ls_bg_color,
