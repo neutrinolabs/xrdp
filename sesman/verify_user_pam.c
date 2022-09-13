@@ -37,10 +37,9 @@
 #include <stdio.h>
 #include <security/pam_appl.h>
 
-/* Allows the conversation function to find the username and password */
-struct t_user_pass
+/* Allows the conversation function to find required items */
+struct conv_func_data
 {
-    const char *user;
     const char *pass;
 };
 
@@ -100,7 +99,7 @@ msg_style_to_str(int msg_style, char *buff, unsigned int bufflen)
  * @param[in] num_msg Count of messages in the msg array
  * @param[in] msg Messages from the PAM stack to the application
  * @param[out] resp Message replies from the application to the PAM stack
- * @param[in] appdata_ptr Used to pass in a struct t_user_pass pointer
+ * @param[in] appdata_ptr Used to pass in a struct conv_func_data pointer
  *
  * @result PAM_SUCCESS if the messages were all processed successfully.
  *
@@ -120,7 +119,7 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
 {
     int i;
     struct pam_response *reply = NULL;
-    struct t_user_pass *user_pass;
+    struct conv_func_data *conv_func_data;
     char sb[64];
     int rv = PAM_SUCCESS;
 
@@ -144,10 +143,10 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
             switch (msg[i]->msg_style)
             {
                 case PAM_PROMPT_ECHO_OFF: /* password */
-                    user_pass = (struct t_user_pass *) appdata_ptr;
+                    conv_func_data = (struct conv_func_data *) appdata_ptr;
                     /* Check this function isn't being called
                      * later than we expected */
-                    if (user_pass == NULL)
+                    if (conv_func_data == NULL || conv_func_data->pass == NULL)
                     {
                         LOG(LOG_LEVEL_ERROR,
                             "verify_pam_conv: Password unavailable");
@@ -155,7 +154,7 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
                     }
                     else
                     {
-                        reply[i].resp = g_strdup(user_pass->pass);
+                        reply[i].resp = g_strdup(conv_func_data->pass);
                     }
                     break;
 
@@ -216,73 +215,79 @@ get_service_name(char *service_name)
 }
 
 /******************************************************************************/
-/* returns non-NULL for success
- * Detailed error code is in the errorcode variable */
 
-struct auth_info *
-auth_userpass(const char *user, const char *pass,
-              const char *client_ip, int *errorcode)
+/** Performs PAM operations common to login methods
+ *
+ * @param auth_info Module auth_info structure
+ * @param user User name
+ * @param pass Password, if needed for authentication.
+ * @param client_ip Client IP if known, or NULL
+ * @param authentication_required True if user must be authenticated
+ *
+ * For a UDS connection, the user can be assumed to be authenticated,
+ * so in this instance authentication_required can be false.
+ *
+ * @return Code describing the success of the operation
+ */
+static enum scp_login_status
+common_pam_login(struct auth_info *auth_info,
+                 const char *user,
+                 const char *pass,
+                 const char *client_ip,
+                 int authentication_required)
 {
-    int error;
-    struct auth_info *auth_info;
+    int perror;
     char service_name[256];
-    struct t_user_pass user_pass = {user, pass};
-    struct pam_conv pamc = {verify_pam_conv, (void *) &user_pass};
+    struct conv_func_data conv_func_data;
+    struct pam_conv pamc;
 
-    auth_info = g_new0(struct auth_info, 1);
-    if (auth_info == NULL)
-    {
-        LOG(LOG_LEVEL_ERROR, "auth_userpass: No memory");
-        error = PAM_BUF_ERR;
-        return NULL;
-    }
+    /*
+     * Set up the data required by the conversation function, and the
+     * structure which allows us to pass this to pam_start()
+     */
+    conv_func_data.pass = (authentication_required) ? pass : NULL;
+    pamc.conv = verify_pam_conv;
+    pamc.appdata_ptr = (void *) &conv_func_data;
 
     get_service_name(service_name);
-    error = pam_start(service_name, user, &pamc, &(auth_info->ph));
+    perror = pam_start(service_name, user, &pamc, &(auth_info->ph));
 
-    if (error != PAM_SUCCESS)
+    if (perror != PAM_SUCCESS)
     {
-        if (errorcode != NULL)
-        {
-            *errorcode = error;
-        }
         LOG(LOG_LEVEL_ERROR, "pam_start failed: %s",
-            pam_strerror(auth_info->ph, error));
-        pam_end(auth_info->ph, error);
-        g_free(auth_info);
-        return NULL;
+            pam_strerror(auth_info->ph, perror));
+        pam_end(auth_info->ph, perror);
+        return E_SCP_LOGIN_GENERAL_ERROR;
     }
 
     if (client_ip != NULL && client_ip[0] != '\0')
     {
-        error = pam_set_item(auth_info->ph, PAM_RHOST, client_ip);
-        if (error != PAM_SUCCESS)
+        perror = pam_set_item(auth_info->ph, PAM_RHOST, client_ip);
+        if (perror != PAM_SUCCESS)
         {
             LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_RHOST) failed: %s",
-                pam_strerror(auth_info->ph, error));
+                pam_strerror(auth_info->ph, perror));
         }
     }
 
-    error = pam_set_item(auth_info->ph, PAM_TTY, service_name);
-    if (error != PAM_SUCCESS)
+    perror = pam_set_item(auth_info->ph, PAM_TTY, service_name);
+    if (perror != PAM_SUCCESS)
     {
         LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_TTY) failed: %s",
-            pam_strerror(auth_info->ph, error));
+            pam_strerror(auth_info->ph, perror));
     }
 
-    error = pam_authenticate(auth_info->ph, 0);
-
-    if (error != PAM_SUCCESS)
+    if (authentication_required)
     {
-        if (errorcode != NULL)
+        perror = pam_authenticate(auth_info->ph, 0);
+
+        if (perror != PAM_SUCCESS)
         {
-            *errorcode = error;
+            LOG(LOG_LEVEL_ERROR, "pam_authenticate failed: %s",
+                pam_strerror(auth_info->ph, perror));
+            pam_end(auth_info->ph, perror);
+            return E_SCP_LOGIN_NOT_AUTHENTICATED;
         }
-        LOG(LOG_LEVEL_ERROR, "pam_authenticate failed: %s",
-            pam_strerror(auth_info->ph, error));
-        pam_end(auth_info->ph, error);
-        g_free(auth_info);
-        return NULL;
     }
     /* From man page:
        The pam_acct_mgmt function is used to determine if the users account is
@@ -290,35 +295,99 @@ auth_userpass(const char *user, const char *pass,
        verifies access restrictions. It is typically called after the user has
        been authenticated.
      */
-    error = pam_acct_mgmt(auth_info->ph, 0);
+    perror = pam_acct_mgmt(auth_info->ph, 0);
 
-    if (error != PAM_SUCCESS)
+    if (perror != PAM_SUCCESS)
     {
-        if (errorcode != NULL)
-        {
-            *errorcode = error;
-        }
         LOG(LOG_LEVEL_ERROR, "pam_acct_mgmt failed: %s",
-            pam_strerror(auth_info->ph, error));
-        pam_end(auth_info->ph, error);
-        g_free(auth_info);
-        return NULL;
+            pam_strerror(auth_info->ph, perror));
+        pam_end(auth_info->ph, perror);
+        return E_SCP_LOGIN_NOT_AUTHORIZED;
     }
 
     /* Set the appdata_ptr passed to the conversation function to
      * NULL, as the existing value is going out of scope */
     pamc.appdata_ptr = NULL;
-    error = pam_set_item(auth_info->ph, PAM_CONV, &pamc);
-    if (error != PAM_SUCCESS)
+    perror = pam_set_item(auth_info->ph, PAM_CONV, &pamc);
+    if (perror != PAM_SUCCESS)
     {
         LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_CONV) failed: %s",
-            pam_strerror(auth_info->ph, error));
+            pam_strerror(auth_info->ph, perror));
+    }
+
+    return E_SCP_LOGIN_OK;
+}
+
+
+/******************************************************************************/
+/* returns non-NULL for success
+ * Detailed error code is in the errorcode variable */
+
+struct auth_info *
+auth_userpass(const char *user, const char *pass,
+              const char *client_ip, enum scp_login_status *errorcode)
+{
+    struct auth_info *auth_info;
+    enum scp_login_status status;
+
+    auth_info = g_new0(struct auth_info, 1);
+    if (auth_info == NULL)
+    {
+        status = E_SCP_LOGIN_NO_MEMORY;
+    }
+    else
+    {
+        status = common_pam_login(auth_info, user, pass, client_ip, 1);
+
+        if (status != E_SCP_LOGIN_OK)
+        {
+            g_free(auth_info);
+            auth_info = NULL;
+        }
+    }
+
+    if (errorcode != NULL)
+    {
+        *errorcode = status;
     }
 
     return auth_info;
 }
 
 /******************************************************************************/
+
+struct auth_info *
+auth_uds(const char *user, enum scp_login_status *errorcode)
+{
+    struct auth_info *auth_info;
+    enum scp_login_status status;
+
+    auth_info = g_new0(struct auth_info, 1);
+    if (auth_info == NULL)
+    {
+        status = E_SCP_LOGIN_NO_MEMORY;
+    }
+    else
+    {
+        status = common_pam_login(auth_info, user, NULL, NULL, 0);
+
+        if (status != E_SCP_LOGIN_OK)
+        {
+            g_free(auth_info);
+            auth_info = NULL;
+        }
+    }
+
+    if (errorcode != NULL)
+    {
+        *errorcode = status;
+    }
+
+    return auth_info;
+}
+
+/******************************************************************************/
+
 /* returns error */
 int
 auth_start_session(struct auth_info *auth_info, int display_num)
@@ -364,17 +433,31 @@ auth_start_session(struct auth_info *auth_info, int display_num)
 int
 auth_stop_session(struct auth_info *auth_info)
 {
+    int rv = 0;
     int error;
 
-    error = pam_close_session(auth_info->ph, 0);
-    if (error != PAM_SUCCESS)
+    if (auth_info->session_opened)
     {
-        LOG(LOG_LEVEL_ERROR, "pam_close_session failed: %s",
-            pam_strerror(auth_info->ph, error));
-        return 1;
+        error = pam_close_session(auth_info->ph, 0);
+        if (error != PAM_SUCCESS)
+        {
+            LOG(LOG_LEVEL_ERROR, "pam_close_session failed: %s",
+                pam_strerror(auth_info->ph, error));
+            rv = 1;
+        }
+        else
+        {
+            auth_info->session_opened = 0;
+        }
     }
-    auth_info->session_opened = 0;
-    return 0;
+
+    if (auth_info->did_setcred)
+    {
+        pam_setcred(auth_info->ph, PAM_DELETE_CRED);
+        auth_info->did_setcred = 0;
+    }
+
+    return rv;
 }
 
 /******************************************************************************/
@@ -387,15 +470,7 @@ auth_end(struct auth_info *auth_info)
     {
         if (auth_info->ph != 0)
         {
-            if (auth_info->session_opened)
-            {
-                pam_close_session(auth_info->ph, 0);
-            }
-
-            if (auth_info->did_setcred)
-            {
-                pam_setcred(auth_info->ph, PAM_DELETE_CRED);
-            }
+            auth_stop_session(auth_info);
 
             pam_end(auth_info->ph, PAM_SUCCESS);
             auth_info->ph = 0;
