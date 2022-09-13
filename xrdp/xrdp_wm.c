@@ -1236,16 +1236,17 @@ xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
 {
     LOG(LOG_LEVEL_DEBUG, "mouse touch event gesture %d param %d", gesture, param);
 
-    switch (gesture) {
+    switch (gesture)
+    {
         // vertical scroll
         case 0:
             self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_VSCROLL,
-                                            self->mouse_x, self->mouse_y, param, 0);
+                                     self->mouse_x, self->mouse_y, param, 0);
             break;
         // horizantal scroll
         case 1:
             self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_HSCROLL,
-                                            self->mouse_x, self->mouse_y, param, 0);
+                                     self->mouse_x, self->mouse_y, param, 0);
             break;
     }
 
@@ -1802,7 +1803,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         {
             // [MS-RDPBCGR] In negative scrolling, rotation distance is negative.
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
-            if (delta != 0) 
+            if (delta != 0)
             {
                 xrdp_wm_mouse_touch(self, 0, delta);
             }
@@ -1838,7 +1839,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         {
             // [MS-RDPBCGR] In negative scrolling, rotation distance is negative.
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
-            if (delta != 0) 
+            if (delta != 0)
             {
                 xrdp_wm_mouse_touch(self, 1, delta);
             }
