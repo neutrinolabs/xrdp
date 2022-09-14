@@ -1238,13 +1238,13 @@ xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
 
     switch (gesture)
     {
-        // vertical scroll
-        case 0:
+        case TOUCH_TWO_FINGERS_UP:
+        case TOUCH_TWO_FINGERS_DOWN:
             self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_VSCROLL,
                                      self->mouse_x, self->mouse_y, param, 0);
             break;
-        // horizantal scroll
-        case 1:
+        case TOUCH_TWO_FINGERS_RIGHT:
+        case TOUCH_TWO_FINGERS_LEFT:
             self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_HSCROLL,
                                      self->mouse_x, self->mouse_y, param, 0);
             break;
@@ -1801,11 +1801,21 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            // [MS-RDPBCGR] In negative scrolling, rotation distance is negative.
+            /**
+             * [MS-RDPBCGR] 2.2.8.1.1.3.1.1.3 Mouse Event (TS_POINTER_EVENT)
+             * In negative scrolling, rotation distance is negative and the delta
+             * is represented by the lowest byte.
+             * Examples:
+             * device_flags = 0x020a, positive vertical scrolling, distance 10
+             * device_flags = 0x03f6, negative vertical scrolling, distance -10
+             *
+             * The negative number is represented by complement.
+             */
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
             if (delta != 0)
             {
-                xrdp_wm_mouse_touch(self, 0, delta);
+                // Use nature scrolling, up direction is negative.
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_UP, delta);
             }
             else
             {
@@ -1817,7 +1827,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
             delta = device_flags & WheelRotationMask;
             if (delta != 0)
             {
-                xrdp_wm_mouse_touch(self, 0, delta);
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_DOWN, delta);
             }
             else
             {
@@ -1837,11 +1847,21 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            // [MS-RDPBCGR] In negative scrolling, rotation distance is negative.
+            /**
+             * [MS-RDPBCGR] 2.2.8.1.1.3.1.1.3 Mouse Event (TS_POINTER_EVENT)
+             * In negative scrolling, rotation distance is negative and the delta
+             * is represented by the lowest byte.
+             * Examples:
+             * device_flags = 0x040a, positive horizontal scrolling, distance 10
+             * device_flags = 0x05f6, negative horizontal scrolling, distance -10
+             *
+             * The negative number is represented by complement.
+             */
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
             if (delta != 0)
             {
-                xrdp_wm_mouse_touch(self, 1, delta);
+                // Use nature scrolling, right direction is negative.
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_RIGHT, delta);
             }
             else
             {
@@ -1853,7 +1873,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
             delta = device_flags & WheelRotationMask;
             if (delta != 0)
             {
-                xrdp_wm_mouse_touch(self, 1, delta);
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_LEFT, delta);
             }
             else
             {
