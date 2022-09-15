@@ -14,6 +14,8 @@ config.sub
 configure
 depcomp
 .deps/
+fontutils/xrdp-dumpfv1
+fontutils/xrdp-mkfv1
 genkeymap/xrdp-genkeymap
 install-sh
 instfiles/pam.d/xrdp-sesman
@@ -52,3 +54,4 @@ tools/devel/tcp_proxy/tcp_proxy
 xrdp/xrdp
 xrdp/xrdp.ini
 xrdp_configure_options.h
+xrdpapi/xrdp-xrdpapi-simple
