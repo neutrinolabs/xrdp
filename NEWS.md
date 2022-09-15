@@ -1,3 +1,34 @@
+# Release notes for xrdp v0.9.20 (2022/09/15)
+
+## General announcements
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## New features
+* Mitigation for too fast vertical scroll has been implemented. This is actually not a new feature of xrdp so see also [xorgxrdp v0.9.19 release note](https://github.com/neutrinolabs/xorgxrdp/releases/tag/v0.9.19).
+
+## Bug fixes
+* Windows RDS compatibility has been improved, so some old clients (e.g. Wyse Sx0) can now be used again with xrdp in non-TLS mode (#2273)
+* Update xrdpapi simple example to work with new logging (#2276)
+* sesman: fix spacing in log (#2282)
+* Fix MSTSC crashes when resolution is changed by maximizing on a different monitor (#2292 #1928)
+* Mark count with unused attribute (#2353)
+* Simple maintenance improvements (#2354)
+
+## Internal changes
+* FreeBSD version for CI bumped to 12-3 (#2226)
+* cppcheck version used for CI bumped to 2.9 (#2351)
+
+## Changes for packagers or developers
+
+Nothing this time.
+
+## Known issues
+
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.19 (2022/03/17)
 
 ## General announcements
