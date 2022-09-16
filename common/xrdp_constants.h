@@ -247,6 +247,12 @@
 #define BUTTON_STATE_UP   0
 #define BUTTON_STATE_DOWN 1
 
+/* touch gestures */
+#define TOUCH_TWO_FINGERS_DOWN 0
+#define TOUCH_TWO_FINGERS_UP 1
+#define TOUCH_TWO_FINGERS_LEFT 2
+#define TOUCH_TWO_FINGERS_RIGHT 3
+
 /* messages */
 #define WM_PAINT       3
 #define WM_KEYDOWN     15
@@ -270,6 +276,10 @@
 #define WM_BUTTON8DOWN 116
 #define WM_BUTTON9UP   117
 #define WM_BUTTON9DOWN 118
+
+#define WM_TOUCH_VSCROLL 140
+#define WM_TOUCH_HSCROLL 141
+
 #define WM_INVALIDATE  200
 
 #define CB_ITEMCHANGE  300
