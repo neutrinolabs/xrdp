@@ -2034,12 +2034,22 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     LOG(LOG_LEVEL_DEBUG, "xrdp_wm_login_mode_changed: login_mode is %d", self->login_state);
     if (self->login_state == WMLS_RESET)
     {
-        /* this is the initial state of the login window */
-        xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
         list_clear(self->log);
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
-        xrdp_wm_init(self);
+
+        if (self->fatal_error_in_log_window)
+        {
+            /* We've got here after OK is pressed in the log
+             * window, so the user has read the message(s) in it */
+            g_set_wait_obj(self->pro_layer->self_term_event);
+        }
+        else
+        {
+            /* this is the initial state of the login window */
+            xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
+            xrdp_wm_init(self);
+        }
     }
     else if (self->login_state == WMLS_START_CONNECT)
     {
@@ -2160,7 +2170,6 @@ add_string_to_logwindow(const char *msg, struct list *log)
     do
     {
         new_part_message = g_strndup(current_pointer, LOG_WINDOW_CHAR_PER_LINE);
-        LOG(LOG_LEVEL_INFO, "%s", new_part_message);
         list_add_item(log, (tintptr) new_part_message);
         len_done += g_strlen(new_part_message);
         current_pointer += g_strlen(new_part_message);

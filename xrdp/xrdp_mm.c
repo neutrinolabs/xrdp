@@ -30,15 +30,6 @@
 
 #include "scp.h"
 
-#ifdef USE_PAM
-#if defined(HAVE__PAM_TYPES_H)
-#define LINUXPAM 1
-#include <security/_pam_types.h>
-#elif defined(HAVE_PAM_CONSTANTS_H)
-#define OPENPAM 1
-#include <security/pam_constants.h>
-#endif
-#endif /* USE_PAM */
 #include <ctype.h>
 
 #include "xrdp_encoder.h"
@@ -47,10 +38,6 @@
 
 
 /* Forward declarations */
-static const char *
-getPAMError(const int pamError, char *text, int text_bytes);
-static const char *
-getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self);
 static int
 xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port);
 static void
@@ -233,85 +220,63 @@ xrdp_mm_get_value_int(struct xrdp_mm *self, const char *aname, int def)
 /*****************************************************************************/
 /* Send gateway login information to sesman */
 static int
-xrdp_mm_send_gateway_login(struct xrdp_mm *self, const char *username,
-                           const char *password)
+xrdp_mm_send_sys_login_request(struct xrdp_mm *self, const char *username,
+                               const char *password)
 {
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                     "sending login info to session manager, please wait...");
 
-    return scp_send_gateway_request(
+    return scp_send_sys_login_request(
                self->sesman_trans, username, password,
                self->wm->client_info->client_ip);
 }
 
 /*****************************************************************************/
-/* Send login information to sesman */
+/* Send a create session request to sesman */
 static int
-xrdp_mm_send_login(struct xrdp_mm *self)
+xrdp_mm_create_session(struct xrdp_mm *self)
 {
     int rv = 0;
     int xserverbpp;
-    const char *username;
-    const char *password;
+    enum scp_session_type type;
 
-    username = xrdp_mm_get_value(self, "username");
-    password = xrdp_mm_get_value(self, "password");
-    if (username == NULL || username[0] == '\0')
+    /* Map the session code to an SCP session type */
+    switch (self->code)
     {
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR, "No username is available");
-        rv = 1;
+        case XVNC_SESSION_CODE:
+            type = SCP_SESSION_TYPE_XVNC;
+            break;
+
+        case XRDP_SESSION_CODE:
+            type = SCP_SESSION_TYPE_XRDP;
+            break;
+
+        case  XORG_SESSION_CODE:
+            type = SCP_SESSION_TYPE_XORG;
+            break;
+
+        default:
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                            "Unrecognised session code %d", self->code);
+            rv = 1;
     }
-    else if (password == NULL)
+
+    if (rv == 0)
     {
-        /* Can't find a password definition at all - even an empty one */
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                        "No password field is available");
-        rv = 1;
-    }
-    else
-    {
-        enum scp_session_type type;
-        /* Map the session code to an SCP session type */
-        switch (self->code)
-        {
-            case XVNC_SESSION_CODE:
-                type = SCP_SESSION_TYPE_XVNC;
-                break;
+        xserverbpp = xrdp_mm_get_value_int(self, "xserverbpp",
+                                           self->wm->screen->bpp);
 
-            case XRDP_SESSION_CODE:
-                type = SCP_SESSION_TYPE_XRDP;
-                break;
-
-            case  XORG_SESSION_CODE:
-                type = SCP_SESSION_TYPE_XORG;
-                break;
-
-            default:
-                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
-                                "Unrecognised session code %d", self->code);
-                rv = 1;
-        }
-
-        if (rv == 0)
-        {
-            xserverbpp = xrdp_mm_get_value_int(self, "xserverbpp",
-                                               self->wm->screen->bpp);
-
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
-                            "sending login info to session manager. "
-                            "Please wait...");
-            rv = scp_send_create_session_request(
-                     self->sesman_trans,
-                     username,
-                     password,
-                     type,
-                     self->wm->screen->width,
-                     self->wm->screen->height,
-                     xserverbpp,
-                     self->wm->client_info->program,
-                     self->wm->client_info->directory,
-                     self->wm->client_info->client_ip);
-        }
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                        "sending create session request to session"
+                        " manager. Please wait...");
+        rv = scp_send_create_session_request(
+                 self->sesman_trans,
+                 type,
+                 self->wm->screen->width,
+                 self->wm->screen->height,
+                 xserverbpp,
+                 self->wm->client_info->program,
+                 self->wm->client_info->directory);
     }
 
     return rv;
@@ -1921,21 +1886,6 @@ xrdp_mm_chan_data_in(struct trans *trans)
 }
 
 /*****************************************************************************/
-
-static void cleanup_sesman_connection(struct xrdp_mm *self)
-{
-    /* Don't delete any transports here - we may be in
-     * an auth callback from one of them */
-    self->delete_sesman_trans = 1;
-
-    if (self->wm->login_state != WMLS_CLEANUP)
-    {
-        xrdp_wm_set_login_state(self->wm, WMLS_INACTIVE);
-        xrdp_mm_module_cleanup(self);
-    }
-}
-
-/*****************************************************************************/
 /* does the section in xrdp.ini has any channel.*=true | false */
 static int
 xrdp_mm_update_allowed_channels(struct xrdp_mm *self)
@@ -2088,38 +2038,49 @@ xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
 
 /*****************************************************************************/
 static int
-xrdp_mm_process_gateway_response(struct xrdp_mm *self)
+xrdp_mm_process_login_response(struct xrdp_mm *self)
 {
-    int auth_result;
+    enum scp_login_status login_result;
     int rv;
+    int server_closed;
 
-    rv = scp_get_gateway_response(self->sesman_trans, &auth_result);
+    rv = scp_get_login_response(self->sesman_trans, &login_result, &server_closed);
     if (rv == 0)
     {
-        const char *additionalError;
-        char pam_error[128];
-
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "Reply from access control: %s",
-                        getPAMError(auth_result,
-                                    pam_error, sizeof(pam_error)));
-
-        if (auth_result != 0)
+        if (login_result != E_SCP_LOGIN_OK)
         {
-            additionalError = getPAMAdditionalErrorInfo(auth_result, self);
-            if (additionalError && additionalError[0])
+            char buff[128];
+            scp_login_status_to_str(login_result, buff, sizeof(buff));
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s", buff);
+
+            if (login_result == E_SCP_LOGIN_NOT_AUTHENTICATED &&
+                    self->wm->pamerrortxt[0] != '\0')
             {
                 xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s",
-                                additionalError);
+                                self->wm->pamerrortxt);
             }
 
-            /* TODO : Check this is displayed */
-            cleanup_sesman_connection(self);
+            if (server_closed)
+            {
+                if (login_result == E_SCP_LOGIN_NOT_AUTHENTICATED)
+                {
+                    xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s",
+                                    "Login retry limit reached");
+                }
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s",
+                                "Close the log window to exit.");
+                self->wm->fatal_error_in_log_window = 1;
+                /* Transport can be deleted now */
+                self->delete_sesman_trans = 1;
+            }
+            /* If the server hasn't closed, inform the window manager
+             * of the fail, but leave the sesman connection open for
+             * further login attempts */
             xrdp_wm_mod_connect_done(self->wm, 1);
         }
         else
         {
-            /* Authentication successful */
+            /* login successful */
             xrdp_mm_connect_sm(self);
         }
     }
@@ -2131,18 +2092,17 @@ xrdp_mm_process_gateway_response(struct xrdp_mm *self)
 static int
 xrdp_mm_process_create_session_response(struct xrdp_mm *self)
 {
-    int auth_result;
+    enum scp_screate_status status;
     int display;
     struct guid guid;
 
     int rv;
 
-    rv = scp_get_create_session_response(self->sesman_trans, &auth_result,
+    rv = scp_get_create_session_response(self->sesman_trans, &status,
                                          &display, &guid);
     if (rv == 0)
     {
         const char *username;
-        char displayinfo[64];
 
         /* Sort out some logging information */
         if ((username = xrdp_mm_get_value(self, "username")) == NULL)
@@ -2150,37 +2110,26 @@ xrdp_mm_process_create_session_response(struct xrdp_mm *self)
             username = "???";
         }
 
-        if (display == 0)
+        if (status == E_SCP_SCREATE_OK)
         {
-            /* A returned display of zero doesn't mean anything useful, and
-             * can confuse the user. It's most likely authentication has
-             * failed and no display was allocated */
-            displayinfo[0] = '\0';
-        }
-        else
-        {
-            g_snprintf(displayinfo, sizeof(displayinfo),
-                       " on display %d", display);
-        }
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                            "session is available on display %d for user %s",
+                            display, username);
 
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "login %s for user %s%s",
-                        ((auth_result == 0) ? "successful" : "failed"),
-                        username, displayinfo);
-
-        if (auth_result != 0)
-        {
-            /* Authentication failure */
-            cleanup_sesman_connection(self);
-            xrdp_wm_mod_connect_done(self->wm, 1);
-        }
-        else
-        {
-            /* Authentication successful - carry on with the connect
-             * state machine */
+            /* Carry on with the connect state machine */
             self->display = display;
             self->guid = guid;
             xrdp_mm_connect_sm(self);
+        }
+        else
+        {
+            char buff[128];
+            scp_screate_status_to_str(status, buff, sizeof(buff));
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                            "Can't create session for user %s - %s",
+                            username, buff);
+            /* Leave the sesman connection open for further login attenpts */
+            xrdp_wm_mod_connect_done(self->wm, 1);
         }
     }
 
@@ -2203,8 +2152,8 @@ xrdp_mm_scp_data_in(struct trans *trans)
 
         switch ((msgno = scp_msg_in_start(trans)))
         {
-            case E_SCP_GATEWAY_RESPONSE:
-                rv = xrdp_mm_process_gateway_response(self);
+            case E_SCP_LOGIN_RESPONSE:
+                rv = xrdp_mm_process_login_response(self);
                 break;
 
             case E_SCP_CREATE_SESSION_RESPONSE:
@@ -2229,7 +2178,10 @@ xrdp_mm_scp_data_in(struct trans *trans)
 /*****************************************************************************/
 /* This routine clears all states to make sure that our next login will be
  * as expected. If the user does not press ok on the log window and try to
- * connect again we must make sure that no previous information is stored.*/
+ * connect again we must make sure that no previous information is stored.
+ *
+ * This routine does not clear a sesman_trans if it is allocated, as this
+ * would break the password retry limit mechanism */
 static void
 cleanup_states(struct xrdp_mm *self)
 {
@@ -2238,242 +2190,13 @@ cleanup_states(struct xrdp_mm *self)
         self->connect_state = MMCS_CONNECT_TO_SESMAN;
         self->use_sesman = 0; /* true if this is a sesman session */
         self->use_chansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
-        self->use_pam_auth = 0; /* true if we're to use the PAM authentication facility */
-        self->sesman_trans = NULL; /* connection to sesman */
+        self->use_gw_login = 0; /* true if we're to use the gateway login facility */
+        //self->sesman_trans = NULL; /* connection to sesman */
         self->chan_trans = NULL; /* connection to chansrv */
         self->delete_sesman_trans = 0;
         self->display = 0; /* 10 for :10.0, 11 for :11.0, etc */
         guid_clear(&self->guid);
         self->code = 0; /* ???_SESSION_CODE value */
-    }
-}
-
-static const char *
-getPAMError(const int pamError, char *text, int text_bytes)
-{
-    switch (pamError)
-    {
-#if defined(LINUXPAM)
-        case PAM_SUCCESS:
-            return "Success";
-        case PAM_OPEN_ERR:
-            return "dlopen() failure";
-        case PAM_SYMBOL_ERR:
-            return "Symbol not found";
-        case PAM_SERVICE_ERR:
-            return "Error in service module";
-        case PAM_SYSTEM_ERR:
-            return "System error";
-        case PAM_BUF_ERR:
-            return "Memory buffer error";
-        case PAM_PERM_DENIED:
-            return "Permission denied";
-        case PAM_AUTH_ERR:
-            return "Authentication failure";
-        case PAM_CRED_INSUFFICIENT:
-            return "Insufficient credentials to access authentication data";
-        case PAM_AUTHINFO_UNAVAIL:
-            return "Authentication service cannot retrieve authentication info.";
-        case PAM_USER_UNKNOWN:
-            return "User not known to the underlying authentication module";
-        case PAM_MAXTRIES:
-            return "Have exhausted maximum number of retries for service.";
-        case PAM_NEW_AUTHTOK_REQD:
-            return "Authentication token is no longer valid; new one required.";
-        case PAM_ACCT_EXPIRED:
-            return "User account has expired";
-        case PAM_CRED_UNAVAIL:
-            return "Authentication service cannot retrieve user credentials";
-        case PAM_CRED_EXPIRED:
-            return "User credentials expired";
-        case PAM_CRED_ERR:
-            return "Failure setting user credentials";
-        case PAM_NO_MODULE_DATA:
-            return "No module specific data is present";
-        case PAM_BAD_ITEM:
-            return "Bad item passed to pam_*_item()";
-        case PAM_CONV_ERR:
-            return "Conversation error";
-        case PAM_AUTHTOK_ERR:
-            return "Authentication token manipulation error";
-        case PAM_AUTHTOK_LOCK_BUSY:
-            return "Authentication token lock busy";
-        case PAM_AUTHTOK_DISABLE_AGING:
-            return "Authentication token aging disabled";
-        case PAM_TRY_AGAIN:
-            return "Failed preliminary check by password service";
-        case PAM_IGNORE:
-            return "Please ignore underlying account module";
-        case PAM_MODULE_UNKNOWN:
-            return "Module is unknown";
-        case PAM_AUTHTOK_EXPIRED:
-            return "Authentication token expired";
-        case PAM_CONV_AGAIN:
-            return "Conversation is waiting for event";
-        case PAM_INCOMPLETE:
-            return "Application needs to call libpam again";
-        case 32 + 1:
-            return "Error connecting to PAM";
-        case 32 + 3:
-            return "Username okey but group problem";
-#elif defined(OPENPAM)
-        case PAM_SUCCESS: /* 0 */
-            return "Success";
-        case PAM_OPEN_ERR:
-            return "dlopen() failure";
-        case PAM_SYMBOL_ERR:
-            return "Symbol not found";
-        case PAM_SERVICE_ERR:
-            return "Error in service module";
-        case PAM_SYSTEM_ERR:
-            return "System error";
-        case PAM_BUF_ERR:
-            return "Memory buffer error";
-        case PAM_CONV_ERR:
-            return "Conversation error";
-        case PAM_PERM_DENIED:
-            return "Permission denied";
-        case PAM_MAXTRIES:
-            return "Have exhausted maximum number of retries for service.";
-        case PAM_AUTH_ERR:
-            return "Authentication failure";
-        case PAM_NEW_AUTHTOK_REQD: /* 10 */
-            return "Authentication token is no longer valid; new one required.";
-        case PAM_CRED_INSUFFICIENT:
-            return "Insufficient credentials to access authentication data";
-        case PAM_AUTHINFO_UNAVAIL:
-            return "Authentication service cannot retrieve authentication info.";
-        case PAM_USER_UNKNOWN:
-            return "User not known to the underlying authentication module";
-        case PAM_CRED_UNAVAIL:
-            return "Authentication service cannot retrieve user credentials";
-        case PAM_CRED_EXPIRED:
-            return "User credentials expired";
-        case PAM_CRED_ERR:
-            return "Failure setting user credentials";
-        case PAM_ACCT_EXPIRED:
-            return "User account has expired";
-        case PAM_AUTHTOK_EXPIRED:
-            return "Authentication token expired";
-        case PAM_SESSION_ERR:
-            return "Session failure";
-        case PAM_AUTHTOK_ERR: /* 20 */
-            return "Authentication token manipulation error";
-        case PAM_AUTHTOK_RECOVERY_ERR:
-            return "Failed to recover old authentication token";
-        case PAM_AUTHTOK_LOCK_BUSY:
-            return "Authentication token lock busy";
-        case PAM_AUTHTOK_DISABLE_AGING:
-            return "Authentication token aging disabled";
-        case PAM_NO_MODULE_DATA:
-            return "No module specific data is present";
-        case PAM_IGNORE:
-            return "Please ignore underlying account module";
-        case PAM_ABORT:
-            return "General failure";
-        case PAM_TRY_AGAIN:
-            return "Failed preliminary check by password service";
-        case PAM_MODULE_UNKNOWN:
-            return "Module is unknown";
-        case PAM_DOMAIN_UNKNOWN: /* 29 */
-            return "Unknown authentication domain";
-#endif
-        default:
-            g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
-            return text;
-    }
-}
-
-static const char *
-getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
-{
-    switch (pamError)
-    {
-#if defined(LINUXPAM)
-        case PAM_SUCCESS:
-            return NULL;
-        case PAM_OPEN_ERR:
-        case PAM_SYMBOL_ERR:
-        case PAM_SERVICE_ERR:
-        case PAM_SYSTEM_ERR:
-        case PAM_BUF_ERR:
-        case PAM_PERM_DENIED:
-        case PAM_AUTH_ERR:
-        case PAM_CRED_INSUFFICIENT:
-        case PAM_AUTHINFO_UNAVAIL:
-        case PAM_USER_UNKNOWN:
-        case PAM_CRED_UNAVAIL:
-        case PAM_CRED_ERR:
-        case PAM_NO_MODULE_DATA:
-        case PAM_BAD_ITEM:
-        case PAM_CONV_ERR:
-        case PAM_AUTHTOK_ERR:
-        case PAM_AUTHTOK_LOCK_BUSY:
-        case PAM_AUTHTOK_DISABLE_AGING:
-        case PAM_TRY_AGAIN:
-        case PAM_IGNORE:
-        case PAM_MODULE_UNKNOWN:
-        case PAM_CONV_AGAIN:
-        case PAM_INCOMPLETE:
-        case _PAM_RETURN_VALUES + 1:
-        case _PAM_RETURN_VALUES + 3:
-            return NULL;
-        case PAM_MAXTRIES:
-        case PAM_NEW_AUTHTOK_REQD:
-        case PAM_ACCT_EXPIRED:
-        case PAM_CRED_EXPIRED:
-        case PAM_AUTHTOK_EXPIRED:
-            if (self->wm->pamerrortxt[0])
-            {
-                return self->wm->pamerrortxt;
-            }
-            else
-            {
-                return "Authentication error - Verify that user/password is valid";
-            }
-#elif defined(OPENPAM)
-        case PAM_SUCCESS: /* 0 */
-            return NULL;
-        case PAM_OPEN_ERR:
-        case PAM_SYMBOL_ERR:
-        case PAM_SERVICE_ERR:
-        case PAM_SYSTEM_ERR:
-        case PAM_BUF_ERR:
-        case PAM_CONV_ERR:
-        case PAM_PERM_DENIED:
-        case PAM_MAXTRIES:
-        case PAM_AUTH_ERR:
-        case PAM_NEW_AUTHTOK_REQD: /* 10 */
-        case PAM_CRED_INSUFFICIENT:
-        case PAM_AUTHINFO_UNAVAIL:
-        case PAM_USER_UNKNOWN:
-        case PAM_CRED_UNAVAIL:
-        case PAM_CRED_EXPIRED:
-        case PAM_CRED_ERR:
-        case PAM_ACCT_EXPIRED:
-        case PAM_AUTHTOK_EXPIRED:
-        case PAM_SESSION_ERR:
-        case PAM_AUTHTOK_ERR: /* 20 */
-        case PAM_AUTHTOK_RECOVERY_ERR:
-        case PAM_AUTHTOK_LOCK_BUSY:
-        case PAM_AUTHTOK_DISABLE_AGING:
-        case PAM_NO_MODULE_DATA:
-        case PAM_IGNORE:
-        case PAM_ABORT:
-        case PAM_TRY_AGAIN:
-        case PAM_MODULE_UNKNOWN:
-        case PAM_DOMAIN_UNKNOWN: /* 29 */
-            if (self->wm->pamerrortxt[0])
-            {
-                return self->wm->pamerrortxt;
-            }
-            else
-            {
-                return "Authentication error - Verify that user/password is valid";
-            }
-#endif
-        default:
-            return "No expected error";
     }
 }
 
@@ -2539,7 +2262,7 @@ xrdp_mm_scp_connect(struct xrdp_mm *self)
 
     xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                     "connecting to sesman on %s", port_description);
-    t = scp_connect(port, g_is_term);
+    t = scp_connect(port, "xrdp", g_is_term);
     if (t != NULL)
     {
         /* fully connected */
@@ -2650,7 +2373,7 @@ void
 xrdp_mm_connect(struct xrdp_mm *self)
 {
     const char *port = xrdp_mm_get_value(self, "port");
-    const char *gateway_username = xrdp_mm_get_value(self, "pamusername");
+    const char *gw_username = xrdp_mm_get_value(self, "pamusername");
 
     /* make sure we start in correct state */
     cleanup_states(self);
@@ -2680,7 +2403,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         }
     }
 
-    if (gateway_username != NULL)
+    if (gw_username != NULL)
     {
         /* Connecting to a remote sesman is no longer supported */
         if (xrdp_mm_get_value(self, "pamsessionmng") != NULL)
@@ -2690,13 +2413,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
                             "Parameter 'pamsessionmng' is obsolete."
                             " Please remove from config");
         }
-#ifdef USE_PAM
-        self->use_pam_auth = 1;
-#else
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
-                        "pamusername parameter ignored - "
-                        "xrdp is compiled without PAM support");
-#endif
+        self->use_gw_login = 1;
     }
 
     /* Will we need chansrv ? We use it unconditionally for a
@@ -2731,7 +2448,8 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
         {
             case MMCS_CONNECT_TO_SESMAN:
             {
-                if (self->use_sesman || self->use_pam_auth)
+                if (self->sesman_trans == NULL &&
+                        (self->use_sesman || self->use_gw_login))
                 {
                     /* Synchronous call */
                     status = xrdp_mm_sesman_connect(self);
@@ -2739,45 +2457,46 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
             }
             break;
 
-            case MMCS_PAM_AUTH:
+            case MMCS_GATEWAY_LOGIN:
             {
-                if (self->use_pam_auth)
+                if (self->use_gw_login)
                 {
-                    const char *gateway_username;
-                    const char *gateway_password;
+                    const char *gw_username;
+                    const char *gw_password;
 
-                    gateway_username = xrdp_mm_get_value(self, "pamusername");
-                    gateway_password = xrdp_mm_get_value(self, "pampassword");
-                    if (!g_strcmp(gateway_username, "same"))
+                    gw_username = xrdp_mm_get_value(self, "pamusername");
+                    gw_password = xrdp_mm_get_value(self, "pampassword");
+                    if (!g_strcmp(gw_username, "same"))
                     {
-                        gateway_username = xrdp_mm_get_value(self, "username");
+                        gw_username = xrdp_mm_get_value(self, "username");
                     }
 
-                    if (gateway_password == NULL ||
-                            !g_strcmp(gateway_password, "same"))
+                    if (gw_password == NULL ||
+                            !g_strcmp(gw_password, "same"))
                     {
-                        gateway_password = xrdp_mm_get_value(self, "password");
+                        gw_password = xrdp_mm_get_value(self, "password");
                     }
 
-                    if (gateway_username == NULL || gateway_password == NULL)
+                    if (gw_username == NULL || gw_password == NULL)
                     {
                         xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
                                         "Can't determine username and/or "
-                                        "password for gateway authorization");
+                                        "password for gateway login");
                         status = 1;
                     }
                     else
                     {
                         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                                         "Performing access control for %s",
-                                        gateway_username);
+                                        gw_username);
 
-                        status = xrdp_mm_send_gateway_login(self,
-                                                            gateway_username,
-                                                            gateway_password);
+                        status = xrdp_mm_send_sys_login_request(self,
+                                                                gw_username,
+                                                                gw_password);
                         if (status == 0)
                         {
-                            /* Now waiting for a reply from sesman */
+                            /* Now waiting for a reply from sesman - see
+                               xrdp_mm_process_login_response() */
                             waiting_for_msg = 1;
                         }
                     }
@@ -2785,21 +2504,77 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
             }
             break;
 
-            case MMCS_SESSION_AUTH:
+            case MMCS_SESSION_LOGIN:
             {
-                if (self->use_sesman)
+                // Finished with the gateway login
+                if (self->use_gw_login)
                 {
-                    if ((status = xrdp_mm_send_login(self)) == 0)
+                    xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                    "access control check was successful");
+                    // No reply needed for this one
+                    status = scp_send_logout_request(self->sesman_trans);
+                }
+
+                if (status == 0 && self->use_sesman)
+                {
+                    const char *username;
+                    const char *password;
+
+                    username = xrdp_mm_get_value(self, "username");
+                    password = xrdp_mm_get_value(self, "password");
+                    if (username == NULL || username[0] == '\0')
                     {
-                        /* Now waiting for a reply from sesman */
-                        waiting_for_msg = 1;
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                        "No username is available");
+                        status = 1;
+                    }
+                    else if (password == NULL)
+                    {
+                        /* Can't find a password definition at all - even
+                         * an empty one */
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                        "No password field is available");
+                        status = 1;
+                    }
+                    else
+                    {
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                        "Performing login request for %s",
+                                        username);
+                        status = xrdp_mm_send_sys_login_request(self,
+                                                                username,
+                                                                password);
+                        if (status == 0)
+                        {
+                            /* Now waiting for a reply from sesman - see
+                               xrdp_mm_process_create_session_response() */
+                            waiting_for_msg = 1;
+                        }
                     }
                 }
             }
             break;
 
+            case MMCS_CREATE_SESSION:
+                if (self->use_sesman)
+                {
+                    xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                    "login was successful - creating session");
+                    if ((status = xrdp_mm_create_session(self)) == 0)
+                    {
+                        /* Now waiting for a reply from sesman. Note that
+                         * at this point sesman is expecting us to
+                         * close the connection - we can do nothing else
+                         * with it */
+                        waiting_for_msg = 1;
+                    }
+                }
+                break;
+
             case MMCS_CONNECT_TO_SESSION:
             {
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                "Connecting to session");
                 /* This is synchronous - no reply message expected */
                 status = xrdp_mm_user_session_connect(self);
             }
@@ -2811,6 +2586,8 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                 {
                     char portbuff[256];
 
+                    xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                    "Connecting to chansrv");
                     if (self->use_sesman)
                     {
                         g_snprintf(portbuff, sizeof(portbuff),
@@ -2848,8 +2625,17 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
 
     if (!waiting_for_msg)
     {
+        /* We don't need the sesman transport anymore */
+        if (self->sesman_trans != NULL)
+        {
+            self->delete_sesman_trans = 1;
+        }
         xrdp_wm_mod_connect_done(self->wm, status);
-        cleanup_sesman_connection(self);
+        /* Make sure the module is cleaned up if we weren't successful */
+        if (status != 0)
+        {
+            xrdp_mm_module_cleanup(self);
+        }
     }
 }
 
