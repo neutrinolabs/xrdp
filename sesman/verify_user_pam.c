@@ -46,7 +46,7 @@ struct t_user_pass
     char pass[MAX_BUF];
 };
 
-struct t_auth_info
+struct auth_info
 {
     struct t_user_pass user_pass;
     int session_opened;
@@ -209,19 +209,19 @@ get_service_name(char *service_name)
 }
 
 /******************************************************************************/
-/* returns long, zero is no go
- Stores the detailed error code in the errorcode variable*/
+/* returns non-NULL for success
+ * Detailed error code is in the errorcode variable */
 
-long
+struct auth_info *
 auth_userpass(const char *user, const char *pass,
               const char *client_ip, int *errorcode)
 {
     int error;
-    struct t_auth_info *auth_info;
+    struct auth_info *auth_info;
     char service_name[256];
 
     get_service_name(service_name);
-    auth_info = g_new0(struct t_auth_info, 1);
+    auth_info = g_new0(struct auth_info, 1);
     g_strncpy(auth_info->user_pass.user, user, MAX_BUF - 1);
     g_strncpy(auth_info->user_pass.pass, pass, MAX_BUF - 1);
     auth_info->pamc.conv = &verify_pam_conv;
@@ -238,7 +238,7 @@ auth_userpass(const char *user, const char *pass,
             pam_strerror(auth_info->ph, error));
         pam_end(auth_info->ph, error);
         g_free(auth_info);
-        return 0;
+        return NULL;
     }
 
     if (client_ip != NULL && client_ip[0] != '\0')
@@ -270,7 +270,7 @@ auth_userpass(const char *user, const char *pass,
             pam_strerror(auth_info->ph, error));
         pam_end(auth_info->ph, error);
         g_free(auth_info);
-        return 0;
+        return NULL;
     }
     /* From man page:
        The pam_acct_mgmt function is used to determine if the users account is
@@ -290,23 +290,21 @@ auth_userpass(const char *user, const char *pass,
             pam_strerror(auth_info->ph, error));
         pam_end(auth_info->ph, error);
         g_free(auth_info);
-        return 0;
+        return NULL;
     }
 
-    return (long)auth_info;
+    return auth_info;
 }
 
 /******************************************************************************/
 /* returns error */
 int
-auth_start_session(long in_val, int in_display)
+auth_start_session(struct auth_info *auth_info, int display_num)
 {
-    struct t_auth_info *auth_info;
     int error;
     char display[256];
 
-    g_sprintf(display, ":%d", in_display);
-    auth_info = (struct t_auth_info *)in_val;
+    g_sprintf(display, ":%d", display_num);
     error = pam_set_item(auth_info->ph, PAM_TTY, display);
 
     if (error != PAM_SUCCESS)
@@ -342,12 +340,10 @@ auth_start_session(long in_val, int in_display)
 /******************************************************************************/
 /* returns error */
 int
-auth_stop_session(long in_val)
+auth_stop_session(struct auth_info *auth_info)
 {
-    struct t_auth_info *auth_info;
     int error;
 
-    auth_info = (struct t_auth_info *)in_val;
     error = pam_close_session(auth_info->ph, 0);
     if (error != PAM_SUCCESS)
     {
@@ -363,13 +359,9 @@ auth_stop_session(long in_val)
 /* returns error */
 /* cleanup */
 int
-auth_end(long in_val)
+auth_end(struct auth_info *auth_info)
 {
-    struct t_auth_info *auth_info;
-
-    auth_info = (struct t_auth_info *)in_val;
-
-    if (auth_info != 0)
+    if (auth_info != NULL)
     {
         if (auth_info->ph != 0)
         {
@@ -396,18 +388,15 @@ auth_end(long in_val)
 /* returns error */
 /* set any pam env vars */
 int
-auth_set_env(long in_val)
+auth_set_env(struct auth_info *auth_info)
 {
-    struct t_auth_info *auth_info;
     char **pam_envlist;
     char **pam_env;
     char item[256];
     char value[256];
     int eq_pos;
 
-    auth_info = (struct t_auth_info *)in_val;
-
-    if (auth_info != 0)
+    if (auth_info != NULL)
     {
         /* export PAM environment */
         pam_envlist = pam_getenvlist(auth_info->ph);

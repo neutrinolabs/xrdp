@@ -29,6 +29,7 @@
 #endif
 
 #include "arch.h"
+#include "auth.h"
 #include "os_calls.h"
 #include "string_calls.h"
 
@@ -74,6 +75,14 @@ struct user_info
 {
     const char *name;
     const char *pass;
+};
+
+/*
+ * Need a complete type for struct auth_info, even though we're
+ * not really using it if this module (Kerberos authentication) is selected */
+struct auth_info
+{
+    char dummy;
 };
 
 /******************************************************************************/
@@ -399,8 +408,8 @@ cleanup:
 }
 
 /******************************************************************************/
-/* returns boolean */
-long
+/* returns non-NULL for success */
+struct auth_info *
 auth_userpass(const char *user, const char *pass,
               const char *client_ip, int *errorcode)
 {
@@ -408,7 +417,9 @@ auth_userpass(const char *user, const char *pass,
     struct k5_data k5;
     struct user_info u_info;
     int got_k5;
-    int authed_k5;
+    /* Need a non-NULL pointer to return to indicate success */
+    static struct auth_info success = {0};
+    struct auth_info *auth_info = NULL;
 
     g_memset(&opts, 0, sizeof(opts));
     opts.action = INIT_PW;
@@ -416,22 +427,24 @@ auth_userpass(const char *user, const char *pass,
     g_memset(&u_info, 0, sizeof(u_info));
     u_info.name = user;
     u_info.pass = pass;
-    authed_k5 = 0;
     got_k5 = k5_begin(&opts, &k5, &u_info);
 
     if (got_k5)
     {
-        authed_k5 = k5_kinit(&opts, &k5, &u_info);
+        if (k5_kinit(&opts, &k5, &u_info))
+        {
+            auth_info = &success;
+        }
         k5_end(&k5);
     }
 
-    return authed_k5;
+    return auth_info;
 }
 
 /******************************************************************************/
 /* returns error */
 int
-auth_start_session(long in_val, int in_display)
+auth_start_session(struct auth_info *auth_info, int display_num)
 {
     return 0;
 }
@@ -439,21 +452,21 @@ auth_start_session(long in_val, int in_display)
 /******************************************************************************/
 /* returns error */
 int
-auth_stop_session(long in_val)
+auth_stop_session(struct auth_info *auth_info)
 {
     return 0;
 }
 
 /******************************************************************************/
 int
-auth_end(long in_val)
+auth_end(struct auth_info *auth_info)
 {
     return 0;
 }
 
 /******************************************************************************/
 int
-auth_set_env(long in_val)
+auth_set_env(struct auth_info *auth_info)
 {
     return 0;
 }
