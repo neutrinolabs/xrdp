@@ -98,6 +98,8 @@ dist_xrdppkgdata_DATA = \
   xrdp24b.bmp \
   xrdp256.bmp \
   xrdp_logo.bmp \
+  xrdp_logo.png \
+  README.logo \
   sans-10.fv1 \
   sans-18.fv1 \
   cursor0.cur \

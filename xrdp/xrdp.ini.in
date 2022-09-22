@@ -95,12 +95,11 @@ use_fastpath=both
 ;
 ; colors used by windows in RGB format
 ;
-blue=009cb5
-grey=dedede
 #black=000000
-#dark_grey=808080
-#blue=08246b
-#dark_blue=08246b
+grey=e1e1e1
+dark_grey=b4b4b4
+blue=0078d7
+dark_blue=0078d7
 #white=ffffff
 #red=ff0000
 #green=00ff00
@@ -125,7 +124,7 @@ grey=dedede
 #ls_title=My Login Title
 
 ; top level window background color in RGB format
-ls_top_window_bg_color=009cb5
+ls_top_window_bg_color=003057
 
 ; width and height of login screen
 ;
@@ -139,10 +138,10 @@ ls_top_window_bg_color=009cb5
 ; below
 ;
 ls_width=350
-ls_height=430
+ls_height=360
 
 ; login screen background color in RGB format
-ls_bg_color=dedede
+ls_bg_color=f0f0f0
 
 ; optional background image filename. BMP format is always supported,
 ; but other formats will be supported if xrdp is build with imlib2
@@ -163,10 +162,10 @@ ls_bg_color=dedede
 ; logo height are ignored for a transform of 'none'.
 ls_logo_filename=
 ls_logo_transform=scale
-ls_logo_width=240
-ls_logo_height=140
+ls_logo_width=250
+ls_logo_height=110
 ls_logo_x_pos=55
-ls_logo_y_pos=50
+ls_logo_y_pos=35
 
 ; for positioning labels such as username, password etc
 ls_label_x_pos=30
@@ -177,17 +176,17 @@ ls_input_x_pos=110
 ls_input_width=210
 
 ; y pos for first label and combo box
-ls_input_y_pos=220
+ls_input_y_pos=158
 
 ; OK button
 ls_btn_ok_x_pos=142
-ls_btn_ok_y_pos=370
+ls_btn_ok_y_pos=308
 ls_btn_ok_width=85
 ls_btn_ok_height=30
 
 ; Cancel button
 ls_btn_cancel_x_pos=237
-ls_btn_cancel_y_pos=370
+ls_btn_cancel_y_pos=308
 ls_btn_cancel_width=85
 ls_btn_cancel_height=30
 
