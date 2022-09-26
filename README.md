@@ -4,6 +4,9 @@
 
 [![Latest Version](https://img.shields.io/github/v/release/neutrinolabs/xrdp.svg?label=Latest%20Version)](https://github.com/neutrinolabs/xrdp/releases)
 
+[![Packages](https://repology.org/badge/latest-versions/xrdp.svg)](https://repology.org/metapackage/xrdp/versions)
+[![Packages](https://repology.org/badge/tiny-repos/xrdp.svg)](https://repology.org/metapackage/xrdp/versions)
+
 # xrdp - an open source RDP server
 
 ## Overview
