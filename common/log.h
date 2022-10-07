@@ -434,4 +434,10 @@ log_hexdump_with_location(const char *function_name,
  * @return
  */
 char *getLogFile(char *replybuf, int bufsize);
+
+/**
+ * Returns formatted datetime for log
+ * @return
+ */
+char *getFormattedDateTime(char *replybuf, int bufsize);
 #endif

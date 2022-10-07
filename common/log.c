@@ -20,9 +20,11 @@
 #include <config_ac.h>
 #endif
 
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <math.h>
 #include <syslog.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -1010,12 +1012,10 @@ internal_log_message(const enum logLevels lvl,
                      const char *msg,
                      va_list ap)
 {
-    char buff[LOG_BUFFER_SIZE + 31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
+    char buff[LOG_BUFFER_SIZE + 43]; /* 31 ("[2022-10-07T19:58:33.065+0900] ") + 8 (log level) + 4 (space+cr+lf+\0) */
     int len = 0;
     enum logReturns rv = LOG_STARTUP_OK;
     int writereply = 0;
-    time_t now_t;
-    struct tm *now;
 
     if (g_staticLogConfig == NULL)
     {
@@ -1035,20 +1035,18 @@ internal_log_message(const enum logLevels lvl,
         return LOG_STARTUP_OK;
     }
 
-    now_t = time(&now_t);
-    now = localtime(&now_t);
+    getFormattedDateTime(buff, 32);
 
-    strftime(buff, 21, "[%Y%m%d-%H:%M:%S] ", now);
-
-    internal_log_lvl2str(lvl, buff + 20);
+    internal_log_lvl2str(lvl, buff + 31);
 
     if (g_staticLogConfig->enable_pid)
     {
-        g_snprintf(buff + 28, LOG_BUFFER_SIZE, "[pid:%d tid:%lld] ",
+        /* 31 (datetime) + 8 (log level) = 39 */
+        g_snprintf(buff + 39, LOG_BUFFER_SIZE, "[pid:%d tid:%lld] ",
                    g_getpid(), (long long) tc_get_threadid());
-        len = g_strlen(buff + 28);
+        len = g_strlen(buff + 39);
     }
-    len += vsnprintf(buff + 28 + len, LOG_BUFFER_SIZE - len, msg, ap);
+    len += vsnprintf(buff + 39 + len, LOG_BUFFER_SIZE - len, msg, ap);
 
     /* checking for truncated messages */
     if (len > LOG_BUFFER_SIZE)
@@ -1058,17 +1056,18 @@ internal_log_message(const enum logLevels lvl,
     }
 
     /* forcing the end of message string */
+    /* 31 (datetime) + 8 (log level) = 39 */
 #ifdef _WIN32
-    buff[len + 28] = '\r';
-    buff[len + 29] = '\n';
-    buff[len + 30] = '\0';
+    buff[len + 39] = '\r';
+    buff[len + 40] = '\n';
+    buff[len + 41] = '\0';
 #else
 #ifdef _MACOS
-    buff[len + 28] = '\r';
-    buff[len + 29] = '\0';
+    buff[len + 39] = '\r';
+    buff[len + 40] = '\0';
 #else
-    buff[len + 28] = '\n';
-    buff[len + 29] = '\0';
+    buff[len + 39] = '\n';
+    buff[len + 40] = '\0';
 #endif
 #endif
 
@@ -1140,3 +1139,32 @@ getLogFile(char *replybuf, int bufsize)
 
     return replybuf;
 }
+
+/**
+ * Returns formatted datetime for log
+ * @return
+ */
+char *
+getFormattedDateTime(char *replybuf, int bufsize)
+{
+    char buf_datetime[21];
+    char buf_millisec[4];
+    char buf_timezone[6];
+
+    struct tm *now;
+    struct timeval tv;
+    int millisec;
+
+    gettimeofday(&tv, NULL);
+    now = localtime(&tv.tv_sec);
+
+    millisec = lrint(tv.tv_usec / 1000.0);
+    g_snprintf(buf_millisec, sizeof(buf_millisec), "%03d", millisec);
+
+    strftime(buf_datetime, sizeof(buf_datetime), "%FT%T.", now);
+    strftime(buf_timezone, sizeof(buf_timezone), "%z", now);
+    g_snprintf(replybuf, bufsize, "[%s%s%s] ", buf_datetime, buf_millisec, buf_timezone);
+
+    return replybuf;
+}
+
