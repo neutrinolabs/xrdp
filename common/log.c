@@ -1146,9 +1146,9 @@ getLogFile(char *replybuf, int bufsize)
 char *
 getFormattedDateTime(char *replybuf, int bufsize)
 {
-    char buf_datetime[21];
-    char buf_millisec[4];
-    char buf_timezone[6];
+    char buf_datetime[21]; /* 2022-10-07T16:36:04 + . */
+    char buf_millisec[4];  /* 357 */
+    char buf_timezone[6];  /* +0900 */
 
     struct tm *now;
     struct timeval tv;
