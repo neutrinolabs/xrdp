@@ -24,7 +24,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <math.h>
 #include <syslog.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -1158,7 +1157,7 @@ getFormattedDateTime(char *replybuf, int bufsize)
     gettimeofday(&tv, NULL);
     now = localtime(&tv.tv_sec);
 
-    millisec = lrint(tv.tv_usec / 1000.0);
+    millisec = (tv.tv_usec + 500 / 1000);
     g_snprintf(buf_millisec, sizeof(buf_millisec), "%03d", millisec);
 
     strftime(buf_datetime, sizeof(buf_datetime), "%FT%T.", now);
