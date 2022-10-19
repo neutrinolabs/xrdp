@@ -115,7 +115,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
       - run: ./bootstrap
       - run: ./configure $CONF_FLAGS
@@ -139,9 +139,9 @@ jobs:
         id: os
         run: echo "::set-output name=image::$ImageOS"
         shell: bash
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache cppcheck
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-cppcheck
         with:
@@ -168,9 +168,9 @@ jobs:
         id: os
         run: echo "::set-output name=image::$ImageOS"
         shell: bash
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache astyle
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-astyle
         with:
