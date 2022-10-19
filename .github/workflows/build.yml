@@ -134,10 +134,9 @@ jobs:
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
       # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
-      # see https://github.com/actions/cache/issues/543
       - name: Get operating system name and version.
         id: os
-        run: echo "::set-output name=image::$ImageOS"
+        run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
       - uses: actions/checkout@v3
       - name: Cache cppcheck
@@ -163,10 +162,9 @@ jobs:
       ASTYLE_REPO: https://svn.code.sf.net/p/astyle/code/tags
     steps:
       # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
-      # see https://github.com/actions/cache/issues/543
       - name: Get operating system name and version.
         id: os
-        run: echo "::set-output name=image::$ImageOS"
+        run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
       - uses: actions/checkout@v3
       - name: Cache astyle
