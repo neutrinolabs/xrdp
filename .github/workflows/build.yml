@@ -63,19 +63,19 @@ jobs:
           - CC: gcc
             feature_set: max
             arch: i386
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             name_extra: for 32-bit arch (legacy OS)
 
           - CC: g++
             feature_set: max
             arch: i386
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             name_extra: for 32-bit arch (legacy OS)
 
           - CC: clang
             feature_set: max
             arch: i386
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             name_extra: for 32-bit arch (legacy OS)
 
     name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
@@ -95,8 +95,8 @@ jobs:
       CONF_FLAGS_amd64_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
                   --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
                   --enable-pixman --with-imlib2"
-      CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
-                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+      CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-mp3lame
+                  --enable-opus --enable-rfxcodec --enable-painter
                   --disable-pixman --with-imlib2 --host=i686-linux"
 
       PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
@@ -112,7 +112,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
       - run: ./bootstrap
       - run: ./configure $CONF_FLAGS
@@ -130,18 +130,19 @@ jobs:
       CPPCHECK_VER: 2.9
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
-      # This is currently the only way to get a version into
-      # the cache tag name - see https://github.com/actions/cache/issues/543
-      - run: |
-          echo "OS_VERSION=`lsb_release -sr`" >> $GITHUB_ENV
-      - uses: actions/checkout@v2
+      # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
+      - name: Get operating system name and version.
+        id: os
+        run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
+        shell: bash
+      - uses: actions/checkout@v3
       - name: Cache cppcheck
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-cppcheck
         with:
           path: ~/cppcheck.local
-          key: ${{ runner.os }}-${{ env.OS_VERSION }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
+          key: ${{ steps.os.outputs.image }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
       - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh
       - run: ./bootstrap
       - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
@@ -157,18 +158,19 @@ jobs:
       ASTYLE_VER: 3.1
       ASTYLE_REPO: https://svn.code.sf.net/p/astyle/code/tags
     steps:
-      # This is currently the only way to get a version into
-      # the cache tag name - see https://github.com/actions/cache/issues/543
-      - run: |
-          echo "OS_VERSION=`lsb_release -sr`" >> $GITHUB_ENV
-      - uses: actions/checkout@v2
+      # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
+      - name: Get operating system name and version.
+        id: os
+        run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
+        shell: bash
+      - uses: actions/checkout@v3
       - name: Cache astyle
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-astyle
         with:
           path: ~/astyle.local
-          key: ${{ runner.os }}-${{ env.OS_VERSION }}-build-${{ env.cache-name }}-${{ env.ASTYLE_VER }}
+          key: ${{ steps.os.outputs.image }}-build-${{ env.cache-name }}-${{ env.ASTYLE_VER }}
       - run: sudo scripts/install_astyle_dependencies_with_apt.sh
       - run: scripts/install_astyle.sh $ASTYLE_REPO $ASTYLE_VER
       - name: Format code with astyle
