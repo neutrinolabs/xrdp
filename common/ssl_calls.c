@@ -337,7 +337,7 @@ ssl_sha1_clear(void *sha1_info)
 #else
     if (sha1_info != NULL)
     {
-        EVP_DigestInit_ex(sha1_info, g_md_sha1, NULL);
+        EVP_DigestInit_ex((EVP_MD_CTX *)sha1_info, g_md_sha1, NULL);
     }
 #endif
 }
@@ -417,7 +417,7 @@ ssl_md5_clear(void *md5_info)
 #else
     if (md5_info != NULL)
     {
-        EVP_DigestInit_ex(md5_info, g_md_md5, NULL);
+        EVP_DigestInit_ex((EVP_MD_CTX *)md5_info, g_md_md5, NULL);
     }
 #endif
 }
