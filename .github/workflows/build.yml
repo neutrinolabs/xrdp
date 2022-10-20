@@ -65,19 +65,19 @@ jobs:
           - CC: gcc
             feature_set: max
             arch: i386
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             name_extra: for 32-bit arch (legacy OS)
 
           - CC: g++
             feature_set: max
             arch: i386
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             name_extra: for 32-bit arch (legacy OS)
 
           - CC: clang
             feature_set: max
             arch: i386
-            os: ubuntu-18.04
+            os: ubuntu-20.04
             name_extra: for 32-bit arch (legacy OS)
 
     name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
@@ -97,8 +97,8 @@ jobs:
       CONF_FLAGS_amd64_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
                   --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
                   --enable-pixman --with-imlib2 --with-freetype2"
-      CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
-                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+      CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-mp3lame
+                  --enable-opus --enable-rfxcodec --enable-painter
                   --disable-pixman --with-imlib2 --with-freetype2
                   --host=i686-linux"
 
@@ -115,7 +115,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
       - run: ./bootstrap
       - run: ./configure $CONF_FLAGS
@@ -134,14 +134,13 @@ jobs:
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
       # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
-      # see https://github.com/actions/cache/issues/543
       - name: Get operating system name and version.
         id: os
-        run: echo "::set-output name=image::$ImageOS"
+        run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache cppcheck
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-cppcheck
         with:
@@ -163,14 +162,13 @@ jobs:
       ASTYLE_REPO: https://svn.code.sf.net/p/astyle/code/tags
     steps:
       # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
-      # see https://github.com/actions/cache/issues/543
       - name: Get operating system name and version.
         id: os
-        run: echo "::set-output name=image::$ImageOS"
+        run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache astyle
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-astyle
         with:
