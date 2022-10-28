@@ -17,7 +17,8 @@ test_common_SOURCES = \
     test_string_calls.c \
     test_os_calls.c \
     test_ssl_calls.c \
-    test_base64.c
+    test_base64.c \
+    test_guid.c
 
 test_common_CFLAGS = \
     @CHECK_CFLAGS@ \

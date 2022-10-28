@@ -28,7 +28,8 @@
 #include "arch.h"
 
 #define GUID_SIZE 16  /* bytes */
-#define GUID_STR_SIZE (GUID_SIZE * 2 + 1)   /* Size for string representation */
+#define GUID_STR_SIZE (GUID_SIZE * 2 + 4 + 1)   /* w/ 4 hyphens + null terminator */
+
 
 /**
  * Use a struct for the guid so we can easily copy by assignment
@@ -72,4 +73,14 @@ guid_is_set(const struct guid *guid);
  */
 const char *guid_to_str(const struct guid *guid, char *str);
 
+
+/**
+ * Converts a Microsoft's COM GUID to a string representation
+ *
+ * @param src  GUID to represent
+ * @param dest pointer to at least GUID_STR_SIZE bytes to store the
+ *             representation
+ */
+const char *ms_guid_to_str(const char *src, char *dest);
 #endif
+
