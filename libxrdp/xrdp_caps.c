@@ -25,6 +25,7 @@
 
 #include <limits.h>
 
+#include "guid.h"
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "ms-rdperp.h"
@@ -521,6 +522,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     int i1;
     char *codec_guid;
     char *next_guid;
+    char codec_guid_str[GUID_STR_SIZE];
 
     if (len < 1)
     {
@@ -533,6 +535,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     for (index = 0; index < codec_count; index++)
     {
         codec_guid = s->p;
+        ms_guid_to_str(codec_guid, codec_guid_str);
+
         if (len < 16 + 1 + 2)
         {
             LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_codecs: error");
@@ -552,8 +556,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 
         if (g_memcmp(codec_guid, XR_CODEC_GUID_NSCODEC, 16) == 0)
         {
-            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: nscodec, codec id %d, properties len %d",
-                codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: NSCodec(%s), codec id [%d], properties len [%d]",
+                codec_guid_str, codec_id, codec_properties_length);
             self->client_info.ns_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.ns_prop, s->p, i1);
@@ -561,8 +565,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
         {
-            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: RemoteFX, codec id %d, properties len %d",
-                codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: RemoteFX(%s), codec id [%d], properties len [%d]",
+                codec_guid_str, codec_id, codec_properties_length);
             self->client_info.rfx_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.rfx_prop, s->p, i1);
@@ -570,8 +574,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
         {
-            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: jpeg, codec id %d, properties len %d",
-                codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: JPEG(%s), codec id [%d], properties len [%d]",
+                codec_guid_str, codec_id, codec_properties_length);
             self->client_info.jpeg_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.jpeg_prop, s->p, i1);
@@ -587,8 +591,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_H264, 16) == 0)
         {
-            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: h264, codec id %d, properties len %d",
-                codec_id, codec_properties_length);
+            LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: H264(%s), codec id [%d], properties len [%d]",
+                codec_guid_str, codec_id, codec_properties_length);
             self->client_info.h264_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.h264_prop, s->p, i1);
@@ -596,7 +600,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else
         {
-            LOG(LOG_LEVEL_WARNING, "xrdp_caps_process_codecs: unknown codec id %d", codec_id);
+            LOG(LOG_LEVEL_WARNING, "xrdp_caps_process_codecs: unknown(%s), codec id [%d], properties len [%d]",
+                codec_guid_str, codec_id, codec_properties_length);
         }
 
         s->p = next_guid;
