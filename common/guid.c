@@ -65,15 +65,9 @@ guid_is_set(const struct guid *guid)
 
 }
 
-const char *guid_to_str(const struct guid *guid, char *str)
+const char *guid_to_str(const struct guid *src, char *dest)
 {
-    g_bytes_to_hexstr(guid->g, GUID_SIZE, str, GUID_STR_SIZE);
-    return str;
-}
-
-const char *ms_guid_to_str(const char *src, char *dest)
-{
-    const unsigned char *guid = (const unsigned char *)src;
+    const unsigned char *guid = (const unsigned char *)src->g;
 
     /*
      * Flipping integers into little-endian

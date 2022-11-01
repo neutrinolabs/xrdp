@@ -71,16 +71,7 @@ guid_is_set(const struct guid *guid);
  *            representation
  * @return str is returned for convenience
  */
-const char *guid_to_str(const struct guid *guid, char *str);
+const char *guid_to_str(const struct guid *guid, char *dest);
 
-
-/**
- * Converts a Microsoft's COM GUID to a string representation
- *
- * @param src  GUID to represent
- * @param dest pointer to at least GUID_STR_SIZE bytes to store the
- *             representation
- */
-const char *ms_guid_to_str(const char *src, char *dest);
 #endif
 

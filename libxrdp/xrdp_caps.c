@@ -522,7 +522,10 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     int i1;
     char *codec_guid;
     char *next_guid;
+    struct guid guid;
     char codec_guid_str[GUID_STR_SIZE];
+
+    guid_clear(&guid);
 
     if (len < 1)
     {
@@ -535,7 +538,9 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     for (index = 0; index < codec_count; index++)
     {
         codec_guid = s->p;
-        ms_guid_to_str(codec_guid, codec_guid_str);
+
+        g_memcpy(guid.g, s->p, GUID_SIZE);
+        guid_to_str(&guid, codec_guid_str);
 
         if (len < 16 + 1 + 2)
         {
