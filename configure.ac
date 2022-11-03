@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script
 
-AC_PREREQ(2.65)
+AC_PREREQ([2.69])
 AC_INIT([xrdp], [0.9.80], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
@@ -8,7 +8,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
 AC_PROG_CXX
 AC_C_CONST
-AC_PROG_LIBTOOL
+LT_INIT
 
 PKG_PROG_PKG_CONFIG
 if test "x$PKG_CONFIG" = "x"; then
@@ -82,7 +82,7 @@ fi
 AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
 
 AC_ARG_ENABLE(tests,
-              AC_HELP_STRING([--enable-tests],
+              AS_HELP_STRING([--enable-tests],
               [Ensure dependencies for the tests are installed]),
               [ensure_tests_deps=yes], [])
 AC_ARG_ENABLE(pam, AS_HELP_STRING([--enable-pam],
@@ -188,9 +188,9 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
-AC_ARG_WITH(imlib2, AC_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
+AC_ARG_WITH(imlib2, AS_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
-AC_ARG_WITH(freetype2, AC_HELP_STRING([--with-freetype2=ARG], [freetype2 library to use for rendering fonts (ARG=yes/no/<abs-path>)]),,)
+AC_ARG_WITH(freetype2, AS_HELP_STRING([--with-freetype2=ARG], [freetype2 library to use for rendering fonts (ARG=yes/no/<abs-path>)]),,)
 
 # Obsolete options
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
