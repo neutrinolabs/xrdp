@@ -4,6 +4,7 @@
 #endif
 
 #include "string_calls.h"
+#include "ms-rdpbcgr.h"
 
 #include "test_common.h"
 

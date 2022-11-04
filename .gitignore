@@ -48,7 +48,10 @@ stamp-h1
 tap-driver.sh
 test-driver
 tests/common/test_common
+tests/libipm/test_libipm
+tests/libxrdp/test_libxrdp
 tests/memtest/memtest
+tests/xrdp/test_xrdp
 tools/devel/tcp_proxy/tcp_proxy
 *.trs
 xrdp/xrdp

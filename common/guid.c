@@ -65,8 +65,20 @@ guid_is_set(const struct guid *guid)
 
 }
 
-const char *guid_to_str(const struct guid *guid, char *str)
+const char *guid_to_str(const struct guid *src, char *dest)
 {
-    g_bytes_to_hexstr(guid->g, GUID_SIZE, str, GUID_STR_SIZE);
-    return str;
+    const unsigned char *guid = (const unsigned char *)src->g;
+
+    /*
+     * Flipping integers into little-endian
+     * See also: https://devblogs.microsoft.com/oldnewthing/20220928-00/?p=107221
+     */
+    g_sprintf(dest, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+              guid[3], guid[2], guid[1], guid[0],
+              guid[5], guid[4],
+              guid[7], guid[6],
+              guid[8], guid[9],
+              guid[10], guid[11], guid[12], guid[13], guid[14], guid[15]);
+
+    return dest;
 }

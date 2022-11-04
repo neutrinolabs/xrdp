@@ -28,7 +28,8 @@
 #include "arch.h"
 
 #define GUID_SIZE 16  /* bytes */
-#define GUID_STR_SIZE (GUID_SIZE * 2 + 1)   /* Size for string representation */
+#define GUID_STR_SIZE (GUID_SIZE * 2 + 4 + 1)   /* w/ 4 hyphens + null terminator */
+
 
 /**
  * Use a struct for the guid so we can easily copy by assignment
@@ -66,10 +67,11 @@ guid_is_set(const struct guid *guid);
  * Converts a GUID to a string representation
  *
  * @param guid GUID to represent
- * @param str pointer to at least GUID_STR_SIZE bytes to store the
- *            representation
- * @return str is returned for convenience
+ * @param dest destionation pointer to at least GUID_STR_SIZE
+ *             bytes to store the representation
+ * @return dest is returned for convenience
  */
-const char *guid_to_str(const struct guid *guid, char *str);
+const char *guid_to_str(const struct guid *guid, char *dest);
 
 #endif
+
