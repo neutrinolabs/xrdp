@@ -62,15 +62,15 @@ internal_log_file_open(const char *fname)
 
     if (fname != NULL)
     {
-	if (g_strcmp(fname, "<stdout>") != 0)
-	{
-	    ret = open(fname, O_WRONLY | O_CREAT | O_APPEND | O_SYNC,
-		       S_IRUSR | S_IWUSR);
-	}
-	else
-	{
-	    ret = dup(1);
-	}
+        if (g_strcmp(fname, "<stdout>") != 0)
+        {
+            ret = open(fname, O_WRONLY | O_CREAT | O_APPEND | O_SYNC,
+                       S_IRUSR | S_IWUSR);
+        }
+        else
+        {
+            ret = dup(1);
+        }
     }
 
 #ifdef FD_CLOEXEC
