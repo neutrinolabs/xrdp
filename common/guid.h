@@ -67,9 +67,9 @@ guid_is_set(const struct guid *guid);
  * Converts a GUID to a string representation
  *
  * @param guid GUID to represent
- * @param str pointer to at least GUID_STR_SIZE bytes to store the
- *            representation
- * @return str is returned for convenience
+ * @param dest destionation pointer to at least GUID_STR_SIZE
+ *             bytes to store the representation
+ * @return dest is returned for convenience
  */
 const char *guid_to_str(const struct guid *guid, char *dest);
 
