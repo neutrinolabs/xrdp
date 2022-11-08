@@ -8,7 +8,11 @@ outfile="$3"
 
 service="xrdp-sesman"
 pamdir="/etc/pam.d"
-pamdir_suse="/usr/etc/pam.d"
+pamdir_suse="/usr/lib/pam.d"
+if [ ! -d $pamdir_suse ]; then
+   # Older SUSE distros uses /usr/etc/pam.d
+   pamdir_suse="/usr/etc/pam.d"
+fi
 
 # Modules needed by xrdp-sesman.unix, if we get to that
 unix_modules_needed="pam_unix.so pam_env.so pam_nologin.so"
