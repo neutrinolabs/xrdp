@@ -57,6 +57,42 @@ START_TEST(test_guid_to_str_ignore)
 }
 END_TEST
 
+START_TEST(test_guid_to_str_random)
+{
+    /* setup */
+    char dest[GUID_STR_SIZE];
+    struct guid guid;
+    unsigned int i;
+    for (i = 0 ; i < 100; ++i)
+    {
+        guid = guid_new();
+        /* test */
+        guid_to_str(&guid, dest);
+
+        /* Check all the '-' signs are in the right places */
+        ck_assert_int_eq(dest[8], '-');
+        ck_assert_int_eq(dest[13], '-');
+        ck_assert_int_eq(dest[18], '-');
+        ck_assert_int_eq(dest[23], '-');
+
+        /* Check the variant is RFC4122 */
+        char c = dest[18 + 1]; /* char after 3rd dash */
+        if (c != '8' && c != '9' && c != 'A' && c != 'B')
+        {
+            ck_abort_msg("Generated UUID is not RFC4122 compliant");
+        }
+
+        /* Check the version is 'randomly generated' */
+        c = dest[13 + 1]; /* char after 2nd dash */
+        if (c != '4')
+        {
+            ck_abort_msg("Generated UUID is not RFC4122 randomly-generated");
+        }
+
+    }
+}
+END_TEST
+
 /******************************************************************************/
 
 Suite *
@@ -72,6 +108,7 @@ make_suite_test_guid(void)
     tcase_add_test(tc_guid, test_guid_to_str_remotefx);
     tcase_add_test(tc_guid, test_guid_to_str_nscodec);
     tcase_add_test(tc_guid, test_guid_to_str_ignore);
+    tcase_add_test(tc_guid, test_guid_to_str_random);
 
     return s;
 }

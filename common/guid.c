@@ -30,11 +30,27 @@
 #include "os_calls.h"
 #include "string_calls.h"
 
+enum
+{
+    /* Field offsets in the UUID */
+    E_CLOCK_SEQ_HI_AND_RESERVED = 8,
+    E_TIME_HI_AND_VERSION_MSB = 7,
+    /* UUID versions from RFC4122 section 4.1.3 */
+    E_UUID_VERSION_RANDOM = 4
+};
+
 struct guid
 guid_new(void)
 {
     struct guid guid = {0};
     g_random(guid.g, sizeof(guid.g));
+    /* Show this UUID as conforming to RFC4122 (section 4.1.1) */
+    guid.g[E_CLOCK_SEQ_HI_AND_RESERVED] &= ~0x40; /* Clear bit 6 */
+    guid.g[E_CLOCK_SEQ_HI_AND_RESERVED] |= (char)0x80; /* Set bit 7 */
+
+    guid.g[E_TIME_HI_AND_VERSION_MSB] &= ~0xf0;
+    guid.g[E_TIME_HI_AND_VERSION_MSB] |= (E_UUID_VERSION_RANDOM << 4);
+
     return guid;
 }
 
