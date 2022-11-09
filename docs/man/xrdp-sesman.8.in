@@ -7,6 +7,9 @@ xrdp\-sesman \- \fBxrdp\fR(8) session manager
 \-\-kill
 .br
 .B xrdp\-sesman
+\-\-reload
+.br
+.B xrdp\-sesman
 \-\-help
 .br
 .B xrdp\-sesman
@@ -24,6 +27,9 @@ It manages user sessions by authenticating the user and starting the appropriate
 .TP
 \fB\-k\fR, \fB\-\-kill\fR
 Kills running \fBxrdp\-sesman\fR daemon.
+.TP
+\fB\-r\fR, \fB\-\-reload\fR
+Reloads running \fBxrdp\-sesman\fR daemon.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
@@ -48,6 +54,11 @@ If you use this option, be aware that you will have to have a
 the system (notably \fBxrdp(8)\fR and \fBxrdp\-chansrv(8)\fR) will want
 to read it.
 .RE
+.SH "SIGNALS"
+.TP
+\fBSIGHUP\fR
+Causes \fBxrdp\-sesman\fR to reload its configuration. Needed if you're
+not running \fBxrdp\-sesman\fR as a daemon.
 .SH "FILES"
 @sbindir@/xrdp\-sesman
 .br

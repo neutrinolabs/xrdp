@@ -12,6 +12,7 @@ EnvironmentFile=-@sysconfdir@/sysconfig/xrdp
 EnvironmentFile=-@sysconfdir@/default/xrdp
 ExecStart=@sbindir@/xrdp-sesman $SESMAN_OPTIONS
 ExecStop=@sbindir@/xrdp-sesman $SESMAN_OPTIONS --kill
+ExecReload=@sbindir@/xrdp-sesman $SESMAN_OPTIONS --reload
 
 [Install]
 WantedBy=multi-user.target

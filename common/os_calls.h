@@ -192,6 +192,7 @@ char    *g_getenv(const char *name);
 int      g_exit(int exit_code);
 int      g_getpid(void);
 int      g_sigterm(int pid);
+int      g_sighup(int pid);
 int      g_getuser_info(const char *username, int *gid, int *uid, char **shell,
                         char **dir, char **gecos);
 int      g_getgroup_info(const char *groupname, int *gid);

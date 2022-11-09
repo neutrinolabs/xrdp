@@ -3044,6 +3044,18 @@ g_sigterm(int pid)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
+int
+g_sighup(int pid)
+{
+#if defined(_WIN32)
+    return 0;
+#else
+    return kill(pid, SIGHUP);
+#endif
+}
+
+/*****************************************************************************/
 /* returns 0 if ok */
 /* the caller is responsible to free the buffs */
 /* does not work in win32 */

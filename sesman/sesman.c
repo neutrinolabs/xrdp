@@ -46,10 +46,20 @@
  */
 #define MAX_SHORT_LIVED_CONNECTIONS 16
 
+/**
+ * Define the mode of operation of the program
+ */
+enum sesman_mode
+{
+    SSM_NORMAL = 0,
+    SSM_KILL_DAEMON,
+    SSM_RELOAD_DAEMON
+};
+
 struct sesman_startup_params
 {
     const char *sesman_ini;
-    int kill;
+    enum sesman_mode mode;
     int no_daemon;
     int help;
     int version;
@@ -158,6 +168,8 @@ sesman_process_params(int argc, char **argv,
     const char *option;
     const char *value;
 
+    startup_params->mode = SSM_NORMAL;
+
     index = 1;
 
     while (index < argc)
@@ -179,7 +191,11 @@ sesman_process_params(int argc, char **argv,
         }
         else if (nocase_matches(option, "-kill", "--kill", "-k", NULL))
         {
-            startup_params->kill = 1;
+            startup_params->mode = SSM_KILL_DAEMON;
+        }
+        else if (nocase_matches(option, "-reload", "--reload", "-r", NULL))
+        {
+            startup_params->mode = SSM_RELOAD_DAEMON;
         }
         else if (nocase_matches(option, "-nodaemon", "--nodaemon", "-n",
                                 "-nd", "--nd", "-ns", "--ns", NULL))
@@ -594,6 +610,7 @@ print_help(void)
 {
     g_printf("Usage: xrdp-sesman [options]\n");
     g_printf("   -k, --kill        shut down xrdp-sesman\n");
+    g_printf("   -r, --reload      reload xrdp-sesman\n");
     g_printf("   -h, --help        show help\n");
     g_printf("   -v, --version     show version\n");
     g_printf("   -n, --nodaemon    don't fork into background\n");
@@ -603,57 +620,44 @@ print_help(void)
 }
 
 /******************************************************************************/
+/**
+ * Reads the PID file
+ */
 static int
-kill_running_sesman(const char *pid_file)
+read_pid_file(const char *pid_file, int *pid)
 {
-    int error;
+    int rv = 1;
     int fd;
-    int pid;
-    char pid_s[32] = {0};
 
     /* check if sesman is running */
     if (!g_file_exist(pid_file))
     {
         g_printf("sesman is not running (pid file not found - %s)\n", pid_file);
-        g_deinit();
-        return 1;
     }
-
-    fd = g_file_open(pid_file);
-
-    if (-1 == fd)
+    else if ((fd = g_file_open(pid_file)) < 0)
     {
         g_printf("error opening pid file[%s]: %s\n", pid_file, g_get_strerror());
-        return 1;
-    }
-
-    error = g_file_read(fd, pid_s, sizeof(pid_s) - 1);
-
-    if (-1 == error)
-    {
-        g_printf("error reading pid file: %s\n", g_get_strerror());
-        g_file_close(fd);
-        g_deinit();
-        return 1;
-    }
-
-    g_file_close(fd);
-    pid = g_atoi(pid_s);
-
-    error = g_sigterm(pid);
-
-    if (0 != error)
-    {
-        g_printf("error killing sesman: %s\n", g_get_strerror());
     }
     else
     {
-        g_file_delete(pid_file);
+        char pid_s[32] = {0};
+        int error = g_file_read(fd, pid_s, sizeof(pid_s) - 1);
+        g_file_close(fd);
+
+        if (error < 0)
+        {
+            g_printf("error reading pid file: %s\n", g_get_strerror());
+        }
+        else
+        {
+            *pid = g_atoi(pid_s);
+            rv = 0;
+        }
     }
 
-    g_deinit();
-    return error;
+    return rv;
 }
+
 /******************************************************************************/
 int
 main(int argc, char **argv)
@@ -699,9 +703,44 @@ main(int argc, char **argv)
     }
 
 
-    if (startup_params.kill)
+    if (startup_params.mode == SSM_KILL_DAEMON)
     {
-        g_exit(kill_running_sesman(pid_file));
+        int pid;
+        int error = 1;
+        if (read_pid_file(pid_file, &pid) == 0)
+        {
+            if (g_sigterm(pid) != 0)
+            {
+                g_printf("error killing sesman: %s\n", g_get_strerror());
+            }
+            else
+            {
+                /* File is no longer required */
+                g_file_delete(pid_file);
+                error = 0;
+            }
+        }
+        g_deinit();
+        g_exit(error);
+    }
+
+    if (startup_params.mode == SSM_RELOAD_DAEMON)
+    {
+        int pid;
+        int error = 1;
+        if (read_pid_file(pid_file, &pid) == 0)
+        {
+            if (g_sighup(pid) != 0)
+            {
+                g_printf("error reloading sesman: %s\n", g_get_strerror());
+            }
+            else
+            {
+                error = 0;
+            }
+        }
+        g_deinit();
+        g_exit(error);
     }
 
     if (g_file_exist(pid_file))
