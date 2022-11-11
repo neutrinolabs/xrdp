@@ -1701,8 +1701,7 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
               "bitmapData <omitted from log>",
               bpp, codecID, width, height, data_bytes);
 
-    /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
-    if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
+    if (xrdp_rdp_send_fastpath(rdp, s, FASTPATH_UPDATETYPE_SURFCMDS) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "libxrdp_fastpath_send_surface: xrdp_rdp_send_fastpath failed");
@@ -1734,16 +1733,16 @@ libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
     make_stream(s);
     init_stream(s, 8192);
     xrdp_rdp_init_fastpath(rdp, s);
-    out_uint16_le(s, 0x0004); /* CMDTYPE_FRAME_MARKER */
+    out_uint16_le(s, CMDTYPE_FRAME_MARKER);
     out_uint16_le(s, frame_action);
     out_uint32_le(s, frame_id);
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FRAME_MARKER "
-              "cmdType 0x0004 (CMDTYPE_FRAME_MARKER), frameAction 0x%4.4x, "
-              "frameId %d", frame_action, frame_id);
+              "cmdType 0x%4.4x (CMDTYPE_FRAME_MARKER), frameAction 0x%4.4x, "
+              "frameId %d",
+              CMDTYPE_FRAME_MARKER, frame_action, frame_id);
 
-    /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
-    if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
+    if (xrdp_rdp_send_fastpath(rdp, s, FASTPATH_UPDATETYPE_SURFCMDS) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "libxrdp_fastpath_send_frame_marker: xrdp_rdp_send_fastpath failed");
