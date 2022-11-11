@@ -32,8 +32,23 @@
 
 
 /**
- * Use a struct for the guid so we can easily copy by assignment
- */
+ * Use a struct for the guid so we can easily copy by assignment.
+ * We use an array of char so that
+ * we can compare GUIDs with a straight memcmp()
+ *
+ * Some fields of the GUID are in little-endian-order as specified by
+ * [MS-DTYP]. This is at odds with RFC4122 which specifies big-endian
+ * order for all fields.
+ *
+ * Octets RFC4122 field
+ * ------ -------------
+ * 0-3    time_low (little-endian)
+ * 4-5    time_mid (little-endian)
+ * 6-7    time_hi_and_version (little-endian)
+ * 8      clock_seq_hi_and_reserved
+ * 9      clock_seq_low (in order)
+ * 10-15  node
+  */
 struct guid
 {
     char g[GUID_SIZE];
@@ -41,6 +56,8 @@ struct guid
 
 /**
  * Get an initialised GUID
+ *
+ * The GUID is compatible with RFC4122 section 4.4.
  *
  * @return new GUID
  */
