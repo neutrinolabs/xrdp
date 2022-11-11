@@ -1,5 +1,5 @@
 # ===========================================================================
-#     http://www.gnu.org/software/autoconf-archive/ax_type_socklen_t.html
+#    https://www.gnu.org/software/autoconf-archive/ax_type_socklen_t.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -27,7 +27,7 @@
 #   Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License along
-#   with this program. If not, see <http://www.gnu.org/licenses/>.
+#   with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 #   As a special exception, the respective Autoconf Macro's copyright owner
 #   gives unlimited permission to copy, distribute and modify the configure
@@ -42,18 +42,16 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 6
+#serial 8
 
 AU_ALIAS([TYPE_SOCKLEN_T], [AX_TYPE_SOCKLEN_T])
 AC_DEFUN([AX_TYPE_SOCKLEN_T],
-[AC_CACHE_CHECK([for socklen_t], ac_cv_ax_type_socklen_t,
-[
-  AC_TRY_COMPILE(
-  [#include <sys/types.h>
-   #include <sys/socket.h>],
-  [socklen_t len = (socklen_t) 42; return (!len);],
-  ac_cv_ax_type_socklen_t=yes,
-  ac_cv_ax_type_socklen_t=no)
+[AC_CACHE_CHECK([for socklen_t], [ac_cv_ax_type_socklen_t],
+[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+  #include <sys/socket.h>]],
+  [[socklen_t len = (socklen_t) 42; return (!len);]])],
+  [ac_cv_ax_type_socklen_t=yes],
+  [ac_cv_ax_type_socklen_t=no])
 ])
   if test $ac_cv_ax_type_socklen_t != yes; then
     AC_DEFINE(socklen_t, int, [Substitute for socklen_t])
