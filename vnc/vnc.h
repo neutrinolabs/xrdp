@@ -175,5 +175,8 @@ int
 lib_send_copy(struct vnc *v, struct stream *s);
 int
 skip_trans_bytes(struct trans *trans, unsigned int bytes);
+void
+process_touchpad_scroll(struct vnc *v, int axis, long param1, long param2,
+                        long param3, long param4);
 
 #endif /* VNC_H */

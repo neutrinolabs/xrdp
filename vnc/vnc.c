@@ -616,6 +616,11 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
         s_mark_end(s);
         error = lib_send_copy(v, s);
     }
+    /* touchpad scroll event */
+    else if (msg == WM_TOUCH_VSCROLL || msg == WM_TOUCH_HSCROLL)
+    {
+        process_touchpad_scroll(v, msg, param1, param2, param3, param4);
+    }
     else if (msg == 200) /* invalidate */
     {
         if (v->suppress_output == 0)
@@ -638,6 +643,77 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
 
     free_stream(s);
     return error;
+}
+
+/**************************************************************************//**
+ * Process touchpad scroll event
+ *
+ * As VNC does not support touchpad events, convert them to consecutive
+ * mouse wheel events.
+ *
+ * @param v VNC object
+ * @param axis Axis to scroll: WM_TOUCH_VSCROLL or WM_TOUCH_HSCROLL
+ * @return != 0 for error
+ *
+ */
+// Maybe make it configurable later
+#define SCALE_FACTOR 10
+
+void
+process_touchpad_scroll(struct vnc *v, int axis, long param1, long param2,
+                        long param3, long param4)
+{
+    int i;
+    long delta = param3;
+    int scaled_delta;
+    int abs_scaled_delta;
+
+    scaled_delta = delta / SCALE_FACTOR == 0 ? delta > 0 ? 1 : -1 : delta / SCALE_FACTOR;
+    abs_scaled_delta = (scaled_delta > 0) ? scaled_delta : -scaled_delta;
+
+    /**
+     * 7.4.5  PointerEvent
+     *
+     * Up    -> Button4
+     * Down  -> Button5
+     * Left  -> Button6
+     * Right -> Button7
+     *
+     */
+    switch(axis)
+    {
+        case WM_TOUCH_VSCROLL:
+            for (i = 0; i < abs_scaled_delta; i++)
+            {
+                if (scaled_delta > 0) /* positive is up */
+                {
+                    lib_mod_event(v, WM_BUTTON4DOWN, param1, param2, 0, 0);
+                    lib_mod_event(v, WM_BUTTON4UP, param1, param2, 0, 0);
+                }
+                else
+                {
+                    lib_mod_event(v, WM_BUTTON5DOWN, param1, param2, 0, 0);
+                    lib_mod_event(v, WM_BUTTON5UP, param1, param2, 0, 0);
+                }
+            }
+            break;
+
+        case WM_TOUCH_HSCROLL:
+            for (i = 0; i < abs_scaled_delta; i++)
+            {
+                if (scaled_delta > 0) /* positive is right */
+                {
+                    lib_mod_event(v, WM_BUTTON7DOWN, param1, param2, 0, 0);
+                    lib_mod_event(v, WM_BUTTON7UP, param1, param2, 0, 0);
+                }
+                else
+                {
+                    lib_mod_event(v, WM_BUTTON6DOWN, param1, param2, 0, 0);
+                    lib_mod_event(v, WM_BUTTON6UP, param1, param2, 0, 0);
+                }
+            }
+            break;
+    }
 }
 
 //******************************************************************************
