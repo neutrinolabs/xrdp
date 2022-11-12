@@ -547,7 +547,12 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
             }
         }
     }
-    else if (msg >= 100 && msg <= 110) /* mouse events */
+    /* mouse events
+     *
+     * VNC supports up to 8 mouse buttons because mouse buttons are
+     * represented by 7 bits bitmask
+     */
+    else if (msg >= WM_MOUSEMOVE && msg <= WM_BUTTON8DOWN) /* 100 to 116 */
     {
         switch (msg)
         {
@@ -582,6 +587,24 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
                 break;
             case WM_BUTTON5DOWN:
                 v->mod_mouse_state |= 16;
+                break;
+            case WM_BUTTON6UP:
+                v->mod_mouse_state &= ~32;
+                break;
+            case WM_BUTTON6DOWN:
+                v->mod_mouse_state |= 32;
+                break;
+            case WM_BUTTON7UP:
+                v->mod_mouse_state &= ~64;
+                break;
+            case WM_BUTTON7DOWN:
+                v->mod_mouse_state |= 64;
+                break;
+            case WM_BUTTON8UP:
+                v->mod_mouse_state &= ~128;
+                break;
+            case WM_BUTTON8DOWN:
+                v->mod_mouse_state |= 128;
                 break;
         }
 
