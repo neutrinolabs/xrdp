@@ -680,7 +680,7 @@ process_touchpad_scroll(struct vnc *v, int axis, long param1, long param2,
      * Right -> Button7
      *
      */
-    switch(axis)
+    switch (axis)
     {
         case WM_TOUCH_VSCROLL:
             for (i = 0; i < abs_scaled_delta; i++)
