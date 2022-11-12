@@ -551,36 +551,36 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     {
         switch (msg)
         {
-            case 100:
-                break; /* WM_MOUSEMOVE */
-            case 101:
+            case WM_MOUSEMOVE:
+                break;
+            case WM_LBUTTONUP:
                 v->mod_mouse_state &= ~1;
-                break; /* WM_LBUTTONUP */
-            case 102:
+                break;
+            case WM_LBUTTONDOWN:
                 v->mod_mouse_state |= 1;
-                break; /* WM_LBUTTONDOWN */
-            case 103:
+                break;
+            case WM_RBUTTONUP:
                 v->mod_mouse_state &= ~4;
-                break; /* WM_RBUTTONUP */
-            case 104:
+                break;
+            case WM_RBUTTONDOWN:
                 v->mod_mouse_state |= 4;
-                break; /* WM_RBUTTONDOWN */
-            case 105:
+                break;
+            case WM_BUTTON3UP:
                 v->mod_mouse_state &= ~2;
                 break;
-            case 106:
+            case WM_BUTTON3DOWN:
                 v->mod_mouse_state |= 2;
                 break;
-            case 107:
+            case WM_BUTTON4UP:
                 v->mod_mouse_state &= ~8;
                 break;
-            case 108:
+            case WM_BUTTON4DOWN:
                 v->mod_mouse_state |= 8;
                 break;
-            case 109:
+            case WM_BUTTON5UP:
                 v->mod_mouse_state &= ~16;
                 break;
-            case 110:
+            case WM_BUTTON5DOWN:
                 v->mod_mouse_state |= 16;
                 break;
         }
