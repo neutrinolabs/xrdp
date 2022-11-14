@@ -29,7 +29,7 @@
 #include "log.h"
 #include "string_calls.h"
 
-/* Code values used in 'code=' settings */
+/* Code values used in 'xrdp_mm->code=' settings */
 #define XVNC_SESSION_CODE 0
 #define XRDP_SESSION_CODE 10
 #define XORG_SESSION_CODE 20
