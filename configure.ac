@@ -281,14 +281,21 @@ if test x$use_imlib2 = xyes; then
 fi
 
 # Find freetype2
+#
+# The modversion used by pkgcheck does not correspond to the
+# freetype2 release. See docs/VERSIONS.TXT in the freetype2
+# source for a table of correspondences. If you change one
+# of the below defines, change both.
+m4_define([FT2_REQUIRED_VERSION], [2_8_0])
+m4_define([FT2_REQUIRED_MODVERSION], [20.0.14])
 case "$with_freetype2" in
     '' | no) AC_MSG_NOTICE([freetype2 will not be supported])
         use_freetype2=no
         ;;
     yes)
-        PKG_CHECK_MODULES([FREETYPE2], [freetype2 >= 2.8],
+        PKG_CHECK_MODULES([FREETYPE2], [freetype2 >= FT2_REQUIRED_MODVERSION],
             [use_freetype2=yes],
-            [AC_MSG_ERROR([please install libfreetype6-dev or freetype-devel])])
+            [AC_MSG_ERROR([please install version FT2_REQUIRED_VERSION or later of libfreetype6-dev or freetype-devel])])
         ;;
     /*) AC_MSG_CHECKING([for freetype2 in $with_freetype2])
         if test -d $with_freetype2/lib; then
