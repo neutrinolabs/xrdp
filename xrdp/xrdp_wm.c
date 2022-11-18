@@ -577,6 +577,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                      self->screen->bpp);
 
     /* Load the font */
+    xrdp_font_delete(self->default_font);
     dpi = xrdp_login_wnd_get_monitor_dpi(self);
     self->default_font = xrdp_font_create(self, dpi);
 
