@@ -5,6 +5,7 @@ AM_CPPFLAGS = \
   -DXRDP_SYSCONF_PATH=\"${sysconfdir}\" \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
+  -DXRDP_BIN_PATH=\"${bindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
@@ -34,7 +35,9 @@ xrdp_sesman_SOURCES = \
   sig.c \
   sig.h \
   xauth.c \
-  xauth.h
+  xauth.h \
+  xwait.c \
+  xwait.h
 
 # Possible authentication modules
 # See https://www.gnu.org/software/automake/manual/html_node/Conditional-Sources.html

@@ -49,6 +49,7 @@
 #include "sesman.h"
 #include "string_calls.h"
 #include "xauth.h"
+#include "xwait.h"
 #include "xrdp_sockets.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
@@ -286,42 +287,6 @@ x_server_running_check_ports(int display)
 }
 
 /******************************************************************************/
-/**
- *
- * @brief checks if there's a server running on a display
- * @param display the display to check
- * @return 0 if there isn't a display running, nonzero otherwise
- *
- */
-static int
-x_server_running(int display)
-{
-    char text[256];
-    int x_running;
-
-    g_sprintf(text, "/tmp/.X11-unix/X%d", display);
-    x_running = g_file_exist(text);
-
-    if (!x_running)
-    {
-        LOG(LOG_LEVEL_DEBUG, "Did not find a running X server at %s", text);
-        g_sprintf(text, "/tmp/.X%d-lock", display);
-        x_running = g_file_exist(text);
-    }
-
-    if (x_running)
-    {
-        LOG(LOG_LEVEL_INFO, "Found X server running at %s", text);
-    }
-    else
-    {
-        LOG(LOG_LEVEL_DEBUG, "Did not find a running X server at %s", text);
-    }
-
-    return x_running;
-}
-
-/******************************************************************************/
 /* called with the main thread
    returns boolean */
 static int
@@ -375,37 +340,6 @@ session_get_avail_display_from_chain(void)
     return 0;
 }
 
-/******************************************************************************/
-static int
-wait_for_xserver(int display)
-{
-    int i;
-
-    /* give X a bit to start */
-    /* wait up to 10 secs for x server to start */
-    i = 0;
-
-    LOG(LOG_LEVEL_DEBUG, "Waiting for X server to start on display %d", display);
-
-    while (!x_server_running(display))
-    {
-        i++;
-
-        if (i > 40)
-        {
-            LOG(LOG_LEVEL_WARNING,
-                "Timed out waiting for X server on display %d to startup",
-                display);
-            break;
-        }
-
-        g_sleep(250);
-    }
-
-    return 0;
-}
-
-/******************************************************************************/
 static int
 session_start_chansrv(int uid, int display)
 {
@@ -655,13 +589,12 @@ session_start(struct auth_info *auth_info,
         }
         else if (window_manager_pid == 0)
         {
-            wait_for_xserver(display);
             env_set_user(s->uid,
                          0,
                          display,
                          g_cfg->env_names,
                          g_cfg->env_values);
-            if (x_server_running(display))
+            if (wait_for_xserver(display))
             {
                 auth_set_env(auth_info);
                 if (s->directory != 0)
@@ -912,7 +845,6 @@ session_start(struct auth_info *auth_info,
                 struct exit_status xserver_exit_status;
                 struct exit_status chansrv_exit_status;
 
-                wait_for_xserver(display);
                 chansrv_pid = session_start_chansrv(s->uid, display);
 
                 LOG(LOG_LEVEL_INFO,
