@@ -56,11 +56,6 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port);
 static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
 
-/* Code values used in 'code=' settings */
-#define XVNC_SESSION_CODE 0
-#define XRDP_SESSION_CODE 10
-#define XORG_SESSION_CODE 20
-
 /*****************************************************************************/
 struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner)

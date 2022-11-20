@@ -29,11 +29,6 @@
 #include "log.h"
 #include "string_calls.h"
 
-/* Code values used in 'xrdp_mm->code=' settings */
-#define XVNC_SESSION_CODE 0
-#define XRDP_SESSION_CODE 10
-#define XORG_SESSION_CODE 20
-
 /*****************************************************************************/
 struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
@@ -1816,9 +1811,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
              * The negative number is represented by complement.
              */
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
-
-            // XVNC session has not implemented the touch event for now
-            if (delta != 0 && self->mm->code != XVNC_SESSION_CODE)
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
             {
                 // Use nature scrolling, up direction is negative.
                 xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_UP, delta);
@@ -1831,9 +1824,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         else
         {
             delta = device_flags & WheelRotationMask;
-
-            // XVNC session has not implemented the touch event for now
-            if (delta != 0 && self->mm->code != XVNC_SESSION_CODE)
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
             {
                 xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_DOWN, delta);
             }
@@ -1866,9 +1857,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
              * The negative number is represented by complement.
              */
             delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
-
-            // XVNC session has not implemented the touch event for now
-            if (delta != 0 && self->mm->code != XVNC_SESSION_CODE)
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
             {
                 // Use nature scrolling, right direction is negative.
                 xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_RIGHT, delta);
@@ -1881,9 +1870,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         else
         {
             delta = device_flags & WheelRotationMask;
-
-            // XVNC session has not implemented the touch event for now
-            if (delta != 0 && self->mm->code != XVNC_SESSION_CODE)
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
             {
                 xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_LEFT, delta);
             }
