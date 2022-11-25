@@ -145,7 +145,18 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
             {
                 case PAM_PROMPT_ECHO_OFF: /* password */
                     user_pass = (struct t_user_pass *) appdata_ptr;
-                    reply[i].resp = g_strdup(user_pass->pass);
+                    /* Check this function isn't being called
+                     * later than we expected */
+                    if (user_pass == NULL)
+                    {
+                        LOG(LOG_LEVEL_ERROR,
+                            "verify_pam_conv: Password unavailable");
+                        reply[i].resp = g_strdup("????");
+                    }
+                    else
+                    {
+                        reply[i].resp = g_strdup(user_pass->pass);
+                    }
                     break;
 
                 case PAM_ERROR_MSG:
@@ -292,6 +303,16 @@ auth_userpass(const char *user, const char *pass,
         pam_end(auth_info->ph, error);
         g_free(auth_info);
         return NULL;
+    }
+
+    /* Set the appdata_ptr passed to the conversation function to
+     * NULL, as the existing value is going out of scope */
+    pamc.appdata_ptr = NULL;
+    error = pam_set_item(auth_info->ph, PAM_CONV, &pamc);
+    if (error != PAM_SUCCESS)
+    {
+        LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_CONV) failed: %s",
+            pam_strerror(auth_info->ph, error));
     }
 
     return auth_info;
