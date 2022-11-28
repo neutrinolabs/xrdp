@@ -37,21 +37,17 @@
 #include <stdio.h>
 #include <security/pam_appl.h>
 
-/* Defines the maximum size of a username or password. With pam there is no real limit */
-#define MAX_BUF 8192
-
+/* Allows the conversation function to find the username and password */
 struct t_user_pass
 {
-    char user[MAX_BUF];
-    char pass[MAX_BUF];
+    const char *user;
+    const char *pass;
 };
 
 struct auth_info
 {
-    struct t_user_pass user_pass;
     int session_opened;
     int did_setcred;
-    struct pam_conv pamc;
     pam_handle_t *ph;
 };
 
@@ -149,7 +145,18 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
             {
                 case PAM_PROMPT_ECHO_OFF: /* password */
                     user_pass = (struct t_user_pass *) appdata_ptr;
-                    reply[i].resp = g_strdup(user_pass->pass);
+                    /* Check this function isn't being called
+                     * later than we expected */
+                    if (user_pass == NULL)
+                    {
+                        LOG(LOG_LEVEL_ERROR,
+                            "verify_pam_conv: Password unavailable");
+                        reply[i].resp = g_strdup("????");
+                    }
+                    else
+                    {
+                        reply[i].resp = g_strdup(user_pass->pass);
+                    }
                     break;
 
                 case PAM_ERROR_MSG:
@@ -219,14 +226,19 @@ auth_userpass(const char *user, const char *pass,
     int error;
     struct auth_info *auth_info;
     char service_name[256];
+    struct t_user_pass user_pass = {user, pass};
+    struct pam_conv pamc = {verify_pam_conv, (void *) &user_pass};
+
+    auth_info = g_new0(struct auth_info, 1);
+    if (auth_info == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "auth_userpass: No memory");
+        error = PAM_BUF_ERR;
+        return NULL;
+    }
 
     get_service_name(service_name);
-    auth_info = g_new0(struct auth_info, 1);
-    g_strncpy(auth_info->user_pass.user, user, MAX_BUF - 1);
-    g_strncpy(auth_info->user_pass.pass, pass, MAX_BUF - 1);
-    auth_info->pamc.conv = &verify_pam_conv;
-    auth_info->pamc.appdata_ptr = &(auth_info->user_pass);
-    error = pam_start(service_name, user, &(auth_info->pamc), &(auth_info->ph));
+    error = pam_start(service_name, user, &pamc, &(auth_info->ph));
 
     if (error != PAM_SUCCESS)
     {
@@ -291,6 +303,16 @@ auth_userpass(const char *user, const char *pass,
         pam_end(auth_info->ph, error);
         g_free(auth_info);
         return NULL;
+    }
+
+    /* Set the appdata_ptr passed to the conversation function to
+     * NULL, as the existing value is going out of scope */
+    pamc.appdata_ptr = NULL;
+    error = pam_set_item(auth_info->ph, PAM_CONV, &pamc);
+    if (error != PAM_SUCCESS)
+    {
+        LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_CONV) failed: %s",
+            pam_strerror(auth_info->ph, error));
     }
 
     return auth_info;
