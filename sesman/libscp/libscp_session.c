@@ -428,13 +428,28 @@ scp_session_set_guid(struct SCP_SESSION *s, const struct guid *guid)
 }
 
 /*******************************************************************/
+static void
+clear_and_free_string(char *p)
+{
+    if (p != NULL)
+    {
+        char *cp;
+        for (cp = p ; *cp != '\0'; ++cp)
+        {
+            *cp = '\0';
+        }
+        g_free(p);
+    }
+}
+
+/*******************************************************************/
 void
 scp_session_destroy(struct SCP_SESSION *s)
 {
     if (s != NULL)
     {
         g_free(s->username);
-        g_free(s->password);
+        clear_and_free_string(s->password);
         g_free(s->hostname);
         g_free(s->domain);
         g_free(s->program);
