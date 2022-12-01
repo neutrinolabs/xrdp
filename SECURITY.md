@@ -10,7 +10,9 @@ so that we can fix the security problem to protect a lot of users around the wor
 as possible.
 
 Our email address for security report is below. This is a private mailing list and not open
-for public viewing.
+for public viewing. Please include your GitHub account when reporting a vulnerability to
+this email address if possible. Then we core team can invite you to private pull requests
+and reporters can join the code review.
 
 * [xrdp-core@googlegroups.com](mailto:xrdp-core@googlegroups.com)
 
