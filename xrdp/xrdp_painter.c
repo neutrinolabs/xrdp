@@ -184,7 +184,7 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
                                 NULL, 0);
         if (error)
         {
-            LLOGLN(0, ("xrdp_painter_send_dirty: RFX encode fails (%d)", error));
+            LOG_DEVEL(LOG_LEVEL_WARNING, "xrdp_painter_send_dirty: RFX encode fails (%d)", error);
             return 1;
         }
 
