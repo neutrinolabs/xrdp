@@ -83,9 +83,9 @@ xrdp_wm_create(struct xrdp_process *owner,
     if (self->codec_id)
     {
         self->codec_handle = (struct xrdp_encoder *)rfxcodec_encode_create(
-                                                    self->screen->width,
-                                                    self->screen->height,
-                                                    RFX_FORMAT_BGRA, 0);
+                                 self->screen->width,
+                                 self->screen->height,
+                                 RFX_FORMAT_BGRA, 0);
         if (!self->codec_handle)
         {
             LOG(LOG_LEVEL_ERROR, "xrdp_painter_create: rfxcodec_encode_create failed");
