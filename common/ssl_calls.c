@@ -36,12 +36,34 @@
 #include <openssl/crypto.h>
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "arch.h"
 #include "ssl_calls.h"
 #include "trans.h"
 #include "log.h"
 
 #define SSL_WANT_READ_WRITE_TIMEOUT 100
+
+/*
+ * Globals used by openssl 3 and later */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static EVP_MD *g_md_md5;    /* MD5 message digest */
+static EVP_MD *g_md_sha1;   /* SHA1 message digest */
+static EVP_CIPHER *g_cipher_des_ede3_cbc; /* DES3 CBC cipher */
+static EVP_MAC *g_mac_hmac; /* HMAC MAC */
+#endif
+
+/* definition of ssl_tls */
+struct ssl_tls
+{
+    SSL *ssl; /* SSL * */
+    SSL_CTX *ctx; /* SSL_CTX * */
+    char *cert;
+    char *key;
+    struct trans *trans;
+    tintptr rwo; /* wait obj */
+    int error_logged; /* Error has already been logged */
+};
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
@@ -63,8 +85,8 @@ static inline void
 RSA_get0_key(const RSA *key, const BIGNUM **n, const BIGNUM **e,
              const BIGNUM **d)
 {
-     *n = key->n;
-     *d = key->d;
+    *n = key->n;
+    *d = key->d;
 }
 
 static inline int
@@ -74,7 +96,7 @@ DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
      * parameters MUST be non-NULL.  q may remain NULL.
      */
     if ((dh->p == NULL && p == NULL)
-        || (dh->g == NULL && g == NULL))
+            || (dh->g == NULL && g == NULL))
     {
         return 0;
     }
@@ -105,12 +127,41 @@ DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
 
 
+
+/*****************************************************************************/
+static void
+dump_error_stack(const char *prefix)
+{
+    /* Dump the error stack from the SSL library */
+    unsigned long code;
+    char buff[256];
+    while ((code = ERR_get_error()) != 0L)
+    {
+        ERR_error_string_n(code, buff, sizeof(buff));
+        LOG(LOG_LEVEL_ERROR, "%s: %s", prefix, buff);
+    }
+}
+
+/*****************************************************************************/
+/* As above, but used for TLS connection errors where only the first
+   error is logged */
+static void
+dump_ssl_error_stack(struct ssl_tls *self)
+{
+    if (!self->error_logged)
+    {
+        dump_error_stack("SSL");
+        self->error_logged = 1;
+    }
+}
+
 /*****************************************************************************/
 int
 ssl_init(void)
 {
     SSL_load_error_strings();
     SSL_library_init();
+
     return 0;
 }
 
@@ -118,16 +169,44 @@ ssl_init(void)
 int
 ssl_finish(void)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /* De-allocate any allocated globals
+     * For OpenSSL 3, these can all safely be passed a NULL pointer */
+    EVP_MD_free(g_md_md5);
+    EVP_MD_free(g_md_sha1);
+    EVP_CIPHER_free(g_cipher_des_ede3_cbc);
+    EVP_MAC_free(g_mac_hmac);
+#endif
     return 0;
 }
 
-/* rc4 stuff */
+/* rc4 stuff
+ *
+ * For OpenSSL 3.0, the rc4 encryption algorithm is only provided by the
+ * legacy provider (see crypto(7)). Since RC4 is so simple, we can implement
+ * it directly rather than having to load the legacy provider.  This will
+ * avoids problems if running on a system where openssl has been built
+ * without the legacy provider */
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+struct rc4_data
+{
+    /* See https://en.wikipedia.org/wiki/RC4 */
+    unsigned char S[256];
+    int i;
+    int j;
+};
+#endif
 
 /*****************************************************************************/
 void *
 ssl_rc4_info_create(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(RC4_KEY), 1);
+#else
+    return g_malloc(sizeof(struct rc4_data), 1);
+#endif
 }
 
 /*****************************************************************************/
@@ -139,16 +218,77 @@ ssl_rc4_info_delete(void *rc4_info)
 
 /*****************************************************************************/
 void
-ssl_rc4_set_key(void *rc4_info, char *key, int len)
+ssl_rc4_set_key(void *rc4_info, const char *key, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     RC4_set_key((RC4_KEY *)rc4_info, len, (tui8 *)key);
+#else
+    unsigned char *S = ((struct rc4_data *)rc4_info)->S;
+    int i;
+    int j = 0;
+    unsigned char t;
+    for (i = 0 ; i < 256; ++i)
+    {
+        S[i] = i;
+    }
+    for (i = 0 ; i < 256; ++i)
+    {
+        j = (j + S[i] + key[i % len]) & 0xff;
+        t = S[i];
+        S[i] = S[j];
+        S[j] = t;
+    }
+    ((struct rc4_data *)rc4_info)->i = 0;
+    ((struct rc4_data *)rc4_info)->j = 0;
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_rc4_crypt(void *rc4_info, char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     RC4((RC4_KEY *)rc4_info, len, (tui8 *)data, (tui8 *)data);
+#else
+    unsigned char *S = ((struct rc4_data *)rc4_info)->S;
+    int i = ((struct rc4_data *)rc4_info)->i;
+    int j = ((struct rc4_data *)rc4_info)->j;
+    unsigned char *p = (unsigned char *)data;
+    unsigned char t;
+    unsigned char k;
+
+    /*
+     * Do some loop-unrolling for performance. Here are the steps
+     * for each byte */
+#define RC4_ROUND \
+    i = (i + 1) & 0xff; \
+    j = (j + S[i]) & 0xff; \
+    t = S[i]; \
+    S[i] = S[j]; \
+    S[j] = t; \
+    k = S[(S[i] + S[j]) & 0xff]; \
+    *p++ ^= k
+
+    while (len >= 8)
+    {
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        RC4_ROUND;
+        len -= 8;
+    }
+    while (len-- > 0)
+    {
+        RC4_ROUND;
+    }
+
+    ((struct rc4_data *)rc4_info)->i = i;
+    ((struct rc4_data *)rc4_info)->j = j;
+#endif
 }
 
 /* sha1 stuff */
@@ -157,35 +297,78 @@ ssl_rc4_crypt(void *rc4_info, char *data, int len)
 void *
 ssl_sha1_info_create(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(SHA_CTX), 1);
+#else
+    /*
+     * If we can't get the digest loaded, there's a problem with the
+     * library providers, so there's no point in us returning anything useful.
+     * If we do load the digest, it's used later */
+    if (g_md_sha1 == NULL)
+    {
+        if ((g_md_sha1 = EVP_MD_fetch(NULL, "sha1", NULL)) == NULL)
+        {
+            dump_error_stack("sha1");
+            return NULL;
+        }
+    }
+
+    return (void *)EVP_MD_CTX_new();
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_info_delete(void *sha1_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     g_free(sha1_info);
+#else
+    EVP_MD_CTX_free((EVP_MD_CTX *)sha1_info);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_clear(void *sha1_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Init((SHA_CTX *)sha1_info);
+#else
+    if (sha1_info != NULL)
+    {
+        EVP_DigestInit_ex((EVP_MD_CTX *)sha1_info, g_md_sha1, NULL);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
+#else
+    if (sha1_info != NULL)
+    {
+        EVP_DigestUpdate((EVP_MD_CTX *)sha1_info, data, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_sha1_complete(void *sha1_info, char *data)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Final((tui8 *)data, (SHA_CTX *)sha1_info);
+#else
+    if (sha1_info != NULL)
+    {
+        EVP_DigestFinal_ex((EVP_MD_CTX *)sha1_info, (unsigned char *)data,
+                           NULL);
+    }
+#endif
 }
 
 /* md5 stuff */
@@ -194,67 +377,149 @@ ssl_sha1_complete(void *sha1_info, char *data)
 void *
 ssl_md5_info_create(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(MD5_CTX), 1);
+#else
+    /*
+     * If we can't get the digest loaded, there's a problem with the
+     * library providers, so there's no point in us returning anything useful.
+     * If we do load the digest, it's used later */
+    if (g_md_md5 == NULL)
+    {
+        if ((g_md_md5 = EVP_MD_fetch(NULL, "md5", NULL)) == NULL)
+        {
+            dump_error_stack("md5");
+            return NULL;
+        }
+    }
+
+    return (void *)EVP_MD_CTX_new();
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_info_delete(void *md5_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     g_free(md5_info);
+#else
+    EVP_MD_CTX_free((EVP_MD_CTX *)md5_info);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_clear(void *md5_info)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Init((MD5_CTX *)md5_info);
+#else
+    if (md5_info != NULL)
+    {
+        EVP_DigestInit_ex((EVP_MD_CTX *)md5_info, g_md_md5, NULL);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
-ssl_md5_transform(void *md5_info, char *data, int len)
+ssl_md5_transform(void *md5_info, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Update((MD5_CTX *)md5_info, data, len);
+#else
+    if (md5_info != NULL)
+    {
+        EVP_DigestUpdate((EVP_MD_CTX *)md5_info, data, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_md5_complete(void *md5_info, char *data)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
+#else
+    if (md5_info != NULL)
+    {
+        EVP_DigestFinal_ex((EVP_MD_CTX *)md5_info, (unsigned char *)data, NULL);
+    }
+#endif
 }
 
 /* FIPS stuff */
 
 /*****************************************************************************/
 void *
-ssl_des3_encrypt_info_create(const char *key, const char* ivec)
+ssl_des3_encrypt_info_create(const char *key, const char *ivec)
 {
     EVP_CIPHER_CTX *des3_ctx;
     const tui8 *lkey;
     const tui8 *livec;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /*
+     * For these versions of OpenSSL, there are no long-term guarantees the
+     * DES3 cipher will be available. We'll try to load it here so we
+     * can log any errors */
+    if (g_cipher_des_ede3_cbc == NULL)
+    {
+        g_cipher_des_ede3_cbc = EVP_CIPHER_fetch(NULL, "des-ede3-cbc", NULL);
+        if (g_cipher_des_ede3_cbc == NULL)
+        {
+            dump_error_stack("DES-EDE3-CBC");
+            return NULL;
+        }
+    }
+#endif
+
     des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     EVP_EncryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+#else
+    EVP_EncryptInit_ex(des3_ctx, g_cipher_des_ede3_cbc, NULL, lkey, livec);
+#endif
     EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
     return des3_ctx;
 }
 
 /*****************************************************************************/
 void *
-ssl_des3_decrypt_info_create(const char *key, const char* ivec)
+ssl_des3_decrypt_info_create(const char *key, const char *ivec)
 {
     EVP_CIPHER_CTX *des3_ctx;
     const tui8 *lkey;
     const tui8 *livec;
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /*
+     * For these versions of OpenSSL, there are no long-term guarantees the
+     * DES3 cipher will be available. We'll try to load it here so we
+     * can log any errors */
+    if (g_cipher_des_ede3_cbc == NULL)
+    {
+        g_cipher_des_ede3_cbc = EVP_CIPHER_fetch(NULL, "des-ede3-cbc", NULL);
+        if (g_cipher_des_ede3_cbc == NULL)
+        {
+            dump_error_stack("DES-EDE3-CBC");
+            return NULL;
+        }
+    }
+#endif
+
     des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     EVP_DecryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+#else
+    EVP_DecryptInit_ex(des3_ctx, g_cipher_des_ede3_cbc, NULL, lkey, livec);
+#endif
     EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
     return des3_ctx;
 }
@@ -282,10 +547,13 @@ ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
     tui8 *lout_data;
 
     des3_ctx = (EVP_CIPHER_CTX *) des3;
-    lin_data = (const tui8 *) in_data;
-    lout_data = (tui8 *) out_data;
-    len = 0;
-    EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    if (des3_ctx != NULL)
+    {
+        lin_data = (const tui8 *) in_data;
+        lout_data = (tui8 *) out_data;
+        len = 0;
+        EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    }
     return 0;
 }
 
@@ -299,10 +567,13 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
     tui8 *lout_data;
 
     des3_ctx = (EVP_CIPHER_CTX *) des3;
-    lin_data = (const tui8 *) in_data;
-    lout_data = (tui8 *) out_data;
-    len = 0;
-    EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    if (des3_ctx != NULL)
+    {
+        lin_data = (const tui8 *) in_data;
+        lout_data = (tui8 *) out_data;
+        len = 0;
+        EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    }
     return 0;
 }
 
@@ -310,16 +581,28 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
 void *
 ssl_hmac_info_create(void)
 {
-    HMAC_CTX *hmac_ctx;
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    return (HMAC_CTX *)HMAC_CTX_new();
+#else
+    /* Need a MAC algorithm loaded */
+    if (g_mac_hmac == NULL)
+    {
+        if ((g_mac_hmac = EVP_MAC_fetch(NULL, "hmac", NULL)) == NULL)
+        {
+            dump_error_stack("hmac");
+            return NULL;
+        }
+    }
 
-    hmac_ctx = HMAC_CTX_new();
-    return hmac_ctx;
+    return (void *)EVP_MAC_CTX_new(g_mac_hmac);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_info_delete(void *hmac)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
 
     hmac_ctx = (HMAC_CTX *) hmac;
@@ -327,42 +610,75 @@ ssl_hmac_info_delete(void *hmac)
     {
         HMAC_CTX_free(hmac_ctx);
     }
+#else
+    EVP_MAC_CTX_free((EVP_MAC_CTX *)hmac);
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_sha1_init(void *hmac, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
 
     hmac_ctx = (HMAC_CTX *) hmac;
     HMAC_Init_ex(hmac_ctx, data, len, EVP_sha1(), NULL);
+#else
+    if (hmac != NULL)
+    {
+        char digest[] = "sha1";
+        OSSL_PARAM params[3];
+        size_t n = 0;
+        params[n++] = OSSL_PARAM_construct_utf8_string("digest", digest, 0);
+        params[n++] = OSSL_PARAM_construct_end();
+        if (EVP_MAC_init((EVP_MAC_CTX *)hmac, (unsigned char *)data,
+                         len, params) == 0)
+        {
+            dump_error_stack("hmac-sha1");
+        }
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_transform(void *hmac, const char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
     const tui8 *ldata;
 
     hmac_ctx = (HMAC_CTX *) hmac;
-    ldata = (const tui8*) data;
+    ldata = (const tui8 *) data;
     HMAC_Update(hmac_ctx, ldata, len);
+#else
+    if (hmac != NULL)
+    {
+        EVP_MAC_update((EVP_MAC_CTX *)hmac, (unsigned char *)data, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_hmac_complete(void *hmac, char *data, int len)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
-    tui8* ldata;
+    tui8 *ldata;
     tui32 llen;
 
     hmac_ctx = (HMAC_CTX *) hmac;
     ldata = (tui8 *) data;
     llen = len;
     HMAC_Final(hmac_ctx, ldata, &llen);
+#else
+    if (hmac != NULL)
+    {
+        EVP_MAC_final((EVP_MAC_CTX *)hmac, (unsigned char *)data, NULL, len);
+    }
+#endif
 }
 
 /*****************************************************************************/
@@ -454,7 +770,6 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
                   char *mod, int mod_len, char *pri, int pri_len)
 {
     BIGNUM *my_e;
-    RSA *my_key;
     char *lexp;
     char *lmod;
     char *lpri;
@@ -463,7 +778,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
     int diff;
 
     if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
-                          ((pri_len != 64) && (pri_len != 256)))
+            ((pri_len != 64) && (pri_len != 256)))
     {
         return 1;
     }
@@ -476,12 +791,44 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
     ssl_reverse_it(lexp, exp_len);
     my_e = BN_new();
     BN_bin2bn((tui8 *)lexp, exp_len, my_e);
-    my_key = RSA_new();
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    const BIGNUM *n = NULL;
+    const BIGNUM *d = NULL;
+    RSA *my_key = RSA_new();
     error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
 
-    const BIGNUM *n;
-    const BIGNUM *d;
+    /* After this call, n and d point directly into my_key, and are valid
+     * until my_key is free'd */
     RSA_get0_key(my_key, &n, NULL, &d);
+#else
+    BIGNUM *n = NULL;
+    BIGNUM *d = NULL;
+    OSSL_PARAM params[] =
+    {
+        OSSL_PARAM_construct_int("bits", &key_size_in_bits),
+        OSSL_PARAM_construct_end()
+    };
+    EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
+    EVP_PKEY *pkey = NULL;
+
+    if (pctx != NULL &&
+            EVP_PKEY_keygen_init(pctx) > 0 &&
+            EVP_PKEY_CTX_set_params(pctx, params) > 0 &&
+            EVP_PKEY_generate(pctx, &pkey) > 0 &&
+            EVP_PKEY_get_bn_param(pkey, "n", &n) > 0 &&
+            EVP_PKEY_get_bn_param(pkey, "d", &d) > 0)
+    {
+        error = 0;
+    }
+    else
+    {
+        error = 1;
+    }
+
+    EVP_PKEY_CTX_free(pctx);
+    EVP_PKEY_free(pkey);
+#endif
 
     if (error == 0)
     {
@@ -516,7 +863,12 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
     }
 
     BN_free(my_e);
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     RSA_free(my_key);
+#else
+    BN_free(n);
+    BN_clear_free(d);
+#endif
     g_free(lexp);
     g_free(lmod);
     g_free(lpri);
@@ -528,10 +880,15 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
 see also
  * https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
  * https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_tmp_dh_callback(3)
+ *
+ * We dont do this for OpenSSL 3 - we use SSL_CTX_set_dh_auto() instead, as this
+ * can cater for different key sizes on the certificate
 */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 static DH *ssl_get_dh2236()
 {
-    static unsigned char dh2236_p[] = {
+    static unsigned char dh2236_p[] =
+    {
         0x0E, 0xF8, 0x69, 0x0B, 0x35, 0x2F, 0x62, 0x59, 0xF7, 0xAF, 0x4E, 0x19,
         0xB5, 0x9B, 0xD2, 0xEB, 0x33, 0x78, 0x1D, 0x43, 0x1D, 0xB6, 0xE4, 0xA3,
         0x63, 0x47, 0x6A, 0xD4, 0xA8, 0x28, 0x11, 0x8C, 0x3F, 0xC8, 0xF1, 0x32,
@@ -557,7 +914,8 @@ static DH *ssl_get_dh2236()
         0x70, 0xAC, 0x58, 0x3A, 0x3C, 0x18, 0x15, 0x54, 0x84, 0xA8, 0xAA, 0x41,
         0x26, 0x7B, 0xE0, 0xA3,
     };
-    static unsigned char dh2236_g[] = {
+    static unsigned char dh2236_g[] =
+    {
         0x02,
     };
 
@@ -588,6 +946,7 @@ static DH *ssl_get_dh2236()
 
     return dh;
 }
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L */
 
 /*****************************************************************************/
 struct ssl_tls *
@@ -610,44 +969,69 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 
     return self;
 }
-
 /*****************************************************************************/
-int
-ssl_tls_print_error(const char *func, SSL *connection, int value)
+static int
+ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
 {
-    switch (SSL_get_error(connection, value))
+    int result = 1;
+    int ssl_error = SSL_get_error(self->ssl, value);
+
+    if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE)
     {
-        case SSL_ERROR_ZERO_RETURN:
-            g_writeln("ssl_tls_print_error: %s: Server closed TLS connection",
-                      func);
-            return 1;
-
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-            return 0;
-
-        case SSL_ERROR_SYSCALL:
-            g_writeln("ssl_tls_print_error: %s: I/O error", func);
-            return 1;
-
-        case SSL_ERROR_SSL:
-            g_writeln("ssl_tls_print_error: %s: Failure in SSL library (protocol error?)",
-                      func);
-            return 1;
-
-        default:
-            g_writeln("ssl_tls_print_error: %s: Unknown error", func);
-            return 1;
+        result = 0;
     }
+    else if (!self->error_logged)
+    {
+        switch (ssl_error)
+        {
+            case SSL_ERROR_ZERO_RETURN:
+                LOG(LOG_LEVEL_ERROR, "%s: Server closed TLS connection", func);
+                break;
+
+            case SSL_ERROR_SYSCALL:
+                LOG(LOG_LEVEL_ERROR, "%s: I/O error", func);
+                break;
+
+            case SSL_ERROR_SSL:
+                LOG(LOG_LEVEL_ERROR, "%s: Failure in SSL library "
+                    "(protocol error?)", func);
+                break;
+
+            default:
+                LOG(LOG_LEVEL_ERROR, "%s: Unknown SSL error", func);
+                break;
+        }
+
+        dump_ssl_error_stack(self); /* Sets self->error_logged */
+    }
+
+    return result;
+}
+
+/**************************************************************************//**
+ * Log an attempt to use an encrypted file
+ *
+ * For example, a private key could have a password set on it. We don't
+ * support this.
+ */
+static int
+log_encrypted_file_unsupported(char *buf, int size, int rwflag, void *u)
+{
+    LOG(LOG_LEVEL_ERROR, "Encryption is not supported for %s",
+        (const char *)u);
+    return -1; /* See pem_password_cb(3ssl) */
 }
 
 /*****************************************************************************/
+
 int
 ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                const char *tls_ciphers)
 {
     int connection_status;
     long options = 0;
+
+    ERR_clear_error();
 
     /**
      * SSL_OP_NO_SSLv2
@@ -693,7 +1077,8 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     self->ctx = SSL_CTX_new(SSLv23_server_method());
     if (self->ctx == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "ssl_tls_accept: SSL_CTX_new failed");
+        LOG(LOG_LEVEL_ERROR, "Unable to negotiate a TLS connection with the client");
+        dump_ssl_error_stack(self);
         return 1;
     }
 
@@ -704,23 +1089,31 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     SSL_CTX_set_options(self->ctx, options);
 
     /* set DH parameters */
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     DH *dh = ssl_get_dh2236();
     if (dh == NULL)
     {
-        log_message(LOG_LEVEL_ERROR, "ssl_tls_accept: ssl_get_dh2236 failed");
+        LOG(LOG_LEVEL_ERROR, "Unable to generate DHE parameters for TLS");
         return 1;
     }
 
     if (SSL_CTX_set_tmp_dh(self->ctx, dh) != 1)
     {
-        log_message(LOG_LEVEL_ERROR,
-                    "ssl_tls_accept: SSL_CTX_set_tmp_dh failed");
+        LOG(LOG_LEVEL_ERROR, "Unable to setup DHE parameters for TLS");
+        dump_ssl_error_stack(self);
         return 1;
     }
     DH_free(dh); // ok to free, copied into ctx by SSL_CTX_set_tmp_dh()
-
+#else
+    if (!SSL_CTX_set_dh_auto(self->ctx, 1))
+    {
+        LOG(LOG_LEVEL_ERROR, "TLS DHE auto failed to be enabled");
+        dump_ssl_error_stack(self);
+        return 1;
+    }
+#endif
 #if defined(SSL_CTX_set_ecdh_auto)
-    if(!SSL_CTX_set_ecdh_auto(self->ctx, 1))
+    if (!SSL_CTX_set_ecdh_auto(self->ctx, 1))
     {
         LOG(LOG_LEVEL_WARNING, "TLS ecdh auto failed to be enabled");
     }
@@ -728,50 +1121,84 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
 
     if (g_strlen(tls_ciphers) > 1)
     {
-        log_message(LOG_LEVEL_TRACE, "ssl_tls_accept: tls_ciphers=%s",
-            tls_ciphers);
+        LOG(LOG_LEVEL_TRACE, "tls_ciphers=%s", tls_ciphers);
         if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
         {
-            g_writeln("ssl_tls_accept: invalid cipher options");
+            LOG(LOG_LEVEL_ERROR, "Invalid TLS cipher options %s", tls_ciphers);
+            dump_ssl_error_stack(self);
             return 1;
         }
     }
 
     SSL_CTX_set_read_ahead(self->ctx, 0);
 
-    if (SSL_CTX_use_RSAPrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
+    /*
+     * We don't currently handle encrypted private keys - set a callback
+     * to tell the user if one is provided */
+    SSL_CTX_set_default_passwd_cb(self->ctx, log_encrypted_file_unsupported);
+    SSL_CTX_set_default_passwd_cb_userdata(self->ctx, self->key);
+
+    if (SSL_CTX_use_PrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
             <= 0)
     {
-        g_writeln("ssl_tls_accept: SSL_CTX_use_RSAPrivateKey_file failed");
+        LOG(LOG_LEVEL_ERROR, "Error loading TLS private key from %s", self->key);
+        dump_ssl_error_stack(self);
         return 1;
     }
+    SSL_CTX_set_default_passwd_cb(self->ctx, NULL);
+    SSL_CTX_set_default_passwd_cb_userdata(self->ctx, NULL);
 
     if (SSL_CTX_use_certificate_chain_file(self->ctx, self->cert) <= 0)
     {
-        g_writeln("ssl_tls_accept: SSL_CTX_use_certificate_chain_file failed");
+        LOG(LOG_LEVEL_ERROR, "Error loading TLS certificate chain from %s", self->cert);
+        dump_ssl_error_stack(self);
         return 1;
     }
+
+    /*
+     * Don't call SSL_check_private_key() for openSSL prior to 1.0.2, as
+     * certificate chains are not handled in the same way - see
+     * SSL_CTX_check_private_key(3ssl) */
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+    if (!SSL_CTX_check_private_key(self->ctx))
+    {
+        LOG(LOG_LEVEL_ERROR, "Private key %s and certificate %s do not match",
+            self->key, self->cert);
+        dump_ssl_error_stack(self);
+        return 1;
+    }
+#endif
 
     self->ssl = SSL_new(self->ctx);
 
     if (self->ssl == NULL)
     {
-        g_writeln("ssl_tls_accept: SSL_new failed");
+        LOG(LOG_LEVEL_ERROR, "Unable to create an SSL structure");
+        dump_ssl_error_stack(self);
         return 1;
     }
 
     if (SSL_set_fd(self->ssl, self->trans->sck) < 1)
     {
-        g_writeln("ssl_tls_accept: SSL_set_fd failed");
+        LOG(LOG_LEVEL_ERROR, "Unable to set up an SSL structure on fd %d",
+            (int)self->trans->sck);
+        dump_ssl_error_stack(self);
         return 1;
     }
 
-    while(1) {
+    while (1)
+    {
+        /*
+         * Make sure the error queue is clear before (re-) attempting the
+         * accept. If the accept is successful, the error queue will
+         * remain clear for normal SSL operation */
+        ERR_clear_error();
+
         connection_status = SSL_accept(self->ssl);
 
         if (connection_status <= 0)
         {
-            if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
+            if (ssl_tls_log_error(self, "SSL_accept", connection_status))
             {
                 return 1;
             }
@@ -796,7 +1223,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
         }
     }
 
-    g_writeln("ssl_tls_accept: TLS connection accepted");
+    LOG(LOG_LEVEL_TRACE, "TLS connection accepted");
 
     return 0;
 }
@@ -822,7 +1249,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
         status = SSL_shutdown(self->ssl);
         if (status <= 0)
         {
-            if (ssl_tls_print_error("SSL_shutdown", self->ssl, status))
+            if (ssl_tls_log_error(self, "SSL_shutdown", status))
             {
                 return 1;
             }
@@ -843,10 +1270,14 @@ ssl_tls_delete(struct ssl_tls *self)
     if (self != NULL)
     {
         if (self->ssl)
+        {
             SSL_free(self->ssl);
+        }
 
         if (self->ctx)
+        {
             SSL_CTX_free(self->ctx);
+        }
 
         g_delete_wait_obj(self->rwo);
 
@@ -861,7 +1292,8 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
     int status;
     int break_flag;
 
-    while(1) {
+    while (1)
+    {
         status = SSL_read(tls->ssl, data, length);
 
         switch (SSL_get_error(tls->ssl, status))
@@ -887,7 +1319,7 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
                 return 0;
 
             default:
-                ssl_tls_print_error("SSL_read", tls->ssl, status);
+                ssl_tls_log_error(tls, "SSL_read", status);
                 status = -1;
                 break_flag = 1;
                 break;
@@ -914,7 +1346,8 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
     int status;
     int break_flag;
 
-    while(1) {
+    while (1)
+    {
         status = SSL_write(tls->ssl, data, length);
 
         switch (SSL_get_error(tls->ssl, status))
@@ -940,7 +1373,7 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
                 return 0;
 
             default:
-                ssl_tls_print_error("SSL_write", tls->ssl, status);
+                ssl_tls_log_error(tls, "SSL_write", status);
                 status = -1;
                 break_flag = 1;
                 break;
@@ -970,16 +1403,23 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 
 /*****************************************************************************/
 const char *
-ssl_get_version(const struct ssl_st *ssl)
+ssl_get_version(const struct ssl_tls *ssl)
 {
-    return SSL_get_version(ssl);
+    return SSL_get_version(ssl->ssl);
 }
 
 /*****************************************************************************/
 const char *
-ssl_get_cipher_name(const struct ssl_st *ssl)
+ssl_get_cipher_name(const struct ssl_tls *ssl)
 {
-    return SSL_get_cipher_name(ssl);
+    return SSL_get_cipher_name(ssl->ssl);
+}
+
+/*****************************************************************************/
+tintptr
+ssl_get_rwo(const struct ssl_tls *ssl)
+{
+    return ssl->rwo;
 }
 
 /*****************************************************************************/
@@ -1015,68 +1455,68 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
     if (g_pos(str, ",TLSv1.3,") >= 0)
     {
 #if defined(SSL_OP_NO_TLSv1_3)
-        log_message(LOG_LEVEL_DEBUG, "TLSv1.3 enabled");
+        LOG(LOG_LEVEL_DEBUG, "TLSv1.3 enabled");
         protocols &= ~SSL_OP_NO_TLSv1_3;
 #else
-        log_message(LOG_LEVEL_WARNING,
-                    "TLSv1.3 enabled by config, "
-                    "but not supported by system OpenSSL");
+        LOG(LOG_LEVEL_WARNING,
+            "TLSv1.3 enabled by config, "
+            "but not supported by system OpenSSL");
         rv |= (1 << 6);
 #endif
     }
     if (g_pos(str, ",TLSv1.2,") >= 0)
     {
 #if defined(SSL_OP_NO_TLSv1_2)
-        log_message(LOG_LEVEL_DEBUG, "TLSv1.2 enabled");
+        LOG(LOG_LEVEL_DEBUG, "TLSv1.2 enabled");
         protocols &= ~SSL_OP_NO_TLSv1_2;
 #else
-        log_message(LOG_LEVEL_WARNING,
-                    "TLSv1.2 enabled by config, "
-                    "but not supported by system OpenSSL");
+        LOG(LOG_LEVEL_WARNING,
+            "TLSv1.2 enabled by config, "
+            "but not supported by system OpenSSL");
         rv |= (1 << 1);
 #endif
     }
     if (g_pos(str, ",TLSv1.1,") >= 0)
     {
 #if defined(SSL_OP_NO_TLSv1_1)
-        log_message(LOG_LEVEL_DEBUG, "TLSv1.1 enabled");
+        LOG(LOG_LEVEL_DEBUG, "TLSv1.1 enabled");
         protocols &= ~SSL_OP_NO_TLSv1_1;
 #else
-        log_message(LOG_LEVEL_WARNING,
-                    "TLSv1.1 enabled by config, "
-                    "but not supported by system OpenSSL");
+        LOG(LOG_LEVEL_WARNING,
+            "TLSv1.1 enabled by config, "
+            "but not supported by system OpenSSL");
         rv |= (1 << 2);
 #endif
     }
     if (g_pos(str, ",TLSv1,") >= 0)
     {
 #if defined(SSL_OP_NO_TLSv1)
-        log_message(LOG_LEVEL_DEBUG, "TLSv1 enabled");
+        LOG(LOG_LEVEL_DEBUG, "TLSv1 enabled");
         protocols &= ~SSL_OP_NO_TLSv1;
 #else
-        log_message(LOG_LEVEL_WARNING,
-                    "TLSv1 enabled by config, "
-                    "but not supported by system OpenSSL");
+        LOG(LOG_LEVEL_WARNING,
+            "TLSv1 enabled by config, "
+            "but not supported by system OpenSSL");
         rv |= (1 << 3);
 #endif
     }
     if (g_pos(str, ",SSLv3,") >= 0)
     {
 #if defined(SSL_OP_NO_SSLv3)
-        log_message(LOG_LEVEL_DEBUG, "SSLv3 enabled");
+        LOG(LOG_LEVEL_DEBUG, "SSLv3 enabled");
         protocols &= ~SSL_OP_NO_SSLv3;
 #else
-        log_message(LOG_LEVEL_WARNING,
-                    "SSLv3 enabled by config, "
-                    "but not supported by system OpenSSL");
+        LOG(LOG_LEVEL_WARNING,
+            "SSLv3 enabled by config, "
+            "but not supported by system OpenSSL");
         rv |= (1 << 4);
 #endif
     }
     if (protocols == bad_protocols)
     {
-        log_message(LOG_LEVEL_WARNING, "No SSL/TLS protocols enabled. "
-                    "At least one protocol should be enabled to accept "
-                    "TLS connections.");
+        LOG(LOG_LEVEL_WARNING, "No SSL/TLS protocols enabled. "
+            "At least one protocol should be enabled to accept "
+            "TLS connections.");
         rv |= (1 << 5);
     }
     *ssl_protocols = protocols;

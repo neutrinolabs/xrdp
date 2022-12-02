@@ -21,57 +21,57 @@
 /* ffmpeg related stuff */
 extern "C"
 {
-    #include <libavformat/avformat.h>
-    #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
 
 class OurInterface : public QObject
 {
-    Q_OBJECT
+        Q_OBJECT
 
-public:
-    explicit OurInterface(QObject *parent = 0);
+    public:
+        explicit OurInterface(QObject *parent = 0);
 
-    /* public methods */
-    int  oneTimeInit();
-    void oneTimeDeinit();
-    int initRemoteClient();
-    void deInitRemoteClient();
-    int  sendGeometry(QRect rect);
-    void setFilename(QString filename);
-    void playMedia();
-    //PlayVideo *getPlayVideoInstance();
-    DemuxMedia *getDemuxMediaInstance();
-    void setVcrOp(int op);
-    int setVolume(int volume);
+        /* public methods */
+        int  oneTimeInit();
+        void oneTimeDeinit();
+        int initRemoteClient();
+        void deInitRemoteClient();
+        int  sendGeometry(QRect rect);
+        void setFilename(QString filename);
+        void playMedia();
+        //PlayVideo *getPlayVideoInstance();
+        DemuxMedia *getDemuxMediaInstance();
+        void setVcrOp(int op);
+        int setVolume(int volume);
 
-public slots:
-    void onGeometryChanged(int x, int y, int width, int height);
+    public slots:
+        void onGeometryChanged(int x, int y, int width, int height);
 
-signals:
-    void on_ErrorMsg(QString title, QString msg);
-    void onMediaDurationInSeconds(int duration);
+    signals:
+        void on_ErrorMsg(QString title, QString msg);
+        void onMediaDurationInSeconds(int duration);
 
-private:
+    private:
 
-    /* private stuff */
+        /* private stuff */
 
-    QQueue<MediaPacket *> videoQueue;
+        QQueue<MediaPacket *> videoQueue;
 
-    DemuxMedia     *demuxMedia;
-    QThread        *demuxMediaThread;
-    //PlayVideo      *playVideo;
-    QString         filename;
-    void           *channel;
-    int             stream_id;
-    QRect           savedGeometry;
+        DemuxMedia     *demuxMedia;
+        QThread        *demuxMediaThread;
+        //PlayVideo      *playVideo;
+        QString         filename;
+        void           *channel;
+        int             stream_id;
+        QRect           savedGeometry;
 
-    /* private methods */
-    int  openVirtualChannel();
-    int  closeVirtualChannel();
-    int  sendMetadataFile();
-    int  sendVideoFormat();
-    int  sendAudioFormat();
+        /* private methods */
+        int  openVirtualChannel();
+        int  closeVirtualChannel();
+        int  sendMetadataFile();
+        int  sendVideoFormat();
+        int  sendAudioFormat();
 };
 
 #endif // INTERFACE_H

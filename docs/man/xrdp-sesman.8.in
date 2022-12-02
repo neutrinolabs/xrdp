@@ -7,13 +7,16 @@ xrdp\-sesman \- \fBxrdp\fR(8) session manager
 \-\-kill
 .br
 .B xrdp\-sesman
+\-\-reload
+.br
+.B xrdp\-sesman
 \-\-help
 .br
 .B xrdp\-sesman
 \-\-version
 .br
 .B xrdp\-sesman
-[ \-\-nodaemon ] [ --config /path/to/sesman.ini ]
+[\-\-nodaemon] [\-\-dump\-config] [\-\-config /path/to/sesman.ini]
 
 .SH "DESCRIPTION"
 \fBxrdp\-sesman\fR is \fBxrdp\fR(8) session manager.
@@ -25,6 +28,9 @@ It manages user sessions by authenticating the user and starting the appropriate
 \fB\-k\fR, \fB\-\-kill\fR
 Kills running \fBxrdp\-sesman\fR daemon.
 .TP
+\fB\-r\fR, \fB\-\-reload\fR
+Reloads running \fBxrdp\-sesman\fR daemon.
+.TP
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
 .TP
@@ -33,6 +39,10 @@ Output version information and exit.
 .TP
 \fB\-n\fR, \fB\-\-nodaemon\fR
 Starts \fBxrdp\-sesman\fR in foreground instead of starting it as a daemon.
+.TP
+\fB\-\-dump\-config\fR
+Print the configuration on stdout before starting the daemon.
+The default is not to do this.
 .TP
 \fB\-c\fR, \fB\-\-config\fR
 Specify a path to a different \fIsesman.ini\fR file. This option is intended
@@ -44,8 +54,13 @@ If you use this option, be aware that you will have to have a
 the system (notably \fBxrdp(8)\fR and \fBxrdp\-chansrv(8)\fR) will want
 to read it.
 .RE
+.SH "SIGNALS"
+.TP
+\fBSIGHUP\fR
+Causes \fBxrdp\-sesman\fR to reload its configuration. Needed if you're
+not running \fBxrdp\-sesman\fR as a daemon.
 .SH "FILES"
-@bindir@/xrdp\-sesman
+@sbindir@/xrdp\-sesman
 .br
 @bindir@/xrdp\-sesrun
 .br
@@ -54,6 +69,8 @@ to read it.
 @localstatedir@/log/xrdp\-sesman.log
 .br
 @localstatedir@/run/xrdp\-sesman.pid
+.br
+@sesmanruntimedir@/sesman.socket
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>
@@ -66,4 +83,6 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+for more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

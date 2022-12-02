@@ -63,6 +63,15 @@ struct pointer_item
 
 struct source_info;
 
+struct kbd_overrides
+{
+    int type;
+    int subtype;
+    int fn_keys;
+    int layout;
+    int layout_mask;
+};
+
 struct mod
 {
     int size; /* size of this struct */
@@ -79,11 +88,16 @@ struct mod
     int (*mod_get_wait_objs)(struct mod *v, tbus *read_objs, int *rcount,
                              tbus *write_objs, int *wcount, int *timeout);
     int (*mod_check_wait_objs)(struct mod *v);
-    int (*mod_frame_ack)(struct mod* mod, int flags, int frame_id);
-    int (*mod_suppress_output)(struct mod* mod, int suppress,
-                             int left, int top, int right, int bottom);
-    tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
-                                    functions above */
+    int (*mod_frame_ack)(struct mod *mod, int flags, int frame_id);
+    int (*mod_suppress_output)(struct mod *mod, int suppress,
+                               int left, int top, int right, int bottom);
+    int (*mod_server_monitor_resize)(struct mod *mod,
+                                     int width, int height);
+    int (*mod_server_monitor_full_invalidate)(struct mod *mod,
+            int width, int height);
+    int (*mod_server_version_message)(struct mod *mod);
+    tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
+                                 functions above */
     /* server functions */
     int (*server_begin_update)(struct mod *v);
     int (*server_end_update)(struct mod *v);
@@ -94,8 +108,8 @@ struct mod
                              char *data, int width, int height, int srcx, int srcy);
     int (*server_set_pointer)(struct mod *v, int x, int y, char *data, char *mask);
     int (*server_palette)(struct mod *v, int *palette);
-    int (*server_msg)(struct mod *v, char *msg, int code);
-    int (*server_is_term)(struct mod *v);
+    int (*server_msg)(struct mod *v, const char *msg, int code);
+    int (*server_is_term)(void);
     int (*server_set_clip)(struct mod *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct mod *v);
     int (*server_set_fgcolor)(struct mod *v, int fgcolor);
@@ -117,6 +131,7 @@ struct mod
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
     int (*server_reset)(struct mod *v, int width, int height, int bpp);
+    int (*server_get_channel_count)(struct mod *v);
     int (*server_query_channel)(struct mod *v, int index,
                                 char *channel_name,
                                 int *channel_flags);
@@ -125,6 +140,7 @@ struct mod
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct mod *v);
+    int (*server_chansrv_in_use)(struct mod *v);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct mod *v, int rdpindex,
                                     int width, int height);
@@ -157,29 +173,29 @@ struct mod
                                     int flags);
     int (*server_set_pointer_ex)(struct mod *mod, int x, int y, char *data,
                                  char *mask, int bpp);
-    int (*server_add_char_alpha)(struct mod* mod, int font, int character,
+    int (*server_add_char_alpha)(struct mod *mod, int font, int character,
                                  int offset, int baseline,
-                                 int width, int height, char* data);
-    int (*server_create_os_surface_bpp)(struct mod* v, int rdpindex,
+                                 int width, int height, char *data);
+    int (*server_create_os_surface_bpp)(struct mod *v, int rdpindex,
                                         int width, int height, int bpp);
-    int (*server_paint_rect_bpp)(struct mod* v, int x, int y, int cx, int cy,
-                                 char* data, int width, int height,
+    int (*server_paint_rect_bpp)(struct mod *v, int x, int y, int cx, int cy,
+                                 char *data, int width, int height,
                                  int srcx, int srcy, int bpp);
-    int (*server_composite)(struct mod* v, int srcidx, int srcformat,
-                            int srcwidth, int srcrepeat, int* srctransform,
+    int (*server_composite)(struct mod *v, int srcidx, int srcformat,
+                            int srcwidth, int srcrepeat, int *srctransform,
                             int mskflags, int mskidx, int mskformat,
                             int mskwidth, int mskrepeat, int op,
                             int srcx, int srcy, int mskx, int msky,
                             int dstx, int dsty, int width, int height,
                             int dstformat);
-    int (*server_paint_rects)(struct mod* v,
+    int (*server_paint_rects)(struct mod *v,
                               int num_drects, short *drects,
                               int num_crects, short *crects,
                               char *data, int width, int height,
                               int flags, int frame_id);
-    int (*server_session_info)(struct mod* v, const char *data,
+    int (*server_session_info)(struct mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 46]; /* align, 100 minus the number of server
                                        functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -211,5 +227,11 @@ struct mod
     struct bitmap_item bitmap_cache[4][4096];
     struct brush_item brush_cache[64];
     struct pointer_item pointer_cache[32];
+    char pamusername[255];
 
+    int allow_client_experiencesettings;
+    int perf_settings_override_mask; /* Performance bits overridden in ini file */
+    int perf_settings_values_mask; /* Values of overridden performance bits */
+    int allow_client_kbd_settings;
+    struct kbd_overrides kbd_overrides; /* neutrinordp.overide_kbd_* values */
 };

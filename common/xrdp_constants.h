@@ -29,7 +29,7 @@
  *
  * xrdp constants
  *
- * Constants defined in publically available Microsoft documents are not
+ * Constants defined in publicly available Microsoft documents are not
  * stored here, but are stored in the include files ms-*.h, where the name
  * of the file is the name of the document defining the constant.
  *
@@ -37,7 +37,22 @@
  * ms-erref.h
  ******************************************************************************/
 
+/**
+ * Size of buffer including terminator for an IP address as returned
+ * by g_sck_get_peer_ip_address(). See POSIX INET6_ADDRSTRLEN
+ */
+#define MAX_PEER_ADDRSTRLEN 46
+
+/**
+ * Size of buffer including terminator for a socket description, as
+ * returned by g_sck_get_peer_description()
+ * Currently the largest is an IPv6 address (INET6_ADDRSTRLEN), plus
+ * []:<port> characters
+ */
+#define MAX_PEER_DESCSTRLEN (46 + 2 + 1 + 5)
+
 #define INFO_CLIENT_NAME_BYTES  32
+
 /**
  * Maximum length of a string including the mandatory null terminator
  * [MS-RDPBCGR] TS_INFO_PACKET(2.2.1.11.1.1)
@@ -95,8 +110,8 @@
  * not yet sorted out
  */
 
-#define MCS_CONNECT_INITIAL            0x7f65
-#define MCS_CONNECT_RESPONSE           0x7f66
+#define MCS_CONNECT_INITIAL            0x7f65 /* MCS BER: big endian, class=application (0x4000), constructed (0x2000), tag number > 30 (0x1f00), tag number=101 (0x0065) */
+#define MCS_CONNECT_RESPONSE           0x7f66 /* MCS BER: application 102 */
 
 #define BER_TAG_BOOLEAN                1
 #define BER_TAG_INTEGER                2
@@ -180,7 +195,7 @@
 #define MASK_REMOVE_BITS(var, mask)    (var &= ~mask)
 #define MASK_HAS_BITS(var, mask)       ((var & mask)>0)
 #define MASK_CHANGE_BIT(var, mask, active) \
-                  (var = ((var & ~mask) | (active ? mask : 0)))
+    (var = ((var & ~mask) | (active ? mask : 0)))
 
 /* Clipboard constants, "borrowed" from GCC system headers in
    the w32 cross compiler */
@@ -232,6 +247,12 @@
 #define BUTTON_STATE_UP   0
 #define BUTTON_STATE_DOWN 1
 
+/* touch gestures */
+#define TOUCH_TWO_FINGERS_DOWN 0
+#define TOUCH_TWO_FINGERS_UP 1
+#define TOUCH_TWO_FINGERS_LEFT 2
+#define TOUCH_TWO_FINGERS_RIGHT 3
+
 /* messages */
 #define WM_PAINT       3
 #define WM_KEYDOWN     15
@@ -255,6 +276,10 @@
 #define WM_BUTTON8DOWN 116
 #define WM_BUTTON9UP   117
 #define WM_BUTTON9DOWN 118
+
+#define WM_TOUCH_VSCROLL 140
+#define WM_TOUCH_HSCROLL 141
+
 #define WM_INVALIDATE  200
 
 #define CB_ITEMCHANGE  300

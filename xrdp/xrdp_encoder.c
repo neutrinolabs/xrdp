@@ -32,17 +32,7 @@
 #include "rfxcodec_encode.h"
 #endif
 
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
-    { \
-        g_write("xrdp:xrdp_encoder [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
-    } \
-  } \
-  while (0)
+
 
 #define XRDP_SURCMD_PREFIX_BYTES 256
 
@@ -81,7 +71,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 
     if (client_info->jpeg_codec_id != 0)
     {
-        LLOGLN(0, ("xrdp_encoder_create: starting jpeg codec session"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting jpeg codec session");
         self->codec_id = client_info->jpeg_codec_id;
         self->in_codec_mode = 1;
         self->codec_quality = client_info->jpeg_prop[0];
@@ -94,19 +84,19 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 #ifdef XRDP_RFXCODEC
     else if (client_info->rfx_codec_id != 0)
     {
-        LLOGLN(0, ("xrdp_encoder_create: starting rfx codec session"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting rfx codec session");
         self->codec_id = client_info->rfx_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
         self->process_enc = process_enc_rfx;
         self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
-                                                    mm->wm->screen->height,
-                                                    RFX_FORMAT_YUV, 0);
+                             mm->wm->screen->height,
+                             RFX_FORMAT_YUV, 0);
     }
 #endif
     else if (client_info->h264_codec_id != 0)
     {
-        LLOGLN(0, ("xrdp_encoder_create: starting h264 codec session"));
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting h264 codec session");
         self->codec_id = client_info->h264_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 3;
@@ -121,7 +111,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         return 0;
     }
 
-    LLOGLN(0, ("init_xrdp_encoder: initializing encoder codec_id %d", self->codec_id));
+    LOG_DEVEL(LOG_LEVEL_INFO, "init_xrdp_encoder: initializing encoder codec_id %d", self->codec_id);
 
     /* setup required FIFOs */
     self->fifo_to_proc = fifo_create();
@@ -155,7 +145,7 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     XRDP_ENC_DATA_DONE *enc_done;
     FIFO *fifo;
 
-    LLOGLN(0, ("xrdp_encoder_delete:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_delete:");
     if (self == 0)
     {
         return;
@@ -243,7 +233,7 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     tbus mutex;
     tbus event_processed;
 
-    LLOGLN(10, ("process_enc_jpg:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_jpg:");
     quality = self->codec_quality;
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
@@ -257,22 +247,22 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         cy = enc->crects[index * 4 + 3];
         if (cx < 1 || cy < 1)
         {
-            LLOGLN(0, ("process_enc_jpg: error 1"));
+            LOG_DEVEL(LOG_LEVEL_WARNING, "process_enc_jpg: error 1");
             continue;
         }
 
-        LLOGLN(10, ("process_enc_jpg: x %d y %d cx %d cy %d", x, y, cx, cy));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_jpg: x %d y %d cx %d cy %d", x, y, cx, cy);
 
         out_data_bytes = MAX((cx + 4) * cy * 4, 8192);
         if ((out_data_bytes < 1) || (out_data_bytes > 16 * 1024 * 1024))
         {
-            LLOGLN(0, ("process_enc_jpg: error 2"));
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: error 2");
             return 1;
         }
         out_data = (char *) g_malloc(out_data_bytes + 256 + 2, 0);
         if (out_data == 0)
         {
-            LLOGLN(0, ("process_enc_jpg: error 3"));
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: error 3");
             return 1;
         }
 
@@ -285,12 +275,12 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                                             out_data + 256 + 2, &out_data_bytes);
         if (error < 0)
         {
-            LLOGLN(0, ("process_enc_jpg: jpeg error %d bytes %d",
-                   error, out_data_bytes));
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: jpeg error %d bytes %d",
+                      error, out_data_bytes);
             g_free(out_data);
             return 1;
         }
-        LLOGLN(10, ("jpeg error %d bytes %d", error, out_data_bytes));
+        LOG_DEVEL(LOG_LEVEL_WARNING, "jpeg error %d bytes %d", error, out_data_bytes);
         enc_done = (XRDP_ENC_DATA_DONE *)
                    g_malloc(sizeof(XRDP_ENC_DATA_DONE), 1);
         enc_done->comp_bytes = out_data_bytes + 2;
@@ -326,7 +316,10 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     int cy;
     int out_data_bytes;
     int count;
-    int error;
+    int tiles_written;
+    int all_tiles_written;
+    int tiles_left;
+    int finished;
     char *out_data;
     XRDP_ENC_DATA_DONE *enc_done;
     FIFO *fifo_processed;
@@ -336,94 +329,111 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     struct rfx_rect *rfxrects;
     int alloc_bytes;
 
-    LLOGLN(10, ("process_enc_rfx:"));
-    LLOGLN(10, ("process_enc_rfx: num_crects %d num_drects %d",
-           enc->num_crects, enc->num_drects));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx:");
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx: num_crects %d num_drects %d",
+              enc->num_crects, enc->num_drects);
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;
 
-    error = 1;
-    out_data = NULL;
-    out_data_bytes = 0;
-
-    if ((enc->num_crects > 0) && (enc->num_drects > 0))
+    all_tiles_written = 0;
+    do
     {
-        alloc_bytes = XRDP_SURCMD_PREFIX_BYTES;
-        alloc_bytes += self->max_compressed_bytes;
-        alloc_bytes += sizeof(struct rfx_tile) * enc->num_crects +
-                       sizeof(struct rfx_rect) * enc->num_drects;
-        out_data = g_new(char, alloc_bytes);
-        if (out_data != NULL)
+        tiles_written = 0;
+        tiles_left = enc->num_crects - all_tiles_written;
+        out_data = NULL;
+        out_data_bytes = 0;
+
+        if ((tiles_left > 0) && (enc->num_drects > 0))
         {
-            tiles = (struct rfx_tile *)
-                    (out_data + XRDP_SURCMD_PREFIX_BYTES +
-                     self->max_compressed_bytes);
-            rfxrects = (struct rfx_rect *) (tiles + enc->num_crects);
-
-            count = enc->num_crects;
-            for (index = 0; index < count; index++)
+            alloc_bytes = XRDP_SURCMD_PREFIX_BYTES;
+            alloc_bytes += self->max_compressed_bytes;
+            alloc_bytes += sizeof(struct rfx_tile) * tiles_left +
+                           sizeof(struct rfx_rect) * enc->num_drects;
+            out_data = g_new(char, alloc_bytes);
+            if (out_data != NULL)
             {
-                x = enc->crects[index * 4 + 0];
-                y = enc->crects[index * 4 + 1];
-                cx = enc->crects[index * 4 + 2];
-                cy = enc->crects[index * 4 + 3];
-                tiles[index].x = x;
-                tiles[index].y = y;
-                tiles[index].cx = cx;
-                tiles[index].cy = cy;
-                tiles[index].quant_y = 0;
-                tiles[index].quant_cb = 0;
-                tiles[index].quant_cr = 0;
-            }
+                tiles = (struct rfx_tile *)
+                        (out_data + XRDP_SURCMD_PREFIX_BYTES +
+                         self->max_compressed_bytes);
+                rfxrects = (struct rfx_rect *) (tiles + tiles_left);
 
-            count = enc->num_drects;
-            for (index = 0; index < count; index++)
-            {
-                x = enc->drects[index * 4 + 0];
-                y = enc->drects[index * 4 + 1];
-                cx = enc->drects[index * 4 + 2];
-                cy = enc->drects[index * 4 + 3];
-                rfxrects[index].x = x;
-                rfxrects[index].y = y;
-                rfxrects[index].cx = cx;
-                rfxrects[index].cy = cy;
-            }
+                count = tiles_left;
+                for (index = 0; index < count; index++)
+                {
+                    x = enc->crects[(index + all_tiles_written) * 4 + 0];
+                    y = enc->crects[(index + all_tiles_written) * 4 + 1];
+                    cx = enc->crects[(index + all_tiles_written) * 4 + 2];
+                    cy = enc->crects[(index + all_tiles_written) * 4 + 3];
+                    tiles[index].x = x;
+                    tiles[index].y = y;
+                    tiles[index].cx = cx;
+                    tiles[index].cy = cy;
+                    tiles[index].quant_y = 0;
+                    tiles[index].quant_cb = 0;
+                    tiles[index].quant_cr = 0;
+                }
 
-            out_data_bytes = self->max_compressed_bytes;
-            error = rfxcodec_encode(self->codec_handle,
-                                    out_data + XRDP_SURCMD_PREFIX_BYTES,
-                                    &out_data_bytes, enc->data,
-                                    enc->width, enc->height, enc->width * 4,
-                                    rfxrects, enc->num_drects,
-                                    tiles, enc->num_crects, 0, 0);
+                count = enc->num_drects;
+                for (index = 0; index < count; index++)
+                {
+                    x = enc->drects[index * 4 + 0];
+                    y = enc->drects[index * 4 + 1];
+                    cx = enc->drects[index * 4 + 2];
+                    cy = enc->drects[index * 4 + 3];
+                    rfxrects[index].x = x;
+                    rfxrects[index].y = y;
+                    rfxrects[index].cx = cx;
+                    rfxrects[index].cy = cy;
+                }
+
+                out_data_bytes = self->max_compressed_bytes;
+                tiles_written = rfxcodec_encode(self->codec_handle,
+                                                out_data + XRDP_SURCMD_PREFIX_BYTES,
+                                                &out_data_bytes, enc->data,
+                                                enc->width, enc->height, enc->width * 4,
+                                                rfxrects, enc->num_drects,
+                                                tiles, tiles_left, 0, 0);
+            }
         }
-    }
 
-    LLOGLN(10, ("process_enc_rfx: rfxcodec_encode rv %d", error));
-    /* only if enc_done->comp_bytes is not zero is something sent
-       to the client but you must always send something back even
-       on error so Xorg can get ack */
-    enc_done = g_new0(XRDP_ENC_DATA_DONE, 1);
-    if (enc_done == NULL)
-    {
-        return 1;
-    }
-    enc_done->comp_bytes = error == 0 ? out_data_bytes : 0;
-    enc_done->pad_bytes = XRDP_SURCMD_PREFIX_BYTES;
-    enc_done->comp_pad_data = out_data;
-    enc_done->enc = enc;
-    enc_done->last = 1;
-    enc_done->cx = self->mm->wm->screen->width;
-    enc_done->cy = self->mm->wm->screen->height;
+        LOG_DEVEL(LOG_LEVEL_DEBUG,
+                  "process_enc_rfx: rfxcodec_encode tiles_written %d",
+                  tiles_written);
+        /* only if enc_done->comp_bytes is not zero is something sent
+           to the client but you must always send something back even
+           on error so Xorg can get ack */
+        enc_done = g_new0(XRDP_ENC_DATA_DONE, 1);
+        if (enc_done == NULL)
+        {
+            return 1;
+        }
+        enc_done->comp_bytes = tiles_written > 0 ? out_data_bytes : 0;
+        enc_done->pad_bytes = XRDP_SURCMD_PREFIX_BYTES;
+        enc_done->comp_pad_data = out_data;
+        enc_done->enc = enc;
+        enc_done->cx = self->mm->wm->screen->width;
+        enc_done->cy = self->mm->wm->screen->height;
 
-    /* done with msg */
-    /* inform main thread done */
-    tc_mutex_lock(mutex);
-    fifo_add_item(fifo_processed, enc_done);
-    tc_mutex_unlock(mutex);
-    /* signal completion for main thread */
-    g_set_wait_obj(event_processed);
+        enc_done->continuation = all_tiles_written > 0;
+        if (tiles_written > 0)
+        {
+            all_tiles_written += tiles_written;
+        }
+        finished =
+            (all_tiles_written == enc->num_crects) || (tiles_written < 0);
+        enc_done->last = finished;
+
+        /* done with msg */
+        /* inform main thread done */
+        tc_mutex_lock(mutex);
+        fifo_add_item(fifo_processed, enc_done);
+        tc_mutex_unlock(mutex);
+        /* signal completion for main thread */
+        g_set_wait_obj(event_processed);
+
+    }
+    while (!finished);
 
     return 0;
 }
@@ -434,7 +444,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 static int
 process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 {
-    LLOGLN(0, ("process_enc_x264:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "process_enc_x264:");
     return 0;
 }
 
@@ -458,12 +468,12 @@ proc_enc_msg(void *arg)
     tbus wobjs[32];
     struct xrdp_encoder *self;
 
-    LLOGLN(0, ("proc_enc_msg: thread is running"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "proc_enc_msg: thread is running");
 
     self = (struct xrdp_encoder *) arg;
     if (self == 0)
     {
-        LLOGLN(0, ("proc_enc_msg: self nil"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "proc_enc_msg: self nil");
         return 0;
     }
 
@@ -492,13 +502,14 @@ proc_enc_msg(void *arg)
 
         if (g_is_wait_obj_set(term_obj)) /* global term */
         {
-            LLOGLN(0, ("proc_enc_msg: global term"));
+            LOG(LOG_LEVEL_DEBUG,
+                "Received termination signal, stopping the encoder thread");
             break;
         }
 
         if (g_is_wait_obj_set(lterm_obj)) /* xrdp_mm term */
         {
-            LLOGLN(0, ("proc_enc_msg: xrdp_mm term"));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "proc_enc_msg: xrdp_mm term");
             break;
         }
 
@@ -522,6 +533,6 @@ proc_enc_msg(void *arg)
         }
 
     } /* end while (cont) */
-    LLOGLN(0, ("proc_enc_msg: thread exit"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "proc_enc_msg: thread exit");
     return 0;
 }

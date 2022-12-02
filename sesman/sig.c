@@ -28,53 +28,17 @@
 #include <config_ac.h>
 #endif
 
-#include <signal.h>
-
+#include "string_calls.h"
 #include "sesman.h"
 
-extern int g_sck;
-extern int g_pid;
-extern struct config_sesman *g_cfg; /* in sesman.c */
-extern tbus g_term_event;
-
 /******************************************************************************/
 void
-sig_sesman_shutdown(int sig)
-{
-    char pid_file[256];
-
-    LOG(LOG_LEVEL_INFO, "shutting down sesman %d", 1);
-
-    if (g_getpid() != g_pid)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
-        return;
-    }
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, " - getting signal %d pid %d", sig, g_getpid());
-
-    g_set_wait_obj(g_term_event);
-
-    session_sigkill_all();
-
-    g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
-    g_file_delete(pid_file);
-}
-
-/******************************************************************************/
-void
-sig_sesman_reload_cfg(int sig)
+sig_sesman_reload_cfg(void)
 {
     int error;
     struct config_sesman *cfg;
 
-    LOG(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
-
-    if (g_getpid() != g_pid)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
-        return;
-    }
+    LOG(LOG_LEVEL_INFO, "receiving SIGHUP");
 
     if ((cfg = config_read(g_cfg->sesman_ini)) == NULL)
     {
@@ -82,8 +46,21 @@ sig_sesman_reload_cfg(int sig)
         return;
     }
 
-    /* stop logging subsystem */
-    log_end();
+    /* Deal with significant config changes */
+    if (g_strcmp(g_cfg->listen_port, cfg->listen_port) != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "sesman listen port changed to %s",
+            cfg->listen_port);
+
+        /* We have to delete the old port before listening to the new one
+         * in case they overlap in scope */
+        sesman_delete_listening_transport();
+        if (sesman_create_listening_transport(cfg) == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Sesman now listening on %s",
+                g_cfg->listen_port);
+        }
+    }
 
     /* free old config data */
     config_free(g_cfg);
@@ -91,8 +68,8 @@ sig_sesman_reload_cfg(int sig)
     /* replace old config with newly read one */
     g_cfg = cfg;
 
-    /* start again logging subsystem */
-    error = log_start(g_cfg->sesman_ini, "xrdp-sesman");
+    /* Restart logging subsystem */
+    error = log_start(g_cfg->sesman_ini, "xrdp-sesman", LOG_START_RESTART);
 
     if (error != LOG_STARTUP_OK)
     {
@@ -114,80 +91,21 @@ sig_sesman_reload_cfg(int sig)
 
 /******************************************************************************/
 void
-sig_sesman_session_end(int sig)
+sig_sesman_session_end(void)
 {
     int pid;
 
-    if (g_getpid() != g_pid)
-    {
-        return;
-    }
-
-    pid = g_waitchild();
-
-    if (pid > 0)
-    {
-        session_kill(pid);
-    }
-}
-
-/******************************************************************************/
-void *
-sig_handler_thread(void *arg)
-{
-    int recv_signal;
-    sigset_t sigmask;
-    sigset_t oldmask;
-    sigset_t waitmask;
-
-    /* mask signals to be able to wait for them... */
-    sigfillset(&sigmask);
-    /* it is a good idea not to block SIGILL SIGSEGV */
-    /* SIGFPE -- see sigaction(2) NOTES              */
-    pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);
-
-    /* building the signal wait mask... */
-    sigemptyset(&waitmask);
-    sigaddset(&waitmask, SIGHUP);
-    sigaddset(&waitmask, SIGCHLD);
-    sigaddset(&waitmask, SIGTERM);
-    sigaddset(&waitmask, SIGINT);
-
-    //  sigaddset(&waitmask, SIGFPE);
-    //  sigaddset(&waitmask, SIGILL);
-    //  sigaddset(&waitmask, SIGSEGV);
-
+    LOG(LOG_LEVEL_DEBUG, "receiving SIGCHLD");
     do
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "calling sigwait()");
-        sigwait(&waitmask, &recv_signal);
+        pid = g_waitchild();
 
-        switch (recv_signal)
+        if (pid > 0)
         {
-            case SIGHUP:
-                //reload cfg
-                //we must stop & restart logging, or copy logging cfg!!!!
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGHUP");
-                //return 0;
-                break;
-            case SIGCHLD:
-                /* a session died */
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGCHLD");
-                sig_sesman_session_end(SIGCHLD);
-                break;
-            case SIGINT:
-                /* we die */
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGINT");
-                sig_sesman_shutdown(recv_signal);
-                break;
-            case SIGTERM:
-                /* we die */
-                LOG_DEVEL(LOG_LEVEL_DEBUG, "sesman received SIGTERM");
-                sig_sesman_shutdown(recv_signal);
-                break;
+            LOG(LOG_LEVEL_INFO, "Process %d has exited", pid);
+
+            session_kill(pid);
         }
     }
-    while (1);
-
-    return 0;
+    while (pid > 0);
 }

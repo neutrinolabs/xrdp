@@ -23,6 +23,7 @@
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "thread_calls.h"
 #include "trans.h"
 #include "chansrv.h"
@@ -60,7 +61,7 @@ static tbus g_thread_done_event = 0;
 
 struct config_chansrv *g_cfg = NULL;
 
-int g_display_num = 0;
+int g_display_num = -1;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
 int g_rdpdr_chan_id = -1;   /* rdpdr   */
@@ -196,7 +197,7 @@ check_timeout(void)
     struct timeout_obj *temp_tobj;
     int count;
     tui32 now;
-
+    UNUSED_VAR(count);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "check_timeout:");
     count = 0;
     tobj = g_timeout_head;
@@ -364,23 +365,23 @@ process_message_channel_setup(struct stream *s)
         LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
                   "id %d flags %8.8x", ci->name, ci->id, ci->flags);
 
-        if (g_strcasecmp(ci->name, "cliprdr") == 0)
+        if (g_strcasecmp(ci->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
         {
             g_cliprdr_index = g_num_chan_items;
             g_cliprdr_chan_id = ci->id;
         }
-        else if (g_strcasecmp(ci->name, "rdpsnd") == 0)
+        else if (g_strcasecmp(ci->name, RDPSND_SVC_CHANNEL_NAME) == 0)
         {
             g_rdpsnd_index = g_num_chan_items;
             g_rdpsnd_chan_id = ci->id;
         }
-        else if (g_strcasecmp(ci->name, "rdpdr") == 0)
+        else if (g_strcasecmp(ci->name, RDPDR_SVC_CHANNEL_NAME) == 0)
         {
             g_rdpdr_index = g_num_chan_items;
             g_rdpdr_chan_id = ci->id;
         }
         /* disabled for now */
-        else if (g_strcasecmp(ci->name, "rail") == 0)
+        else if (g_strcasecmp(ci->name, RAIL_SVC_CHANNEL_NAME) == 0)
         {
             g_rail_index = g_num_chan_items;
             g_rail_chan_id = ci->id;
@@ -1240,18 +1241,9 @@ setup_listen(void)
         trans_delete(g_lis_trans);
     }
 
-    if (g_cfg->use_unix_socket)
-    {
-        g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-        g_lis_trans->is_term = g_is_term;
-        g_snprintf(port, 255, XRDP_CHANSRV_STR, g_display_num);
-    }
-    else
-    {
-        g_lis_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-        g_lis_trans->is_term = g_is_term;
-        g_snprintf(port, 255, "%d", 7200 + g_display_num);
-    }
+    g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+    g_lis_trans->is_term = g_is_term;
+    g_snprintf(port, 255, XRDP_CHANSRV_STR, g_display_num);
 
     g_lis_trans->trans_conn_in = my_trans_conn_in;
     error = trans_listen(g_lis_trans, port);
@@ -1557,65 +1549,6 @@ x_server_fatal_handler(void)
 }
 
 /*****************************************************************************/
-static int
-get_display_num_from_display(char *display_text)
-{
-    int index;
-    int mode;
-    int host_index;
-    int disp_index;
-    int scre_index;
-    char host[256];
-    char disp[256];
-    char scre[256];
-
-    g_memset(host, 0, 256);
-    g_memset(disp, 0, 256);
-    g_memset(scre, 0, 256);
-
-    index = 0;
-    host_index = 0;
-    disp_index = 0;
-    scre_index = 0;
-    mode = 0;
-
-    while (display_text[index] != 0)
-    {
-        if (display_text[index] == ':')
-        {
-            mode = 1;
-        }
-        else if (display_text[index] == '.')
-        {
-            mode = 2;
-        }
-        else if (mode == 0)
-        {
-            host[host_index] = display_text[index];
-            host_index++;
-        }
-        else if (mode == 1)
-        {
-            disp[disp_index] = display_text[index];
-            disp_index++;
-        }
-        else if (mode == 2)
-        {
-            scre[scre_index] = display_text[index];
-            scre_index++;
-        }
-
-        index++;
-    }
-
-    host[host_index] = 0;
-    disp[disp_index] = 0;
-    scre[scre_index] = 0;
-    g_display_num = g_atoi(disp);
-    return 0;
-}
-
-/*****************************************************************************/
 int
 main_cleanup(void)
 {
@@ -1727,7 +1660,7 @@ main(int argc, char **argv)
     char text[256];
     const char *config_path;
     char log_path[256];
-    char *display_text;
+    const char *display_text;
     char log_file[256];
     enum logReturns error;
     struct log_config *logconfig;
@@ -1738,6 +1671,21 @@ main(int argc, char **argv)
     if (get_log_path(log_path, 255) != 0)
     {
         g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
+        main_cleanup();
+        return 1;
+    }
+
+    display_text = g_getenv("DISPLAY");
+    if (display_text == NULL)
+    {
+        g_writeln("DISPLAY is not set");
+        main_cleanup();
+        return 1;
+    }
+    g_display_num = g_get_display_num_from_display(display_text);
+    if (g_display_num < 0)
+    {
+        g_writeln("Unable to get display from DISPLAY='%s'", display_text);
         main_cleanup();
         return 1;
     }
@@ -1754,11 +1702,6 @@ main(int argc, char **argv)
     config_dump(g_cfg);
 
     pid = g_getpid();
-    display_text = g_getenv("DISPLAY");
-    if (display_text != NULL)
-    {
-        get_display_num_from_display(display_text);
-    }
 
     /* starting logging subsystem */
     g_snprintf(log_file, 255, "%s/xrdp-chansrv.%d.log", log_path, g_display_num);
@@ -1799,7 +1742,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    LOG_DEVEL(LOG_LEVEL_ALWAYS, "main: app started pid %d(0x%8.8x)", pid, pid);
+    LOG_DEVEL(LOG_LEVEL_INFO, "main: app started pid %d(0x%8.8x)", pid, pid);
     /*  set up signal handler  */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
@@ -1811,13 +1754,6 @@ main(int argc, char **argv)
     xcommon_set_x_server_fatal_handler(x_server_fatal_handler);
 
     LOG_DEVEL(LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text);
-
-    if (g_display_num == 0)
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "main: error, display is zero");
-        main_cleanup();
-        return 1;
-    }
 
     LOG_DEVEL(LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num);
     g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);

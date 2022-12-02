@@ -63,6 +63,12 @@ ssl_protocols=TLSv1.2, TLSv1.3
 ; for example when the server is multi homed with SSSd
 #domain_user_separator=@
 
+; The following options will override the keyboard layout settings.
+; These options are for DEBUG and are not recommended for regular use.
+#xrdp.override_keyboard_type=0x04
+#xrdp.override_keyboard_subtype=0x01
+#xrdp.override_keylayout=0x00000409
+
 ; Section name to use for automatic login if the client sends username
 ; and password. If empty, the domain name sent by the client is used.
 ; If empty and no domain name is given, the first suitable section in
@@ -89,16 +95,26 @@ use_fastpath=both
 ;
 ; colors used by windows in RGB format
 ;
-blue=009cb5
-grey=dedede
 #black=000000
-#dark_grey=808080
-#blue=08246b
-#dark_blue=08246b
+grey=e1e1e1
+dark_grey=b4b4b4
+blue=0078d7
+dark_blue=0078d7
 #white=ffffff
 #red=ff0000
 #green=00ff00
 #background=626c72
+
+;
+; Select a default fv1 font
+;
+; This parameter is a comma-separated list of DPI:name pairs.
+; The list is scanned from left-to-right. The font used is the first
+; font whose DPI value is less-than-or-equal to the vertical DPI of
+; the monitor used for the login screen.
+#fv1_select=130:sans-18.fv1,0:sans-10.fv1
+; Default DPI used for a monitor when that information is unknown
+#default_dpi=96
 
 ;
 ; configure login screen
@@ -108,44 +124,69 @@ grey=dedede
 #ls_title=My Login Title
 
 ; top level window background color in RGB format
-ls_top_window_bg_color=009cb5
+ls_top_window_bg_color=003057
 
 ; width and height of login screen
+;
+; When the sans-10.fv1 font is selected, these values are in pixels.
+; For other fonts, these values (and other size values) will be scaled
+; appropriately to preserve the proportions of the login screen.
+;
+; The default height allows for about 5 fields to be comfortably displayed
+; above the buttons at the bottom. To display more fields, make <ls_height>
+; larger, and also increase <ls_btn_ok_y_pos> and <ls_btn_cancel_y_pos>
+; below
+;
 ls_width=350
-ls_height=430
+ls_height=360
 
 ; login screen background color in RGB format
-ls_bg_color=dedede
+ls_bg_color=f0f0f0
 
-; optional background image filename (bmp format).
+; optional background image filename. BMP format is always supported,
+; but other formats will be supported if xrdp is build with imlib2
+; The transform can be one of the following:-
+;     none  : No transformation. Image is placed in bottom-right corner
+;             of the screen.
+;     scale : Image is scaled to the screen size. The image aspect
+;             ratio is not preserved.
+;     zoom  : Image is scaled to the screen size. The image aspect
+;             ratio is preserved by clipping the image.
 #ls_background_image=
+#ls_background_transform=none
 
 ; logo
-; full path to bmp-file or file in shared folder
+; full path to file or file in shared folder. BMP format is always supported,
+; but other formats will be supported if xrdp is build with imlib2
+; For transform values, see 'ls_background_transform'. The logo width and
+; logo height are ignored for a transform of 'none'.
 ls_logo_filename=
+ls_logo_transform=scale
+ls_logo_width=250
+ls_logo_height=110
 ls_logo_x_pos=55
-ls_logo_y_pos=50
+ls_logo_y_pos=35
 
 ; for positioning labels such as username, password etc
 ls_label_x_pos=30
-ls_label_width=65
+ls_label_width=68
 
 ; for positioning text and combo boxes next to above labels
 ls_input_x_pos=110
 ls_input_width=210
 
 ; y pos for first label and combo box
-ls_input_y_pos=220
+ls_input_y_pos=158
 
 ; OK button
 ls_btn_ok_x_pos=142
-ls_btn_ok_y_pos=370
+ls_btn_ok_y_pos=308
 ls_btn_ok_width=85
 ls_btn_ok_height=30
 
 ; Cancel button
 ls_btn_cancel_x_pos=237
-ls_btn_cancel_y_pos=370
+ls_btn_cancel_y_pos=308
 ls_btn_cancel_width=85
 ls_btn_cancel_height=30
 
@@ -160,7 +201,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [LoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #xrdp.c=INFO
 #main()=INFO
 
@@ -182,9 +224,6 @@ tcutils=true
 ; for debugging xrdp, in section xrdp1, change port=-1 to this:
 #port=/tmp/.xrdp/xrdp_display_10
 
-; for debugging xrdp, add following line to section xrdp1
-#chansrvport=/tmp/.xrdp/xrdp_chansrv_socket_7210
-
 
 ;
 ; Session types
@@ -198,7 +237,6 @@ name=Xorg
 lib=libxup.@lib_extension@
 username=ask
 password=ask
-ip=127.0.0.1
 port=-1
 code=20
 
@@ -214,8 +252,14 @@ port=-1
 ; Disable requested encodings to support buggy VNC servers
 ; (1 = ExtendedDesktopSize)
 #disabled_encodings_mask=0
+; Use this to connect to a chansrv instance created outside of sesman
+; (e.g. as part of an x11vnc console session). Replace '0' with the
+; display number of the session
+#chansrvport=DISPLAY(0)
 
-
+; Generic VNC Proxy
+; Tailor this to specific hosts and VNC instances by specifying an ip
+; and port and setting a suitable name.
 [vnc-any]
 name=vnc-any
 lib=libvnc.@lib_extension@
@@ -225,16 +269,55 @@ username=na
 password=ask
 #pamusername=asksame
 #pampassword=asksame
-#pamsessionmng=127.0.0.1
 #delay_ms=2000
 
+; Generic RDP proxy using NeutrinoRDP
+; Tailor this to specific hosts by specifying an ip and port and setting
+; a suitable name.
 [neutrinordp-any]
 name=neutrinordp-any
+; To use this section, you should build xrdp with configure option
+; --enable-neutrinordp.
 lib=libxrdpneutrinordp.@lib_extension@
 ip=ask
 port=ask3389
 username=ask
 password=ask
+; Uncomment the following lines to enable PAM authentication for proxy
+; connections.
+#pamusername=ask
+#pampassword=ask
+; Currently NeutrinoRDP doesn't support dynamic resizing. Uncomment
+; this line if you're using a client which does.
+#enable_dynamic_resizing=false
+; By default, performance settings requested by the RDP client are ignored
+; and chosen by NeutrinoRDP. Uncomment this line to allow the user to
+; select performance settings in the RDP client.
+#perf.allow_client_experiencesettings=true
+; Override any experience setting by uncommenting one or more of the
+; following lines.
+#perf.wallpaper=false
+#perf.font_smoothing=false
+#perf.desktop_composition=false
+#perf.full_window_drag=false
+#perf.menu_anims=false
+#perf.themes=false
+#perf.cursor_blink=false
+; By default NeutrinoRDP supports cursor shadows. If this is giving
+; you problems (e.g. cursor is a black rectangle) try disabling cursor
+; shadows by uncommenting the following line.
+#perf.cursor_shadow=false
+; By default, NeutrinoRDP uses the keyboard layout of the remote RDP Server.
+; If you want to tell the remote the keyboard layout of the RDP Client,
+; by uncommenting the following line.
+#neutrinordp.allow_client_keyboardLayout=true
+; The following options will override the remote keyboard layout settings.
+; These options are for DEBUG and are not recommended for regular use.
+#neutrinordp.override_keyboardLayout_mask=0x0000FFFF
+#neutrinordp.override_kbd_type=0x04
+#neutrinordp.override_kbd_subtype=0x01
+#neutrinordp.override_kbd_fn_keys=12
+#neutrinordp.override_kbd_layout=0x00000409
 
 ; You can override the common channel settings for each session type
 #channel.rdpdr=true

@@ -28,7 +28,11 @@
 #include <config_ac.h>
 #endif
 
-#include "sesman.h"
+#include "arch.h"
+#include "auth.h"
+#include "log.h"
+#include "os_calls.h"
+#include "string_calls.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -41,29 +45,38 @@
 #define SECS_PER_DAY (24L*3600L)
 #endif
 
-extern struct config_sesman *g_cfg; /* in sesman.c */
-
 static int
 auth_crypt_pwd(const char *pwd, const char *pln, char *crp);
 
 static int
 auth_account_disabled(struct spwd *stp);
 
+/*
+ * Need a complete type for struct auth_info, even though we're
+ * not really using it if this module (UNIX authentication) is selected */
+struct auth_info
+{
+    char dummy;
+};
+
 /******************************************************************************/
-/* returns boolean */
-long
-auth_userpass(const char *user, const char *pass, int *errorcode)
+/* returns non-NULL for success */
+struct auth_info *
+auth_userpass(const char *user, const char *pass,
+              const char *client_ip, int *errorcode)
 {
     const char *encr;
     const char *epass;
     struct passwd *spw;
     struct spwd *stp;
+    /* Need a non-NULL pointer to return to indicate success */
+    static struct auth_info success = {0};
 
     spw = getpwnam(user);
 
     if (spw == 0)
     {
-        return 0;
+        return NULL;
     }
 
     if (g_strncmp(spw->pw_passwd, "x", 3) == 0)
@@ -73,13 +86,13 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
         if (stp == 0)
         {
-            return 0;
+            return NULL;
         }
 
         if (1 == auth_account_disabled(stp))
         {
             LOG(LOG_LEVEL_INFO, "account %s is disabled", user);
-            return 0;
+            return NULL;
         }
 
         encr = stp->sp_pwdp;
@@ -92,15 +105,15 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
     epass = crypt(pass, encr);
     if (epass == 0)
     {
-        return 0;
+        return NULL;
     }
-    return (strcmp(encr, epass) == 0);
+    return (strcmp(encr, epass) == 0) ? &success : NULL;
 }
 
 /******************************************************************************/
 /* returns error */
 int
-auth_start_session(long in_val, int in_display)
+auth_start_session(struct auth_info *auth_info, int display_num)
 {
     return 0;
 }
@@ -108,21 +121,21 @@ auth_start_session(long in_val, int in_display)
 /******************************************************************************/
 /* returns error */
 int
-auth_stop_session(long in_val)
+auth_stop_session(struct auth_info *auth_info)
 {
     return 0;
 }
 
 /******************************************************************************/
 int
-auth_end(long in_val)
+auth_end(struct auth_info *auth_info)
 {
     return 0;
 }
 
 /******************************************************************************/
 int
-auth_set_env(long in_val)
+auth_set_env(struct auth_info *auth_info)
 {
     return 0;
 }

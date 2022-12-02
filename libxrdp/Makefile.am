@@ -14,10 +14,6 @@ AM_LDFLAGS =
 
 LIBXRDP_EXTRA_LIBS =
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
 if XRDP_NEUTRINORDP
 AM_CPPFLAGS += -DXRDP_NEUTRINORDP
 LIBXRDP_EXTRA_LIBS += $(FREERDP_LIBS)
@@ -49,6 +45,7 @@ libxrdp_la_SOURCES = \
   xrdp_bitmap_compress.c \
   xrdp_caps.c \
   xrdp_channel.c \
+  xrdp_channel.h \
   xrdp_fastpath.c \
   xrdp_iso.c \
   xrdp_jpeg_compress.c \

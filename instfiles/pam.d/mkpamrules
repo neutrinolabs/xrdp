@@ -8,7 +8,11 @@ outfile="$3"
 
 service="xrdp-sesman"
 pamdir="/etc/pam.d"
-pamdir_suse="/usr/etc/pam.d"
+pamdir_suse="/usr/lib/pam.d"
+if [ ! -d $pamdir_suse ]; then
+   # Older SUSE distros uses /usr/etc/pam.d
+   pamdir_suse="/usr/etc/pam.d"
+fi
 
 # Modules needed by xrdp-sesman.unix, if we get to that
 unix_modules_needed="pam_unix.so pam_env.so pam_nologin.so"
@@ -22,8 +26,8 @@ find_pam_module_dir()
   # Looks for the pam security module directory
   set -- $pam_module_dir_searchpath
   for d in "$@"; do
-    if [ -s $d/pam_unix.so ]; then
-      echo $d
+    if [ -s "$d/pam_unix.so" ]; then
+      echo "$d"
       break
     fi
   done
@@ -34,7 +38,7 @@ can_apply_unix_config()
   result=0
   module_dir="$1"
   for m in $unix_modules_needed; do
-    if [ ! -s $module_dir/$m ]; then
+    if [ ! -s "$module_dir/$m" ]; then
       echo "  ** $m not found" >&2
       result=1
     fi

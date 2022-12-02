@@ -105,18 +105,18 @@ struct irp
     void      *user_data;
 };
 
-IRP * devredir_irp_new(void);
-/* As above, but allocates sufficent space for the specified
+IRP *devredir_irp_new(void);
+/* As above, but allocates sufficient space for the specified
  * pathname, and copies it in to the pathname field */
-IRP * devredir_irp_with_pathname_new(const char *pathname);
+IRP *devredir_irp_with_pathname_new(const char *pathname);
 /* As above, but specifies a pathname length with pathname
  * initially set to "". Use if you need to modify the pathname
  * significantly */
-IRP * devredir_irp_with_pathnamelen_new(unsigned int pathnamelen);
+IRP *devredir_irp_with_pathnamelen_new(unsigned int pathnamelen);
 int   devredir_irp_delete(IRP *irp);
-IRP * devredir_irp_find(tui32 completion_id);
-IRP * devredir_irp_find_by_fileid(tui32 FileId);
-IRP * devredir_irp_get_last(void);
+IRP *devredir_irp_find(tui32 completion_id);
+IRP *devredir_irp_find_by_fileid(tui32 FileId);
+IRP *devredir_irp_get_last(void);
 void  devredir_irp_dump(void);
 
 #endif /* end ifndef __IRP_H */

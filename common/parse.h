@@ -26,6 +26,14 @@
 #define PARSE_H
 
 #include "arch.h"
+#include "log.h"
+
+/* Check the config_ac.h file is included so we know whether to enable the
+ * development macros
+ */
+#ifndef CONFIG_AC_H
+#   error config_ac.h not visible in parse.h
+#endif
 
 #if defined(L_ENDIAN)
 #elif defined(B_ENDIAN)
@@ -53,17 +61,88 @@ struct stream
     int *source;
 };
 
-/******************************************************************************/
-#define s_check(s) ((s)->p <= (s)->end)
+/** Check arguments to stream primitives
+ *
+ * This adds a function call overhead to every stream primitive and is
+ * intended for development only
+ *
+ * @param s stream
+ * @param n Bytes being requested for input/output
+ * @param is_out (0=input, !0=output)
+ * @param file __file__for caller
+ * @param line __line__ for caller
+ *
+ * On any kind of violation a message is output and the program is
+ * aborted.
+ */
+void
+parser_stream_overflow_check(const struct stream *s, int n, int is_out,
+                             const char *file, int line);
+
+#ifdef USE_DEVEL_STREAMCHECK
+#   define S_CHECK_REM(s,n) \
+    parser_stream_overflow_check((s), (n), 0, __FILE__, __LINE__)
+#   define S_CHECK_REM_OUT(s,n) \
+    parser_stream_overflow_check((s), (n), 1, __FILE__, __LINE__)
+#else
+#   define S_CHECK_REM(s,n)
+#   define S_CHECK_REM_OUT(s,n)
+#endif
 
 /******************************************************************************/
 #define s_check_rem(s, n) ((s)->p + (n) <= (s)->end)
 
 /******************************************************************************/
+/**
+ * @returns true if there are at least n bytes remaining in the stream,
+ *          else false and logs an error message
+ */
+#define s_check_rem_and_log(s, n, msg_prefix) \
+    ( s_check_rem((s), (n)) ? \
+      1 : \
+      LOG(LOG_LEVEL_ERROR, \
+          "%s Not enough bytes in the stream: expected %d, remaining %d", \
+          (msg_prefix), (n), s_rem(s)) \
+      && 0 )
+
+/******************************************************************************/
 #define s_check_rem_out(s, n) ((s)->p + (n) <= (s)->data + (s)->size)
 
 /******************************************************************************/
+/**
+ * @returns true if there are at least n bytes remaining in the stream,
+ *          else false and logs an error message
+ */
+#define s_check_rem_out_and_log(s, n, msg_prefix) \
+    ( s_check_rem_out((s), (n)) ? \
+      1 : \
+      LOG(LOG_LEVEL_ERROR, \
+          "%s Not enough bytes in the stream: expected %d, remaining %d", \
+          (msg_prefix), (n), s_rem_out(s)) \
+      && 0 )
+
+/******************************************************************************/
 #define s_check_end(s) ((s)->p == (s)->end)
+
+/******************************************************************************/
+/**
+ * @returns true if there are exactly 0 bytes remaining in the stream,
+ *          else false and logs an error message
+ */
+#define s_check_end_and_log(s, msg_prefix) \
+    ( s_check_end((s)) ? \
+      1 : \
+      LOG(LOG_LEVEL_ERROR, \
+          "%s Expected to be at the end of the stream, " \
+          "but there are %d bytes remaining", \
+          (msg_prefix), s_rem(s)) \
+      && 0 )
+
+/******************************************************************************/
+#define s_rem(s) ((int) ((s)->end - (s)->p))
+
+/******************************************************************************/
+#define s_rem_out(s) ((int) ((s)->data + (s)->size - (s)->p))
 
 /******************************************************************************/
 #define make_stream(s) \
@@ -71,34 +150,34 @@ struct stream
 
 /******************************************************************************/
 #define init_stream(s, v) do \
-{ \
-    if ((v) > (s)->size) \
     { \
-        g_free((s)->data); \
-        (s)->data = (char*)g_malloc((v), 0); \
-        (s)->size = (v); \
-    } \
-    (s)->p = (s)->data; \
-    (s)->end = (s)->data; \
-    (s)->next_packet = 0; \
-} while (0)
+        if ((v) > (s)->size) \
+        { \
+            g_free((s)->data); \
+            (s)->data = (char*)g_malloc((v), 0); \
+            (s)->size = (v); \
+        } \
+        (s)->p = (s)->data; \
+        (s)->end = (s)->data; \
+        (s)->next_packet = 0; \
+    } while (0)
 
 /******************************************************************************/
 #define free_stream(s) do \
-{ \
-    if ((s) != 0) \
     { \
-        g_free((s)->data); \
-    } \
-    g_free((s)); \
-} while (0)
+        if ((s) != 0) \
+        { \
+            g_free((s)->data); \
+        } \
+        g_free((s)); \
+    } while (0)
 
 /******************************************************************************/
 #define s_push_layer(s, h, n) do \
-{ \
-    (s)->h = (s)->p; \
-    (s)->p += (n); \
-} while (0)
+    { \
+        (s)->h = (s)->p; \
+        (s)->p += (n); \
+    } while (0)
 
 /******************************************************************************/
 #define s_pop_layer(s, h) \
@@ -109,249 +188,280 @@ struct stream
     (s)->end = (s)->p
 
 #define in_sint8(s, v) do \
-{ \
-    (v) = *((signed char*)((s)->p)); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 1); \
+        (v) = *((signed char*)((s)->p)); \
+        (s)->p++; \
+    } while (0)
 
 /******************************************************************************/
 #define in_uint8(s, v) do \
-{ \
-    (v) = *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 1); \
+        (v) = *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+    } while (0)
 /******************************************************************************/
-#define in_uint8_peek(s, v) do { v = *s->p; } while (0)
+#define in_uint8_peek(s, v) do \
+    { \
+        S_CHECK_REM((s), 1); \
+        v = *s->p; \
+    } while (0)
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_sint16_le(s, v) do \
-{ \
-    (v) = (signed short) \
-        ( \
-            (*((unsigned char*)((s)->p + 0)) << 0) | \
-            (*((unsigned char*)((s)->p + 1)) << 8) \
-        ); \
-    (s)->p += 2; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 2); \
+        (v) = (signed short) \
+              ( \
+                (*((unsigned char*)((s)->p + 0)) << 0) | \
+                (*((unsigned char*)((s)->p + 1)) << 8) \
+              ); \
+        (s)->p += 2; \
+    } while (0)
 #else
 #define in_sint16_le(s, v) do \
-{ \
-    (v) = *((signed short*)((s)->p)); \
-    (s)->p += 2; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 2); \
+        (v) = *((signed short*)((s)->p)); \
+        (s)->p += 2; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint16_le(s, v) do \
-{ \
-    (v) = (unsigned short) \
-        ( \
-            (*((unsigned char*)((s)->p + 0)) << 0) | \
-            (*((unsigned char*)((s)->p + 1)) << 8) \
-        ); \
-    (s)->p += 2; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 2); \
+        (v) = (unsigned short) \
+              ( \
+                (*((unsigned char*)((s)->p + 0)) << 0) | \
+                (*((unsigned char*)((s)->p + 1)) << 8) \
+              ); \
+        (s)->p += 2; \
+    } while (0)
 #else
 #define in_uint16_le(s, v) do \
-{ \
-    (v) = *((unsigned short*)((s)->p)); \
-    (s)->p += 2; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 2); \
+        (v) = *((unsigned short*)((s)->p)); \
+        (s)->p += 2; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #define in_uint16_be(s, v) do \
-{ \
-    (v) = *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-    (v) <<= 8; \
-    (v) |= *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 2); \
+        (v) = *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+        (v) <<= 8; \
+        (v) |= *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+    } while (0)
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint32_le(s, v) do \
-{ \
-    (v) = (unsigned int) \
-        ( \
-            (*((unsigned char*)((s)->p + 0)) << 0) | \
-            (*((unsigned char*)((s)->p + 1)) << 8) | \
-            (*((unsigned char*)((s)->p + 2)) << 16) | \
-            (*((unsigned char*)((s)->p + 3)) << 24) \
-        ); \
-    (s)->p += 4; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 4); \
+        (v) = (unsigned int) \
+              ( \
+                (*((unsigned char*)((s)->p + 0)) << 0) | \
+                (*((unsigned char*)((s)->p + 1)) << 8) | \
+                (*((unsigned char*)((s)->p + 2)) << 16) | \
+                (*((unsigned char*)((s)->p + 3)) << 24) \
+              ); \
+        (s)->p += 4; \
+    } while (0)
 #else
 #define in_uint32_le(s, v) do \
-{ \
-    (v) = *((unsigned int*)((s)->p)); \
-    (s)->p += 4; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 4); \
+        (v) = *((unsigned int*)((s)->p)); \
+        (s)->p += 4; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint64_le(s, v) do \
-{ \
-    (v) = (tui64) \
-        ( \
-            (((tui64)(*((unsigned char*)((s)->p + 0)))) << 0) | \
-            (((tui64)(*((unsigned char*)((s)->p + 1)))) << 8) | \
-            (((tui64)(*((unsigned char*)((s)->p + 2)))) << 16) | \
-            (((tui64)(*((unsigned char*)((s)->p + 3)))) << 24) | \
-            (((tui64)(*((unsigned char*)((s)->p + 4)))) << 32) | \
-            (((tui64)(*((unsigned char*)((s)->p + 5)))) << 40) | \
-            (((tui64)(*((unsigned char*)((s)->p + 6)))) << 48) | \
-            (((tui64)(*((unsigned char*)((s)->p + 7)))) << 56) \
-        ); \
-    (s)->p += 8; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 8); \
+        (v) = (tui64) \
+              ( \
+                (((tui64)(*((unsigned char*)((s)->p + 0)))) << 0) | \
+                (((tui64)(*((unsigned char*)((s)->p + 1)))) << 8) | \
+                (((tui64)(*((unsigned char*)((s)->p + 2)))) << 16) | \
+                (((tui64)(*((unsigned char*)((s)->p + 3)))) << 24) | \
+                (((tui64)(*((unsigned char*)((s)->p + 4)))) << 32) | \
+                (((tui64)(*((unsigned char*)((s)->p + 5)))) << 40) | \
+                (((tui64)(*((unsigned char*)((s)->p + 6)))) << 48) | \
+                (((tui64)(*((unsigned char*)((s)->p + 7)))) << 56) \
+              ); \
+        (s)->p += 8; \
+    } while (0)
 #else
 #define in_uint64_le(s, v) do \
-{ \
-    (v) = *((tui64*)((s)->p)); \
-    (s)->p += 8; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 8); \
+        (v) = *((tui64*)((s)->p)); \
+        (s)->p += 8; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #define in_uint32_be(s, v) do \
-{ \
-    (v) = *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-    (v) <<= 8; \
-    (v) |= *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-    (v) <<= 8; \
-    (v) |= *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-    (v) <<= 8; \
-    (v) |= *((unsigned char*)((s)->p)); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM((s), 4); \
+        (v) = *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+        (v) <<= 8; \
+        (v) |= *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+        (v) <<= 8; \
+        (v) |= *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+        (v) <<= 8; \
+        (v) |= *((unsigned char*)((s)->p)); \
+        (s)->p++; \
+    } while (0)
 
 /******************************************************************************/
 #define out_uint8(s, v) do \
-{ \
-  *((s)->p) = (unsigned char)(v); \
-  (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 1); \
+        *((s)->p) = (unsigned char)(v); \
+        (s)->p++; \
+    } while (0)
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint16_le(s, v) do \
-{ \
-    *((s)->p) = (unsigned char)((v) >> 0); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 8); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 2); \
+        *((s)->p) = (unsigned char)((v) >> 0); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 8); \
+        (s)->p++; \
+    } while (0)
 #else
 #define out_uint16_le(s, v) do \
-{ \
-    *((unsigned short*)((s)->p)) = (unsigned short)(v); \
-    (s)->p += 2; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 2); \
+        *((unsigned short*)((s)->p)) = (unsigned short)(v); \
+        (s)->p += 2; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #define out_uint16_be(s, v) do \
-{ \
-    *((s)->p) = (unsigned char)((v) >> 8); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 0); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 2); \
+        *((s)->p) = (unsigned char)((v) >> 8); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 0); \
+        (s)->p++; \
+    } while (0)
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint32_le(s, v) do \
-{ \
-    *((s)->p) = (unsigned char)((v) >> 0); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 8); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 16); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 24); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 4); \
+        *((s)->p) = (unsigned char)((v) >> 0); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 8); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 16); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 24); \
+        (s)->p++; \
+    } while (0)
 #else
 #define out_uint32_le(s, v) do \
-{ \
-    *((unsigned int*)((s)->p)) = (v); \
-    (s)->p += 4; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 4); \
+        *((unsigned int*)((s)->p)) = (v); \
+        (s)->p += 4; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint64_le(s, v) do \
-{ \
-    *((s)->p) = (unsigned char)((v) >> 0); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 8); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 16); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 24); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 32); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 40); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 48); \
-    (s)->p++; \
-    *((s)->p) = (unsigned char)((v) >> 56); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 8); \
+        *((s)->p) = (unsigned char)((v) >> 0); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 8); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 16); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 24); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 32); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 40); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 48); \
+        (s)->p++; \
+        *((s)->p) = (unsigned char)((v) >> 56); \
+        (s)->p++; \
+    } while (0)
 #else
 #define out_uint64_le(s, v) do \
-{ \
-    *((tui64*)((s)->p)) = (v); \
-    (s)->p += 8; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 8); \
+        *((tui64*)((s)->p)) = (v); \
+        (s)->p += 8; \
+    } while (0)
 #endif
 
 /******************************************************************************/
 #define out_uint32_be(s, v) do \
-{ \
-    *((s)->p) = (unsigned char)((v) >> 24); \
-    s->p++; \
-    *((s)->p) = (unsigned char)((v) >> 16); \
-    s->p++; \
-    *((s)->p) = (unsigned char)((v) >> 8); \
-    s->p++; \
-    *((s)->p) = (unsigned char)(v); \
-    (s)->p++; \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), 4); \
+        *((s)->p) = (unsigned char)((v) >> 24); \
+        s->p++; \
+        *((s)->p) = (unsigned char)((v) >> 16); \
+        s->p++; \
+        *((s)->p) = (unsigned char)((v) >> 8); \
+        s->p++; \
+        *((s)->p) = (unsigned char)(v); \
+        (s)->p++; \
+    } while (0)
 
 /******************************************************************************/
 #define in_uint8p(s, v, n) do \
-{ \
-    (v) = (s)->p; \
-    (s)->p += (n); \
-} while (0)
+    { \
+        S_CHECK_REM((s), (n)); \
+        (v) = (s)->p; \
+        (s)->p += (n); \
+    } while (0)
 
 /******************************************************************************/
 #define in_uint8a(s, v, n) do \
-{ \
-    g_memcpy((v), (s)->p, (n)); \
-    (s)->p += (n); \
-} while (0)
+    { \
+        S_CHECK_REM((s), (n)); \
+        g_memcpy((v), (s)->p, (n)); \
+        (s)->p += (n); \
+    } while (0)
 
 /******************************************************************************/
-#define in_uint8s(s, n) \
-    (s)->p += (n)
+#define in_uint8s(s, n) do \
+    { \
+        S_CHECK_REM((s), (n)); \
+        (s)->p += (n); \
+    } while (0);
 
 /******************************************************************************/
 #define out_uint8p(s, v, n) do \
-{ \
-    g_memcpy((s)->p, (v), (n)); \
-    (s)->p += (n); \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), (n)); \
+        g_memcpy((s)->p, (v), (n)); \
+        (s)->p += (n); \
+    } while (0)
 
 /******************************************************************************/
 #define out_uint8a(s, v, n) \
@@ -359,10 +469,11 @@ struct stream
 
 /******************************************************************************/
 #define out_uint8s(s, n) do \
-{ \
-    g_memset((s)->p, 0, (n)); \
-    (s)->p += (n); \
-} while (0)
+    { \
+        S_CHECK_REM_OUT((s), (n)); \
+        g_memset((s)->p, 0, (n)); \
+        (s)->p += (n); \
+    } while (0)
 
 /*
  * @brief allocate a new stream
@@ -371,11 +482,11 @@ struct stream
  * @param _l length of new stream
  ******************************************************************************/
 #define xstream_new(_s, _l)   \
-do                           \
-{                            \
-    make_stream((_s));       \
-    init_stream((_s), (_l)); \
-} while (0)
+    do                           \
+    {                            \
+        make_stream((_s));       \
+        init_stream((_s), (_l)); \
+    } while (0)
 
 /**
  * @brief release a previously allocated stream
@@ -383,6 +494,8 @@ do                           \
  * @param _s opaque handle returned by stream_new()
  *****************************************************************************/
 #define xstream_free(_s) free_stream(_s)
+
+#define xstream_skip_u8(_s, _n)       in_uint8s(_s, _n)
 
 #define xstream_rd_u8(_s, _var)       in_uint8(_s, _var)
 #define xstream_rd_u16_le(_s, _var)   in_uint16_le(_s, _var)
@@ -401,63 +514,63 @@ do                           \
 #define xstream_wr_s32_le(_s, _var)   TODO
 
 #define xstream_rd_u64_le(_s, _v)                             \
-do                                                            \
-{                                                             \
-    _v =                                                      \
-    (tui64)(*((unsigned char *)_s->p)) |                      \
-    (((tui64) (*(((unsigned char *)_s->p) + 1))) << 8)  |     \
-    (((tui64) (*(((unsigned char *)_s->p) + 2))) << 16) |     \
-    (((tui64) (*(((unsigned char *)_s->p) + 3))) << 24) |     \
-    (((tui64) (*(((unsigned char *)_s->p) + 4))) << 32) |     \
-    (((tui64) (*(((unsigned char *)_s->p) + 5))) << 40) |     \
-    (((tui64) (*(((unsigned char *)_s->p) + 6))) << 48) |     \
-    (((tui64) (*(((unsigned char *)_s->p) + 7))) << 56);      \
-    _s->p += 8;                                               \
-} while (0)
+    do                                                            \
+    {                                                             \
+        _v =                                                      \
+                (tui64)(*((unsigned char *)_s->p)) |                      \
+                (((tui64) (*(((unsigned char *)_s->p) + 1))) << 8)  |     \
+                (((tui64) (*(((unsigned char *)_s->p) + 2))) << 16) |     \
+                (((tui64) (*(((unsigned char *)_s->p) + 3))) << 24) |     \
+                (((tui64) (*(((unsigned char *)_s->p) + 4))) << 32) |     \
+                (((tui64) (*(((unsigned char *)_s->p) + 5))) << 40) |     \
+                (((tui64) (*(((unsigned char *)_s->p) + 6))) << 48) |     \
+                (((tui64) (*(((unsigned char *)_s->p) + 7))) << 56);      \
+        _s->p += 8;                                               \
+    } while (0)
 
 #define xstream_wr_u64_le(_s, _v)                                           \
-do                                                                          \
-{                                                                           \
-    *(((unsigned char *) _s->p) + 0) = (unsigned char) ((_v >>  0) & 0xff); \
-    *(((unsigned char *) _s->p) + 1) = (unsigned char) ((_v >>  8) & 0xff); \
-    *(((unsigned char *) _s->p) + 2) = (unsigned char) ((_v >> 16) & 0xff); \
-    *(((unsigned char *) _s->p) + 3) = (unsigned char) ((_v >> 24) & 0xff); \
-    *(((unsigned char *) _s->p) + 4) = (unsigned char) ((_v >> 32) & 0xff); \
-    *(((unsigned char *) _s->p) + 5) = (unsigned char) ((_v >> 40) & 0xff); \
-    *(((unsigned char *) _s->p) + 6) = (unsigned char) ((_v >> 48) & 0xff); \
-    *(((unsigned char *) _s->p) + 7) = (unsigned char) ((_v >> 56) & 0xff); \
-    _s->p += 8;                                                             \
-} while (0)
+    do                                                                          \
+    {                                                                           \
+        *(((unsigned char *) _s->p) + 0) = (unsigned char) ((_v >>  0) & 0xff); \
+        *(((unsigned char *) _s->p) + 1) = (unsigned char) ((_v >>  8) & 0xff); \
+        *(((unsigned char *) _s->p) + 2) = (unsigned char) ((_v >> 16) & 0xff); \
+        *(((unsigned char *) _s->p) + 3) = (unsigned char) ((_v >> 24) & 0xff); \
+        *(((unsigned char *) _s->p) + 4) = (unsigned char) ((_v >> 32) & 0xff); \
+        *(((unsigned char *) _s->p) + 5) = (unsigned char) ((_v >> 40) & 0xff); \
+        *(((unsigned char *) _s->p) + 6) = (unsigned char) ((_v >> 48) & 0xff); \
+        *(((unsigned char *) _s->p) + 7) = (unsigned char) ((_v >> 56) & 0xff); \
+        _s->p += 8;                                                             \
+    } while (0)
 
 /* copy data into stream */
 #define xstream_copyin(_s, _dest, _len)   \
-do                                        \
-{                                         \
-    g_memcpy((_s)->p, (_dest), (_len));   \
-    (_s)->p += (_len);                    \
-} while (0)
+    do                                        \
+    {                                         \
+        g_memcpy((_s)->p, (_dest), (_len));   \
+        (_s)->p += (_len);                    \
+    } while (0)
 
 /* copy data out of stream */
 #define xstream_copyout(_dest, _s, _len)  \
-do                                        \
-{                                         \
-    g_memcpy((_dest), (_s)->p, (_len));   \
-    (_s)->p += (_len);                    \
-} while (0)
+    do                                        \
+    {                                         \
+        g_memcpy((_dest), (_s)->p, (_len));   \
+        (_s)->p += (_len);                    \
+    } while (0)
 
 #define xstream_rd_string(_dest, _s, _len) \
-do                                         \
-{                                          \
-    g_memcpy((_dest), (_s)->p, (_len));    \
-    (_s)->p += (_len);                     \
-} while (0)
+    do                                         \
+    {                                          \
+        g_memcpy((_dest), (_s)->p, (_len));    \
+        (_s)->p += (_len);                     \
+    } while (0)
 
 #define xstream_wr_string(_s, _src, _len) \
-do                                        \
-{                                         \
-    g_memcpy((_s)->p, (_src), (_len));    \
-    (_s)->p += (_len);                    \
-} while (0)
+    do                                        \
+    {                                         \
+        g_memcpy((_s)->p, (_src), (_len));    \
+        (_s)->p += (_len);                    \
+    } while (0)
 
 #define xstream_len(_s)               (int) ((_s)->p - (_s)->data)
 #define xstream_seek(_s, _len)        (_s)->p += (_len)

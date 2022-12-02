@@ -54,6 +54,7 @@ struct xrdp_enc_data_done
     char *comp_pad_data;
     struct xrdp_enc_data *enc;
     int last; /* true is this is last message for enc */
+    int continuation; /* true if this isn't the start of a frame */
     int x;
     int y;
     int cx;

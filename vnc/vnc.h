@@ -18,11 +18,15 @@
  * libvnc
  */
 
+#ifndef VNC_H
+#define VNC_H
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
 #include "defines.h"
+#include "guid.h"
 
 #define CURRENT_MOD_VER 4
 
@@ -58,6 +62,9 @@ enum vnc_resize_status
 
 struct source_info;
 
+/* Defined in vnc_clip.c */
+struct vnc_clipboard_data;
+
 struct vnc
 {
     int size; /* size of this struct */
@@ -77,7 +84,12 @@ struct vnc
     int (*mod_frame_ack)(struct vnc *v, int flags, int frame_id);
     int (*mod_suppress_output)(struct vnc *v, int suppress,
                                int left, int top, int right, int bottom);
-    tintptr mod_dumby[100 - 11]; /* align, 100 minus the number of mod
+    int (*mod_server_monitor_resize)(struct vnc *v,
+                                     int width, int height);
+    int (*mod_server_monitor_full_invalidate)(struct vnc *v,
+            int width, int height);
+    int (*mod_server_version_message)(struct vnc *v);
+    tintptr mod_dumby[100 - 14]; /* align, 100 minus the number of mod
                                   functions above */
     /* server functions */
     int (*server_begin_update)(struct vnc *v);
@@ -90,7 +102,7 @@ struct vnc
     int (*server_set_cursor)(struct vnc *v, int x, int y, char *data, char *mask);
     int (*server_palette)(struct vnc *v, int *palette);
     int (*server_msg)(struct vnc *v, const char *msg, int code);
-    int (*server_is_term)(struct vnc *v);
+    int (*server_is_term)(void);
     int (*server_set_clip)(struct vnc *v, int x, int y, int cx, int cy);
     int (*server_reset_clip)(struct vnc *v);
     int (*server_set_fgcolor)(struct vnc *v, int fgcolor);
@@ -112,6 +124,7 @@ struct vnc
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
     int (*server_reset)(struct vnc *v, int width, int height, int bpp);
+    int (*server_get_channel_count)(struct vnc *v);
     int (*server_query_channel)(struct vnc *v, int index,
                                 char *channel_name,
                                 int *channel_flags);
@@ -120,7 +133,8 @@ struct vnc
                                   char *data, int data_len,
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct vnc *v);
-    tintptr server_dumby[100 - 25]; /* align, 100 minus the number of server
+    int (*server_chansrv_in_use)(struct vnc *v);
+    tintptr server_dumby[100 - 27]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -143,14 +157,23 @@ struct vnc
     int shift_state; /* 0 up, 1 down */
     int keylayout;
     int clip_chanid;
-    struct stream *clip_data_s;
+    struct vnc_clipboard_data *vc;
     int delay_ms;
     struct trans *trans;
-    int got_guid;
-    tui8 guid[16];
+    struct guid guid;
     int suppress_output;
     unsigned int enabled_encodings_mask;
     /* Resizeable support */
     struct vnc_screen_layout client_layout;
-    enum vnc_resize_status initial_resize_status;
+    enum vnc_resize_status resize_status;
 };
+
+/*
+ * Functions
+ */
+int
+lib_send_copy(struct vnc *v, struct stream *s);
+int
+skip_trans_bytes(struct trans *trans, unsigned int bytes);
+
+#endif /* VNC_H */

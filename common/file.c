@@ -24,6 +24,7 @@
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "list.h"
 #include "file.h"
 #include "parse.h"

@@ -18,6 +18,11 @@
 
 /* FUSE mount point */
 char g_fuse_root_path[256] = "";
+#ifdef XRDP_FUSE
+static const char *g_fuse_root_path_basename; /* See xfuse_path_in_xfuse_fs() */
+static int g_fuse_root_parent_dev;   /* Ditto */
+static int g_fuse_root_parent_ino;   /* Ditto */
+#endif
 char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
 #if defined(HAVE_CONFIG_H)
@@ -122,6 +127,11 @@ void xfuse_devredir_cb_rename_file(struct state_rename *fip,
 void xfuse_devredir_cb_file_close(struct state_close *fip)
 {}
 
+int xfuse_path_in_xfuse_fs(const char *path)
+{
+    return 0;
+}
+
 #else
 
 /******************************************************************************
@@ -130,7 +140,12 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
 **                                                                           **
 ******************************************************************************/
 
-#define FUSE_USE_VERSION 26
+/* FUSE_USE_VERSION must be defined globally for other parts of
+ * xrdp-chansrv which include <fuse_lowlevel.h> for definitions. Check
+ * it's actually defined here */
+#ifndef FUSE_USE_VERSION
+#error Define FUSE_USE_VERSION in the make system and recompile
+#endif
 
 #include <fuse_lowlevel.h>
 #include <stdio.h>
@@ -144,6 +159,7 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
 
 #include "arch.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "clipboard_file.h"
 #include "chansrv_fuse.h"
 #include "chansrv_xfs.h"
@@ -318,6 +334,7 @@ static char *g_buffer = 0;
 static int g_fd = 0;
 static tintptr g_bufsize = 0;
 
+
 /* forward declarations for internal access */
 static int xfuse_init_xrdp_fs(void);
 static int xfuse_deinit_xrdp_fs(void);
@@ -392,6 +409,8 @@ static const char *filename_on_device(const char *full_path);
 static void update_inode_file_attributes(const struct file_attr *fattr,
         tui32 change_mask, XFS_INODE *xinode);
 static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name);
+static unsigned int format_user_info(char *dest, unsigned int len,
+                                     const char *format);
 
 /*****************************************************************************/
 int
@@ -446,18 +465,34 @@ xfuse_handle_from_fuse_handle(uint64_t handle)
 /**
  * Initialize FUSE subsystem
  *
- * @return 0 on success, -1 on failure
+ * @return 0 on success, -1 on failure, 1 for feature disabled
  *****************************************************************************/
 
 int
 xfuse_init(void)
 {
     struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
+    char *p;
 
     /* if already inited, just return */
     if (g_xfuse_inited)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "already inited");
+        return 0;
+    }
+
+    /* This feature may be disabled */
+    if (!g_cfg->enable_fuse_mount)
+    {
+        /*
+         * Only log the 'disabled mounts' message one time
+         */
+        static int disabled_mounts_msg_shown = 0;
+        if (!disabled_mounts_msg_shown)
+        {
+            LOG(LOG_LEVEL_INFO, "FUSE mounts are disabled by config");
+            disabled_mounts_msg_shown = 1;
+        }
         return 1;
     }
 
@@ -469,17 +504,74 @@ xfuse_init(void)
 
     load_fuse_config();
 
-    /* define FUSE mount point to ~/xrdp_client, ~/thinclient_drives */
-    g_snprintf(g_fuse_root_path, 255, "%s/%s", g_getenv("HOME"), g_cfg->fuse_mount_name);
+    /* define FUSE mount point */
+    if (g_cfg->fuse_mount_name[0] == '/')
+    {
+        /* String is an absolute path to the mount point containing
+         * %u or %U characters */
+        format_user_info(g_fuse_root_path, sizeof(g_fuse_root_path),
+                         g_cfg->fuse_mount_name);
+    }
+    else
+    {
+        /* mount_name is relative to $HOME, e.g. ~/xrdp_client,
+         * or ~/thinclient_drives */
+        g_snprintf(g_fuse_root_path, sizeof(g_fuse_root_path), "%s/%s",
+                   g_getenv("HOME"), g_cfg->fuse_mount_name);
+    }
+
+    /* Remove all trailing '/' from the root path */
+    p = g_fuse_root_path + g_strlen(g_fuse_root_path);
+    while ( p > g_fuse_root_path && *(p - 1) == '/')
+    {
+        --p;
+        *p = '\0';
+    }
+
+    /* This shouldn't happen */
+    if (g_strlen(g_fuse_root_path) == 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Fuse root path is empty after removing trailing '/'");
+        return -1;
+    }
+
     g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
+
+    /* Get the characteristics of the parent directory of the FUSE mount
+     * point. Used by xfuse_path_in_xfuse_fs() */
+    p = (char *)g_strrchr(g_fuse_root_path, '/');
+    if (p != NULL)
+    {
+        /* Temporarily finish the root path at this point */
+        *p = '\0';
+        g_fuse_root_path_basename = p + 1;
+        g_fuse_root_parent_dev = g_file_get_device_number(g_fuse_root_path);
+        g_fuse_root_parent_ino = g_file_get_inode_num(g_fuse_root_path);
+        *p = '/';
+    }
+    else
+    {
+        g_fuse_root_parent_dev = -1;
+        g_fuse_root_parent_ino = -1;
+    }
+
+    if (g_fuse_root_parent_dev == -1 || g_fuse_root_parent_ino == -1)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Unable to obtain characteristics of directory containing %s",
+            g_fuse_root_path);
+        return -1;
+    }
 
     /* if FUSE mount point does not exist, create it */
     if (!g_directory_exist(g_fuse_root_path))
     {
+        (void)g_create_path(g_fuse_root_path);
         if (!g_create_dir(g_fuse_root_path))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "mkdir %s failed. If %s is already mounted, you must "
-                      "first unmount it", g_fuse_root_path, g_fuse_root_path);
+            LOG(LOG_LEVEL_ERROR, "mkdir %s failed. If %s is already mounted, you must "
+                "first unmount it", g_fuse_root_path, g_fuse_root_path);
             return -1;
         }
     }
@@ -748,23 +840,38 @@ xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)
 int
 xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex)
 {
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "entered: filename=%s flags=%d size=%d lindex=%d",
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "entered: filename=%s flags=%d size=%d lindex=%d",
               filename, flags, size, lindex);
 
-    /* add entry to xrdp_fs */
-    XFS_INODE *xinode = xfs_add_entry( g_xfs,
-                                       g_clipboard_inum,    /* parent inode */
-                                       filename,
-                                       (0666 | S_IFREG));
-    if (xinode == NULL)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "failed to create file in xrdp filesystem");
-        return -1;
-    }
-    xinode->size = size;
-    xinode->lindex = lindex;
+    int result = -1;
 
-    return 0;
+    if (g_xfs == NULL)
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "xfuse_add_clip_dir_item() called with no filesystem");
+    }
+    else
+    {
+        /* add entry to xrdp_fs */
+        XFS_INODE *xinode = xfs_add_entry( g_xfs,
+                                           g_clipboard_inum, /* parent inode */
+                                           filename,
+                                           (0666 | S_IFREG));
+        if (xinode == NULL)
+        {
+            LOG(LOG_LEVEL_INFO,
+                "failed to create file %s in xrdp filesystem", filename);
+        }
+        else
+        {
+            xinode->size = size;
+            xinode->lindex = lindex;
+            result = 0;
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -1437,6 +1544,77 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
     xfs_decrement_file_open_count(g_xfs, fip->inum);
 
     free(fip);
+}
+
+/*
+ * Determine is a file is in the FUSE filesystem
+ *
+ * The whole purpose of this function is to avoid deadlocks. If we try
+ * to determine the size (or any other attribute) of a file in the FUSE
+ * filesystem, the kernel will block the calling thread and send a message
+ * to libfuse. Since we're single-threaded, this will result in deadlock.
+ *
+ * Ideally we'd use a stat() of the file to compare with a stat() of
+ * the mountpoint. This won't work however, for the reasons outline above.
+ *
+ * A simple implementation might be to compare the start of the filename
+ * with the FUSE mount point. This will work, but can easily be defeated,
+ * (perhaps unintentionally) by symlinks in the path.
+ *
+ * The approach taken here is to record the basename of the FUSE mount
+ * point directory (e.g. 'thinclient_drives') and look for that in the
+ * passed-in filename as a directory element. If we find it, we look
+ * at the device name and inode number of the parent directory of the
+ * FUSE mount point. If these match we consider the filename to be in
+ * the FUSE filesystem.
+ */
+int xfuse_path_in_xfuse_fs(const char *path)
+{
+    char *wpath = NULL; /* Writeable copy of path */
+    char *p;
+    int blen = g_strlen(g_fuse_root_path_basename);
+    int rv = 0;
+
+    if ((wpath = g_strdup(path)) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "system out of memory");
+    }
+    else
+    {
+        /* Look ahead in the string for the basename of the FUSE mount point */
+        for (p = wpath;
+                (p = g_strstr(p, g_fuse_root_path_basename)) != NULL ;
+                p = p + 1)
+        {
+            /* Is this string preceded by a '/' ? */
+            if (p == wpath || *(p - 1) != '/')
+            {
+                continue;
+            }
+
+            /* Is the string followed by a '/' or '\0' ? We know it's
+             * valid to look ahead this far in the string, as g_strstr()
+             * tells us it is */
+            if (*(p + blen) != '/' && *(p + blen) != '\0')
+            {
+                continue;
+            }
+
+            /* Temporarily terminate the string early, and check the
+             * file system characteristics of the preceding directory */
+            *(p - 1) = '\0';
+
+            if (g_file_get_device_number(wpath) == g_fuse_root_parent_dev &&
+                    g_file_get_inode_num(wpath) == g_fuse_root_parent_ino)
+            {
+                rv = 1;
+                break;
+            }
+            *(p - 1) = '/';
+        }
+        g_free(wpath);
+    }
+    return rv;
 }
 
 /******************************************************************************
@@ -2607,6 +2785,32 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
     }
 
     return result;
+}
+
+/*
+ * Scans a user-provided string substituting %u/%U for UID/username
+ */
+static unsigned int format_user_info(char *dest, unsigned int len,
+                                     const char *format)
+{
+    char uidstr[64];
+    char username[64];
+    const struct info_string_tag map[] =
+    {
+        {'u', uidstr},
+        {'U', username},
+        INFO_STRING_END_OF_LIST
+    };
+
+    int uid = g_getuid();
+    g_snprintf(uidstr, sizeof(uidstr), "%d", uid);
+    if (g_getlogin(username, sizeof(username)) != 0)
+    {
+        /* Fall back to UID */
+        g_strncpy(username, uidstr, sizeof(username) - 1);
+    }
+
+    return g_format_info_string(dest, len, format, map);
 }
 
 #endif /* end else #ifndef XRDP_FUSE */

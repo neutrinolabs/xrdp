@@ -27,57 +27,71 @@
 #ifndef AUTH_H
 #define AUTH_H
 
+
+/**
+ * Opaque type used to represent an authentication handle
+ */
+struct auth_info;
+
 /**
  *
  * @brief Validates user's password
  * @param user user's login name
  * @param pass user's password
- * @return non-zero handle on success, 0 on failure
+ * @param client_ip IP address of connecting client (or ""/NULL if not known)
+ * @param[out] errorcode from result
+ * @return auth handle on success, NULL on failure
  *
  */
-long
-auth_userpass(const char *user, const char *pass, int *errorcode);
+struct auth_info *
+auth_userpass(const char *user, const char *pass,
+              const char *client_ip, int *errorcode);
 
 /**
  *
- * @brief FIXME
- * @param in_val
- * @param in_display
+ * @brief Starts a session
+ * @param auth_info. Auth handle created by auth_userpass
+ * @param display_num Display number
  * @return 0 on success, 1 on failure
  *
  */
 int
-auth_start_session(long in_val, int in_display);
+auth_start_session(struct auth_info *auth_info, int display_num);
 
 /**
  *
- * @brief FIXME
- * @param in_val
+ * @brief Stops a session previously started with auth_start_session()
+ * @param auth_info. Auth handle created by auth_userpass
  * @return 0 on success, 1 on failure
  *
  */
 int
-auth_stop_session(long in_val);
+auth_stop_session(struct auth_info *auth_info);
 
 /**
  *
- * @brief FIXME
- * @param in_val
+ * @brief Deallocates an auth handle and releases all resources
+ * @param auth_info. Auth handle created by auth_userpass
  * @return 0 on success, 1 on failure
  *
  */
 int
-auth_end(long in_val);
+auth_end(struct auth_info *auth_info);
 
 /**
  *
- * @brief FIXME
- * @param in_val
+ * @brief Sets up the environment for a session started
+ *        with auth_start_session()
+ *
+ * This call is only effective for PAM-based environments. It must be made
+ * after the context has been switched to the logged-in user.
+ *
+ * @param auth_info. Auth handle created by auth_userpass
  * @return 0 on success, 1 on failure
  *
  */
 int
-auth_set_env(long in_val);
+auth_set_env(struct auth_info *auth_info);
 
 
 #define AUTH_PWD_CHG_OK                0
@@ -88,8 +102,9 @@ auth_set_env(long in_val);
 
 /**
  *
- * @brief FIXME
- * @param in_val
+ * @brief WIP - Checks to see if the password for a user needs changing
+ *
+ * @param user - Username to check
  * @return 0 on success, 1 on failure
  *
  */
@@ -98,8 +113,10 @@ auth_check_pwd_chg(const char *user);
 
 /**
  *
- * @brief FIXME
- * @param in_val
+ * @brief WIP - Changes the password for a user
+ *
+ * @param user Username to check
+ * @param newpwd New password for user
  * @return 0 on success, 1 on failure
  *
  */

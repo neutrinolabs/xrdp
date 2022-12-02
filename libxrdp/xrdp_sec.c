@@ -25,14 +25,7 @@
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
-
-#define LOG_LEVEL 1
-#define LLOG(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
-#define LLOGLN(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
-#define LHEXDUMP(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_hexdump _args ; } } while (0)
+#include "string_calls.h"
 
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
@@ -50,28 +43,94 @@ static tui8 g_pad_92[48] =
     92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92
 };
 
+
+/*****************************************************************************/
+/* Licensing request v2 PDU
+ *
+ * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
+ * [MS-RDPELE] SERVER_LICENSE_REQUEST with PREAMBLE_VERSION_2_0
+ */
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_lic1[322] =
 {
+    /* [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
+     * flags (2) = 0x0080 (SEC_LICENSE_PKT)
+     * flagsHi (2) = unused (arbitrary data)
+     * [MS-RDPBCGR] LICENSE_PREAMBLE
+     * bMsgType (1) = 0x01 (LICENSE_REQUEST)
+     * flags (1) = 0x02 (PREAMBLE_VERSION_2_0)
+     * wMsgSize (2) = 318 (excludes the 4 bytes TS_SECURITY_HEADER Basic)
+     */
     0x80, 0x00, 0x3e, 0x01, 0x01, 0x02, 0x3e, 0x01,
+    /* [MS-RDPELE] SERVER_LICENSE_REQUEST
+     * ServerRandom (32) = <see hex below>
+     */
     0x7b, 0x3c, 0x31, 0xa6, 0xae, 0xe8, 0x74, 0xf6,
     0xb4, 0xa5, 0x03, 0x90, 0xe7, 0xc2, 0xc7, 0x39,
     0xba, 0x53, 0x1c, 0x30, 0x54, 0x6e, 0x90, 0x05,
     0xd0, 0x05, 0xce, 0x44, 0x18, 0x91, 0x83, 0x81,
+    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - ProductInfo
+     * [MS-RDPELE] PRODUCT_INFO
+     * dwVersion (4) = 0x00040000
+     * cbCompanyName (4) = 0x0000002c (44)
+     */
     0x00, 0x00, 0x04, 0x00, 0x2c, 0x00, 0x00, 0x00,
+    /*
+     * pbCompanyName (44) = UTF-16("Microsoft Corporation")
+     * cbProductId (4) = 0x00000008 (8)
+     */
     0x4d, 0x00, 0x69, 0x00, 0x63, 0x00, 0x72, 0x00,
     0x6f, 0x00, 0x73, 0x00, 0x6f, 0x00, 0x66, 0x00,
     0x74, 0x00, 0x20, 0x00, 0x43, 0x00, 0x6f, 0x00,
     0x72, 0x00, 0x70, 0x00, 0x6f, 0x00, 0x72, 0x00,
     0x61, 0x00, 0x74, 0x00, 0x69, 0x00, 0x6f, 0x00,
     0x6e, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+    /*
+     * pbProductId (8) = UTF-16("236")
+     */
     0x32, 0x00, 0x33, 0x00, 0x36, 0x00, 0x00, 0x00,
+    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - KeyExchangeList
+     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
+     * wBlobType (2) = 0x000d (BB_KEY_EXCHG_ALG_BLOB)
+     * wBlobLen (2) = 0x0004 (4)
+     * blobData (4) = 0x00000001 (KEY_EXCHANGE_ALG_RSA)
+     */
     0x0d, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00,
+    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - ServerCertificate
+     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
+     * wBlobType (2) = BB_CERTIFICATE_BLOB (0x0003)
+     * wBlobLen (2) = 0x00b8 (184)
+     * blobData = <SERVER_CERTIFICATE>
+     *
+     * [MS-RDPBCGR] SERVER_CERTIFICATE
+     * dwVersion (31 bits) = 0x00000001 (CERT_CHAIN_VERSION_1)
+     * t (1 bit) = 0 (temporary certificate)
+     */
     0x03, 0x00, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00,
+    /*
+     * certData = <PROPRIETARYSERVERCERTIFICATE>
+     *
+     * [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE
+     * dwSigAlgId (4) = 0x00000001 (SIGNATURE_ALG_RSA)
+     * dwKeyAlgId (4) = 0x00000001 (KEY_EXCHANGE_ALG_RSA)
+     * wPublicKeyBlobType (2) = 0x0006 (BB_RSA_KEY_BLOB)
+     * wPublicKeyBlobLen (2) = 0x005c (92)
+     * PublicKeyBlob = <RSA_PUBLIC_KEY>
+     *
+     * [MS-RDPBCGR] RSA_PUBLIC_KEY
+     * magic (4) = 0x31415352
+     * keylen (4) = 0x00000048 (72)
+     * bitlen (4) = 0x00000200 (512)
+     * datalen (4) = 0x0000003f (63)
+     * pubExp (4) = 0x00010001 (65537)
+     */
     0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
     0x06, 0x00, 0x5c, 0x00, 0x52, 0x53, 0x41, 0x31,
     0x48, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
     0x3f, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+    /*
+     * modulus (72) = <see hex below>
+     */
     0x01, 0xc7, 0xc9, 0xf7, 0x8e, 0x5a, 0x38, 0xe4,
     0x29, 0xc3, 0x00, 0x95, 0x2d, 0xdd, 0x4c, 0x3e,
     0x50, 0x45, 0x0b, 0x0d, 0x9e, 0x2a, 0x5d, 0x18,
@@ -81,6 +140,14 @@ static tui8 g_lic1[322] =
     0xc8, 0xc7, 0xb4, 0xa8, 0x47, 0xc8, 0x50, 0x71,
     0x74, 0x29, 0x53, 0x89, 0x6d, 0x9c, 0xed, 0x70,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - ServerCertificate
+     * [MS-RDPBCGR] LICENSE_BINARY_BLOB - blobData
+     * [MS-RDPBCGR] SERVER_CERTIFICATE - certData
+     * [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE
+     * wSignatureBlobType (2) = 0x0008 (BB_RSA_SIGNATURE_BLOB)
+     * wSignatureBlobLen (2) = 0x0048 (72)
+     * SignatureBlob (72) = <see hex below, calculated using [MS-RDPBCGR] 5.3.3.1.2>
+     */
     0x08, 0x00, 0x48, 0x00, 0xa8, 0xf4, 0x31, 0xb9,
     0xab, 0x4b, 0xe6, 0xb4, 0xf4, 0x39, 0x89, 0xd6,
     0xb1, 0xda, 0xf6, 0x1e, 0xec, 0xb1, 0xf0, 0x54,
@@ -90,26 +157,90 @@ static tui8 g_lic1[322] =
     0xcb, 0x11, 0xc3, 0xf2, 0xdb, 0x09, 0x42, 0x68,
     0x29, 0x56, 0x58, 0x01, 0x56, 0xdb, 0x59, 0x03,
     0x69, 0xdb, 0x7d, 0x37, 0x00, 0x00, 0x00, 0x00,
+    /* <last 4 bytes of SignatureBlob>
+     *
+     * [MS-RDPELE] SERVER_LICENSE_REQUEST - ScopeList
+     * [MS-RDPELE] SCOPE_LIST
+     * ScopeCount (4) = 0x00000001 (1)
+     * ScopeArray = <LICENSE_BINARY_BLOB>
+     *
+     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
+     * wBlobType (2) = 0x000e (BB_SCOPE_BLOB)
+     * wBlobLen (2) = 0x000e (14)
+     * blobData (14) = ISO-8859-1("microsoft.com")
+     */
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
     0x0e, 0x00, 0x0e, 0x00, 0x6d, 0x69, 0x63, 0x72,
     0x6f, 0x73, 0x6f, 0x66, 0x74, 0x2e, 0x63, 0x6f,
     0x6d, 0x00
 };
 
+/*****************************************************************************/
+/* Licensing success response v2 PDU
+ *
+ * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
+ * [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
+ */
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_lic2[20] =
 {
+    /* [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
+     * flags (2) = 0x0080 (SEC_LICENSE_PKT)
+     * flagsHi (2) = unused (arbitrary data)
+     * [MS-RDPBCGR] LICENSE_PREAMBLE
+     * bMsgType (1) = 0xff (ERROR_ALERT)
+     * flags (1) = 0x02 (PREAMBLE_VERSION_2_0)
+     * wMsgSize (2) = 0x10 (16, excludes the 4 bytes TS_SECURITY_HEADER Basic)
+     */
     0x80, 0x00, 0x10, 0x00, 0xff, 0x02, 0x10, 0x00,
+    /*
+     * [MS-RDPBCGR] LICENSE_ERROR_MESSAGE
+     * dwErrorCode (4) = 0x00000007 (STATUS_VALID_CLIENT)
+     * dwStateTransition (4) = 0x00000002 (ST_NO_TRANSITION)
+     * bbErrorInfo = <LICENSE_BINARY_BLOB>
+     */
     0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+    /*
+     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
+     * wBlobType (2) = 0x1428 <ignored by client> (should be 0x0004 BB_ERROR_BLOB)
+     * wBlobLen (2) = 0x0000 (0)
+     */
     0x28, 0x14, 0x00, 0x00
 };
 
-/* mce */
+/*****************************************************************************/
+/* Licensing success response v3 PDU
+ *
+ * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
+ * [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
+ *
+ * used for Media Center Edition
+ */
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_lic3[20] =
 {
+    /* S */
+    /* [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
+     * flags (2) = 0x0280 (SEC_LICENSE_PKT | SEC_LICENSE_ENCRYPT_CS)
+     * flagsHi (2) = unused (arbitrary data)
+     * [MS-RDPBCGR] LICENSE_PREAMBLE
+     * bMsgType (1) = 0xff (ERROR_ALERT)
+     * flags (1) = 0x03 (PREAMBLE_VERSION_3_0)
+     * wMsgSize (2) = 0x0010 (16, excludes the 4 bytes TS_SECURITY_HEADER Basic)
+     */
     0x80, 0x02, 0x10, 0x00, 0xff, 0x03, 0x10, 0x00,
+    /*
+     * [MS-RDPBCGR] LICENSE_ERROR_MESSAGE
+     * dwErrorCode (4) = 0x00000007 (STATUS_VALID_CLIENT)
+     * dwStateTransition (4) = 0x00000002 (ST_NO_TRANSITION)
+     * bbErrorInfo = <LICENSE_BINARY_BLOB>
+     */
     0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+    /*
+     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
+     * wBlobType (2) = 0x99f3 <ignored by client> (should be 0x0004 BB_ERROR_BLOB)
+     * wBlobLen (2) = 0x0000 (0)
+     */
     0xf3, 0x99, 0x00, 0x00
 };
 
@@ -241,9 +372,34 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
-    LLOGLN(0, ("xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
-               client_info->keyboard_type, client_info->keyboard_subtype));
+    const struct xrdp_keyboard_overrides *ko =
+            &client_info->xrdp_keyboard_overrides;
 
+    LOG(LOG_LEVEL_INFO, "xrdp_load_keyboard_layout: Keyboard information sent"
+        " by the RDP client, keyboard_type:[0x%02X], keyboard_subtype:[0x%02X],"
+        " keylayout:[0x%08X]",
+        client_info->keyboard_type, client_info->keyboard_subtype,
+        client_info->keylayout);
+
+    if (ko->type != -1)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode keyboard_type 0x%02X"
+            " with 0x%02X", client_info->keyboard_type, ko->type);
+        client_info->keyboard_type = ko->type;
+    }
+    if (ko->subtype != -1)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode keyboard_subtype 0x%02X"
+            " with 0x%02X", client_info->keyboard_subtype,
+            ko->subtype);
+        client_info->keyboard_subtype = ko->subtype;
+    }
+    if (ko->layout != -1)
+    {
+        LOG(LOG_LEVEL_INFO, "overrode keylayout 0x%08X"
+            " with 0x%08X", client_info->keylayout, ko->layout);
+        client_info->keylayout = ko->layout;
+    }
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
     g_memset(client_info->model, 0, sizeof(client_info->model));
@@ -262,7 +418,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     }
 
     g_snprintf(keyboard_cfg_file, 255, "%s/xrdp_keyboard.ini", XRDP_CFG_PATH);
-    LLOGLN(10, ("keyboard_cfg_file %s", keyboard_cfg_file));
+    LOG(LOG_LEVEL_DEBUG, "keyboard_cfg_file %s", keyboard_cfg_file);
 
     fd = g_file_open(keyboard_cfg_file);
 
@@ -293,8 +449,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                 {
                     item = (char *)list_get_item(items, i);
                     value = (char *)list_get_item(values, i);
-                    LLOGLN(10, ("xrdp_load_keyboard_layout: item %s value %s",
-                           item, value));
+                    LOG(LOG_LEVEL_DEBUG, "xrdp_load_keyboard_layout: item %s value %s",
+                        item, value);
                     if (g_strcasecmp(item, "keyboard_type") == 0)
                     {
                         int v = g_atoi(value);
@@ -307,7 +463,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                     {
                         int v = g_atoi(value);
                         if (v != client_info->keyboard_subtype &&
-                            section_found == index)
+                                section_found == index)
                         {
                             section_found = -1;
                             break;
@@ -360,9 +516,9 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                          * mixing items from different sections will result in
                          * skipping over current section.
                          */
-                        LLOGLN(10, ("xrdp_load_keyboard_layout: skipping "
-                               "configuration item - %s, continuing to next "
-                               "section", item));
+                        LOG(LOG_LEVEL_DEBUG, "xrdp_load_keyboard_layout: skipping "
+                            "configuration item - %s, continuing to next "
+                            "section", item);
                         break;
                     }
                 }
@@ -428,15 +584,15 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         list_delete(items);
         list_delete(values);
 
-        LLOGLN(0, ("xrdp_load_keyboard_layout: model [%s] variant [%s] "
-               "layout [%s] options [%s]", client_info->model,
-               client_info->variant, client_info->layout, client_info->options));
+        LOG(LOG_LEVEL_INFO, "xrdp_load_keyboard_layout: model [%s] variant [%s] "
+            "layout [%s] options [%s]", client_info->model,
+            client_info->variant, client_info->layout, client_info->options);
         g_file_close(fd);
     }
     else
     {
-        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %s",
-               keyboard_cfg_file));
+        LOG(LOG_LEVEL_ERROR, "xrdp_load_keyboard_layout: error opening %s",
+            keyboard_cfg_file);
     }
 }
 
@@ -446,7 +602,6 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
 {
     struct xrdp_sec *self;
 
-    DEBUG((" in xrdp_sec_create"));
     self = (struct xrdp_sec *) g_malloc(sizeof(struct xrdp_sec), 1);
     self->rdp_layer = owner;
     self->crypt_method = CRYPT_METHOD_NONE; /* set later */
@@ -456,7 +611,6 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     self->is_security_header_present = 1;
-    DEBUG((" out xrdp_sec_create"));
 
     return self;
 }
@@ -467,7 +621,6 @@ xrdp_sec_delete(struct xrdp_sec *self)
 {
     if (self == 0)
     {
-        g_writeln("xrdp_sec_delete: self is null");
         return;
     }
 
@@ -493,6 +646,7 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
 {
     if (xrdp_mcs_init(self->mcs_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_init: xrdp_mcs_init failed");
         return 1;
     }
 
@@ -510,6 +664,10 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
         {
             s_push_layer(s, sec_hdr, 4);
         }
+    }
+    else
+    {
+        s_push_layer(s, sec_hdr, 0);
     }
 
     return 0;
@@ -567,7 +725,7 @@ xrdp_sec_update(char *key, char *update_key, int key_len)
 static void
 xrdp_sec_fips_decrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_fips_decrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_fips_decrypt:");
     ssl_des3_decrypt(self->decrypt_fips_info, len, data, data);
     self->decrypt_use_count++;
 }
@@ -576,7 +734,7 @@ xrdp_sec_fips_decrypt(struct xrdp_sec *self, char *data, int len)
 static void
 xrdp_sec_decrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_decrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_decrypt:");
     if (self->decrypt_use_count == 4096)
     {
         xrdp_sec_update(self->decrypt_key, self->decrypt_update_key,
@@ -593,7 +751,7 @@ xrdp_sec_decrypt(struct xrdp_sec *self, char *data, int len)
 static void
 xrdp_sec_fips_encrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_fips_encrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_fips_encrypt:");
     ssl_des3_encrypt(self->encrypt_fips_info, len, data, data);
     self->encrypt_use_count++;
 }
@@ -602,7 +760,7 @@ xrdp_sec_fips_encrypt(struct xrdp_sec *self, char *data, int len)
 static void
 xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
 {
-    LLOGLN(10, ("xrdp_sec_encrypt:"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_encrypt:");
     if (self->encrypt_use_count == 4096)
     {
         xrdp_sec_update(self->encrypt_key, self->encrypt_update_key,
@@ -619,6 +777,7 @@ xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
 /*****************************************************************************
  * convert utf-16 encoded string from stream into utf-8 string.
  * note: src_bytes doesn't include the null-terminator char.
+ * Copied From: xrdp_sec.c
  */
 static int
 unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
@@ -628,13 +787,14 @@ unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
     int i;
     int bytes;
 
-    LLOGLN(10, ("unicode_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "unicode_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len);
     if (src_bytes == 0)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing UTF-16"))
         {
             return 1;
         }
+        LOG_DEVEL(LOG_LEVEL_TRACE, "unicode_utf16_in: num_chars 0, dst '' (empty string)");
         in_uint8s(s, 2); /* null terminator */
         return 0;
     }
@@ -643,7 +803,7 @@ unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
     src = g_new0(twchar, bytes);
     for (i = 0; i < bytes / 2; ++i)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing UTF-16"))
         {
             g_free(src);
             return 1;
@@ -655,13 +815,14 @@ unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
     {
         g_memset(dst, '\0', dst_len);
     }
-    LLOGLN(10, ("unicode_utf16_in: num_chars %d, dst %s", num_chars, dst));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "unicode_utf16_in: num_chars %d, dst '%s'", num_chars, dst);
     g_free(src);
 
     return 0;
 }
 
 /*****************************************************************************/
+/* Process TS_INFO_PACKET */
 /* returns error */
 static int
 xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
@@ -679,58 +840,73 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     /* initialize (zero out) local variables */
     g_memset(tmpdata, 0, sizeof(char) * 256);
-    if (!s_check_rem(s, 8))
+    if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_INFO_PACKET"))
     {
         return 1;
     }
     in_uint8s(s, 4);
     in_uint32_le(s, flags);
-    DEBUG(("in xrdp_sec_process_logon_info flags $%x", flags));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Parsing [MS-RDPBCGR] TS_INFO_PACKET");
 
     /* this is the first test that the decrypt is working */
     if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
     {
         /* must be or error */
-        DEBUG(("xrdp_sec_process_logon_info: flags wrong, major error"));
-        LLOGLN(0, ("xrdp_sec_process_logon_info: flags wrong, likely decrypt "
-               "not working"));
+        LOG(LOG_LEVEL_ERROR, "received wrong flags, likely decrypt not working");
         return 1;
     }
 
     if (flags & RDP_LOGON_LEAVE_AUDIO)
     {
         self->rdp_layer->client_info.sound_code = 1;
-        DEBUG(("flag RDP_LOGON_LEAVE_AUDIO found"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MS-RDPBCGR] TS_INFO_PACKET flag INFO_REMOTECONSOLEAUDIO found");
+        LOG(LOG_LEVEL_DEBUG,
+            "Client requested that audio on the server be played on the server.");
     }
 
     if (flags & RDP_LOGON_RAIL)
     {
         self->rdp_layer->client_info.rail_enable = 1;
-        DEBUG(("flag RDP_LOGON_RAIL found"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MS-RDPBCGR] TS_INFO_PACKET flag INFO_RAIL found");
+        LOG(LOG_LEVEL_DEBUG,
+            "Client requested Remote Application Integrated Locally (RAIL).");
     }
 
-    if ((flags & RDP_LOGON_AUTO) && (!self->rdp_layer->client_info.is_mce))
-        /* todo, for now not allowing autologon and mce both */
+    if (flags & RDP_LOGON_AUTO)
     {
-        self->rdp_layer->client_info.rdp_autologin = 1;
-        DEBUG(("flag RDP_LOGON_AUTO found"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MS-RDPBCGR] TS_INFO_PACKET flag INFO_AUTOLOGON found");
+        /* todo, for now not allowing autologon and mce both */
+        if (!self->rdp_layer->client_info.is_mce)
+        {
+            self->rdp_layer->client_info.rdp_autologin = 1;
+            LOG(LOG_LEVEL_DEBUG, "Client requested auto logon.");
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING, "Auto logon is not supported with MCE");
+        }
     }
 
     if (flags & RDP_COMPRESSION)
     {
-        DEBUG(("flag RDP_COMPRESSION found"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MS-RDPBCGR] TS_INFO_PACKET flag INFO_COMPRESSION found, "
+                  "CompressionType 0x%1.1x", (flags & 0x00001E00) >> 9);
+        /* TODO: check the client's supported compression type vs the server
+           compression used */
         if (self->rdp_layer->client_info.use_bulk_comp)
         {
-            DEBUG(("flag RDP_COMPRESSION set"));
+
             self->rdp_layer->client_info.rdp_compression = 1;
+            LOG(LOG_LEVEL_DEBUG, "Client requested compression enabled.");
         }
         else
         {
-            DEBUG(("flag RDP_COMPRESSION not set"));
+            LOG(LOG_LEVEL_DEBUG, "Client requested compression, but server "
+                "compression is disabled.");
         }
     }
 
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET cbDomain"))
     {
         return 1;
     }
@@ -738,11 +914,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_domain >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR,
+            "Client supplied domain is too long. Max length %d, domain length %d",
+            INFO_CLIENT_MAX_CB_LEN, len_domain);
         return 1;
     }
 
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET cbUserName"))
     {
         return 1;
     }
@@ -753,18 +931,21 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
      * always sends autologon credentials, even when user has not
      * configured any
      */
-    if (len_user == 0)
+    if (len_user == 0 && self->rdp_layer->client_info.rdp_autologin)
     {
+        LOG(LOG_LEVEL_DEBUG, "Client supplied user name is empty, disabling autologin");
         self->rdp_layer->client_info.rdp_autologin = 0;
     }
 
     if (len_user >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR,
+            "Client supplied user name is too long. Max length %d, user name length %d",
+            INFO_CLIENT_MAX_CB_LEN, len_user);
         return 1;
     }
 
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET cbPassword"))
     {
         return 1;
     }
@@ -772,11 +953,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_password >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR,
+            "Client supplied password is too long. Max length %d, password length %d",
+            INFO_CLIENT_MAX_CB_LEN, len_password);
         return 1;
     }
 
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET cbAlternateShell"))
     {
         return 1;
     }
@@ -784,11 +967,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_program >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR,
+            "Client supplied program name is too long. Max length %d, program name length %d",
+            INFO_CLIENT_MAX_CB_LEN, len_program);
         return 1;
     }
 
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET cbWorkingDir"))
     {
         return 1;
     }
@@ -796,17 +981,21 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (len_directory >= INFO_CLIENT_MAX_CB_LEN)
     {
-        DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory >= %d", INFO_CLIENT_MAX_CB_LEN));
+        LOG(LOG_LEVEL_ERROR,
+            "Client supplied directory name is too long. Max length %d, directory name length %d",
+            INFO_CLIENT_MAX_CB_LEN, len_directory);
         return 1;
     }
 
     if (unicode_utf16_in(s, len_domain, self->rdp_layer->client_info.domain, sizeof(self->rdp_layer->client_info.domain) - 1) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "ERROR reading domain");
         return 1;
     }
-    DEBUG(("domain %s", self->rdp_layer->client_info.domain));
+
     if (unicode_utf16_in(s, len_user, self->rdp_layer->client_info.username, sizeof(self->rdp_layer->client_info.username) - 1) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "ERROR reading user name");
         return 1;
     }
 
@@ -814,16 +1003,16 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     {
         if (unicode_utf16_in(s, len_password, self->rdp_layer->client_info.password, sizeof(self->rdp_layer->client_info.password) - 1) != 0)
         {
+            LOG(LOG_LEVEL_ERROR, "ERROR reading password");
             return 1;
         }
-        DEBUG(("flag RDP_LOGON_AUTO found"));
     }
     else if (self->rdp_layer->client_info.enable_token_login
              && len_user > 0
              && len_password == 0
              && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
     {
-        DEBUG(("Logon token detected"));
+        LOG(LOG_LEVEL_DEBUG, "Client supplied a Logon token. Overwriting password with logon token.");
         g_strncpy(self->rdp_layer->client_info.password, sep + 1,
                   sizeof(self->rdp_layer->client_info.password) - 1);
         self->rdp_layer->client_info.username[sep - self->rdp_layer->client_info.username] = '\0';
@@ -831,71 +1020,118 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     else
     {
-        if (!s_check_rem(s, len_password + 2))
+        if (!s_check_rem_and_log(s, len_password + 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET Password"))
         {
             return 1;
         }
         in_uint8s(s, len_password + 2);
         if (self->rdp_layer->client_info.require_credentials)
         {
-            g_writeln("xrdp_sec_process_logon_info: credentials on cmd line is mandatory");
+            LOG(LOG_LEVEL_ERROR, "Server is configured to require that the "
+                "client enable auto logon with credentials, but the client did "
+                "not request auto logon.");
             return 1; /* credentials on cmd line is mandatory */
         }
     }
     if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
-        && self->rdp_layer->client_info.domain[0] != '\0')
+            && self->rdp_layer->client_info.domain[0] != '\0')
     {
+        LOG(LOG_LEVEL_DEBUG, "Client supplied domain with user name. Overwriting user name with user name parsed from domain.");
         int size = sizeof(self->rdp_layer->client_info.username);
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain_user_separator, size - 1 - g_strlen(self->rdp_layer->client_info.domain_user_separator));
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
     }
-    DEBUG(("username %s", self->rdp_layer->client_info.username));
 
     if (unicode_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program) - 1) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "ERROR reading program");
         return 1;
     }
-    DEBUG(("program %s", self->rdp_layer->client_info.program));
+
     if (unicode_utf16_in(s, len_directory, self->rdp_layer->client_info.directory, sizeof(self->rdp_layer->client_info.directory) - 1) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "ERROR reading directory");
         return 1;
     }
-    DEBUG(("directory %s", self->rdp_layer->client_info.directory));
 
-    if (flags & RDP_LOGON_BLOB)
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_INFO_PACKET "
+              "CodePage (ignored), flags 0x%8.8x, cbDomain %d, cbUserName %d, "
+              "cbPassword %d, cbAlternateShell %d, cbWorkingDir %d, Domain %s, "
+              "UserName %s, Password (omitted from log), AlternateShell %s, "
+              "WorkingDir %s", flags, len_domain,
+              len_user, len_password, len_program, len_directory,
+              self->rdp_layer->client_info.domain,
+              self->rdp_layer->client_info.username,
+              self->rdp_layer->client_info.program,
+              self->rdp_layer->client_info.directory);
+    LOG(LOG_LEVEL_DEBUG, "Client supplied domain: %s", self->rdp_layer->client_info.domain);
+    LOG(LOG_LEVEL_DEBUG, "Client supplied username: %s", self->rdp_layer->client_info.username);
+    LOG(LOG_LEVEL_DEBUG, "Client supplied password: <omitted from log>");
+    LOG(LOG_LEVEL_DEBUG, "Client supplied program: %s", self->rdp_layer->client_info.program);
+    LOG(LOG_LEVEL_DEBUG, "Client supplied directory: %s", self->rdp_layer->client_info.directory);
+
+    /* TODO: explain why the windows key flag is used to determine if the
+       TS_EXTENDED_INFO_PACKET should be parsed */
+    if (flags & RDP_LOGON_BLOB) /* INFO_ENABLEWINDOWSKEY */
     {
-        if (!s_check_rem(s, 4))
+        if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET "
+                                 "clientAddressFamily and cbClientAddress"))
         {
             return 1;
         }
-        in_uint8s(s, 2);                                    /* unknown */
+        /* TS_EXTENDED_INFO_PACKET required fields */
+        in_uint8s(s, 2);         /* clientAddressFamily */
         in_uint16_le(s, len_ip);
         if (unicode_utf16_in(s, len_ip - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
         {
+            LOG(LOG_LEVEL_ERROR, "ERROR reading ip");
             return 1;
         }
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET clientDir"))
         {
             return 1;
         }
         in_uint16_le(s, len_dll);
         if (unicode_utf16_in(s, len_dll - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
         {
+            LOG(LOG_LEVEL_ERROR, "ERROR reading clientDir");
             return 1;
         }
-        if (!s_check_rem(s, 4 + 62 + 22 + 62 + 26 + 4))
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET "
+                  "<Required Fields> clientAddressFamily (ignored), "
+                  "cbClientAddress (ignored), clientAddress (ignored), "
+                  "cbClientDir (ignored), clientDir (ignored)");
+
+        /* TODO: MS-BCGR 2.2.1.11.1.1.1 says that all fields after the
+           client directory are optional. */
+        if (!s_check_rem_and_log(s, 4 + 64 + 20 + 64 + 20 + 4 + 4,
+                                 "Parsing [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET "
+                                 "clientTimeZone, clientSessionId, and performanceFlags"))
         {
             return 1;
         }
-        in_uint8s(s, 4);                                    /* len of timezone */
-        in_uint8s(s, 62);                                   /* skip */
-        in_uint8s(s, 22);                                   /* skip misc. */
-        in_uint8s(s, 62);                                   /* skip */
-        in_uint8s(s, 26);                                   /* skip stuff */
+        /* TS_TIME_ZONE_INFORMATION */
+        in_uint8s(s, 4);   /* Bias (4) */
+        in_uint8s(s, 64);  /* StandardName (64) */
+        in_uint8s(s, 20);  /* StandardDate (16), StandardBias (4) */
+        in_uint8s(s, 64);  /* DaylightName (64) */
+        in_uint8s(s, 20);  /* DaylightDate (16), DaylightBias (4) */
+        in_uint8s(s, 4);   /* TS_EXTENDED_INFO_PACKET clientSessionId (4) */
+
+        /* TS_EXTENDED_INFO_PACKET optional fields */
         in_uint32_le(s, self->rdp_layer->client_info.rdp5_performanceflags);
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET "
+                  "<Optional Fields> clientTimeZone (ignored), "
+                  "clientSessionId (ignored), performanceFlags 0x%8.8x, "
+                  "cbAutoReconnectCookie (ignored), autoReconnectCookie (ignored), "
+                  "reserved1 (ignored), reserved2 (ignored), "
+                  "cbDynamicDSTTimeZoneKeyName (ignored), "
+                  "dynamicDSTTimeZoneKeyName (ignored), "
+                  "dynamicDaylightTimeDisabled (ignored)",
+                  self->rdp_layer->client_info.rdp5_performanceflags);
     }
 
-    DEBUG(("out xrdp_sec_process_logon_info"));
     return 0;
 }
 
@@ -906,21 +1142,24 @@ xrdp_sec_send_lic_initial(struct xrdp_sec *self)
 {
     struct stream *s;
 
-    LLOGLN(10, ("xrdp_sec_send_lic_initial:"));
+
     make_stream(s);
     init_stream(s, 8192);
 
     if (xrdp_mcs_init(self->mcs_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_send_lic_initial: xrdp_mcs_init failed");
         free_stream(s);
         return 1;
     }
 
-    out_uint8a(s, g_lic1, 322);
+    out_uint8a(s, g_lic1, sizeof(g_lic1));
     s_mark_end(s);
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPELE] SERVER_LICENSE_REQUEST");
     if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPELE] SERVER_LICENSE_REQUEST failed");
         free_stream(s);
         return 1;
     }
@@ -930,6 +1169,10 @@ xrdp_sec_send_lic_initial(struct xrdp_sec *self)
 }
 
 /*****************************************************************************/
+/*
+ * Send a [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
+ * See also: [MS-RDPELE] 1.3.3 Licensing PDU Flows
+ */
 /* returns error */
 static int
 xrdp_sec_send_lic_response(struct xrdp_sec *self)
@@ -941,15 +1184,18 @@ xrdp_sec_send_lic_response(struct xrdp_sec *self)
 
     if (xrdp_mcs_init(self->mcs_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_send_lic_response: xrdp_mcs_init failed");
         free_stream(s);
         return 1;
     }
 
-    out_uint8a(s, g_lic2, 20);
+    out_uint8a(s, g_lic2, sizeof(g_lic2));
     s_mark_end(s);
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT");
     if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT failed");
         free_stream(s);
         return 1;
     }
@@ -970,6 +1216,7 @@ xrdp_sec_send_media_lic_response(struct xrdp_sec *self)
 
     if (xrdp_mcs_init(self->mcs_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_send_media_lic_response: xrdp_mcs_init failed");
         free_stream(s);
         return 1;
     }
@@ -977,8 +1224,10 @@ xrdp_sec_send_media_lic_response(struct xrdp_sec *self)
     out_uint8a(s, g_lic3, sizeof(g_lic3));
     s_mark_end(s);
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT");
     if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT failed");
         free_stream(s);
         return 1;
     }
@@ -1099,7 +1348,7 @@ xrdp_sec_fips_establish_keys(struct xrdp_sec *self)
     const char *fips_ivec;
     void *sha1;
 
-    LLOGLN(0, ("xrdp_sec_fips_establish_keys:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_sec_fips_establish_keys:");
 
     sha1 = ssl_sha1_info_create();
     ssl_sha1_clear(sha1);
@@ -1129,9 +1378,9 @@ xrdp_sec_fips_establish_keys(struct xrdp_sec *self)
 
     fips_ivec = (const char *) g_fips_ivec;
     self->encrypt_fips_info =
-          ssl_des3_encrypt_info_create(self->fips_encrypt_key, fips_ivec);
+        ssl_des3_encrypt_info_create(self->fips_encrypt_key, fips_ivec);
     self->decrypt_fips_info =
-          ssl_des3_decrypt_info_create(self->fips_decrypt_key, fips_ivec);
+        ssl_des3_decrypt_info_create(self->fips_decrypt_key, fips_ivec);
     self->sign_fips_info = ssl_hmac_info_create();
 }
 
@@ -1143,7 +1392,7 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
     char temp_hash[48];
     char input[48];
 
-    LLOGLN(0, ("xrdp_sec_establish_keys:"));
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_sec_establish_keys:");
 
     g_memcpy(input, self->client_random, 24);
     g_memcpy(input + 24, self->server_random, 24);
@@ -1184,9 +1433,15 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     int len;
     int pad;
 
-    LLOGLN(10, ("xrdp_sec_recv_fastpath:"));
+#ifndef USE_DEVEL_LOGGING
+    /* TODO: remove UNUSED_VAR once the `ver` variable is used for more than
+    logging in debug mode */
+    UNUSED_VAR(ver);
+#endif
+
     if (xrdp_fastpath_recv(self->fastpath_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv_fastpath: xrdp_fastpath_recv failed");
         return 1;
     }
 
@@ -1194,46 +1449,64 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     {
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
-            if (!s_check_rem(s, 12))
+            if (!s_check_rem_and_log(s, 12, "Parsing [MS-RDPBCGR] TS_FP_FIPS_INFO"))
             {
                 return 1;
             }
+            /* TS_FP_FIPS_INFO */
             in_uint16_le(s, len);
             in_uint8(s, ver); /* length (2 bytes) */
+            in_uint8(s, pad);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_FP_FIPS_INFO "
+                      "length %d, version %d, padlen %d", len, ver, pad);
             if (len != 0x10)  /* length MUST set to 0x10 */
             {
+                LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPBCGR] TS_FP_FIPS_INFO "
+                    "invalid fastpath length. Expected 16, received %d", len);
                 return 1;
             }
-            in_uint8(s, pad);
-            LLOGLN(10, ("xrdp_sec_recv_fastpath: len %d ver %d pad %d", len, ver, pad));
+
+            /* remainder of TS_FP_INPUT_PDU */
             in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
-            LLOGLN(10, ("xrdp_sec_recv_fastpath: data len %d", (int)(s->end - s->p)));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "CRYPT_LEVEL_FIPS - data len %d",
+                      (int)(s->end - s->p));
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
         }
         else
         {
-            if (!s_check_rem(s, 8))
+            if (!s_check_rem_and_log(s, 8,
+                                     "Parsing [MS-RDPBCGR] TS_FP_INPUT_PDU dataSignature"))
             {
                 return 1;
             }
+            /* remainder of TS_FP_INPUT_PDU */
             in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
         }
     }
 
-    if (self->fastpath_layer->numEvents == 0)
+    if (self->fastpath_layer->numEvents == 0) /* set by xrdp_fastpath_recv() */
     {
         /**
          * If numberEvents is not provided in fpInputHeader, it will be provided
          * as one additional byte here.
          */
-        if (!s_check_rem(s, 8))
+        if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_FP_INPUT_PDU numEvents"))
         {
             return 1;
         }
         in_uint8(s, self->fastpath_layer->numEvents); /* numEvents (1 byte) (optional) */
     }
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_INPUT_PDU "
+              "fpInputHeader.action (ignored), "
+              "fpInputHeader.numEvents (see final numEvents), "
+              "fpInputHeader.flags %d, length1 (ToDo), length2 (ToDo), "
+              "fipsInformation %s, dataSignature (ignored), numEvents %d",
+              self->fastpath_layer->secFlags,
+              (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) ? "(see above)" : "(not present)",
+              self->fastpath_layer->numEvents);
 
     return 0;
 }
@@ -1247,64 +1520,85 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     int ver;
     int pad;
 
-    DEBUG((" in xrdp_sec_recv"));
 
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
-        DEBUG((" out xrdp_sec_recv : error"));
-        g_writeln("xrdp_sec_recv: xrdp_mcs_recv failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_mcs_recv failed");
         return 1;
     }
 
-    if (!s_check_rem(s, 4))
+    /* TODO: check if moving this check until after the is_security_header_present
+    causes any issues.
+    the security header is optional (eg. TLS connections), so this
+    check should really be after the check if the security header is present,
+    this currently seems to be working by coincidence at the moment. */
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPBCGR] TS_SECURITY_HEADER"))
     {
         return 1;
     }
-
 
     if (!(self->is_security_header_present))
     {
+        /* noisy log statement with no real info since this is an
+           expected state for TLS connections
+        */
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_recv: security header NOT present");
         return 0;
     }
 
+    /* TS_SECURITY_HEADER */
     in_uint32_le(s, flags);
-    DEBUG((" in xrdp_sec_recv flags $%x", flags));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER "
+              "flags 0x%8.8x, flagsHi (merged with flags)", flags);
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
-            if (!s_check_rem(s, 12))
+            if (!s_check_rem_and_log(s, 12, "Parsing [MS-RDPBCGR] TS_SECURITY_HEADER2"))
             {
                 return 1;
             }
-            in_uint16_le(s, len);
-            in_uint8(s, ver);
-            if ((len != 16) || (ver != 1))
-            {
-                return 1;
-            }
-            in_uint8(s, pad);
-            LLOGLN(10, ("xrdp_sec_recv: len %d ver %d pad %d", len, ver, pad));
+            /* TS_SECURITY_HEADER2 */
+            in_uint16_le(s, len); /* length */
+            in_uint8(s, ver); /* version */
+            in_uint8(s, pad); /* padlen */
             in_uint8s(s, 8); /* signature(8) */
-            LLOGLN(10, ("xrdp_sec_recv: data len %d", (int)(s->end - s->p)));
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+                      "length %d, version %d, padlen %d, dataSignature (ignored)",
+                      len, ver, pad);
+            if (len != 16)
+            {
+                LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+                    "has unexpected length. Expected 16, actual %d", len);
+                return 1;
+            }
+            if (ver != 1)
+            {
+                LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+                    "has unexpected version. Expected 1, actual %d", ver);
+                return 1;
+            }
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
         }
         else if (self->crypt_level > CRYPT_LEVEL_NONE)
         {
-            if (!s_check_rem(s, 8))
+            if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_SECURITY_HEADER1"))
             {
                 return 1;
             }
+            /* TS_SECURITY_HEADER1 */
             in_uint8s(s, 8); /* signature(8) */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
+                      "dataSignature (ignored)");
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
         }
     }
 
-    if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
+    if (flags & SEC_CLIENT_RANDOM) /* 0x01 TS_SECURITY_PACKET */
     {
-        if (!s_check_rem(s, 4))
+        if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPBCGR] TS_SECURITY_PACKET"))
         {
             return 1;
         }
@@ -1312,18 +1606,22 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         /* 512, 2048 bit */
         if ((len != 64 + 8) && (len != 256 + 8))
         {
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv : error - unexpected length %d", len);
             return 1;
         }
-        if (!s_check_rem(s, len - 8))
+        if (!s_check_rem_and_log(s, len - 8,
+                                 "Parsing [MS-RDPBCGR] TS_SECURITY_PACKET encryptedClientRandom"))
         {
             return 1;
         }
         in_uint8a(s, self->client_crypt_random, len - 8);
+
         xrdp_sec_rsa_op(self, self->client_random, self->client_crypt_random,
                         len - 8, self->pub_mod, self->pri_exp);
-        LLOGLN(10, ("xrdp_sec_recv: client random - len %d", len));
-        LHEXDUMP(10, (self->client_random, 256));
-        LHEXDUMP(10, (self->client_crypt_random, len - 8));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_SECURITY_PACKET "
+                  "length %d, encryptedClientRandom (see below)", len);
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "encryptedClientRandom", self->client_crypt_random, len - 8);
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "decrypted encryptedClientRandom", self->client_random, 256);
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
             xrdp_sec_fips_establish_keys(self);
@@ -1333,15 +1631,15 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             xrdp_sec_establish_keys(self);
         }
         *chan = 1; /* just set a non existing channel and exit */
-        DEBUG((" out xrdp_sec_recv"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: out channel 1 (non-existing channel)");
         return 0;
     }
 
-    if (flags & SEC_LOGON_INFO) /* 0x40 */
+    if (flags & SEC_LOGON_INFO) /* 0x40 SEC_INFO_PKT */
     {
         if (xrdp_sec_process_logon_info(self, s) != 0)
         {
-            DEBUG((" out xrdp_sec_recv error"));
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_process_logon_info failed");
             return 1;
         }
 
@@ -1349,30 +1647,30 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         {
             if (xrdp_sec_send_media_lic_response(self) != 0)
             {
-                DEBUG((" out xrdp_sec_recv error"));
+                LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_send_media_lic_response failed");
                 return 1;
             }
 
-            DEBUG((" out xrdp_sec_recv"));
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: out 'send demand active'");
             return -1; /* special error that means send demand active */
         }
 
         if (xrdp_sec_send_lic_initial(self) != 0)
         {
-            DEBUG((" out xrdp_sec_recv error"));
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_send_lic_initial failed");
             return 1;
         }
 
         *chan = 1; /* just set a non existing channel and exit */
-        DEBUG((" out xrdp_sec_recv"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: out channel 1 (non-existing channel)");
         return 0;
     }
 
-    if (flags & SEC_LICENCE_NEG) /* 0x80 */
+    if (flags & SEC_LICENCE_NEG) /* 0x80 SEC_LICENSE_PKT */
     {
         if (xrdp_sec_send_lic_response(self) != 0)
         {
-            DEBUG((" out xrdp_sec_recv error"));
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_send_lic_response failed");
             return 1;
         }
 
@@ -1383,11 +1681,10 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             self->is_security_header_present = 0;
         }
 
-        DEBUG((" out xrdp_sec_recv"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: out 'send demand active'");
         return -1; /* special error that means send demand active */
     }
 
-    DEBUG((" out xrdp_sec_recv"));
     return 0;
 }
 
@@ -1458,15 +1755,12 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
     int datalen;
     int pad;
 
-    LLOGLN(10, ("xrdp_sec_send:"));
-    DEBUG((" in xrdp_sec_send"));
     s_pop_layer(s, sec_hdr);
 
     if (self->crypt_level > CRYPT_LEVEL_NONE)
     {
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
-            LLOGLN(10, ("xrdp_sec_send: fips"));
             out_uint32_le(s, SEC_ENCRYPT);
             datalen = (int)((s->end - s->p) - 12);
             out_uint16_le(s, 16); /* crypto header size */
@@ -1477,6 +1771,11 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
             out_uint8(s, pad); /* fips pad */
             xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
             xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+                      "flags 0x%4.4x, flagsHi 0x%4.4x, length 16, version 1, "
+                      "padlen %d, dataSignature 0x%8.8x 0x%8.8x",
+                      SEC_ENCRYPT & 0xffff, (SEC_ENCRYPT & 0xffff0000) >> 16,
+                      pad, *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
         }
         else if (self->crypt_level > CRYPT_LEVEL_LOW)
         {
@@ -1484,19 +1783,25 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
             datalen = (int)((s->end - s->p) - 8);
             xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
             xrdp_sec_encrypt(self, s->p + 8, datalen);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
+                      "flags 0x%4.4x, flagsHi 0x%4.4x, dataSignature 0x%8.8x 0x%8.8x",
+                      SEC_ENCRYPT & 0xffff, (SEC_ENCRYPT & 0xffff0000) >> 16,
+                      *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
         }
         else
         {
             out_uint32_le(s, 0);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER "
+                      "flags 0x0000, flagsHi 0x0000");
         }
     }
 
     if (xrdp_mcs_send(self->mcs_layer, s, chan) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_send: xrdp_mcs_send failed");
         return 1;
     }
 
-    DEBUG((" out xrdp_sec_send"));
     return 0;
 }
 
@@ -1523,6 +1828,8 @@ xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s)
 {
     if (xrdp_fastpath_init(self->fastpath_layer, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_init_fastpath: xrdp_fastpath_init failed");
         return 1;
     }
     if (self->crypt_level == CRYPT_LEVEL_FIPS)
@@ -1555,12 +1862,11 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
     int error;
     char save[8];
 
-    LLOGLN(10, ("xrdp_sec_send_fastpath:"));
     error = 0;
     s_pop_layer(s, sec_hdr);
     if (self->crypt_level == CRYPT_LEVEL_FIPS)
     {
-        LLOGLN(10, ("xrdp_sec_send_fastpath: fips"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: fips");
         pdulen = (int)(s->end - s->p);
         datalen = pdulen - 15;
         pad = (8 - (datalen % 8)) & 7;
@@ -1578,12 +1884,19 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         g_memcpy(save, s->p + 8 + datalen, pad);
         g_memset(s->p + 8 + datalen, 0, pad);
         xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_UPDATE_PDU "
+                  "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
+                  "fpOutputHeader.flags 0x2, length1 0x%2.2x, length2 0x%2.2x, "
+                  "fipsInformation.length 16, fipsInformation.version 1, "
+                  "fipsInformation.padlen %d, dataSignature 0x%8.8x 0x%8.8x, ",
+                  pdulen >> 4, pdulen & 0xff, pad,
+                  *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
         error = xrdp_fastpath_send(self->fastpath_layer, s);
         g_memcpy(s->p + 8 + datalen, save, pad);
     }
     else if (self->crypt_level > CRYPT_LEVEL_LOW)
     {
-        LLOGLN(10, ("xrdp_sec_send_fastpath: crypt"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: crypt");
         pdulen = (int)(s->end - s->p);
         datalen = pdulen - 11;
         secFlags = 0x2;
@@ -1593,22 +1906,33 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         out_uint16_be(s, pdulen);
         xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
         xrdp_sec_encrypt(self, s->p + 8, datalen);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_UPDATE_PDU "
+                  "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
+                  "fpOutputHeader.flags 0x2, length1 0x%2.2x, length2 0x%2.2x, "
+                  "dataSignature 0x%8.8x 0x%8.8x, ",
+                  pdulen >> 4, pdulen & 0xff,
+                  *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
         error = xrdp_fastpath_send(self->fastpath_layer, s);
     }
     else
     {
-        LLOGLN(10, ("xrdp_sec_send_fastpath: no crypt"));
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_send_fastpath: no crypt");
         pdulen = (int)(s->end - s->p);
-        LLOGLN(10, ("xrdp_sec_send_fastpath: pdulen %d", pdulen));
         secFlags = 0x0;
         fpOutputHeader = secFlags << 6;
         out_uint8(s, fpOutputHeader);
         pdulen |= 0x8000;
         out_uint16_be(s, pdulen);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_UPDATE_PDU "
+                  "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
+                  "fpOutputHeader.flags 0, length1 0x%2.2x, length2 0x%2.2x",
+                  pdulen >> 4, pdulen & 0xff);
         error = xrdp_fastpath_send(self->fastpath_layer, s);
     }
     if (error != 0)
     {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_send_fastpath: xrdp_fastpath_send failed");
         return 1;
     }
     return 0;
@@ -1618,8 +1942,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
 /* http://msdn.microsoft.com/en-us/library/cc240510.aspx
    2.2.1.3.2 Client Core Data (TS_UD_CS_CORE) */
 static int
-xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
+xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 {
+    int version;
     int colorDepth;
     int postBeta2ColorDepth;
     int highColorDepth;
@@ -1627,49 +1952,76 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     int earlyCapabilityFlags;
     char clientName[INFO_CLIENT_NAME_BYTES / 2] = { '\0' };
 
-    in_uint8s(s, 4); /* version */
-    in_uint16_le(s, self->rdp_layer->client_info.width);
-    in_uint16_le(s, self->rdp_layer->client_info.height);
+    UNUSED_VAR(version);
+    struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
+    /* Clear physical sizes. These are optional and may not be read later */
+    client_info->session_physical_width = 0;
+    client_info->session_physical_height = 0;
+
+    /* TS_UD_CS_CORE required fields */
+    in_uint32_le(s, version);
+    in_uint16_le(s, client_info->display_sizes.session_width);
+    in_uint16_le(s, client_info->display_sizes.session_height);
     in_uint16_le(s, colorDepth);
-    g_writeln("colorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp)", colorDepth);
     switch (colorDepth)
     {
         case RNS_UD_COLOR_4BPP:
-            self->rdp_layer->client_info.bpp = 4;
+            client_info->bpp = 4;
             break;
         case RNS_UD_COLOR_8BPP:
-            self->rdp_layer->client_info.bpp = 8;
+            client_info->bpp = 8;
             break;
     }
     in_uint8s(s, 2); /* SASSequence */
     in_uint8s(s, 4); /* keyboardLayout */
     in_uint8s(s, 4); /* clientBuild */
     unicode_utf16_in(s, INFO_CLIENT_NAME_BYTES - 2, clientName, sizeof(clientName) - 1);  /* clientName */
-    log_message(LOG_LEVEL_INFO, "connected client computer name: %s", clientName);
+    LOG(LOG_LEVEL_INFO, "Connected client computer name: %s", clientName);
     in_uint8s(s, 4); /* keyboardType */
     in_uint8s(s, 4); /* keyboardSubType */
     in_uint8s(s, 4); /* keyboardFunctionKey */
     in_uint8s(s, 64); /* imeFileName */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Required fields> version %08x, desktopWidth %d, "
+              "desktopHeight %d, colorDepth %s, SASSequence (ignored), "
+              "keyboardLayout (ignored), clientBuild (ignored), "
+              "clientName %s, keyboardType (ignored), "
+              "keyboardSubType (ignored), keyboardFunctionKey (ignored), "
+              "imeFileName (ignored)",
+              version,
+              client_info->display_sizes.session_width,
+              client_info->display_sizes.session_height,
+              (colorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
+               colorDepth == 0xca01 ? "RNS_UD_COLOR_8BPP" : "unknown"),
+              clientName);
+
+    /* TS_UD_CS_CORE optional fields */
     in_uint16_le(s, postBeta2ColorDepth);
-    g_writeln("postBeta2ColorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp "
-              "0xca02 15bpp 0xca03 16bpp 0xca04 24bpp)", postBeta2ColorDepth);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> postBeta2ColorDepth %s",
+              postBeta2ColorDepth == 0xca00 ? "RNS_UD_COLOR_4BPP" :
+              postBeta2ColorDepth == 0xca01 ? "RNS_UD_COLOR_8BPP" :
+              postBeta2ColorDepth == 0xca02 ? "RNS_UD_COLOR_16BPP_555" :
+              postBeta2ColorDepth == 0xca03 ? "RNS_UD_COLOR_16BPP_565" :
+              postBeta2ColorDepth == 0xca04 ? "RNS_UD_COLOR_24BPP" :
+              "unknown");
 
     switch (postBeta2ColorDepth)
     {
         case RNS_UD_COLOR_4BPP:
-            self->rdp_layer->client_info.bpp = 4;
+            client_info->bpp = 4;
             break;
         case RNS_UD_COLOR_8BPP :
-            self->rdp_layer->client_info.bpp = 8;
+            client_info->bpp = 8;
             break;
         case RNS_UD_COLOR_16BPP_555:
-            self->rdp_layer->client_info.bpp = 15;
+            client_info->bpp = 15;
             break;
         case RNS_UD_COLOR_16BPP_565:
-            self->rdp_layer->client_info.bpp = 16;
+            client_info->bpp = 16;
             break;
         case RNS_UD_COLOR_24BPP:
-            self->rdp_layer->client_info.bpp = 24;
+            client_info->bpp = 24;
             break;
     }
     if (!s_check_rem(s, 2))
@@ -1677,41 +2029,57 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
         return 0;
     }
     in_uint8s(s, 2); /* clientProductId */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> clientProductId (ignored)");
 
     if (!s_check_rem(s, 4))
     {
         return 0;
     }
     in_uint8s(s, 4); /* serialNumber */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> serialNumber (ignored)");
 
     if (!s_check_rem(s, 2))
     {
         return 0;
     }
     in_uint16_le(s, highColorDepth);
-    g_writeln("highColorDepth 0x%4.4x (0x0004 4bpp 0x0008 8bpp 0x000f 15bpp "
-              "0x0010 16 bpp 0x0018 24bpp)", highColorDepth);
-    self->rdp_layer->client_info.bpp = highColorDepth;
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> highColorDepth %s",
+              highColorDepth == 0x0004 ? "HIGH_COLOR_4BPP" :
+              highColorDepth == 0x0008 ? "HIGH_COLOR_8BPP" :
+              highColorDepth == 0x000F ? "HIGH_COLOR_15BPP" :
+              highColorDepth == 0x0010 ? "HIGH_COLOR_16BPP" :
+              highColorDepth == 0x0018 ? "HIGH_COLOR_24BPP" :
+              "unknown");
+    client_info->bpp = highColorDepth;
 
     if (!s_check_rem(s, 2))
     {
         return 0;
     }
     in_uint16_le(s, supportedColorDepths);
-    g_writeln("supportedColorDepths 0x%4.4x (0x0001 24bpp 0x0002 16bpp "
-              "0x0004 15bpp 0x0008 32bpp)", supportedColorDepths);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> supportedColorDepths %s",
+              supportedColorDepths == 0x0001 ? "RNS_UD_24BPP_SUPPORT" :
+              supportedColorDepths == 0x0002 ? "RNS_UD_16BPP_SUPPORT" :
+              supportedColorDepths == 0x0004 ? "RNS_UD_15BPP_SUPPORT" :
+              supportedColorDepths == 0x0008 ? "RNS_UD_32BPP_SUPPORT" :
+              "unknown");
 
     if (!s_check_rem(s, 2))
     {
         return 0;
     }
     in_uint16_le(s, earlyCapabilityFlags);
-    self->rdp_layer->client_info.mcs_early_capability_flags = earlyCapabilityFlags;
-    g_writeln("earlyCapabilityFlags 0x%4.4x (0x0002 want32)",
+    client_info->mcs_early_capability_flags = earlyCapabilityFlags;
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> earlyCapabilityFlags 0x%4.4x",
               earlyCapabilityFlags);
     if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
     {
-        self->rdp_layer->client_info.bpp = 32;
+        client_info->bpp = 32;
     }
 
     if (!s_check_rem(s, 64))
@@ -1719,147 +2087,207 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
         return 0;
     }
     in_uint8s(s, 64); /* clientDigProductId */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> clientDigProductId (ignored)");
 
     if (!s_check_rem(s, 1))
     {
         return 0;
     }
-    in_uint8(s, self->rdp_layer->client_info.mcs_connection_type); /* connectionType */
-    g_writeln("got client client connection type 0x%8.8x",
-              self->rdp_layer->client_info.mcs_connection_type);
+    in_uint8(s, client_info->mcs_connection_type); /* connectionType */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> connectionType 0x%2.2x",
+              client_info->mcs_connection_type);
 
     if (!s_check_rem(s, 1))
     {
         return 0;
     }
     in_uint8s(s, 1); /* pad1octet */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> pad1octet (ignored)");
 
     if (!s_check_rem(s, 4))
     {
         return 0;
     }
     in_uint8s(s, 4); /* serverSelectedProtocol */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> serverSelectedProtocol (ignored)");
 
+    /*
+     * Non-zero values for the desktop physical width and height values
+     * are only sent if the client has a single monitor. For multiple
+     * monitors, the physical size of each monitor is sent in the
+     * TS_UD_CS_MONITOR_EX PDU */
     if (!s_check_rem(s, 4))
     {
         return 0;
     }
-    in_uint8s(s, 4); /* desktopPhysicalWidth */
+    in_uint32_le(s, client_info->session_physical_width);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> desktopPhysicalWidth %u",
+              client_info->session_physical_width);
 
     if (!s_check_rem(s, 4))
     {
+        client_info->session_physical_width = 0;
         return 0;
     }
-    in_uint8s(s, 4); /* desktopPhysicalHeight */
+    in_uint32_le(s, client_info->session_physical_height);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> desktopPhysicalHeight %u",
+              client_info->session_physical_height);
 
+    /* MS-RDPBCGR 2.2.1.3.2 */
+    if (client_info->session_physical_width < 10 ||
+            client_info->session_physical_width > 10000 ||
+            client_info->session_physical_height < 10 ||
+            client_info->session_physical_height > 10000)
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "Physical desktop dimensions (%ux%u) are invalid",
+            client_info->session_physical_width,
+            client_info->session_physical_height);
+        client_info->session_physical_width = 0;
+        client_info->session_physical_height = 0;
+    }
     if (!s_check_rem(s, 2))
     {
         return 0;
     }
     in_uint8s(s, 2); /* reserved */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Optional Field> desktopOrientation (ignored)");
 
     return 0;
 }
 
 /*****************************************************************************/
+/* Process a [MS-RDPBCGR] TS_UD_CS_SEC message */
 static int
-xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream* s)
+xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream *s)
 {
     int crypt_method;
     int found;
 
-    g_writeln("xrdp_sec_process_mcs_data_CS_SECURITY:");
     in_uint32_le(s, crypt_method);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_SEC "
+              "encryptionMethods 0x%8.8x, extEncryptionMethods (ignored)",
+              crypt_method);
     if (crypt_method & CRYPT_METHOD_40BIT)
     {
-        g_writeln("  client supports 40 bit encryption");
+        LOG(LOG_LEVEL_DEBUG, "Client supports 40 bit encryption");
     }
     if (crypt_method & CRYPT_METHOD_128BIT)
     {
-        g_writeln("  client supports 128 bit encryption");
+        LOG(LOG_LEVEL_DEBUG, "Client supports 128 bit encryption");
     }
     if (crypt_method & CRYPT_METHOD_56BIT)
     {
-        g_writeln("  client supports 56 bit encryption");
+        LOG(LOG_LEVEL_DEBUG, "Client supports 56 bit encryption");
     }
     if (crypt_method & CRYPT_METHOD_FIPS)
     {
-        g_writeln("  client supports fips encryption");
+        LOG(LOG_LEVEL_DEBUG, "Client supports fips encryption");
     }
     found = 0;
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_FIPS) &&
-        (self->crypt_level == CRYPT_LEVEL_FIPS))
+            (self->mcs_layer->iso_layer->selectedProtocol == PROTOCOL_SSL))
+    {
+        LOG(LOG_LEVEL_DEBUG,
+            "The connection is using TLS, skipping RDP crypto negotiation");
+        found = 1;
+    }
+    if ((found == 0) &&
+            (self->crypt_method & CRYPT_METHOD_FIPS) &&
+            (self->crypt_level == CRYPT_LEVEL_FIPS))
     {
         if (crypt_method & CRYPT_METHOD_FIPS)
         {
-            g_writeln("  client and server support fips, using fips");
+            LOG(LOG_LEVEL_DEBUG,
+                "Client and server both support fips encryption, "
+                "using RDP fips encryption.");
             self->crypt_method = CRYPT_METHOD_FIPS;
             self->crypt_level = CRYPT_LEVEL_FIPS;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_128BIT) &&
-        (self->crypt_level == CRYPT_LEVEL_HIGH))
+            (self->crypt_method & CRYPT_METHOD_128BIT) &&
+            (self->crypt_level == CRYPT_LEVEL_HIGH))
     {
         if (crypt_method & CRYPT_METHOD_128BIT)
         {
-            g_writeln("  client and server support high crypt, using "
-                      "high crypt");
+            LOG(LOG_LEVEL_DEBUG,
+                "Client and server both support high encryption, "
+                "using RDP 128-bit encryption.");
             self->crypt_method = CRYPT_METHOD_128BIT;
             self->crypt_level = CRYPT_LEVEL_HIGH;
             found = 1;
         }
     }
+    /* TODO: figure out why both "COMPATIBLE" and "LOW" crypto level both use
+        40-bit encryption, and why there is no cypto method for 56-bit
+        encryption even though there is code for checking for 56-bit
+        encryption */
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_40BIT) &&
-        (self->crypt_level == CRYPT_LEVEL_CLIENT_COMPATIBLE))
+            (self->crypt_method & CRYPT_METHOD_40BIT) &&
+            (self->crypt_level == CRYPT_LEVEL_CLIENT_COMPATIBLE))
     {
         if (crypt_method & CRYPT_METHOD_40BIT)
         {
-            g_writeln("  client and server support medium crypt, using "
-                      "medium crypt");
+            LOG(LOG_LEVEL_DEBUG,
+                "Client and server both support medium encryption, "
+                "using RDP 40-bit encryption.");
             self->crypt_method = CRYPT_METHOD_40BIT;
             self->crypt_level = CRYPT_LEVEL_CLIENT_COMPATIBLE;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_method & CRYPT_METHOD_40BIT) &&
-        (self->crypt_level == CRYPT_LEVEL_LOW))
+            (self->crypt_method & CRYPT_METHOD_40BIT) &&
+            (self->crypt_level == CRYPT_LEVEL_LOW))
     {
         if (crypt_method & CRYPT_METHOD_40BIT)
         {
-            g_writeln("  client and server support low crypt, using "
-                      "low crypt");
+            LOG(LOG_LEVEL_DEBUG,
+                "Client and server both support low encryption, "
+                "using RDP 40-bit encryption.");
             self->crypt_method = CRYPT_METHOD_40BIT;
             self->crypt_level = CRYPT_LEVEL_LOW;
             found = 1;
         }
     }
     if ((found == 0) &&
-        (self->crypt_level == CRYPT_LEVEL_NONE))
+            (self->crypt_level == CRYPT_LEVEL_NONE))
     {
         if (crypt_method == CRYPT_METHOD_NONE)
         {
-            g_writeln("  client and server support none crypt, using "
-                      "none crypt");
+            LOG(LOG_LEVEL_DEBUG,
+                "Client and server both support no encryption, "
+                "RDP encryption is disabled.");
             self->crypt_method = CRYPT_METHOD_NONE;
             self->crypt_level = CRYPT_LEVEL_NONE;
             found = 1;
         }
     }
-//    if (found == 0)
-//    {
-//        g_writeln("  can not find client / server agreed encryption method");
-//        return 1;
-//    }
+    if (found == 0)
+    {
+        /* TODO: figure out why failing to find a shared encryption level
+            does not return an error? */
+        /* TODO: does the connection fail now or is the default server
+            encryption used? */
+        LOG(LOG_LEVEL_WARNING,
+            "Client and server do not both support the same encryption.");
+        //        return 1;
+    }
     return 0;
 }
 
 /*****************************************************************************/
-/* this adds the mcs channels in the list of channels to be used when
+/* Process a [MS-RDPBCGR] TS_UD_CS_NET message.
+   This adds the mcs channels in the list of channels to be used when
    creating the server mcs data */
 static int
 xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
@@ -1868,186 +2296,184 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     int index;
     struct xrdp_client_info *client_info;
     struct mcs_channel_item *channel_item;
+    int next_mcs_channel_id;
 
     client_info = &(self->rdp_layer->client_info);
-    DEBUG(("processing channels, channels_allowed is %d",
-           client_info->channels_allowed));
     /* this is an option set in xrdp.ini */
     if (client_info->channels_allowed == 0) /* are channels on? */
     {
-        log_message(LOG_LEVEL_INFO, "all channels are disabled by "
-                    "configuration");
+        LOG(LOG_LEVEL_DEBUG, "All channels are disabled by configuration");
         return 0;
     }
-    if (!s_check_rem(s, 4))
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPBCGR] TS_UD_CS_NET"))
     {
         return 1;
     }
     in_uint32_le(s, num_channels);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_NET "
+              "channelCount %d", num_channels);
     if (num_channels > 31)
     {
+        LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Protocol error: too many channels requested. "
+            "max 31, received %d", num_channels);
         return 1;
     }
+
+    /* GOTCHA: When adding a channel the MCS channel ID is set to
+     * MCS_GLOBAL_CHANNEL + (index + 1). This is assumed by
+     * xrdp_channel_process(), when mapping an incoming PDU into an
+     * entry in this array */
+    next_mcs_channel_id = MCS_GLOBAL_CHANNEL + 1;
+
     for (index = 0; index < num_channels; index++)
     {
         channel_item = g_new0(struct mcs_channel_item, 1);
-        if (!s_check_rem(s, 12))
+        if (!s_check_rem_and_log(s, 12, "Parsing [MS-RDPBCGR] TS_UD_CS_NET.CHANNEL_DEF"))
         {
             g_free(channel_item);
             return 1;
         }
         in_uint8a(s, channel_item->name, 8);
         in_uint32_le(s, channel_item->flags);
-        if (g_strlen(channel_item->name) > 0)
+
+        if (g_strlen(channel_item->name) > 0 && g_strlen(channel_item->name) < 8)
         {
-            channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-            log_message(LOG_LEVEL_INFO, "adding channel item name %s chan_id "
-                        "%d flags 0x%8.8x", channel_item->name,
-                        channel_item->chanid, channel_item->flags);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] "
+                      "TS_UD_CS_NET.CHANNEL_DEF %d, name %s, options 0x%8.8x",
+                      index, channel_item->name, channel_item->flags);
+            channel_item->chanid = next_mcs_channel_id++;
             list_add_item(self->mcs_layer->channel_list,
                           (intptr_t) channel_item);
-            DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
-                   channel_item->name));
+            LOG(LOG_LEVEL_DEBUG,
+                "Adding channel: name %s, channel id %d, flags 0x%8.8x",
+                channel_item->name, channel_item->chanid, channel_item->flags);
         }
         else
         {
+            LOG_DEVEL(LOG_LEVEL_WARNING, "Received [MS-RDPBCGR] "
+                      "TS_UD_CS_NET.CHANNEL_DEF %d, skipped because of "
+                      "malformed channel name.", index);
+            LOG_DEVEL_HEXDUMP(LOG_LEVEL_WARNING,
+                              "[MS-RDPBCGR] TS_UD_CS_NET.CHANNEL_DEF name",
+                              channel_item->name, 8);
             g_free(channel_item);
         }
     }
+
+    /* Set the user channel as well */
+    self->mcs_layer->chanid = next_mcs_channel_id++;
+    self->mcs_layer->userid = self->mcs_layer->chanid - MCS_USERCHANNEL_BASE;
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "MCS user is %d, channel id is %d",
+              self->mcs_layer->userid, self->mcs_layer->chanid);
+
     return 0;
 }
 
 /*****************************************************************************/
-/* reads the client monitors data */
-static int
+/* Process a [MS-RDPBCGR] TS_UD_CS_MONITOR message.
+   reads the client monitors data */
+int
 xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 {
-    int index;
-    int monitorCount;
     int flags;
-    int x1;
-    int y1;
-    int x2;
-    int y2;
-    int got_primary;
-    struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
+    int error = 0;
+    struct xrdp_client_info *client_info = &(self->rdp_layer->client_info);
 
-    client_info = &(self->rdp_layer->client_info);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:");
 
-    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: processing monitors data, allow_multimon is %d", client_info->multimon));
     /* this is an option set in xrdp.ini */
     if (client_info->multimon != 1) /* are multi-monitors allowed ? */
     {
-        LLOGLN(0, ("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
-               "allowed, skipping"));
+        LOG(LOG_LEVEL_INFO,
+            "xrdp_sec_process_mcs_data_monitors:"
+            " Multi-monitor is disabled by server config");
         return 0;
     }
+    if (!s_check_rem_and_log(s, 4,
+                             "xrdp_sec_process_mcs_data_monitors:"
+                             " Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR"))
+    {
+        return SEC_PROCESS_MONITORS_ERR;
+    }
     in_uint32_le(s, flags); /* flags */
+
     //verify flags - must be 0x0
     if (flags != 0)
     {
-        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
-               "zero, detected: %d", flags));
-        return 1;
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_process_mcs_data_monitors: [MS-RDPBCGR]"
+            " Protocol error: TS_UD_CS_MONITOR flags MUST be zero,"
+            " received: 0x%8.8x", flags);
+        return SEC_PROCESS_MONITORS_ERR;
     }
-    in_uint32_le(s, monitorCount);
-    //verify monitorCount - max 16
-    if (monitorCount > 16)
+
+    struct display_size_description *description =
+        (struct display_size_description *)
+        g_malloc(sizeof(struct display_size_description), 1);
+
+    error = libxrdp_process_monitor_stream(s, description, 0);
+    if (error == 0)
     {
-        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
-               "monitors is 16, detected: %d", monitorCount));
-        return 1;
+        client_info->display_sizes.monitorCount = description->monitorCount;
+
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:"
+                  " Received [MS-RDPBCGR] TS_UD_CS_MONITOR"
+                  " flags 0x%8.8x, monitorCount %d",
+                  flags, description->monitorCount);
+
+        client_info->display_sizes.session_width = description->session_width;
+        client_info->display_sizes.session_height = description->session_height;
+        g_memcpy(client_info->display_sizes.minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        g_memcpy(client_info->display_sizes.minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
     }
 
-    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: monitorCount= %d", monitorCount));
+    g_free(description);
 
-    client_info->monitorCount = monitorCount;
-
-    x1 = 0;
-    y1 = 0;
-    x2 = 0;
-    y2 = 0;
-    got_primary = 0;
-    /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
-    for (index = 0; index < monitorCount; index++)
-    {
-        in_uint32_le(s, client_info->minfo[index].left);
-        in_uint32_le(s, client_info->minfo[index].top);
-        in_uint32_le(s, client_info->minfo[index].right);
-        in_uint32_le(s, client_info->minfo[index].bottom);
-        in_uint32_le(s, client_info->minfo[index].is_primary);
-        if (index == 0)
-        {
-            x1 = client_info->minfo[index].left;
-            y1 = client_info->minfo[index].top;
-            x2 = client_info->minfo[index].right;
-            y2 = client_info->minfo[index].bottom;
-        }
-        else
-        {
-            x1 = MIN(x1, client_info->minfo[index].left);
-            y1 = MIN(y1, client_info->minfo[index].top);
-            x2 = MAX(x2, client_info->minfo[index].right);
-            y2 = MAX(y2, client_info->minfo[index].bottom);
-        }
-
-        if (client_info->minfo[index].is_primary)
-        {
-            got_primary = 1;
-        }
-
-        LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: got a monitor [%d]: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d",
-                index,
-                client_info->minfo[index].left,
-                client_info->minfo[index].top,
-                client_info->minfo[index].right,
-                client_info->minfo[index].bottom,
-                client_info->minfo[index].is_primary));
-    }
-
-    if (!got_primary)
-    {
-        /* no primary monitor was set, choose the leftmost monitor as primary */
-        for (index = 0; index < monitorCount; index++)
-        {
-            if (client_info->minfo[index].left == x1 &&
-                    client_info->minfo[index].top == y1)
-            {
-                client_info->minfo[index].is_primary = 1;
-                break;
-            }
-        }
-    }
-
-    /* set wm geometry */
-    if ((x2 > x1) && (y2 > y1))
-    {
-        client_info->width = (x2 - x1) + 1;
-        client_info->height = (y2 - y1) + 1;
-    }
-    /* make sure virtual desktop size is ok */
-    if (client_info->width > 0x7FFE || client_info->width < 0xC8 ||
-        client_info->height > 0x7FFE || client_info->height < 0xC8)
-    {
-        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: error, virtual desktop width / height is too large"));
-        return 1; /* error */
-    }
-
-    /* keep a copy of non negative monitor info values for xrdp_wm usage */
-    for (index = 0; index < monitorCount; index++)
-    {
-        client_info->minfo_wm[index].left =  client_info->minfo[index].left - x1;
-        client_info->minfo_wm[index].top =  client_info->minfo[index].top - y1;
-        client_info->minfo_wm[index].right =  client_info->minfo[index].right - x1;
-        client_info->minfo_wm[index].bottom =  client_info->minfo[index].bottom - y1;
-        client_info->minfo_wm[index].is_primary =  client_info->minfo[index].is_primary;
-    }
-
-    return 0;
+    return error;
 }
 
 /*****************************************************************************/
-/* process client mcs data, we need some things in here to create the server
+/* Process a [MS-RDPBCGR] TS_UD_CS_MONITOR_EX message.
+   reads the client monitor's extended data */
+int
+xrdp_sec_process_mcs_data_monitors_ex(struct xrdp_sec *self, struct stream *s)
+{
+    int flags;
+    struct xrdp_client_info *client_info = &(self->rdp_layer->client_info);
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors_ex:");
+
+    /* this is an option set in xrdp.ini */
+    if (client_info->multimon != 1) /* are multi-monitors allowed ? */
+    {
+        /* This should already be logged in
+           xrdp_sec_process_mcs_data_monitors() */
+        return 0;
+    }
+    if (!s_check_rem_and_log(s, 4,
+                             "xrdp_sec_process_mcs_data_monitors_ex:"
+                             " Parsing [MS-RDPBCGR] TS_UD_CS_MONITOR_EX"))
+    {
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+    in_uint32_le(s, flags); /* flags */
+
+    //verify flags - must be 0x0
+    if (flags != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_process_mcs_data_monitors_ex: [MS-RDPBCGR]"
+            " Protocol error: TS_UD_CS_MONITOR_EX flags MUST be zero,"
+            " received: 0x%8.8x", flags);
+        return SEC_PROCESS_MONITORS_ERR;
+    }
+
+    return libxrdp_process_monitor_ex_stream(s, &client_info->display_sizes);
+}
+
+/*****************************************************************************/
+/* Process a Client MCS Connect Initial PDU with GCC Conference Create Request.
+   process client mcs data, we need some things in here to create the server
    mcs data */
 int
 xrdp_sec_process_mcs_data(struct xrdp_sec *self)
@@ -2056,87 +2482,111 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
     char *hold_p = (char *)NULL;
     int tag = 0;
     int size = 0;
+    struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
 
     s = &(self->client_mcs_data);
     /* set p to beginning */
     s->p = s->data;
     /* skip header */
-    if (!s_check_rem(s, 23))
+    if (!s_check_rem_and_log(s, 23, "Parsing [ITU T.124] ConferenceCreateRequest"))
     {
         return 1;
     }
-    in_uint8s(s, 23);
+    in_uint8s(s, 23); /* skip [ITU T.124] ConferenceCreateRequest fields until userData */
 
     while (s_check_rem(s, 4))
     {
         hold_p = s->p;
         in_uint16_le(s, tag);
         in_uint16_le(s, size);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_UD_HEADER "
+                  "type 0x%4.4x, length %d", tag, size);
 
-        if ((size < 4) || (!s_check_rem(s, size - 4)))
+        if (size < 4)
         {
-            LLOGLN(0, ("error in xrdp_sec_process_mcs_data tag %d size %d",
-                   tag, size));
+            LOG(LOG_LEVEL_WARNING, "[MS-RDPBCGR] Protocol error: Invalid TS_UD_HEADER length value. "
+                "expected >= 4, actual %d", size);
+            break;
+        }
+        if (!s_check_rem_and_log(s, size - 4,
+                                 "Parsing [MS-RDPBCGR] GCC Conference Create Request client data field"))
+        {
             break;
         }
 
-        LLOGLN(10, ("xrdp_sec_process_mcs_data: 0x%8.8x", tag));
         switch (tag)
         {
             case SEC_TAG_CLI_INFO:     /* CS_CORE           0xC001 */
                 if (xrdp_sec_process_mcs_data_CS_CORE(self, s) != 0)
                 {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Processing [MS-RDPBCGR] TS_UD_CS_CORE failed");
                     return 1;
                 }
                 break;
             case SEC_TAG_CLI_CRYPT:    /* CS_SECURITY       0xC002 */
                 if (xrdp_sec_process_mcs_data_CS_SECURITY(self, s) != 0)
                 {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Processing [MS-RDPBCGR] TS_UD_CS_SEC failed");
                     return 1;
                 }
                 break;
             case SEC_TAG_CLI_CHANNELS: /* CS_NET            0xC003 */
                 if (xrdp_sec_process_mcs_data_channels(self, s) != 0)
                 {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Processing [MS-RDPBCGR] TS_UD_CS_NET failed");
                     return 1;
                 }
                 break;
             case SEC_TAG_CLI_4:        /* CS_CLUSTER        0xC004 */
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "Received [MS-RDPBCGR] TS_UD_CS_CLUSTER - no-op");
                 break;
             case SEC_TAG_CLI_MONITOR:  /* CS_MONITOR        0xC005 */
                 if (xrdp_sec_process_mcs_data_monitors(self, s) != 0)
                 {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Processing [MS-RDPBCGR] TS_UD_CS_MONITOR failed");
                     return 1;
                 }
                 break;
-                                       /* CS_MCS_MSGCHANNEL 0xC006
-                                          CS_MONITOR_EX     0xC008
-                                          CS_MULTITRANSPORT 0xC00A
-                                          SC_CORE           0x0C01
-                                          SC_SECURITY       0x0C02
-                                          SC_NET            0x0C03
-                                          SC_MCS_MSGCHANNEL 0x0C04
-                                          SC_MULTITRANSPORT 0x0C08 */
+            case SEC_TAG_CLI_MONITOR_EX:  /* CS_MONITOR_EX     0xC008 */
+                if (xrdp_sec_process_mcs_data_monitors_ex(self, s) != 0)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Processing [MS-RDPBCGR] TS_UD_CS_MONITOR_EX failed");
+                    return 1;
+                }
+                break;
+            /* CS_MCS_MSGCHANNEL 0xC006
+               CS_MULTITRANSPORT 0xC00A
+               SC_CORE           0x0C01
+               SC_SECURITY       0x0C02
+               SC_NET            0x0C03
+               SC_MCS_MSGCHANNEL 0x0C04
+               SC_MULTITRANSPORT 0x0C08 */
             default:
-                LLOGLN(0, ("error unknown xrdp_sec_process_mcs_data "
-                       "tag 0x%4.4x size %d", tag, size));
+                LOG(LOG_LEVEL_WARNING,
+                    "Received [MS-RDPBCGR] TS_UD_HEADER type 0x%4.4x "
+                    "is unknown (ignored)", tag);
                 break;
         }
 
         s->p = hold_p + size;
     }
 
-    if (self->rdp_layer->client_info.max_bpp > 0)
+    if (client_info->max_bpp > 0)
     {
-        if (self->rdp_layer->client_info.bpp >
-            self->rdp_layer->client_info.max_bpp)
+        if (client_info->bpp > client_info->max_bpp)
         {
-            LLOGLN(0, ("xrdp_rdp_parse_client_mcs_data: client asked "
-                   "for %dbpp connection but configuration is limited "
-                   "to %dbpp", self->rdp_layer->client_info.bpp,
-                   self->rdp_layer->client_info.max_bpp));
-            self->rdp_layer->client_info.bpp =
-                         self->rdp_layer->client_info.max_bpp;
+            LOG(LOG_LEVEL_WARNING, "Client requested %d bpp color depth, "
+                "but the server configuration is limited to %d bpp. "
+                "Downgrading the color depth to %d bits-per-pixel.",
+                client_info->bpp,
+                client_info->max_bpp,
+                client_info->max_bpp);
+            client_info->bpp = client_info->max_bpp;
         }
     }
 
@@ -2146,7 +2596,16 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
 }
 
 /*****************************************************************************/
-/* process the mcs client data we received from the mcs layer */
+/* Process the mcs client data [ITU T.124] ConferenceCreateRequest userData field
+   as a [MS-RDPBCGR] TS_UD_CS_CORE struct */
+/* TODO: why does this method parse the strust from back to front (resetting
+   after each field) instead of from front to back like the rest of the parsing
+   code? */
+/* TODO: why does this method exist when the same struct is parsed in
+   xrdp_sec_process_mcs_data_CS_CORE and there does not seem to be any
+   dependencies preventing a call to that function. */
+/* TODO: this is a brittle function that assumes field offsets in the stream
+   instead of parsing the variable length fields of [ITU T.124] ConferenceCreateRequest */
 static int
 xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 {
@@ -2159,18 +2618,22 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     s = &(self->client_mcs_data);
     /* get hostname, it's unicode */
     s->p = s->data;
-    if (!s_check_rem(s, 47))
+    if (!s_check_rem_and_log(s, 47, "Parsing [ITU T.124] ConferenceCreateRequest"))
     {
         return 1;
     }
-    in_uint8s(s, 47);
+    in_uint8s(s, 47); /* skip [ITU T.124] ConferenceCreateRequest up to the
+                         userData field, and skip [MS-RDPBCGR] TS_UD_CS_CORE
+                         up to the clientName field */
     g_memset(client_info->hostname, 0, 32);
     c = 1;
     index = 0;
 
+    /* TODO: why aren't we using unicode_utf16_in to parse the client name
+       like we do in xrdp_sec_process_mcs_data_CS_CORE? */
     while (index < 16 && c != 0)
     {
-        if (!s_check_rem(s, 2))
+        if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_UD_CS_CORE clientName"))
         {
             return 1;
         }
@@ -2181,31 +2644,45 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     }
     /* get build */
     s->p = s->data;
-    if (!s_check_rem(s, 43 + 4))
+    if (!s_check_rem_and_log(s, 43 + 4, "Parsing [MS-RDPBCGR] TS_UD_CS_CORE clientBuild"))
     {
         return 1;
     }
     in_uint8s(s, 43);
-    in_uint32_le(s, client_info->build);
+    in_uint32_le(s, client_info->build); /* [MS-RDPBCGR] TS_UD_CS_CORE clientBuild */
     /* get keylayout */
     s->p = s->data;
-    if (!s_check_rem(s, 39 + 4))
+    if (!s_check_rem_and_log(s, 39 + 4, "Parsing [MS-RDPBCGR] TS_UD_CS_CORE keyboardLayout"))
     {
         return 1;
     }
     in_uint8s(s, 39);
-    in_uint32_le(s, client_info->keylayout);
+    in_uint32_le(s, client_info->keylayout); /* [MS-RDPBCGR] TS_UD_CS_CORE keyboardLayout */
     /* get keyboard type / subtype */
     s->p = s->data;
-    if (!s_check_rem(s, 79 + 8))
+    if (!s_check_rem_and_log(s, 79 + 8, "Parsing [MS-RDPBCGR] TS_UD_CS_CORE keyboardType"))
     {
         return 1;
     }
     in_uint8s(s, 79);
-    in_uint32_le(s, client_info->keyboard_type);
-    in_uint32_le(s, client_info->keyboard_subtype);
+    in_uint32_le(s, client_info->keyboard_type); /* [MS-RDPBCGR] TS_UD_CS_CORE keyboardType */
+    in_uint32_le(s, client_info->keyboard_subtype); /* [MS-RDPBCGR] TS_UD_CS_CORE keyboardSubType */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
+              "<Required fields> version (ignored), desktopWidth (ignored), "
+              "desktopHeight (ignored), colorDepth (ignored), SASSequence (ignored), "
+              "keyboardLayout 0x%8.8x, clientBuild %d, "
+              "clientName %s, keyboardType 0x%8.8x, "
+              "keyboardSubType 0x%8.8x, keyboardFunctionKey (ignored), "
+              "imeFileName (ignored)",
+              client_info->keylayout,
+              client_info->build,
+              client_info->hostname,
+              client_info->keyboard_type,
+              client_info->keyboard_subtype);
+
     xrdp_load_keyboard_layout(client_info);
     s->p = s->data;
+
     return 0;
 }
 
@@ -2237,13 +2714,15 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
             self->crypt_level = CRYPT_LEVEL_FIPS;
             break;
         default:
-            g_writeln("Fatal : Illegal crypt_level");
+            LOG_DEVEL(LOG_LEVEL_WARNING, "Fatal : Illegal crypt_level %d",
+                      self->rdp_layer->client_info.crypt_level);
             break ;
     }
 
     if (self->decrypt_rc4_info != NULL)
     {
-        g_writeln("xrdp_sec_init_rdp_security: decrypt_rc4_info already created !!!");
+        LOG_DEVEL(LOG_LEVEL_WARNING,
+                  "xrdp_sec_init_rdp_security: decrypt_rc4_info already created !!!");
     }
     else
     {
@@ -2252,7 +2731,8 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
 
     if (self->encrypt_rc4_info != NULL)
     {
-        g_writeln("xrdp_sec_init_rdp_security: encrypt_rc4_info already created !!!");
+        LOG_DEVEL(LOG_LEVEL_WARNING,
+                  "xrdp_sec_init_rdp_security: encrypt_rc4_info already created !!!");
     }
     else
     {
@@ -2274,13 +2754,12 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     char *value = NULL;
     char key_file[256];
 
-    DEBUG((" in xrdp_sec_incoming:"));
     iso = self->mcs_layer->iso_layer;
 
     /* negotiate security layer */
     if (xrdp_iso_incoming(iso) != 0)
     {
-        DEBUG(("xrdp_sec_incoming: xrdp_iso_incoming failed"));
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: xrdp_iso_incoming failed");
         return 1;
     }
 
@@ -2288,18 +2767,19 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         /* init tls security */
-        DEBUG((" in xrdp_sec_incoming: init tls security"));
 
         if (trans_set_tls_mode(self->mcs_layer->iso_layer->trans,
-                self->rdp_layer->client_info.key_file,
-                self->rdp_layer->client_info.certificate,
-                self->rdp_layer->client_info.ssl_protocols,
-                self->rdp_layer->client_info.tls_ciphers) != 0)
+                               self->rdp_layer->client_info.key_file,
+                               self->rdp_layer->client_info.certificate,
+                               self->rdp_layer->client_info.ssl_protocols,
+                               self->rdp_layer->client_info.tls_ciphers) != 0)
         {
-            g_writeln("xrdp_sec_incoming: trans_set_tls_mode failed");
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: trans_set_tls_mode failed");
             return 1;
         }
 
+        LOG(LOG_LEVEL_DEBUG, "Using TLS security, and "
+            "setting RDP security crypto to LEVEL_NONE and METHOD_NONE");
         self->crypt_level = CRYPT_LEVEL_NONE;
         self->crypt_method = CRYPT_METHOD_NONE;
         self->rsa_key_bytes = 0;
@@ -2308,14 +2788,16 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     else
     {
         /* init rdp security */
-        DEBUG((" in xrdp_sec_incoming: init rdp security"));
         if (xrdp_sec_init_rdp_security(self) != 0)
         {
-            DEBUG(("xrdp_sec_incoming: xrdp_sec_init_rdp_security failed"));
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: xrdp_sec_init_rdp_security failed");
             return 1;
         }
         if (self->crypt_method != CRYPT_METHOD_NONE)
         {
+            LOG(LOG_LEVEL_DEBUG, "Using RDP security, and "
+                "reading the server configuration");
+
             g_memset(key_file, 0, sizeof(char) * 256);
             g_random(self->server_random, 32);
             items = list_create();
@@ -2327,8 +2809,8 @@ xrdp_sec_incoming(struct xrdp_sec *self)
             if (file_by_name_read_section(key_file, "keys", items, values) != 0)
             {
                 /* this is a show stopper */
-                log_message(LOG_LEVEL_ALWAYS, "XRDP cannot read file: %s "
-                            "(check permissions)", key_file);
+                LOG(LOG_LEVEL_ERROR, "XRDP cannot read file: %s "
+                    "(check permissions)", key_file);
                 list_delete(items);
                 list_delete(values);
                 return 1;
@@ -2346,7 +2828,8 @@ xrdp_sec_incoming(struct xrdp_sec *self)
                 else if (g_strcasecmp(item, "pub_mod") == 0)
                 {
                     self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
-                    g_writeln("pub_mod bytes %d", self->rsa_key_bytes);
+                    LOG_DEVEL(LOG_LEVEL_DEBUG, "Server config: pub_mod bytes %d",
+                              self->rsa_key_bytes);
                     hex_str_to_bin(value, self->pub_mod, self->rsa_key_bytes);
                 }
                 else if (g_strcasecmp(item, "pub_sig") == 0)
@@ -2356,17 +2839,16 @@ xrdp_sec_incoming(struct xrdp_sec *self)
                 else if (g_strcasecmp(item, "pri_exp") == 0)
                 {
                     self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
-                    g_writeln("pri_exp %d", self->rsa_key_bytes);
+                    LOG_DEVEL(LOG_LEVEL_DEBUG, "Server config: pri_exp %d",
+                              self->rsa_key_bytes);
                     hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
                 }
             }
 
             if (self->rsa_key_bytes <= 64)
             {
-                g_writeln("warning, RSA key len 512 "
-                          "bits or less, consider creating a 2048 bit key");
-                log_message(LOG_LEVEL_WARNING, "warning, RSA key len 512 "
-                            "bits or less, consider creating a 2048 bit key");
+                LOG(LOG_LEVEL_WARNING, "warning, RSA key len 512 "
+                    "bits or less, consider creating a 2048 bit key");
             }
 
             list_delete(items);
@@ -2377,24 +2859,23 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     /* negotiate mcs layer */
     if (xrdp_mcs_incoming(self->mcs_layer) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: xrdp_mcs_incoming failed");
         return 1;
     }
 
-#ifdef XRDP_DEBUG
-    g_writeln("client mcs data received");
-    g_hexdump(self->client_mcs_data.data,
-              (int)(self->client_mcs_data.end - self->client_mcs_data.data));
-    g_writeln("server mcs data sent");
-    g_hexdump(self->server_mcs_data.data,
-              (int)(self->server_mcs_data.end - self->server_mcs_data.data));
-#endif
-    DEBUG((" out xrdp_sec_incoming"));
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "client mcs data received",
+                      self->client_mcs_data.data,
+                      (int)(self->client_mcs_data.end - self->client_mcs_data.data));
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "server mcs data sent",
+                      self->server_mcs_data.data,
+                      (int)(self->server_mcs_data.end - self->server_mcs_data.data));
+
     if (xrdp_sec_in_mcs_data(self) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: xrdp_sec_in_mcs_data failed");
         return 1;
     }
 
-    LLOGLN(10, ("xrdp_sec_incoming: out"));
     return 0;
 }
 
@@ -2404,8 +2885,6 @@ xrdp_sec_disconnect(struct xrdp_sec *self)
 {
     int rv;
 
-    DEBUG((" in xrdp_sec_disconnect"));
     rv = xrdp_mcs_disconnect(self->mcs_layer);
-    DEBUG((" out xrdp_sec_disconnect"));
     return rv;
 }

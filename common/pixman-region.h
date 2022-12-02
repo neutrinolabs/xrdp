@@ -56,21 +56,21 @@ typedef struct pixman_region16          pixman_region16_t;
 /* creation/destruction */
 void                    pixman_region_init               (pixman_region16_t *region);
 void                    pixman_region_init_rect          (pixman_region16_t *region,
-                                                          int                x,
-                                                          int                y,
-                                                          unsigned int       width,
-                                                          unsigned int       height);
+        /**/                                              int                x,
+        /**/                                              int                y,
+        /**/                                              unsigned int       width,
+        /**/                                              unsigned int       height);
 void                    pixman_region_fini               (pixman_region16_t *region);
 pixman_bool_t           pixman_region_union              (pixman_region16_t *new_reg,
-                                                          pixman_region16_t *reg1,
-                                                          pixman_region16_t *reg2);
+        /**/                                              pixman_region16_t *reg1,
+        /**/                                              pixman_region16_t *reg2);
 pixman_bool_t           pixman_region_subtract           (pixman_region16_t *reg_d,
-                                                          pixman_region16_t *reg_m,
-                                                          pixman_region16_t *reg_s);
+        /**/                                              pixman_region16_t *reg_m,
+        /**/                                              pixman_region16_t *reg_s);
 pixman_bool_t           pixman_region_intersect          (pixman_region16_t *new_reg,
-                                                          pixman_region16_t *reg1,
-                                                          pixman_region16_t *reg2);
-pixman_box16_t *        pixman_region_rectangles         (pixman_region16_t *region,
-                                                          int               *n_rects);
+        /**/                                              pixman_region16_t *reg1,
+        /**/                                              pixman_region16_t *reg2);
+pixman_box16_t         *pixman_region_rectangles         (pixman_region16_t *region,
+        /**/                                              int               *n_rects);
 
 #endif

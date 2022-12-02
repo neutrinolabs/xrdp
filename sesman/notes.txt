@@ -1,0 +1,11 @@
+************************************************************
+** Notes on the current version of the SCP protocol used  **
+** to communicate with sesman                             **
+**                                                        **
+** This information is for internal documentational use   **
+** only. It may be incomplete. The SCP protocol is        **
+** internal, and may change for even minor releases.      **
+************************************************************
+
+The SCP protocol is layered on top of libipm, which is in
+../libipm. See ../libipm/scp.h for the interface messages to xrdp-sesman

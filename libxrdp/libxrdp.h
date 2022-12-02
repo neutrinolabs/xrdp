@@ -29,9 +29,11 @@
 #include "os_calls.h"
 #include "ssl_calls.h"
 #include "list.h"
+#include "log.h"
 #include "file.h"
 #include "libxrdpinc.h"
 #include "xrdp_client_info.h"
+#include "log.h"
 
 
 /* iso */
@@ -65,6 +67,9 @@ struct xrdp_mcs
     struct stream *client_mcs_data;
     struct stream *server_mcs_data;
     struct list *channel_list;
+    /* This boolean is set to indicate we're expecting channel join
+     * requests as part of the connect sequence */
+    int expecting_channel_join_requests;
 };
 
 /* fastpath */
@@ -357,6 +362,19 @@ int
 xrdp_mcs_disconnect(struct xrdp_mcs *self);
 
 /* xrdp_sec.c */
+
+/*
+    These are error return codes for:-
+        1. xrdp_sec_process_mcs_data_monitors
+        2. libxrdp_process_monitor_stream
+        3. libxrdp_process_monitor_ex_stream
+    To clarify any reason for a non-zero response code.
+*/
+#define SEC_PROCESS_MONITORS_ERR 1
+#define SEC_PROCESS_MONITORS_ERR_TOO_MANY_MONITORS 2
+#define SEC_PROCESS_MONITORS_ERR_INVALID_DESKTOP 3
+#define SEC_PROCESS_MONITORS_ERR_INVALID_MONITOR 4
+
 struct xrdp_sec *
 xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans);
 void
@@ -381,6 +399,8 @@ int
 xrdp_sec_incoming(struct xrdp_sec *self);
 int
 xrdp_sec_disconnect(struct xrdp_sec *self);
+int
+xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s);
 
 /* xrdp_rdp.c */
 struct xrdp_rdp *
@@ -548,9 +568,9 @@ xrdp_codec_jpeg_compress(void *handle,
                          int   cy,       /* height of area to compress */
                          int   quality,  /* higher numbers compress less */
                          char *out_data, /* dest for jpg image */
-                         int  *io_len    /* length of out_data and on return */
-                                         /* len of compressed data */
-                         );
+                         int  *io_len    /* length of out_data and on return
+                                            len of compressed data */
+                        );
 
 void *
 xrdp_jpeg_init(void);
@@ -558,7 +578,7 @@ int
 xrdp_jpeg_deinit(void *handle);
 
 /* xrdp_channel.c */
-struct xrdp_channel*
+struct xrdp_channel *
 xrdp_channel_create(struct xrdp_sec *owner, struct xrdp_mcs *mcs_layer);
 void
 xrdp_channel_delete(struct xrdp_channel *self);

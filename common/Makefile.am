@@ -10,10 +10,12 @@ include_HEADERS = \
   ms-erref.h \
   ms-fscc.h \
   ms-rdpbcgr.h \
+  ms-rdpeclip.h \
   ms-rdpefs.h \
   ms-rdpegdi.h \
   ms-rdpele.h \
   ms-rdperp.h \
+  ms-rdpedisp.h \
   ms-smb2.h \
   xrdp_client_info.h \
   xrdp_constants.h \
@@ -28,11 +30,10 @@ AM_CPPFLAGS = \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\"
 
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
-
-AM_CFLAGS = $(OPENSSL_CFLAGS)
+# -no-suppress is an automake-specific flag which is needed
+# to prevent us missing compiler errors in some circumstances
+# (see https://github.com/neutrinolabs/xrdp/pull/1843 )
+AM_CFLAGS = -no-suppress $(OPENSSL_CFLAGS)
 
 module_LTLIBRARIES = \
   libcommon.la
@@ -46,6 +47,8 @@ libcommon_la_SOURCES = \
   fifo.h \
   file.c \
   file.h \
+  guid.c \
+  guid.h \
   list.c \
   list.h \
   list16.c \
@@ -54,11 +57,13 @@ libcommon_la_SOURCES = \
   log.h \
   os_calls.c \
   os_calls.h \
-  os_calls.h \
+  parse.c \
   parse.h \
   rail.h \
   ssl_calls.c \
   ssl_calls.h \
+  string_calls.c \
+  string_calls.h \
   thread_calls.c \
   thread_calls.h \
   trans.c \

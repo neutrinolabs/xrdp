@@ -25,12 +25,18 @@
 #include "xup.h"
 #include "log.h"
 #include "trans.h"
+#include "string_calls.h"
 
-#define LOG_LEVEL 1
-#define LLOG(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
-#define LLOGLN(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
+static int
+send_server_monitor_resize(
+    struct mod *mod, struct stream *s, int width, int height, int bpp);
+
+static int
+send_server_monitor_full_invalidate(
+    struct mod *mod, struct stream *s, int width, int height);
+
+static int
+send_server_version_message(struct mod *v, struct stream *s);
 
 static int
 lib_mod_process_message(struct mod *mod, struct stream *s);
@@ -47,11 +53,11 @@ lib_send_copy(struct mod *mod, struct stream *s)
 int
 lib_mod_start(struct mod *mod, int w, int h, int bpp)
 {
-    LIB_DEBUG(mod, "in lib_mod_start");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_start");
     mod->width = w;
     mod->height = h;
     mod->bpp = bpp;
-    LIB_DEBUG(mod, "out lib_mod_start");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_start");
     return 0;
 }
 
@@ -67,17 +73,16 @@ lib_mod_log_peer(struct mod *mod)
     my_pid = g_getpid();
     if (g_sck_get_peer_cred(mod->trans->sck, &pid, &uid, &gid) == 0)
     {
-        log_message(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp_pid=%d connected "
-                    "to X11rdp_pid=%d X11rdp_uid=%d X11rdp_gid=%d "
-                    "client_ip=%s client_port=%s",
-                    my_pid, pid, uid, gid,
-                    mod->client_info.client_addr,
-                    mod->client_info.client_port);
+        LOG(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp_pid=%d connected "
+            "to X11rdp_pid=%d X11rdp_uid=%d X11rdp_gid=%d "
+            "client=%s",
+            my_pid, pid, uid, gid,
+            mod->client_info.client_description);
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "lib_mod_log_peer: g_sck_get_peer_cred "
-                    "failed");
+        LOG(LOG_LEVEL_ERROR, "lib_mod_log_peer: g_sck_get_peer_cred "
+            "failed");
     }
     return 0;
 }
@@ -90,7 +95,7 @@ lib_data_in(struct trans *trans)
     struct stream *s;
     int len;
 
-    LLOGLN(10, ("lib_data_in:"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_data_in:");
     if (trans == 0)
     {
         return 1;
@@ -112,7 +117,7 @@ lib_data_in(struct trans *trans)
             in_uint32_le(s, len);
             if (len < 0 || len > 128 * 1024)
             {
-                g_writeln("lib_data_in: bad size");
+                LOG(LOG_LEVEL_ERROR, "lib_data_in: bad size");
                 return 1;
             }
             if (len > 0)
@@ -121,12 +126,12 @@ lib_data_in(struct trans *trans)
                 trans->extra_flags = 2;
                 break;
             }
-            /* fall through */
+        /* fall through */
         case 2:
             s->p = s->data;
             if (lib_mod_process_message(self, s) != 0)
             {
-                g_writeln("lib_data_in: lib_mod_process_message failed");
+                LOG(LOG_LEVEL_ERROR, "lib_data_in: lib_mod_process_message failed");
                 return 1;
             }
             init_stream(s, 0);
@@ -144,166 +149,92 @@ int
 lib_mod_connect(struct mod *mod)
 {
     int error;
-    int len;
-    int i;
-    int use_uds;
+    int socket_mode;
     struct stream *s;
     char con_port[256];
-
-    LIB_DEBUG(mod, "in lib_mod_connect");
 
     mod->server_msg(mod, "started connecting", 0);
 
     /* only support 8, 15, 16, 24, and 32 bpp connections from rdp client */
-    if (mod->bpp != 8 && mod->bpp != 15 && mod->bpp != 16 && mod->bpp != 24 && mod->bpp != 32)
+    if (mod->bpp != 8
+            && mod->bpp != 15
+            && mod->bpp != 16
+            && mod->bpp != 24
+            && mod->bpp != 32)
     {
         mod->server_msg(mod,
-                        "error - only supporting 8, 15, 16, 24, and 32 bpp rdp connections", 0);
-        LIB_DEBUG(mod, "out lib_mod_connect error");
-        return 1;
-    }
-
-    if (g_strcmp(mod->ip, "") == 0)
-    {
-        mod->server_msg(mod, "error - no ip set", 0);
-        LIB_DEBUG(mod, "out lib_mod_connect error");
+                        "error - only supporting 8, 15, 16, 24, and 32"
+                        " bpp rdp connections", 0);
         return 1;
     }
 
     make_stream(s);
     g_sprintf(con_port, "%s", mod->port);
-    use_uds = 0;
-
-    if (con_port[0] == '/')
-    {
-        use_uds = 1;
-    }
 
     error = 0;
     mod->sck_closed = 0;
-    i = 0;
 
-    if (use_uds)
+    if (con_port[0] == '/')
     {
-        mod->trans = trans_create(TRANS_MODE_UNIX, 8 * 8192, 8192);
-        if (mod->trans == 0)
-        {
-            free_stream(s);
-            return 1;
-        }
+        socket_mode = TRANS_MODE_UNIX;
+        LOG(LOG_LEVEL_INFO, "lib_mod_connect: connecting via UNIX socket");
     }
     else
     {
-        mod->trans = trans_create(TRANS_MODE_TCP, 8 * 8192, 8192);
-        if (mod->trans == 0)
+        socket_mode = TRANS_MODE_TCP;
+        LOG(LOG_LEVEL_INFO, "lib_mod_connect: connecting via TCP socket");
+        if (g_strcmp(mod->ip, "") == 0)
         {
+            mod->server_msg(mod, "error - no ip set", 0);
             free_stream(s);
             return 1;
         }
     }
 
+    mod->trans = trans_create(socket_mode, 8 * 8192, 8192);
+    if (mod->trans == 0)
+    {
+        free_stream(s);
+        return 1;
+    }
     mod->trans->si = mod->si;
     mod->trans->my_source = XRDP_SOURCE_MOD;
+    mod->trans->is_term = mod->server_is_term;
 
-    while (1)
+    /* Give the X server a bit of time to start */
+    if (trans_connect(mod->trans, mod->ip, con_port, 30 * 1000) == 0)
     {
+        LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_connect: connected to Xserver "
+                  "(Xorg or X11rdp) sck %lld",
+                  (long long) (mod->trans->sck));
+    }
+    else
+    {
+        mod->server_msg(mod, "connection problem, giving up", 0);
+        error = 1;
+    }
 
-        /* mod->server_msg(mod, "connecting...", 0); */
-
-        error = -1;
-        if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
-        {
-            LLOGLN(0, ("lib_mod_connect: connected to Xserver "
-                   "(Xorg or X11rdp) sck %lld",
-                   (long long) (mod->trans->sck)));
-            error = 0;
-        }
-
-        if (error == 0)
-        {
-            break;
-        }
-
-        if (mod->server_is_term(mod))
-        {
-            break;
-        }
-
-        i++;
-
-        if (i >= 60)
-        {
-            mod->server_msg(mod, "connection problem, giving up", 0);
-            break;
-        }
-
-        g_sleep(500);
+    if (error == 0 && socket_mode == TRANS_MODE_UNIX)
+    {
+        lib_mod_log_peer(mod);
     }
 
     if (error == 0)
     {
-        if (use_uds)
-        {
-            lib_mod_log_peer(mod);
-        }
-    }
-
-    if (error == 0)
-    {
-        /* send version message */
-        init_stream(s, 8192);
-        s_push_layer(s, iso_hdr, 4);
-        out_uint16_le(s, 103);
-        out_uint32_le(s, 301);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 1);
-        s_mark_end(s);
-        len = (int)(s->end - s->data);
-        s_pop_layer(s, iso_hdr);
-        out_uint32_le(s, len);
-        lib_send_copy(mod, s);
+        error = send_server_version_message(mod, s);
     }
 
     if (error == 0)
     {
         /* send screen size message */
-        init_stream(s, 8192);
-        s_push_layer(s, iso_hdr, 4);
-        out_uint16_le(s, 103);
-        out_uint32_le(s, 300);
-        out_uint32_le(s, mod->width);
-        out_uint32_le(s, mod->height);
-        out_uint32_le(s, mod->bpp);
-        out_uint32_le(s, 0);
-        s_mark_end(s);
-        len = (int)(s->end - s->data);
-        s_pop_layer(s, iso_hdr);
-        out_uint32_le(s, len);
-        lib_send_copy(mod, s);
+        error = send_server_monitor_resize(
+                    mod, s, mod->width, mod->height, mod->bpp);
     }
 
     if (error == 0)
     {
-        /* send invalidate message */
-        init_stream(s, 8192);
-        s_push_layer(s, iso_hdr, 4);
-        out_uint16_le(s, 103);
-        out_uint32_le(s, 200);
-        /* x and y */
-        i = 0;
-        out_uint32_le(s, i);
-        /* width and height */
-        i = ((mod->width & 0xffff) << 16) | mod->height;
-        out_uint32_le(s, i);
-        out_uint32_le(s, 0);
-        out_uint32_le(s, 0);
-        s_mark_end(s);
-        len = (int)(s->end - s->data);
-        s_pop_layer(s, iso_hdr);
-        out_uint32_le(s, len);
-        lib_send_copy(mod, s);
+        error = send_server_monitor_full_invalidate(
+                    mod, s, mod->width, mod->height);
     }
 
     free_stream(s);
@@ -313,7 +244,6 @@ lib_mod_connect(struct mod *mod)
         trans_delete(mod->trans);
         mod->trans = 0;
         mod->server_msg(mod, "some problem", 0);
-        LIB_DEBUG(mod, "out lib_mod_connect error");
         return 1;
     }
     else
@@ -326,7 +256,7 @@ lib_mod_connect(struct mod *mod)
         mod->trans->extra_flags = 1;
     }
 
-    LIB_DEBUG(mod, "out lib_mod_connect");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_connect");
     return 0;
 }
 
@@ -341,7 +271,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
     int key;
     int rv;
 
-    LIB_DEBUG(mod, "in lib_mod_event");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_event");
     make_stream(s);
 
     if ((msg >= 15) && (msg <= 16)) /* key events */
@@ -354,7 +284,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
             {
                 if (mod->shift_state)
                 {
-                    g_writeln("special");
+                    LOG_DEVEL(LOG_LEVEL_TRACE, "special");
                     /* fix for mstsc sending left control down with altgr */
                     /* control down / up
                     msg param1 param2 param3 param4
@@ -397,7 +327,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
     out_uint32_le(s, len);
     rv = lib_send_copy(mod, s);
     free_stream(s);
-    LIB_DEBUG(mod, "out lib_mod_event");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_event");
     return rv;
 }
 
@@ -782,7 +712,7 @@ process_server_window_delete(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
-process_server_window_show(struct mod* mod, struct stream* s)
+process_server_window_show(struct mod *mod, struct stream *s)
 {
     int window_id;
     int rv;
@@ -1097,7 +1027,7 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
     {
         amod->screen_shmem_id = shmem_id;
         amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-        if (amod->screen_shmem_pixels == (void*)-1)
+        if (amod->screen_shmem_pixels == (void *) -1)
         {
             /* failed */
             amod->screen_shmem_id = 0;
@@ -1114,7 +1044,7 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
         amod->screen_shmem_id = shmem_id;
         g_shmdt(amod->screen_shmem_pixels);
         amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-        if (amod->screen_shmem_pixels == (void*)-1)
+        if (amod->screen_shmem_pixels == (void *) -1)
         {
             /* failed */
             amod->screen_shmem_id = 0;
@@ -1244,43 +1174,58 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     bmpdata = 0;
     if (flags == 0) /* screen */
     {
-        if (amod->screen_shmem_id_mapped == 0)
+        /* Do we need to map (or remap) the memory
+         * area shared with the X server ? */
+        if (amod->screen_shmem_id_mapped == 0 ||
+                amod->screen_shmem_id != shmem_id)
         {
-            amod->screen_shmem_id = shmem_id;
-            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-            if (amod->screen_shmem_pixels == (void*)-1)
+            if (amod->screen_shmem_id_mapped != 0)
+            {
+                g_shmdt(amod->screen_shmem_pixels);
+            }
+            amod->screen_shmem_pixels = (char *) g_shmat(shmem_id);
+            if (amod->screen_shmem_pixels == (void *) -1)
             {
                 /* failed */
+                if (amod->screen_shmem_id_mapped == 0)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Can't attach to shared memory id %d [%s]",
+                        shmem_id, g_get_strerror());
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Can't attach to shared memory id %d from id %d [%s]",
+                        shmem_id, amod->screen_shmem_id, g_get_strerror());
+                }
                 amod->screen_shmem_id = 0;
                 amod->screen_shmem_pixels = 0;
                 amod->screen_shmem_id_mapped = 0;
             }
             else
             {
+                amod->screen_shmem_id = shmem_id;
                 amod->screen_shmem_id_mapped = 1;
             }
         }
-        else if (amod->screen_shmem_id != shmem_id)
-        {
-            amod->screen_shmem_id = shmem_id;
-            g_shmdt(amod->screen_shmem_pixels);
-            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-            if (amod->screen_shmem_pixels == (void*)-1)
-            {
-                /* failed */
-                amod->screen_shmem_id = 0;
-                amod->screen_shmem_pixels = 0;
-                amod->screen_shmem_id_mapped = 0;
-            }
-        }
+
         if (amod->screen_shmem_pixels != 0)
         {
             bmpdata = amod->screen_shmem_pixels + shmem_offset;
         }
     }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "process_server_paint_rect_shmem_ex:"
+                  " flags=%d frame_id=%d, shmem_id=%d, shmem_offset=%d,"
+                  " width=%d, height=%d",
+                  flags, frame_id, shmem_id, shmem_offset,
+                  width, height);
+    }
+
     if (bmpdata != 0)
     {
-
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
                                       num_crects, lcrects,
                                       bmpdata, width, height,
@@ -1291,7 +1236,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
         rv = 1;
     }
 
-    //g_writeln("frame_id %d", frame_id);
+    //LOG_DEVEL(LOG_LEVEL_TRACE, "frame_id %d", frame_id);
     //send_paint_rect_ex_ack(amod, flags, frame_id);
 
     g_free(lcrects);
@@ -1303,11 +1248,135 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
+send_server_version_message(struct mod *mod, struct stream *s)
+{
+    /* send version message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 301);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 1);
+    s_mark_end(s);
+    int len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    int rv = lib_send_copy(mod, s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+send_server_monitor_resize(
+    struct mod *mod, struct stream *s, int width, int height, int bpp)
+{
+    /* send screen size message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 300);
+    out_uint32_le(s, width);
+    out_uint32_le(s, height);
+    /*
+        TODO: The bpp here is only necessary for initial creation. We should
+        modify XUP to require this only on server initialization, but not on
+        resize. Microsoft's RDP protocol does not support changing
+        the bpp on resize.
+    */
+    out_uint32_le(s, bpp);
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    int len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    int rv = lib_send_copy(mod, s);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_resize:"
+              " sent resize message with following properties to"
+              " xorgxrdp backend width=%d, height=%d, bpp=%d, return value=%d",
+              width, height, bpp, rv);
+    return rv;
+}
+
+static int
+send_server_monitor_full_invalidate(
+    struct mod *mod, struct stream *s, int width, int height)
+{
+    /* send invalidate message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 200);
+    /* x and y */
+    int i = 0;
+    out_uint32_le(s, i);
+    /* width and height */
+    i = ((width & 0xffff) << 16) | height;
+    out_uint32_le(s, i);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    int len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    int rv = lib_send_copy(mod, s);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_full_invalidate:"
+              " sent invalidate message with following"
+              " properties to xorgxrdp backend"
+              " width=%d, height=%d, return value=%d",
+              width, height, rv);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_send_server_version_message(struct mod *mod)
+{
+    /* send server version message */
+    struct stream *s;
+    make_stream(s);
+    int rv = send_server_version_message(mod, s);
+    free_stream(s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_send_server_monitor_resize(struct mod *mod, int width, int height)
+{
+    /* send screen size message */
+    struct stream *s;
+    make_stream(s);
+    int rv = send_server_monitor_resize(mod, s, width, height, mod->bpp);
+    free_stream(s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_send_server_monitor_full_invalidate(struct mod *mod, int width, int height)
+{
+    /* send invalidate message */
+    struct stream *s;
+    make_stream(s);
+    int rv = send_server_monitor_full_invalidate(mod, s, width, height);
+    free_stream(s);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
 lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
 
-    LLOGLN(10, ("lib_mod_process_orders: type %d", type));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "lib_mod_process_orders: type %d", type);
     rv = 0;
     switch (type)
     {
@@ -1402,7 +1471,8 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             rv = process_server_paint_rect_shmem_ex(mod, s);
             break;
         default:
-            g_writeln("lib_mod_process_orders: unknown order type %d", type);
+            LOG_DEVEL(LOG_LEVEL_WARNING,
+                      "lib_mod_process_orders: unknown order type %d", type);
             rv = 0;
             break;
     }
@@ -1417,7 +1487,7 @@ lib_send_client_info(struct mod *mod)
     struct stream *s;
     int len;
 
-    g_writeln("lib_send_client_info:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_send_client_info:");
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
@@ -1445,14 +1515,14 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int type;
     char *phold;
 
-    LLOGLN(10, ("lib_mod_process_message:"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message:");
     rv = 0;
     if (rv == 0)
     {
         in_uint16_le(s, type);
         in_uint16_le(s, num_orders);
         in_uint32_le(s, len);
-        LLOGLN(10, ("lib_mod_process_message: type %d", type));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: type %d", type);
 
         if (type == 1) /* original order list */
         {
@@ -1469,7 +1539,8 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
         }
         else if (type == 2) /* caps */
         {
-            g_writeln("lib_mod_process_message: type 2 len %d", len);
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "lib_mod_process_message: type 2 len %d", len);
             for (index = 0; index < num_orders; index++)
             {
                 phold = s->p;
@@ -1479,7 +1550,9 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                 switch (type)
                 {
                     default:
-                        g_writeln("lib_mod_process_message: unknown cap type %d len %d",
+                        LOG_DEVEL(LOG_LEVEL_TRACE,
+                                  "lib_mod_process_message: unknown"
+                                  " cap type %d len %d",
                                   type, len);
                         break;
                 }
@@ -1508,7 +1581,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
         }
         else
         {
-            g_writeln("unknown type %d", type);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "unknown type %d", type);
         }
     }
 
@@ -1520,7 +1593,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
 int
 lib_mod_signal(struct mod *mod)
 {
-    g_writeln("lib_mod_signal: not used");
+    // no-op
     return 0;
 }
 
@@ -1544,11 +1617,11 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {
-        g_strncpy(mod->username, value, INFO_CLIENT_MAX_CB_LEN-1);
+        g_strncpy(mod->username, value, INFO_CLIENT_MAX_CB_LEN - 1);
     }
     else if (g_strcasecmp(name, "password") == 0)
     {
-        g_strncpy(mod->password, value, INFO_CLIENT_MAX_CB_LEN-1);
+        g_strncpy(mod->password, value, INFO_CLIENT_MAX_CB_LEN - 1);
     }
     else if (g_strcasecmp(name, "ip") == 0)
     {
@@ -1607,7 +1680,8 @@ lib_mod_check_wait_objs(struct mod *mod)
 int
 lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 {
-    LLOGLN(10, ("lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id));
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id);
     send_paint_rect_ex_ack(amod, flags, frame_id);
     return 0;
 }
@@ -1618,8 +1692,9 @@ int
 lib_mod_suppress_output(struct mod *amod, int suppress,
                         int left, int top, int right, int bottom)
 {
-    LLOGLN(10, ("lib_mod_suppress_output: suppress 0x%8.8x left %d top %d "
-           "right %d bottom %d", suppress, left, top, right, bottom));
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "lib_mod_suppress_output: suppress 0x%8.8x left %d top %d "
+              "right %d bottom %d", suppress, left, top, right, bottom);
     send_suppress_output(amod, suppress, left, top, right, bottom);
     return 0;
 }
@@ -1644,6 +1719,10 @@ mod_init(void)
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
     mod->mod_frame_ack = lib_mod_frame_ack;
     mod->mod_suppress_output = lib_mod_suppress_output;
+    mod->mod_server_monitor_resize = lib_send_server_monitor_resize;
+    mod->mod_server_monitor_full_invalidate
+        = lib_send_server_monitor_full_invalidate;
+    mod->mod_server_version_message = lib_send_server_version_message;
     return (tintptr) mod;
 }
 

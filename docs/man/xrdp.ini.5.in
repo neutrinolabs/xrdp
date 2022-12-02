@@ -118,19 +118,19 @@ Multiple address:port instances must be separated by spaces or commas. Check the
 Specifying interfaces requires said interfaces to be UP before xrdp starts.
 
 .TP
-\fBrequire_credentials\fP=\fI[true|false]\fP
+\fBenable_token_login\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will scan the user name provided by the
 client for the ASCII field separator character (0x1F). It will then copy over what is after the
 separator as the password supplied by the user and treats it as autologon. If not specified,
 defaults to \fBfalse\fP.
 
 .TP
-\domain_user_separator\fP=\separator\fP
+\fBdomain_user_separator\fP=\fBseparator\fP
 If specified the domain name supplied by the client is appended to the username separated
 by \fBseparator\fP.
 
 .TP
-\enable_token_login\fP=\fI[true|false]\fP
+\fBrequire_credentials\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
 password initial connection phase. In other words, xrdp doesn't allow clients to show login
 screen if set to true. If not specified, defaults to \fBfalse\fP.
@@ -212,6 +212,18 @@ These options override the colors used internally by \fBxrdp\fP(8) to draw the l
 Colors are defined using a hexadecimal (hex) notation for the combination of Red, Green, and Blue color values (RGB).
 The lowest value that can be given to one of the light sources is 0 (hex 00).
 The highest value is 255 (hex FF).
+.TP
+\fBfv1_select\fP=\fI130:sans-18.fv1,0:sans-10.fv1\fP
+Selects a default fv1 font.
+This parameter is a comma-separated list of DPI:name pairs.  The list
+is scanned from left-to-right. The font used is the first font whose DPI
+value is less-than-or-equal to the vertical DPI of the monitor used for
+the login screen.
+.TP
+\fBdefault_dpi\fP=\fI96\fP
+Default DPI used for a monitor if the client does not send physical
+size information.
+
 
 .SH "LOGGING"
 The following parameters can be used in the \fB[Logging]\fR section:
@@ -232,7 +244,7 @@ This option can have one of the following values:
 
 \fBINFO\fR or \fB3\fR \- Logs errors, warnings and informational messages
 
-\fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
+\fBDEBUG\fR or \fB4\fR \- Log everything. If \fBxrdp-sesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
 
 .TP
 \fBEnableSyslog\fR=\fI[true|false]\fR
@@ -338,6 +350,16 @@ values supported for a particular release of \fBxrdp\fR(8) are documented in
 Specifies the session type. The default, \fI0\fR, is Xvnc, \fI10\fR is
 X11rdp, and \fI20\fR is Xorg with xorgxrdp modules.
 
+.TP
+\fBchansrvport\fR=\fBDISPLAY(\fR\fIn\fR\fB)\fR|\fI/path/to/domain-socket\fR
+Asks xrdp to connect to a manually started \fBxrdp-chansrv\fR instance.
+This can be useful if you wish to use to use xrdp to connect to a VNC session
+which has been started other than by \fBxrdp-sesman\fR, as you can then make
+use of \fBxrdp\-chansrv\fR facilities in the VNC session.
+
+The first form of this setting is recommended, replacing \fIn\fR with the
+X11 display number of the session.
+
 .SH "EXAMPLES"
 This is an example \fBxrdp.ini\fR:
 
@@ -369,8 +391,11 @@ password={base64}cGFzc3dvcmQhCg==
 
 .SH "SEE ALSO"
 .BR xrdp (8),
-.BR sesman (8),
-.BR sesrun (8),
+.BR xrdp\-chansrv (8),
+.BR xrdp\-sesman (8),
+.BR xrdp\-sesrun (8),
 .BR sesman.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+For more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

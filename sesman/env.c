@@ -34,9 +34,7 @@
 #include "list.h"
 #include "sesman.h"
 #include "ssl_calls.h"
-
-extern unsigned char g_fixedkey[8]; /* in sesman.c */
-extern struct config_sesman *g_cfg;  /* in sesman.c */
+#include "string_calls.h"
 
 /******************************************************************************/
 int
@@ -54,6 +52,7 @@ env_check_password_file(const char *filename, const char *passwd)
     /* create password hash from password */
     passwd_bytes = g_strlen(passwd);
     sha1 = ssl_sha1_info_create();
+    ssl_sha1_clear(sha1);
     ssl_sha1_transform(sha1, "xrdp_vnc", 8);
     ssl_sha1_transform(sha1, passwd, passwd_bytes);
     ssl_sha1_transform(sha1, passwd, passwd_bytes);
@@ -113,12 +112,10 @@ env_set_user(const char *username, char **passwd_file, int display,
     if (error == 0)
     {
         g_rm_temp_dir();
+        /*
+         * Set the primary group. Note that secondary groups should already
+         * have been set */
         error = g_setgid(pw_gid);
-
-        if (error == 0)
-        {
-            error = g_initgroups(username, pw_gid);
-        }
 
         if (error == 0)
         {
@@ -142,7 +139,8 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_sprintf(text, ":%d.0", display);
             g_setenv("DISPLAY", text, 1);
             g_setenv("XRDP_SESSION", "1", 1);
-            /* XRDP_SOCKET_PATH should be set even here, chansrv uses this */
+            /* XRDP_SOCKET_PATH should be set even here. It's used by
+             * xorgxrdp and the pulseaudio plugin */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
             /* pulse sink socket */
             g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_OUT_BASE_STR, display);

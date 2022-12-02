@@ -64,7 +64,8 @@ typedef int bool_t;
 
 #if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 #if defined(__sparc__) || \
-    defined(__hppa__) || \
+    defined(__s390__) || defined (__s390x__) || \
+    defined(__hppa__) || defined (__m68k__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
     (defined(__ppc__) && defined(__BIG_ENDIAN__))
 #define B_ENDIAN
@@ -77,14 +78,18 @@ typedef int bool_t;
 /* check if we need to align data */
 #if !(defined(NEED_ALIGN) || defined(NO_NEED_ALIGN))
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
-    defined(__AIX__) || defined(__mips__) || \
-    defined(__ia64__) || defined(__arm__) || \
+    defined(__AIX__) || defined(__m68k__) || defined(__mips__) || \
+    defined(__ia64__) || defined(__arm__) || defined(__sh__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
-    (defined(__ppc__) && defined(__BIG_ENDIAN__))
+    (defined(__ppc__) && defined(__BIG_ENDIAN__)) || \
+    defined(__loongarch__)
 #define NEED_ALIGN
 #elif defined(__x86__) || defined(__x86_64__) || \
       defined(__AMD64__) || defined(_M_IX86) || defined (_M_AMD64) || \
-      defined(__i386__) || defined(__aarch64__)
+      defined(__i386__) || defined(__aarch64__) || \
+      defined(__PPC__) || defined(__LITTLE_ENDIAN__) || \
+      defined(__s390__) || defined (__s390x__) || \
+      defined(__riscv)
 #define NO_NEED_ALIGN
 #else
 #warning unknown arch
@@ -141,7 +146,7 @@ typedef int tsock;
 /* format string verification */
 #if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
 #define printflike(arg_format, arg_first_check) \
- __attribute__((__format__(__printf__, arg_format, arg_first_check)))
+    __attribute__((__format__(__printf__, arg_format, arg_first_check)))
 #else
 #define printflike(arg_format, arg_first_check)
 #endif
@@ -150,8 +155,8 @@ typedef int tsock;
 #ifdef __cplusplus
 extern "C" {
 #endif
-   tintptr mod_init(void);
-   int mod_exit(tintptr);
+tintptr mod_init(void);
+int mod_exit(tintptr);
 #ifdef __cplusplus
 }
 #endif

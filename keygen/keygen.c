@@ -30,6 +30,7 @@
 #endif
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "ssl_calls.h"
 #include "arch.h"
 #include "list.h"

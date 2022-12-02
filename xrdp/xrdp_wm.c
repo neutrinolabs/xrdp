@@ -27,22 +27,11 @@
 #include "xrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
+#include "string_calls.h"
 
 #ifdef XRDP_RFXCODEC
 #include "rfxcodec_encode.h"
 #endif
-
-#define LLOG_LEVEL 1
-#define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
-    { \
-        g_write("xrdp:xrdp_wm [%10.10u]: ", g_time3()); \
-        g_writeln _args ; \
-    } \
-  } \
-  while (0)
 
 #define MAX_RDP_TILES (128 * 128)       /* Per Microsoft max RDP display size  */
 #define MAX_RDP_RECTS ((1 << 16) - 1)   /* Per RDPRFX 2.2.2.3.3 TS_RFX_REGION */
@@ -61,27 +50,26 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     self = (struct xrdp_wm *)g_malloc(sizeof(struct xrdp_wm), 1);
     self->client_info = client_info;
-    self->screen = xrdp_bitmap_create(client_info->width,
-                                      client_info->height,
+    self->screen = xrdp_bitmap_create(client_info->display_sizes.session_width,
+                                      client_info->display_sizes.session_height,
                                       client_info->bpp,
                                       WND_TYPE_SCREEN, self);
     self->screen->wm = self;
     self->pro_layer = owner;
     self->session = owner->session;
     pid = g_getpid();
-    g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_mode_event_%8.8x",
+    g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_state_event_%8.8x",
                pid, owner->session_id);
-    log_message(LOG_LEVEL_DEBUG, "%s", event_name);
-    self->login_mode_event = g_create_wait_obj(event_name);
+    LOG(LOG_LEVEL_DEBUG, "%s", event_name);
+    self->login_state_event = g_create_wait_obj(event_name);
     self->painter = xrdp_painter_create(self, self->session);
     self->cache = xrdp_cache_create(self, self->session, self->client_info);
     self->log = list_create();
     self->log->auto_free = 1;
     self->mm = xrdp_mm_create(self);
-    self->default_font = xrdp_font_create(self);
     /* this will use built in keymap or load from file */
     get_keymaps(self->session->client_info->keylayout, &(self->keymap));
-    xrdp_wm_set_login_mode(self, 0);
+    xrdp_wm_set_login_state(self, WMLS_RESET);
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
 
@@ -100,7 +88,7 @@ xrdp_wm_create(struct xrdp_process *owner,
                                                     RFX_FORMAT_BGRA, 0);
         if (!self->codec_handle)
         {
-            LLOGLN(0, ("xrdp_painter_create: rfxcodec_encode_create failed"));
+            LOG(LOG_LEVEL_ERROR, "xrdp_painter_create: rfxcodec_encode_create failed");
             self->codec_id = 0;
         }
         else
@@ -136,10 +124,12 @@ xrdp_wm_delete(struct xrdp_wm *self)
     list_delete(self->log);
     /* free default font */
     xrdp_font_delete(self->default_font);
-    g_delete_wait_obj(self->login_mode_event);
+    g_delete_wait_obj(self->login_state_event);
 
     if (self->xrdp_config)
+    {
         g_free(self->xrdp_config);
+    }
 
     /* free self */
     g_free(self);
@@ -270,6 +260,7 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
                      char *mask, int *x, int *y)
 {
     int fd;
+    int len;
     int bpp;
     int w;
     int h;
@@ -281,8 +272,8 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     if (!g_file_exist(file_name))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error pointer file [%s] does not exist",
-                  file_name);
+        LOG(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: error pointer file [%s] does not exist",
+            file_name);
         return 1;
     }
 
@@ -292,14 +283,22 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     if (fd < 0)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error loading pointer from file [%s]",
-                  file_name);
+        LOG(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: error loading pointer from file [%s]",
+            file_name);
         xstream_free(fs);
         return 1;
     }
 
-    g_file_read(fd, fs->data, 8192);
+    len = g_file_read(fd, fs->data, 8192);
     g_file_close(fd);
+    if (len <= 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_wm_load_pointer: read error from file [%s]",
+            file_name);
+        xstream_free(fs);
+        return 1;
+    }
+    fs->end = fs->data + len;
     in_uint8s(fs, 6);
     in_uint8(fs, w);
     in_uint8(fs, h);
@@ -469,7 +468,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     if (g_strcasecmp(val, "black") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        self->black = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+                        self->black = HCOLOR(self->screen->bpp, xrdp_wm_htoi(val));
                     }
                     else if (g_strcasecmp(val, "grey") == 0)
                     {
@@ -540,7 +539,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
+        LOG(LOG_LEVEL_WARNING, "xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", self->session->xrdp_ini);
     }
 
     if (self->screen->bpp == 8)
@@ -574,13 +573,13 @@ xrdp_wm_load_static_pointers(struct xrdp_wm *self)
     struct xrdp_pointer_item pointer_item;
     char file_path[256];
 
-    DEBUG(("sending cursor"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "sending cursor");
     g_snprintf(file_path, 255, "%s/cursor1.cur", XRDP_SHARE_PATH);
     g_memset(&pointer_item, 0, sizeof(pointer_item));
     xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                          pointer_item.mask, &pointer_item.x, &pointer_item.y);
     xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
-    DEBUG(("sending cursor"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "sending cursor");
     g_snprintf(file_path, 255, "%s/cursor0.cur", XRDP_SHARE_PATH);
     g_memset(&pointer_item, 0, sizeof(pointer_item));
     xrdp_wm_load_pointer(self, file_path, pointer_item.data,
@@ -603,11 +602,23 @@ xrdp_wm_init(struct xrdp_wm *self)
     char default_section_name[256];
     char section_name[256];
     char autorun_name[256];
+    int dpi;
 
-    g_writeln("in xrdp_wm_init: ");
+    LOG(LOG_LEVEL_DEBUG, "in xrdp_wm_init: ");
 
     load_xrdp_config(self->xrdp_config, self->session->xrdp_ini,
                      self->screen->bpp);
+
+    /* Remove a font loaded on the previous config */
+    xrdp_font_delete(self->default_font);
+    self->painter->font = NULL; /* May be set to the default_font */
+
+    /* Load the font */
+    dpi = xrdp_login_wnd_get_monitor_dpi(self);
+    self->default_font = xrdp_font_create(self, dpi);
+
+    /* Scale the login screen values */
+    xrdp_login_wnd_scale_config_values(self);
 
     /* global channels allow */
     names = list_create();
@@ -617,56 +628,35 @@ xrdp_wm_init(struct xrdp_wm *self)
     if (file_by_name_read_section(self->session->xrdp_ini,
                                   "Channels", names, values) == 0)
     {
-        int error;
-        int ii;
         int chan_id;
-        int chan_flags;
-        int disabled;
-        char chan_name[16];
+        int chan_count = libxrdp_get_channel_count(self->session);
+        const char *disabled_str = NULL;
 
-        ii = 0;
-        error = libxrdp_query_channel(self->session, ii, chan_name,
-                                      &chan_flags);
-        while (error == 0)
+        for (chan_id = 0 ; chan_id < chan_count ; ++chan_id)
         {
-            r = NULL;
-            for (index = 0; index < names->count; index++)
+            char chan_name[16];
+            if (libxrdp_query_channel(self->session, chan_id, chan_name,
+                                      NULL) == 0)
             {
-                q = (char *) list_get_item(names, index);
-                if (g_strcasecmp(q, chan_name) == 0)
+                int disabled = 1; /* Channels disabled if not found */
+
+                for (index = 0; index < names->count; index++)
                 {
-                    r = (char *) list_get_item(values, index);
-                    break;
+                    q = (char *) list_get_item(names, index);
+                    if (g_strcasecmp(q, chan_name) == 0)
+                    {
+                        r = (const char *) list_get_item(values, index);
+                        disabled = !g_text2bool(r);
+                        break;
+                    }
                 }
-            }
-            if (r == NULL)
-            {
-                /* not found, disable the channel */
-                chan_id = libxrdp_get_channel_id(self->session, chan_name);
-                libxrdp_disable_channel(self->session, chan_id, 1);
-                g_writeln("xrdp_wm_init: channel %s channel id %d is "
-                          "disabled", chan_name, chan_id);
-            }
-            else
-            {
-                /* found */
-                chan_id = libxrdp_get_channel_id(self->session, q);
-                disabled = !g_text2bool(r);
+                disabled_str = (disabled) ? "disabled" : "enabled";
+                LOG(LOG_LEVEL_DEBUG, "xrdp_wm_init: "
+                    "channel %s channel id %d is %s",
+                    chan_name, chan_id, disabled_str);
+
                 libxrdp_disable_channel(self->session, chan_id, disabled);
-                if (disabled)
-                {
-                    g_writeln("xrdp_wm_init: channel %s channel id %d is "
-                              "disabled", chan_name, chan_id);
-                }
-                else
-                {
-                    g_writeln("xrdp_wm_init: channel %s channel id %d is "
-                              "allowed", chan_name, chan_id);
-                }
             }
-            ii++;
-            error = libxrdp_query_channel(self->session, ii, chan_name,
-                                          &chan_flags);
         }
     }
     list_delete(names);
@@ -698,9 +688,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 q = (char *)list_get_item(names, index);
                 if ((g_strncasecmp("globals", q, 8) != 0) &&
-                    (g_strncasecmp("Logging", q, 8) != 0) &&
-                    (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
-                    (g_strncasecmp("channels", q, 9) != 0))
+                        (g_strncasecmp("Logging", q, 8) != 0) &&
+                        (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
+                        (g_strncasecmp("channels", q, 9) != 0))
                 {
                     g_strncpy(default_section_name, q, 255);
                     break;
@@ -736,14 +726,13 @@ xrdp_wm_init(struct xrdp_wm *self)
              * in xrdp.ini, fallback to default_section_name */
             if (file_read_section(fd, section_name, names, values) != 0)
             {
-                log_message(LOG_LEVEL_INFO,
-                            "Module \"%s\" specified by %s from %s port %s "
-                            "is not configured. Using \"%s\" instead.",
-                            section_name,
-                            self->session->client_info->username,
-                            self->session->client_info->client_addr,
-                            self->session->client_info->client_port,
-                            default_section_name);
+                LOG(LOG_LEVEL_INFO,
+                    "Module \"%s\" specified by %s from %s "
+                    "is not configured. Using \"%s\" instead.",
+                    section_name,
+                    self->session->client_info->username,
+                    self->session->client_info->client_description,
+                    default_section_name);
                 list_clear(names);
                 list_clear(values);
 
@@ -758,7 +747,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                     q = (char *)list_get_item(names, index);
                     r = (char *)list_get_item(values, index);
 
-                    if (g_strncmp("password", q, 255) == 0)
+                    if (g_strncasecmp("password", q, 255) == 0)
                     {
                         /* if the password has been asked for by the module, use what the
                            client says.
@@ -769,7 +758,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->password;
                         }
                     }
-                    else if (g_strncmp("username", q, 255) == 0)
+                    else if (g_strncasecmp("username", q, 255) == 0)
                     {
                         /* if the username has been asked for by the module, use what the
                            client says.
@@ -780,7 +769,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->username;
                         }
                     }
-                    else if (g_strncmp("ip", q, 255) == 0)
+                    else if (g_strncasecmp("ip", q, 255) == 0)
                     {
                         /* if the ip has been asked for by the module, use what the
                          client says (target ip should be in 'domain' field, when starting with "_")
@@ -796,7 +785,7 @@ xrdp_wm_init(struct xrdp_wm *self)
 
                         }
                     }
-                    else if (g_strncmp("port", q, 255) == 0)
+                    else if (g_strncasecmp("port", q, 255) == 0)
                     {
                         if (g_strncmp("ask3389", r, 7) == 0)
                         {
@@ -808,13 +797,16 @@ xrdp_wm_init(struct xrdp_wm *self)
                     list_add_item(self->mm->login_values, (long)g_strdup(r));
                 }
 
-                xrdp_wm_set_login_mode(self, 2);
+                /*
+                 * Skip the login box and go straight to the connection phase
+                 */
+                xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
             }
             else
             {
                 /* Hopefully, we never reach here. */
-                log_message(LOG_LEVEL_DEBUG,
-                            "Control should never reach %s:%d", __FILE__, __LINE__);
+                LOG(LOG_LEVEL_WARNING,
+                    "Control should never reach %s:%d", __FILE__, __LINE__);
             }
 
             list_delete(names);
@@ -823,22 +815,22 @@ xrdp_wm_init(struct xrdp_wm *self)
         }
         else
         {
-            log_message(LOG_LEVEL_ERROR,
-                        "xrdp_wm_init: Could not read xrdp.ini file %s",
-                        self->session->xrdp_ini);
+            LOG(LOG_LEVEL_WARNING,
+                "xrdp_wm_init: Could not read xrdp.ini file %s",
+                self->session->xrdp_ini);
         }
     }
     else
     {
-        g_writeln("   xrdp_wm_init: no autologin / auto run detected, draw login window");
+        LOG(LOG_LEVEL_DEBUG, "   xrdp_wm_init: no autologin / auto run detected, draw login window");
         xrdp_login_wnd_create(self);
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
         xrdp_wm_set_focused(self, self->login_window);
-        xrdp_wm_set_login_mode(self, 1);
+        xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
     }
 
-    g_writeln("out xrdp_wm_init: ");
+    LOG(LOG_LEVEL_DEBUG, "out xrdp_wm_init: ");
     return 0;
 }
 
@@ -1277,6 +1269,29 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
 
 /*****************************************************************************/
 int
+xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
+{
+    LOG(LOG_LEVEL_DEBUG, "mouse touch event gesture %d param %d", gesture, param);
+
+    switch (gesture)
+    {
+        case TOUCH_TWO_FINGERS_UP:
+        case TOUCH_TWO_FINGERS_DOWN:
+            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_VSCROLL,
+                                     self->mouse_x, self->mouse_y, param, 0);
+            break;
+        case TOUCH_TWO_FINGERS_RIGHT:
+        case TOUCH_TWO_FINGERS_LEFT:
+            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_HSCROLL,
+                                     self->mouse_x, self->mouse_y, param, 0);
+            break;
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int
 xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 {
     struct xrdp_bitmap *control;
@@ -1569,7 +1584,8 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
 
     // workaround odd shift behavior
     // see https://github.com/neutrinolabs/xrdp/issues/397
-    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT)) {
+    if (scan_code == 42 && device_flags == (KBD_FLAG_UP | KBD_FLAG_EXT))
+    {
         return 0;
     }
 
@@ -1773,7 +1789,7 @@ static int
 xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
                             int x, int y)
 {
-    DEBUG(("mouse event flags %4.4x x %d y %d", device_flags, x, y));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "mouse event flags %4.4x x %d y %d", device_flags, x, y);
 
     if (device_flags & PTRFLAGS_MOVE)
     {
@@ -1819,13 +1835,41 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
     /* vertical mouse wheel */
     if (device_flags & PTRFLAGS_WHEEL)
     {
+        int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+            /**
+             * [MS-RDPBCGR] 2.2.8.1.1.3.1.1.3 Mouse Event (TS_POINTER_EVENT)
+             * In negative scrolling, rotation distance is negative and the delta
+             * is represented by the lowest byte.
+             * Examples:
+             * device_flags = 0x020a, positive vertical scrolling, distance 10
+             * device_flags = 0x03f6, negative vertical scrolling, distance -10
+             *
+             * The negative number is represented by complement.
+             */
+            delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
+            {
+                // Use nature scrolling, up direction is negative.
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_UP, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+            }
         }
         else
         {
-            xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+            delta = device_flags & WheelRotationMask;
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
+            {
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_DOWN, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+            }
         }
     }
 
@@ -1837,13 +1881,41 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
      */
     if (device_flags & PTRFLAGS_HWHEEL)
     {
+        int delta = 0;
         if (device_flags & PTRFLAGS_WHEEL_NEGATIVE)
         {
-            xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+            /**
+             * [MS-RDPBCGR] 2.2.8.1.1.3.1.1.3 Mouse Event (TS_POINTER_EVENT)
+             * In negative scrolling, rotation distance is negative and the delta
+             * is represented by the lowest byte.
+             * Examples:
+             * device_flags = 0x040a, positive horizontal scrolling, distance 10
+             * device_flags = 0x05f6, negative horizontal scrolling, distance -10
+             *
+             * The negative number is represented by complement.
+             */
+            delta = (device_flags & WheelRotationMask) | ~WheelRotationMask;
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
+            {
+                // Use nature scrolling, right direction is negative.
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_RIGHT, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 6, 0);
+            }
         }
         else
         {
-            xrdp_wm_mouse_click(self, 0, 0, 7, 0);
+            delta = device_flags & WheelRotationMask;
+            if (delta != 0 && XRDP_MM_IMPLEMENTS_TOUCH(self->mm))
+            {
+                xrdp_wm_mouse_touch(self, TOUCH_TWO_FINGERS_LEFT, delta);
+            }
+            else
+            {
+                xrdp_wm_mouse_click(self, 0, 0, 7, 0);
+            }
         }
     }
 
@@ -1852,7 +1924,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 
 /*****************************************************************************/
 static int
-xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
+xrdp_wm_process_input_mousex(struct xrdp_wm *self, int device_flags,
                              int x, int y)
 {
     if (device_flags & PTRXFLAGS_DOWN)
@@ -1895,7 +1967,7 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 
     if (self->mm->mod != 0)
     {
-        if (self->mm->usechansrv)
+        if (self->mm->use_chansrv)
         {
             rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
                                               param3, param4);
@@ -1968,7 +2040,7 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
             rv = xrdp_mm_check_chan(wm->mm);
             break;
         case 0x5557:
-            //g_writeln("callback: frame ack %d", param1);
+            LOG(LOG_LEVEL_TRACE, "callback: frame ack %p", (void *) param1);
             xrdp_mm_frame_ack(wm->mm, param1);
             break;
         case 0x5558:
@@ -1987,45 +2059,61 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
 /* returns error */
 /* this gets called when there is nothing on any socket */
 static int
-xrdp_wm_login_mode_changed(struct xrdp_wm *self)
+xrdp_wm_login_state_changed(struct xrdp_wm *self)
 {
     if (self == 0)
     {
         return 0;
     }
 
-    g_writeln("xrdp_wm_login_mode_changed: login_mode is %d", self->login_mode);
-
-    if (self->login_mode == 0)
+    LOG(LOG_LEVEL_DEBUG, "xrdp_wm_login_mode_changed: login_mode is %d", self->login_state);
+    if (self->login_state == WMLS_RESET)
     {
         /* this is the initial state of the login window */
-        xrdp_wm_set_login_mode(self, 1); /* put the wm in login mode */
+        xrdp_wm_set_login_state(self, WMLS_USER_PROMPT);
         list_clear(self->log);
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_init(self);
     }
-    else if (self->login_mode == 2)
-    {
-        if (xrdp_mm_connect(self->mm) == 0)
-        {
-            xrdp_wm_set_login_mode(self, 3); /* put the wm in connected mode */
-            xrdp_wm_delete_all_children(self);
-            self->dragging = 0;
-        }
-        else
-        {
-            /* we do nothing on connect error so far */
-        }
-    }
-    else if (self->login_mode == 10)
+    else if (self->login_state == WMLS_START_CONNECT)
     {
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
-        xrdp_wm_set_login_mode(self, 11);
+        xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
+
+        /* This calls back to xrdp_wm_mod_connect_done() when the
+         * connect is finished*/
+        xrdp_mm_connect(self->mm);
+    }
+    else if (self->login_state == WMLS_CLEANUP)
+    {
+        xrdp_wm_delete_all_children(self);
+        self->dragging = 0;
+        xrdp_wm_set_login_state(self, WMLS_INACTIVE);
     }
 
     return 0;
+}
+
+/******************************************************************************/
+/* this gets called when the module manager finishes a connect
+ * which was initiated by xrdp_mm_connect()
+ */
+void
+xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status)
+{
+    LOG(LOG_LEVEL_DEBUG, "status from xrdp_mm_connect() : %d", status);
+    if (status == 0)
+    {
+        xrdp_wm_set_login_state(self, WMLS_CLEANUP);
+        self->dragging = 0;
+    }
+    else
+    {
+        xrdp_wm_set_login_state(self, WMLS_INACTIVE);
+        xrdp_wm_show_log(self);
+    }
 }
 
 /*****************************************************************************/
@@ -2072,7 +2160,7 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
             {
                 /* make sure autologin is off */
                 wm->session->client_info->rdp_autologin = 0;
-                xrdp_wm_set_login_mode(wm, 0); /* reset session */
+                xrdp_wm_set_login_state(wm, WMLS_RESET); /* reset session */
             }
         }
     }
@@ -2082,12 +2170,14 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
 
         if (painter != 0)
         {
+            unsigned int row_height = xrdp_painter_font_body_height(painter);
             painter->fg_color = wnd->wm->black;
 
             for (index = 0; index < wnd->wm->log->count; index++)
             {
                 text = (char *)list_get_item(wnd->wm->log, index);
-                xrdp_painter_draw_text(painter, wnd, 10, 30 + index * 15, text);
+                xrdp_painter_draw_text(painter, wnd, 10,
+                                       (index  + 2) * row_height, text);
             }
         }
     }
@@ -2105,11 +2195,12 @@ add_string_to_logwindow(const char *msg, struct list *log)
     do
     {
         new_part_message = g_strndup(current_pointer, LOG_WINDOW_CHAR_PER_LINE);
-        g_writeln("%s", new_part_message);
+        LOG(LOG_LEVEL_INFO, "%s", new_part_message);
         list_add_item(log, (tintptr) new_part_message);
         len_done += g_strlen(new_part_message);
         current_pointer += g_strlen(new_part_message);
-    } while ((len_done < g_strlen(msg)) && (len_done < DEFAULT_STRING_LEN));
+    }
+    while ((len_done < g_strlen(msg)) && (len_done < DEFAULT_STRING_LEN));
 }
 
 /*****************************************************************************/
@@ -2121,7 +2212,7 @@ xrdp_wm_show_log(struct xrdp_wm *self)
     int h;
     int xoffset;
     int yoffset;
-    int index;
+    uint32_t index;
     int primary_x_offset;
     int primary_y_offset;
 
@@ -2130,14 +2221,15 @@ xrdp_wm_show_log(struct xrdp_wm *self)
     {
         /* make sure autologin is off */
         self->session->client_info->rdp_autologin = 0;
-        xrdp_wm_set_login_mode(self, 0); /* reset session */
+        xrdp_wm_set_login_state(self, WMLS_RESET); /* reset session */
         return 0;
     }
 
     if (self->log_wnd == 0)
     {
-        w = DEFAULT_WND_LOG_W;
-        h = DEFAULT_WND_LOG_H;
+        w = self->xrdp_config->cfg_globals.ls_scaled.log_wnd_width;
+        h = self->xrdp_config->cfg_globals.ls_scaled.log_wnd_height;
+
         xoffset = 10;
         yoffset = 10;
 
@@ -2157,14 +2249,14 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         primary_y_offset = 0;
 
         /* multimon scenario, draw log window on primary monitor */
-        if (self->client_info->monitorCount > 1)
+        if (self->client_info->display_sizes.monitorCount > 1)
         {
-            for (index = 0; index < self->client_info->monitorCount; index++)
+            for (index = 0; index < self->client_info->display_sizes.monitorCount; index++)
             {
-                if (self->client_info->minfo_wm[index].is_primary)
+                if (self->client_info->display_sizes.minfo_wm[index].is_primary)
                 {
-                    primary_x_offset = self->client_info->minfo_wm[index].left;
-                    primary_y_offset = self->client_info->minfo_wm[index].top;
+                    primary_x_offset = self->client_info->display_sizes.minfo_wm[index].left;
+                    primary_y_offset = self->client_info->display_sizes.minfo_wm[index].top;
                     break;
                 }
             }
@@ -2181,12 +2273,19 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         self->log_wnd->top = primary_y_offset + yoffset;
         set_string(&(self->log_wnd->caption1), "Connection Log");
         /* ok button */
-        but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
+        const char *ok_string = "OK";
+        const int ok_height =
+            self->xrdp_config->cfg_globals.ls_scaled.default_btn_height;
+        const int ok_width = xrdp_painter_text_width(self->painter, ok_string) +
+                             DEFAULT_BUTTON_MARGIN_W;
+
+        but = xrdp_bitmap_create(ok_width, ok_height, self->screen->bpp,
+                                 WND_TYPE_BUTTON, self);
         list_insert_item(self->log_wnd->child_list, 0, (long)but);
         but->parent = self->log_wnd;
         but->owner = self->log_wnd;
-        but->left = (w - DEFAULT_BUTTON_W) - xoffset;
-        but->top = (h - DEFAULT_BUTTON_H) - yoffset;
+        but->left = (w - ok_width) - xoffset;
+        but->top = (h - ok_height) - yoffset;
         but->id = 1;
         but->tab_stop = 1;
         set_string(&but->caption1, "OK");
@@ -2213,7 +2312,7 @@ xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
     vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
 
-    log_message(loglevel, "xrdp_wm_log_msg: %s", msg);
+    LOG(loglevel, "xrdp_wm_log_msg: %s", msg);
     add_string_to_logwindow(msg, self->log);
     return 0;
 }
@@ -2231,7 +2330,7 @@ xrdp_wm_get_wait_objs(struct xrdp_wm *self, tbus *robjs, int *rc,
     }
 
     i = *rc;
-    robjs[i++] = self->login_mode_event;
+    robjs[i++] = self->login_state_event;
     *rc = i;
     return xrdp_mm_get_wait_objs(self->mm, robjs, rc, wobjs, wc, timeout);
 }
@@ -2249,10 +2348,10 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 
     rv = 0;
 
-    if (g_is_wait_obj_set(self->login_mode_event))
+    if (g_is_wait_obj_set(self->login_state_event))
     {
-        g_reset_wait_obj(self->login_mode_event);
-        xrdp_wm_login_mode_changed(self);
+        g_reset_wait_obj(self->login_state_event);
+        xrdp_wm_login_state_changed(self);
     }
 
     if (rv == 0)
@@ -2264,10 +2363,59 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int
-xrdp_wm_set_login_mode(struct xrdp_wm *self, int login_mode)
+const char *
+xrdp_wm_login_state_to_str(enum wm_login_state login_state)
 {
-    self->login_mode = login_mode;
-    g_set_wait_obj(self->login_mode_event);
+    const char *result = "unknown";
+    /* Use a switch for this, as some compilers will warn about missing states
+     */
+    switch (login_state)
+    {
+        case WMLS_RESET:
+            result = "WMLS_RESET";
+            break;
+        case WMLS_USER_PROMPT:
+            result = "WMLS_USER_PROMPT";
+            break;
+        case WMLS_START_CONNECT:
+            result = "WMLS_START_CONNECT";
+            break;
+        case WMLS_CONNECT_IN_PROGRESS:
+            result = "WMLS_CONNECT_IN_PROGRESS";
+            break;
+        case WMLS_CLEANUP:
+            result = "WMLS_CLEANUP";
+            break;
+        case WMLS_INACTIVE:
+            result = "WMLS_INACTIVE";
+    }
+
+    return result;
+}
+
+/*****************************************************************************/
+int
+xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
+{
+    LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
+        xrdp_wm_login_state_to_str(self->login_state),
+        xrdp_wm_login_state_to_str(login_state));
+
+    self->login_state = login_state;
+    g_set_wait_obj(self->login_state_event);
     return 0;
+}
+
+int
+xrdp_wm_can_resize(struct xrdp_wm *self)
+{
+    if (self->login_state != WMLS_CLEANUP
+            && self->login_state != WMLS_INACTIVE)
+    {
+        LOG(LOG_LEVEL_INFO, "Not allowing resize. Login in progress.");
+        LOG_DEVEL(LOG_LEVEL_INFO,
+                  "State is %s", xrdp_wm_login_state_to_str(self->login_state));
+        return 0;
+    }
+    return 1;
 }

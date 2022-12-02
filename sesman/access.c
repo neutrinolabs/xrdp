@@ -29,8 +29,7 @@
 #endif
 
 #include "sesman.h"
-
-extern struct config_sesman *g_cfg; /* in sesman.c */
+#include "string_calls.h"
 
 /******************************************************************************/
 int

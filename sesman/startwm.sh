@@ -42,7 +42,7 @@ pre_start()
   return 0
 }
 
-# When loging out from the interactive shell, the execution sequence is:
+# When logging out from the interactive shell, the execution sequence is:
 #
 # IF ~/.bash_logout exists THEN
 #     execute ~/.bash_logout
@@ -69,6 +69,19 @@ wm_start()
     . /etc/X11/Xsession
     post_start
     exit 0
+  fi
+
+  # alpine
+  # Don't use /etc/X11/xinit/Xsession - it doesn't work
+  if [ -f /etc/alpine-release ]; then
+    if [ -f /etc/X11/xinit/xinitrc ]; then
+        pre_start
+        /etc/X11/xinit/xinitrc
+        post_start
+    else
+        echo "** xinit package isn't installed" >&2
+        exit 1
+    fi
   fi
 
   # el

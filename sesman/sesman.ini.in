@@ -1,8 +1,8 @@
 ;; See `man 5 sesman.ini` for details
 
 [Globals]
-ListenAddress=127.0.0.1
-ListenPort=3350
+; listening port
+#ListenPort=sesman.socket
 EnableUserWindowManager=true
 ; Give in relative path to user's home directory
 UserWindowManager=startwm.sh
@@ -19,9 +19,24 @@ TerminalServerAdmins=tsadmins
 ; When AlwaysGroupCheck=false access will be permitted
 ; if the group TerminalServerUsers is not defined.
 AlwaysGroupCheck=false
-; When RestrictOutboundClipboard=true clipboard from the
+; When RestrictOutboundClipboard=all clipboard from the
 ; server is not pushed to the client.
-RestrictOutboundClipboard=false
+; In addition, you can control text/file/image transfer restrictions
+; respectively. It also accepts comma separated list such as text,file,image.
+; To keep compatibility, some aliases are also available:
+;   true: an alias of all
+;   false: an alias of none
+;   yes: an alias of all
+RestrictOutboundClipboard=none
+; When RestrictInboundClipboard=all clipboard from the
+; client is not pushed to the server.
+; In addition, you can control text/file/image transfer restrictions
+; respectively. It also accepts comma separated list such as text,file,image.
+; To keep compatibility, some aliases are also available:
+;   true: an alias of all
+;   false: an alias of none
+;   yes: an alias of all
+RestrictInboundClipboard=none
 
 [Sessions]
 ;; X11DisplayOffset - x11 display number offset
@@ -37,30 +52,37 @@ MaxSessions=50
 ;; KillDisconnected - kill disconnected sessions
 ; Type: boolean
 ; Default: false
-; if 1, true, or yes, kill session after 60 seconds
+; if 1, true, or yes, every session will be killed within DisconnectedTimeLimit
+; seconds after the user disconnects
 KillDisconnected=false
 
-;; DisconnectedTimeLimit - when to kill idle sessions
+;; DisconnectedTimeLimit (seconds) - wait before kill disconnected sessions
 ; Type: integer
 ; Default: 0
-; if not zero, the seconds before a disconnected session is killed
-; min 60 seconds
+; if KillDisconnected is set to false, this value is ignored
 DisconnectedTimeLimit=0
 
-;; IdleTimeLimit (specify in second) - wait before disconnect idle sessions
+;; IdleTimeLimit (seconds) - wait before disconnect idle sessions
 ; Type: integer
 ; Default: 0
 ; Set to 0 to disable idle disconnection.
 IdleTimeLimit=0
 
 ;; Policy - session allocation policy
-; Type: enum [ "Default" | "UBD" | "UBI" | "UBC" | "UBDI" | "UBDC" ]
-; "Default" session per <User,BitPerPixel>
-; "UBD" session per <User,BitPerPixel,DisplaySize>
-; "UBI" session per <User,BitPerPixel,IPAddr>
-; "UBC" session per <User,BitPerPixel,Connection>
-; "UBDI" session per <User,BitPerPixel,DisplaySize,IPAddr>
-; "UBDC" session per <User,BitPerPixel,DisplaySize,Connection>
+;
+;  Type: enum [ "Default" | "Separate" | Combination from {UBDI} ]
+;  "Default"    Currently same as "UB"
+;  "Separate"   All sessions are separate. Sessions can never be rejoined,
+;               and will need to be cleaned up manually, or automatically
+;               by setting other sesman options.
+;
+;   Combination options:-
+;      U        Sessions are separated per user
+;      B        Sessions are separated by bits-per-pixel
+;      D        Sessions are separated by initial display size
+;      I        Sessions are separated by IP address
+;
+;   The options U and B are always active, and cannot be de-selected.
 Policy=Default
 
 [Logging]
@@ -74,7 +96,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [LoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #sesman.c=INFO
 #main()=INFO
 
@@ -84,7 +107,7 @@ EnableSyslog=true
 
 [Xorg]
 ; Specify the path of non-suid Xorg executable. It might differ depending
-; on your distribution and version. Find out the appropreate path for your
+; on your distribution and version. Find out the appropriate path for your
 ; environment. The typical path is known as follows:
 ;
 ; Fedora 26 or later    :  param=/usr/libexec/Xorg
@@ -93,9 +116,10 @@ EnableSyslog=true
 ; Arch Linux            :  param=/usr/lib/Xorg
 ; CentOS 7              :  param=/usr/bin/Xorg or param=Xorg
 ; CentOS 8              :  param=/usr/libexec/Xorg
+; FreeBSD (from 2022Q4) :  param=/usr/local/libexec/Xorg
 ;
 param=Xorg
-; Leave the rest paramaters as-is unless you understand what will happen.
+; Leave the rest parameters as-is unless you understand what will happen.
 param=-config
 param=xrdp/xorg.conf
 param=-noreset
@@ -114,15 +138,24 @@ param=-dpi
 param=96
 
 [Chansrv]
-; drive redirection, defaults to xrdp_client if not set
+; drive redirection
+; See sesman.ini(5) for the format of this parameter
+#FuseMountName=/run/user/%u/thinclient_drives
+#FuseMountName=/media/thinclient_drives/%U/thinclient_drives
 FuseMountName=thinclient_drives
-; this value allows only the user to acess their own mapped drives.
+; this value allows only the user to access their own mapped drives.
 ; Make this more permissive (e.g. 022) if required.
 FileUmask=077
+; Can be used to disable FUSE functionality - see sesman.ini(5)
+#EnableFuseMount=false
+; Uncomment this line only if you are using GNOME 3 versions 3.29.92
+; and up, and you wish to cut-paste files between Nautilus and Windows. Do
+; not use this setting for GNOME 4, or other file managers
+#UseNautilus3FlistFormat=true
 
 [ChansrvLogging]
-; Note: one log file is created per display and the LogFile config value 
-; is ignored. The channel server log file names follow the naming convention: 
+; Note: one log file is created per display and the LogFile config value
+; is ignored. The channel server log file names follow the naming convention:
 ; xrdp-chansrv.${DISPLAY}.log
 ;
 ; Note: Log levels can be any of: core, error, warning, info, debug, or trace
@@ -134,7 +167,8 @@ EnableSyslog=true
 #EnableProcessId=false
 
 [ChansrvLoggingPerLogger]
-; Note: per logger configuration is only used in XRDP_DEBUG builds of XRDP.
+; Note: per logger configuration is only used if xrdp is built with
+; --enable-devel-logging
 #chansrv.c=INFO
 #main()=INFO
 

@@ -12,13 +12,11 @@ AM_CPPFLAGS = \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libxrdp
+  -I$(top_srcdir)/libipm \
+  -I$(top_srcdir)/libxrdp \
+  $(IMLIB2_CFLAGS)
 
 XRDP_EXTRA_LIBS =
-
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
 
 if XRDP_RFXCODEC
 AM_CPPFLAGS += -DXRDP_RFXCODEC
@@ -47,6 +45,8 @@ xrdp_SOURCES = \
   xrdp.c \
   xrdp.h \
   xrdp_bitmap.c \
+  xrdp_bitmap_load.c \
+  xrdp_bitmap_common.c \
   xrdp_cache.c \
   xrdp_encoder.c \
   xrdp_encoder.h \
@@ -62,7 +62,9 @@ xrdp_SOURCES = \
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/libipm/libipm.la \
   $(top_builddir)/libxrdp/libxrdp.la \
+  $(IMLIB2_LIBS) \
   $(XRDP_EXTRA_LIBS)
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
@@ -96,6 +98,9 @@ dist_xrdppkgdata_DATA = \
   xrdp24b.bmp \
   xrdp256.bmp \
   xrdp_logo.bmp \
+  xrdp_logo.png \
+  README.logo \
   sans-10.fv1 \
+  sans-18.fv1 \
   cursor0.cur \
   cursor1.cur

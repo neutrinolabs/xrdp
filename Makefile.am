@@ -1,7 +1,8 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_DISTCHECK_CONFIGURE_FLAGS = \
   --without-systemdsystemunitdir \
-  --enable-strict-locations
+  --enable-strict-locations \
+  --enable-tests
 
 EXTRA_DIST = \
   COPYING \
@@ -10,17 +11,7 @@ EXTRA_DIST = \
   astyle_config.as \
   bootstrap \
   coding_style.md \
-  description-pak \
-  design.txt \
-  faq-compile.txt \
-  faq-general.txt \
-  file-loc.txt \
-  fontdump \
-  install.txt \
   m4 \
-  postinstall-pak \
-  tcutils \
-  tests \
   vrplayer
 
 if XRDP_NEUTRINORDP
@@ -47,24 +38,35 @@ else
 RFXCODECDIR =
 endif
 
+if XRDP_ULALACA
+ULALACADIR = ulalaca
+else
+ULALACADIR =
+endif
+
 SUBDIRS = \
   common \
   vnc \
   xup \
   mc \
   $(NEUTRINORDPDIR) \
+  libipm \
   libxrdp \
   $(PAINTERDIR) \
   $(RFXCODECDIR) \
-  xrdp \
   sesman \
+  xrdp \
+  fontutils \
   keygen \
   docs \
   instfiles \
   genkeymap \
   xrdpapi \
   pkgconfig \
-  $(XRDPVRDIR)
+  $(XRDPVRDIR) \
+  $(ULALACADIR) \
+  tests \
+  tools
 
 distclean-local:
 	-rm -f xrdp_configure_options.h

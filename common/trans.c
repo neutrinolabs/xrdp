@@ -23,12 +23,19 @@
 #endif
 
 #include "os_calls.h"
+#include "string_calls.h"
 #include "trans.h"
 #include "arch.h"
 #include "parse.h"
 #include "ssl_calls.h"
+#include "log.h"
 
 #define MAX_SBYTES 0
+
+/** Time between polls of is_term when connecting */
+#define CONNECT_TERM_POLL_MS 3000
+/** Time we wait before another connect() attempt if one fails immediately */
+#define CONNECT_DELAY_ON_FAIL_MS 2000
 
 /*****************************************************************************/
 int
@@ -94,6 +101,7 @@ trans_create(int mode, int in_size, int out_size)
 
     if (self != NULL)
     {
+        self->sck = -1;
         make_stream(self->in_s);
         init_stream(self->in_s, in_size);
         make_stream(self->out_s);
@@ -118,15 +126,21 @@ trans_delete(struct trans *self)
         return;
     }
 
+    /* Call the user-specified destructor if one exists */
+    if (self->extra_destructor != NULL)
+    {
+        self->extra_destructor(self);
+    }
+
     free_stream(self->in_s);
     free_stream(self->out_s);
 
-    if (self->sck > 0)
+    if (self->sck >= 0)
     {
         g_tcp_close(self->sck);
     }
 
-    self->sck = 0;
+    self->sck = -1;
 
     if (self->listen_filename != 0)
     {
@@ -177,13 +191,9 @@ trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
     objs[*count] = self->sck;
     (*count)++;
 
-    if (self->tls != 0)
+    if (self->tls != NULL && (objs[*count] = ssl_get_rwo(self->tls)) != 0)
     {
-        if (self->tls->rwo != 0)
-        {
-            objs[*count] = self->tls->rwo;
-            (*count)++;
-        }
+        (*count)++;
     }
 
     return 0;
@@ -320,9 +330,7 @@ trans_check_wait_objs(struct trans *self)
     {
         if (g_sck_can_recv(self->sck, 0))
         {
-            in_sck = g_sck_accept(self->sck, self->addr, sizeof(self->addr),
-                                  self->port, sizeof(self->port));
-
+            in_sck = g_sck_accept(self->sck);
             if (in_sck == -1)
             {
                 if (g_tcp_last_error_would_block(self->sck))
@@ -347,10 +355,6 @@ trans_check_wait_objs(struct trans *self)
                     in_trans->type1 = TRANS_TYPE_SERVER;
                     in_trans->status = TRANS_STATUS_UP;
                     in_trans->is_term = self->is_term;
-                    g_strncpy(in_trans->addr, self->addr,
-                              sizeof(self->addr) - 1);
-                    g_strncpy(in_trans->port, self->port,
-                              sizeof(self->port) - 1);
                     g_sck_set_non_blocking(in_sck);
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
@@ -453,7 +457,7 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
     int rcvd;
 
     if (self->status != TRANS_STATUS_UP ||
-        size < 0 || !s_check_rem_out(in_s, size))
+            size < 0 || !s_check_rem_out(in_s, size))
     {
         return 1;
     }
@@ -634,7 +638,7 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
     if (self->si != 0)
     {
         if ((self->si->cur_source != XRDP_SOURCE_NONE) &&
-            (self->si->cur_source != self->my_source))
+                (self->si->cur_source != self->my_source))
         {
             self->si->source[self->si->cur_source] += size;
             wait_s->source = self->si->source + self->si->cur_source;
@@ -661,149 +665,188 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
 
 /*****************************************************************************/
 int
-trans_write_copy(struct trans* self)
+trans_write_copy(struct trans *self)
 {
     return trans_write_copy_s(self, self->out_s);
 }
 
 /*****************************************************************************/
+
+/* Shim to apply the function signature of g_tcp_connect()
+ * to g_tcp_local_connect()
+ */
+static int
+local_connect_shim(int fd, const char *server, const char *port)
+{
+    return g_tcp_local_connect(fd, port);
+}
+
+/**************************************************************************//**
+ * Waits for an asynchronous connect to complete.
+ * @param self - Transport object
+ * @param start_time Start time of connect (from g_time3())
+ * @param timeout Total wait timeout
+ * @return 0 - connect succeeded, 1 - Connect failed
+ *
+ * If the transport is set up for checking a termination object, this
+ * on a regular basis.
+ */
+static int
+poll_for_async_connect(struct trans *self, int start_time, int timeout)
+{
+    int rv = 1;
+    int ms_remaining = timeout - (g_time3() - start_time);
+
+    while (ms_remaining > 0)
+    {
+        int poll_time = ms_remaining;
+        /* Lower bound for waiting for a result */
+        if (poll_time < 100)
+        {
+            poll_time = 100;
+        }
+        /* Limit the wait time if we need to poll for termination */
+        if (self->is_term != NULL && poll_time > CONNECT_TERM_POLL_MS)
+        {
+            poll_time = CONNECT_TERM_POLL_MS;
+        }
+
+        if (g_tcp_can_send(self->sck, poll_time))
+        {
+            /* Connect has finished - return the socket status */
+            rv = g_sck_socket_ok(self->sck) ? 0 : 1;
+            break;
+        }
+
+        /* Check for program termination */
+        if (self->is_term != NULL && self->is_term())
+        {
+            break;
+        }
+
+        ms_remaining = timeout - (g_time3() - start_time);
+    }
+    return rv;
+}
+
+/*****************************************************************************/
+
 int
 trans_connect(struct trans *self, const char *server, const char *port,
               int timeout)
 {
+    int start_time = g_time3();
     int error;
-    int now;
-    int start_time;
+    int ms_before_next_connect;
 
-    start_time = g_time3();
+    /*
+     * Function pointers which we use in the main loop to avoid
+     * having to switch on the socket mode */
+    int (*f_alloc_socket)(void);
+    int (*f_connect)(int fd, const char *server, const char *port);
 
-    if (self->sck != 0)
+    switch (self->mode)
     {
-        g_tcp_close(self->sck);
-        self->sck = 0;
+        case TRANS_MODE_TCP:
+            f_alloc_socket = g_tcp_socket;
+            f_connect = g_tcp_connect;
+            break;
+
+        case TRANS_MODE_UNIX:
+            f_alloc_socket = g_tcp_local_socket;
+            f_connect = local_connect_shim;
+            break;
+
+        default:
+            LOG(LOG_LEVEL_ERROR, "Bad socket mode %d", self->mode);
+            return 1;
     }
 
-    if (self->mode == TRANS_MODE_TCP) /* tcp */
+    while (1)
     {
-        self->sck = g_tcp_socket();
+        /* Check the program isn't terminating */
+        if (self->is_term != NULL && self->is_term())
+        {
+            error = 1;
+            break;
+        }
+
+        /* Allocate a new socket */
+        if (self->sck >= 0)
+        {
+            g_tcp_close(self->sck);
+        }
+        self->sck = f_alloc_socket();
+
         if (self->sck < 0)
         {
-            self->status = TRANS_STATUS_DOWN;
-            return 1;
+            error = 1;
+            break;
         }
+
+        /* Try to connect asynchronously */
         g_tcp_set_non_blocking(self->sck);
-        while (1)
+        error = f_connect(self->sck, server, port);
+        if (error == 0)
         {
-            error = g_tcp_connect(self->sck, server, port);
-            if (error == 0)
+            /* Connect was immediately successful */
+            break;
+        }
+
+        if (g_tcp_last_error_would_block(self->sck))
+        {
+            /* Async connect is in progress */
+            if (poll_for_async_connect(self, start_time, timeout) == 0)
             {
+                /* Async connect was successful */
+                error = 0;
                 break;
             }
-            else
+            /* No need to wait any more before the next connect attempt */
+            ms_before_next_connect = 0;
+        }
+        else
+        {
+            /* Connect failed immediately. Wait a bit before the next
+             * attempt */
+            ms_before_next_connect = CONNECT_DELAY_ON_FAIL_MS;
+        }
+
+        /* Have we reached the total timeout yet? */
+        int ms_left = timeout - (g_time3() - start_time);
+        if (ms_left <= 0)
+        {
+            error = 1;
+            break;
+        }
+
+        /* Sleep a bit before trying again */
+        if (ms_before_next_connect > 0)
+        {
+            if (ms_before_next_connect > ms_left)
             {
-                if (timeout < 1)
-                {
-                    self->status = TRANS_STATUS_DOWN;
-                    return 1;
-                }
-                now = g_time3();
-                if (now - start_time < timeout)
-                {
-                    g_sleep(100);
-                }
-                else
-                {
-                    self->status = TRANS_STATUS_DOWN;
-                    return 1;
-                }
-                if (self->is_term != NULL)
-                {
-                    if (self->is_term())
-                    {
-                        self->status = TRANS_STATUS_DOWN;
-                        return 1;
-                    }
-                }
+                ms_before_next_connect = ms_left;
             }
+            g_sleep(ms_before_next_connect);
         }
     }
-    else if (self->mode == TRANS_MODE_UNIX) /* unix socket */
+
+    if (error != 0)
     {
-        self->sck = g_tcp_local_socket();
-        if (self->sck < 0)
+        if (self->sck >= 0)
         {
-            self->status = TRANS_STATUS_DOWN;
-            return 1;
+            g_tcp_close(self->sck);
+            self->sck = -1;
         }
-        g_tcp_set_non_blocking(self->sck);
-        while (1)
-        {
-            error = g_tcp_local_connect(self->sck, port);
-            if (error == 0)
-            {
-                break;
-            }
-            else
-            {
-                if (timeout < 1)
-                {
-                    self->status = TRANS_STATUS_DOWN;
-                    return 1;
-                }
-                now = g_time3();
-                if (now - start_time < timeout)
-                {
-                    g_sleep(100);
-                }
-                else
-                {
-                    self->status = TRANS_STATUS_DOWN;
-                    return 1;
-                }
-                if (self->is_term != NULL)
-                {
-                    if (self->is_term())
-                    {
-                        self->status = TRANS_STATUS_DOWN;
-                        return 1;
-                    }
-                }
-            }
-        }
+        self->status = TRANS_STATUS_DOWN;
     }
     else
     {
-        self->status = TRANS_STATUS_DOWN;
-        return 1;
+        self->status = TRANS_STATUS_UP; /* ok */
+        self->type1 = TRANS_TYPE_CLIENT; /* client */
     }
 
-    if (error == -1)
-    {
-        if (g_tcp_last_error_would_block(self->sck))
-        {
-            now = g_time3();
-            if (now - start_time < timeout)
-            {
-                timeout = timeout - (now - start_time);
-            }
-            else
-            {
-                timeout = 0;
-            }
-            if (g_tcp_can_send(self->sck, timeout))
-            {
-                self->status = TRANS_STATUS_UP; /* ok */
-                self->type1 = TRANS_TYPE_CLIENT; /* client */
-                return 0;
-            }
-        }
-
-        return 1;
-    }
-
-    self->status = TRANS_STATUS_UP; /* ok */
-    self->type1 = TRANS_TYPE_CLIENT; /* client */
-    return 0;
+    return error;
 }
 
 /*****************************************************************************/
@@ -812,9 +855,9 @@ trans_connect(struct trans *self, const char *server, const char *port,
  * @return 0 on success, 1 on failure
  */
 int
-trans_listen_address(struct trans *self, char *port, const char *address)
+trans_listen_address(struct trans *self, const char *port, const char *address)
 {
-    if (self->sck != 0)
+    if (self->sck >= 0)
     {
         g_tcp_close(self->sck);
     }
@@ -823,7 +866,9 @@ trans_listen_address(struct trans *self, char *port, const char *address)
     {
         self->sck = g_tcp_socket();
         if (self->sck < 0)
+        {
             return 1;
+        }
 
         g_tcp_set_non_blocking(self->sck);
 
@@ -845,7 +890,9 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 
         self->sck = g_tcp_local_socket();
         if (self->sck < 0)
+        {
             return 1;
+        }
 
         g_tcp_set_non_blocking(self->sck);
 
@@ -923,7 +970,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 
 /*****************************************************************************/
 int
-trans_listen(struct trans *self, char *port)
+trans_listen(struct trans *self, const char *port)
 {
     return trans_listen_address(self, port, "0.0.0.0");
 }
@@ -974,13 +1021,13 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
     self->tls = ssl_tls_create(self, key, cert);
     if (self->tls == NULL)
     {
-        g_writeln("trans_set_tls_mode: ssl_tls_create malloc error");
+        LOG(LOG_LEVEL_ERROR, "trans_set_tls_mode: ssl_tls_create malloc error");
         return 1;
     }
 
     if (ssl_tls_accept(self->tls, ssl_protocols, tls_ciphers) != 0)
     {
-        g_writeln("trans_set_tls_mode: ssl_tls_accept failed");
+        LOG(LOG_LEVEL_ERROR, "trans_set_tls_mode: ssl_tls_accept failed");
         return 1;
     }
 
@@ -989,8 +1036,8 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
     self->trans_send = trans_tls_send;
     self->trans_can_recv = trans_tls_can_recv;
 
-    self->ssl_protocol = ssl_get_version(self->tls->ssl);
-    self->cipher_name = ssl_get_cipher_name(self->tls->ssl);
+    self->ssl_protocol = ssl_get_version(self->tls);
+    self->cipher_name = ssl_get_cipher_name(self->tls);
 
     return 0;
 }

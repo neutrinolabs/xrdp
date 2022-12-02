@@ -273,7 +273,11 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
         xfs->free_list   = NULL;
         xfs->generation = 1;
 
+        /* xfs->inode_table check should be superfluous here, but it
+         * prevents cppcheck 2.2/2.3 generating a false positive nullPointer
+         * report */
         if (!grow_xfs(xfs, INODE_TABLE_ALLOCATION_INITIAL) ||
+                xfs->inode_table == NULL ||
                 (xino1 = g_new0(XFS_INODE_ALL, 1)) == NULL ||
                 (xino2 = g_new0(XFS_INODE_ALL, 1)) == NULL)
         {
@@ -658,7 +662,7 @@ xfs_readdir(struct xfs_fs *xfs, struct xfs_dir_handle *handle, off_t *off)
     XFS_INODE_ALL *dxino = NULL;
     XFS_INODE_ALL *xino = NULL;
 
-    /* Check the direcory is still valid */
+    /* Check the directory is still valid */
     if (handle->inum < xfs->inode_count &&
             ((dxino = xfs->inode_table[handle->inum]) != NULL) &&
             (dxino->pub.mode & S_IFDIR) != 0 &&

@@ -1,45 +1,78 @@
 .TH "xrdp\-sesrun" "8" "@PACKAGE_VERSION@" "xrdp team" ""
 .SH "NAME"
-xrdp\-sesrun \- \fBxrdp-sesman\fR(8) session launcher
+\fBxrdp\-sesrun\fR \- \fBxrdp\-sesman\fR(8) session launcher
 
 .SH "SYNTAX"
 .B xrdp\-sesrun
-.I [ -C /path/to/sesman.ini ] server username password width height bpp code
+.I [ options ] username
 
 .SH "DESCRIPTION"
 \fBxrdp\-sesrun\fR starts a session using \fBxrdp\-sesman\fR(8).
 .br
-This is a tool useful for testing, it simply behaves like xrdp when some user logs in a new session and authenticates, thus starting a new session.
+This is a tool useful for testing, it simply behaves like xrdp when some
+user logs in a new session and authenticates, thus starting a new session.
+
+Default values for the options are set at compile-time. Run the utility without
+a username to see what the defaults are for your installation.
+
+The utility prompts for a password if neither \fB-p\fR or \fB-F\fR is used.
 
 .SH "OPTIONS"
 .TP
-.I \-\-config
-(Optional) Specify a path to a different \fIsesman.ini\fR file.
+.B -g <width>x<height>
+Set session geometry.
+.br
+Note that most configurations will resize the session on connection, so this
+option may not do what you expect.
+.TP
+.B -b <bits-per-pixel>
+Set session bits-per-pixel (colour depth). Some session types (i.e. Xorg)
+will ignore this setting.
+.TP
+.B -t <session-type>
+Session type - one of Xorg, Xvnc or X11rdp. Alternatively, for testing
+only, use the numeric session code.
+.TP
+.B -D <directory>
+Directory to run the new session in. Defaults to $HOME for the specified user.
+.TP
+.B -S <shell>
+Specify an alternate shell to run, instead of the default window manager.
+.TP
+.B -p <password>
+Password for user. USE FOR TESTING ONLY - the password will be visible
+in the output of the \fBps\fR command.
+.TP
+.B -F <file-descriptor>
+Specify a file descriptor (normally 0) to read the password in from. This
+is a secure way to pass the password in to the utility.
+.TP
+.B -c <sesman-ini>
+Specify a different sesman.ini file. This file is used to find out how to
+connect to \fBxrdp\-sesman\fR.
 
+.SH "ENVIRONMENT"
 .TP
-.I server
-Server on which sesman is running
+.I SESRUN_LOG_LEVEL
+Override the default logging level. One of "error", "warn", "info",
+"debug", "trace" or a number 1-5.
+
+.SH "EXAMPLES"
 .TP
-.I username
-user name of the session being started
+.B
+xrdp-sesrun -F 0 user1 <passwd.txt
+Create a default session for user \fBuser1\fR with a password from
+a file
 .TP
-.I password
-user password
-.TP
-.I width
-Screen width
-.TP
-.I height
-Screen height
-.TP
-.I bpp
-Session color depth
-.TP
-.I code
-Session type (0 for Xvnc, 10 for X11RDP, 20 for Xorg)
+.B
+xrdp-sesrun -t Xvnc -S /usr/bin/xterm user1
+Create an extremely minimal Xvnc session for user \fBuser1\fR. This
+could be useful for debugging why the standard session is not starting
+properly. Note you would need to install the \fBxterm\fR utility
+first. The \fBgnome\-terminal\fR utility probably won't work here.
 
 .SH "FILES"
-@bindir@/xrdp\-sesman
+@sbindir@/xrdp\-sesman
 .br
 @bindir@/xrdp\-sesrun
 .br
@@ -56,4 +89,6 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-for more info on \fBxrdp\fR see http://www.xrdp.org/
+For more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE

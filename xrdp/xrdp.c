@@ -27,6 +27,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "xrdp_configure_options.h"
+#include "string_calls.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
@@ -73,13 +74,14 @@ static void
 print_help(void)
 {
     g_writeln("Usage: xrdp [options]");
-    g_writeln("   -k, --kill       shut down xrdp");
-    g_writeln("   -h, --help       show help");
-    g_writeln("   -v, --version    show version");
-    g_writeln("   -n, --nodaemon   don't fork into background");
-    g_writeln("   -p, --port       tcp listen port");
-    g_writeln("   -f, --fork       fork on new connection");
-    g_writeln("   -c, --config     Specify new path to xrdp.ini");
+    g_writeln("   -k, --kill        shut down xrdp");
+    g_writeln("   -h, --help        show help");
+    g_writeln("   -v, --version     show version");
+    g_writeln("   -n, --nodaemon    don't fork into background");
+    g_writeln("   -p, --port        tcp listen port");
+    g_writeln("   -f, --fork        fork on new connection");
+    g_writeln("   -c, --config      specify new path to xrdp.ini");
+    g_writeln("       --dump-config display config on stdout on startup");
 }
 
 /*****************************************************************************/
@@ -100,7 +102,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
         /* this is the main thread, call the function directly */
         /* in fork mode, this always happens too */
         sync_result = sync_func(sync_param1, sync_param2);
-        /*g_writeln("g_xrdp_sync processed IN main thread -> continue");*/
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_xrdp_sync processed IN main thread -> continue");
     }
     else
     {
@@ -131,25 +133,22 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             tc_mutex_unlock(g_sync_mutex);
         }
         while (sync_command != 0); /* loop until g_process_waiting_function()
-
                                 * has processed the request */
         tc_mutex_unlock(g_sync1_mutex);
-        /*g_writeln("g_xrdp_sync processed BY main thread -> continue");*/
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "g_xrdp_sync processed BY main thread -> continue");
     }
 
     return sync_result;
 }
 
 /*****************************************************************************/
+/* Signal handler for SIGINT and SIGTERM
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this function. For more details see `man signal-safety`
+ */
 static void
 xrdp_shutdown(int sig)
 {
-    tbus threadid;
-
-    threadid = tc_get_threadid();
-    g_writeln("shutting down");
-    g_writeln("signal %d threadid %lld", sig, (long long)threadid);
-
     if (!g_is_wait_obj_set(g_term_event))
     {
         g_set_wait_obj(g_term_event);
@@ -157,21 +156,27 @@ xrdp_shutdown(int sig)
 }
 
 /*****************************************************************************/
+/* Signal handler for SIGCHLD
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this function. For more details see `man signal-safety`
+ */
 static void
 xrdp_child(int sig)
 {
-    int safety;
-
-    for (safety = 0; (g_waitchild() >= 0) && (safety <= 10); safety++)
+    while (g_waitchild() > 0)
     {
     }
 }
 
 /*****************************************************************************/
+/* No-op signal handler.
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this function. For more details see `man signal-safety`
+ */
 static void
-xrdp_hang_up(int sig)
+xrdp_sig_no_op(int sig)
 {
-    log_message(LOG_LEVEL_INFO, "caught SIGHUP, noop...");
+    /* no-op */
 }
 
 /*****************************************************************************/
@@ -226,14 +231,6 @@ tbus
 g_get_sync_event(void)
 {
     return g_sync_event;
-}
-
-/*****************************************************************************/
-static void
-pipe_sig(int sig_num)
-{
-    /* do nothing */
-    g_writeln("got XRDP SIGPIPE(%d)", sig_num);
 }
 
 /*****************************************************************************/
@@ -360,6 +357,10 @@ xrdp_process_params(int argc, char **argv,
             startup_params->fork = 1;
             g_writeln("--fork parameter found, ini override");
         }
+        else if (nocase_matches(option, "--dump-config", NULL))
+        {
+            startup_params->dump_config = 1;
+        }
         else if (nocase_matches(option, "-c", "--config", NULL))
         {
             index++;
@@ -404,23 +405,17 @@ xrdp_sanity_check(void)
 #endif
 
     /* check long, int and void* sizes */
-    if (sizeof(int) != 4)
-    {
-        g_writeln("unusable int size, must be 4");
-        return 1;
-    }
+#if SIZEOF_INT != 4
+#   error unusable int size, must be 4
+#endif
 
-    if (sizeof(long) != sizeof(void *))
-    {
-        g_writeln("long size must match void* size");
-        return 1;
-    }
+#if SIZEOF_LONG != SIZEOF_VOID_P
+#   error sizeof(long) must match sizeof(void*)
+#endif
 
-    if (sizeof(long) != 4 && sizeof(long) != 8)
-    {
-        g_writeln("unusable long size, must be 4 or 8");
-        return 1;
-    }
+#if SIZEOF_LONG != 4 && SIZEOF_LONG != 8
+#   error sizeof(long), must be 4 or 8
+#endif
 
     if (sizeof(tui64) != 8)
     {
@@ -442,7 +437,6 @@ int
 main(int argc, char **argv)
 {
     int exit_status = 0;
-    int test;
     enum logReturns error;
     struct xrdp_startup_params startup_params = {0};
     int pid;
@@ -450,16 +444,18 @@ main(int argc, char **argv)
     int daemon;
     char text[256];
     const char *pid_file = XRDP_PID_PATH "/xrdp.pid";
-
     int errored_argc;
+
+#ifdef USE_DEVEL_LOGGING
+    int test;
+    for (test = 0; test < argc; test++)
+    {
+        g_writeln("Argument %i - %s", test, argv[test]);
+    }
+#endif
 
     g_init("xrdp");
     ssl_init();
-
-    for (test = 0; test < argc; test++)
-    {
-        DEBUG(("Argument %i - %s", test, argv[test]));
-    }
 
     startup_params.xrdp_ini = XRDP_CFG_PATH "/xrdp.ini";
 
@@ -535,26 +531,27 @@ main(int argc, char **argv)
     }
 
     /* starting logging subsystem */
-    error = log_start(startup_params.xrdp_ini, "xrdp");
+    error = log_start(startup_params.xrdp_ini, "xrdp",
+                      (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
 
     if (error != LOG_STARTUP_OK)
     {
         switch (error)
         {
-        case LOG_ERROR_MALLOC:
-            g_writeln("error on malloc. cannot start logging. quitting.");
-            break;
-        case LOG_ERROR_FILE_OPEN:
-            g_writeln("error opening log file [%s]. quitting.",
-                      getLogFile(text, 255));
-            break;
-        case LOG_ERROR_NO_CFG:
-            g_writeln("config file %s unreadable or missing",
-                      startup_params.xrdp_ini);
-            break;
-        default:
-            g_writeln("log_start error");
-            break;
+            case LOG_ERROR_MALLOC:
+                g_writeln("error on malloc. cannot start logging. quitting.");
+                break;
+            case LOG_ERROR_FILE_OPEN:
+                g_writeln("error opening log file [%s]. quitting.",
+                          getLogFile(text, 255));
+                break;
+            case LOG_ERROR_NO_CFG:
+                g_writeln("config file %s unreadable or missing",
+                          startup_params.xrdp_ini);
+                break;
+            default:
+                g_writeln("log_start error");
+                break;
         }
 
         g_deinit();
@@ -565,10 +562,11 @@ main(int argc, char **argv)
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
-        g_writeln("It looks like xrdp is already running.");
-        g_writeln("If not, delete %s and try again.", pid_file);
+        LOG(LOG_LEVEL_ALWAYS, "It looks like xrdp is already running.");
+        LOG(LOG_LEVEL_ALWAYS, "If not, delete %s and try again.", pid_file);
+        log_end();
         g_deinit();
-        g_exit(0);
+        g_exit(1);
     }
 
     daemon = !startup_params.no_daemon;
@@ -585,16 +583,20 @@ main(int argc, char **argv)
 
         if (fd == -1)
         {
-            g_writeln("running in daemon mode with no access to pid files, quitting");
+            LOG(LOG_LEVEL_ALWAYS,
+                "running in daemon mode with no access to pid files, quitting");
+            log_end();
             g_deinit();
-            g_exit(0);
+            g_exit(1);
         }
 
         if (g_file_write(fd, "0", 1) == -1)
         {
-            g_writeln("running in daemon mode with no access to pid files, quitting");
+            LOG(LOG_LEVEL_ALWAYS,
+                "running in daemon mode with no access to pid files, quitting");
+            log_end();
             g_deinit();
-            g_exit(0);
+            g_exit(1);
         }
 
         g_file_close(fd);
@@ -606,8 +608,9 @@ main(int argc, char **argv)
         /* if can't listen, exit with failure status */
         if (xrdp_listen_test(&startup_params) != 0)
         {
-            log_message(LOG_LEVEL_ERROR, "Failed to start xrdp daemon, "
-                        "possibly address already in use.");
+            LOG(LOG_LEVEL_ALWAYS, "Failed to start xrdp daemon, "
+                "possibly address already in use.");
+            log_end();
             g_deinit();
             /* must exit with failure status,
                or systemd cannot detect xrdp daemon couldn't start properly */
@@ -618,15 +621,16 @@ main(int argc, char **argv)
 
         if (pid == -1)
         {
-            g_writeln("problem forking");
+            LOG(LOG_LEVEL_ALWAYS, "problem forking [%s]", g_get_strerror());
+            log_end();
             g_deinit();
             g_exit(1);
         }
 
         if (0 != pid)
         {
-            g_writeln("daemon process %d started ok", pid);
             /* exit, this is the main process */
+            log_end();
             g_deinit();
             g_exit(0);
         }
@@ -638,9 +642,8 @@ main(int argc, char **argv)
 
         if (fd == -1)
         {
-            g_writeln("trying to write process id to xrdp.pid");
-            g_writeln("problem opening xrdp.pid");
-            g_writeln("maybe no rights");
+            LOG(LOG_LEVEL_WARNING, "Can't open %s for writing [%s]",
+                pid_file, g_get_strerror());
         }
         else
         {
@@ -672,20 +675,20 @@ main(int argc, char **argv)
     g_threadid = tc_get_threadid();
     g_listen = xrdp_listen_create();
     g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
-    g_signal_pipe(pipe_sig);                /* SIGPIPE */
+    g_signal_pipe(xrdp_sig_no_op);          /* SIGPIPE */
     g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
     g_signal_child_stop(xrdp_child);        /* SIGCHLD */
-    g_signal_hang_up(xrdp_hang_up);         /* SIGHUP */
+    g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
     g_sync_mutex = tc_mutex_create();
     g_sync1_mutex = tc_mutex_create();
     pid = g_getpid();
-    log_message(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
+    LOG(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
     g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
     g_term_event = g_create_wait_obj(text);
 
     if (g_term_event == 0)
     {
-        g_writeln("error creating g_term_event");
+        LOG(LOG_LEVEL_WARNING, "error creating g_term_event");
     }
 
     g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
@@ -693,7 +696,7 @@ main(int argc, char **argv)
 
     if (g_sync_event == 0)
     {
-        g_writeln("error creating g_sync_event");
+        LOG(LOG_LEVEL_WARNING, "error creating g_sync_event");
     }
 
     g_listen->startup_params = &startup_params;

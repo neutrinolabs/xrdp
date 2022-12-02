@@ -3,12 +3,12 @@
 
 class MediaPacket
 {
-public:
-    MediaPacket();
+    public:
+        MediaPacket();
 
-    void *av_pkt;
-    int   delay_in_us;
-    int   seq;
+        void *av_pkt;
+        int   delay_in_us;
+        int   seq;
 };
 
 #endif // MEDIAPACKET_H

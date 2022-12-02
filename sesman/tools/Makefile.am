@@ -5,12 +5,8 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/sesman/libscp \
+  -I$(top_srcdir)/libipm \
   -I$(top_srcdir)/sesman
-
-if XRDP_DEBUG
-AM_CPPFLAGS += -DXRDP_DEBUG
-endif
 
 AM_CFLAGS = $(X_CFLAGS)
 
@@ -20,37 +16,35 @@ bin_PROGRAMS = \
   xrdp-dis
 
 noinst_PROGRAMS = \
-  xrdp-sestest \
   xrdp-xcon
 
 xrdp_sesrun_SOURCES = \
-  config.c \
   sesrun.c \
-  tcp.c \
-  tcp.h
-
-xrdp_sestest_SOURCES = \
-  sestest.c
+  config.c \
+  tools_common.h \
+  tools_common.c
 
 xrdp_sesadmin_SOURCES = \
-  sesadmin.c
+  sesadmin.c \
+  tools_common.h \
+  tools_common.c
 
 xrdp_dis_SOURCES = \
   dis.c
+
+xrdp_dis_LDADD = \
+  $(top_builddir)/common/libcommon.la
 
 xrdp_xcon_SOURCES = \
   xcon.c
 
 xrdp_sesrun_LDADD = \
-  $(top_builddir)/common/libcommon.la
-
-xrdp_sestest_LDADD = \
   $(top_builddir)/common/libcommon.la \
-  $(top_builddir)/sesman/libscp/libscp.la
+  $(top_builddir)/libipm/libipm.la
 
 xrdp_sesadmin_LDADD = \
   $(top_builddir)/common/libcommon.la \
-  $(top_builddir)/sesman/libscp/libscp.la
+  $(top_builddir)/libipm/libipm.la
 
 xrdp_xcon_LDFLAGS = \
   $(X_LIBS)

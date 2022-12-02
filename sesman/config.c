@@ -33,6 +33,84 @@
 #include "file.h"
 #include "sesman.h"
 #include "log.h"
+#include "string_calls.h"
+#include "chansrv/chansrv_common.h"
+#include "scp.h"
+
+static const struct bitmask_char policy_bits[] =
+{
+    { SESMAN_CFG_SESS_POLICY_U, 'U'  },
+    { SESMAN_CFG_SESS_POLICY_B, 'B'  },
+    { SESMAN_CFG_SESS_POLICY_D, 'D'  },
+    { SESMAN_CFG_SESS_POLICY_I, 'I'  },
+    BITMASK_CHAR_END_OF_LIST
+};
+
+/***************************************************************************//**
+ * Parse a session allocation policy string
+ */
+static unsigned int
+parse_policy_string(const char *value)
+{
+    unsigned int rv;
+    char unrecognised[16];
+
+    if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_DFLT_S))
+    {
+        rv = SESMAN_CFG_SESS_POLICY_DEFAULT;
+    }
+    else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_SEP_S))
+    {
+        rv = SESMAN_CFG_SESS_POLICY_SEPARATE;
+    }
+    else
+    {
+        unrecognised[0] = '\0';
+        rv = g_charstr_to_bitmask(value, policy_bits, unrecognised,
+                                  sizeof(unrecognised));
+        if (unrecognised[0] != '\0')
+        {
+            LOG(LOG_LEVEL_WARNING, "Character(s) '%s' in the session"
+                " allocation policy are not recognised", unrecognised);
+
+            if (g_strchr(unrecognised, 'C') != NULL ||
+                    g_strchr(unrecognised, 'c') != NULL)
+            {
+                /* Change from xrdp v0.9.x */
+                LOG(LOG_LEVEL_WARNING, "Character 'C' is no longer used"
+                    " in session allocation policies - use '%s'",
+                    SESMAN_CFG_SESS_POLICY_SEP_S);
+            }
+        }
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+int
+config_output_policy_string(unsigned int value,
+                            char *buff, unsigned int bufflen)
+{
+    int rv = 0;
+    if (bufflen > 0)
+    {
+        if (value & SESMAN_CFG_SESS_POLICY_DEFAULT)
+        {
+            rv = g_snprintf(buff, bufflen, "Default");
+        }
+        else if (value & SESMAN_CFG_SESS_POLICY_SEPARATE)
+        {
+            rv = g_snprintf(buff, bufflen, "Separate");
+        }
+        else
+        {
+            rv = g_bitmask_to_charstr(value, policy_bits, buff, bufflen, NULL);
+        }
+    }
+
+    return rv;
+}
 
 /***************************************************************************//**
  *
@@ -49,14 +127,11 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
                     struct list *param_v)
 {
     int i;
-    int length;
-    char *buf;
 
     list_clear(param_v);
     list_clear(param_n);
 
     /* resetting the struct */
-    cf->listen_address[0] = '\0';
     cf->listen_port[0] = '\0';
     cf->enable_user_wm = 0;
     cf->user_wm[0] = '\0';
@@ -68,47 +143,50 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
 
     for (i = 0; i < param_n->count; i++)
     {
-        buf = (char *)list_get_item(param_n, i);
+        const char *param = (const char *)list_get_item(param_n, i);
+        const char *val = (const char *)list_get_item(param_v, i);
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_DEFWM))
+        if (0 == g_strcasecmp(param, SESMAN_CFG_DEFWM))
         {
-            cf->default_wm = g_strdup((char *)list_get_item(param_v, i));
+            cf->default_wm = g_strdup(val);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_USERWM))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_USERWM))
         {
-            g_strncpy(cf->user_wm, (char *)list_get_item(param_v, i), 31);
+            g_strncpy(cf->user_wm, val, sizeof(cf->user_wm) - 1);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_ENABLE_USERWM))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_ENABLE_USERWM))
         {
-            cf->enable_user_wm = g_text2bool((char *)list_get_item(param_v, i));
+            cf->enable_user_wm = g_text2bool(val);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_PORT))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_PORT))
         {
-            g_strncpy(cf->listen_port, (char *)list_get_item(param_v, i), 15);
+            scp_port_to_unix_domain_path(val, cf->listen_port,
+                                         sizeof(cf->listen_port));
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_ADDRESS))
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_AUTH_FILE_PATH))
         {
-            g_strncpy(cf->listen_address, (char *)list_get_item(param_v, i), 31);
+            cf->auth_file_path = g_strdup(val);
         }
-        else if (0 == g_strcasecmp(buf, SESMAN_CFG_AUTH_FILE_PATH))
+        else if (g_strcasecmp(param, SESMAN_CFG_RECONNECT_SH) == 0)
         {
-            cf->auth_file_path = g_strdup((char *)list_get_item(param_v, i));
+            cf->reconnect_sh = g_strdup(val);
         }
-        else if (g_strcasecmp(buf, SESMAN_CFG_RECONNECT_SH) == 0)
+        else if (0 == g_strcasecmp(param, SESMAN_CFG_ADDRESS))
         {
-            cf->reconnect_sh = g_strdup((char *)list_get_item(param_v, i));
+            /* Config must be updated for Unix Domain Sockets */
+            LOG(LOG_LEVEL_WARNING, "Obsolete setting' " SESMAN_CFG_ADDRESS
+                "' in [" SESMAN_CFG_GLOBALS "] should be removed.");
+            LOG(LOG_LEVEL_WARNING, "Review setting' " SESMAN_CFG_PORT "' in ["
+                SESMAN_CFG_GLOBALS "]");
         }
     }
 
     /* checking for missing required parameters */
-    if ('\0' == cf->listen_address[0])
-    {
-        g_strncpy(cf->listen_address, "0.0.0.0", 8);
-    }
-
     if ('\0' == cf->listen_port[0])
     {
-        g_strncpy(cf->listen_port, "3350", 5);
+        /* Load the default value */
+        scp_port_to_unix_domain_path(NULL, cf->listen_port,
+                                     sizeof(cf->listen_port));
     }
 
     if ('\0' == cf->user_wm[0])
@@ -116,50 +194,64 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         cf->enable_user_wm = 0;
     }
 
-    if (cf->default_wm == 0)
-    {
-        cf->default_wm = g_strdup("startwm.sh");
-    }
-    else if (g_strlen(cf->default_wm) == 0)
+    if (cf->default_wm == 0 || cf->default_wm[0] == '\0')
     {
         g_free(cf->default_wm);
         cf->default_wm = g_strdup("startwm.sh");
     }
-    /* if default_wm doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    /* if default_wm doesn't begin with '/', it's a relative path to
+     * XRDP_CFG_PATH */
     if (cf->default_wm[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(cf->default_wm) + 1; /* '/' */
-        buf = (char *)g_malloc(length, 0);
+        int length = (sizeof(XRDP_CFG_PATH) +
+                      g_strlen(cf->default_wm) + 1); /* '/' */
+        char *buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, cf->default_wm);
         g_free(cf->default_wm);
-        cf->default_wm = g_strdup(buf);
-        g_free(buf);
+        cf->default_wm = buf;
     }
 
-    if (cf->reconnect_sh == 0)
-    {
-        cf->reconnect_sh = g_strdup("reconnectwm.sh");
-    }
-    else if (g_strlen(cf->reconnect_sh) == 0)
+    if (cf->reconnect_sh == 0 || cf->reconnect_sh[0] == '\0')
     {
         g_free(cf->reconnect_sh);
         cf->reconnect_sh = g_strdup("reconnectwm.sh");
     }
-    /* if reconnect_sh doesn't begin with '/', it's a relative path to XRDP_CFG_PATH */
+    /* if reconnect_sh doesn't begin with '/', it's a relative path to
+     * XRDP_CFG_PATH */
     if (cf->reconnect_sh[0] != '/')
     {
         /* sizeof operator returns string length including null terminator  */
-        length = sizeof(XRDP_CFG_PATH) + g_strlen(cf->reconnect_sh) + 1; /* '/' */
-        buf = (char *)g_malloc(length, 0);
+        int length = (sizeof(XRDP_CFG_PATH) +
+                      g_strlen(cf->reconnect_sh) + 1); /* '/' */
+        char *buf = (char *)g_malloc(length, 0);
         g_sprintf(buf, "%s/%s", XRDP_CFG_PATH, cf->reconnect_sh);
         g_free(cf->reconnect_sh);
-        cf->reconnect_sh = g_strdup(buf);
-        g_free(buf);
+        cf->reconnect_sh = buf;
     }
 
     return 0;
 }
+
+/*
+  Map clipboard strings into bitmask values.
+  Duplicated definition exists in chansrv_config,
+  because it avoids build failure for xrdp-sesman and xrdp-sesrun.
+  It should be unified in the future.
+*/
+static const struct bitmask_string clip_restrict_map[] =
+{
+    { CLIP_RESTRICT_TEXT, "text"},
+    { CLIP_RESTRICT_FILE, "file"},
+    { CLIP_RESTRICT_IMAGE, "image"},
+    { CLIP_RESTRICT_ALL, "all"},
+    { CLIP_RESTRICT_NONE, "none"},
+    /* Compatibility values */
+    { CLIP_RESTRICT_ALL, "true"},
+    { CLIP_RESTRICT_ALL, "yes"},
+    { CLIP_RESTRICT_NONE, "false"},
+    BITMASK_STRING_END_OF_LIST
+};
 
 /***************************************************************************//**
  *
@@ -189,6 +281,7 @@ config_read_security(int file, struct config_security *sc,
     sc->ts_users_enable = 0;
     sc->ts_admins_enable = 0;
     sc->restrict_outbound_clipboard = 0;
+    sc->restrict_inbound_clipboard = 0;
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -230,7 +323,31 @@ config_read_security(int file, struct config_security *sc,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD))
         {
-            sc->restrict_outbound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
+            char unrecognised[256];
+            sc->restrict_outbound_clipboard =
+                g_str_to_bitmask((const char *)list_get_item(param_v, i),
+                                 clip_restrict_map, ",",
+                                 unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictOutboundClipboard' %s",
+                    unrecognised);
+            }
+        }
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD))
+        {
+            char unrecognised[256];
+            sc->restrict_inbound_clipboard =
+                g_str_to_bitmask((const char *)list_get_item(param_v, i),
+                                 clip_restrict_map, ",",
+                                 unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictInboundClipboard' %s",
+                    unrecognised);
+            }
         }
 
     }
@@ -253,7 +370,8 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
                      struct list *param_v)
 {
     int i;
-    char *buf;
+    const char *buf;
+    const char *value;
 
     list_clear(param_v);
     list_clear(param_n);
@@ -264,70 +382,43 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     se->max_idle_time = 0;
     se->max_disc_time = 0;
     se->kill_disconnected = 0;
-    se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
+    se->policy = SESMAN_CFG_SESS_POLICY_DEFAULT;
 
     file_read_section(file, SESMAN_CFG_SESSIONS, param_n, param_v);
 
     for (i = 0; i < param_n->count; i++)
     {
-        buf = (char *)list_get_item(param_n, i);
+        buf = (const char *)list_get_item(param_n, i);
+        value = (const char *)list_get_item(param_v, i);
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_X11DISPLAYOFFSET))
         {
-            se->x11_display_offset = g_atoi((char *)list_get_item(param_v, i));
+            se->x11_display_offset = g_atoi(value);
         }
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX))
         {
-            se->max_sessions = g_atoi((char *)list_get_item(param_v, i));
+            se->max_sessions = g_atoi(value);
         }
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_KILL_DISC))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_KILL_DISC))
         {
-            se->kill_disconnected = g_text2bool((char *)list_get_item(param_v, i));
+            se->kill_disconnected = g_text2bool(value);
         }
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_IDLE_LIMIT))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_IDLE_LIMIT))
         {
-            se->max_idle_time = g_atoi((char *)list_get_item(param_v, i));
+            se->max_idle_time = g_atoi(value);
         }
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_DISC_LIMIT))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_DISC_LIMIT))
         {
-            se->max_disc_time = g_atoi((char *)list_get_item(param_v, i));
+            se->max_disc_time = g_atoi(value);
         }
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_POLICY_S))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_POLICY_S))
         {
-            char *value = (char *)list_get_item(param_v, i);
-            if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_DFLT_S))
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
-            }
-            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBD_S))
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_UBD;
-            }
-            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBI_S))
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_UBI;
-            }
-            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBC_S))
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_UBC;
-            }
-            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDI_S))
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_UBDI;
-            }
-            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDC_S))
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_UBDC;
-            }
-            else /* silently ignore typos */
-            {
-                se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
-            }
+            se->policy = parse_policy_string(value);
         }
     }
 
@@ -471,7 +562,7 @@ config_read(const char *sesman_ini)
         if ((cfg->sesman_ini = g_strdup(sesman_ini)) != NULL)
         {
             int fd;
-            if ((fd = g_file_open(cfg->sesman_ini)) != -1)
+            if ((fd = g_file_open_ex(cfg->sesman_ini, 1, 0, 0, 0)) != -1)
             {
                 struct list *sec;
                 struct list *param_n;
@@ -483,6 +574,7 @@ config_read(const char *sesman_ini)
                 param_n->auto_free = 1;
                 param_v = list_create();
                 param_v->auto_free = 1;
+                all_ok = 1;
 
                 /* read global config */
                 config_read_globals(fd, cfg, param_n, param_v);
@@ -505,7 +597,6 @@ config_read(const char *sesman_ini)
                 list_delete(param_v);
                 list_delete(param_n);
                 g_file_close(fd);
-                all_ok = 1;
             }
         }
     }
@@ -528,36 +619,67 @@ config_dump(struct config_sesman *config)
     struct config_security *sc;
     se = &(config->sess);
     sc = &(config->sec);
+    char policy_s[64];
 
     /* Global sesman configuration */
     g_writeln("Filename:                     %s", config->sesman_ini);
     g_writeln("Global configuration:");
-    g_writeln("    ListenAddress:            %s", config->listen_address);
     g_writeln("    ListenPort:               %s", config->listen_port);
     g_writeln("    EnableUserWindowManager:  %d", config->enable_user_wm);
     g_writeln("    UserWindowManager:        %s", config->user_wm);
     g_writeln("    DefaultWindowManager:     %s", config->default_wm);
     g_writeln("    ReconnectScript:          %s", config->reconnect_sh);
     g_writeln("    AuthFilePath:             %s",
-              ((config->auth_file_path) ? (config->auth_file_path) : ("disabled")));
+              (config->auth_file_path ? config->auth_file_path : "disabled"));
 
     /* Session configuration */
+    config_output_policy_string(se->policy, policy_s, sizeof(policy_s));
+
     g_writeln("Session configuration:");
     g_writeln("    MaxSessions:              %d", se->max_sessions);
     g_writeln("    X11DisplayOffset:         %d", se->x11_display_offset);
     g_writeln("    KillDisconnected:         %d", se->kill_disconnected);
     g_writeln("    IdleTimeLimit:            %d", se->max_idle_time);
     g_writeln("    DisconnectedTimeLimit:    %d", se->max_disc_time);
-    g_writeln("    Policy:                   %d", se->policy);
+    g_writeln("    Policy:                   %s", policy_s);
 
     /* Security configuration */
     g_writeln("Security configuration:");
-    g_writeln("    AllowRootLogin:           %d", sc->allow_root);
-    g_writeln("    MaxLoginRetry:            %d", sc->login_retry);
-    g_writeln("    AlwaysGroupCheck:         %d", sc->ts_always_group_check);
-    g_writeln("    RestrictOutboundClipboard: %d", sc->restrict_outbound_clipboard);
+    g_writeln("    AllowRootLogin:            %d", sc->allow_root);
+    g_writeln("    MaxLoginRetry:             %d", sc->login_retry);
+    g_writeln("    AlwaysGroupCheck:          %d", sc->ts_always_group_check);
+    if (sc->restrict_outbound_clipboard == CLIP_RESTRICT_NONE)
+    {
+        g_writeln("    RestrictOutboundClipboard: %s", "none");
+    }
+    else if (sc->restrict_outbound_clipboard == CLIP_RESTRICT_ALL)
+    {
+        g_writeln("    RestrictOutboundClipboard: %s", "all");
+    }
+    else
+    {
+        char buf[256];
+        g_bitmask_to_str(sc->restrict_outbound_clipboard,
+                         clip_restrict_map, ',', buf, sizeof(buf));
+        g_writeln("    RestrictOutboundClipboard: %s", buf);
+    }
+    if (sc->restrict_inbound_clipboard == CLIP_RESTRICT_NONE)
+    {
+        g_writeln("    RestrictInboundClipboard:  %s", "none");
+    }
+    else if (sc->restrict_inbound_clipboard == CLIP_RESTRICT_ALL)
+    {
+        g_writeln("    RestrictInboundClipboard:  %s", "all");
+    }
+    else
+    {
+        char buf[256];
+        g_bitmask_to_str(sc->restrict_inbound_clipboard,
+                         clip_restrict_map, ',', buf, sizeof(buf));
+        g_writeln("    RestrictInboundClipboard:  %s", buf);
+    }
 
-    g_printf( "    TSUsersGroup:             ");
+    g_printf( "    TSUsersGroup:              ");
     if (sc->ts_users_enable)
     {
         g_printf("%d", sc->ts_users);
@@ -568,7 +690,7 @@ config_dump(struct config_sesman *config)
     }
     g_writeln("%s", "");
 
-    g_printf( "    TSAdminsGroup:            ");
+    g_printf( "    TSAdminsGroup:             ");
     if (sc->ts_admins_enable)
     {
         g_printf("%d", sc->ts_admins);

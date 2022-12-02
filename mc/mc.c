@@ -23,17 +23,18 @@
 #endif
 
 #include "mc.h"
+#include "log.h"
 
 /*****************************************************************************/
 /* return error */
 int
 lib_mod_start(struct mod *mod, int w, int h, int bpp)
 {
-    LIB_DEBUG(mod, "in lib_mod_start");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_start");
     mod->width = w;
     mod->height = h;
     mod->bpp = bpp;
-    LIB_DEBUG(mod, "out lib_mod_start");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_start");
     return 0;
 }
 
@@ -42,8 +43,8 @@ lib_mod_start(struct mod *mod, int w, int h, int bpp)
 int
 lib_mod_connect(struct mod *mod)
 {
-    LIB_DEBUG(mod, "in lib_mod_connect");
-    LIB_DEBUG(mod, "out lib_mod_connect");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_connect");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_connect");
     return 0;
 }
 
@@ -53,8 +54,8 @@ int
 lib_mod_event(struct mod *mod, int msg, long param1, long param2,
               long param3, long param4)
 {
-    LIB_DEBUG(mod, "in lib_mod_event");
-    LIB_DEBUG(mod, "out lib_mod_event");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_event");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_event");
     return 0;
 }
 
@@ -63,8 +64,8 @@ lib_mod_event(struct mod *mod, int msg, long param1, long param2,
 int
 lib_mod_signal(struct mod *mod)
 {
-    LIB_DEBUG(mod, "in lib_mod_signal");
-    LIB_DEBUG(mod, "out lib_mod_signal");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_signal");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_signal");
     return 0;
 }
 

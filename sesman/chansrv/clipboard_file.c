@@ -33,6 +33,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "string_calls.h"
 #include "list.h"
 #include "chansrv.h"
 #include "clipboard.h"
@@ -40,6 +41,7 @@
 #include "clipboard_common.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
+#include "ms-rdpeclip.h"
 
 extern int g_cliprdr_chan_id; /* in chansrv.c */
 
@@ -79,6 +81,37 @@ timeval2wintime(struct timeval *tv)
     return result;
 }
 #endif
+
+/***
+ * See MS-RDPECLIP 3.1.5.4.7
+ *
+ * Sends a failure response to a CLIPRDR_FILECONTENTS_REQUEST
+ * @param streamId Stream ID from CLIPRDR_FILECONTENTS_REQUEST
+ * @return 0 for success
+ */
+
+static int
+clipboard_send_filecontents_response_fail(int streamId)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "clipboardn_send_filecontents_response_fail:");
+
+    struct stream *s;
+    int size;
+    int rv;
+
+    make_stream(s);
+    init_stream(s, 64);
+
+    out_uint16_le(s, CB_FILECONTENTS_RESPONSE);
+    out_uint16_le(s, CB_RESPONSE_FAIL);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, streamId);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    return rv;
+}
 
 /*****************************************************************************/
 /* this will replace %20 or any hex with the space or correct char
@@ -167,17 +200,28 @@ clipboard_get_file(const char *file, int bytes)
     clipboard_check_file(pathname);
     clipboard_check_file(filename);
     g_snprintf(full_fn, 255, "%s/%s", pathname, filename);
+
+    /*
+     * Before we look at the file, see if it's in the FUSE filesystem. If it is,
+     * we can't call normal file checking functions, as these will result in
+     * a deadlock */
+    if (xfuse_path_in_xfuse_fs(full_fn))
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_get_file: Can't add client-side file "
+            "%s to clipboard", full_fn);
+        return 1;
+    }
     if (g_directory_exist(full_fn))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] is a directory, "
-                  "not supported", full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] is a directory, "
+            "not supported", full_fn);
         flags |= CB_FILE_ATTRIBUTE_DIRECTORY;
         return 1;
     }
     if (!g_file_exist(full_fn))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] does not exist",
-                  full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_get_file: file [%s] does not exist",
+            full_fn);
         return 1;
     }
     else
@@ -316,12 +360,21 @@ clipboard_send_file_size(int streamId, int lindex)
     if (g_files_list == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_size: error g_files_list is nil");
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     cfi = (struct cb_file_info *)list_get_item(g_files_list, lindex);
     if (cfi == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_size: error cfi is nil");
+        clipboard_send_filecontents_response_fail(streamId);
+        return 1;
+    }
+    if (cfi->size < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_size: error cfi->size is negative"
+            "value [%d]", cfi->size);
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     file_size = cfi->size;
@@ -395,12 +448,14 @@ clipboard_send_file_data(int streamId, int lindex,
     if (g_files_list == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: error g_files_list is nil");
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     cfi = (struct cb_file_info *)list_get_item(g_files_list, lindex);
     if (cfi == 0)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: error cfi is nil");
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_file_data: streamId %d lindex %d "
@@ -410,15 +465,17 @@ clipboard_send_file_data(int streamId, int lindex,
     fd = g_file_open_ex(full_fn, 1, 0, 0, 0);
     if (fd == -1)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: file open [%s] failed",
-                  full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_data: file open [%s] failed: %s",
+            full_fn, g_get_strerror());
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     if (g_file_seek(fd, nPositionLow) < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
-                  "in file: %s", full_fn);
+        LOG(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error in file [%s]: %s",
+            full_fn, g_get_strerror());
         g_file_close(fd);
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     make_stream(s);
@@ -430,6 +487,7 @@ clipboard_send_file_data(int streamId, int lindex,
                   cbRequested, size);
         free_stream(s);
         g_file_close(fd);
+        clipboard_send_filecontents_response_fail(streamId);
         return 1;
     }
     out_uint16_le(s, CB_FILECONTENTS_RESPONSE); /* 9 */
@@ -443,6 +501,10 @@ clipboard_send_file_data(int streamId, int lindex,
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     g_file_close(fd);
+
+    /* Log who transferred which file via clipboard for the purpose of audit */
+    LOG(LOG_LEVEL_INFO, "S2C: Transferred a file: filename=%s, uid=%d", full_fn, g_getuid());
+
     return rv;
 }
 
@@ -554,13 +616,19 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-/* read in CLIPRDR_FILEDESCRIPTOR */
+/* read in CLIPRDR_FILEDESCRIPTOR [MS-RDPECLIP] 2.2.5.2.3.1 */
 static int
 clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 {
     int num_chars;
+    int filename_bytes;
     int ex_bytes;
 
+    if (!s_check_rem_and_log(s, 4 + 32 + 4 + 16 + 8 + 8 + 520,
+                             "Parsing [MS-RDPECLIP] CLIPRDR_FILEDESCRIPTOR"))
+    {
+        return 1;
+    }
     in_uint32_le(s, cfd->flags);
     in_uint8s(s, 32); /* reserved1 */
     in_uint32_le(s, cfd->fileAttributes);
@@ -569,12 +637,10 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
     in_uint32_le(s, cfd->lastWriteTimeHigh);
     in_uint32_le(s, cfd->fileSizeHigh);
     in_uint32_le(s, cfd->fileSizeLow);
-    num_chars = 256;
-    clipboard_in_unicode(s, cfd->cFileName, &num_chars);
-    ex_bytes = 512 - num_chars * 2;
-    ex_bytes -= 2;
+    num_chars = sizeof(cfd->cFileName);
+    filename_bytes = clipboard_in_unicode(s, cfd->cFileName, &num_chars);
+    ex_bytes = 520 - filename_bytes;
     in_uint8s(s, ex_bytes);
-    in_uint8s(s, 8); /* pad */
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_file_info:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  flags 0x%8.8x", cfd->flags);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  fileAttributes 0x%8.8x", cfd->fileAttributes);
@@ -588,71 +654,105 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 
 /*****************************************************************************/
 int
-clipboard_c2s_in_files(struct stream *s, char *file_list)
+clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size,
+                       const char *fprefix)
 {
-    int cItems;
+    int citems;
     int lindex;
     int str_len;
-    int file_count;
-    struct clip_file_desc *cfd;
+    struct clip_file_desc cfd;
     char *ptr;
+    char *last; /* Last writeable char in buffer */
+    int dropped_files = 0; /* # files we can't add to buffer */
 
-    if (!s_check_rem(s, 4))
+    if (file_list_size < 1)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: parse error");
+        LOG(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: No space in string");
         return 1;
     }
-    in_uint32_le(s, cItems);
-    if (cItems > 64 * 1024) /* sanity check */
+    if (!s_check_rem(s, 4))
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: error cItems %d too big", cItems);
+        LOG(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: parse error");
+        return 1;
+    }
+    in_uint32_le(s, citems);
+    if (citems < 0 || citems > 64 * 1024) /* sanity check */
+    {
+        LOG(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: "
+            "Bad number of files in list (%d)", citems);
         return 1;
     }
     xfuse_clear_clip_dir();
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_files: cItems %d", cItems);
-    cfd = (struct clip_file_desc *)
-          g_malloc(sizeof(struct clip_file_desc), 0);
-    file_count = 0;
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_files: cItems %d", citems);
     ptr = file_list;
-    for (lindex = 0; lindex < cItems; lindex++)
+    last = file_list + file_list_size - 1;
+
+    for (lindex = 0; lindex < citems; lindex++)
     {
-        g_memset(cfd, 0, sizeof(struct clip_file_desc));
-        clipboard_c2s_in_file_info(s, cfd);
-        if ((g_pos(cfd->cFileName, "\\") >= 0) ||
-                (cfd->fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
+        g_memset(&cfd, 0, sizeof(struct clip_file_desc));
+        if (clipboard_c2s_in_file_info(s, &cfd) != 0)
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: skipping directory not "
-                      "supported [%s]", cfd->cFileName);
-            continue;
+            return 1;
         }
-        if (xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex) == -1)
+        if ((g_pos(cfd.cFileName, "\\") >= 0) ||
+                (cfd.fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_c2s_in_files: failed to add clip dir item");
+            LOG(LOG_LEVEL_WARNING, "clipboard_c2s_in_files: skipping "
+                "directory not supported [%s]", cfd.cFileName);
             continue;
         }
 
-        if (file_count > 0)
+        /* Have we already run out of room in the list? */
+        if (dropped_files > 0)
         {
-            *ptr = '\n';
-            ptr++;
+            dropped_files += 1;
+            continue;
         }
-        file_count++;
 
-        g_strcpy(ptr, "file://");
-        ptr += 7;
+        /* Room for this file? */
+        str_len = (ptr == file_list) ? 0 : 1; /* Delimiter */
+        str_len += g_strlen(fprefix); /* e.g. "file://" */
+        str_len += g_strlen(g_fuse_clipboard_path);
+        str_len += 1; /* '/' */
+        str_len += g_strlen(cfd.cFileName);
+        if (str_len > (last - ptr))
+        {
+            dropped_files += 1;
+            continue;
+        }
+
+        if (xfuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow, lindex) == -1)
+        {
+            LOG(LOG_LEVEL_WARNING, "clipboard_c2s_in_files: "
+                "failed to add clip dir item %s", cfd.cFileName);
+            continue;
+        }
+
+        if (ptr > file_list)
+        {
+            *ptr++ = '\n';
+        }
+
+        str_len = g_strlen(fprefix);
+        g_strcpy(ptr, fprefix);
+        ptr += str_len;
 
         str_len = g_strlen(g_fuse_clipboard_path);
         g_strcpy(ptr, g_fuse_clipboard_path);
         ptr += str_len;
+        *ptr++ = '/';
 
-        *ptr = '/';
-        ptr++;
-
-        str_len = g_strlen(cfd->cFileName);
-        g_strcpy(ptr, cfd->cFileName);
+        str_len = g_strlen(cfd.cFileName);
+        g_strcpy(ptr, cfd.cFileName);
         ptr += str_len;
     }
-    *ptr = 0;
-    g_free(cfd);
+    *ptr = '\0';
+
+    if (dropped_files > 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "clipboard_c2s_in_files: "
+            "Dropped %d files from the clip buffer due to insufficient space",
+            dropped_files);
+    }
     return 0;
 }

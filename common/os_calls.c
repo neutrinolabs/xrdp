@@ -76,8 +76,9 @@
 #endif
 
 #include "os_calls.h"
-#include "arch.h"
+#include "string_calls.h"
 #include "log.h"
+#include "xrdp_constants.h"
 
 /* for clearenv() */
 #if defined(_WIN32)
@@ -103,6 +104,22 @@ extern char **environ;
 #define INADDR_NONE ((unsigned long)-1)
 #endif
 
+/**
+ * Type big enough to hold socket address information for any connecting type
+ */
+union sock_info
+{
+    struct sockaddr sa;
+    struct sockaddr_in sa_in;
+#if defined(XRDP_ENABLE_IPV6)
+    struct sockaddr_in6 sa_in6;
+#endif
+    struct sockaddr_un sa_un;
+#if defined(XRDP_ENABLE_VSOCK)
+    struct sockaddr_vm sa_vm;
+#endif
+};
+
 /*****************************************************************************/
 int
 g_rm_temp_dir(void)
@@ -121,9 +138,9 @@ g_mk_socket_path(const char *app_name)
             /* if failed, still check if it got created by someone else */
             if (!g_directory_exist(XRDP_SOCKET_PATH))
             {
-                log_message(LOG_LEVEL_ERROR,
-                            "g_mk_socket_path: g_create_path(%s) failed",
-                            XRDP_SOCKET_PATH);
+                LOG(LOG_LEVEL_ERROR,
+                    "g_mk_socket_path: g_create_path(%s) failed",
+                    XRDP_SOCKET_PATH);
                 return 1;
             }
         }
@@ -269,7 +286,7 @@ g_write(const char *format, ...)
 }
 
 /*****************************************************************************/
-/* produce a hex dump */
+/* print a hex dump to stdout*/
 void
 g_hexdump(const char *p, int len)
 {
@@ -327,6 +344,13 @@ g_memcpy(void *d_ptr, const void *s_ptr, int size)
 }
 
 /*****************************************************************************/
+void
+g_memmove(void *d_ptr, const void *s_ptr, int size)
+{
+    memmove(d_ptr, s_ptr, size);
+}
+
+/*****************************************************************************/
 int
 g_getchar(void)
 {
@@ -360,13 +384,13 @@ g_tcp_set_no_delay(int sck)
             }
             else
             {
-                g_writeln("Error setting tcp_nodelay");
+                LOG(LOG_LEVEL_ERROR, "Error setting tcp_nodelay");
             }
         }
     }
     else
     {
-        g_writeln("Error getting tcp_nodelay");
+        LOG(LOG_LEVEL_ERROR, "Error getting tcp_nodelay");
     }
 
     return ret;
@@ -399,13 +423,13 @@ g_tcp_set_keepalive(int sck)
             }
             else
             {
-                g_writeln("Error setting tcp_keepalive");
+                LOG(LOG_LEVEL_ERROR, "Error setting tcp_keepalive");
             }
         }
     }
     else
     {
-        g_writeln("Error getting tcp_keepalive");
+        LOG(LOG_LEVEL_ERROR, "Error getting tcp_keepalive");
     }
 
     return ret;
@@ -428,12 +452,12 @@ g_tcp_socket(void)
         switch (errno)
         {
             case EAFNOSUPPORT: /* if IPv6 not supported, retry IPv4 */
-                log_message(LOG_LEVEL_INFO, "IPv6 not supported, falling back to IPv4");
+                LOG(LOG_LEVEL_INFO, "IPv6 not supported, falling back to IPv4");
                 rv = (int)socket(AF_INET, SOCK_STREAM, 0);
                 break;
 
             default:
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
+                LOG(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
                 return -1;
         }
     }
@@ -442,12 +466,12 @@ g_tcp_socket(void)
 #endif
     if (rv < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
+        LOG(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
         return -1;
     }
 #if defined(XRDP_ENABLE_IPV6)
     option_len = sizeof(option_value);
-    if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+    if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&option_value,
                    &option_len) == 0)
     {
         if (option_value != 0)
@@ -458,10 +482,10 @@ g_tcp_socket(void)
             option_value = 0;
 #endif
             option_len = sizeof(option_value);
-            if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
-                       option_len) < 0)
+            if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&option_value,
+                           option_len) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
+                LOG(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
             }
         }
     }
@@ -475,9 +499,9 @@ g_tcp_socket(void)
             option_value = 1;
             option_len = sizeof(option_value);
             if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                       option_len) < 0)
+                           option_len) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
+                LOG(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
             }
         }
     }
@@ -492,9 +516,9 @@ g_tcp_socket(void)
             option_value = 1024 * 32;
             option_len = sizeof(option_value);
             if (setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                       option_len) < 0)
+                           option_len) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
+                LOG(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
             }
         }
     }
@@ -589,6 +613,17 @@ g_sck_local_socket(void)
 
 /*****************************************************************************/
 int
+g_sck_local_socketpair(int sck[2])
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return socketpair(PF_LOCAL, SOCK_STREAM, 0, sck);
+#endif
+}
+
+/*****************************************************************************/
+int
 g_sck_vsock_socket(void)
 {
 #if defined(XRDP_ENABLE_VSOCK)
@@ -638,9 +673,9 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 
     if (getsockopt(sck, SOL_SOCKET, LOCAL_PEERCRED, &xucred, &xucred_length))
     {
-            return 1;
+        return 1;
     }
-    if (pid !=0)
+    if (pid != 0)
     {
         *pid = 0; /* can't get pid in FreeBSD, OS X */
     }
@@ -648,7 +683,8 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
     {
         *uid = xucred.cr_uid;
     }
-    if (gid != 0) {
+    if (gid != 0)
+    {
         *gid = xucred.cr_gid;
     }
     return 0;
@@ -658,88 +694,103 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 }
 
 /*****************************************************************************/
+
+static const char *
+get_peer_description(const union sock_info *sock_info,
+                     char *desc, unsigned int bytes)
+{
+    if (bytes > 0)
+    {
+        int family = sock_info->sa.sa_family;
+        switch (family)
+        {
+            case AF_INET:
+            {
+                char ip[INET_ADDRSTRLEN];
+                const struct sockaddr_in *sa_in = &sock_info->sa_in;
+                if (inet_ntop(family, &sa_in->sin_addr,
+                              ip, sizeof(ip)) != NULL)
+                {
+                    g_snprintf(desc, bytes, "%s:%d", ip,
+                               ntohs(sa_in->sin_port));
+                }
+                else
+                {
+                    g_snprintf(desc, bytes, "<unknown AF_INET>:%d",
+                               ntohs(sa_in->sin_port));
+                }
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+            case AF_INET6:
+            {
+                char ip[INET6_ADDRSTRLEN];
+                const struct sockaddr_in6 *sa_in6 = &sock_info->sa_in6;
+                if (inet_ntop(family, &sa_in6->sin6_addr,
+                              ip, sizeof(ip)) != NULL)
+                {
+                    g_snprintf(desc, bytes, "[%s]:%d", ip,
+                               ntohs(sa_in6->sin6_port));
+                }
+                else
+                {
+                    g_snprintf(desc, bytes, "[<unknown AF_INET6>]:%d",
+                               ntohs(sa_in6->sin6_port));
+                }
+                break;
+            }
+#endif
+
+            case AF_UNIX:
+            {
+                g_snprintf(desc, bytes, "AF_UNIX");
+                break;
+            }
+
+#if defined(XRDP_ENABLE_VSOCK)
+
+            case AF_VSOCK:
+            {
+                const struct sockaddr_vm *sa_vm = &sock_info->sa_vm;
+
+                g_snprintf(desc, bytes, "AF_VSOCK:cid=%u/port=%u",
+                           sa_vm->svm_cid, sa_vm->svm_port);
+
+                break;
+            }
+
+#endif
+            default:
+                g_snprintf(desc, bytes, "Unknown address family %d", family);
+                break;
+        }
+    }
+
+    return desc;
+}
+
+/*****************************************************************************/
 void
 g_sck_close(int sck)
 {
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    char sockname[128];
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-#if defined(XRDP_ENABLE_VSOCK)
-        struct sockaddr_vm sock_addr_vm;
-#endif
-    } sock_info;
-    socklen_t sock_len = sizeof(sock_info);
+    char sockname[MAX_PEER_DESCSTRLEN];
 
+    union sock_info sock_info;
+    socklen_t sock_len = sizeof(sock_info);
     memset(&sock_info, 0, sizeof(sock_info));
 
-    if (getsockname(sck, &sock_info.sock_addr, &sock_len) == 0)
+    if (getsockname(sck, &sock_info.sa, &sock_len) == 0)
     {
-        switch (sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-
-                g_snprintf(sockname, sizeof(sockname), "AF_INET %s:%d",
-                           inet_ntoa(sock_addr_in->sin_addr),
-                           ntohs(sock_addr_in->sin_port));
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                char addr[48];
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-
-                g_snprintf(sockname, sizeof(sockname), "AF_INET6 %s port %d",
-                           inet_ntop(sock_addr_in6->sin6_family,
-                                     &sock_addr_in6->sin6_addr, addr, sizeof(addr)),
-                           ntohs(sock_addr_in6->sin6_port));
-                break;
-            }
-
-#endif
-
-            case AF_UNIX:
-                g_snprintf(sockname, sizeof(sockname), "AF_UNIX");
-                break;
-
-#if defined(XRDP_ENABLE_VSOCK)
-
-            case AF_VSOCK:
-            {
-                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
-
-                g_snprintf(sockname,
-                           sizeof(sockname),
-                           "AF_VSOCK cid %d port %d",
-                           sock_addr_vm->svm_cid,
-                           sock_addr_vm->svm_port);
-                break;
-            }
-
-#endif
-
-            default:
-                g_snprintf(sockname, sizeof(sockname), "unknown family %d",
-                           sock_info.sock_addr.sa_family);
-                break;
-        }
+        get_peer_description(&sock_info, sockname, sizeof(sockname));
     }
     else
     {
-        log_message(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
-                    sck, g_get_strerror());
+        LOG(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
+            sck, g_get_strerror());
 
         if (errno == EBADF || errno == ENOTSOCK)
         {
@@ -751,12 +802,12 @@ g_sck_close(int sck)
 
     if (close(sck) == 0)
     {
-        log_message(LOG_LEVEL_DEBUG, "Closed socket %d (%s)", sck, sockname);
+        LOG(LOG_LEVEL_DEBUG, "Closed socket %d (%s)", sck, sockname);
     }
     else
     {
-        log_message(LOG_LEVEL_WARNING, "Cannot close socket %d (%s): %s", sck,
-                    sockname, g_get_strerror());
+        LOG(LOG_LEVEL_WARNING, "Cannot close socket %d (%s): %s", sck,
+            sockname, g_get_strerror());
     }
 
 #endif
@@ -777,7 +828,7 @@ connect_loopback(int sck, const char *port)
     sa.sin6_family = AF_INET6;
     sa.sin6_addr = in6addr_loopback;             // IPv6 ::1
     sa.sin6_port = htons((tui16)atoi(port));
-    res = connect(sck, (struct sockaddr*)&sa, sizeof(sa));
+    res = connect(sck, (struct sockaddr *)&sa, sizeof(sa));
     if (res == -1 && errno == EINPROGRESS)
     {
         return -1;
@@ -792,7 +843,7 @@ connect_loopback(int sck, const char *port)
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
     s.sin_port = htons((tui16)atoi(port));
-    res = connect(sck, (struct sockaddr*)&s, sizeof(s));
+    res = connect(sck, (struct sockaddr *)&s, sizeof(s));
     if (res == -1 && errno == EINPROGRESS)
     {
         return -1;
@@ -807,7 +858,7 @@ connect_loopback(int sck, const char *port)
     sa.sin6_family = AF_INET6;
     inet_pton(AF_INET6, "::FFFF:127.0.0.1", &sa.sin6_addr);
     sa.sin6_port = htons((tui16)atoi(port));
-    res = connect(sck, (struct sockaddr*)&sa, sizeof(sa));
+    res = connect(sck, (struct sockaddr *)&sa, sizeof(sa));
     if (res == -1 && errno == EINPROGRESS)
     {
         return -1;
@@ -850,8 +901,8 @@ g_tcp_connect(int sck, const char *address, const char *port)
     }
     if (res != 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getaddrinfo() failed: %s",
-                    sck, address, port, gai_strerror(res));
+        LOG(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getaddrinfo() failed: %s",
+            sck, address, port, gai_strerror(res));
     }
     if (res > -1)
     {
@@ -879,10 +930,10 @@ g_tcp_connect(int sck, const char *address, const char *port)
 }
 #else
 int
-g_tcp_connect(int sck, const char* address, const char* port)
+g_tcp_connect(int sck, const char *address, const char *port)
 {
     struct sockaddr_in s;
-    struct hostent* h;
+    struct hostent *h;
     int res;
 
     g_memset(&s, 0, sizeof(struct sockaddr_in));
@@ -900,13 +951,13 @@ g_tcp_connect(int sck, const char* address, const char* port)
                 {
                     if ((*(h->h_addr_list)) != 0)
                     {
-                        s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
+                        s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
                     }
                 }
             }
         }
     }
-    res = connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    res = connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
 
     /* Mac OSX connect() returns -1 for already established connections */
     if (res == -1 && errno == EISCONN)
@@ -951,7 +1002,7 @@ g_sck_set_non_blocking(int sck)
     i = i | O_NONBLOCK;
     if (fcntl(sck, F_SETFL, i) < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_sck_set_non_blocking: fcntl() failed");
+        LOG(LOG_LEVEL_ERROR, "g_sck_set_non_blocking: fcntl() failed");
     }
 #endif
     return 0;
@@ -972,7 +1023,7 @@ g_tcp_bind(int sck, const char *port)
     sa.sin6_family = AF_INET6;
     sa.sin6_addr = in6addr_any;                 // IPv6 ::
     sa.sin6_port = htons((tui16)atoi(port));
-    if (bind(sck, (struct sockaddr*)&sa, sizeof(sa)) == 0)
+    if (bind(sck, (struct sockaddr *)&sa, sizeof(sa)) == 0)
     {
         return 0;
     }
@@ -983,19 +1034,19 @@ g_tcp_bind(int sck, const char *port)
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_ANY);     // IPv4 0.0.0.0
     s.sin_port = htons((tui16)atoi(port));
-    if (bind(sck, (struct sockaddr*)&s, sizeof(s)) == 0)
+    if (bind(sck, (struct sockaddr *)&s, sizeof(s)) == 0)
     {
         return 0;
     }
 
-    log_message(LOG_LEVEL_ERROR, "g_tcp_bind(%d, %s) failed "
-                "bind IPv6 (errno=%d) and IPv4 (errno=%d).",
-                sck, port, errno6, errno);
+    LOG(LOG_LEVEL_ERROR, "g_tcp_bind(%d, %s) failed "
+        "bind IPv6 (errno=%d) and IPv4 (errno=%d).",
+        sck, port, errno6, errno);
     return -1;
 }
 #else
 int
-g_tcp_bind(int sck, const char* port)
+g_tcp_bind(int sck, const char *port)
 {
     struct sockaddr_in s;
 
@@ -1003,7 +1054,7 @@ g_tcp_bind(int sck, const char* port)
     s.sin_family = AF_INET;
     s.sin_port = htons((tui16)atoi(port));
     s.sin_addr.s_addr = INADDR_ANY;
-    return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
@@ -1078,7 +1129,7 @@ bind_loopback(int sck, const char *port)
     sa.sin6_family = AF_INET6;
     sa.sin6_addr = in6addr_loopback;             // IPv6 ::1
     sa.sin6_port = htons((tui16)atoi(port));
-    if (bind(sck, (struct sockaddr*)&sa, sizeof(sa)) == 0)
+    if (bind(sck, (struct sockaddr *)&sa, sizeof(sa)) == 0)
     {
         return 0;
     }
@@ -1089,7 +1140,7 @@ bind_loopback(int sck, const char *port)
     s.sin_family = AF_INET;
     s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);  // IPv4 127.0.0.1
     s.sin_port = htons((tui16)atoi(port));
-    if (bind(sck, (struct sockaddr*)&s, sizeof(s)) == 0)
+    if (bind(sck, (struct sockaddr *)&s, sizeof(s)) == 0)
     {
         return 0;
     }
@@ -1100,14 +1151,14 @@ bind_loopback(int sck, const char *port)
     sa.sin6_family = AF_INET6;
     inet_pton(AF_INET6, "::FFFF:127.0.0.1", &sa.sin6_addr);
     sa.sin6_port = htons((tui16)atoi(port));
-    if (bind(sck, (struct sockaddr*)&sa, sizeof(sa)) == 0)
+    if (bind(sck, (struct sockaddr *)&sa, sizeof(sa)) == 0)
     {
         return 0;
     }
 
-    log_message(LOG_LEVEL_ERROR, "bind_loopback(%d, %s) failed; "
-                "IPv6 ::1 (errno=%d), IPv4 127.0.0.1 (errno=%d) and IPv6 ::FFFF:127.0.0.1 (errno=%d).",
-                sck, port, errno6, errno4, errno);
+    LOG(LOG_LEVEL_ERROR, "bind_loopback(%d, %s) failed; "
+        "IPv6 ::1 (errno=%d), IPv4 127.0.0.1 (errno=%d) and IPv6 ::FFFF:127.0.0.1 (errno=%d).",
+        sck, port, errno6, errno4, errno);
     return -1;
 }
 
@@ -1142,7 +1193,7 @@ getaddrinfo_bind(int sck, const char *port, const char *address)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "getaddrinfo error: %s", gai_strerror(error));
+        LOG(LOG_LEVEL_ERROR, "getaddrinfo error: %s", gai_strerror(error));
         return -1;
     }
     return res;
@@ -1159,16 +1210,16 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
     int res;
 
     if ((address == 0) ||
-        (address[0] == 0) ||
-        (g_strcmp(address, "0.0.0.0") == 0) ||
-        (g_strcmp(address, "::") == 0))
+            (address[0] == 0) ||
+            (g_strcmp(address, "0.0.0.0") == 0) ||
+            (g_strcmp(address, "::") == 0))
     {
         return g_tcp_bind(sck, port);
     }
 
     if ((g_strcmp(address, "127.0.0.1") == 0) ||
-        (g_strcmp(address, "::1") == 0) ||
-        (g_strcmp(address, "localhost") == 0))
+            (g_strcmp(address, "::1") == 0) ||
+            (g_strcmp(address, "localhost") == 0))
     {
         return bind_loopback(sck, port);
     }
@@ -1183,7 +1234,7 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
         struct in_addr a;
         if ((inet_aton(address, &a) == 1) && (strlen(address) <= 15))
         {
-            char sz[7+15+1];
+            char sz[7 + 15 + 1];
             sprintf(sz, "::FFFF:%s", address);
             res = getaddrinfo_bind(sck, port, sz);
             if (res == 0)
@@ -1192,15 +1243,15 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
             }
         }
 
-        log_message(LOG_LEVEL_ERROR, "g_tcp_bind_address(%d, %s, %s) Failed!",
-                    sck, port, address);
+        LOG(LOG_LEVEL_ERROR, "g_tcp_bind_address(%d, %s, %s) Failed!",
+            sck, port, address);
         return -1;
     }
     return 0;
 }
 #else
 int
-g_tcp_bind_address(int sck, const char* port, const char* address)
+g_tcp_bind_address(int sck, const char *port, const char *address)
 {
     struct sockaddr_in s;
 
@@ -1212,7 +1263,7 @@ g_tcp_bind_address(int sck, const char* port, const char* address)
     {
         return -1; /* bad address */
     }
-    return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
@@ -1226,19 +1277,10 @@ g_sck_listen(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_accept(int sck)
+g_sck_accept(int sck)
 {
     int ret;
-    char msg[256];
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-    } sock_info;
-
+    union sock_info sock_info;
     socklen_t sock_len = sizeof(sock_info);
     memset(&sock_info, 0, sock_len);
 
@@ -1246,141 +1288,10 @@ g_tcp_accept(int sck)
 
     if (ret > 0)
     {
-        switch(sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-
-                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                           inet_ntoa(sock_addr_in->sin_addr),
-                           ntohs(sock_addr_in->sin_port));
-                log_message(LOG_LEVEL_INFO, "%s", msg);
-
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-                char addr[256];
-
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, sizeof(addr));
-                g_snprintf(msg, sizeof(msg), "A connection received from %s port %d",
-                           addr, ntohs(sock_addr_in6->sin6_port));
-                log_message(LOG_LEVEL_INFO, "%s", msg);
-
-                break;
-
-            }
-
-#endif
-        }
-    }
-
-    return ret;
-}
-
-/*****************************************************************************/
-int
-g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
-{
-    int ret;
-    char msg[256];
-    union
-    {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-        struct sockaddr_un sock_addr_un;
-#if defined(XRDP_ENABLE_VSOCK)
-        struct sockaddr_vm sock_addr_vm;
-#endif
-    } sock_info;
-
-    socklen_t sock_len = sizeof(sock_info);
-    memset(&sock_info, 0, sock_len);
-
-    ret = accept(sck, (struct sockaddr *)&sock_info, &sock_len);
-
-    if (ret > 0)
-    {
-        switch(sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-
-                g_snprintf(addr, addr_bytes, "%s", inet_ntoa(sock_addr_in->sin_addr));
-                g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in->sin_port));
-                g_snprintf(msg, sizeof(msg),
-                           "AF_INET connection received from %s port %s",
-                           addr, port);
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, addr_bytes);
-                g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in6->sin6_port));
-                g_snprintf(msg, sizeof(msg),
-                           "AF_INET6 connection received from %s port %s",
-                           addr, port);
-                break;
-            }
-
-#endif
-
-            case AF_UNIX:
-            {
-                g_strncpy(addr, "", addr_bytes - 1);
-                g_strncpy(port, "", port_bytes - 1);
-                g_snprintf(msg, sizeof(msg), "AF_UNIX connection received");
-                break;
-            }
-
-#if defined(XRDP_ENABLE_VSOCK)
-
-            case AF_VSOCK:
-            {
-                struct sockaddr_vm *sock_addr_vm = &sock_info.sock_addr_vm;
-
-                g_snprintf(addr, addr_bytes - 1, "%d", sock_addr_vm->svm_cid);
-                g_snprintf(port, addr_bytes - 1, "%d", sock_addr_vm->svm_port);
-
-                g_snprintf(msg,
-                           sizeof(msg),
-                           "AF_VSOCK connection received from cid: %s port: %s",
-                           addr,
-                           port);
-
-                break;
-            }
-
-#endif
-            default:
-            {
-                g_strncpy(addr, "", addr_bytes - 1);
-                g_strncpy(port, "", port_bytes - 1);
-                g_snprintf(msg, sizeof(msg),
-                           "connection received, unknown socket family %d",
-                           sock_info.sock_addr.sa_family);
-                break;
-            }
-        }
-
-
-        log_message(LOG_LEVEL_INFO, "Socket %d: %s", ret, msg);
+        char description[MAX_PEER_DESCSTRLEN];
+        get_peer_description(&sock_info, description, sizeof(description));
+        LOG(LOG_LEVEL_INFO, "Socket %d: connection accepted from %s",
+            ret, description);
 
     }
 
@@ -1388,81 +1299,86 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 }
 
 /*****************************************************************************/
-/*
- * TODO: this function writes not only IP address, name is confusing
- */
-void
-g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
+
+const char *
+g_sck_get_peer_ip_address(int sck,
+                          char *ip, unsigned int bytes,
+                          unsigned short *port)
 {
-    char *addr;
-    int port;
-    int ok;
-
-    union
+    if (bytes > 0)
     {
-        struct sockaddr sock_addr;
-        struct sockaddr_in sock_addr_in;
-#if defined(XRDP_ENABLE_IPV6)
-        struct sockaddr_in6 sock_addr_in6;
-#endif
-        struct sockaddr_un sock_addr_un;
-    } sock_info;
+        int ok = 0;
+        union sock_info sock_info;
 
-    ok = 0;
+        socklen_t sock_len = sizeof(sock_info);
+        memset(&sock_info, 0, sock_len);
+
+        if (getpeername(sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
+        {
+            int family = sock_info.sa.sa_family;
+            switch (family)
+            {
+                case AF_INET:
+                {
+                    struct sockaddr_in *sa_in = &sock_info.sa_in;
+                    if (inet_ntop(family, &sa_in->sin_addr, ip, bytes) != NULL)
+                    {
+                        ok = 1;
+                        if (port != NULL)
+                        {
+                            *port = ntohs(sa_in->sin_port);
+                        }
+                    }
+                    break;
+                }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+                case AF_INET6:
+                {
+                    struct sockaddr_in6 *sa_in6 = &sock_info.sa_in6;
+                    if (inet_ntop(family, &sa_in6->sin6_addr, ip, bytes) != NULL)
+                    {
+                        ok = 1;
+                        if (port != NULL)
+                        {
+                            *port = ntohs(sa_in6->sin6_port);
+                        }
+                    }
+                    break;
+                }
+
+#endif
+                default:
+                    break;
+            }
+        }
+
+        if (!ok)
+        {
+            ip[0] = '\0';
+        }
+    }
+
+    return ip;
+}
+
+/*****************************************************************************/
+
+const char *
+g_sck_get_peer_description(int sck,
+                           char *desc, unsigned int bytes)
+{
+    union sock_info sock_info;
     socklen_t sock_len = sizeof(sock_info);
     memset(&sock_info, 0, sock_len);
-#if defined(XRDP_ENABLE_IPV6)
-    addr = (char *)g_malloc(INET6_ADDRSTRLEN, 1);
-#else
-    addr = (char *)g_malloc(INET_ADDRSTRLEN, 1);
-#endif
 
-    if (getpeername(rcv_sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
+    if (getpeername(sck, (struct sockaddr *)&sock_info, &sock_len) == 0)
     {
-        switch(sock_info.sock_addr.sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
-                g_snprintf(addr, INET_ADDRSTRLEN, "%s", inet_ntoa(sock_addr_in->sin_addr));
-                port = ntohs(sock_addr_in->sin_port);
-                ok = 1;
-                break;
-            }
-
-#if defined(XRDP_ENABLE_IPV6)
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
-                inet_ntop(sock_addr_in6->sin6_family,
-                          &sock_addr_in6->sin6_addr, addr, INET6_ADDRSTRLEN);
-                port = ntohs(sock_addr_in6->sin6_port);
-                ok = 1;
-                break;
-            }
-
-#endif
-
-            default:
-            {
-                break;
-            }
-
-        }
-
-        if (ok)
-        {
-            g_snprintf(ip_address, bytes, "%s:%d - socket: %d", addr, port, rcv_sck);
-        }
+        get_peer_description(&sock_info, desc, bytes);
     }
 
-    if (!ok)
-    {
-        g_snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
-    }
-
-    g_free(addr);
+    return desc;
 }
 
 /*****************************************************************************/
@@ -1806,7 +1722,7 @@ g_set_wait_obj(tintptr obj)
         {
             error = errno;
             if ((error == EAGAIN) || (error == EWOULDBLOCK) ||
-                (error == EINPROGRESS) || (error == EINTR))
+                    (error == EINPROGRESS) || (error == EINTR))
             {
                 /* ok */
             }
@@ -1857,7 +1773,7 @@ g_reset_wait_obj(tintptr obj)
         {
             error = errno;
             if ((error == EAGAIN) || (error == EWOULDBLOCK) ||
-                (error == EINPROGRESS) || (error == EINTR))
+                    (error == EINPROGRESS) || (error == EINTR))
             {
                 /* ok */
             }
@@ -2008,7 +1924,7 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
     }
     else if (rcount > 0)
     {
-        g_writeln("Programming error read_objs is null");
+        LOG(LOG_LEVEL_ERROR, "Programming error read_objs is null");
         return 1; /* error */
     }
 
@@ -2031,7 +1947,7 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
     }
     else if (wcount > 0)
     {
-        g_writeln("Programming error write_objs is null");
+        LOG(LOG_LEVEL_ERROR, "Programming error write_objs is null");
         return 1; /* error */
     }
 
@@ -2274,6 +2190,55 @@ g_file_lock(int fd, int start, int len)
 }
 
 /*****************************************************************************/
+/* Converts a hex mask to a mode_t value */
+#if !defined(_WIN32)
+static mode_t
+hex_to_mode_t(int hex)
+{
+    mode_t mode = 0;
+
+    mode |= (hex & 0x4000) ? S_ISUID : 0;
+    mode |= (hex & 0x2000) ? S_ISGID : 0;
+    mode |= (hex & 0x1000) ? S_ISVTX : 0;
+    mode |= (hex & 0x0400) ? S_IRUSR : 0;
+    mode |= (hex & 0x0200) ? S_IWUSR : 0;
+    mode |= (hex & 0x0100) ? S_IXUSR : 0;
+    mode |= (hex & 0x0040) ? S_IRGRP : 0;
+    mode |= (hex & 0x0020) ? S_IWGRP : 0;
+    mode |= (hex & 0x0010) ? S_IXGRP : 0;
+    mode |= (hex & 0x0004) ? S_IROTH : 0;
+    mode |= (hex & 0x0002) ? S_IWOTH : 0;
+    mode |= (hex & 0x0001) ? S_IXOTH : 0;
+    return mode;
+}
+#endif
+
+/*****************************************************************************/
+/* Converts a mode_t value to a hex mask */
+#if !defined(_WIN32)
+static int
+mode_t_to_hex(mode_t mode)
+{
+    int hex = 0;
+
+    hex |= (mode & S_ISUID) ?  0x4000 : 0;
+    hex |= (mode & S_ISGID) ?  0x2000 : 0;
+    hex |= (mode & S_ISVTX) ?  0x1000 : 0;
+    hex |= (mode & S_IRUSR) ?  0x0400 : 0;
+    hex |= (mode & S_IWUSR) ?  0x0200 : 0;
+    hex |= (mode & S_IXUSR) ?  0x0100 : 0;
+    hex |= (mode & S_IRGRP) ?  0x0040 : 0;
+    hex |= (mode & S_IWGRP) ?  0x0020 : 0;
+    hex |= (mode & S_IXGRP) ?  0x0010 : 0;
+    hex |= (mode & S_IROTH) ?  0x0004 : 0;
+    hex |= (mode & S_IWOTH) ?  0x0002 : 0;
+    hex |= (mode & S_IXOTH) ?  0x0001 : 0;
+
+    return hex;
+}
+#endif
+
+/*****************************************************************************/
 /* returns error */
 int
 g_chmod_hex(const char *filename, int flags)
@@ -2281,22 +2246,22 @@ g_chmod_hex(const char *filename, int flags)
 #if defined(_WIN32)
     return 0;
 #else
-    int fl;
+    mode_t m = hex_to_mode_t(flags);
+    return chmod(filename, m);
+#endif
+}
 
-    fl = 0;
-    fl |= (flags & 0x4000) ? S_ISUID : 0;
-    fl |= (flags & 0x2000) ? S_ISGID : 0;
-    fl |= (flags & 0x1000) ? S_ISVTX : 0;
-    fl |= (flags & 0x0400) ? S_IRUSR : 0;
-    fl |= (flags & 0x0200) ? S_IWUSR : 0;
-    fl |= (flags & 0x0100) ? S_IXUSR : 0;
-    fl |= (flags & 0x0040) ? S_IRGRP : 0;
-    fl |= (flags & 0x0020) ? S_IWGRP : 0;
-    fl |= (flags & 0x0010) ? S_IXGRP : 0;
-    fl |= (flags & 0x0004) ? S_IROTH : 0;
-    fl |= (flags & 0x0002) ? S_IWOTH : 0;
-    fl |= (flags & 0x0001) ? S_IXOTH : 0;
-    return chmod(filename, fl);
+/*****************************************************************************/
+/* returns error */
+int
+g_umask_hex(int flags)
+{
+#if defined(_WIN32)
+    return flags;
+#else
+    mode_t m = hex_to_mode_t(flags);
+    m = umask(m);
+    return mode_t_to_hex(m);
 #endif
 }
 
@@ -2510,515 +2475,47 @@ g_file_get_size(const char *filename)
 }
 
 /*****************************************************************************/
-/* returns length of text */
+/* returns device number, -1 on error */
 int
-g_strlen(const char *text)
-{
-    if (text == NULL)
-    {
-        return 0;
-    }
-
-    return strlen(text);
-}
-
-/*****************************************************************************/
-/* locates char in text */
-const char *
-g_strchr(const char* text, int c)
-{
-    if (text == NULL)
-    {
-        return 0;
-    }
-
-    return strchr(text,c);
-}
-
-/*****************************************************************************/
-/* returns dest */
-char *
-g_strcpy(char *dest, const char *src)
-{
-    if (src == 0 && dest != 0)
-    {
-        dest[0] = 0;
-        return dest;
-    }
-
-    if (dest == 0 || src == 0)
-    {
-        return 0;
-    }
-
-    return strcpy(dest, src);
-}
-
-/*****************************************************************************/
-/* returns dest */
-char *
-g_strncpy(char *dest, const char *src, int len)
-{
-    char *rv;
-
-    if (src == 0 && dest != 0)
-    {
-        dest[0] = 0;
-        return dest;
-    }
-
-    if (dest == 0 || src == 0)
-    {
-        return 0;
-    }
-
-    rv = strncpy(dest, src, len);
-    dest[len] = 0;
-    return rv;
-}
-
-/*****************************************************************************/
-/* returns dest */
-char *
-g_strcat(char *dest, const char *src)
-{
-    if (dest == 0 || src == 0)
-    {
-        return dest;
-    }
-
-    return strcat(dest, src);
-}
-
-/*****************************************************************************/
-/* returns dest */
-char *
-g_strncat(char *dest, const char *src, int len)
-{
-    if (dest == 0 || src == 0)
-    {
-        return dest;
-    }
-
-    return strncat(dest, src, len);
-}
-
-/*****************************************************************************/
-/* if in = 0, return 0 else return newly alloced copy of in */
-char *
-g_strdup(const char *in)
-{
-    int len;
-    char *p;
-
-    if (in == 0)
-    {
-        return 0;
-    }
-
-    len = g_strlen(in);
-    p = (char *)g_malloc(len + 1, 0);
-
-    if (p != NULL)
-    {
-        g_strcpy(p, in);
-    }
-
-    return p;
-}
-
-/*****************************************************************************/
-/* if in = 0, return 0 else return newly alloced copy of input string
- * if the input string is larger than maxlen the returned string will be
- * truncated. All strings returned will include null termination*/
-char *
-g_strndup(const char *in, const unsigned int maxlen)
-{
-    unsigned int len;
-    char *p;
-
-    if (in == 0)
-    {
-        return 0;
-    }
-
-    len = g_strlen(in);
-
-    if (len > maxlen)
-    {
-        len = maxlen - 1;
-    }
-
-    p = (char *)g_malloc(len + 2, 0);
-
-    if (p != NULL)
-    {
-        g_strncpy(p, in, len + 1);
-    }
-
-    return p;
-}
-
-/*****************************************************************************/
-int
-g_strcmp(const char *c1, const char *c2)
-{
-    return strcmp(c1, c2);
-}
-
-/*****************************************************************************/
-int
-g_strncmp(const char *c1, const char *c2, int len)
-{
-    return strncmp(c1, c2, len);
-}
-
-/*****************************************************************************/
-/* compare up to delim */
-int
-g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
-{
-    char c1;
-    char c2;
-
-    c1 = 0;
-    c2 = 0;
-    while (n > 0)
-    {
-        c1 = *(s1++);
-        c2 = *(s2++);
-        if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
-        {
-            return c1 - c2;
-        }
-        n--;
-    }
-    return c1 - c2;
-}
-
-/*****************************************************************************/
-int
-g_strcasecmp(const char *c1, const char *c2)
+g_file_get_device_number(const char *filename)
 {
 #if defined(_WIN32)
-    return stricmp(c1, c2);
+    return -1;
 #else
-    return strcasecmp(c1, c2);
-#endif
-}
+    struct stat st;
 
-/*****************************************************************************/
-int
-g_strncasecmp(const char *c1, const char *c2, int len)
-{
-#if defined(_WIN32)
-    return strnicmp(c1, c2, len);
-#else
-    return strncasecmp(c1, c2, len);
-#endif
-}
-
-/*****************************************************************************/
-int
-g_atoi(const char *str)
-{
-    if (str == 0)
+    if (stat(filename, &st) == 0)
     {
-        return 0;
+        return (int)(st.st_dev);
     }
-
-    return atoi(str);
-}
-
-/*****************************************************************************/
-int
-g_htoi(char *str)
-{
-    int len;
-    int index;
-    int rv;
-    int val;
-    int shift;
-
-    rv = 0;
-    len = strlen(str);
-    index = len - 1;
-    shift = 0;
-
-    while (index >= 0)
-    {
-        val = 0;
-
-        switch (str[index])
-        {
-            case '1':
-                val = 1;
-                break;
-            case '2':
-                val = 2;
-                break;
-            case '3':
-                val = 3;
-                break;
-            case '4':
-                val = 4;
-                break;
-            case '5':
-                val = 5;
-                break;
-            case '6':
-                val = 6;
-                break;
-            case '7':
-                val = 7;
-                break;
-            case '8':
-                val = 8;
-                break;
-            case '9':
-                val = 9;
-                break;
-            case 'a':
-            case 'A':
-                val = 10;
-                break;
-            case 'b':
-            case 'B':
-                val = 11;
-                break;
-            case 'c':
-            case 'C':
-                val = 12;
-                break;
-            case 'd':
-            case 'D':
-                val = 13;
-                break;
-            case 'e':
-            case 'E':
-                val = 14;
-                break;
-            case 'f':
-            case 'F':
-                val = 15;
-                break;
-        }
-
-        rv = rv | (val << shift);
-        index--;
-        shift += 4;
-    }
-
-    return rv;
-}
-
-/*****************************************************************************/
-/* returns number of bytes copied into out_str */
-int
-g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
-                  int bytes_out_str)
-{
-    int rv;
-    int index;
-    char *lout_str;
-    const tui8 *lbytes;
-
-    rv = 0;
-    lbytes = (const tui8 *) bytes;
-    lout_str = out_str;
-    for (index = 0; index < num_bytes; index++)
-    {
-        if (bytes_out_str < 3)
-        {
-            break;
-        }
-        g_snprintf(lout_str, bytes_out_str, "%2.2x", lbytes[index]);
-        lout_str += 2;
-        bytes_out_str -= 2;
-        rv += 2;
-    }
-    return rv;
-}
-
-/*****************************************************************************/
-int
-g_pos(const char *str, const char *to_find)
-{
-    const char *pp;
-
-    pp = strstr(str, to_find);
-
-    if (pp == 0)
+    else
     {
         return -1;
     }
 
-    return (pp - str);
+#endif
 }
 
 /*****************************************************************************/
+/* returns inode number, -1 on error */
 int
-g_mbstowcs(twchar *dest, const char *src, int n)
+g_file_get_inode_num(const char *filename)
 {
-    wchar_t *ldest;
-    int rv;
+#if defined(_WIN32)
+    return -1;
+#else
+    struct stat st;
 
-    ldest = (wchar_t *)dest;
-    rv = mbstowcs(ldest, src, n);
-    return rv;
-}
-
-/*****************************************************************************/
-int
-g_wcstombs(char *dest, const twchar *src, int n)
-{
-    const wchar_t *lsrc;
-    int rv;
-
-    lsrc = (const wchar_t *)src;
-    rv = wcstombs(dest, lsrc, n);
-    return rv;
-}
-
-/*****************************************************************************/
-/* returns error */
-/* trim spaces and tabs, anything <= space */
-/* trim_flags 1 trim left, 2 trim right, 3 trim both, 4 trim through */
-/* this will always shorten the string or not change it */
-int
-g_strtrim(char *str, int trim_flags)
-{
-    int index;
-    int len;
-    int text1_index;
-    int got_char;
-    wchar_t *text;
-    wchar_t *text1;
-
-    len = mbstowcs(0, str, 0);
-
-    if (len < 1)
+    if (stat(filename, &st) == 0)
     {
-        return 0;
+        return (int)(st.st_ino);
+    }
+    else
+    {
+        return -1;
     }
 
-    if ((trim_flags < 1) || (trim_flags > 4))
-    {
-        return 1;
-    }
-
-    text = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
-    text1 = (wchar_t *)malloc(len * sizeof(wchar_t) + 8);
-    if (text == NULL || text1 == NULL)
-    {
-        free(text);
-        free(text1);
-        return 1;
-    }
-    text1_index = 0;
-    mbstowcs(text, str, len + 1);
-
-    switch (trim_flags)
-    {
-        case 4: /* trim through */
-
-            for (index = 0; index < len; index++)
-            {
-                if (text[index] > 32)
-                {
-                    text1[text1_index] = text[index];
-                    text1_index++;
-                }
-            }
-
-            text1[text1_index] = 0;
-            break;
-        case 3: /* trim both */
-            got_char = 0;
-
-            for (index = 0; index < len; index++)
-            {
-                if (got_char)
-                {
-                    text1[text1_index] = text[index];
-                    text1_index++;
-                }
-                else
-                {
-                    if (text[index] > 32)
-                    {
-                        text1[text1_index] = text[index];
-                        text1_index++;
-                        got_char = 1;
-                    }
-                }
-            }
-
-            text1[text1_index] = 0;
-            len = text1_index;
-
-            /* trim right */
-            for (index = len - 1; index >= 0; index--)
-            {
-                if (text1[index] > 32)
-                {
-                    break;
-                }
-            }
-
-            text1_index = index + 1;
-            text1[text1_index] = 0;
-            break;
-        case 2: /* trim right */
-
-            /* copy it */
-            for (index = 0; index < len; index++)
-            {
-                text1[text1_index] = text[index];
-                text1_index++;
-            }
-
-            /* trim right */
-            for (index = len - 1; index >= 0; index--)
-            {
-                if (text1[index] > 32)
-                {
-                    break;
-                }
-            }
-
-            text1_index = index + 1;
-            text1[text1_index] = 0;
-            break;
-        case 1: /* trim left */
-            got_char = 0;
-
-            for (index = 0; index < len; index++)
-            {
-                if (got_char)
-                {
-                    text1[text1_index] = text[index];
-                    text1_index++;
-                }
-                else
-                {
-                    if (text[index] > 32)
-                    {
-                        text1[text1_index] = text[index];
-                        text1_index++;
-                        got_char = 1;
-                    }
-                }
-            }
-
-            text1[text1_index] = 0;
-            break;
-    }
-
-    wcstombs(str, text1, text1_index + 1);
-    free(text);
-    free(text1);
-    return 0;
+#endif
 }
 
 /*****************************************************************************/
@@ -3102,16 +2599,41 @@ g_get_errno(void)
 
 /*****************************************************************************/
 /* does not work in win32 */
+
+#define ARGS_STR_LEN 1024
+
 int
 g_execvp(const char *p1, char *args[])
 {
 #if defined(_WIN32)
     return 0;
 #else
+
     int rv;
+    char args_str[ARGS_STR_LEN];
+    int args_len;
+
+    args_len = 0;
+    while (args[args_len] != NULL)
+    {
+        args_len++;
+    }
+
+    g_strnjoin(args_str, ARGS_STR_LEN, " ", (const char **) args, args_len);
+
+    LOG(LOG_LEVEL_DEBUG,
+        "Calling exec (executable: %s, arguments: %s)",
+        p1, args_str);
 
     g_rm_temp_dir();
     rv = execvp(p1, args);
+
+    /* should not get here */
+    LOG(LOG_LEVEL_ERROR,
+        "Error calling exec (executable: %s, arguments: %s) "
+        "returned errno: %d, description: %s",
+        p1, args_str, g_get_errno(), g_get_strerror());
+
     g_mk_socket_path(0);
     return rv;
 #endif
@@ -3126,9 +2648,24 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
     return 0;
 #else
     int rv;
+    const char *args[] = {a2, a3, NULL};
+    char args_str[ARGS_STR_LEN];
+
+    g_strnjoin(args_str, ARGS_STR_LEN, " ", args, 2);
+
+    LOG(LOG_LEVEL_DEBUG,
+        "Calling exec (executable: %s, arguments: %s)",
+        a1, args_str);
 
     g_rm_temp_dir();
     rv = execlp(a1, a2, a3, (void *)0);
+
+    /* should not get here */
+    LOG(LOG_LEVEL_ERROR,
+        "Error calling exec (executable: %s, arguments: %s) "
+        "returned errno: %d, description: %s",
+        a1, args_str, g_get_errno(), g_get_strerror());
+
     g_mk_socket_path(0);
     return rv;
 #endif
@@ -3227,6 +2764,12 @@ g_fork(void)
     {
         g_mk_socket_path(0);
     }
+    else if (rv == -1) /* error */
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Process fork failed with errno: %d, description: %s",
+            g_get_errno(), g_get_strerror());
+    }
 
     return rv;
 #endif
@@ -3248,12 +2791,18 @@ g_setgid(int pid)
 /* returns error, zero is success, non zero is error */
 /* does not work in win32 */
 int
-g_initgroups(const char *user, int gid)
+g_initgroups(const char *username)
 {
 #if defined(_WIN32)
     return 0;
 #else
-    return initgroups(user, gid);
+    int gid;
+    int error = g_getuser_info(username, &gid, NULL, NULL, NULL, NULL);
+    if (error == 0)
+    {
+        error = initgroups(username, gid);
+    }
+    return error;
 #endif
 }
 
@@ -3309,6 +2858,17 @@ g_setsid(void)
 
 /*****************************************************************************/
 int
+g_getlogin(char *name, unsigned int len)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return getlogin_r(name, len);
+#endif
+}
+
+/*****************************************************************************/
+int
 g_setlogin(const char *name)
 {
 #ifdef BSD
@@ -3346,7 +2906,7 @@ g_waitchild(void)
 
 /*****************************************************************************/
 /* does not work in win32
-   returns pid of process that exits or zero if signal occurred */
+   returns pid of process that exits or <= 0 if no process was found */
 int
 g_waitpid(int pid)
 {
@@ -3362,17 +2922,54 @@ g_waitpid(int pid)
     else
     {
         rv = waitpid(pid, 0, 0);
-
-        if (rv == -1)
-        {
-            if (errno == EINTR) /* signal occurred */
-            {
-                rv = 0;
-            }
-        }
     }
 
     return rv;
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32
+   returns exit status code of child process with pid */
+struct exit_status
+g_waitpid_status(int pid)
+{
+    struct exit_status exit_status;
+
+#if defined(_WIN32)
+    exit_status.exit_code = -1;
+    exit_status.signal_no = 0;
+    return exit_status;
+#else
+    int rv;
+    int status;
+
+    exit_status.exit_code = -1;
+    exit_status.signal_no = 0;
+
+    if (pid > 0)
+    {
+        LOG(LOG_LEVEL_DEBUG, "waiting for pid %d to exit", pid);
+        rv = waitpid(pid, &status, 0);
+
+        if (rv != -1)
+        {
+            if (WIFEXITED(status))
+            {
+                exit_status.exit_code = WEXITSTATUS(status);
+            }
+            if (WIFSIGNALED(status))
+            {
+                exit_status.signal_no = WTERMSIG(status);
+            }
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING, "wait for pid %d returned unknown result", pid);
+        }
+    }
+
+    return exit_status;
 #endif
 }
 
@@ -3443,6 +3040,18 @@ g_sigterm(int pid)
     return 0;
 #else
     return kill(pid, SIGTERM);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+int
+g_sighup(int pid)
+{
+#if defined(_WIN32)
+    return 0;
+#else
+    return kill(pid, SIGHUP);
 #endif
 }
 
@@ -3636,11 +3245,11 @@ struct dib_hdr
     int            vres;
     unsigned int   ncolors;
     unsigned int   nimpcolors;
-    };
+};
 
 /******************************************************************************/
 int
-g_save_to_bmp(const char* filename, char* data, int stride_bytes,
+g_save_to_bmp(const char *filename, char *data, int stride_bytes,
               int width, int height, int depth, int bits_per_pixel)
 {
     struct bmp_magic bm;
@@ -3653,8 +3262,8 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     int pixel;
     int extra;
     int file_stride_bytes;
-    char* line;
-    char* line_ptr;
+    char *line;
+    char *line_ptr;
 
     if ((depth == 24) && (bits_per_pixel == 32))
     {
@@ -3664,7 +3273,9 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     }
     else
     {
-        g_writeln("g_save_to_bpp: unimp");
+        LOG(LOG_LEVEL_ERROR,
+            "g_save_to_bpp: unimplemented for: depth %d, bits_per_pixel %d",
+            depth, bits_per_pixel);
         return 1;
     }
     bm.magic[0] = 'B';
@@ -3697,23 +3308,23 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd == -1)
     {
-        g_writeln("g_save_to_bpp: open error");
+        LOG(LOG_LEVEL_ERROR, "g_save_to_bpp: open error");
         return 1;
     }
     bytes = write(fd, &bm, sizeof(bm));
     if (bytes != sizeof(bm))
     {
-        g_writeln("g_save_to_bpp: write error");
+        LOG(LOG_LEVEL_ERROR, "g_save_to_bpp: write error");
     }
     bytes = write(fd, &bh, sizeof(bh));
     if (bytes != sizeof(bh))
     {
-        g_writeln("g_save_to_bpp: write error");
+        LOG(LOG_LEVEL_ERROR, "g_save_to_bpp: write error");
     }
     bytes = write(fd, &dh, sizeof(dh));
     if (bytes != sizeof(dh))
     {
-        g_writeln("g_save_to_bpp: write error");
+        LOG(LOG_LEVEL_ERROR, "g_save_to_bpp: write error");
     }
     data += stride_bytes * height;
     data -= stride_bytes;
@@ -3726,7 +3337,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
             line_ptr = line;
             for (i1 = 0; i1 < width; i1++)
             {
-                pixel = ((int*)data)[i1];
+                pixel = ((int *)data)[i1];
                 *(line_ptr++) = (pixel >>  0) & 0xff;
                 *(line_ptr++) = (pixel >>  8) & 0xff;
                 *(line_ptr++) = (pixel >> 16) & 0xff;
@@ -3734,7 +3345,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
             bytes = write(fd, line, file_stride_bytes);
             if (bytes != file_stride_bytes)
             {
-                g_writeln("g_save_to_bpp: write error");
+                LOG(LOG_LEVEL_ERROR, "g_save_to_bpp: write error");
             }
             data -= stride_bytes;
         }
@@ -3747,31 +3358,18 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
             bytes = write(fd, data, width * (bits_per_pixel / 8));
             if (bytes != width * (bits_per_pixel / 8))
             {
-                g_writeln("g_save_to_bpp: write error");
+                LOG(LOG_LEVEL_ERROR, "g_save_to_bpp: write error");
             }
             data -= stride_bytes;
         }
     }
     else
     {
-        g_writeln("g_save_to_bpp: unimp");
+        LOG(LOG_LEVEL_ERROR,
+            "g_save_to_bpp: unimplemented for: depth %d, bits_per_pixel %d",
+            depth, bits_per_pixel);
     }
     close(fd);
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns boolean */
-int
-g_text2bool(const char *s)
-{
-    if ( (g_atoi(s) != 0) ||
-         (0 == g_strcasecmp(s, "true")) ||
-         (0 == g_strcasecmp(s, "on")) ||
-         (0 == g_strcasecmp(s, "yes")))
-    {
-        return 1;
-    }
     return 0;
 }
 
@@ -3783,7 +3381,7 @@ g_shmat(int shmid)
 #if defined(_WIN32)
     return 0;
 #else
-     return shmat(shmid, 0, 0);
+    return shmat(shmid, 0, 0);
 #endif
 }
 
@@ -3914,7 +3512,7 @@ g_tcp4_bind_address(int sck, const char *port, const char *address)
     {
         return -1; /* bad address */
     }
-    if (bind(sck, (struct sockaddr*) &s, sizeof(s)) < 0)
+    if (bind(sck, (struct sockaddr *) &s, sizeof(s)) < 0)
     {
         return -1;
     }

@@ -17,6 +17,11 @@
  * limitations under the License.
  *
  * iso layer
+ *
+ * Note: [ITU-T X.224] and [ISO/IEC 8073] are essentially two specifications
+ * of the same protocol (see [ITU-T X.224] Appendix I – Differences between
+ * ITU-T Rec. X.224 (1993) and ISO/IEC 8073:1992). The RDP protocol
+ * specification [MS-RDPBCGR] makes reference to the [ITU-T X.224] specificaiton.
  */
 
 #if defined(HAVE_CONFIG_H)
@@ -25,16 +30,51 @@
 
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
+#include "string_calls.h"
 #include "log.h"
 
-#define LOG_LEVEL 1
-#define LLOG(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
-#define LLOGLN(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
-#define LHEXDUMP(_level, _args) \
-    do { if (_level < LOG_LEVEL) { g_hexdump _args ; } } while (0)
 
+/*****************************************************************************/
+/**
+ * Converts a protocol mask ([MS-RDPBCGR] 2.2.1.1.1 to a string)
+ *
+ * @param protocol Protocol mask
+ * @param buff Output buffer
+ * @param bufflen total length of buff
+ * @return As for snprintf()
+ *
+ * The string "RDP" is always added to the output, even if other bits
+ * are set
+ */
+static int
+protocol_mask_to_str(int protocol, char *buff, int bufflen)
+{
+    char delim = '|';
+
+    static const struct bitmask_string bits[] =
+    {
+        { PROTOCOL_SSL, "SSL" },
+        { PROTOCOL_HYBRID, "HYBRID" },
+        { PROTOCOL_RDSTLS, "RDSTLS" },
+        { PROTOCOL_HYBRID_EX, "HYBRID_EX"},
+        BITMASK_STRING_END_OF_LIST
+    };
+
+    int rlen = g_bitmask_to_str(protocol, bits, delim, buff, bufflen);
+
+    /* Append "RDP" */
+    if (rlen == 0)
+    {
+        /* String is empty */
+        rlen = g_snprintf(buff, bufflen, "RDP");
+    }
+    else if (rlen < bufflen)
+    {
+        rlen += g_snprintf(buff + rlen, bufflen - rlen, "%cRDP", delim);
+    }
+
+    return rlen;
+}
 
 /*****************************************************************************/
 struct xrdp_iso *
@@ -42,11 +82,9 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
 {
     struct xrdp_iso *self;
 
-    LLOGLN(10, ("   in xrdp_iso_create"));
     self = (struct xrdp_iso *) g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
     self->trans = trans;
-    LLOGLN(10, ("   out xrdp_iso_create"));
     return self;
 }
 
@@ -67,95 +105,146 @@ xrdp_iso_delete(struct xrdp_iso *self)
 static int
 xrdp_iso_negotiate_security(struct xrdp_iso *self)
 {
+    char requested_str[64];
+    const char *selected_str = "";
+    const char *configured_str = "";
+
     int rv = 0;
     struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
 
-    self->selectedProtocol = client_info->security_layer;
+    /* Can we do TLS/SSL? (basic check) */
+    int ssl_capable = g_file_readable(client_info->certificate) &&
+                      g_file_readable(client_info->key_file);
 
+    /* Work out what's actually configured in xrdp.ini. The
+     * selection happens later, but we can do some error checking here */
     switch (client_info->security_layer)
     {
         case PROTOCOL_RDP:
+            configured_str = "RDP";
             break;
+
         case PROTOCOL_SSL:
-            if (self->requestedProtocol & PROTOCOL_SSL)
+            /* We *must* use TLS. Check we can offer it, and it's requested */
+            if (ssl_capable)
             {
-                if (!g_file_readable(client_info->certificate) ||
-                    !g_file_readable(client_info->key_file))
+                configured_str = "SSL";
+                if ((self->requestedProtocol & PROTOCOL_SSL) == 0)
                 {
-                    /* certificate or privkey is not readable */
-                    log_message(LOG_LEVEL_DEBUG, "No readable certificates or "
-                                "private keys, cannot accept TLS connections");
-                    self->failureCode = SSL_CERT_NOT_ON_SERVER;
+                    LOG(LOG_LEVEL_ERROR, "Server requires TLS for security, "
+                        "but the client did not request TLS.");
+                    self->failureCode = SSL_REQUIRED_BY_SERVER;
                     rv = 1; /* error */
-                }
-                else
-                {
-                    self->selectedProtocol = PROTOCOL_SSL;
                 }
             }
             else
             {
-                self->failureCode = SSL_REQUIRED_BY_SERVER;
+                configured_str = "";
+                LOG(LOG_LEVEL_ERROR, "Cannot accept TLS connections because "
+                    "certificate or private key file is not readable. "
+                    "certificate file: [%s], private key file: [%s]",
+                    client_info->certificate, client_info->key_file);
+                self->failureCode = SSL_CERT_NOT_ON_SERVER;
                 rv = 1; /* error */
             }
             break;
         case PROTOCOL_HYBRID:
         case PROTOCOL_HYBRID_EX:
         default:
-            if ((self->requestedProtocol & PROTOCOL_SSL) &&
-                g_file_readable(client_info->certificate) &&
-                g_file_readable(client_info->key_file))
+            /* We don't yet support CredSSP */
+            if (ssl_capable)
             {
-                /* that's a patch since we don't support CredSSP for now */
-                self->selectedProtocol = PROTOCOL_SSL;
+                configured_str = "SSL|RDP";
             }
             else
             {
-                self->selectedProtocol = PROTOCOL_RDP;
+                /*
+                 * Tell the user we can't offer TLS, but this isn't fatal */
+                configured_str = "RDP";
+                LOG(LOG_LEVEL_WARNING, "Cannot accept TLS connections because "
+                    "certificate or private key file is not readable. "
+                    "certificate file: [%s], private key file: [%s]",
+                    client_info->certificate, client_info->key_file);
             }
             break;
     }
 
-    log_message(LOG_LEVEL_DEBUG, "Security layer: requested %d, selected %d",
-                self->requestedProtocol, self->selectedProtocol);
+    /* Currently the choice comes down to RDP or SSL */
+    if (rv != 0)
+    {
+        self->selectedProtocol = PROTOCOL_RDP;
+        selected_str = "";
+    }
+    else if (ssl_capable && (self->requestedProtocol &
+                             client_info->security_layer &
+                             PROTOCOL_SSL) != 0)
+    {
+        self->selectedProtocol = PROTOCOL_SSL;
+        selected_str = "SSL";
+    }
+    else
+    {
+        self->selectedProtocol = PROTOCOL_RDP;
+        selected_str = "RDP";
+    }
+
+    protocol_mask_to_str(self->requestedProtocol,
+                         requested_str, sizeof(requested_str));
+
+    LOG(LOG_LEVEL_INFO, "Security protocol: configured [%s], requested [%s],"
+        " selected [%s]",
+        configured_str, requested_str, selected_str);
+
     return rv;
 }
 
 /*****************************************************************************/
-/* returns error */
+/* Process a [MS-RDPBCGR] RDP_NEG_REQ message.
+ * returns error
+ */
 static int
 xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
 {
     int flags;
     int len;
 
-    if (!s_check_rem(s, 7))
+    if (!s_check_rem_and_log(s, 7, "Parsing [MS-RDPBCGR] RDP_NEG_REQ"))
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: unexpected end-of-record"));
         return 1;
     }
 
-    in_uint8(s, flags);
+    /* The type field has already been read to determine that this function
+       should be called */
+    in_uint8(s, flags); /* flags */
     if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: error, flags: %x",flags));
+        LOG(LOG_LEVEL_ERROR,
+            "Unsupported [MS-RDPBCGR] RDP_NEG_REQ flags: 0x%2.2x", flags);
         return 1;
     }
 
-    in_uint16_le(s, len);
+    in_uint16_le(s, len); /* length */
     if (len != 8)
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: error, length: %x",len));
+        LOG(LOG_LEVEL_ERROR,
+            "Protocol error: [MS-RDPBCGR] RDP_NEG_REQ length must be 8, "
+            "received %d", len);
         return 1;
     }
 
-    in_uint32_le(s, self->requestedProtocol);
+    in_uint32_le(s, self->requestedProtocol); /* requestedProtocols */
+
+    /* TODO: why is requestedProtocols flag value bigger than 0xb invalid? */
     if (self->requestedProtocol > 0xb)
     {
-        LLOGLN(10, ("xrdp_iso_process_rdpNegReq: error, requestedProtocol: %x",
-                self->requestedProtocol));
+        LOG(LOG_LEVEL_ERROR,
+            "Unknown requested protocol flag [MS-RDPBCGR] RDP_NEG_REQ, "
+            "requestedProtocol 0x%8.8x", self->requestedProtocol);
         return 1;
     }
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received struct [MS-RDPBCGR] RDP_NEG_REQ "
+              "flags 0x%2.2x, length 8, requestedProtocol 0x%8.8x",
+              flags, self->requestedProtocol);
 
     return 0;
 }
@@ -169,6 +258,10 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
  * On exit, the TPKT header and the fixed part of the PDU header will have been
  * removed from the stream.
  *
+ * @param self
+ * @param s [in]
+ * @param code [out]
+ * @param len [out]
  * Returns error
  *****************************************************************************/
 static int
@@ -181,83 +274,110 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 
     if (s != self->trans->in_s)
     {
-        LLOGLN(10, ("xrdp_iso_recv_msg error logic"));
+        LOG(LOG_LEVEL_WARNING,
+            "Bug: the input stream is not the same stream as the "
+            "transport input stream");
     }
 
-    /* TPKT header is 4 bytes, then first 2 bytes of the X.224 CR-TPDU */
-    if (!s_check_rem(s, 6))
+    /* [ITU-T T.123] TPKT header is 4 bytes, then first 2 bytes of the X.224 CR-TPDU */
+    if (!s_check_rem_and_log(s, 6,
+                             "Parsing [ITU-T T.123] TPKT header and [ITU-T X.224] TPDU header"))
     {
         return 1;
     }
 
-    in_uint8(s, ver);
-    in_uint8s(s, 3); /* Skip reserved field, plus length */
-    in_uint8(s, *len);
-    in_uint8(s, *code);
+    /* [ITU-T T.123] TPKT header */
+    in_uint8(s, ver); /* version */
+    in_uint8s(s, 3); /* Skip reserved field (1 byte), plus length (2 bytes) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [ITU-T T.123] TPKT "
+              "version %d, length (ignored)", ver);
+
+    /* [ITU-T X.224] TPDU header */
+    in_uint8(s, *len);  /* LI (length indicator) */
+    in_uint8(s, *code); /* TPDU code */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [ITU-T X.224] TPDU "
+              "length indicator %d, TDPU code 0x%2.2x", *len, *code);
 
     if (ver != 3)
     {
-        LLOGLN(10, ("xrdp_iso_recv_msg: bad ver"));
-        LHEXDUMP(10, (s->data, 4));
+        LOG(LOG_LEVEL_ERROR,
+            "Unsupported [ITU-T T.123] TPKT header version: %d", ver);
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_ERROR, "[ITU-T T.123] TPKT header", s->data, 4);
         return 1;
     }
 
     if (*len == 255)
     {
         /* X.224 13.2.1 - reserved value */
-        LLOGLN(10, ("xrdp_iso_recv_msg: reserved length encountered"));
-        LHEXDUMP(10, (s->data, 4));
+        LOG(LOG_LEVEL_ERROR,
+            "[ITU-T X.224] TPDU header: unsupported use of reserved length value");
+        LOG_DEVEL_HEXDUMP(LOG_LEVEL_ERROR, "[ITU-T X.224] TPDU header", s->data + 4, 4);
         return 1;
     }
 
     if (*code == ISO_PDU_DT)
     {
-        /* Data PDU : X.224 13.7 */
-        if (!s_check_rem(s, 1))
+        /* Data PDU : X.224 13.7 class 0 */
+        if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T X.224] DT-TPDU (Data) header"))
         {
             return 1;
         }
-        in_uint8s(s, 1);
+        in_uint8s(s, 1); /* EOT (End of TSDU Mark) (upper 1 bit) and
+                            TPDU-NR (Data TPDU Number) (lower 7 bits) */
     }
     else
     {
-        /* Other supported PDUs : X.224 13.x */
-        if (!s_check_rem(s, 5))
+        /* Other supported X.224 class 0 PDUs all have 5 bytes remaining
+           in the fixed header :
+            CR Connection request (13.3)
+            CC Connection confirm (13.4)
+            DR Disconnect request (13.5) */
+        if (!s_check_rem_and_log(s, 5, "Parsing [ITU-T X.224] Other PDU header"))
         {
             return 1;
         }
-        in_uint8s(s, 5);
+        in_uint8s(s, 5); /* DST-REF (2 bytes)
+                            SRC-REF (2 bytes)
+                            [CR, CC] CLASS OPTION (1 byte) or [DR] REASON (1 byte) */
     }
 
     return 0;
 }
 
 /*****************************************************************************/
-/* returns error */
+/* Process the header of a [ITU-T X.224] DT-TPDU (Data) message.
+ *
+ * returns error
+ */
 int
 xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 {
     int code;
     int len;
 
-    LLOGLN(10, ("   in xrdp_iso_recv"));
-
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
-        LLOGLN(10, ("   out xrdp_iso_recv xrdp_iso_recv_msg return non zero"));
+        LOG(LOG_LEVEL_ERROR, "xrdp_iso_recv: xrdp_iso_recv_msg failed");
         return 1;
     }
 
     if (code != ISO_PDU_DT || len != 2)
     {
-        LLOGLN(10, ("   out xrdp_iso_recv code != ISO_PDU_DT or length != 2"));
+        LOG(LOG_LEVEL_ERROR, "xrdp_iso_recv only supports processing "
+            "[ITU-T X.224] DT-TPDU (Data) headers. Received TPDU header: "
+            "length indicator %d, TDPU code 0x%2.2x", len, code);
         return 1;
     }
 
-    LLOGLN(10, ("   out xrdp_iso_recv"));
     return 0;
 }
 /*****************************************************************************/
+/*
+ * Send a [ITU-T X.224] CC-TPDU (Connection Confirm) message with
+ * [ITU-T T.123] TPKT header.
+ *
+ * returns error
+ */
 static int
 xrdp_iso_send_cc(struct xrdp_iso *self)
 {
@@ -272,35 +392,45 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
     init_stream(s, 8192);
 
     holdp = s->p;
-    /* tpkt */
+    /* [ITU-T T.123] TPKT header */
     out_uint8(s, 3); /* version */
-    out_uint8(s, 0); /* pad */
+    out_uint8(s, 0); /* reserved (padding) */
     len_ptr = s->p;
     out_uint16_be(s, 0); /* length, set later */
-    /* iso */
+
+    /* [ITU-T X.224] CC-TPDU */
     len_indicator_ptr = s->p;
-    out_uint8(s, 0); /* length indicator, set later */
+    out_uint8(s, 0);          /* length indicator, set later */
     out_uint8(s, ISO_PDU_CC); /* Connection Confirm PDU */
-    out_uint16_be(s, 0);
-    out_uint16_be(s, 0x1234);
-    out_uint8(s, 0);
-    /* rdpNegData */
+    out_uint16_be(s, 0);      /* DST-REF */
+    out_uint16_be(s, 0x1234); /* SRC-REF */
+    out_uint8(s, 0);          /* CLASS OPTION */
+
+    /* [MS-RDPBCGR] 2.2.1.2 rdpNegData */
     if (self->rdpNegData)
     {
         if (self->failureCode)
         {
-            out_uint8(s, RDP_NEG_FAILURE);
-            out_uint8(s, 0); /* no flags */
-            out_uint16_le(s, 8); /* must be 8 */
-            out_uint32_le(s, self->failureCode); /* failure code */
+            /* [MS-RDPBCGR] RDP_NEG_FAILURE */
+            out_uint8(s, RDP_NEG_FAILURE);       /* type*/
+            out_uint8(s, 0);                     /* flags (none) */
+            out_uint16_le(s, 8);                 /* length (must be 8) */
+            out_uint32_le(s, self->failureCode); /* failureCode */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding structure [MS-RDPBCGR] RDP_NEG_FAILURE "
+                      "flags 0, length 8, failureCode 0x%8.8x", self->failureCode);
         }
         else
         {
-            out_uint8(s, RDP_NEG_RSP);
+            /* [MS-RDPBCGR] RDP_NEG_RSP */
+            out_uint8(s, RDP_NEG_RSP);                    /* type*/
             //TODO: hardcoded flags
             out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
-            out_uint16_le(s, 8); /* must be 8 */
-            out_uint32_le(s, self->selectedProtocol); /* selected protocol */
+            out_uint16_le(s, 8);                          /* length (must be 8) */
+            out_uint32_le(s, self->selectedProtocol);     /* selectedProtocol */
+            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding structure [MS-RDPBCGR] RDP_NEG_RSP "
+                      "flags 0x%02x, length 8, selectedProtocol 0x%8.8x",
+                      EXTENDED_CLIENT_DATA_SUPPORTED,
+                      self->selectedProtocol);
         }
     }
     s_mark_end(s);
@@ -311,8 +441,15 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
     len_ptr[1] = len;
     len_indicator_ptr[0] = len_indicator;
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [ITU-T T.123] TPKT "
+              "version 3, length %d", len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [ITU-T X.224] CC-TPDU (Connection Confirm) "
+              "length indicator %d, DST-REF 0, SRC-REF 0, CLASS OPTION 0",
+              len_indicator);
+
     if (trans_write_copy_s(self->trans, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "Sending [ITU-T X.224] CC-TPDU (Connection Confirm) failed");
         free_stream(s);
         return 1;
     }
@@ -323,7 +460,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
 /*****************************************************************************
  * Process an X.224 connection request PDU
  *
- * See MS-RDPCGR v20190923 sections 2.2.1.1 and 3.3.5.3.1.
+ * See MS-RDPBCGR v20190923 sections 2.2.1.1 and 3.3.5.3.1.
  *
  * From the latter, in particular:-
  * - The length embedded in the TPKT header MUST be examined for
@@ -345,22 +482,26 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     struct stream *s;
     int expected_pdu_len;
 
-    LLOGLN(10, ("   in xrdp_iso_incoming"));
-
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[ITU-T X.224] Connection Sequence: receive connection request");
     s = libxrdp_force_read(self->trans);
     if (s == NULL)
     {
+        LOG(LOG_LEVEL_ERROR, "[ITU-T X.224] Connection Sequence: CR-TPDU (Connection Request) failed");
         return 1;
     }
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
-        LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_recv_msg returned non zero"));
+        LOG(LOG_LEVEL_ERROR, "[ITU-T X.224] Connection Sequence: CR-TPDU (Connection Request) failed");
         return 1;
     }
 
     if (code != ISO_PDU_CR)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_iso_incoming only supports processing "
+            "[ITU-T X.224] CR-TPDU (Connection Request) headers. "
+            "Received TPDU header: length indicator %d, TDPU code 0x%2.2x",
+            len, code);
         return 1;
     }
 
@@ -375,42 +516,51 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     expected_pdu_len = (s->end - s->p) + 6;
     if (len != expected_pdu_len)
     {
-        LLOGLN(0, ("xrdp_iso_incoming: X.224 CR-TPDU length exp %d got %d",
-                   expected_pdu_len, len));
+        LOG(LOG_LEVEL_ERROR,
+            "Invalid length indicator in [ITU-T X.224] CR-TPDU (Connection Request). "
+            "expected %d, received %d",
+            expected_pdu_len, len);
         return 1;
     }
 
-    /* process connection request */
+    /* process connection request [MS-RDPBCGR] 2.2.1.1 */
     while (s_check_rem(s, 1))
     {
-        in_uint8(s, cc_type);
+        in_uint8(s, cc_type); /* type or 'C' */
         switch (cc_type)
         {
             default:
+                LOG_DEVEL(LOG_LEVEL_WARNING,
+                          "Ignoring unknown structure type in [ITU-T X.224] CR-TPDU (Connection Request). "
+                          "type 0x%2.2x", cc_type);
                 break;
             case RDP_NEG_REQ: /* rdpNegReq 1 */
                 self->rdpNegData = 1;
                 if (xrdp_iso_process_rdp_neg_req(self, s) != 0)
                 {
-                    LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero"));
+                    LOG(LOG_LEVEL_ERROR,
+                        "[ITU-T X.224] Connection Sequence: failed");
                     return 1;
                 }
                 break;
             case RDP_CORRELATION_INFO: /* rdpCorrelationInfo 6 */
                 // TODO
-                if (!s_check_rem(s, 1 + 2 + 16 + 16))
+                if (!s_check_rem_and_log(s, 1 + 2 + 16 + 16,
+                                         "Parsing [MS-RDPBCGR] RDP_NEG_CORRELATION_INFO"))
                 {
-                    LLOGLN(0, ("xrdp_iso_incoming: short correlation info"));
                     return 1;
                 }
 
                 in_uint8s(s, 1 + 2 + 16 + 16);
+                LOG_DEVEL(LOG_LEVEL_TRACE,
+                          "Received struct [MS-RDPBCGR] RDP_NEG_CORRELATION_INFO "
+                          "(all fields ignored)");
                 break;
-            case 'C': /* Cookie */
-                 /* The routingToken and cookie fields are both ASCII
-                  * strings starting with the word 'Cookie: ' and
-                  * ending with CR+LF. We ignore both, so we do
-                  * not need to distinguish them  */
+            case 'C': /* Cookie or routingToken */
+                /* The routingToken and cookie fields are both ASCII
+                 * strings starting with the word 'Cookie: ' and
+                 * ending with CR+LF. We ignore both, so we do
+                 * not need to distinguish them  */
                 while (s_check_rem(s, 1))
                 {
                     in_uint8(s, cc_type);
@@ -423,6 +573,9 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                         }
                     }
                 }
+                LOG_DEVEL(LOG_LEVEL_TRACE,
+                          "Received struct [MS-RDPBCGR] routingToken or cookie "
+                          "(ignored)");
                 break;
         }
     }
@@ -431,13 +584,14 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     rv = xrdp_iso_negotiate_security(self);
 
     /* send connection confirm back to client */
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[ITU-T X.224] Connection Sequence: send connection confirmation");
     if (xrdp_iso_send_cc(self) != 0)
     {
-        LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_send_cc returned non zero"));
+        LOG(LOG_LEVEL_ERROR, "[ITU-T X.224] Connection Sequence: send connection confirmation failed");
         return 1;
     }
 
-    LLOGLN(10, ("   out xrdp_iso_incoming"));
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "[ITU-T X.224] Connection Sequence: completed");
     return rv;
 }
 
@@ -452,27 +606,39 @@ xrdp_iso_init(struct xrdp_iso *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* returns error */
+/* Sends a message with the [ITU-T T.123] TPKT header (T.123 section 8) and
+ * [ITU-T X.224] DT-TPDU (Data) header (X.224 section 13)
+ * returns error
+ */
 int
 xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
 {
     int len;
 
-    LLOGLN(10, ("   in xrdp_iso_send"));
     s_pop_layer(s, iso_hdr);
     len = (int) (s->end - s->p);
-    out_uint8(s, 3);
-    out_uint8(s, 0);
-    out_uint16_be(s, len);
-    out_uint8(s, 2);
-    out_uint8(s, ISO_PDU_DT);
-    out_uint8(s, 0x80);
+    /* [ITU-T T.123] TPKT header */
+    out_uint8(s, 3);       /* version */
+    out_uint8(s, 0);       /* reserved (padding) */
+    out_uint16_be(s, len); /* length */
+
+    /* [ITU-T X.224] DT-TPDU (Data) header */
+    out_uint8(s, 2);          /* LI (length indicator) */
+    out_uint8(s, ISO_PDU_DT); /* TPDU code */
+    out_uint8(s, 0x80);       /* EOT (End of TSDU Mark) (upper 1 bit) and
+                                 TPDU-NR (Data TPDU Number) (lower 7 bits) */
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [ITU-T T.123] TPKT "
+              "version 3, length %d", len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [ITU-T X.224] DT-TPDU (Data) "
+              "length indicator 2, TPDU code 0x%2.2x, EOT 1, TPDU-NR 0x00",
+              ISO_PDU_DT);
 
     if (trans_write_copy_s(self->trans, s) != 0)
     {
+        LOG(LOG_LEVEL_ERROR, "xrdp_iso_send: trans_write_copy_s failed");
         return 1;
     }
 
-    LLOGLN(10, ("   out xrdp_iso_send"));
     return 0;
 }

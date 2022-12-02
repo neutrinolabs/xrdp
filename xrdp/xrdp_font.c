@@ -18,56 +18,127 @@
  * fonts
  */
 
-/*
-  The fv1 files contain
-  Font File Header (just one)
-    FNT1       4 bytes
-    Font Name  32 bytes
-    Font Size  2 bytes
-    Font Style 2 bytes
-    Pad        8 bytes
-  Font Data (repeats)
-    Width      2 bytes
-    Height     2 bytes
-    Baseline   2 bytes
-    Offset     2 bytes
-    Incby      2 bytes
-    Pad        6 bytes
-    Glyph Data var, see FONT_DATASIZE macro
-*/
+/* fv1 files are described in fontutils/README_fv1.txt */
 
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
 
+#include <ctype.h>
+
 #include "xrdp.h"
 #include "log.h"
+#include "string_calls.h"
 
 #if 0 /* not used */
 static char w_char[] =
 {
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x08, 0x20, 0x80,
-    0x08, 0x50, 0x80,
-    0x04, 0x51, 0x00,
-    0x04, 0x51, 0x00,
-    0x04, 0x51, 0x00,
-    0x02, 0x8a, 0x00,
-    0x02, 0x8a, 0x00,
-    0x02, 0x8a, 0x00,
-    0x01, 0x04, 0x00,
-    0x01, 0x04, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
+    0x08, 0x20, 0x80, // ....X.....X.....X.......
+    0x08, 0x50, 0x80, // ....X....X.X....X.......
+    0x04, 0x51, 0x00, // .....X...X.X...X........
+    0x04, 0x51, 0x00, // .....X...X.X...X........
+    0x04, 0x51, 0x00, // .....X...X.X...X........
+    0x02, 0x8a, 0x00, // ......X.X...X.X.........
+    0x02, 0x8a, 0x00, // ......X.X...X.X.........
+    0x02, 0x8a, 0x00, // ......X.X...X.X.........
+    0x01, 0x04, 0x00, // .......X.....X..........
+    0x01, 0x04, 0x00, // .......X.....X..........
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
+    0x00, 0x00, 0x00, // ........................
 };
 #endif
 
 /*****************************************************************************/
+/**
+ * Parses the fv1_select configuration value to get the font to use,
+ * based on the DPI of the primary monitor
+ *
+ * @param globals Configuration globals
+ * @param dpi DPI of primary monitor. If not known, a suitable
+ *            default should be passed in here.
+ * @param[out] font_name Name of font to use
+ * @param[in] font_name_len Length of font name buffer
+ */
+static void
+get_font_name_from_dpi(const struct xrdp_cfg_globals *globals,
+                       unsigned int dpi,
+                       char *font_name, int font_name_len)
+{
+    int bad_selector = 0;
+
+    font_name[0] = '\0';
+
+    const char *fv1_select = globals->fv1_select;
+    if (fv1_select == NULL || fv1_select[0] == '\0')
+    {
+        fv1_select = DEFAULT_FV1_SELECT;
+    }
+
+    const char *p = fv1_select;
+
+    while (p != NULL)
+    {
+        /* DPI value must be next in string */
+        if (!isdigit(*p))
+        {
+            bad_selector = 1;
+            break;
+        }
+        unsigned int field_dpi = g_atoi(p);
+        if (field_dpi <= dpi)
+        {
+            /* Use this font */
+            p = g_strchr(p, ':');
+            if (p == NULL)
+            {
+                bad_selector = 1;
+            }
+            else
+            {
+                ++p;
+                const char *q = g_strchr(p, ',');
+                if (q == NULL)
+                {
+                    q = p + g_strlen(p);
+                }
+                if (q - p > (font_name_len - 1))
+                {
+                    q = p + font_name_len - 1;
+                }
+                g_memcpy(font_name, p, q - p);
+                font_name[q - p] = '\0';
+            }
+            break;
+        }
+        else
+        {
+            p = g_strchr(p, ',');
+            if (p != NULL)
+            {
+                ++p;
+            }
+        }
+    }
+
+    if (bad_selector)
+    {
+        LOG(LOG_LEVEL_WARNING, "Unable to parse fv1_select configuration");
+    }
+
+    if (font_name[0] == '\0')
+    {
+        LOG(LOG_LEVEL_WARNING, "Loading default font " DEFAULT_FONT_NAME);
+        g_snprintf(font_name, font_name_len, DEFAULT_FONT_NAME);
+    }
+}
+
+/*****************************************************************************/
 struct xrdp_font *
-xrdp_font_create(struct xrdp_wm *wm)
+xrdp_font_create(struct xrdp_wm *wm, unsigned int dpi)
 {
     struct xrdp_font *self;
     struct stream *s;
@@ -78,24 +149,60 @@ xrdp_font_create(struct xrdp_wm *wm)
     int datasize;
     int file_size;
     struct xrdp_font_char *f;
-    char file_path[256];
+    const char *file_path;
+    char file_path_buff[256];
+    int min_descender;
+    char font_name[256];
+    const struct xrdp_cfg_globals *globals = &wm->xrdp_config->cfg_globals;
+    LOG_DEVEL(LOG_LEVEL_TRACE, "in xrdp_font_create");
 
-    DEBUG(("in xrdp_font_create"));
-    g_snprintf(file_path, 255, "%s/%s", XRDP_SHARE_PATH, DEFAULT_FONT_NAME);
+    if (dpi == 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "No DPI value is available to find login font");
+        dpi = globals->default_dpi;
+        LOG(LOG_LEVEL_WARNING, "Using the default_dpi of %u", dpi);
+    }
+    get_font_name_from_dpi(globals, dpi, font_name, sizeof(font_name));
+
+    if (font_name[0] == '/')
+    {
+        /* User specified absolute path */
+        file_path = font_name;
+    }
+    else
+    {
+        g_snprintf(file_path_buff, sizeof(file_path_buff),
+                   XRDP_SHARE_PATH "/%s",
+                   font_name);
+        file_path = file_path_buff;
+    }
 
     if (!g_file_exist(file_path))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error font file [%s] does not exist",
-               file_path);
-        return 0;
+        /* Try to fall back to the default */
+        const char *default_file_path = XRDP_SHARE_PATH "/" DEFAULT_FONT_NAME;
+        if (g_file_exist(default_file_path))
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "xrdp_font_create: font file [%s] does not exist - using [%s]",
+                file_path, default_file_path);
+            file_path = default_file_path;
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "xrdp_font_create: Can't load either [%s] or [%s]",
+                file_path, default_file_path);
+            return 0;
+        }
     }
 
     file_size = g_file_get_size(file_path);
 
     if (file_size < 1)
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error reading font from file [%s]",
-        file_path);
+        LOG(LOG_LEVEL_ERROR, "xrdp_font_create: error reading font from file [%s]",
+            file_path);
         return 0;
     }
 
@@ -117,7 +224,9 @@ xrdp_font_create(struct xrdp_wm *wm)
             in_uint8a(s, self->name, 32);
             in_uint16_le(s, self->size);
             in_uint16_le(s, self->style);
-            in_uint8s(s, 8);
+            in_uint16_le(s, self->body_height);
+            in_sint16_le(s, min_descender);
+            in_uint8s(s, 4);
             index = 32;
 
             while (s_check_rem(s, 16))
@@ -128,7 +237,8 @@ xrdp_font_create(struct xrdp_wm *wm)
                 in_sint16_le(s, i);
                 f->height = i;
                 in_sint16_le(s, i);
-                f->baseline = i;
+                /* Move the glyph up so there are no descenders */
+                f->baseline = i + min_descender;
                 in_sint16_le(s, i);
                 f->offset = i;
                 in_sint16_le(s, i);
@@ -139,23 +249,37 @@ xrdp_font_create(struct xrdp_wm *wm)
                 if (datasize < 0 || datasize > 512)
                 {
                     /* shouldn't happen */
-                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create, datasize wrong");
-                    log_message(LOG_LEVEL_DEBUG,"width %d height %d datasize %d index %d",
-                               f->width, f->height, datasize, index);
+                    LOG(LOG_LEVEL_ERROR, "error in xrdp_font_create, datasize wrong "
+                        "width %d, height %d, datasize %d, index %d",
+                        f->width, f->height, datasize, index);
                     break;
                 }
 
-                if (s_check_rem(s, datasize))
+                if (datasize == 0)
+                {
+                    /* Allocate a single blank pixel for the glyph, so
+                     * that it can be added to the glyph cache if required */
+                    f->width = 1;
+                    f->height = 1;
+                    f->data = (char *)g_malloc(1, 1);
+                }
+                else if (s_check_rem(s, datasize))
                 {
                     f->data = (char *)g_malloc(datasize, 0);
                     in_uint8a(s, f->data, datasize);
                 }
                 else
                 {
-                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create");
+                    LOG(LOG_LEVEL_ERROR, "error in xrdp_font_create");
                 }
-
                 index++;
+            }
+
+            if (self->body_height == 0 && index > 32)
+            {
+                /* Older font made for xrdp v0.9.x. Synthesise this
+                 * value from the first glyph */
+                self->body_height = -self->font_items[32].baseline + 1;
             }
         }
     }
@@ -169,7 +293,7 @@ xrdp_font_create(struct xrdp_wm *wm)
       self->font_items[0].data = g_malloc(3 * 16, 0);
       g_memcpy(self->font_items[0].data, w_char, 3 * 16);
     */
-    DEBUG(("out xrdp_font_create"));
+    LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_font_create");
     return self;
 }
 
