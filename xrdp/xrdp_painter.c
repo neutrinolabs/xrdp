@@ -214,21 +214,21 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             {
                 return 1;
             }
-	    src = self->wm->screen->data;
-	    src += self->wm->screen->line_size * rect.top;
-	    src += rect.left * Bpp;
-	    dst = ldata;
-	    for (index = 0; index < cy; index++)
-	    {
-		g_memcpy(dst, src, cx * Bpp);
-		src += self->wm->screen->line_size;
-		dst += cx * Bpp;
-	    }
-	    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
-		      rect.left, rect.top, cx, cy);
-	    libxrdp_send_bitmap(self->session, cx, cy, bpp,
-				ldata, rect.left, rect.top, cx, cy);
-	    g_free(ldata);
+            src = self->wm->screen->data;
+            src += self->wm->screen->line_size * rect.top;
+            src += rect.left * Bpp;
+            dst = ldata;
+            for (index = 0; index < cy; index++)
+            {
+                g_memcpy(dst, src, cx * Bpp);
+                src += self->wm->screen->line_size;
+                dst += cx * Bpp;
+            }
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
+                      rect.left, rect.top, cx, cy);
+            libxrdp_send_bitmap(self->session, cx, cy, bpp,
+                                ldata, rect.left, rect.top, cx, cy);
+            g_free(ldata);
 
             jndex++;
             error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
