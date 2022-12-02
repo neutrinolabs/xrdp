@@ -12,29 +12,6 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm
 
-if SESMAN_BSD
-AUTH_C = verify_user_bsd.c
-AUTH_LIB =
-else
-if SESMAN_PAMUSERPASS
-AUTH_C = verify_user_pam_userpass.c
-AUTH_LIB = -lpam -lpam_userpass
-else
-if SESMAN_KERBEROS
-AUTH_C = verify_user_kerberos.c
-AUTH_LIB = -lkrb5
-else
-if SESMAN_NOPAM
-AUTH_C = verify_user.c
-AUTH_LIB = -lcrypt
-else
-AUTH_C = verify_user_pam.c
-AUTH_LIB = -lpam
-endif
-endif
-endif
-endif
-
 sbin_PROGRAMS = \
   xrdp-sesman
 
@@ -57,13 +34,26 @@ xrdp_sesman_SOURCES = \
   sig.c \
   sig.h \
   xauth.c \
-  xauth.h \
-  $(AUTH_C)
+  xauth.h
 
+# Possible authentication modules
+# See https://www.gnu.org/software/automake/manual/html_node/Conditional-Sources.html
+EXTRA_xrdp_sesman_SOURCES = \
+ verify_user.c \
+ verify_user_bsd.c \
+ verify_user_kerberos.c \
+ verify_user_pam.c \
+ verify_user_pam_userpass.c
+
+# Make sure the right authentication module is pulled in
+xrdp_sesman_DEPENDENCIES = $(AUTHMOD_OBJ)
+
+# Make sure the right authentication module is linked with
 xrdp_sesman_LDADD = \
+  $(AUTHMOD_OBJ) \
   $(top_builddir)/libipm/libipm.la \
   $(top_builddir)/common/libcommon.la \
-  $(AUTH_LIB) \
+  $(AUTHMOD_LIB) \
   -lpthread
 
 sesmansysconfdir=$(sysconfdir)/xrdp

@@ -1,9 +1,11 @@
 AM_CPPFLAGS = \
+  -DXRDP_SYSCONF_PATH=\"${sysconfdir}\" \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
+  -DXRDP_AUTHMOD_SRC=\"../${AUTHMOD_SRC}\" \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm \
   -I$(top_srcdir)/sesman
@@ -16,6 +18,7 @@ bin_PROGRAMS = \
   xrdp-dis
 
 noinst_PROGRAMS = \
+  xrdp-authtest \
   xrdp-xcon
 
 xrdp_sesrun_SOURCES = \
@@ -38,6 +41,10 @@ xrdp_dis_LDADD = \
 xrdp_xcon_SOURCES = \
   xcon.c
 
+xrdp_authtest_SOURCES = \
+  authmod.c \
+  authtest.c
+
 xrdp_sesrun_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libipm/libipm.la
@@ -51,3 +58,7 @@ xrdp_xcon_LDFLAGS = \
 
 xrdp_xcon_LDADD = \
   $(X_PRE_LIBS) -lX11 $(X_EXTRA_LIBS)
+
+xrdp_authtest_LDADD = \
+  $(top_builddir)/common/libcommon.la \
+  $(AUTHMOD_LIB)
