@@ -176,12 +176,12 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
 
         int encoding_bytes = self->wm->max_encoding_bytes;
         int tiles_written = rfxcodec_encode(self->wm->codec_handle,
-                                self->wm->encoding + XRDP_SURCMD_PREFIX_BYTES,
-                                &encoding_bytes, self->wm->screen->data,
-                                width, height, width * Bpp,
-                                rfxrects, num_rfxrects,
-                                rfxtiles, num_tiles,
-                                NULL, 0);
+                                            self->wm->encoding + XRDP_SURCMD_PREFIX_BYTES,
+                                            &encoding_bytes, self->wm->screen->data,
+                                            width, height, width * Bpp,
+                                            rfxrects, num_rfxrects,
+                                            rfxtiles, num_tiles,
+                                            NULL, 0);
         if (tiles_written < 0)
         {
             LOG_DEVEL(LOG_LEVEL_WARNING, "xrdp_painter_send_dirty: RFX encode fails (%d)", tiles_written);
