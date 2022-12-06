@@ -131,10 +131,10 @@ static void devredir_send_server_core_cap_req(void);
 static void devredir_send_server_clientID_confirm(void);
 static void devredir_send_server_user_logged_on(void);
 
-static void devredir_proc_client_core_cap_resp(struct stream *s);
-static void devredir_proc_client_devlist_announce_req(struct stream *s);
-static void devredir_proc_client_devlist_remove_req(struct stream *s);
-static void devredir_proc_device_iocompletion(struct stream *s);
+static int devredir_proc_client_core_cap_resp(struct stream *s);
+static int devredir_proc_client_devlist_announce_req(struct stream *s);
+static int devredir_proc_client_devlist_remove_req(struct stream *s);
+static int devredir_proc_device_iocompletion(struct stream *s);
 static void devredir_proc_query_dir_response(IRP *irp,
         struct stream *s_in,
         tui32 DeviceId,
@@ -323,6 +323,11 @@ devredir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     }
 
     /* read header from incoming data */
+    if (!s_check_rem_and_log(ls, 4, "Parsing [MS-RDPEFS] RDPDR_HEADER"))
+    {
+        rv = -1;
+        goto done;
+    }
     xstream_rd_u16_le(ls, comp_type);
     xstream_rd_u16_le(ls, pktID);
 
@@ -340,27 +345,34 @@ devredir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     switch (pktID)
     {
         case PAKID_CORE_CLIENTID_CONFIRM:
-            xstream_seek(ls, 2);  /* major version, we ignore it */
-            xstream_rd_u16_le(ls, minor_ver);
-            xstream_rd_u32_le(ls, g_clientID);
-
-            g_client_rdp_version = minor_ver;
-
-            switch (minor_ver)
+            if (!s_check_rem_and_log(ls, 6, "Parsing [MS-RDPEFS] DR_CORE_CLIENT_ANNOUNCE_RSP"))
             {
-                case RDP_CLIENT_50:
-                    break;
-
-                case RDP_CLIENT_51:
-                    break;
-
-                case RDP_CLIENT_52:
-                    break;
-
-                case RDP_CLIENT_60_61:
-                    break;
+                rv = -1;
             }
-            // LK_TODO devredir_send_server_clientID_confirm();
+            else
+            {
+                xstream_seek(ls, 2);  /* major version, we ignore it */
+                xstream_rd_u16_le(ls, minor_ver);
+                xstream_rd_u32_le(ls, g_clientID);
+
+                g_client_rdp_version = minor_ver;
+
+                switch (minor_ver)
+                {
+                    case RDP_CLIENT_50:
+                        break;
+
+                    case RDP_CLIENT_51:
+                        break;
+
+                    case RDP_CLIENT_52:
+                        break;
+
+                    case RDP_CLIENT_60_61:
+                        break;
+                }
+                // LK_TODO devredir_send_server_clientID_confirm();
+            }
             break;
 
         case PAKID_CORE_CLIENT_NAME:
@@ -378,19 +390,19 @@ devredir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             break;
 
         case PAKID_CORE_CLIENT_CAPABILITY:
-            devredir_proc_client_core_cap_resp(ls);
+            rv = devredir_proc_client_core_cap_resp(ls);
             break;
 
         case PAKID_CORE_DEVICELIST_ANNOUNCE:
-            devredir_proc_client_devlist_announce_req(ls);
+            rv = devredir_proc_client_devlist_announce_req(ls);
             break;
 
         case PAKID_CORE_DEVICELIST_REMOVE:
-            devredir_proc_client_devlist_remove_req(ls);
+            rv = devredir_proc_client_devlist_remove_req(ls);
             break;
 
         case PAKID_CORE_DEVICE_IOCOMPLETION:
-            devredir_proc_device_iocompletion(ls);
+            rv = devredir_proc_device_iocompletion(ls);
             break;
 
         default:
@@ -727,8 +739,9 @@ devredir_send_drive_dir_request(IRP *irp, tui32 device_id,
  * @brief process client's response to our core_capability_req() msg
  *
  * @param   s   stream containing client's response
+ * @return  0   for success, -1 otherwise
  *****************************************************************************/
-static void
+static int
 devredir_proc_client_core_cap_resp(struct stream *s)
 {
     int i;
@@ -738,15 +751,31 @@ devredir_proc_client_core_cap_resp(struct stream *s)
     tui32 cap_version;
     char *holdp;
 
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CORE_CAPABLITY_RSP"))
+    {
+        return -1;
+    }
     xstream_rd_u16_le(s, num_caps);
     xstream_seek(s, 2);  /* padding */
 
     for (i = 0; i < num_caps; i++)
     {
         holdp = s->p;
+        if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPEFS] CAPABILITY_HEADER"))
+        {
+            return -1;
+        }
         xstream_rd_u16_le(s, cap_type);
         xstream_rd_u16_le(s, cap_len);
         xstream_rd_u32_le(s, cap_version);
+        /* Convert the length to a remaining length. Underflow is possible,
+         * but this is an unsigned type so that's OK */
+        cap_len -= (s->p - holdp);
+        if (cap_len > 0 &&
+                !s_check_rem_and_log(s, cap_len, "Parsing [MS-RDPEFS] CAPABILITY_HEADER length"))
+        {
+            return -1;
+        }
 
         switch (cap_type)
         {
@@ -779,11 +808,12 @@ devredir_proc_client_core_cap_resp(struct stream *s)
                 scard_init();
                 break;
         }
-        s->p = holdp + cap_len;
+        xstream_seek(s, cap_len);
     }
+    return 0;
 }
 
-static void
+static int
 devredir_proc_client_devlist_announce_req(struct stream *s)
 {
     unsigned int i;
@@ -795,12 +825,22 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
     enum NTSTATUS response_status;
 
     /* get number of devices being announced */
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CORE_DEVICELIST_ANNOUNCE_REQ"))
+    {
+        return -1;
+    }
+
     xstream_rd_u32_le(s, device_count);
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "num of devices announced: %d", device_count);
 
     for (i = 0; i < device_count; i++)
     {
+        if (!s_check_rem_and_log(s, 4 + 4 + 8 + 4,
+                                 "Parsing [MS-RDPEFS] DEVICE_ANNOUNCE"))
+        {
+            return -1;
+        }
         xstream_rd_u32_le(s, device_type);
         xstream_rd_u32_le(s, g_device_id);
         /* get preferred DOS name
@@ -816,6 +856,12 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
 
         /* Read the device data length from the stream */
         xstream_rd_u32_le(s, device_data_len);
+        if (device_data_len > 0 &&
+                !s_check_rem_and_log(s, device_data_len,
+                                     "Parsing [MS-RDPEFS] DEVICE_ANNOUNCE devdata"))
+        {
+            return -1;
+        }
 
         switch (device_type)
         {
@@ -881,9 +927,11 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
         devredir_send_server_device_announce_resp(g_device_id,
                 response_status);
     }
+
+    return 0;
 }
 
-static void
+static int
 devredir_proc_client_devlist_remove_req(struct stream *s)
 {
     unsigned int i;
@@ -891,7 +939,16 @@ devredir_proc_client_devlist_remove_req(struct stream *s)
     tui32 device_id;
 
     /* get number of devices being announced */
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_DEVICELIST_REMOVE"))
+    {
+        return -1;
+    }
     xstream_rd_u32_le(s, device_count);
+    if (!s_check_rem_and_log(s, 4 * device_count,
+                             "Parsing [MS-RDPEFS] DR_DEVICELIST_REMOVE list"))
+    {
+        return -1;
+    }
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "num of devices removed: %d", device_count);
     {
@@ -901,9 +958,10 @@ devredir_proc_client_devlist_remove_req(struct stream *s)
             xfuse_delete_share(device_id);
         }
     }
+    return 0;
 }
 
-static void
+static int
 devredir_proc_device_iocompletion(struct stream *s)
 {
     IRP       *irp       = NULL;
@@ -914,6 +972,10 @@ devredir_proc_device_iocompletion(struct stream *s)
     tui32      Length;
     enum COMPLETION_TYPE comp_type;
 
+    if (!s_check_rem_and_log(s, 12, "Parsing [MS-RDPEFS] DR_DEVICE_IOCOMPLETION"))
+    {
+        return -1;
+    }
     xstream_rd_u32_le(s, DeviceId);
     xstream_rd_u32_le(s, CompletionId);
     xstream_rd_u32_le(s, IoStatus32);
@@ -959,6 +1021,10 @@ devredir_proc_device_iocompletion(struct stream *s)
                 }
                 else
                 {
+                    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CREATE_RSP"))
+                    {
+                        return -1;
+                    }
                     xstream_rd_u32_le(s, irp->FileId);
                     devredir_send_drive_dir_request(irp, DeviceId,
                                                     1, irp->pathname);
@@ -966,6 +1032,10 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_CREATE_REQ:
+                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CREATE_RSP"))
+                {
+                    return -1;
+                }
                 xstream_rd_u32_le(s, irp->FileId);
 
                 xfuse_devredir_cb_create_file(
@@ -978,6 +1048,10 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_OPEN_REQ:
+                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CREATE_RSP"))
+                {
+                    return -1;
+                }
                 xstream_rd_u32_le(s, irp->FileId);
 
                 xfuse_devredir_cb_open_file((struct state_open *) irp->fuse_info,
@@ -989,7 +1063,15 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_READ:
+                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_READ_RSP"))
+                {
+                    return -1;
+                }
                 xstream_rd_u32_le(s, Length);
+                if (!s_check_rem_and_log(s, Length, "Parsing [MS-RDPEFS] DR_READ_RSP"))
+                {
+                    return -1;
+                }
                 xfuse_devredir_cb_read_file((struct state_read *) irp->fuse_info,
                                             IoStatus,
                                             s->p, Length);
@@ -997,6 +1079,10 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_WRITE:
+                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_WRITE_RSP"))
+                {
+                    return -1;
+                }
                 xstream_rd_u32_le(s, Length);
                 xfuse_devredir_cb_write_file((struct state_write *) irp->fuse_info,
                                              IoStatus,
@@ -1019,6 +1105,10 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_RMDIR_OR_FILE:
+                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CREATE_RSP"))
+                {
+                    return -1;
+                }
                 xstream_rd_u32_le(s, irp->FileId);
                 devredir_proc_cid_rmdir_or_file(irp, IoStatus);
                 break;
@@ -1028,6 +1118,10 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_RENAME_FILE:
+                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CREATE_RSP"))
+                {
+                    return -1;
+                }
                 xstream_rd_u32_le(s, irp->FileId);
                 devredir_proc_cid_rename_file(irp, IoStatus);
                 break;
@@ -1051,6 +1145,7 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
         }
     }
+    return 0;
 }
 
 static void
