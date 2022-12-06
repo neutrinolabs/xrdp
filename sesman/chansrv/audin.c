@@ -181,15 +181,16 @@ audin_send_open(int chan_id)
     int error;
     int bytes;
     struct stream *s;
-    struct xr_wave_format_ex *wf;
+    struct xr_wave_format_ex *wf = g_client_formats[g_current_format];
 
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_open:");
     make_stream(s);
-    init_stream(s, 8192);
+    /* wf->cbSize was checked when the format was received */
+    init_stream(s, wf->cbSize + 64);
+
     out_uint8(s, MSG_SNDIN_OPEN);
     out_uint32_le(s, 2048); /* FramesPerPacket */
     out_uint32_le(s, g_current_format); /* initialFormat */
-    wf = g_client_formats[g_current_format];
     out_uint16_le(s, wf->wFormatTag);
     out_uint16_le(s, wf->nChannels);
     out_uint32_le(s, wf->nSamplesPerSec);
