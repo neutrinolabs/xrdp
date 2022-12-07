@@ -1722,6 +1722,12 @@ xrdp_mm_trans_process_drdynvc_channel_close(struct xrdp_mm *self,
         return 1;
     }
     in_uint32_le(s, chansrv_chan_id);
+    if (chansrv_chan_id < 0 || chansrv_chan_id > 255)
+    {
+        LOG(LOG_LEVEL_ERROR, "Attempting to close invalid chansrv channel %d",
+            chansrv_chan_id);
+        return 1;
+    }
     chan_id = self->cs2xr_cid_map[chansrv_chan_id];
     /* close dynamic channel */
     error = libxrdp_drdynvc_close(self->wm->session, chan_id);
