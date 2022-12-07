@@ -925,6 +925,12 @@ xrdp_mm_process_rail_update_window_text(struct xrdp_mm *self, struct stream *s)
 
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, size); /* title size */
+    if (size < 0 || !s_check_rem(s, size))
+    {
+        LOG(LOG_LEVEL_ERROR, "%s : invalid window text size %d",
+            __func__, size);
+        return 1;
+    }
     rwso.title_info = g_new(char, size + 1);
     in_uint8a(s, rwso.title_info, size);
     rwso.title_info[size] = 0;
