@@ -98,7 +98,7 @@ struct trans
     ttrans_data_in trans_data_in;
     ttrans_conn_in trans_conn_in;
     void *callback_data;
-    int header_size;
+    unsigned int header_size;
     struct stream *in_s;
     struct stream *out_s;
     char *listen_filename;
