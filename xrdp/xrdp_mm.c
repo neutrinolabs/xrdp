@@ -1635,7 +1635,7 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
     int error;
     int chan_id;
     int chansrv_chan_id;
-    char *name;
+    char name[1024 + 1];
     struct xrdp_drdynvc_procs procs;
 
     if (!s_check_rem(s, 2))
@@ -1643,33 +1643,32 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
         return 1;
     }
     in_uint32_le(s, name_bytes);
-    if ((name_bytes < 1) || (name_bytes > 1024))
-    {
-        return 1;
-    }
-    name = g_new(char, name_bytes + 1);
-    if (name == NULL)
+    if ((name_bytes < 1) || (name_bytes > (int)(sizeof(name) - 1)))
     {
         return 1;
     }
     if (!s_check_rem(s, name_bytes))
     {
-        g_free(name);
         return 1;
     }
     in_uint8a(s, name, name_bytes);
     name[name_bytes] = 0;
     if (!s_check_rem(s, 8))
     {
-        g_free(name);
         return 1;
     }
     in_uint32_le(s, flags);
     in_uint32_le(s, chansrv_chan_id);
+    if (chansrv_chan_id < 0 || chansrv_chan_id > 255)
+    {
+        LOG(LOG_LEVEL_ERROR, "Attempting to open invalid chansrv channel %d",
+            chansrv_chan_id);
+        return 1;
+    }
+
     if (flags == 0)
     {
         /* open static channel, not supported */
-        g_free(name);
         return 1;
     }
     else
@@ -1685,13 +1684,11 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
                                      &chan_id);
         if (error != 0)
         {
-            g_free(name);
             return 1;
         }
         self->xr2cr_cid_map[chan_id] = chansrv_chan_id;
         self->cs2xr_cid_map[chansrv_chan_id] = chan_id;
     }
-    g_free(name);
     return 0;
 }
 
