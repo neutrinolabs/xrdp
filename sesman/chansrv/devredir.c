@@ -103,7 +103,6 @@ int g_is_port_redir_supported = 0;
 int g_is_drive_redir_supported = 0;
 int g_is_smartcard_redir_supported = 0;
 int g_drive_redir_version = 1;
-char g_full_name_for_filesystem[1024];
 tui32 g_completion_id = 1;
 
 tui32 g_clientID;           /* unique client ID - announced by client */
@@ -866,21 +865,18 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
         switch (device_type)
         {
             case RDPDR_DTYP_FILESYSTEM:
-                /* get device data len */
-                if (device_data_len)
-                {
-                    xstream_rd_string(g_full_name_for_filesystem, s,
-                                      device_data_len);
-                }
+                /* At present we don't use the full name - see
+                 * [MS-RDPEFS] 2.2.3.1 for details of the contents */
+                xstream_skip_u8(s, device_data_len);
 
                 LOG(LOG_LEVEL_INFO, "Detected remote drive '%s'",
                     preferred_dos_name);
 
                 LOG_DEVEL(LOG_LEVEL_DEBUG,
                           "device_type=FILE_SYSTEM device_id=0x%x dosname=%s "
-                          "device_data_len=%d full_name=%s", g_device_id,
+                          "device_data_len=%d", g_device_id,
                           preferred_dos_name,
-                          device_data_len, g_full_name_for_filesystem);
+                          device_data_len);
 
                 response_status = STATUS_SUCCESS;
 
