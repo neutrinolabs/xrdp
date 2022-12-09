@@ -225,7 +225,7 @@ scp_v0c_reply_available(struct trans *trans)
     if (trans != NULL && trans->status == TRANS_STATUS_UP)
     {
         /* Have we read enough data from the stream? */
-        if ((trans->in_s->end - trans->in_s->data) < trans->header_size)
+        if ((unsigned int)(trans->in_s->end - trans->in_s->data) < trans->header_size)
         {
             result = 0;
         }
