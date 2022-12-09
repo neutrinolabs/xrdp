@@ -547,41 +547,64 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
             }
         }
     }
-    else if (msg >= 100 && msg <= 110) /* mouse events */
+    /* mouse events
+     *
+     * VNC supports up to 8 mouse buttons because mouse buttons are
+     * represented by 7 bits bitmask
+     */
+    else if (msg >= WM_MOUSEMOVE && msg <= WM_BUTTON8DOWN) /* 100 to 116 */
     {
         switch (msg)
         {
-            case 100:
-                break; /* WM_MOUSEMOVE */
-            case 101:
+            case WM_MOUSEMOVE:
+                break;
+            case WM_LBUTTONUP:
                 v->mod_mouse_state &= ~1;
-                break; /* WM_LBUTTONUP */
-            case 102:
+                break;
+            case WM_LBUTTONDOWN:
                 v->mod_mouse_state |= 1;
-                break; /* WM_LBUTTONDOWN */
-            case 103:
+                break;
+            case WM_RBUTTONUP:
                 v->mod_mouse_state &= ~4;
-                break; /* WM_RBUTTONUP */
-            case 104:
+                break;
+            case WM_RBUTTONDOWN:
                 v->mod_mouse_state |= 4;
-                break; /* WM_RBUTTONDOWN */
-            case 105:
+                break;
+            case WM_BUTTON3UP:
                 v->mod_mouse_state &= ~2;
                 break;
-            case 106:
+            case WM_BUTTON3DOWN:
                 v->mod_mouse_state |= 2;
                 break;
-            case 107:
+            case WM_BUTTON4UP:
                 v->mod_mouse_state &= ~8;
                 break;
-            case 108:
+            case WM_BUTTON4DOWN:
                 v->mod_mouse_state |= 8;
                 break;
-            case 109:
+            case WM_BUTTON5UP:
                 v->mod_mouse_state &= ~16;
                 break;
-            case 110:
+            case WM_BUTTON5DOWN:
                 v->mod_mouse_state |= 16;
+                break;
+            case WM_BUTTON6UP:
+                v->mod_mouse_state &= ~32;
+                break;
+            case WM_BUTTON6DOWN:
+                v->mod_mouse_state |= 32;
+                break;
+            case WM_BUTTON7UP:
+                v->mod_mouse_state &= ~64;
+                break;
+            case WM_BUTTON7DOWN:
+                v->mod_mouse_state |= 64;
+                break;
+            case WM_BUTTON8UP:
+                v->mod_mouse_state &= ~128;
+                break;
+            case WM_BUTTON8DOWN:
+                v->mod_mouse_state |= 128;
                 break;
         }
 
