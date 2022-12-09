@@ -102,7 +102,7 @@ libipm_msg_in_check_available(struct trans *trans, int *available)
     }
     else
     {
-        int len = trans->in_s->end - trans->in_s->data; /* Data read so far */
+        unsigned int len = trans->in_s->end - trans->in_s->data; /* Data read so far */
 
         if (len == trans->header_size)
         {

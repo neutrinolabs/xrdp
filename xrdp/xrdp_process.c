@@ -172,7 +172,7 @@ xrdp_process_data_in(struct trans *self)
             }
 
             len = (int) (s->end - s->data);
-            if (pro->server_trans->header_size > len)
+            if (pro->server_trans->header_size > (unsigned int)len)
             {
                 /* not enough data read yet */
                 break;
@@ -192,7 +192,7 @@ xrdp_process_data_in(struct trans *self)
             pro->server_trans->extra_flags = 3;
 
             len = (int) (s->end - s->data);
-            if (pro->server_trans->header_size > len)
+            if (pro->server_trans->header_size > (unsigned int)len)
             {
                 /* not enough data read yet */
                 break;
