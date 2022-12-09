@@ -676,22 +676,31 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
 static int
 xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct stream *s)
 {
-    int size;
-    int total_size;
+    unsigned int size;
+    unsigned int total_size;
     int chan_id;
     int chan_flags;
-    int rv;
+    int rv = 0;
 
-    in_uint16_le(s, chan_id);
-    in_uint16_le(s, chan_flags);
-    in_uint16_le(s, size);
-    in_uint32_le(s, total_size);
-    rv = 0;
-
-    if (rv == 0)
+    if (!s_check_rem_and_log(s, 10, "Reading channel data header"))
     {
-        rv = libxrdp_send_to_channel(self->wm->session, chan_id, s->p, size, total_size,
-                                     chan_flags);
+        rv = 1;
+    }
+    else
+    {
+        in_uint16_le(s, chan_id);
+        in_uint16_le(s, chan_flags);
+        in_uint16_le(s, size);
+        in_uint32_le(s, total_size);
+        if (!s_check_rem_and_log(s, size, "Reading channel data data"))
+        {
+            rv = 1;
+        }
+        else
+        {
+            rv = libxrdp_send_to_channel(self->wm->session, chan_id,
+                                         s->p, size, total_size, chan_flags);
+        }
     }
 
     return rv;
