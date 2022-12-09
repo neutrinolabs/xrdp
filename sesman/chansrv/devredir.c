@@ -855,7 +855,7 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
 
         /* Read the device data length from the stream */
         xstream_rd_u32_le(s, device_data_len);
-        if (device_data_len > 0 && !
+        if (device_data_len > 0 &&
                 !s_check_rem_and_log(s, device_data_len,
                                      "Parsing [MS-RDPEFS] DEVICE_ANNOUNCE devdata"))
         {
