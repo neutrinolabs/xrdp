@@ -1946,6 +1946,17 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
 static int
 xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 {
+#define CS_CORE_MIN_LENGTH \
+    (\
+     4 +            /* Version */ \
+     2 + 2 +        /* desktopWidth + desktopHeight */ \
+     2 + 2 +        /* colorDepth + SASSequence */ \
+     4 +            /* keyboardLayout */ \
+     4 + 32 +       /* clientBuild + clientName */ \
+     4 + 4 + 4 +    /* keyboardType + keyboardSubType + keyboardFunctionKey */ \
+     64 +           /* imeFileName */ \
+     0)
+
     int version;
     int colorDepth;
     int postBeta2ColorDepth;
@@ -1956,7 +1967,12 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
 
     UNUSED_VAR(version);
 
-    /* TS_UD_CS_CORE requiered fields */
+    /* TS_UD_CS_CORE required fields */
+    if (!s_check_rem_and_log(s, CS_CORE_MIN_LENGTH,
+                             "Parsing [MS-RDPBCGR] TS_UD_CS_CORE"))
+    {
+        return 1;
+    }
     in_uint32_le(s, version);
     in_uint16_le(s, self->rdp_layer->client_info.width);
     in_uint16_le(s, self->rdp_layer->client_info.height);
@@ -1994,6 +2010,10 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               clientName);
 
     /* TS_UD_CS_CORE optional fields */
+    if (!s_check_rem(s, 2))
+    {
+        return 0;
+    }
     in_uint16_le(s, postBeta2ColorDepth);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> postBeta2ColorDepth %s",
@@ -2138,6 +2158,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               "<Optional Field> desktopOrientation (ignored)");
 
     return 0;
+#undef CS_CORE_MIN_LENGTH
 }
 
 /*****************************************************************************/
