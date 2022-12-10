@@ -1,3 +1,46 @@
+# Release notes for xrdp v0.9.21 (2022/12/10)
+
+## General announcements
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## Security fixes
+
+This update is recommended for all xrdp users and provides following important security fixes:
+
+* [CVE-2022-23468](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23468)
+* [CVE-2022-23477](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23477)
+* [CVE-2022-23478](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23478)
+* [CVE-2022-23479](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23479)
+* [CVE-2022-23480](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23480)
+* [CVE-2022-23481](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23481)
+* [CVE-2022-23483](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23483)
+* [CVE-2022-23482](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23482)
+* [CVE-2022-23484](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23484)
+* [CVE-2022-23493](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-23493)
+
+These security issues are reported by [Team BT5 (BoB 11th)](https://github.com/Team-BT5). We appreciate their great help with making and reviewing patches.
+
+## New features
+* openSuSE Tumbleweed move to /usr/lib/pam.d is now supported in the installation scripts (#2413)
+* VNC backend session now supports extra mouse buttons 6, 7 and 8 (#2426)
+
+## Bug fixes
+* Passwords are no longer left on the heap in sesman (#1599 #2439)
+* Set permissions on pcsc socket dir to owner only (#2454 #2460)
+
+## Internal changes
+* CI updates to cope with github upgrades (#2395)
+
+## Changes for packagers or developers
+Nothing this time.
+
+## Known issues
+
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.20 (2022/09/15)
 
 ## General announcements
@@ -278,7 +321,7 @@ These changes are likely to impact operating system package builders and those b
 * Minor manpage fixes #1611
 
 ## Other changes
-* CI error fixes 
+* CI error fixes
 * Introduce cppcheck
 
 ## Known issues
