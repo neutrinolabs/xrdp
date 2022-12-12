@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 #include "list.h"
 #include "file.h"
 #include "os_calls.h"
@@ -61,8 +62,15 @@ internal_log_file_open(const char *fname)
 
     if (fname != NULL)
     {
-        ret = open(fname, O_WRONLY | O_CREAT | O_APPEND | O_SYNC,
-                   S_IRUSR | S_IWUSR);
+        if (g_strcmp(fname, "<stdout>") != 0)
+        {
+            ret = open(fname, O_WRONLY | O_CREAT | O_APPEND | O_SYNC,
+                       S_IRUSR | S_IWUSR);
+        }
+        else
+        {
+            ret = dup(1);
+        }
     }
 
 #ifdef FD_CLOEXEC
@@ -321,7 +329,7 @@ internal_config_read_logging(int file,
 
             if (lc->log_file != NULL)
             {
-                if (lc->log_file[0] != '/')
+                if (lc->log_file[0] != '/' && g_strcmp(lc->log_file, "<stdout>") != 0)
                 {
                     temp_buf = (char *)g_malloc(512, 0);
                     g_snprintf(temp_buf, 511, "%s/%s", XRDP_LOG_PATH, lc->log_file);

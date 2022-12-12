@@ -97,7 +97,10 @@ sections.
 .TP
 \fBLogFile\fR=\fIfilename\fR
 Log file path. It can be either absolute or relative. If not specified,
-defaults to \fI./sesman.log\fR It is ignored in the [ChansrvLogging] section
+defaults to \fI./sesman.log\fR. If set to \fB<stdout>\fR, log will go to
+stdout. Use for debugging only\fR
+
+It is ignored in the [ChansrvLogging] section
 since the channel server creates one log file per display and instead uses the
 following log file naming convention \fIxrdp-chansrv.${DISPLAY}.log\fR
 
