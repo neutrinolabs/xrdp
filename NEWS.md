@@ -1,3 +1,12 @@
+# Release notes for xrdp v0.9.21.1 (2022/12/13)
+
+This release only includes following fix for packagers. Packagers try to build xrdp on distributions _other than_ Arch Linux, Debian, SUSE, Red Hat(ish), FreeBSD and macOS may be required to use this release.
+
+## Changes for packagers or developers
+* Add missing xrdp-sesman.system to distributed tarball (#2466 #2468)
+
+-----------------------
+
 # Release notes for xrdp v0.9.21 (2022/12/10)
 
 ## General announcements
