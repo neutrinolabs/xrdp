@@ -680,13 +680,27 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     int len;
     char *p;
 
+    if (!s_check_rem_and_log(s, 10,
+                             "Parsing [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU"
+                             " - header"))
+    {
+        return 1;
+    }
     in_uint8s(s, 4); /* rdp_shareid */
     in_uint8s(s, 2); /* userid */
     in_uint16_le(s, source_len); /* sizeof RDP_SOURCE */
     in_uint16_le(s, cap_len);
+
+    if (!s_check_rem_and_log(s, source_len + 2 + 2,
+                             "Parsing [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU"
+                             " - header2"))
+    {
+        return 1;
+    }
     in_uint8s(s, source_len);
     in_uint16_le(s, num_caps);
     in_uint8s(s, 2); /* pad */
+
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU "
               "shareID (ignored), originatorID (ignored), lengthSourceDescriptor %d, "
               "lengthCombinedCapabilities  %d, sourceDescriptor (ignored), "

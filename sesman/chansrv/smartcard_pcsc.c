@@ -1874,7 +1874,9 @@ scard_pcsc_init(void)
                 }
             }
         }
-        g_chmod_hex(g_pcsclite_ipc_dir, 0x1777);
+        /* Only the current user should be able to access the remote
+         * smartcard */
+        g_chmod_hex(g_pcsclite_ipc_dir, 0x700);
         g_snprintf(g_pcsclite_ipc_file, 255, "%s/pcscd.comm", g_pcsclite_ipc_dir);
         g_lis->trans_conn_in = my_pcsc_trans_conn_in;
         error = trans_listen(g_lis, g_pcsclite_ipc_file);

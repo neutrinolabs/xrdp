@@ -663,22 +663,31 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
 static int
 xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct stream *s)
 {
-    int size;
-    int total_size;
+    unsigned int size;
+    unsigned int total_size;
     int chan_id;
     int chan_flags;
-    int rv;
+    int rv = 0;
 
-    in_uint16_le(s, chan_id);
-    in_uint16_le(s, chan_flags);
-    in_uint16_le(s, size);
-    in_uint32_le(s, total_size);
-    rv = 0;
-
-    if (rv == 0)
+    if (!s_check_rem_and_log(s, 10, "Reading channel data header"))
     {
-        rv = libxrdp_send_to_channel(self->wm->session, chan_id, s->p, size, total_size,
-                                     chan_flags);
+        rv = 1;
+    }
+    else
+    {
+        in_uint16_le(s, chan_id);
+        in_uint16_le(s, chan_flags);
+        in_uint16_le(s, size);
+        in_uint32_le(s, total_size);
+        if (!s_check_rem_and_log(s, size, "Reading channel data data"))
+        {
+            rv = 1;
+        }
+        else
+        {
+            rv = libxrdp_send_to_channel(self->wm->session, chan_id,
+                                         s->p, size, total_size, chan_flags);
+        }
     }
 
     return rv;
@@ -916,6 +925,12 @@ xrdp_mm_process_rail_update_window_text(struct xrdp_mm *self, struct stream *s)
 
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, size); /* title size */
+    if (size < 0 || !s_check_rem(s, size))
+    {
+        LOG(LOG_LEVEL_ERROR, "%s : invalid window text size %d",
+            __func__, size);
+        return 1;
+    }
     rwso.title_info = g_new(char, size + 1);
     in_uint8a(s, rwso.title_info, size);
     rwso.title_info[size] = 0;
@@ -1635,7 +1650,7 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
     int error;
     int chan_id;
     int chansrv_chan_id;
-    char *name;
+    char name[1024 + 1];
     struct xrdp_drdynvc_procs procs;
 
     if (!s_check_rem(s, 2))
@@ -1643,33 +1658,32 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
         return 1;
     }
     in_uint32_le(s, name_bytes);
-    if ((name_bytes < 1) || (name_bytes > 1024))
-    {
-        return 1;
-    }
-    name = g_new(char, name_bytes + 1);
-    if (name == NULL)
+    if ((name_bytes < 1) || (name_bytes > (int)(sizeof(name) - 1)))
     {
         return 1;
     }
     if (!s_check_rem(s, name_bytes))
     {
-        g_free(name);
         return 1;
     }
     in_uint8a(s, name, name_bytes);
     name[name_bytes] = 0;
     if (!s_check_rem(s, 8))
     {
-        g_free(name);
         return 1;
     }
     in_uint32_le(s, flags);
     in_uint32_le(s, chansrv_chan_id);
+    if (chansrv_chan_id < 0 || chansrv_chan_id > 255)
+    {
+        LOG(LOG_LEVEL_ERROR, "Attempting to open invalid chansrv channel %d",
+            chansrv_chan_id);
+        return 1;
+    }
+
     if (flags == 0)
     {
         /* open static channel, not supported */
-        g_free(name);
         return 1;
     }
     else
@@ -1685,13 +1699,11 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
                                      &chan_id);
         if (error != 0)
         {
-            g_free(name);
             return 1;
         }
         self->xr2cr_cid_map[chan_id] = chansrv_chan_id;
         self->cs2xr_cid_map[chansrv_chan_id] = chan_id;
     }
-    g_free(name);
     return 0;
 }
 
@@ -1710,6 +1722,12 @@ xrdp_mm_trans_process_drdynvc_channel_close(struct xrdp_mm *self,
         return 1;
     }
     in_uint32_le(s, chansrv_chan_id);
+    if (chansrv_chan_id < 0 || chansrv_chan_id > 255)
+    {
+        LOG(LOG_LEVEL_ERROR, "Attempting to close invalid chansrv channel %d",
+            chansrv_chan_id);
+        return 1;
+    }
     chan_id = self->cs2xr_cid_map[chansrv_chan_id];
     /* close dynamic channel */
     error = libxrdp_drdynvc_close(self->wm->session, chan_id);
