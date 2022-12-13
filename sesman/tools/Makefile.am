@@ -61,4 +61,5 @@ xrdp_xcon_LDADD = \
 
 xrdp_authtest_LDADD = \
   $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/libipm/libipm.la \
   $(AUTHMOD_LIB)
