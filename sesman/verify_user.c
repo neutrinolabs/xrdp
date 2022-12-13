@@ -63,52 +63,114 @@ struct auth_info
 /* returns non-NULL for success */
 struct auth_info *
 auth_userpass(const char *user, const char *pass,
-              const char *client_ip, int *errorcode)
+              const char *client_ip, enum scp_login_status *errorcode)
 {
-    const char *encr;
-    const char *epass;
+    const char *encr = NULL;
     struct passwd *spw;
-    struct spwd *stp;
+
     /* Need a non-NULL pointer to return to indicate success */
     static struct auth_info success = {0};
 
-    spw = getpwnam(user);
+    /* Most likely codepath return from here is 'not authenticated' */
+    enum scp_login_status status = E_SCP_LOGIN_NOT_AUTHENTICATED;
 
-    if (spw == 0)
+    /* Find the encrypted password */
+    if ((spw = getpwnam(user)) != NULL)
     {
-        return NULL;
-    }
-
-    if (g_strncmp(spw->pw_passwd, "x", 3) == 0)
-    {
-        /* the system is using shadow */
-        stp = getspnam(user);
-
-        if (stp == 0)
+        if (g_strncmp(spw->pw_passwd, "x", 3) == 0)
         {
-            return NULL;
-        }
+            struct spwd *stp;
 
-        if (1 == auth_account_disabled(stp))
+            /* the system is using shadow */
+            if ((stp = getspnam(user)) == NULL)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't get shadow entry for account %s",
+                    user);
+                status = E_SCP_LOGIN_GENERAL_ERROR;
+            }
+            else
+            {
+                if (1 == auth_account_disabled(stp))
+                {
+                    LOG(LOG_LEVEL_INFO, "account %s is disabled", user);
+                    status = E_SCP_LOGIN_NOT_AUTHORIZED;
+                }
+                else
+                {
+                    encr = stp->sp_pwdp;
+                }
+            }
+        }
+        else
         {
-            LOG(LOG_LEVEL_INFO, "account %s is disabled", user);
-            return NULL;
+            /* old system with only passwd */
+            encr = spw->pw_passwd;
         }
+    }
 
-        encr = stp->sp_pwdp;
-    }
-    else
+    if (encr != NULL)
     {
-        /* old system with only passwd */
-        encr = spw->pw_passwd;
+        const char *epass;
+        if ((epass = crypt(pass, encr)) != NULL &&
+                g_strcmp(encr, epass) == 0)
+        {
+            status = E_SCP_LOGIN_OK;
+        }
     }
-    epass = crypt(pass, encr);
-    if (epass == 0)
+
+    if (errorcode != NULL)
     {
-        return NULL;
+        *errorcode = status;
     }
-    return (strcmp(encr, epass) == 0) ? &success : NULL;
+
+    return (status == E_SCP_LOGIN_OK) ? &success : NULL;
 }
+
+/******************************************************************************/
+
+struct auth_info *
+auth_uds(const char *user, enum scp_login_status *errorcode)
+{
+    struct passwd *spw;
+
+    /* Need a non-NULL pointer to return to indicate success */
+    static struct auth_info success = {0};
+
+    enum scp_login_status status = E_SCP_LOGIN_OK;
+
+    /* Try to check for a disabled account */
+    if ((spw = getpwnam(user)) != NULL)
+    {
+        if (g_strncmp(spw->pw_passwd, "x", 3) == 0)
+        {
+            struct spwd *stp;
+
+            /* the system is using shadow */
+            if ((stp = getspnam(user)) == NULL)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't get shadow entry for account %s",
+                    user);
+                status = E_SCP_LOGIN_GENERAL_ERROR;
+            }
+            else
+            {
+                if (1 == auth_account_disabled(stp))
+                {
+                    LOG(LOG_LEVEL_INFO, "account %s is disabled", user);
+                    status = E_SCP_LOGIN_NOT_AUTHORIZED;
+                }
+            }
+        }
+    }
+
+    if (errorcode != NULL)
+    {
+        *errorcode = status;
+    }
+
+    return (status == E_SCP_LOGIN_OK) ? &success : NULL;
+}
+
 
 /******************************************************************************/
 /* returns error */

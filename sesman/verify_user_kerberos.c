@@ -127,12 +127,12 @@ k5_begin(const char *username)
 
 /******************************************************************************/
 /* returns boolean */
-static int
+static enum scp_login_status
 k5_kinit(struct auth_info *auth_info, const char *password)
 {
+    enum scp_login_status status = E_SCP_LOGIN_GENERAL_ERROR;
     krb5_creds my_creds;
     krb5_error_code code = 0;
-    int rv = 0;
 
     code = krb5_get_init_creds_password(auth_info->ctx,
                                         &my_creds, auth_info->me,
@@ -144,6 +144,7 @@ k5_kinit(struct auth_info *auth_info, const char *password)
     {
         log_kerberos_failure(auth_info->ctx, code,
                              "krb5_get_init_creds_password");
+        status = E_SCP_LOGIN_NOT_AUTHENTICATED;
     }
     else
     {
@@ -162,7 +163,7 @@ k5_kinit(struct auth_info *auth_info, const char *password)
         }
         else
         {
-            rv = 1;
+            status = E_SCP_LOGIN_OK;
         }
 
         /* Prevent double-free of the client principal */
@@ -174,20 +175,22 @@ k5_kinit(struct auth_info *auth_info, const char *password)
         krb5_free_cred_contents(auth_info->ctx, &my_creds);
     }
 
-    return rv;
+    return status;
 }
 
 /******************************************************************************/
 /* returns non-NULL for success */
 struct auth_info *
 auth_userpass(const char *user, const char *pass,
-              const char *client_ip, int *errorcode)
+              const char *client_ip, enum scp_login_status *errorcode)
 {
+    enum scp_login_status status = E_SCP_LOGIN_GENERAL_ERROR;
     struct auth_info *auth_info = k5_begin(user);
 
     if (auth_info)
     {
-        if (!k5_kinit(auth_info, pass))
+        status = k5_kinit(auth_info, pass);
+        if (status != E_SCP_LOGIN_OK)
         {
             auth_end(auth_info);
             auth_info = NULL;
@@ -196,7 +199,23 @@ auth_userpass(const char *user, const char *pass,
 
     if (errorcode != NULL)
     {
-        *errorcode = (auth_info == NULL);
+        *errorcode = status;
+    }
+
+    return auth_info;
+}
+
+/******************************************************************************/
+/* returns non-NULL for success */
+struct auth_info *
+auth_uds(const char *user, enum scp_login_status *errorcode)
+{
+    struct auth_info *auth_info = k5_begin(user);
+
+    if (errorcode != NULL)
+    {
+        *errorcode =
+            (auth_info != NULL) ? E_SCP_LOGIN_OK : E_SCP_LOGIN_GENERAL_ERROR;
     }
 
     return auth_info;
