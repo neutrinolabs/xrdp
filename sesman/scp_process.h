@@ -27,15 +27,15 @@
 #ifndef SCP_PROCESS_H
 #define SCP_PROCESS_H
 
-struct trans;
+struct sesman_con;
 
 /**
  *
  * @brief Processes an SCP message
- * @param t the connection trans
+ * @param sc the sesman connection
  *
  */
 int
-scp_process(struct trans *t);
+scp_process(struct sesman_con *sc);
 
 #endif

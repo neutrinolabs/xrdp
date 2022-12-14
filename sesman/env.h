@@ -43,14 +43,14 @@ env_check_password_file(const char *filename, const char *password);
 /**
  *
  * @brief Sets user environment ($PATH, $HOME, $UID, and others)
- * @param username Username
+ * @param uid user ID
  * @param passwd_file VNC password file
  * @param display The session display
  * @return 0 on success, g_getuser_info() error codes on error
  *
  */
 int
-env_set_user(const char *username, char **passwd_file, int display,
+env_set_user(int uid, char **passwd_file, int display,
              const struct list *env_names, const struct list *env_values);
 
 #endif

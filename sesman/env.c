@@ -92,27 +92,27 @@ env_check_password_file(const char *filename, const char *passwd)
 /******************************************************************************/
 /*  its the responsibility of the caller to free passwd_file                  */
 int
-env_set_user(const char *username, char **passwd_file, int display,
+env_set_user(int uid, char **passwd_file, int display,
              const struct list *env_names, const struct list *env_values)
 {
     int error;
-    int pw_uid;
     int pw_gid;
-    int uid;
     int index;
     int len;
     char *name;
     char *value;
+    char *pw_username;
     char *pw_shell;
     char *pw_dir;
     char text[256];
     char hostname[256];
 
+    pw_username = 0;
     pw_shell = 0;
     pw_dir = 0;
 
-    error = g_getuser_info_by_name(username, &pw_uid, &pw_gid, &pw_shell,
-                                   &pw_dir, 0);
+    error = g_getuser_info_by_uid(uid, &pw_username, &pw_gid, &pw_shell,
+                                  &pw_dir, 0);
 
     if (error == 0)
     {
@@ -124,7 +124,6 @@ env_set_user(const char *username, char **passwd_file, int display,
 
         if (error == 0)
         {
-            uid = pw_uid;
             error = g_setuid(uid);
         }
 
@@ -135,8 +134,8 @@ env_set_user(const char *username, char **passwd_file, int display,
             g_clearenv();
             g_setenv("SHELL", pw_shell, 1);
             g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
-            g_setenv("USER", username, 1);
-            g_setenv("LOGNAME", username, 1);
+            g_setenv("USER", pw_username, 1);
+            g_setenv("LOGNAME", pw_username, 1);
             g_sprintf(text, "%d", uid);
             g_setenv("UID", text, 1);
             g_setenv("HOME", pw_dir, 1);
@@ -182,14 +181,14 @@ env_set_user(const char *username, char **passwd_file, int display,
                     }
 
                     len = g_snprintf(NULL, 0, "%s/.vnc/sesman_passwd-%s@%s:%d",
-                                     pw_dir, username, hostname, display);
+                                     pw_dir, pw_username, hostname, display);
 
                     *passwd_file = (char *) g_malloc(len + 1, 1);
                     if (*passwd_file != NULL)
                     {
                         /* Try legacy names first, remove if found */
                         g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd:%d",
-                                  pw_dir, username, display);
+                                  pw_dir, pw_username, display);
                         if (g_file_exist(*passwd_file))
                         {
                             LOG(LOG_LEVEL_WARNING, "Removing old "
@@ -197,7 +196,7 @@ env_set_user(const char *username, char **passwd_file, int display,
                             g_file_delete(*passwd_file);
                         }
                         g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd",
-                                  pw_dir, username);
+                                  pw_dir, pw_username);
                         if (g_file_exist(*passwd_file))
                         {
                             LOG(LOG_LEVEL_WARNING, "Removing insecure "
@@ -205,18 +204,18 @@ env_set_user(const char *username, char **passwd_file, int display,
                             g_file_delete(*passwd_file);
                         }
                         g_sprintf(*passwd_file, "%s/.vnc/sesman_passwd-%s@%s:%d",
-                                  pw_dir, username, hostname, display);
+                                  pw_dir, pw_username, hostname, display);
                     }
                 }
                 else
                 {
                     /* we use auth_file_path as requested */
-                    len = g_snprintf(NULL, 0, g_cfg->auth_file_path, username);
+                    len = g_snprintf(NULL, 0, g_cfg->auth_file_path, pw_username);
 
                     *passwd_file = (char *) g_malloc(len + 1, 1);
                     if (*passwd_file != NULL)
                     {
-                        g_sprintf(*passwd_file, g_cfg->auth_file_path, username);
+                        g_sprintf(*passwd_file, g_cfg->auth_file_path, pw_username);
                     }
                 }
 
@@ -226,6 +225,7 @@ env_set_user(const char *username, char **passwd_file, int display,
                 }
             }
 
+            g_free(pw_username);
             g_free(pw_dir);
             g_free(pw_shell);
         }
@@ -233,8 +233,7 @@ env_set_user(const char *username, char **passwd_file, int display,
     else
     {
         LOG(LOG_LEVEL_ERROR,
-            "error getting user info for user %s",
-            username);
+            "error getting user info for uid %d", uid);
     }
 
     return error;
