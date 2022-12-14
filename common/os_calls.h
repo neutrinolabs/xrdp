@@ -162,7 +162,7 @@ int      g_file_get_inode_num(const char *filename);
 long     g_load_library(char *in);
 int      g_free_library(long lib);
 void    *g_get_proc_address(long lib, const char *name);
-int      g_system(char *aexec);
+int      g_system(const char *aexec);
 char    *g_get_strerror(void);
 int      g_get_errno(void);
 int      g_execvp(const char *p1, char *args[]);

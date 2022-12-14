@@ -32,379 +32,149 @@
 #include "auth.h"
 #include "os_calls.h"
 #include "string_calls.h"
+#include "log.h"
 
 #include <krb5.h>
 
-typedef enum { INIT_PW, INIT_KT, RENEW, VALIDATE } action_type;
-
-struct k_opts
-{
-    /* in seconds */
-    krb5_deltat starttime;
-    krb5_deltat lifetime;
-    krb5_deltat rlife;
-
-    int forwardable;
-    int proxiable;
-    int addresses;
-
-    int not_forwardable;
-    int not_proxiable;
-    int no_addresses;
-
-    int verbose;
-
-    char *principal_name;
-    char *service_name;
-    char *keytab_name;
-    char *k5_cache_name;
-    char *k4_cache_name;
-
-    action_type action;
-};
-
-struct k5_data
+struct auth_info
 {
     krb5_context ctx;
     krb5_ccache cc;
     krb5_principal me;
-    char *name;
-};
-
-struct user_info
-{
-    const char *name;
-    const char *pass;
-};
-
-/*
- * Need a complete type for struct auth_info, even though we're
- * not really using it if this module (Kerberos authentication) is selected */
-struct auth_info
-{
-    char dummy;
 };
 
 /******************************************************************************/
-/* returns boolean */
-static int
-k5_begin(struct k_opts *opts, struct k5_data *k5, struct user_info *u_info)
-{
-    krb5_error_code code = 0;
-
-    code = krb5_init_context(&k5->ctx);
-
-    if (code != 0)
-    {
-        g_printf("krb5_init_context failed in k5_begin\n");
-        return 0;
-    }
-
-    if (opts->k5_cache_name)
-    {
-        code = krb5_cc_resolve(k5->ctx, opts->k5_cache_name, &k5->cc);
-
-        if (code != 0)
-        {
-            g_printf("krb5_cc_resolve failed in k5_begin\n");
-            return 0;
-        }
-    }
-    else
-    {
-        code = krb5_cc_default(k5->ctx, &k5->cc);
-
-        if (code != 0)
-        {
-            g_printf("krb5_cc_default failed in k5_begin\n");
-            return 0;
-        }
-    }
-
-    if (opts->principal_name)
-    {
-        /* Use specified name */
-        code = krb5_parse_name(k5->ctx, opts->principal_name, &k5->me);
-
-        if (code != 0)
-        {
-            g_printf("krb5_parse_name failed in k5_begin\n");
-            return 0;
-        }
-    }
-    else
-    {
-        /* No principal name specified */
-        if (opts->action == INIT_KT)
-        {
-            /* Use the default host/service name */
-            code = krb5_sname_to_principal(k5->ctx, NULL, NULL,
-                                           KRB5_NT_SRV_HST, &k5->me);
-
-            if (code != 0)
-            {
-                g_printf("krb5_sname_to_principal failed in k5_begin\n");
-                return 0;
-            }
-        }
-        else
-        {
-            /* Get default principal from cache if one exists */
-            code = krb5_cc_get_principal(k5->ctx, k5->cc, &k5->me);
-
-            if (code != 0)
-            {
-                code = krb5_parse_name(k5->ctx, u_info->name, &k5->me);
-
-                if (code != 0)
-                {
-                    g_printf("krb5_parse_name failed in k5_begin\n");
-                    return 0;
-                }
-            }
-        }
-    }
-
-    code = krb5_unparse_name(k5->ctx, k5->me, &k5->name);
-
-    if (code != 0)
-    {
-        g_printf("krb5_unparse_name failed in k5_begin\n");
-        return 0;
-    }
-
-    opts->principal_name = k5->name;
-    return 1;
-}
-
-/******************************************************************************/
+/* Logs a kerberos error code */
 static void
-k5_end(struct k5_data *k5)
+log_kerberos_failure(krb5_context ctx, krb5_error_code code, const char *where)
 {
-    if (k5->name)
-    {
-        krb5_free_unparsed_name(k5->ctx, k5->name);
-    }
-
-    if (k5->me)
-    {
-        krb5_free_principal(k5->ctx, k5->me);
-    }
-
-    if (k5->cc)
-    {
-        krb5_cc_close(k5->ctx, k5->cc);
-    }
-
-    if (k5->ctx)
-    {
-        krb5_free_context(k5->ctx);
-    }
-
-    g_memset(k5, 0, sizeof(struct k5_data));
+    const char *errstr = krb5_get_error_message(ctx, code);
+    LOG(LOG_LEVEL_ERROR, "Kerberos call to %s failed [%s]", where, errstr);
+    krb5_free_error_message(ctx, errstr);
 }
 
 /******************************************************************************/
-static krb5_error_code KRB5_CALLCONV
-kinit_prompter(krb5_context ctx, void *data, const char *name,
-               const char *banner, int num_prompts, krb5_prompt prompts[])
+int
+auth_end(struct auth_info *auth_info)
 {
-    int i;
-    krb5_prompt_type *types;
-    krb5_error_code rc;
-    struct user_info *u_info;
-
-    u_info = (struct user_info *)data;
-    rc = 0;
-    types = krb5_get_prompt_types(ctx);
-
-    for (i = 0; i < num_prompts; i++)
+    if (auth_info != NULL)
     {
-        if (types[i] == KRB5_PROMPT_TYPE_PASSWORD ||
-                types[i] == KRB5_PROMPT_TYPE_NEW_PASSWORD_AGAIN)
+        if (auth_info->me)
         {
-            g_strncpy(prompts[i].reply->data, u_info->pass, 255);
+            krb5_free_principal(auth_info->ctx, auth_info->me);
         }
+
+        if (auth_info->cc)
+        {
+            krb5_cc_close(auth_info->ctx, auth_info->cc);
+        }
+
+        if (auth_info->ctx)
+        {
+            krb5_free_context(auth_info->ctx);
+        }
+
+        g_memset(auth_info, 0, sizeof(*auth_info));
+        g_free(auth_info);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+/* Checks Kerberos can be used
+ *
+ * If all is well, an auth_info struct is returned */
+static struct auth_info *
+k5_begin(const char *username)
+{
+    int ok = 0;
+    struct auth_info *auth_info = g_new0(struct auth_info, 1);
+    krb5_error_code code;
+
+    if (auth_info == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Out of memory in k5_begin()");
+    }
+    else if ((code = krb5_init_context(&auth_info->ctx)) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't init Kerberos context");
+    }
+    /* Determine the credentials cache to use */
+    else if ((code = krb5_cc_default(auth_info->ctx, &auth_info->cc)) != 0)
+    {
+        log_kerberos_failure(auth_info->ctx, code, "krb5_cc_default");
+    }
+    /* Parse the username into a full principal */
+    else if ((code = krb5_parse_name(auth_info->ctx,
+                                     username, &auth_info->me)) != 0)
+    {
+        log_kerberos_failure(auth_info->ctx, code, "krb5_parse_name");
+    }
+    else
+    {
+        ok = 1;
     }
 
-    return rc;
+    if (!ok)
+    {
+        auth_end(auth_info);
+        auth_info = NULL;
+    }
+
+    return auth_info;
 }
+
 
 /******************************************************************************/
 /* returns boolean */
 static int
-k5_kinit(struct k_opts *opts, struct k5_data *k5, struct user_info *u_info)
+k5_kinit(struct auth_info *auth_info, const char *password)
 {
-    const char *doing;
-    int notix = 1;
-    krb5_keytab keytab = 0;
     krb5_creds my_creds;
     krb5_error_code code = 0;
-    krb5_get_init_creds_opt options;
-    krb5_address **addresses;
+    int rv = 0;
 
-    krb5_get_init_creds_opt_init(&options);
-    g_memset(&my_creds, 0, sizeof(my_creds));
-
-    /*
-      From this point on, we can goto cleanup because my_creds is
-      initialized.
-    */
-    if (opts->lifetime)
-    {
-        krb5_get_init_creds_opt_set_tkt_life(&options, opts->lifetime);
-    }
-
-    if (opts->rlife)
-    {
-        krb5_get_init_creds_opt_set_renew_life(&options, opts->rlife);
-    }
-
-    if (opts->forwardable)
-    {
-        krb5_get_init_creds_opt_set_forwardable(&options, 1);
-    }
-
-    if (opts->not_forwardable)
-    {
-        krb5_get_init_creds_opt_set_forwardable(&options, 0);
-    }
-
-    if (opts->proxiable)
-    {
-        krb5_get_init_creds_opt_set_proxiable(&options, 1);
-    }
-
-    if (opts->not_proxiable)
-    {
-        krb5_get_init_creds_opt_set_proxiable(&options, 0);
-    }
-
-    if (opts->addresses)
-    {
-        addresses = NULL;
-        code = krb5_os_localaddr(k5->ctx, &addresses);
-
-        if (code != 0)
-        {
-            g_printf("krb5_os_localaddr failed in k5_kinit\n");
-            goto cleanup;
-        }
-
-        krb5_get_init_creds_opt_set_address_list(&options, addresses);
-    }
-
-    if (opts->no_addresses)
-    {
-        krb5_get_init_creds_opt_set_address_list(&options, NULL);
-    }
-
-    if ((opts->action == INIT_KT) && opts->keytab_name)
-    {
-        code = krb5_kt_resolve(k5->ctx, opts->keytab_name, &keytab);
-
-        if (code != 0)
-        {
-            g_printf("krb5_kt_resolve failed in k5_kinit\n");
-            goto cleanup;
-        }
-    }
-
-    switch (opts->action)
-    {
-        case INIT_PW:
-            code = krb5_get_init_creds_password(k5->ctx, &my_creds, k5->me,
-                                                0, kinit_prompter, u_info,
-                                                opts->starttime,
-                                                opts->service_name,
-                                                &options);
-            break;
-        case INIT_KT:
-            code = krb5_get_init_creds_keytab(k5->ctx, &my_creds, k5->me,
-                                              keytab,
-                                              opts->starttime,
-                                              opts->service_name,
-                                              &options);
-            break;
-        case VALIDATE:
-            code = krb5_get_validated_creds(k5->ctx, &my_creds, k5->me, k5->cc,
-                                            opts->service_name);
-            break;
-        case RENEW:
-            code = krb5_get_renewed_creds(k5->ctx, &my_creds, k5->me, k5->cc,
-                                          opts->service_name);
-            break;
-    }
-
+    code = krb5_get_init_creds_password(auth_info->ctx,
+                                        &my_creds, auth_info->me,
+                                        password, NULL, NULL,
+                                        0,
+                                        NULL,
+                                        NULL);
     if (code != 0)
     {
-        doing = 0;
-
-        switch (opts->action)
+        log_kerberos_failure(auth_info->ctx, code,
+                             "krb5_get_init_creds_password");
+    }
+    else
+    {
+        /*
+         * Try to store the creds in the credentials cache
+         */
+        if ((code = krb5_cc_initialize(auth_info->ctx, auth_info->cc,
+                                       auth_info->me)) != 0)
         {
-            case INIT_PW:
-            case INIT_KT:
-                doing = "getting initial credentials";
-                break;
-            case VALIDATE:
-                doing = "validating credentials";
-                break;
-            case RENEW:
-                doing = "renewing credentials";
-                break;
+            log_kerberos_failure(auth_info->ctx, code, "krb5_cc_initialize");
         }
-
-        if (code == KRB5KRB_AP_ERR_BAD_INTEGRITY)
+        else if ((code = krb5_cc_store_cred(auth_info->ctx, auth_info->cc,
+                                            &my_creds)) != 0)
         {
-            g_printf("sesman: Password incorrect while %s in k5_kinit\n", doing);
+            log_kerberos_failure(auth_info->ctx, code, "krb5_cc_store_cred");
         }
         else
         {
-            g_printf("sesman: error while %s in k5_kinit\n", doing);
+            rv = 1;
         }
 
-        goto cleanup;
+        /* Prevent double-free of the client principal */
+        if (my_creds.client == auth_info->me)
+        {
+            my_creds.client = NULL;
+        }
+
+        krb5_free_cred_contents(auth_info->ctx, &my_creds);
     }
 
-    if (!opts->lifetime)
-    {
-        /* We need to figure out what lifetime to use for Kerberos 4. */
-        opts->lifetime = my_creds.times.endtime - my_creds.times.authtime;
-    }
-
-    code = krb5_cc_initialize(k5->ctx, k5->cc, k5->me);
-
-    if (code != 0)
-    {
-        g_printf("krb5_cc_initialize failed in k5_kinit\n");
-        goto cleanup;
-    }
-
-    code = krb5_cc_store_cred(k5->ctx, k5->cc, &my_creds);
-
-    if (code != 0)
-    {
-        g_printf("krb5_cc_store_cred failed in k5_kinit\n");
-        goto cleanup;
-    }
-
-    notix = 0;
-
-cleanup:
-
-    if (my_creds.client == k5->me)
-    {
-        my_creds.client = 0;
-    }
-
-    krb5_free_cred_contents(k5->ctx, &my_creds);
-
-    if (keytab)
-    {
-        krb5_kt_close(k5->ctx, keytab);
-    }
-
-    return notix ? 0 : 1;
+    return rv;
 }
 
 /******************************************************************************/
@@ -413,29 +183,20 @@ struct auth_info *
 auth_userpass(const char *user, const char *pass,
               const char *client_ip, int *errorcode)
 {
-    struct k_opts opts;
-    struct k5_data k5;
-    struct user_info u_info;
-    int got_k5;
-    /* Need a non-NULL pointer to return to indicate success */
-    static struct auth_info success = {0};
-    struct auth_info *auth_info = NULL;
+    struct auth_info *auth_info = k5_begin(user);
 
-    g_memset(&opts, 0, sizeof(opts));
-    opts.action = INIT_PW;
-    g_memset(&k5, 0, sizeof(k5));
-    g_memset(&u_info, 0, sizeof(u_info));
-    u_info.name = user;
-    u_info.pass = pass;
-    got_k5 = k5_begin(&opts, &k5, &u_info);
-
-    if (got_k5)
+    if (auth_info)
     {
-        if (k5_kinit(&opts, &k5, &u_info))
+        if (!k5_kinit(auth_info, pass))
         {
-            auth_info = &success;
+            auth_end(auth_info);
+            auth_info = NULL;
         }
-        k5_end(&k5);
+    }
+
+    if (errorcode != NULL)
+    {
+        *errorcode = (auth_info == NULL);
     }
 
     return auth_info;
@@ -453,13 +214,6 @@ auth_start_session(struct auth_info *auth_info, int display_num)
 /* returns error */
 int
 auth_stop_session(struct auth_info *auth_info)
-{
-    return 0;
-}
-
-/******************************************************************************/
-int
-auth_end(struct auth_info *auth_info)
 {
     return 0;
 }

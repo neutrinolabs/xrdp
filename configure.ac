@@ -325,31 +325,50 @@ AM_CONDITIONAL([USE_FREETYPE2], [test "x$use_freetype2" = xyes])
 # Check only one auth mechanism is specified, and give it a name
 auth_cnt=0
 auth_mech="Builtin"
+AUTHMOD_SRC=verify_user.c
+AUTHMOD_OBJ=verify_user.${OBJEXT}
+AUTHMOD_LIB=-lcrypt
 if test x$enable_pam = xyes
 then
   auth_cnt=`expr $auth_cnt + 1`
   auth_mech="PAM"
+  AUTHMOD_SRC=verify_user_pam.c
+  AUTHMOD_OBJ=verify_user_pam.${OBJEXT}
+  AUTHMOD_LIB=-lpam
 fi
 if test x$bsd = xtrue
 then
   auth_cnt=`expr $auth_cnt + 1`
   auth_mech="BSD"
+  AUTHMOD_SRC=verify_user_bsd.c
+  AUTHMOD_OBJ=verify_user_bsd.${OBJEXT}
+  AUTHMOD_LIB=
 fi
 if test x$enable_kerberos = xyes
 then
   auth_cnt=`expr $auth_cnt + 1`
   auth_mech="Kerberos"
+  AUTHMOD_SRC=verify_user_kerberos.c
+  AUTHMOD_OBJ=verify_user_kerberos.${OBJEXT}
+  AUTHMOD_LIB=-lkrb5
 fi
 if test x$enable_pamuserpass = xyes
 then
   auth_cnt=`expr $auth_cnt + 1`
   auth_mech="PAM userpass"
+  AUTHMOD_SRC=verify_user_pam_userpass.c
+  AUTHMOD_OBJ=verify_user_pam_userpass.${OBJEXT}
+  AUTHMOD_LIB="-lpam -lpam_userpass"
 fi
 
 if test $auth_cnt -gt 1
 then
   AC_MSG_ERROR([--enable-pam, --enable-bsd, --enable-pamuserpass and --enable-kerberos are mutually exclusive])
 fi
+
+AC_SUBST([AUTHMOD_SRC])
+AC_SUBST([AUTHMOD_OBJ])
+AC_SUBST([AUTHMOD_LIB])
 
 # checking if pam should be autodetected.
 if test "x$enable_pam" = "xyes"

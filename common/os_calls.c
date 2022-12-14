@@ -2565,7 +2565,7 @@ g_get_proc_address(long lib, const char *name)
 /*****************************************************************************/
 /* does not work in win32 */
 int
-g_system(char *aexec)
+g_system(const char *aexec)
 {
 #if defined(_WIN32)
     return 0;
