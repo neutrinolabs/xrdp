@@ -671,7 +671,7 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
     unsigned int xucred_length;
     xucred_length = sizeof(xucred);
 
-    if (getsockopt(sck, SOL_SOCKET, LOCAL_PEERCRED, &xucred, &xucred_length))
+    if (getsockopt(sck, SOL_LOCAL, LOCAL_PEERCRED, &xucred, &xucred_length))
     {
         return 1;
     }
