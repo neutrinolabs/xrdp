@@ -582,7 +582,9 @@ session_start(struct auth_info *auth_info,
         g_delete_wait_obj(g_term_event);
 
         /* Set the secondary groups before starting the session to prevent
-         * problems on PAM-based systems (see pam_setcred(3)) */
+         * problems on PAM-based systems (see Linux pam_setcred(3)).
+         * If we have *BSD setusercontext() this is not done here */
+#ifndef HAVE_SETUSERCONTEXT
         if (g_initgroups(username) != 0)
         {
             LOG(LOG_LEVEL_ERROR,
@@ -590,6 +592,7 @@ session_start(struct auth_info *auth_info,
                 username, g_get_strerror());
             g_exit(1);
         }
+#endif
 
         sesman_close_all(0);
         auth_start_session(auth_info, display);
