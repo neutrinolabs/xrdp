@@ -188,10 +188,10 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     g_psi.videoTimeout = -1;
     g_psi.audioTimeout = -1;
 
-    /* register all available fileformats and codecs
-     *
-     * FIXME -- this function is deprecated and eventually
-     * will be removed from the library. */
+        /* register all available fileformats and codecs
+         *
+         * FIXME -- this function is deprecated and eventually
+         * will be removed from the library. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     av_register_all();
@@ -354,7 +354,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
 
     printf("xrdpvr_play_media: calling xrdpvr_set_audio_format\n");
     if (xrdpvr_set_audio_format(channel, 101, 0,
-                                (char*)g_psi.p_audio_codec_ctx->extradata,
+                                (char *)g_psi.p_audio_codec_ctx->extradata,
                                 g_psi.p_audio_codec_ctx->extradata_size,
                                 g_psi.p_audio_codec_ctx->sample_rate,
                                 g_psi.p_audio_codec_ctx->bit_rate,
@@ -441,9 +441,9 @@ xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame, int *delay_in_us)
                 av_free_packet(av_pkt);
 #pragma GCC diagnostic pop
 
-		/* Note, if av_destruct_packet is not available (this
-		 * is obsoleted at some point), its functionality is
-		 * implied by av_packet_free()/av_packet_unref() */
+                /* Note, if av_destruct_packet is not available (this
+                 * is obsoleted at some point), its functionality is
+                 * implied by av_packet_free()/av_packet_unref() */
 #if HAVE_AV_DESTRUCT_PACKET
                 new_pkt.destruct = av_destruct_packet;
 #endif
@@ -584,9 +584,9 @@ xrdpvr_play_frame(void *channel, int stream_id, int *videoTimeout,
                 av_free_packet(&av_pkt);
 #pragma GCC diagnostic pop
 
-		/* Note, if av_destruct_packet is not available (this
-		 * is obsoleted at some point), its functionality is
-		 * implied by av_packet_free()/av_packet_unref() */
+                /* Note, if av_destruct_packet is not available (this
+                 * is obsoleted at some point), its functionality is
+                 * implied by av_packet_free()/av_packet_unref() */
 #if HAVE_AV_DESTRUCT_PACKET
                 new_pkt.destruct = av_destruct_packet;
 #endif
@@ -968,7 +968,7 @@ xrdpvr_read_from_client(void *channel, STREAM *s, int bytes, int timeout)
     {
         //printf("xrdpvr_read_from_client: loop\n");
         bytes_read = bytes - total_read;
-        ok = WTSVirtualChannelRead(channel, timeout, (char*)s->p, bytes_read,
+        ok = WTSVirtualChannelRead(channel, timeout, (char *)s->p, bytes_read,
                                    &bytes_read);
         //printf("xrdpvr_read_from_client: loop ok %d\n", ok);
         if (ok)
@@ -1006,7 +1006,7 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
 
     while (1)
     {
-        rv = WTSVirtualChannelWrite(channel, (char*)&s->data[index], bytes_to_send,
+        rv = WTSVirtualChannelWrite(channel, (char *)&s->data[index], bytes_to_send,
                                     &bytes_written);
 
         if (rv == 0)
