@@ -530,6 +530,39 @@ if test "x$enable_strict_locations" != "xyes"; then
   localstatedir="/var";
 fi
 
+# checking for ffmpeg-devel
+PKG_CHECK_MODULES([LIBAV], libavformat libavcodec, [],
+  [AC_MSG_ERROR([please install ffmpeg-dev or ffmpeg-devel])])
+
+AC_CHECK_LIB(avformat, avformat_open_input,
+             AC_DEFINE([HAVE_AVFORMAT_OPEN_INPUT], 1,
+                       [Use avformat_open_input instead of av_open_input_file], []))
+
+AC_CHECK_LIB(avformat, avformat_close_input,
+             AC_DEFINE([HAVE_AVFORMAT_CLOSE_INPUT], 1,
+                       [Use avformat_close_input instead of av_close_input_file], []))
+
+AC_CHECK_LIB(avformat, avformat_find_stream_info,
+             AC_DEFINE([HAVE_AVFORMAT_FIND_STREAM_INFO], 1,
+                       [Use avformat_find_stream_info instead of av_find_stream_info], []))
+
+AC_CHECK_LIB(avcodec, avcodec_open2,
+             AC_DEFINE([HAVE_AVCODEC_OPEN2], 1,
+                       [Use avcodec_open2 instead of avcodec_open], []))
+
+AC_CHECK_LIB(avcodec, av_destruct_packet,
+             AC_DEFINE([HAVE_AV_DESTRUCT_PACKET], 1,
+                       [av_destruct_packet is available], []))
+
+save_CFLAGS="$CFLAGS"
+CFLAGS="$LIBAV_CFLAGS"
+AC_CHECK_DECLS(AV_CODEC_ID_AAC,,, [#include <libavcodec/avcodec.h>])
+AC_CHECK_DECLS(AV_CODEC_ID_H264,,, [#include <libavcodec/avcodec.h>])
+AC_CHECK_DECLS(AVMEDIA_TYPE_AUDIO,,, [#include <libavcodec/avcodec.h>])
+AC_CHECK_DECLS(AVMEDIA_TYPE_VIDEO,,, [#include <libavcodec/avcodec.h>])
+AC_CHECK_DECLS(AV_PKT_FLAG_KEY,,, [#include <libavcodec/avcodec.h>])
+CFLAGS="$save_CFLAGS"
+
 PKG_INSTALLDIR
 
 AC_CHECK_HEADERS([sys/prctl.h])
