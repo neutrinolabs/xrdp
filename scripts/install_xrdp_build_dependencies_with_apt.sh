@@ -77,7 +77,9 @@ in
             libssl-dev \
             libx11-dev \
             libxrandr-dev \
-            libxfixes-dev"
+            libxfixes-dev \
+            libavcodec-dev \
+            libavformat-dev"
 
         case "$FEATURE_SET"
         in
@@ -124,7 +126,9 @@ in
             libxext-dev:i386 \
             libxfixes-dev:i386 \
             libxrandr-dev:i386 \
-            libxrender-dev:i386"
+            libxrender-dev:i386 \
+            libavcodec-dev:i386 \
+            libavformat-dev:i386"
 
         dpkg --add-architecture i386
         dpkg --print-architecture
