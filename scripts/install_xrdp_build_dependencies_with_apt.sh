@@ -5,8 +5,8 @@ FEATURE_SET=min
 ARCH=amd64
 
 # See apt.conf(5)
-#DEBUG_OPTS=
-DEBUG_OPTS="-oDebug::pkgProblemResolver=1"
+DEBUG_OPTS=
+#DEBUG_OPTS="$DEBUG_OPTS -oDebug::pkgProblemResolver=1"
 
 # Given a list of i386 packages, this call makes sure the amd64 variants
 # of the development libraries are not installed
@@ -77,9 +77,7 @@ in
             libssl-dev \
             libx11-dev \
             libxrandr-dev \
-            libxfixes-dev \
-            libavcodec-dev \
-            libavformat-dev"
+            libxfixes-dev"
 
         case "$FEATURE_SET"
         in
@@ -126,10 +124,7 @@ in
             libxext-dev:i386 \
             libxfixes-dev:i386 \
             libxrandr-dev:i386 \
-            libxrender-dev:i386 \
-            libavcodec-dev:i386 \
-            libavformat-dev:i386"
-
+            libxrender-dev:i386"
 
         dpkg --add-architecture i386
         dpkg --print-architecture
@@ -144,7 +139,7 @@ in
 esac
 
 apt-get update
-apt-get -yq -f \
+apt-get -yq \
     --no-install-suggests \
     --no-install-recommends \
     $DEBUG_OPTS \
