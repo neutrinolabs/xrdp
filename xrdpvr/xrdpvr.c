@@ -234,10 +234,10 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     /* find first audio / video stream */
     for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
     {
-    /* register all available fileformats and codecs
-     *
-     * FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
-     * is deprecated */
+        /* register all available fileformats and codecs
+         *
+         * FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
+         * is deprecated */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type ==
