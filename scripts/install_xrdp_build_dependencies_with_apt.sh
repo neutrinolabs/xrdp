@@ -128,7 +128,9 @@ in
             libxrandr-dev:i386 \
             libxrender-dev:i386 \
             libavcodec-dev:i386 \
-            libavformat-dev:i386"
+            libavformat-dev:i386 \
+            libavcodec58:i386 \
+            libavformat58:i386"
 
         dpkg --add-architecture i386
         dpkg --print-architecture
