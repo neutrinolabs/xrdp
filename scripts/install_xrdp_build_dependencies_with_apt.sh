@@ -6,7 +6,7 @@ ARCH=amd64
 
 # See apt.conf(5)
 #DEBUG_OPTS=
-DEBUG_OPTS="$DEBUG_OPTS -oDebug::pkgProblemResolver=1"
+DEBUG_OPTS="-oDebug::pkgProblemResolver=1"
 
 # Given a list of i386 packages, this call makes sure the amd64 variants
 # of the development libraries are not installed
