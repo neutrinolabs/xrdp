@@ -188,10 +188,10 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     g_psi.videoTimeout = -1;
     g_psi.audioTimeout = -1;
 
-        /* register all available fileformats and codecs
-         *
-         * FIXME -- this function is deprecated and eventually
-         * will be removed from the library. */
+    /* register all available fileformats and codecs
+     *
+     * FIXME -- this function is deprecated and eventually
+     * will be removed from the library. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     av_register_all();
@@ -234,9 +234,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     /* find first audio / video stream */
     for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
     {
-        /* register all available fileformats and codecs
-         *
-         * FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
+        /* FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
          * is deprecated */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
