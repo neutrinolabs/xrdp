@@ -128,11 +128,7 @@ in
             libxrandr-dev:i386 \
             libxrender-dev:i386 \
             libavcodec-dev:i386 \
-            libavformat-dev:i386 \
-            libavcodec58:i386 \
-            libavformat58:i386 \
-            libglib2.0-0:i386 \
-            librsvg2-2:i386" \
+            libavformat-dev:i386"
 
         dpkg --add-architecture i386
         dpkg --print-architecture
@@ -147,6 +143,8 @@ in
 esac
 
 apt-get update
+apt-cache depends libavcodec-dev:i386
+apt-cache depends libavformat-dev:i386
 apt-get -yq -f \
     --no-install-suggests \
     --no-install-recommends \
