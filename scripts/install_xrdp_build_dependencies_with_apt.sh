@@ -5,8 +5,8 @@ FEATURE_SET=min
 ARCH=amd64
 
 # See apt.conf(5)
-DEBUG_OPTS=
-#DEBUG_OPTS="$DEBUG_OPTS -oDebug::pkgProblemResolver=1"
+#DEBUG_OPTS=
+DEBUG_OPTS="$DEBUG_OPTS -oDebug::pkgProblemResolver=1"
 
 # Given a list of i386 packages, this call makes sure the amd64 variants
 # of the development libraries are not installed
@@ -130,6 +130,7 @@ in
             libavcodec-dev:i386 \
             libavformat-dev:i386"
 
+
         dpkg --add-architecture i386
         dpkg --print-architecture
         dpkg --print-foreign-architectures
@@ -143,8 +144,6 @@ in
 esac
 
 apt-get update
-apt-cache depends libavcodec-dev:i386
-apt-cache depends libavformat-dev:i386
 apt-get -yq -f \
     --no-install-suggests \
     --no-install-recommends \
