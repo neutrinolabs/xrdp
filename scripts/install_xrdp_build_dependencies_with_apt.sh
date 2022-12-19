@@ -147,7 +147,7 @@ in
 esac
 
 apt-get update
-apt-get -yq \
+apt-get -yq -f \
     --no-install-suggests \
     --no-install-recommends \
     $DEBUG_OPTS \
