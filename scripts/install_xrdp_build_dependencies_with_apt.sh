@@ -130,7 +130,9 @@ in
             libavcodec-dev:i386 \
             libavformat-dev:i386 \
             libavcodec58:i386 \
-            libavformat58:i386"
+            libavformat58:i386 \
+            libglib2.0-0:i386 \
+            librsvg2-2:i386" \
 
         dpkg --add-architecture i386
         dpkg --print-architecture
