@@ -533,7 +533,7 @@ fi
 # checking for ffmpeg-devel
 if test "x$enable_xrdpvr" = xyes; then
     PKG_CHECK_MODULES([LIBAV], libavformat libavcodec, [],
-      [AC_MSG_ERROR([please install ffmpeg-dev or ffmpeg-devel])])
+      [AC_MSG_ERROR([please install libavcodec-dev libavformat-dev or ffmpeg-devel])])
 
     AC_CHECK_LIB(avformat, avformat_open_input,
                  AC_DEFINE([HAVE_AVFORMAT_OPEN_INPUT], 1,
