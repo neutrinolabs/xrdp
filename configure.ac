@@ -534,6 +534,12 @@ fi
 if test "x$enable_xrdpvr" = xyes; then
     save_CC="$CC"
 
+    # For some strange reason, at Ubuntu 20.04 g++ compiles conftest.c
+    # as if it were a c++ program, with c++ mangling, which causes
+    # some AC_CHECK_LIB tests to fail
+    #
+    # So here we implement an ugly workaround by temporary replacing
+    # CC="g++" with CC="gcc", only for tests
     if test "x$CC" = "xg++"; then
         CC="gcc"
     fi
