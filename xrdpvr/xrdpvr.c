@@ -232,7 +232,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     g_video_index = -1;
 
     /* find first audio / video stream */
-    for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
+    for (i = 0; i < (int) g_psi.p_format_ctx->nb_streams; i++)
     {
         /* FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
          * is deprecated */
