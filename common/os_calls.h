@@ -86,8 +86,8 @@ int      g_sck_vsock_bind_address(int sck, const char *port, const char *address
 int      g_tcp_bind_address(int sck, const char *port, const char *address);
 int      g_sck_listen(int sck);
 int      g_sck_accept(int sck);
-int      g_sck_recv(int sck, void *ptr, int len, int flags);
-int      g_sck_send(int sck, const void *ptr, int len, int flags);
+int      g_sck_recv(int sck, void *ptr, unsigned int len, int flags);
+int      g_sck_send(int sck, const void *ptr, unsigned int len, int flags);
 int      g_sck_last_error_would_block(int sck);
 int      g_sck_socket_ok(int sck);
 int      g_sck_can_send(int sck, int millis);

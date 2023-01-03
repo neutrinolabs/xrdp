@@ -1408,7 +1408,7 @@ g_sck_last_error_would_block(int sck)
 
 /*****************************************************************************/
 int
-g_sck_recv(int sck, void *ptr, int len, int flags)
+g_sck_recv(int sck, void *ptr, unsigned int len, int flags)
 {
 #if defined(_WIN32)
     return recv(sck, (char *)ptr, len, flags);
@@ -1419,7 +1419,7 @@ g_sck_recv(int sck, void *ptr, int len, int flags)
 
 /*****************************************************************************/
 int
-g_sck_send(int sck, const void *ptr, int len, int flags)
+g_sck_send(int sck, const void *ptr, unsigned int len, int flags)
 {
 #if defined(_WIN32)
     return send(sck, (const char *)ptr, len, flags);
