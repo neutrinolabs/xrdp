@@ -336,7 +336,7 @@ Specifies the port number to connect to. If set to \fI\-1\fR, the default port f
 .TP
 \fBxserverbpp\fR=\fI<number>\fR
 Specifies color depth of the backend X server. The default is the color
-depth of the client. Only Xvnc and X11rdp use that setting. Xorg runs at
+depth of the client. Only Xvnc uses that setting. Xorg runs at
 \fI24\fR bpp.
 
 .TP
@@ -349,8 +349,8 @@ values supported for a particular release of \fBxrdp\fR(8) are documented in
 
 .TP
 \fBcode\fR=\fI<number>\fR|\fI0\fR
-Specifies the session type. The default, \fI0\fR, is Xvnc, \fI10\fR is
-X11rdp, and \fI20\fR is Xorg with xorgxrdp modules.
+Specifies the session type. The default, \fI0\fR, is Xvnc,
+and \fI20\fR is Xorg with xorgxrdp modules.
 
 .TP
 \fBchansrvport\fR=\fBDISPLAY(\fR\fIn\fR\fB)\fR|\fI/path/to/domain-socket\fR

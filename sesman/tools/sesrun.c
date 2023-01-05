@@ -77,7 +77,6 @@ static struct
 } type_map[] =
 {
     { "Xvnc", SCP_SESSION_TYPE_XVNC},
-    { "X11rdp", SCP_SESSION_TYPE_XRDP},
     { "Xorg", SCP_SESSION_TYPE_XORG},
     { NULL, (enum scp_session_type) - 1}
 };

@@ -41,7 +41,6 @@
 #define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
 #define SESMAN_CFG_RECONNECT_SH      "ReconnectScript"
 
-#define SESMAN_CFG_RDP_PARAMS        "X11rdp"
 #define SESMAN_CFG_XORG_PARAMS       "Xorg"
 #define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 
@@ -227,11 +226,6 @@ struct config_sesman
      * @brief Xvnc additional parameter list
      */
     struct list *vnc_params;
-    /**
-     * @var rdp_params
-     * @brief X11rdp additional parameter list
-     */
-    struct list *rdp_params;
     /**
      * @var xorg_params
      * @brief Xorg additional parameter list
