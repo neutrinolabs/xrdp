@@ -40,12 +40,21 @@ static const char *
 msgno_to_str(unsigned short n)
 {
     return
-        (n == E_SCP_GATEWAY_REQUEST) ? "SCP_GATEWAY_REQUEST" :
-        (n == E_SCP_GATEWAY_RESPONSE) ? "SCP_GATEWAY_RESPONSE" :
+        (n == E_SCP_SET_PEERNAME_REQUEST) ? "SCP_SET_PEERNAME_REQUEST" :
+
+        (n == E_SCP_SYS_LOGIN_REQUEST) ? "SCP_SYS_LOGIN_REQUEST" :
+        (n == E_SCP_UDS_LOGIN_REQUEST) ? "SCP_UDS_LOGIN_REQUEST" :
+        (n == E_SCP_LOGIN_RESPONSE) ? "SCP_LOGIN_RESPONSE" :
+
+        (n == E_SCP_LOGOUT_REQUEST) ? "SCP_LOGOUT_REQUEST" :
+
         (n == E_SCP_CREATE_SESSION_REQUEST) ? "SCP_CREATE_SESSION_REQUEST" :
         (n == E_SCP_CREATE_SESSION_RESPONSE) ? "SCP_CREATE_SESSION_RESPONSE" :
+
         (n == E_SCP_LIST_SESSIONS_REQUEST) ? "SCP_LIST_SESSIONS_REQUEST" :
         (n == E_SCP_LIST_SESSIONS_RESPONSE) ? "SCP_LIST_SESSIONS_RESPONSE" :
+
+        (n == E_SCP_CLOSE_CONNECTION_REQUEST) ? "SCP_CLOSE_CONNECTION_REQUEST" :
         NULL;
 }
 
@@ -147,6 +156,7 @@ scp_port_to_display_string(const char *port, char *buff, unsigned int bufflen)
 /*****************************************************************************/
 struct trans *
 scp_connect(const  char *port,
+            const char *peername,
             int (*term_func)(void))
 {
     char sock_path[256];
@@ -162,8 +172,12 @@ scp_connect(const  char *port,
             trans_delete(t);
             t = NULL;
         }
-        else if (libipm_init_trans(t, LIBIPM_FAC_SCP, msgno_to_str) !=
-                 E_LI_SUCCESS)
+        else if (scp_init_trans(t) != 0)
+        {
+            trans_delete(t);
+            t = NULL;
+        }
+        else if (scp_send_set_peername_request(t, peername) != 0)
         {
             trans_delete(t);
             t = NULL;
@@ -214,16 +228,48 @@ scp_msg_in_start(struct trans *trans)
 
 /*****************************************************************************/
 int
-scp_send_gateway_request(struct trans *trans,
-                         const char *username,
-                         const char *password,
-                         const char *ip_addr)
+scp_send_set_peername_request(struct trans *trans,
+                              const char *peername)
+{
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_SET_PEERNAME_REQUEST,
+               "s",
+               peername);
+}
+
+/*****************************************************************************/
+
+int
+scp_get_set_peername_request(struct trans *trans,
+                             const char **peername)
+{
+    return libipm_msg_in_parse( trans, "s", peername);
+}
+
+
+/*****************************************************************************/
+int
+scp_send_uds_login_request(struct trans *trans)
+{
+    return libipm_msg_out_simple_send(trans,
+                                      (int)E_SCP_UDS_LOGIN_REQUEST,
+                                      NULL);
+}
+
+
+/*****************************************************************************/
+int
+scp_send_sys_login_request(struct trans *trans,
+                           const char *username,
+                           const char *password,
+                           const char *ip_addr)
 {
     int rv;
 
     rv = libipm_msg_out_simple_send(
              trans,
-             (int)E_SCP_GATEWAY_REQUEST,
+             (int)E_SCP_SYS_LOGIN_REQUEST,
              "sss",
              username,
              password,
@@ -238,42 +284,53 @@ scp_send_gateway_request(struct trans *trans,
 /*****************************************************************************/
 
 int
-scp_get_gateway_request(struct trans *trans,
-                        const char **username,
-                        const char **password,
-                        const char **ip_addr)
+scp_get_sys_login_request(struct trans *trans,
+                          const char **username,
+                          const char **password,
+                          const char **ip_addr)
 {
     /* Make sure the buffer is cleared after processing this message */
     libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
 
-    return libipm_msg_in_parse(trans, "sss", username, password,
-                               ip_addr);
+    return libipm_msg_in_parse( trans, "sss",
+                                username, password, ip_addr);
 }
 
 /*****************************************************************************/
 
 int
-scp_send_gateway_response(struct trans *trans,
-                          int auth_result)
+scp_send_login_response(struct trans *trans,
+                        enum scp_login_status login_result,
+                        int server_closed)
 {
     return libipm_msg_out_simple_send(
                trans,
-               (int)E_SCP_GATEWAY_RESPONSE,
-               "i",
-               auth_result);
+               (int)E_SCP_LOGIN_RESPONSE,
+               "ib",
+               login_result,
+               (server_closed != 0)); /* Convert to 0/1 */
 }
 
 /*****************************************************************************/
 
 int
-scp_get_gateway_response(struct trans *trans,
-                         int *auth_result)
+scp_get_login_response(struct trans *trans,
+                       enum scp_login_status *login_result,
+                       int *server_closed)
 {
-    int32_t i_auth_result = 0;
-    int rv = libipm_msg_in_parse(trans, "i", &i_auth_result);
+    int32_t i_login_result = 0;
+    int dummy;
+    /* User can pass in NULL for server_closed if they're trying an
+     * login method like UDS for which all fails are fatal */
+    if (server_closed == NULL)
+    {
+        server_closed = &dummy;
+    }
+
+    int rv = libipm_msg_in_parse(trans, "ib", &i_login_result, server_closed);
     if (rv == 0)
     {
-        *auth_result = i_auth_result;
+        *login_result = (enum scp_login_status)i_login_result;
     }
     return rv;
 }
@@ -281,50 +338,45 @@ scp_get_gateway_response(struct trans *trans,
 /*****************************************************************************/
 
 int
+scp_send_logout_request(struct trans *trans)
+{
+    return libipm_msg_out_simple_send( trans, (int)E_SCP_LOGOUT_REQUEST, NULL);
+}
+
+
+/*****************************************************************************/
+
+int
 scp_send_create_session_request(struct trans *trans,
-                                const char *username,
-                                const char *password,
                                 enum scp_session_type type,
                                 unsigned short width,
                                 unsigned short height,
                                 unsigned char bpp,
                                 const char *shell,
-                                const char *directory,
-                                const char *ip_addr)
+                                const char *directory)
 {
-    int rv = libipm_msg_out_simple_send(
-                 trans,
-                 (int)E_SCP_CREATE_SESSION_REQUEST,
-                 "ssyqqysss",
-                 username,
-                 password,
-                 type,
-                 width,
-                 height,
-                 bpp,
-                 shell,
-                 directory,
-                 ip_addr);
-
-    /* Wipe the output buffer to remove the password */
-    libipm_msg_out_erase(trans);
-
-    return rv;
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_CREATE_SESSION_REQUEST,
+               "yqqyss",
+               type,
+               width,
+               height,
+               bpp,
+               shell,
+               directory);
 }
 
 /*****************************************************************************/
 
 int
 scp_get_create_session_request(struct trans *trans,
-                               const char **username,
-                               const char **password,
                                enum scp_session_type *type,
                                unsigned short *width,
                                unsigned short *height,
                                unsigned char *bpp,
                                const char **shell,
-                               const char **directory,
-                               const char **ip_addr)
+                               const char **directory)
 {
     /* Intermediate values */
     uint8_t i_type;
@@ -332,21 +384,15 @@ scp_get_create_session_request(struct trans *trans,
     uint16_t i_height;
     uint8_t i_bpp;
 
-    /* Make sure the buffer is cleared after processing this message */
-    libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
-
     int rv = libipm_msg_in_parse(
                  trans,
-                 "ssyqqysss",
-                 username,
-                 password,
+                 "yqqyss",
                  &i_type,
                  &i_width,
                  &i_height,
                  &i_bpp,
                  shell,
-                 directory,
-                 ip_addr);
+                 directory);
 
     if (rv == 0)
     {
@@ -364,7 +410,7 @@ scp_get_create_session_request(struct trans *trans,
 
 int
 scp_send_create_session_response(struct trans *trans,
-                                 int auth_result,
+                                 enum scp_screate_status status,
                                  int display,
                                  const struct guid *guid)
 {
@@ -374,7 +420,7 @@ scp_send_create_session_response(struct trans *trans,
                trans,
                (int)E_SCP_CREATE_SESSION_RESPONSE,
                "iiB",
-               auth_result,
+               status,
                display,
                &guid_descriptor);
 }
@@ -383,12 +429,12 @@ scp_send_create_session_response(struct trans *trans,
 
 int
 scp_get_create_session_response(struct trans *trans,
-                                int *auth_result,
+                                enum scp_screate_status *status,
                                 int *display,
                                 struct guid *guid)
 {
     /* Intermediate values */
-    int32_t i_auth_result;
+    int32_t i_status;
     int32_t i_display;
 
     const struct libipm_fsb guid_descriptor = { (void *)guid, sizeof(*guid) };
@@ -396,12 +442,12 @@ scp_get_create_session_response(struct trans *trans,
     int rv = libipm_msg_in_parse(
                  trans,
                  "iiB",
-                 &i_auth_result,
+                 &i_status,
                  &i_display,
                  &guid_descriptor);
     if (rv == 0)
     {
-        *auth_result = i_auth_result;
+        *status = (enum scp_screate_status)i_status;
         *display = i_display;
     }
 
@@ -411,36 +457,12 @@ scp_get_create_session_response(struct trans *trans,
 /*****************************************************************************/
 
 int
-scp_send_list_sessions_request(struct trans *trans,
-                               const char *username,
-                               const char *password)
+scp_send_list_sessions_request(struct trans *trans)
 {
-    int rv;
-
-    rv = libipm_msg_out_simple_send(
-             trans,
-             (int)E_SCP_LIST_SESSIONS_REQUEST,
-             "ss",
-             username,
-             password);
-
-    /* Wipe the output buffer to remove the password */
-    libipm_msg_out_erase(trans);
-
-    return rv;
-}
-
-/*****************************************************************************/
-
-int
-scp_get_list_sessions_request(struct trans *trans,
-                              const char **username,
-                              const char **password)
-{
-    /* Make sure the buffer is cleared after processing this message */
-    libipm_set_flags(trans, LIBIPM_E_MSG_IN_ERASE_AFTER_USE);
-
-    return libipm_msg_in_parse(trans, "ss", username, password);
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_LIST_SESSIONS_REQUEST,
+               NULL);
 }
 
 /*****************************************************************************/
@@ -465,7 +487,7 @@ scp_send_list_sessions_response(
         rv = libipm_msg_out_simple_send(
                  trans,
                  (int)E_SCP_LIST_SESSIONS_RESPONSE,
-                 "iiuyqqyxss",
+                 "iiuyqqyxis",
                  status,
                  info->sid,
                  info->display,
@@ -474,7 +496,7 @@ scp_send_list_sessions_response(
                  info->height,
                  info->bpp,
                  info->start_time,
-                 info->username,
+                 info->uid,
                  info->start_ip_addr);
     }
 
@@ -511,12 +533,12 @@ scp_get_list_sessions_response(
             uint16_t i_height;
             uint8_t i_bpp;
             int64_t i_start_time;
-            char *i_username;
+            int32_t i_uid;
             char *i_start_ip_addr;
 
             rv = libipm_msg_in_parse(
                      trans,
-                     "iuyqqyxss",
+                     "iuyqqyxis",
                      &i_sid,
                      &i_display,
                      &i_type,
@@ -524,7 +546,7 @@ scp_get_list_sessions_response(
                      &i_height,
                      &i_bpp,
                      &i_start_time,
-                     &i_username,
+                     &i_uid,
                      &i_start_ip_addr);
 
             if (rv == 0)
@@ -532,7 +554,6 @@ scp_get_list_sessions_response(
                 /* Allocate a block of memory large enough for the
                  * structure result, and the strings it contains */
                 unsigned int len = sizeof(struct scp_session_info) +
-                                   g_strlen(i_username) + 1 +
                                    g_strlen(i_start_ip_addr) + 1;
                 if ((p = (struct scp_session_info *)g_malloc(len, 1)) == NULL)
                 {
@@ -542,9 +563,8 @@ scp_get_list_sessions_response(
                 {
                     /* Set up the string pointers in the block to point
                      * into the memory allocated after the block */
-                    p->username = (char *)p + sizeof(struct scp_session_info);
                     p->start_ip_addr =
-                        p->username + g_strlen(i_username) + 1;
+                        (char *)p + sizeof(struct scp_session_info);
 
                     /* Copy the data over */
                     p->sid = i_sid;
@@ -554,7 +574,7 @@ scp_get_list_sessions_response(
                     p->height = i_height;
                     p->bpp = i_bpp;
                     p->start_time = i_start_time;
-                    g_strcpy(p->username, i_username);
+                    p->uid = i_uid;
                     g_strcpy(p->start_ip_addr, i_start_ip_addr);
                 }
             }
@@ -562,4 +582,15 @@ scp_get_list_sessions_response(
         *info = p;
     }
     return rv;
+}
+
+/*****************************************************************************/
+
+int
+scp_send_close_connection_request(struct trans *trans)
+{
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_CLOSE_CONNECTION_REQUEST,
+               NULL);
 }

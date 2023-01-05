@@ -68,14 +68,17 @@ usage(void)
              "etc.\n\n"
              "This is a DEVELOPER-ONLY tool\n");
     g_printf("\nusage:\n");
-    g_printf("authtest [options] username\n\n");
+    g_printf("authtest [options] [username]\n\n");
     g_printf("options:\n");
     g_printf("    -p <password>\n"
              "    -F <file-descriptor>  Read password from this file descriptor\n"
              "    -c <command>          Start a session and run the\n"
              "                          specified non-interactive command\n"
              "                          in it\n");
-    g_printf("Password is prompted if -p or -F are not specified\n");
+    g_printf("\nIf username is omitted, the current user is used, and.\n"
+             "a UDS login is attempted\n"
+             "If username is provided, password is needed.\n"
+             "    Password is prompted for if -p or -F are not specified\n");
 }
 
 
@@ -186,10 +189,15 @@ parse_program_args(int argc, char *argv[], struct authmod_params *amp)
         }
     }
 
-    if (argc <= optind)
+    if (argc == optind)
     {
-        LOG(LOG_LEVEL_ERROR, "No user name specified");
-        params_ok = 0;
+        // No username was specified
+        if (password_set)
+        {
+            LOG(LOG_LEVEL_WARNING, "No username - ignoring specified password");
+            amp->password[0] = '\0';
+        }
+        amp->username = NULL;
     }
     else if ((argc - optind) > 1)
     {
@@ -199,14 +207,17 @@ parse_program_args(int argc, char *argv[], struct authmod_params *amp)
     else
     {
         amp->username = argv[optind];
-    }
-
-    if (params_ok && !password_set)
-    {
-        const char *p = getpass("Password: ");
-        if (p != NULL)
+        if (!password_set)
         {
-            g_strcpy(amp->password, p);
+            const char *p = getpass("Password: ");
+            if (p == NULL)
+            {
+                params_ok = 0;
+            }
+            else
+            {
+                g_snprintf(amp->password, sizeof(amp->password), "%s", p);
+            }
         }
     }
 
@@ -214,11 +225,40 @@ parse_program_args(int argc, char *argv[], struct authmod_params *amp)
 }
 
 /******************************************************************************/
+/**
+ * Gets the current username for a UDS login
+ *
+ * Result must be freed after use.
+ */
+static char *
+get_username()
+{
+    int uid = g_getuid();
+    char *this_user;
+    int status;
+
+    status = g_getuser_info_by_uid(uid, &this_user, NULL, NULL, NULL, NULL);
+    if (status != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't map UID %d to a username", uid);
+        this_user = NULL;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_INFO, "Mapped current UID %d to \"%s\"",
+            uid, this_user);
+    }
+
+    return this_user;
+}
+
+/******************************************************************************/
 int
 main(int argc, char **argv)
 {
     struct log_config *logging;
-    int rv = 1;
+    int rv = 0;
+    char *this_user = NULL;
     struct authmod_params amp;
 
     logging = log_config_init_for_console(LOG_LEVEL_DEBUG,
@@ -229,16 +269,34 @@ main(int argc, char **argv)
     if (!parse_program_args(argc, argv, &amp))
     {
         usage();
+        rv = 1;
+    }
+    else if (amp.username == NULL && (this_user = get_username()) == NULL)
+    {
+        rv = 1;
     }
     else
     {
         struct auth_info *auth_info;
-        auth_info = auth_userpass(amp.username, amp.password,
-                                  NULL, &rv);
+        enum scp_login_status errorcode;
+        char errstr[64];
 
-        LOG(LOG_LEVEL_INFO, "auth_userpass() returned %s, errorcode=%d",
+        if (amp.username == NULL)
+        {
+            auth_info = auth_uds(this_user, &errorcode);
+        }
+        else
+        {
+            auth_info = auth_userpass(amp.username, amp.password,
+                                      NULL, &errorcode);
+        }
+        scp_login_status_to_str(errorcode, errstr, sizeof(errstr));
+        LOG(LOG_LEVEL_INFO,
+            "auth_userpass() returned %s, errorcode=%d [%s]",
             (auth_info == NULL) ? "NULL" : "non-NULL",
-            rv);
+            (int)errorcode, errstr);
+
+        rv = (int)errorcode;
         if (auth_info && rv == 0 && amp.command != NULL)
         {
             int display = 10;
@@ -261,6 +319,7 @@ main(int argc, char **argv)
         }
     }
 
+    g_free(this_user);
     log_end();
 
     return rv;

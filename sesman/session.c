@@ -37,10 +37,19 @@
 #include <sys/prctl.h>
 #endif
 
+#include "arch.h"
+#include "session.h"
+
+#include "auth.h"
+#include "config.h"
+#include "env.h"
+#include "list.h"
+#include "log.h"
+#include "os_calls.h"
 #include "sesman.h"
+#include "string_calls.h"
 #include "xauth.h"
 #include "xrdp_sockets.h"
-#include "string_calls.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
@@ -103,10 +112,10 @@ session_get_bydata(const struct session_parameters *sp)
     config_output_policy_string(policy, policy_str, sizeof(policy_str));
 
     LOG(LOG_LEVEL_DEBUG,
-        "%s: search policy=%s type=%s U=%s B=%d D=(%dx%d) I=%s",
+        "%s: search policy=%s type=%s U=%d B=%d D=(%dx%d) I=%s",
         __func__,
         policy_str, SCP_SESSION_TYPE_TO_STR(sp->type),
-        sp->username, sp->bpp, sp->width, sp->height,
+        sp->uid, sp->bpp, sp->width, sp->height,
         sp->ip_addr);
 
     /* 'Separate' policy never matches */
@@ -121,11 +130,11 @@ session_get_bydata(const struct session_parameters *sp)
         struct session_item *item = tmp->item;
 
         LOG(LOG_LEVEL_DEBUG,
-            "%s: try %p type=%s U=%s B=%d D=(%dx%d) I=%s",
+            "%s: try %p type=%s U=%d B=%d D=(%dx%d) I=%s",
             __func__,
             item,
             SCP_SESSION_TYPE_TO_STR(item->type),
-            item->name,
+            item->uid,
             item->bpp,
             item->width, item->height,
             item->start_ip_addr);
@@ -136,11 +145,10 @@ session_get_bydata(const struct session_parameters *sp)
             continue;
         }
 
-        if ((policy & SESMAN_CFG_SESS_POLICY_U) &&
-                g_strncmp(sp->username, item->name, sizeof(item->name) - 1) != 0)
+        if ((policy & SESMAN_CFG_SESS_POLICY_U) && sp->uid != item->uid)
         {
             LOG(LOG_LEVEL_DEBUG,
-                "%s: Username doesn't match for 'U' policy", __func__);
+                "%s: UID doesn't match for 'U' policy", __func__);
             continue;
         }
 
@@ -399,7 +407,7 @@ wait_for_xserver(int display)
 
 /******************************************************************************/
 static int
-session_start_chansrv(const char *username, int display)
+session_start_chansrv(int uid, int display)
 {
     struct list *chansrv_params;
     char exe_path[262];
@@ -421,7 +429,7 @@ session_start_chansrv(const char *username, int display)
         list_add_item(chansrv_params, (intptr_t) g_strdup(exe_path));
         list_add_item(chansrv_params, 0); /* mandatory */
 
-        env_set_user(username, 0, display,
+        env_set_user(uid, 0, display,
                      g_cfg->env_names,
                      g_cfg->env_values);
 
@@ -436,10 +444,38 @@ session_start_chansrv(const char *username, int display)
 }
 
 /******************************************************************************/
+/**
+ * Convert a UID to a username
+ *
+ * @param uid UID
+ * @param uname pointer to output buffer
+ * @param uname_len Length of output buffer
+ * @return 0 for success.
+ */
+static int
+username_from_uid(int uid, char *uname, int uname_len)
+{
+    char *ustr;
+    int rv = g_getuser_info_by_uid(uid, &ustr, NULL, NULL, NULL, NULL);
 
-int
+    if (rv == 0)
+    {
+        g_snprintf(uname, uname_len, "%s", ustr);
+        g_free(ustr);
+    }
+    else
+    {
+        g_snprintf(uname, uname_len, "<unknown>");
+    }
+    return rv;
+}
+
+/******************************************************************************/
+
+enum scp_screate_status
 session_start(struct auth_info *auth_info,
               const struct session_parameters *s,
+              int *returned_display,
               struct guid *guid)
 {
     int display = 0;
@@ -448,6 +484,7 @@ session_start(struct auth_info *auth_info,
     char depth[32];
     char screen[32]; /* display number */
     char text[256];
+    char username[256];
     char execvpparams[2048];
     char *xserver = NULL; /* absolute/relative path to Xorg/X11rdp/Xvnc */
     char *passwd_file;
@@ -467,12 +504,15 @@ session_start(struct auth_info *auth_info,
 
     passwd_file = 0;
 
+    /* Get the username for display purposes */
+    username_from_uid(s->uid, username, sizeof(username));
+
     /* check to limit concurrent sessions */
     if (g_session_count >= g_cfg->sess.max_sessions)
     {
         LOG(LOG_LEVEL_ERROR, "max concurrent session limit "
-            "exceeded. login for user %s denied", s->username);
-        return 0;
+            "exceeded. login for user %s denied", username);
+        return E_SCP_SCREATE_MAX_REACHED;
     }
 
     temp = (struct session_chain *)g_malloc(sizeof(struct session_chain), 0);
@@ -480,8 +520,8 @@ session_start(struct auth_info *auth_info,
     if (temp == 0)
     {
         LOG(LOG_LEVEL_ERROR, "Out of memory error: cannot create new session "
-            "chain element - user %s", s->username);
-        return 0;
+            "chain element - user %s", username);
+        return E_SCP_SCREATE_NO_MEMORY;
     }
 
     temp->item = (struct session_item *)g_malloc(sizeof(struct session_item), 0);
@@ -490,8 +530,8 @@ session_start(struct auth_info *auth_info,
     {
         g_free(temp);
         LOG(LOG_LEVEL_ERROR, "Out of memory error: cannot create new session "
-            "item - user %s", s->username);
-        return 0;
+            "item - user %s", username);
+        return E_SCP_SCREATE_NO_MEMORY;
     }
 
     display = session_get_avail_display_from_chain();
@@ -500,11 +540,12 @@ session_start(struct auth_info *auth_info,
     {
         g_free(temp->item);
         g_free(temp);
-        return 0;
+        return E_SCP_SCREATE_NO_DISPLAY;
     }
 
-    /* Create a GUID for the new session before we work */
+    /* Create a GUID for the new session before we fork */
     *guid = guid_new();
+    *returned_display = display;
 
     pid = g_fork(); /* parent is fork from tcp accept,
                        child forks X and wm, then becomes scp */
@@ -515,8 +556,12 @@ session_start(struct auth_info *auth_info,
             "[session start] (display %d): Failed to fork for scp with "
             "errno: %d, description: %s",
             display, g_get_errno(), g_get_strerror());
+        g_free(temp->item);
+        g_free(temp);
+        return E_SCP_SCREATE_GENERAL_ERROR;
     }
-    else if (pid == 0)
+
+    if (pid == 0)
     {
         LOG(LOG_LEVEL_INFO,
             "[session start] (display %d): calling auth_start_session from pid %d",
@@ -538,16 +583,16 @@ session_start(struct auth_info *auth_info,
 
         /* Set the secondary groups before starting the session to prevent
          * problems on PAM-based systems (see pam_setcred(3)) */
-        if (g_initgroups(s->username) != 0)
+        if (g_initgroups(username) != 0)
         {
             LOG(LOG_LEVEL_ERROR,
                 "Failed to initialise secondary groups for %s: %s",
-                s->username, g_get_strerror());
+                username, g_get_strerror());
             g_exit(1);
         }
 
+        sesman_close_all(0);
         auth_start_session(auth_info, display);
-        sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);
         g_sprintf(screen, ":%d", display);
@@ -579,11 +624,11 @@ session_start(struct auth_info *auth_info,
                     display, g_getpid());
             }
 
-            if (g_setlogin(s->username) < 0)
+            if (g_setlogin(username) < 0)
             {
                 LOG(LOG_LEVEL_WARNING,
                     "[session start] (display %d): setlogin failed for user %s - pid %d",
-                    display, s->username, g_getpid());
+                    display, username, g_getpid());
             }
         }
 
@@ -608,7 +653,7 @@ session_start(struct auth_info *auth_info,
         else if (window_manager_pid == 0)
         {
             wait_for_xserver(display);
-            env_set_user(s->username,
+            env_set_user(s->uid,
                          0,
                          display,
                          g_cfg->env_names,
@@ -706,7 +751,7 @@ session_start(struct auth_info *auth_info,
             {
                 if (s->type == SCP_SESSION_TYPE_XVNC)
                 {
-                    env_set_user(s->username,
+                    env_set_user(s->uid,
                                  &passwd_file,
                                  display,
                                  g_cfg->env_names,
@@ -714,7 +759,7 @@ session_start(struct auth_info *auth_info,
                 }
                 else
                 {
-                    env_set_user(s->username,
+                    env_set_user(s->uid,
                                  0,
                                  display,
                                  g_cfg->env_names,
@@ -892,11 +937,11 @@ session_start(struct auth_info *auth_info,
                 struct exit_status chansrv_exit_status;
 
                 wait_for_xserver(display);
-                chansrv_pid = session_start_chansrv(s->username, display);
+                chansrv_pid = session_start_chansrv(s->uid, display);
 
                 LOG(LOG_LEVEL_INFO,
                     "Session started successfully for user %s on display %d",
-                    s->username, display);
+                    username, display);
 
                 /* Monitor the amount of time we wait for the
                  * window manager. This is approximately how long the window
@@ -930,10 +975,12 @@ session_start(struct auth_info *auth_info,
                         window_manager_pid, display, wm_wait_time);
                 }
                 LOG(LOG_LEVEL_INFO,
-                    "Calling auth_stop_session and auth_end from pid %d",
+                    "Calling auth_stop_session from pid %d",
                     g_getpid());
                 auth_stop_session(auth_info);
-                auth_end(auth_info);
+                // auth_end() is called from the main process currently,
+                // as this called auth_start()
+                //auth_end(auth_info);
 
                 LOG(LOG_LEVEL_INFO,
                     "Terminating X server (pid %d) on display %d",
@@ -969,8 +1016,8 @@ session_start(struct auth_info *auth_info,
     {
         LOG(LOG_LEVEL_INFO, "Starting session: session_pid %d, "
             "display :%d.0, width %d, height %d, bpp %d, client ip %s, "
-            "user name %s",
-            pid, display, s->width, s->height, s->bpp, s->ip_addr, s->username);
+            "UID %d",
+            pid, display, s->width, s->height, s->bpp, s->ip_addr, s->uid);
         temp->item->pid = pid;
         temp->item->display = display;
         temp->item->width = s->width;
@@ -979,7 +1026,7 @@ session_start(struct auth_info *auth_info,
         temp->item->auth_info = auth_info;
         g_strncpy(temp->item->start_ip_addr, s->ip_addr,
                   sizeof(temp->item->start_ip_addr) - 1);
-        g_strncpy(temp->item->name, s->username, 255);
+        temp->item->uid = s->uid;
         temp->item->guid = *guid;
 
         temp->item->start_time = g_time1();
@@ -991,17 +1038,18 @@ session_start(struct auth_info *auth_info,
         g_sessions = temp;
         g_session_count++;
 
-        return display;
+        return E_SCP_SCREATE_OK;
     }
 
+    /* Shouldn't get here */
     g_free(temp->item);
     g_free(temp);
-    return display;
+    return E_SCP_SCREATE_GENERAL_ERROR;
 }
 
 /******************************************************************************/
 int
-session_reconnect(int display, const char *username,
+session_reconnect(int display, int uid,
                   struct auth_info *auth_info)
 {
     int pid;
@@ -1014,7 +1062,7 @@ session_reconnect(int display, const char *username,
     }
     else if (pid == 0)
     {
-        env_set_user(username,
+        env_set_user(uid,
                      0,
                      display,
                      g_cfg->env_names,
@@ -1081,10 +1129,23 @@ session_kill(int pid)
 
         if (tmp->item->pid == pid)
         {
+            char username[256];
+            username_from_uid(tmp->item->uid, username, sizeof(username));
+
             /* deleting the session */
+            if (tmp->item->auth_info != NULL)
+            {
+                LOG(LOG_LEVEL_INFO,
+                    "Calling auth_end for pid %d from pid %d",
+                    pid, g_getpid());
+                auth_end(tmp->item->auth_info);
+                tmp->item->auth_info = NULL;
+            }
             LOG(LOG_LEVEL_INFO,
-                "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s",
-                tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->start_ip_addr);
+                "++ terminated session: UID %d (%s), display :%d.0, "
+                "session_pid %d, ip %s",
+                tmp->item->uid, username, tmp->item->display,
+                tmp->item->pid, tmp->item->start_ip_addr);
             g_free(tmp->item);
 
             if (prev == 0)
@@ -1177,7 +1238,7 @@ session_get_bypid(int pid)
 
 /******************************************************************************/
 struct scp_session_info *
-session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags)
+session_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
 {
     struct session_chain *tmp;
     struct scp_session_info *sess;
@@ -1188,10 +1249,10 @@ session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags)
 
     tmp = g_sessions;
 
-    LOG(LOG_LEVEL_DEBUG, "searching for session by user: %s", user);
+    LOG(LOG_LEVEL_DEBUG, "searching for session by UID: %d", uid);
     while (tmp != 0)
     {
-        if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
+        if (uid == tmp->item->uid)
         {
             LOG(LOG_LEVEL_DEBUG, "session_get_byuser: status=%d, flags=%d, "
                 "result=%d", (tmp->item->status), flags,
@@ -1227,8 +1288,7 @@ session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags)
 
     while (tmp != 0 && index < count)
     {
-        /* #warning FIXME: we should get only disconnected sessions! */
-        if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
+        if (uid == tmp->item->uid)
         {
             if ((tmp->item->status) & flags)
             {
@@ -1239,11 +1299,11 @@ session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags)
                 (sess[index]).width = tmp->item->width;
                 (sess[index]).bpp = tmp->item->bpp;
                 (sess[index]).start_time = tmp->item->start_time;
-                (sess[index]).username = g_strdup(tmp->item->name);
+                (sess[index]).uid = tmp->item->uid;
                 (sess[index]).start_ip_addr = g_strdup(tmp->item->start_ip_addr);
 
-                if ((sess[index]).username == NULL ||
-                        (sess[index]).start_ip_addr == NULL)
+                /* Check for string allocation failures */
+                if ((sess[index]).start_ip_addr == NULL)
                 {
                     free_session_info_list(sess, *cnt);
                     (*cnt) = 0;
@@ -1270,7 +1330,6 @@ free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt)
         unsigned int i;
         for (i = 0 ; i < cnt ; ++i)
         {
-            g_free(sesslist[i].username);
             g_free(sesslist[i].start_ip_addr);
         }
     }
@@ -1383,7 +1442,6 @@ clone_session_params(const struct session_parameters *sp)
     /* Allocate a single block of memory big enough for the structure and
      * all the strings it points to */
     unsigned int len = sizeof(*result);
-    len += g_strlen(sp->username) + 1;
     len += g_strlen(sp->shell) + 1;
     len += g_strlen(sp->directory) + 1;
     len += g_strlen(sp->ip_addr) + 1;
@@ -1403,7 +1461,6 @@ clone_session_params(const struct session_parameters *sp)
         strptr += len;\
     }
 
-        COPY_STRING_MEMBER(sp->username, result->username);
         COPY_STRING_MEMBER(sp->shell, result->shell);
         COPY_STRING_MEMBER(sp->directory, result->directory);
         COPY_STRING_MEMBER(sp->ip_addr, result->ip_addr);

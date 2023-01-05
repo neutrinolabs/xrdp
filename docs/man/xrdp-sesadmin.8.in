@@ -18,13 +18,11 @@ command.
 A summary of options is included below.
 .TP
 .BI \-u= username
-\fIUsername\fP for authentication on the server.
-Defaults to \fBroot\fP.
+Retained for compatibility, but ignored.
 
 .TP
 .BI \-p= password
-The \fIpassword\fP to authenticate with.
-The default is to ask for the password interactively.
+Retained for compatibility, but ignored.
 
 .TP
 .BI \-i= port
@@ -39,7 +37,7 @@ Valid commands are:
 .RS 4
 .TP
 .B list
-List currently active sessions.
+List active sessions for the current user.
 .TP
 .BI kill: sid
 Kills the session specified the given \fIsession id\fP.

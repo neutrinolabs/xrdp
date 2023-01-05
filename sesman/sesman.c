@@ -30,13 +30,19 @@
 
 #include <stdarg.h>
 
+#include "arch.h"
 #include "sesman.h"
-#include "xrdp_configure_options.h"
+
+#include "auth.h"
+#include "config.h"
+#include "lock_uds.h"
+#include "os_calls.h"
+#include "scp.h"
+#include "scp_process.h"
+#include "sig.h"
 #include "string_calls.h"
 #include "trans.h"
-
-#include "scp_process.h"
-#include "lock_uds.h"
+#include "xrdp_configure_options.h"
 
 /**
  * Maximum number of short-lived connections to sesman
@@ -71,14 +77,6 @@ unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 tintptr g_term_event = 0;
 tintptr g_sigchld_event = 0;
 tintptr g_reload_event = 0;
-
-/**
- * Items stored on the g_con_list
- */
-struct sesman_con
-{
-    struct trans *t;
-};
 
 static struct trans *g_list_trans;
 
@@ -126,9 +124,11 @@ alloc_connection(struct trans *t)
 {
     struct sesman_con *result;
 
-    if ((result = g_new(struct sesman_con, 1)) != NULL)
+    if ((result = g_new0(struct sesman_con, 1)) != NULL)
     {
+        g_snprintf(result->peername, sizeof(result->peername), "%s", "unknown");
         result->t = t;
+        result->auth_retry_count = g_cfg->sec.login_retry;
     }
 
     return result;
@@ -140,15 +140,40 @@ alloc_connection(struct trans *t)
  * After this call, the passed-in pointer is invalid and must not be
  * referenced.
  *
+ * Any auth_info struct found in the sesman_con is also deallocated.
+ *
  * @param sc struct to de-allocate
  */
 static void
 delete_connection(struct sesman_con *sc)
 {
-    trans_delete(sc->t);
-    g_free(sc);
+    if (sc != NULL)
+    {
+        trans_delete(sc->t);
+        if (sc->auth_info != NULL)
+        {
+            auth_end(sc->auth_info);
+        }
+        g_free(sc->username);
+        g_free(sc->ip_addr);
+        g_free(sc);
+    }
 }
 
+/*****************************************************************************/
+int
+sesman_set_connection_peername(struct sesman_con *sc, const char *name)
+{
+    int rv = 1;
+
+    if (sc != NULL && name != NULL)
+    {
+        g_snprintf(sc->peername, sizeof(sc->peername), "%s", name);
+        rv = 0;
+    }
+
+    return rv;
+}
 
 /*****************************************************************************/
 /**
@@ -275,16 +300,23 @@ static int sesman_listen_test(struct config_sesman *cfg)
 
 /******************************************************************************/
 int
-sesman_close_all(void)
+sesman_close_all(unsigned int flags)
 {
     int index;
     struct sesman_con *sc;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "sesman_close_all:");
+
+
     sesman_delete_listening_transport();
     for (index = 0; index < g_con_list->count; index++)
     {
         sc = (struct sesman_con *) list_get_item(g_con_list, index);
+        if (sc != NULL && (flags & SCA_CLOSE_AUTH_INFO) == 0)
+        {
+            // Prevent delete_connection() closing the auth_info down
+            sc->auth_info = NULL;
+        }
         delete_connection(sc);
     }
     return 0;
@@ -301,7 +333,8 @@ sesman_data_in(struct trans *self)
 
     if (rv == 0 && available)
     {
-        if ((rv = scp_process(self)) != 0)
+        struct sesman_con *sc = (struct sesman_con *)self->callback_data;
+        if ((rv = scp_process(sc)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
         }
@@ -327,7 +360,7 @@ sesman_listen_conn_in(struct trans *self, struct trans *new_self)
     {
         LOG(LOG_LEVEL_ERROR, "sesman_data_in: No memory to allocate "
             "new connection");
-        trans_delete(new_self);
+        delete_connection(sc);
     }
     else
     {
@@ -549,20 +582,30 @@ sesman_main_loop(void)
             sig_sesman_reload_cfg();
         }
 
-        for (index = 0; index < g_con_list->count; index++)
+        index = 0;
+        while (index < g_con_list->count)
         {
+            int remove_con = 0;
             scon = (struct sesman_con *)list_get_item(g_con_list, index);
-            if (scon != NULL)
+            if (trans_check_wait_objs(scon->t) != 0)
             {
-                if (trans_check_wait_objs(scon->t) != 0)
-                {
-                    LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                        "trans_check_wait_objs failed, removing trans");
-                    delete_connection(scon);
-                    list_remove_item(g_con_list, index);
-                    index--;
-                    continue;
-                }
+                LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                    "trans_check_wait_objs failed, removing trans");
+                remove_con = 1;
+            }
+            else if (scon->close_requested)
+            {
+                remove_con = 1;
+            }
+
+            if (remove_con)
+            {
+                delete_connection(scon);
+                list_remove_item(g_con_list, index);
+            }
+            else
+            {
+                ++index;
             }
         }
 
@@ -577,13 +620,9 @@ sesman_main_loop(void)
             }
         }
     }
-    for (index = 0; index < g_con_list->count; index++)
-    {
-        scon = (struct sesman_con *) list_get_item(g_con_list, index);
-        delete_connection(scon);
-    }
+
+    sesman_close_all(SCA_CLOSE_AUTH_INFO);
     list_delete(g_con_list);
-    sesman_delete_listening_transport();
     return 0;
 }
 

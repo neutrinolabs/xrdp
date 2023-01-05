@@ -53,7 +53,7 @@ struct scp_session_info;
 
 struct session_item
 {
-    char name[256];
+    int uid; /* UID of session */
     int pid; /* pid of sesman waiting for wm to end */
     int display;
     int width;
@@ -85,11 +85,11 @@ struct session_chain
  */
 struct session_parameters
 {
+    int uid;
     enum scp_session_type type;
     unsigned short height;
     unsigned short width;
     unsigned char  bpp;
-    const char *username;
     const char *shell;
     const char *directory;
     const char *ip_addr;
@@ -110,16 +110,17 @@ session_get_bydata(const struct session_parameters *params);
 /**
  *
  * @brief starts a session
- * @return 0 on error, display number if success
  *
+ * @return Connection status.
  */
-int
+enum scp_screate_status
 session_start(struct auth_info *auth_info,
               const struct session_parameters *params,
+              int *display,
               struct guid *guid);
 
 int
-session_reconnect(int display, const char *username,
+session_reconnect(int display, int uid,
                   struct auth_info *auth_info);
 
 /**
@@ -154,14 +155,14 @@ session_get_bypid(int pid);
 /**
  *
  * @brief retrieves session descriptions
- * @param user the user for the sessions
+ * @param UID the UID for the descriptions
  * @return A block of session descriptions
  *
  * Pass the return result to free_session_info_list() after use
  *
  */
 struct scp_session_info *
-session_get_byuser(const char *user, unsigned int *cnt, unsigned char flags);
+session_get_byuid(int uid, unsigned int *cnt, unsigned char flags);
 
 /**
  *

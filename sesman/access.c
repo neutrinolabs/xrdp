@@ -28,7 +28,13 @@
 #include <config_ac.h>
 #endif
 
+#include "arch.h"
+
+#include "access.h"
+#include "config.h"
+#include "log.h"
 #include "sesman.h"
+#include "os_calls.h"
 #include "string_calls.h"
 
 /******************************************************************************/
@@ -51,7 +57,7 @@ access_login_allowed(const char *user)
         return 1;
     }
 
-    if (0 != g_getuser_info(user, &gid, 0, 0, 0, 0))
+    if (0 != g_getuser_info_by_name(user, 0, &gid, 0, 0, 0))
     {
         LOG(LOG_LEVEL_ERROR, "Cannot read user info! - login denied");
         return 0;
@@ -100,7 +106,7 @@ access_login_mng_allowed(const char *user)
         return 1;
     }
 
-    if (0 != g_getuser_info(user, &gid, 0, 0, 0, 0))
+    if (0 != g_getuser_info_by_name(user, 0, &gid, 0, 0, 0))
     {
         LOG(LOG_LEVEL_ERROR, "[MNG] Cannot read user info! - login denied");
         return 0;

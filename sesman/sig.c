@@ -28,8 +28,15 @@
 #include <config_ac.h>
 #endif
 
-#include "string_calls.h"
+#include "arch.h"
+#include "sig.h"
+
+#include "config.h"
+#include "log.h"
+#include "os_calls.h"
 #include "sesman.h"
+#include "session.h"
+#include "string_calls.h"
 
 /******************************************************************************/
 void

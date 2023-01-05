@@ -107,7 +107,9 @@ If not specified or set to \fB0\fP, unlimited.
 
 .TP
 \fBpamerrortxt\fP=\fIerror_text\fP
-Specify text passed to PAM when authentication failed. The maximum length is \fB256\fP.
+Specify additional text displayed to user if authentication fails. The maximum length is \fB256\fP.
+
+The use of 'pam' in the name of this option is historic
 
 .TP
 \fBport\fP=\fIport\fP
