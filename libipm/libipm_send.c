@@ -307,6 +307,47 @@ append_char_ptr_type(char c, struct trans *trans, va_list *argptr)
 }
 
 /**************************************************************************//**
+ * Add a file descriptor to the output stream
+ *
+ * @param c Type letter which triggered the call
+ * @param trans libipm transport
+ * @param argptr Pointer to value in argument stack (promoted to int)
+ * @return != 0 for error
+ */
+static enum libipm_status
+append_fd_type(char c, va_list *argptr, struct trans *trans)
+{
+    enum libipm_status rv = E_LI_SUCCESS;
+    struct stream *s = trans->out_s;
+    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+    int fd = va_arg(*argptr, int);
+    if (fd < 0)
+    {
+        log_append_error(trans, "File descriptor cannot be < 0");
+        rv = E_LI_PROGRAM_ERROR;
+    }
+    else if (!s_check_rem_out(s, 1))
+    {
+        log_append_error(trans,
+                         "Not enough space in output buffer for '%c'", c);
+        rv = E_LI_BUFFER_OVERFLOW;
+    }
+    else if (priv->out_fd_count >= MAX_FD_PER_MSG)
+    {
+        log_append_error(trans,
+                         "Too many file descriptors for '%c'", c);
+        rv = E_LI_TOO_MANY_FDS;
+    }
+    else
+    {
+        out_uint8(s, c);
+        priv->out_fds[priv->out_fd_count++] = fd;
+    }
+
+    return rv;
+}
+
+/**************************************************************************//**
  * Append a fixed size block to the output stream
  *
  * @param c Type letter which triggered the call
@@ -405,6 +446,10 @@ libipm_msg_out_appendv(struct trans *trans, const char *format, va_list *argptr)
                     rv = append_char_ptr_type(c, trans, argptr);
                     break;
 
+                case 'h':
+                    rv = append_fd_type(c, argptr, trans);
+                    break;
+
                 case 'B':
                     rv = append_fsb_type(c, trans, argptr);
                     break;
@@ -441,6 +486,7 @@ init_output_buffer(struct trans *trans, unsigned short msgno)
 
     priv->out_msgno = msgno;
     priv->out_param_count = 0;
+    priv->out_fd_count = 0;
 }
 
 /*****************************************************************************/

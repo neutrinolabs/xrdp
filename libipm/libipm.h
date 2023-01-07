@@ -67,6 +67,7 @@ enum libipm_status
     E_LI_UNIMPLEMENTED_TYPE, /***< Specified type code is unimplemented */
     E_LI_UNEXPECTED_TYPE, /***< Encountered unexpected type on input */
     E_LI_BUFFER_OVERFLOW, /***< End of buffer reached unexpectedly */
+    E_LI_TOO_MANY_FDS, /***< Too many file descriptors encountered */
     E_LI_BAD_VALUE, /***< Specified (or incoming) value is out of range */
     E_LI_BAD_HEADER, /***< Bad incoming message header */
     E_LI_TRANSPORT_ERROR /***< Error detected at the transport level */
@@ -154,13 +155,16 @@ libipm_msg_out_init(struct trans *trans, unsigned short msgno,
  *   x  |int64_t  | Signed (two's complement) 64-bit integer
  *   t  |uint64_t | Unsigned 64-bit integer
  *   s  |char *   | NULL-terminated string
+ *   h  |int      | File descriptor
  *   d  |  -      | (reserved)
- *   h  |  -      | (reserved)
  *   o  |  -      | (reserved)
  *   g  |  -      | (reserved)
  *
  * For the 'b' type, only values 0 and 1 are allowed. Other values
  * generate an error.
+ *
+ * The 'h' type can only be used where the underlying transport is a
+ * UNIX domain socket.
  *
  *  The following additions to the D-Bus type system are also supported:-
  *

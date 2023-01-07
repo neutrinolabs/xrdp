@@ -33,6 +33,35 @@
 const char *libipm_valid_type_chars = "ybnqiuxtsdhogB";
 
 /**************************************************************************//**
+ * Send function for a struct trans initialised with libipm_init_trans()
+ *
+ * @param trans Transport to send on
+ * @param data pointer to data to send
+ * @param len Length of data to send
+ * @return As for write(2)
+ */
+static int
+libipm_trans_send_proc(struct trans *self, const char *data, int len)
+{
+    int rv;
+    struct libipm_priv *priv = (struct libipm_priv *)self->extra_data;
+    if (priv != NULL && data == self->out_s->data)
+    {
+        /* We're sending the message header. Send any file descriptors
+         * as ancillary data */
+        rv = g_sck_send_fd_set(self->sck, data, len,
+                               priv->out_fds, priv->out_fd_count);
+    }
+    else
+    {
+        rv = g_sck_send(self->sck, data, len, 0);
+    }
+
+    return rv;
+}
+
+
+/**************************************************************************//**
  * Destructor for a struct trans initialised with libipm_init_trans()
  *
  * @param trans Transport to destroy
@@ -83,6 +112,7 @@ libipm_init_trans(struct trans *trans,
         priv->facility = facility;
         priv->msgno_to_str = msgno_to_str;
 
+        trans->trans_send = libipm_trans_send_proc;
         trans->extra_data = priv;
         trans->extra_destructor = libipm_trans_destructor;
 

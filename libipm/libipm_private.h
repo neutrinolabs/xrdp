@@ -39,7 +39,12 @@ enum
     /**
      * Size of libipm header
      */
-    HEADER_SIZE = 12
+    HEADER_SIZE = 12,
+
+    /**
+     * Max number of file descriptors in a message
+     */
+    MAX_FD_PER_MSG = 8
 };
 
 /**
@@ -52,6 +57,8 @@ struct libipm_priv
     const char *(*msgno_to_str)(unsigned short msgno);
     unsigned short out_msgno;
     unsigned short out_param_count;
+    unsigned short out_fd_count;
+    int out_fds[MAX_FD_PER_MSG];
     unsigned short in_msgno;
     unsigned short in_param_count;
 };
