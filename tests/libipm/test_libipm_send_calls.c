@@ -44,7 +44,7 @@
 static const unsigned char all_test_expected_buff[] =
 {
     BITS16_LE(LIBIPM_VERSION),
-    BITS16_LE(73),  /* Header : message length */
+    BITS16_LE(74),  /* Header : message length */
     BITS16_LE(LIBIPM_FAC_TEST),
     BITS16_LE(TEST_MESSAGE_NO),
     BITS32_LE(0),
@@ -59,6 +59,7 @@ static const unsigned char all_test_expected_buff[] =
     't', BITS64_LE(ALL_TEST_t_VALUE),
     /* String + terminator */
     's', ALL_TEST_s_VALUE,
+    'h', /* No buffer value is needed for 'h' */
     /* Fixed size block */
     'B', BITS16_LE(7) /* length */, ALL_TEST_B_VALUE
 };
@@ -154,7 +155,7 @@ START_TEST(test_libipm_append_all_test)
 
     status = libipm_msg_out_init(
                  g_t_out, TEST_MESSAGE_NO,
-                 "ybnqiuxtsB",
+                 "ybnqiuxtshB",
                  ALL_TEST_y_VALUE,
                  ALL_TEST_b_VALUE,
                  ALL_TEST_n_VALUE,
@@ -164,6 +165,7 @@ START_TEST(test_libipm_append_all_test)
                  ALL_TEST_x_VALUE,
                  ALL_TEST_t_VALUE,
                  string,
+                 g_fd,
                  &binary_desc);
     ck_assert_int_eq(status, E_LI_SUCCESS);
 
@@ -353,6 +355,30 @@ START_TEST(test_libipm_send_s_type)
 END_TEST
 
 /***************************************************************************//**
+ * Checks various send errors for 'h'
+ */
+START_TEST(test_libipm_send_h_type)
+{
+    enum libipm_status status;
+    unsigned int i;
+
+    test_append_at_end_of_message('h', 1);
+
+    status = libipm_msg_out_init(g_t_out, TEST_MESSAGE_NO, NULL);
+    ck_assert_int_eq(status, E_LI_SUCCESS);
+
+    for (i = 0 ; i < LIBIPM_MAX_FD_PER_MSG; ++i)
+    {
+        status = libipm_msg_out_append(g_t_out, "h", g_fd);
+        ck_assert_int_eq(status, E_LI_SUCCESS);
+    }
+
+    status = libipm_msg_out_append(g_t_out, "h", 1);
+    ck_assert_int_eq(status, E_LI_TOO_MANY_FDS);
+}
+END_TEST
+
+/***************************************************************************//**
  * Checks various send errors for 'B'
  */
 START_TEST(test_libipm_send_B_type)
@@ -496,6 +522,7 @@ make_suite_test_libipm_send_calls(void)
     tcase_add_test(tc, test_libipm_send_x_type);
     tcase_add_test(tc, test_libipm_send_t_type);
     tcase_add_test(tc, test_libipm_send_s_type);
+    tcase_add_test(tc, test_libipm_send_h_type);
     tcase_add_test(tc, test_libipm_send_B_type);
     tcase_add_test(tc, test_libipm_send_y_type);
     tcase_add_test(tc, test_libipm_send_bad_types);
