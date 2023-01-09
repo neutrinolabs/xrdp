@@ -24,10 +24,10 @@
  *
  * Functions in this file use the following naming conventions:-
  *
- * E_SCP_<msg>_REQUEST is sent by scp_send_<msg>_request()
- * E_SCP_<msg>_REQUEST is parsed by scp_get_<msg>_request()
- * E_SCP_<msg>_RESPONSE is sent by scp_send_<msg>_response()
- * E_SCP_<msg>_RESPONSE is parsed by scp_get_<msg>_response()
+ * E_SCP_{msg}_REQUEST is sent by scp_send_{msg}_request()
+ * E_SCP_{msg}_REQUEST is parsed by scp_get_{msg}_request()
+ * E_SCP_{msg}_RESPONSE is sent by scp_send_{msg}_response()
+ * E_SCP_{msg}_RESPONSE is parsed by scp_get_{msg}_response()
  */
 
 #ifndef SCP_H
@@ -269,7 +269,7 @@ scp_get_sys_login_request(struct trans *trans,
  *
  * @param trans SCP transport
  * @param login_result What happened to the login
- * @param server_closed. If login fails, whether server has closed connection.
+ * @param server_closed If login fails, whether server has closed connection.
  *        If not, a retry can be made.
  * @return != 0 for error
  */
@@ -283,7 +283,7 @@ scp_send_login_response(struct trans *trans,
  *
  * @param trans SCP transport
  * @param[out] login_result 0 for success, PAM error code otherwise
- * @param[out] server_closed. If login fails, whether server has closed
+ * @param[out] server_closed If login fails, whether server has closed
  *             connection. If not a retry can be made.
  * @return != 0 for error
  */
