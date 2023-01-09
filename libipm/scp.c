@@ -212,18 +212,18 @@ scp_msg_in_wait_available(struct trans *trans)
 
 /*****************************************************************************/
 
-void
-scp_msg_in_reset(struct trans *trans)
+enum scp_msg_code
+scp_msg_in_get_msgno(const struct trans *trans)
 {
-    libipm_msg_in_reset(trans);
+    return (enum scp_msg_code)libipm_msg_in_get_msgno(trans);
 }
 
 /*****************************************************************************/
 
-enum scp_msg_code
-scp_msg_in_start(struct trans *trans)
+void
+scp_msg_in_reset(struct trans *trans)
 {
-    return (enum scp_msg_code)libipm_msg_in_start(trans);
+    libipm_msg_in_reset(trans);
 }
 
 /*****************************************************************************/

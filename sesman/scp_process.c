@@ -536,7 +536,7 @@ scp_process(struct sesman_con *sc)
     enum scp_msg_code msgno;
     int rv = 0;
 
-    switch ((msgno = scp_msg_in_start(sc->t)))
+    switch ((msgno = scp_msg_in_get_msgno(sc->t)))
     {
         case E_SCP_SET_PEERNAME_REQUEST:
             rv = process_set_peername_request(sc);

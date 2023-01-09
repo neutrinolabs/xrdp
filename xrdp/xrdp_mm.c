@@ -2145,7 +2145,7 @@ xrdp_mm_scp_data_in(struct trans *trans)
         struct xrdp_mm *self = (struct xrdp_mm *)(trans->callback_data);
         enum scp_msg_code msgno;
 
-        switch ((msgno = scp_msg_in_start(trans)))
+        switch ((msgno = scp_msg_in_get_msgno(trans)))
         {
             case E_SCP_LOGIN_RESPONSE:
                 rv = xrdp_mm_process_login_response(self);

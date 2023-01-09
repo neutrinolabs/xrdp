@@ -187,11 +187,10 @@ libipm_msg_in_wait_available(struct trans *trans)
 /*****************************************************************************/
 
 unsigned short
-libipm_msg_in_start(struct trans *trans)
+libipm_msg_in_get_msgno(const struct trans *trans)
 {
     struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
 
-    trans->in_s->p = trans->in_s->data + HEADER_SIZE;
     return (priv == NULL) ? 0 : priv->in_msgno;
 }
 

@@ -116,7 +116,7 @@ check_for_incoming_message(unsigned short expected_msgno)
     status = libipm_msg_in_wait_available(g_t_in);
     ck_assert_int_eq(status, E_LI_SUCCESS);
 
-    msgno = libipm_msg_in_start(g_t_in);
+    msgno = libipm_msg_in_get_msgno(g_t_in);
     ck_assert_int_eq(msgno, expected_msgno);
 }
 

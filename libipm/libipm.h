@@ -219,6 +219,12 @@ libipm_msg_out_erase(struct trans *trans);
  * @param trans libipm transport
  * @param[out] available != 0 if a complete message is available
  * @return != 0 for error
+ *
+ * When 'available' becomes set, the buffer is guaranteed to
+ * be in a parseable state.
+ *
+ * The results of calling this function after starting to parse a message
+ * and before calling libipm_msg_in_reset() are undefined.
  */
 enum libipm_status
 libipm_msg_in_check_available(struct trans *trans, int *available);
@@ -233,6 +239,9 @@ libipm_msg_in_check_available(struct trans *trans, int *available);
  * While the call is active, data-in callbacks for the transport are
  * disabled.
  *
+ * The results of calling this function after starting to parse a message
+ * and before calling libipm_msg_in_reset() are undefined.
+ *
  * Only use this call if you have nothing to do until a message
  * arrives on the transport. If you have other transports to service, use
  * libipm_msg_in_check_available()
@@ -241,7 +250,7 @@ enum libipm_status
 libipm_msg_in_wait_available(struct trans *trans);
 
 /**
- * Start parsing a message
+ * Get the message number for a message in the input buffer.
  *
  * @param trans libipm transport
  * @return message number in the buffer
@@ -250,12 +259,9 @@ libipm_msg_in_wait_available(struct trans *trans);
  * libipm_msg_in_reset() and before a successful call to
  * libipm_msg_in_check_available() (or libipm_msg_wait_available())
  * are undefined.
- *
- * Calling this function resets the message parsing pointer to the start
- * of the message
  */
 unsigned short
-libipm_msg_in_start(struct trans *trans);
+libipm_msg_in_get_msgno(const struct trans *trans);
 
 /**
  * Returns a letter corresponding to the next available type in the

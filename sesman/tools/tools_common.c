@@ -50,7 +50,7 @@ wait_for_sesman_reply(struct trans *t, enum scp_msg_code wait_msgno)
         }
         else
         {
-            enum scp_msg_code reply_msgno = scp_msg_in_start(t);
+            enum scp_msg_code reply_msgno = scp_msg_in_get_msgno(t);
 
             available = 1;
             if (reply_msgno != wait_msgno)
