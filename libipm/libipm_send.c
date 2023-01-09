@@ -94,7 +94,7 @@ bad_value_msg = "Type '%c' has unsupported value '%d'";
  * The boolean value must be a 0 or a 1.
  */
 static enum libipm_status
-append_bool_type(char c, va_list *argptr, struct trans *trans)
+append_bool_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -129,7 +129,7 @@ append_bool_type(char c, va_list *argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int8_type(char c, va_list *argptr, struct trans *trans)
+append_int8_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -164,7 +164,7 @@ append_int8_type(char c, va_list *argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int16_type(char c, va_list *argptr, struct trans *trans)
+append_int16_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -200,7 +200,7 @@ append_int16_type(char c, va_list *argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int32_type(char c, va_list *argptr, struct trans *trans)
+append_int32_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -246,7 +246,7 @@ append_int32_type(char c, va_list *argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_int64_type(char c, va_list *argptr, struct trans *trans)
+append_int64_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -275,7 +275,7 @@ append_int64_type(char c, va_list *argptr, struct trans *trans)
  * NULL pointers are not allowed for the string.
  */
 static enum libipm_status
-append_char_ptr_type(char c, va_list *argptr, struct trans *trans)
+append_char_ptr_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -315,7 +315,7 @@ append_char_ptr_type(char c, va_list *argptr, struct trans *trans)
  * @return != 0 for error
  */
 static enum libipm_status
-append_fsb_type(char c, va_list *argptr, struct trans *trans)
+append_fsb_type(char c, struct trans *trans, va_list *argptr)
 {
     enum libipm_status rv = E_LI_SUCCESS;
     struct stream *s = trans->out_s;
@@ -379,34 +379,34 @@ libipm_msg_out_appendv(struct trans *trans, const char *format, va_list *argptr)
             switch (c)
             {
                 case 'y':
-                    rv = append_int8_type(c, argptr, trans);
+                    rv = append_int8_type(c, trans, argptr);
                     break;
 
                 case 'b':
-                    rv = append_bool_type(c, argptr, trans);
+                    rv = append_bool_type(c, trans, argptr);
                     break;
 
                 case 'n':
                 case 'q':
-                    rv = append_int16_type(c, argptr, trans);
+                    rv = append_int16_type(c, trans, argptr);
                     break;
 
                 case 'i':
                 case 'u':
-                    rv = append_int32_type(c, argptr, trans);
+                    rv = append_int32_type(c, trans, argptr);
                     break;
 
                 case 'x':
                 case 't':
-                    rv = append_int64_type(c, argptr, trans);
+                    rv = append_int64_type(c, trans, argptr);
                     break;
 
                 case 's':
-                    rv = append_char_ptr_type(c, argptr, trans);
+                    rv = append_char_ptr_type(c, trans, argptr);
                     break;
 
                 case 'B':
-                    rv = append_fsb_type(c, argptr, trans);
+                    rv = append_fsb_type(c, trans, argptr);
                     break;
 
                 default:
