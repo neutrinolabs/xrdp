@@ -32,6 +32,23 @@
 
 const char *libipm_valid_type_chars = "ybnqiuxtsdhogB";
 
+/*****************************************************************************/
+void
+libipm_msg_in_close_file_descriptors(struct trans *self)
+{
+    struct libipm_priv *priv = (struct libipm_priv *)self->extra_data;
+    if (priv != NULL)
+    {
+        unsigned int i;
+        for (i = priv->in_fd_index ; i < priv->in_fd_count; ++i)
+        {
+            g_file_close(priv->in_fds[i]);
+        }
+        priv->in_fd_count = 0;
+        priv->in_fd_index = 0;
+    }
+}
+
 /**************************************************************************//**
  * Send function for a struct trans initialised with libipm_init_trans()
  *
@@ -60,6 +77,52 @@ libipm_trans_send_proc(struct trans *self, const char *data, int len)
     return rv;
 }
 
+/**************************************************************************//**
+ * Receive function for a struct trans initialised with libipm_init_trans()
+ *
+ * @param trans Transport to receive on
+ * @param data pointer to receive data buffer
+ * @param len Length of data to read
+ * @return As for read(2)
+ */
+static int
+libipm_trans_recv_proc(struct trans *self, char *data, int len)
+{
+    int rv;
+    struct libipm_priv *priv = (struct libipm_priv *)self->extra_data;
+    if (priv != NULL && data == self->in_s->data)
+    {
+        /* We're receiving the message header */
+        unsigned int fdcount;
+
+        /* Check there are no live file descriptors in the input
+         * buffer from a previous message. This shouldn't happen, but
+         * if by some chance it does, we could leak file descriptors */
+        if (priv->in_fd_count > 0)
+        {
+            LOG(LOG_LEVEL_WARNING, "Unconsumed file descriptors detected");
+            libipm_msg_in_close_file_descriptors(self);
+        }
+        rv = g_sck_recv_fd_set(self->sck, data, len,
+                               priv->in_fds, MAX_FD_PER_MSG,
+                               &fdcount);
+        if (fdcount > MAX_FD_PER_MSG)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "%d file descriptors were discarded on recvmsg()",
+                fdcount - MAX_FD_PER_MSG);
+            fdcount = MAX_FD_PER_MSG;
+        }
+        priv->in_fd_count = fdcount;
+    }
+    else
+    {
+        rv = g_sck_recv(self->sck, data, len, 0);
+    }
+
+    return rv;
+}
+
 
 /**************************************************************************//**
  * Destructor for a struct trans initialised with libipm_init_trans()
@@ -71,6 +134,7 @@ libipm_trans_destructor(struct trans *trans)
 {
     struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
 
+    libipm_msg_in_close_file_descriptors(trans);
     if (priv != NULL)
     {
         if ((priv->flags & LIBIPM_E_MSG_IN_ERASE_AFTER_USE) != 0 &&
@@ -113,6 +177,7 @@ libipm_init_trans(struct trans *trans,
         priv->msgno_to_str = msgno_to_str;
 
         trans->trans_send = libipm_trans_send_proc;
+        trans->trans_recv = libipm_trans_recv_proc;
         trans->extra_data = priv;
         trans->extra_destructor = libipm_trans_destructor;
 

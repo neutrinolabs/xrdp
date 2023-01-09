@@ -300,8 +300,8 @@ libipm_msg_in_peek_type(struct trans *trans);
  *   x  | int64_t *  | Signed (two's complement) 64-bit integer
  *   t  | uint64_t * | Unsigned 64-bit integer
  *   s  | char **    | NULL-terminated string
+ *   h  | int *      | File descriptor
  *   d  |   -        | (reserved)
- *   h  |   -        | (reserved)
  *   o  |   -        | (reserved)
  *   g  |   -        | (reserved)
  *
@@ -314,6 +314,9 @@ libipm_msg_in_peek_type(struct trans *trans);
  * For the 's' type, a pointer into the string in the input buffer is
  * returned. This pointer will only be valid until the next call to
  * libipm_msg_in_reset()
+ *
+ * The 'h' type can only be used where the underlying transport is a
+ * UNIX domain socket.
  *
  * For the 'B' type, pass in the address of an initialised descriptor
  * containing the address and size of the object to copy the data
@@ -329,6 +332,9 @@ libipm_msg_in_parse(struct trans *trans, const char *format, ...);
  *
  * If the LIBIPM_E_MSG_IN_ERASE_AFTER_USE flag is set for the transport,
  * the entire buffer is erased, and the flag is cleared
+ *
+ * Any file descriptors received from the other end but not parsed
+ * by the application are closed.
  *
  * @param trans libipm transport
  */

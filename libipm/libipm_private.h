@@ -61,6 +61,11 @@ struct libipm_priv
     int out_fds[MAX_FD_PER_MSG];
     unsigned short in_msgno;
     unsigned short in_param_count;
+    /** Pointer to next fd to be consumed by the app */
+    unsigned short in_fd_index;
+    /** Number of fds in the incoming message */
+    unsigned short in_fd_count;
+    int in_fds[MAX_FD_PER_MSG];
 };
 
 /**
@@ -70,5 +75,16 @@ struct libipm_priv
  * libipm_msg_in_parse()
  */
 extern const char *libipm_valid_type_chars;
+
+/**
+ * Close input file descriptors for an input message
+ *
+ * If file descriptors are read from the other end, but not passed to the
+ * application, they must be closed to prevent file descriptor leaks
+ *
+ * @param trans Transport to close file descriptors for
+ */
+void
+libipm_msg_in_close_file_descriptors(struct trans *self);
 
 #endif /* LIBIPM__PRIVATE_H */
