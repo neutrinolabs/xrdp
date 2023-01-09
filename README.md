@@ -150,5 +150,5 @@ xrdp
 ├── xrdp ········ main server code
 ├── xrdpapi ····· virtual channel API
 ├── xrdpvr ······ API for playing media over RDP
-└── xup ········· X11rdp and xorgxrdp client module
+└── xup ········· xorgxrdp client module
 ```

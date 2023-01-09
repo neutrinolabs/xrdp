@@ -428,38 +428,6 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
 
 /***************************************************************************//**
  *
- * @brief Reads sesman [X11rdp] configuration section
- * @param file configuration file descriptor
- * @param cs pointer to a config_sesman struct
- * @param param_n parameter name list
- * @param param_v parameter value list
- * @return 0 on success, 1 on failure
- *
- */
-static int
-config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
-                       struct list *param_v)
-{
-    int i;
-
-    list_clear(param_v);
-    list_clear(param_n);
-
-    cs->rdp_params = list_create();
-    cs->rdp_params->auto_free = 1;
-
-    file_read_section(file, SESMAN_CFG_RDP_PARAMS, param_n, param_v);
-
-    for (i = 0; i < param_n->count; i++)
-    {
-        list_add_item(cs->rdp_params, (long)g_strdup((char *)list_get_item(param_v, i)));
-    }
-
-    return 0;
-}
-
-/***************************************************************************//**
- *
  * @brief Reads sesman [Xorg] configuration section
  * @param file configuration file descriptor
  * @param cs pointer to a config_sesman struct
@@ -580,9 +548,8 @@ config_read(const char *sesman_ini)
                 /* read global config */
                 config_read_globals(fd, cfg, param_n, param_v);
 
-                /* read Xvnc/X11rdp/Xorg parameter list */
+                /* read Xvnc/Xorg parameter list */
                 config_read_vnc_params(fd, cfg, param_n, param_v);
-                config_read_rdp_params(fd, cfg, param_n, param_v);
                 config_read_xorg_params(fd, cfg, param_n, param_v);
 
                 /* read security config */
@@ -727,18 +694,6 @@ config_dump(struct config_sesman *config)
                   i, (char *)list_get_item(config->vnc_params, i));
     }
 
-    /* X11rdp */
-    if (config->rdp_params->count)
-    {
-        g_writeln("X11rdp parameters:");
-    }
-
-    for (i = 0; i < config->rdp_params->count; i++)
-    {
-        g_writeln("    Parameter %02d              %s",
-                  i, (char *)list_get_item(config->rdp_params, i));
-    }
-
     /* SessionVariables */
     if (config->env_names->count)
     {
@@ -763,7 +718,6 @@ config_free(struct config_sesman *cs)
         g_free(cs->default_wm);
         g_free(cs->reconnect_sh);
         g_free(cs->auth_file_path);
-        list_delete(cs->rdp_params);
         list_delete(cs->vnc_params);
         list_delete(cs->xorg_params);
         list_delete(cs->env_names);

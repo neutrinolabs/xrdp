@@ -25,10 +25,6 @@ Session management
 Access control
 
 .TP
-\fB[X11rdp]\fR, \fB[Xvnc]\fR, \fB[Xorg]\fR
-X11 server settings for supported servers
-
-.TP
 \fB[Chansrv]\fR
 Settings for xrdp-chansrv(8)
 
@@ -297,7 +293,7 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR, require group membership even
 if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 
 .SH "X11 SERVER"
-Following parameters can be used in the \fB[X11rdp]\fR, \fB[Xvnc]\fR and
+Following parameters can be used in the \fB[Xvnc]\fR and
 \fB[Xorg]\fR sections.
 
 .TP

@@ -34,7 +34,6 @@
 
 /* Code values used in 'xrdp_mm->code=' settings */
 #define XVNC_SESSION_CODE 0
-#define XRDP_SESSION_CODE 10
 #define XORG_SESSION_CODE 20
 
 /* To check whether touch events has been implemented on session type 'mm' */
@@ -370,7 +369,7 @@ struct xrdp_mm
     struct xrdp_mod *mod; /* module interface */
     int display; /* 10 for :10.0, 11 for :11.0, etc */
     struct guid guid; /* GUID for the session, or all zeros  */
-    int code; /* 0=Xvnc session, 10=X11rdp session, 20=xorg driver mode */
+    int code; /* 0=Xvnc session, 20=xorg driver mode */
     struct xrdp_encoder *encoder;
     int cs2xr_cid_map[256];
     int xr2cr_cid_map[256];

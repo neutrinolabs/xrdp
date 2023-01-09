@@ -486,7 +486,7 @@ session_start(struct auth_info *auth_info,
     char text[256];
     char username[256];
     char execvpparams[2048];
-    char *xserver = NULL; /* absolute/relative path to Xorg/X11rdp/Xvnc */
+    char *xserver = NULL; /* absolute/relative path to Xorg/Xvnc */
     char *passwd_file;
     char **pp1 = (char **)NULL;
     struct session_chain *temp = (struct session_chain *)NULL;
@@ -872,33 +872,6 @@ session_start(struct auth_info *auth_info,
                     //config_read_xserver_params(SCP_SESSION_TYPE_XVNC,
                     //                           xserver_params);
                     list_append_list_strdup(g_cfg->vnc_params, xserver_params, 1);
-
-                    /* make sure it ends with a zero */
-                    list_add_item(xserver_params, 0);
-                    pp1 = (char **)xserver_params->items;
-                }
-                else if (s->type == SCP_SESSION_TYPE_XRDP)
-                {
-                    xserver_params = list_create();
-                    xserver_params->auto_free = 1;
-
-                    /* get path of X11rdp from config */
-                    xserver = g_strdup((const char *)list_get_item(g_cfg->rdp_params, 0));
-
-                    /* these are the must have parameters */
-                    list_add_item(xserver_params, (tintptr)g_strdup(xserver));
-                    list_add_item(xserver_params, (tintptr)g_strdup(screen));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-auth"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(authfile));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(geometry));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-depth"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(depth));
-
-                    /* additional parameters from sesman.ini file */
-                    //config_read_xserver_params(SCP_SESSION_TYPE_XRDP,
-                    //                           xserver_params);
-                    list_append_list_strdup(g_cfg->rdp_params, xserver_params, 1);
 
                     /* make sure it ends with a zero */
                     list_add_item(xserver_params, 0);
