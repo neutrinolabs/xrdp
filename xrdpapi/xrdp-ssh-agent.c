@@ -105,6 +105,7 @@
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <poll.h>
 
 #define _PATH_DEVNULL  "/dev/null"
 
@@ -275,14 +276,24 @@ handle_connection(int client_fd)
     int client_going = 1;
     while (client_going)
     {
-        /* Wait for data from RDP or the client */
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(client_fd, &readfds);
-        FD_SET(rdp_fd, &readfds);
-        select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
+        struct pollfd pollfd[2];
+        enum
+        {
+            RDP_FD = 0,
+            CLIENT_FD
+        };
 
-        if (FD_ISSET(rdp_fd, &readfds))
+        /* Wait for data from RDP or the client */
+        pollfd[RDP_FD].fd = rdp_fd;
+        pollfd[RDP_FD].events = POLLIN;
+        pollfd[RDP_FD].revents = 0;
+        pollfd[CLIENT_FD].fd = client_fd;
+        pollfd[CLIENT_FD].events = POLLIN;
+        pollfd[CLIENT_FD].revents = 0;
+
+        poll(pollfd, 2, -1);
+
+        if ((pollfd[RDP_FD].revents & (POLLIN | POLLHUP)) != 0)
         {
             /* Read from RDP and write to the client */
             char buffer[4096];
@@ -325,7 +336,7 @@ handle_connection(int client_fd)
             }
         }
 
-        if (FD_ISSET(client_fd, &readfds))
+        if ((pollfd[CLIENT_FD].revents & (POLLIN | POLLHUP)) != 0)
         {
             /* Read from the client and write to RDP */
             char buffer[4096];
@@ -380,14 +391,18 @@ main(int argc, char **argv)
     /* Wait for a client to connect to the socket */
     while (is_going)
     {
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(sa_uds_fd, &readfds);
-        select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
+        struct pollfd pollfd;
+
+        pollfd.fd = sa_uds_fd;
+        pollfd.events = POLLIN;
+        pollfd.revents = 0;
+
+        poll(pollfd, 1, -1);
 
         /* If something connected then get it...
          * (You can test this using "socat - UNIX-CONNECT:<udspath>".) */
-        if (FD_ISSET(sa_uds_fd, &readfds))
+        if ((pollfd.revents & (POLLIN | POLLHUP)) != 0)
+
         {
             socklen_t addrsize = sizeof(addr);
             int client_fd = accept(sa_uds_fd,

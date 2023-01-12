@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <poll.h>
 #include <X11/Xlib.h>
 #include <sys/select.h>
 
@@ -32,7 +33,6 @@ int g_x_socket = 0;
 
 int main(int argc, char **argv)
 {
-    fd_set rfds;
     int i1;
     XEvent xevent;
 
@@ -48,9 +48,11 @@ int main(int argc, char **argv)
 
     while (1)
     {
-        FD_ZERO(&rfds);
-        FD_SET(g_x_socket, &rfds);
-        i1 = select(g_x_socket + 1, &rfds, 0, 0, 0);
+        struct pollfd pollfd;
+        pollfd.fd = g_x_socket;
+        pollfd.events = POLLIN;
+        pollfd.revents = 0;
+        i1 = poll(&pollfd, 1, -1);
 
         if (i1 < 0)
         {

@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <poll.h>
 
 #include "log.h"
 #include "xrdp_sockets.h"
@@ -481,40 +482,40 @@ WTSFreeMemory(void *pMemory)
 static int
 can_send(int sck, int millis)
 {
-    struct timeval time;
-    fd_set         wfds;
-    int            select_rv;
+    int rv = 0;
+    struct pollfd pollfd;
 
-    /* setup for a select call */
-    FD_ZERO(&wfds);
-    FD_SET(sck, &wfds);
-    time.tv_sec = millis / 1000;
-    time.tv_usec = (millis * 1000) % 1000000;
+    pollfd.fd = sck;
+    pollfd.events = POLLOUT;
+    pollfd.revents = 0;
+    if (poll(&pollfd, 1, millis) > 0)
+    {
+        if ((pollfd.revents & POLLOUT) != 0)
+        {
+            rv = 1;
+        }
+    }
 
-    /* check if it is ok to write to specified socket */
-    select_rv = select(sck + 1, 0, &wfds, 0, &time);
-
-    return (select_rv > 0) ? 1 : 0;
+    return rv;
 }
 
 /*****************************************************************************/
 static int
 can_recv(int sck, int millis)
 {
-    struct timeval time;
-    fd_set rfds;
-    int select_rv;
+    int rv = 0;
+    struct pollfd pollfd;
 
-    FD_ZERO(&rfds);
-    FD_SET(sck, &rfds);
-    time.tv_sec = millis / 1000;
-    time.tv_usec = (millis * 1000) % 1000000;
-    select_rv = select(sck + 1, &rfds, 0, 0, &time);
-
-    if (select_rv > 0)
+    pollfd.fd = sck;
+    pollfd.events = POLLIN;
+    pollfd.revents = 0;
+    if (poll(&pollfd, 1, millis) > 0)
     {
-        return 1;
+        if ((pollfd.revents & (POLLIN | POLLHUP)) != 0)
+        {
+            rv = 1;
+        }
     }
 
-    return 0;
+    return rv;
 }

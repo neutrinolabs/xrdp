@@ -267,26 +267,24 @@ int tcp_connect(int skt, const char *hostname, const char *port)
 
 int tcp_can_send(int skt, int millis)
 {
-    fd_set         wfds;
-    struct timeval time;
-    int            rv;
-
-    time.tv_sec = millis / 1000;
-    time.tv_usec = (millis * 1000) % 1000000;
-    FD_ZERO(&wfds);
-
+    int rv = 0;
     if (skt > 0)
     {
-        FD_SET(((unsigned int) skt), &wfds);
-        rv = select(skt + 1, 0, &wfds, 0, &time);
+        struct pollfd pollfd;
 
-        if (rv > 0)
+        pollfd.fd = skt;
+        pollfd.events = POLLOUT;
+        pollfd.revents = 0;
+        if (poll(&pollfd, 1, millis) > 0)
         {
-            return tcp_socket_ok(skt);
+            if ((pollfd.revents & POLLOUT) != 0)
+            {
+                rv = 1;
+            }
         }
     }
 
-    return 0;
+    return rv;
 }
 
 /**
@@ -317,55 +315,39 @@ int tcp_socket_ok(int skt)
 
 int tcp_select(int sck1, int sck2)
 {
-    fd_set         rfds;
-    struct timeval time;
+    struct pollfd pollfd[2] = {0};
+    int rvmask[2] = {0}; /* Output masks corresponding to fds in pollfd */
 
-    int            max = 0;
-    int            rv  = 0;
-
-    memset(&rfds, 0, sizeof(fd_set));
-    memset(&time, 0, sizeof(struct timeval));
-
-    time.tv_sec = 0;
-    time.tv_usec = 0;
-    FD_ZERO(&rfds);
+    unsigned int i = 0;
+    int rv = 0;
 
     if (sck1 > 0)
     {
-        FD_SET(((unsigned int) sck1), &rfds);
+        pollfd[i].fd = sck1;
+        pollfd[i].events = POLLIN;
+        rvmask[i] = 1;
+        ++i;
     }
 
     if (sck2 > 0)
     {
-        FD_SET(((unsigned int) sck2), &rfds);
+        pollfd[i].fd = sck2;
+        pollfd[i].events = POLLIN;
+        rvmask[i] = 2;
+        ++i;
     }
 
-    max = sck1;
-
-    if (sck2 > max)
+    if (poll(pollfd, i, 0) > 0)
     {
-        max = sck2;
-    }
-
-    rv = select(max + 1, &rfds, 0, 0, &time);
-
-    if (rv > 0)
-    {
-        rv = 0;
-
-        if (FD_ISSET(((unsigned int) sck1), &rfds))
+        if ((pollfd[0].revents & (POLLIN | POLLHUP)) != 0)
         {
-            rv = rv | 1;
+            rv |= rvmask[0];
         }
 
-        if (FD_ISSET(((unsigned int)sck2), &rfds))
+        if ((pollfd[1].revents & (POLLIN | POLLHUP)) != 0)
         {
-            rv = rv | 2;
+            rv |= rvmask[1];
         }
-    }
-    else
-    {
-        rv = 0;
     }
 
     return rv;
