@@ -61,6 +61,9 @@
 #include <time.h>
 #include <grp.h>
 #endif
+#ifdef HAVE_SETUSERCONTEXT
+#include <login_cap.h>
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -2878,6 +2881,31 @@ g_setlogin(const char *name)
 #endif
 }
 
+/*****************************************************************************/
+#ifdef HAVE_SETUSERCONTEXT
+int
+g_set_allusercontext(int uid)
+{
+    int rv;
+    struct passwd *pwd = getpwuid(uid);
+    if (pwd == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "No password entry for UID %d", uid);
+        rv = 1;
+    }
+    else
+    {
+        rv = setusercontext(NULL, pwd, uid, LOGIN_SETALL);
+        if (rv != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "setusercontext(%d) failed [%s]",
+                uid, g_get_strerror());
+        }
+    }
+
+    return (rv != 0);  /* Return 0 or 1 */
+}
+#endif
 /*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred */

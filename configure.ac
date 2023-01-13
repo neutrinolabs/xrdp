@@ -213,6 +213,12 @@ AM_COND_IF([DEVEL_DEBUG],
   [AX_APPEND_COMPILE_FLAGS([-g -O0])],
   [AX_APPEND_COMPILE_FLAGS([-O2])])
 
+# Function setusercontext() is in BSD -lutil but N/A on Solaris or GNU systems
+AC_SEARCH_LIBS([setusercontext], [util])
+
+# Define HAVE_XXXXX macros for some system functions
+AC_CHECK_FUNCS([setusercontext])
+
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
   with_simd=no

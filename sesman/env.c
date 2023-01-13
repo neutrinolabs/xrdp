@@ -117,9 +117,15 @@ env_set_user(int uid, char **passwd_file, int display,
     if (error == 0)
     {
         g_rm_temp_dir();
-        /*
-         * Set the primary group. Note that secondary groups should already
-         * have been set */
+        g_clearenv();
+#ifdef HAVE_SETUSERCONTEXT
+        error = g_set_allusercontext(uid);
+#else
+        /* Set some of the things setusercontext() handles on other
+         * systems */
+
+        /* Primary group. Note that secondary groups should already
+         * have been set, if we're not using setusercontext() */
         error = g_setgid(pw_gid);
 
         if (error == 0)
@@ -127,13 +133,16 @@ env_set_user(int uid, char **passwd_file, int display,
             error = g_setuid(uid);
         }
 
+        if (error == 0)
+        {
+            g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
+        }
+#endif
         g_mk_socket_path(0);
 
         if (error == 0)
         {
-            g_clearenv();
             g_setenv("SHELL", pw_shell, 1);
-            g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
             g_setenv("USER", pw_username, 1);
             g_setenv("LOGNAME", pw_username, 1);
             g_sprintf(text, "%d", uid);
