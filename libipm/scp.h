@@ -24,10 +24,10 @@
  *
  * Functions in this file use the following naming conventions:-
  *
- * E_SCP_<msg>_REQUEST is sent by scp_send_<msg>_request()
- * E_SCP_<msg>_REQUEST is parsed by scp_get_<msg>_request()
- * E_SCP_<msg>_RESPONSE is sent by scp_send_<msg>_response()
- * E_SCP_<msg>_RESPONSE is parsed by scp_get_<msg>_response()
+ * E_SCP_{msg}_REQUEST is sent by scp_send_{msg}_request()
+ * E_SCP_{msg}_REQUEST is parsed by scp_get_{msg}_request()
+ * E_SCP_{msg}_RESPONSE is sent by scp_send_{msg}_response()
+ * E_SCP_{msg}_RESPONSE is parsed by scp_get_{msg}_response()
  */
 
 #ifndef SCP_H
@@ -43,12 +43,24 @@ struct trans;
 /* Message codes */
 enum scp_msg_code
 {
-    E_SCP_GATEWAY_REQUEST = 1,
-    E_SCP_GATEWAY_RESPONSE,
+    E_SCP_SET_PEERNAME_REQUEST = 1,
+    // No E_SCP_SET_PEERNAME_RESPONSE
+
+    E_SCP_SYS_LOGIN_REQUEST,
+    E_SCP_UDS_LOGIN_REQUEST,
+    E_SCP_LOGIN_RESPONSE, /* Shared between login request types */
+
+    E_SCP_LOGOUT_REQUEST,
+    // No S_SCP_LOGOUT_RESPONSE
+
     E_SCP_CREATE_SESSION_REQUEST,
     E_SCP_CREATE_SESSION_RESPONSE,
+
     E_SCP_LIST_SESSIONS_REQUEST,
-    E_SCP_LIST_SESSIONS_RESPONSE
+    E_SCP_LIST_SESSIONS_RESPONSE,
+
+    E_SCP_CLOSE_CONNECTION_REQUEST
+    // No E_SCP_CLOSE_CONNECTION_RESPONSE
 };
 
 /* Common facilities */
@@ -97,6 +109,7 @@ scp_port_to_display_string(const char *port, char *buff, unsigned int bufflen);
  * Connect to an SCP server
  *
  * @param port Port definition (e.g. from sesman.ini)
+ * @param peername Name of this program or object (e.g. "xrdp-sesadmin")
  * @param term_func Function to poll during connection for program
  *         termination, or NULL for none.
  * @return Initialised SCP transport
@@ -104,16 +117,19 @@ scp_port_to_display_string(const char *port, char *buff, unsigned int bufflen);
  * The returned transport has the is_term member set to term_func.
  */
 struct trans *
-scp_connect(const  char *port,
+scp_connect(const char *port,
+            const char *peername,
             int (*term_func)(void));
 
 /**
  * Converts a standard trans connected to an SCP endpoint to an SCP transport
  *
+ * If you are running on a client, you may wish to use
+ * scp_send_set_peername_request() after the commnect to inform the
+ * server who you are.
+ *
  * @param trans connected endpoint
  * @return != 0 for error
- *
- * The returned transport has the is_term member set to term_func.
  */
 int
 scp_init_trans(struct trans *trans);
@@ -170,9 +186,54 @@ scp_msg_in_start(struct trans *trans);
 void
 scp_msg_in_reset(struct trans *trans);
 
+/* -------------------- Setup messages--------------------  */
 
 /**
- * Send an E_SCP_GATEWAY_REQUEST (SCP client)
+ * Send an E_SCP_SET_PEERNAME_REQUEST (SCP client)
+ *
+ * @param trans SCP transport
+ * @param peername Peername
+ * @return != 0 for error
+ *
+ * Server does not send a response
+ *
+ * This message is sent automatically by scp_connect(), but it can
+ * be sent at any time.
+ */
+int
+scp_send_set_peername_request(struct trans *trans,
+                              const char *peername);
+
+/**
+ * Parse an incoming E_SCP_SET_PEERNAME_REQUEST message (SCP server)
+ *
+ * @param trans SCP transport
+ * @param[out] peername peername
+ * @return != 0 for error
+ */
+int
+scp_get_set_peername_request(struct trans *trans,
+                             const char **peername);
+
+/* -------------------- Login messages--------------------  */
+
+/**
+ * Send an E_SCP_UDS_LOGIN_REQUEST (SCP client)
+ *
+ * User is logged in using their socket details
+ *
+ * @param trans SCP transport
+ * @return != 0 for error
+ *
+ * Server replies with E_SCP_LOGIN_RESPONSE
+ */
+int
+scp_send_uds_login_request(struct trans *trans);
+
+/**
+ * Send an E_SCP_SYS_LOGIN_REQUEST (SCP client)
+ *
+ * User is logged in using explicit credentials
  *
  * @param trans SCP transport
  * @param username Username
@@ -180,16 +241,16 @@ scp_msg_in_reset(struct trans *trans);
  * @param ip_addr IP address for the client (or "" if not known)
  * @return != 0 for error
  *
- * Server replies with E_SCP_GATEWAY_RESPONSE
+ * Server replies with E_SCP_LOGIN_RESPONSE
  */
 int
-scp_send_gateway_request(struct trans *trans,
-                         const char *username,
-                         const char *password,
-                         const char *ip_addr);
+scp_send_sys_login_request(struct trans *trans,
+                           const char *username,
+                           const char *password,
+                           const char *ip_addr);
 
 /**
- * Parse an incoming E_SCP_GATEWAY_REQUEST message (SCP server)
+ * Parse an incoming E_SCP_SYS_LOGIN_REQUEST message (SCP server)
  *
  * @param trans SCP transport
  * @param[out] username Username
@@ -198,78 +259,89 @@ scp_send_gateway_request(struct trans *trans,
  * @return != 0 for error
  */
 int
-scp_get_gateway_request(struct trans *trans,
-                        const char **username,
-                        const char **password,
-                        const char **ip_addr);
+scp_get_sys_login_request(struct trans *trans,
+                          const char **username,
+                          const char **password,
+                          const char **ip_addr);
 
 /**
- * Send an E_SCP_GATEWAY_RESPONSE (SCP server)
+ * Send an E_SCP_LOGIN_RESPONSE (SCP server)
  *
  * @param trans SCP transport
- * @param auth_result 0 for success, PAM error code otherwise
+ * @param login_result What happened to the login
+ * @param server_closed If login fails, whether server has closed connection.
+ *        If not, a retry can be made.
  * @return != 0 for error
  */
 int
-scp_send_gateway_response(struct trans *trans,
-                          int auth_result);
+scp_send_login_response(struct trans *trans,
+                        enum scp_login_status login_result,
+                        int server_closed);
 
 /**
- * Parses an incoming E_SCP_GATEWAY_RESPONSE (SCP client)
+ * Parses an incoming E_SCP_LOGIN_RESPONSE (SCP client)
  *
  * @param trans SCP transport
- * @param[out] auth_result 0 for success, PAM error code otherwise
+ * @param[out] login_result 0 for success, PAM error code otherwise
+ * @param[out] server_closed If login fails, whether server has closed
+ *             connection. If not a retry can be made.
  * @return != 0 for error
  */
 int
-scp_get_gateway_response(struct trans *trans,
-                         int *auth_result);
+scp_get_login_response(struct trans *trans,
+                       enum scp_login_status *login_result,
+                       int *server_closed);
 
-/* Session messages */
+/**
+ * Send an E_SCP_LOGOUT_REQUEST (SCP client)
+ *
+ * @param trans SCP transport
+ * @return != 0 for error
+ *
+ * Logs the user out (if they are logged in), so that another
+ * login request can be sent, maybe with a different user.
+ *
+ * A reply is not sent
+ */
+int
+scp_send_logout_request(struct trans *trans);
+
+/* -------------------- Session messages--------------------  */
 
 /**
  * Send an E_SCP_CREATE_SESSION_REQUEST (SCP client)
  *
  * @param trans SCP transport
- * @param username Username of session to create or re-connect to
- * @param password Password for user
  * @param type Session type
  * @param width Initial session width
  * @param height Initial session height
  * @param bpp Session bits-per-pixel (ignored for Xorg sessions)
  * @param shell User program to run. May be ""
  * @param directory Directory to run the program in. May be ""
- * @param ip_addr IP address for the client (or "" if not known)
  * @return != 0 for error
  *
  * Server replies with E_SCP_CREATE_SESSION_RESPONSE
  */
 int
 scp_send_create_session_request(struct trans *trans,
-                                const char *username,
-                                const char *password,
                                 enum scp_session_type type,
                                 unsigned short width,
                                 unsigned short height,
                                 unsigned char bpp,
                                 const char *shell,
-                                const char *directory,
-                                const char *ip_addr);
+                                const char *directory);
 
 
 /**
  * Parse an incoming E_SCP_CREATE_SESSION_REQUEST (SCP server)
  *
  * @param trans SCP transport
- * @param[out] username Username of session to create or re-connect to
- * @param[out] password Password for user
  * @param[out] type Session type
  * @param[out] width Initial session width
  * @param[out] height Initial session height
  * @param[out] bpp Session bits-per-pixel (ignored for Xorg sessions)
  * @param[out] shell User program to run. May be ""
  * @param[out] directory Directory to run the program in. May be ""
- * @param[out] ip_addr IP address for the client. May be ""
  * @return != 0 for error
  *
  * Returned string pointers are valid until scp_msg_in_reset() is
@@ -277,29 +349,26 @@ scp_send_create_session_request(struct trans *trans,
  */
 int
 scp_get_create_session_request(struct trans *trans,
-                               const char **username,
-                               const char **password,
                                enum scp_session_type *type,
                                unsigned short *width,
                                unsigned short *height,
                                unsigned char *bpp,
                                const char **shell,
-                               const char **directory,
-                               const char **ip_addr);
+                               const char **directory);
 
 /**
  * Send an E_SCP_CREATE_SESSION_RESPONSE (SCP server)
  *
  * @param trans SCP transport
- * @param auth_result 0 for success, PAM error code otherwise
- * @param display Should be zero if authentication failed.
- * @param guid Guid for session. Should be all zeros if authentication failed
+ * @param status Status of creation request
+ * @param display Should be zero if create session failed.
+ * @param guid Guid for session. Should be all zeros if create session failed
  *
  * @return != 0 for error
  */
 int
 scp_send_create_session_response(struct trans *trans,
-                                 int auth_result,
+                                 enum scp_screate_status status,
                                  int display,
                                  const struct guid *guid);
 
@@ -308,73 +377,29 @@ scp_send_create_session_response(struct trans *trans,
  * Parse an incoming E_SCP_CREATE_SESSION_RESPONSE (SCP client)
  *
  * @param trans SCP transport
- * @param[out] auth_result 0 for success, PAM error code otherwise
- * @param[out] display Should be zero if authentication failed.
- * @param[out] guid Guid for session. Should be all zeros if authentication
+ * @param[out] status Status of creation request
+ * @param[out] display Should be zero if create session failed.
+ * @param[out] guid Guid for session. Should be all zeros if create session
  *                  failed
  *
  * @return != 0 for error
  */
 int
 scp_get_create_session_response(struct trans *trans,
-                                int *auth_result,
+                                enum scp_screate_status *status,
                                 int *display,
                                 struct guid *guid);
-
-/**
- * Status of an E_SCP_LIST_SESSIONS_RESPONSE message
- */
-enum scp_list_sessions_status
-{
-    /**
-     * This message contains a valid session, and other messages
-     * will be sent
-     */
-    E_SCP_LS_SESSION_INFO = 0,
-
-    /**
-     * This message indicates the end of a list of sessions. No session
-     * is contained in the message */
-    E_SCP_LS_END_OF_LIST,
-
-    /**
-     * Authentication failed for the user
-     */
-    E_SCP_LS_AUTHENTICATION_FAIL = 100,
-
-    /**
-     * A client-side error occurred allocating memory for the session
-     */
-    E_SCP_LS_NO_MEMORY
-};
 
 /**
  * Send an E_LIST_SESSIONS_REQUEST (SCP client)
  *
  * @param trans SCP transport
- * @param username Username
- * @param password Password
  * @return != 0 for error
  *
  * Server replies with one or more E_SCP_LIST_SESSIONS_RESPONSE
  */
 int
-scp_send_list_sessions_request(struct trans *trans,
-                               const char *username,
-                               const char *password);
-
-/**
- * Parse an incoming E_LIST_SESSIONS_REQUEST (SCP server)
- *
- * @param trans SCP transport
- * @param[out] username Username
- * @param[out] password Password
- * @return != 0 for error
- */
-int
-scp_get_list_sessions_request(struct trans *trans,
-                              const char **username,
-                              const char **password);
+scp_send_list_sessions_request(struct trans *trans);
 
 /**
  * Send an E_LIST_SESSIONS_RESPONSE (SCP server)
@@ -410,6 +435,17 @@ scp_get_list_sessions_response(
     struct trans *trans,
     enum scp_list_sessions_status *status,
     struct scp_session_info **info);
+
+/**
+ * Send an E_CLOSE_CONNECTION_REQUEST (SCP client)
+ *
+ * @param trans SCP transport
+ * @return != 0 for error
+ *
+ * Server closes the connection quietly.
+ */
+int
+scp_send_close_connection_request(struct trans *trans);
 
 
 #endif /* SCP_H */

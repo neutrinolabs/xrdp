@@ -34,7 +34,6 @@
 
 /* Code values used in 'xrdp_mm->code=' settings */
 #define XVNC_SESSION_CODE 0
-#define XRDP_SESSION_CODE 10
 #define XORG_SESSION_CODE 20
 
 /* To check whether touch events has been implemented on session type 'mm' */
@@ -312,8 +311,9 @@ struct xrdp_enc_data;
 enum mm_connect_state
 {
     MMCS_CONNECT_TO_SESMAN,
-    MMCS_PAM_AUTH,
-    MMCS_SESSION_AUTH,
+    MMCS_GATEWAY_LOGIN,
+    MMCS_SESSION_LOGIN,
+    MMCS_CREATE_SESSION,
     MMCS_CONNECT_TO_SESSION,
     MMCS_CONNECT_TO_CHANSRV,
     MMCS_DONE
@@ -348,10 +348,8 @@ struct xrdp_mm
     struct xrdp_wm *wm; /* owner */
     enum mm_connect_state connect_state; /* State of connection */
     /* Other processes we connect to */
-    /* NB : When we move to UDS, the sesman and pam_auth
-     * connection be merged */
     int use_sesman; /* true if this is a sesman session */
-    int use_pam_auth; /* True if we're to authenticate using PAM */
+    int use_gw_login; /* True if we're to login using  a gateway */
     int use_chansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
     struct trans *sesman_trans; /* connection to sesman */
     struct trans *chan_trans; /* connection to chansrv */
@@ -371,7 +369,7 @@ struct xrdp_mm
     struct xrdp_mod *mod; /* module interface */
     int display; /* 10 for :10.0, 11 for :11.0, etc */
     struct guid guid; /* GUID for the session, or all zeros  */
-    int code; /* 0=Xvnc session, 10=X11rdp session, 20=xorg driver mode */
+    int code; /* 0=Xvnc session, 20=xorg driver mode */
     struct xrdp_encoder *encoder;
     int cs2xr_cid_map[256];
     int xr2cr_cid_map[256];
@@ -495,6 +493,7 @@ struct xrdp_wm
     struct xrdp_font *default_font;
     struct xrdp_keymap keymap;
     int hide_log_window;
+    int fatal_error_in_log_window;
     struct xrdp_bitmap *target_surface; /* either screen or os surface */
     int current_surface_index;
     int hints;

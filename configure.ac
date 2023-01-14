@@ -213,6 +213,12 @@ AM_COND_IF([DEVEL_DEBUG],
   [AX_APPEND_COMPILE_FLAGS([-g -O0])],
   [AX_APPEND_COMPILE_FLAGS([-O2])])
 
+# Function setusercontext() is in BSD -lutil but N/A on Solaris or GNU systems
+AC_SEARCH_LIBS([setusercontext], [util])
+
+# Define HAVE_XXXXX macros for some system functions
+AC_CHECK_FUNCS([setusercontext])
+
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
   with_simd=no
@@ -422,11 +428,6 @@ fi
 if test "x$enable_ipv6" = "xyes"
 then
   AC_DEFINE([XRDP_ENABLE_IPV6],1,[Enable IPv6])
-fi
-
-if test "x$enable_pam" = "xyes"
-then
-  AC_DEFINE([USE_PAM],1,[Enable PAM])
 fi
 
 AS_IF( [test "x$enable_neutrinordp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )

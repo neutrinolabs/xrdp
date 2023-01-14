@@ -13,6 +13,8 @@ FreeBSD_task:
     - env CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib ./configure --localstatedir=/var --enable-strict-locations --with-pkgconfigdir=/usr/local/libdata/pkgconfig --enable-strict-locations --enable-ipv6 --enable-opus --enable-jpeg --enable-fdkaac --enable-painter --enable-pixman --enable-fuse --with-imlib2 --with-freetype2
   build_script:
     - make -j $(sysctl -n hw.ncpu || echo 4)
+  check_script:
+    - make check
   install_script:
     - make install
   test_script:

@@ -74,7 +74,7 @@ lib_mod_log_peer(struct mod *mod)
     if (g_sck_get_peer_cred(mod->trans->sck, &pid, &uid, &gid) == 0)
     {
         LOG(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp_pid=%d connected "
-            "to X11rdp_pid=%d X11rdp_uid=%d X11rdp_gid=%d "
+            "to Xorg_pid=%d Xorg_uid=%d Xorg_gid=%d "
             "client=%s",
             my_pid, pid, uid, gid,
             mod->client_info.client_description);
@@ -205,7 +205,7 @@ lib_mod_connect(struct mod *mod)
     if (trans_connect(mod->trans, mod->ip, con_port, 30 * 1000) == 0)
     {
         LOG_DEVEL(LOG_LEVEL_INFO, "lib_mod_connect: connected to Xserver "
-                  "(Xorg or X11rdp) sck %lld",
+                  "(Xorg) sck %lld",
                   (long long) (mod->trans->sck));
     }
     else

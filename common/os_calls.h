@@ -93,6 +93,7 @@ int      g_sck_socket_ok(int sck);
 int      g_sck_can_send(int sck, int millis);
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
+
 /**
  * Gets the IP address of a connected peer, if it has one
  * @param sck File descriptor for peer
@@ -183,6 +184,13 @@ int      g_setuid(int pid);
 int      g_setsid(void);
 int      g_getlogin(char *name, unsigned int len);
 int      g_setlogin(const char *name);
+#ifdef HAVE_SETUSERCONTEXT
+/** Sets the login user context (BSD systems only)
+ * @param uid UID of suer
+ * @return 0 for success
+ */
+int      g_set_allusercontext(int uid);
+#endif
 int      g_waitchild(void);
 int      g_waitpid(int pid);
 struct exit_status g_waitpid_status(int pid);
@@ -193,8 +201,10 @@ int      g_exit(int exit_code);
 int      g_getpid(void);
 int      g_sigterm(int pid);
 int      g_sighup(int pid);
-int      g_getuser_info(const char *username, int *gid, int *uid, char **shell,
-                        char **dir, char **gecos);
+int      g_getuser_info_by_name(const char *username, int *uid, int *gid,
+                                char **shell, char **dir, char **gecos);
+int      g_getuser_info_by_uid(int uid, char **username, int *gid,
+                               char **shell, char **dir, char **gecos);
 int      g_getgroup_info(const char *groupname, int *gid);
 int      g_check_user_in_group(const char *username, int gid, int *ok);
 int      g_time1(void);

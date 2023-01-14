@@ -31,8 +31,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-char user[257];
-char pass[257];
 char cmnd[257];
 char port[257];
 
@@ -47,12 +45,9 @@ int main(int argc, char **argv)
     //int end;
     int idx;
     //int sel;
-    char *pwd;
     struct log_config *logging;
     int rv = 1;
 
-    user[0] = '\0';
-    pass[0] = '\0';
     cmnd[0] = '\0';
     port[0] = '\0';
 
@@ -64,11 +59,11 @@ int main(int argc, char **argv)
     {
         if (0 == g_strncmp(argv[idx], "-u=", 3))
         {
-            g_strncpy(user, (argv[idx]) + 3, 256);
+            g_printf("** Ignoring unused argument '-u'");
         }
         else if (0 == g_strncmp(argv[idx], "-p=", 3))
         {
-            g_strncpy(pass, (argv[idx]) + 3, 256);
+            g_printf("** Ignoring unused argument '-p'");
         }
         else if (0 == g_strncmp(argv[idx], "-i=", 3))
         {
@@ -80,48 +75,57 @@ int main(int argc, char **argv)
         }
     }
 
-    if (0 == g_strncmp(port, "", 1))
-    {
-        g_strncpy(port, "3350", 256);
-    }
-
-    if (0 == g_strncmp(user, "", 1))
-    {
-        cmndHelp();
-        return 0;
-    }
-
     if (0 == g_strncmp(cmnd, "", 1))
     {
         cmndHelp();
         return 0;
     }
 
-    if (0 == g_strncmp(pass, "", 1))
-    {
-        pwd = getpass("password:");
-        g_strncpy(pass, pwd, 256);
-
-    }
-
-    t = scp_connect(port, NULL);
-
+    t = scp_connect(port, "xrdp-sesadmin", NULL);
 
     if (t == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "scp_connect() error");
     }
-    else if (0 == g_strncmp(cmnd, "list", 5))
+    else
     {
-        rv = cmndList(t);
-    }
-    else if (0 == g_strncmp(cmnd, "kill:", 5))
-    {
-        rv = cmndKill(t);
+        enum scp_login_status  login_result;
+
+        /* Log in as the current user */
+        if ((rv = scp_send_uds_login_request(t)) == 0 &&
+                (rv = wait_for_sesman_reply(t, E_SCP_LOGIN_RESPONSE)) == 0)
+        {
+            rv = scp_get_login_response(t, &login_result, NULL);
+            if (rv == 0)
+            {
+                if (login_result != E_SCP_LOGIN_OK)
+                {
+                    char msg[256];
+                    scp_login_status_to_str(login_result, msg, sizeof(msg));
+                    g_printf("Login failed; %s\n", msg);
+                    rv = 1;
+                }
+            }
+            scp_msg_in_reset(t); // Done with this message
+        }
     }
 
-    g_memset(pass, '\0', sizeof(pass));
+    if (rv == 0)
+    {
+        if (0 == g_strncmp(cmnd, "list", 5))
+        {
+            rv = cmndList(t);
+        }
+        else if (0 == g_strncmp(cmnd, "kill:", 5))
+        {
+            rv = cmndKill(t);
+        }
+    }
 
+    if (rv == 0)
+    {
+        rv = scp_send_close_connection_request(t);
+    }
     trans_delete(t);
     log_end();
 
@@ -133,10 +137,7 @@ cmndHelp(void)
 {
     fprintf(stderr, "sesadmin - a console sesman administration tool\n");
     fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");
-    fprintf(stderr, "-u=<username>: username to connect to sesman [MANDATORY]\n");
-    fprintf(stderr, "-p=<password>: password to connect to sesman (asked if not given)\n");
-    fprintf(stderr, "-s=<hostname>: sesman host (default is localhost)\n");
-    fprintf(stderr, "-i=<port>    : sesman port (default 3350)\n");
+    fprintf(stderr, "-i=<port>    : sesman port (can be defaulted)\n");
     fprintf(stderr, "-c=<command> : command to execute on the server [MANDATORY]\n");
     fprintf(stderr, "               it can be one of those:\n");
     fprintf(stderr, "               list\n");
@@ -146,9 +147,14 @@ cmndHelp(void)
 static void
 print_session(const struct scp_session_info *s)
 {
+    char *username;
+    const char *uptr;
+    g_getuser_info_by_uid(s->uid, &username, NULL, NULL, NULL, NULL);
+    uptr = (username == NULL) ? "<unknown>" : username;
+
     printf("Session ID: %d\n", s->sid);
     printf("\tDisplay: :%u\n", s->display);
-    printf("\tUser: %s\n", s->username);
+    printf("\tUser: %s\n", uptr);
     printf("\tSession type: %s\n", SCP_SESSION_TYPE_TO_STR(s->type));
     printf("\tScreen size: %dx%d, color depth %d\n",
            s->width, s->height, s->bpp);
@@ -157,6 +163,7 @@ print_session(const struct scp_session_info *s)
     {
         printf("\tStart IP address: %s\n", s->start_ip_addr);
     }
+    g_free(username);
 }
 
 static int
@@ -168,7 +175,7 @@ cmndList(struct trans *t)
     enum scp_list_sessions_status status;
     struct scp_session_info *p;
 
-    int rv = scp_send_list_sessions_request(t, user, pass);
+    int rv = scp_send_list_sessions_request(t);
 
     sessions->auto_free = 1;
 
@@ -188,11 +195,6 @@ cmndList(struct trans *t)
 
         switch (status)
         {
-            case E_SCP_LS_AUTHENTICATION_FAIL:
-                printf("Connection denied (authentication error)\n");
-                rv = 1;
-                break;
-
             case E_SCP_LS_SESSION_INFO:
                 list_add_item(sessions, (tintptr)p);
                 break;

@@ -4,18 +4,28 @@
 
 .SH "SYNTAX"
 .B xrdp\-sesrun
-.I [ options ] username
+.I --help
+.br
+
+.B xrdp\-sesrun
+.I [ options ] [ username ]
 
 .SH "DESCRIPTION"
 \fBxrdp\-sesrun\fR starts a session using \fBxrdp\-sesman\fR(8).
 .br
-This is a tool useful for testing, it simply behaves like xrdp when some
+This is a tool useful for testing. It simply behaves like xrdp when some
 user logs in a new session and authenticates, thus starting a new session.
 
-Default values for the options are set at compile-time. Run the utility without
-a username to see what the defaults are for your installation.
+Default values for the options are set at compile-time. Run the utility with
+the '--help' option to see what the defaults are for your installation.
 
-The utility prompts for a password if neither \fB-p\fR or \fB-F\fR is used.
+If no username is used, the current username is used, and no password
+needs to be provided. In this instance, it is important that any necessary
+authentication tokens for a GUI session (e.g. a Kerberos ticket) have
+already been acquired.
+
+If a username is provided, a password must also be provided. In this instance
+the utility prompts for a password if neither \fB-p\fR or \fB-F\fR is used.
 
 .SH "OPTIONS"
 .TP
@@ -30,7 +40,7 @@ Set session bits-per-pixel (colour depth). Some session types (i.e. Xorg)
 will ignore this setting.
 .TP
 .B -t <session-type>
-Session type - one of Xorg, Xvnc or X11rdp. Alternatively, for testing
+Session type - one of Xorg or Xvnc. Alternatively, for testing
 only, use the numeric session code.
 .TP
 .B -D <directory>
@@ -58,6 +68,10 @@ Override the default logging level. One of "error", "warn", "info",
 "debug", "trace" or a number 1-5.
 
 .SH "EXAMPLES"
+.TP
+.B
+xrdp-sesrun
+Create a default session for the current user.
 .TP
 .B
 xrdp-sesrun -F 0 user1 <passwd.txt

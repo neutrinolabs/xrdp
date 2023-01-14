@@ -951,6 +951,17 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint16_le(s, len_password);
 
+    /*
+     * Ignore autologin requests if the password is empty. System managers
+     * who really want to allow empty passwords can do this with a
+     * special session type */
+    if (len_password == 0 && self->rdp_layer->client_info.rdp_autologin)
+    {
+        LOG(LOG_LEVEL_DEBUG,
+            "Client supplied password is empty, disabling autologin");
+        self->rdp_layer->client_info.rdp_autologin = 0;
+    }
+
     if (len_password >= INFO_CLIENT_MAX_CB_LEN)
     {
         LOG(LOG_LEVEL_ERROR,

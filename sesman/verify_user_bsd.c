@@ -37,12 +37,25 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <limits.h>
+#include <sys/param.h>
+#if defined(OpenBSD)
 #include <login_cap.h>
 #include <bsd_auth.h>
-
-#ifndef SECS_PER_DAY
-#define SECS_PER_DAY (24L*3600L)
+#else
+/*
+ * If OpenBSD isn't defined, add static definitions of OpenBSD-specific
+ * functions. This won't work, but will let the compiler on other
+ * systems check that all is correctly defined */
+static int
+auth_userokay(char *name, char *style, char *type, char *password)
+{
+    fprintf(stderr, "auth_userokay() not implmented on this platform!\n");
+    abort();
+    return 0;
+}
 #endif
+
 
 /*
  * Need a complete type for struct auth_info, even though we're
@@ -55,18 +68,53 @@ struct auth_info
 /******************************************************************************/
 /* returns non-NULL for success */
 struct auth_info *
-auth_userpass(const char *user, const char *pass,
-              const char *client_ip, int *errorcode)
+auth_userpass(const char *const_user, const char *const_pass,
+              const char *client_ip, enum scp_login_status *errorcode)
 {
     /* Need a non-NULL pointer to return to indicate success */
     static struct auth_info success = {0};
-    struct auth_info *ret = NULL;
+    enum scp_login_status status;
 
-    if (auth_userokay(user, NULL, "auth-xrdp", pass))
+    // auth_userokay is not const-correct. See usr.sbin/smtpd/smtpd.c in
+    // the OpenBSD source tree for this workaround
+    char user[LOGIN_NAME_MAX];
+    char pass[LINE_MAX];
+    char type[] = "auth-xrdp";
+
+    snprintf(user, sizeof(user), "%s", const_user);
+    snprintf(pass, sizeof(pass), "%s", const_pass);
+
+    if (auth_userokay(user, NULL, type, pass))
     {
-        ret = &success;
+        status = E_SCP_LOGIN_OK;
     }
-    return ret;
+    else
+    {
+        status = E_SCP_LOGIN_NOT_AUTHENTICATED;
+    }
+
+    if (errorcode != NULL)
+    {
+        *errorcode = status;
+    }
+
+    return (status == E_SCP_LOGIN_OK) ? &success : NULL;
+}
+
+/******************************************************************************/
+/* returns non-NULL for success */
+struct auth_info *
+auth_uds(const char *user, enum scp_login_status *errorcode)
+{
+    /* Need a non-NULL pointer to return to indicate success */
+    static struct auth_info success = {0};
+
+    if (errorcode != NULL)
+    {
+        *errorcode = E_SCP_LOGIN_OK;
+    }
+
+    return &success;
 }
 
 /******************************************************************************/

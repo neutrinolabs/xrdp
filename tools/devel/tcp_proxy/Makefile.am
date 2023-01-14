@@ -10,4 +10,4 @@ tcp_proxy_SOURCES = \
 
 tcp_proxy_LDADD = \
   $(top_builddir)/common/libcommon.la \
-  -ldl
+  $(DLOPEN_LIBS)
