@@ -135,3 +135,12 @@ xrdp_region_get_rect(struct xrdp_region *self, int index,
     }
     return 1;
 }
+
+/*****************************************************************************/
+int
+xrdp_region_get_numrects(struct xrdp_region *self)
+{
+    int count;
+    pixman_region_rectangles(self->reg, &count);
+    return count;
+}

@@ -27,6 +27,7 @@
 
 #if defined(XRDP_PAINTER)
 #include <painter.h> /* libpainter */
+#include "rfxcodec_encode.h"
 #endif
 
 
@@ -66,6 +67,10 @@ xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
     return 0;
 }
 
+#define RFX_TILE_SQUARE 64
+
+#define XRDP_SURCMD_PREFIX_BYTES 256
+
 /*****************************************************************************/
 static int
 xrdp_painter_send_dirty(struct xrdp_painter *self)
@@ -91,39 +96,147 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
         Bpp = 4;
     }
 
-    jndex = 0;
-    error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
-    while (error == 0)
+#ifdef XRDP_RFXCODEC
+
+    int width = self->wm->screen->width;
+    int height = self->wm->screen->height;
+
+    if (self->wm->codec_handle)
     {
-        cx = rect.right - rect.left;
-        cy = rect.bottom - rect.top;
-        ldata = (char *)g_malloc(cx * cy * Bpp, 0);
-        if (ldata == 0)
+        int num_dirty = xrdp_region_get_numrects(self->dirty_region);
+        if (num_dirty == 0)
         {
+            return 0;
+        }
+
+        int tiles_wide = (width + RFX_TILE_SQUARE - 1) / RFX_TILE_SQUARE;
+        int tiles_high = (height + RFX_TILE_SQUARE - 1) / RFX_TILE_SQUARE;
+        char tile_map[tiles_wide][tiles_high];
+        g_memset(tile_map, 0, sizeof(tile_map));
+
+        struct rfx_rect rfxrects[num_dirty];
+        struct rfx_tile rfxtiles[tiles_wide * tiles_high];
+        int num_rfxrects = 0;
+        int num_tiles = 0;
+
+        jndex = 0;
+        error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        while (error == 0)
+        {
+            rfxrects[num_rfxrects].x = rect.left;
+            rfxrects[num_rfxrects].y = rect.top;;
+            rfxrects[num_rfxrects].cx = rect.right - rect.left;
+            rfxrects[num_rfxrects].cy = rect.bottom - rect.top;
+            num_rfxrects++;
+
+            int ty;
+            int top_ty = rect.top / RFX_TILE_SQUARE;
+            int bot_ty = (rect.bottom - 1) / RFX_TILE_SQUARE;
+            for (ty = top_ty; ty <= bot_ty; ty++)
+            {
+                int tx;
+                int left_tx = rect.left / RFX_TILE_SQUARE;
+                int right_tx = (rect.right - 1) / RFX_TILE_SQUARE;
+                for (tx = left_tx; tx <= right_tx; tx++)
+                {
+                    tile_map[tx][ty] = 1;
+                }
+            }
+
+            jndex++;
+            error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        }
+
+        int ty;
+        int last_wide = 1 + (width - 1) % RFX_TILE_SQUARE;
+        int last_high = 1 + (height - 1) % RFX_TILE_SQUARE;
+        for (ty = 0; ty < tiles_high; ty++)
+        {
+            int tx;
+            for (tx = 0; tx < tiles_wide; tx++)
+            {
+                if (tile_map[tx][ty])
+                {
+                    rfxtiles[num_tiles].x = tx * RFX_TILE_SQUARE;
+                    rfxtiles[num_tiles].y = ty * RFX_TILE_SQUARE;
+                    int cx = (tx == tiles_wide - 1) ? last_wide : RFX_TILE_SQUARE;
+                    int cy = (ty == tiles_high - 1) ? last_high : RFX_TILE_SQUARE;
+                    rfxtiles[num_tiles].cx = cx;
+                    rfxtiles[num_tiles].cy = cy;
+                    rfxtiles[num_tiles].quant_y = 0;;
+                    rfxtiles[num_tiles].quant_cb = 0;;
+                    rfxtiles[num_tiles].quant_cr = 0;;
+                    num_tiles++;
+                }
+            }
+        }
+
+        xrdp_region_delete(self->dirty_region);
+        self->dirty_region = xrdp_region_create(self->wm);
+
+        int encoding_bytes = self->wm->max_encoding_bytes;
+        int tiles_written = rfxcodec_encode(self->wm->codec_handle,
+                                            self->wm->encoding + XRDP_SURCMD_PREFIX_BYTES,
+                                            &encoding_bytes, self->wm->screen->data,
+                                            width, height, width * Bpp,
+                                            rfxrects, num_rfxrects,
+                                            rfxtiles, num_tiles,
+                                            NULL, 0);
+        if (tiles_written < 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_WARNING, "xrdp_painter_send_dirty: RFX encode fails (%d)", tiles_written);
             return 1;
         }
-        src = self->wm->screen->data;
-        src += self->wm->screen->line_size * rect.top;
-        src += rect.left * Bpp;
-        dst = ldata;
-        for (index = 0; index < cy; index++)
-        {
-            g_memcpy(dst, src, cx * Bpp);
-            src += self->wm->screen->line_size;
-            dst += cx * Bpp;
-        }
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
-                  rect.left, rect.top, cx, cy);
-        libxrdp_send_bitmap(self->session, cx, cy, bpp,
-                            ldata, rect.left, rect.top, cx, cy);
-        g_free(ldata);
 
-        jndex++;
-        error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        libxrdp_fastpath_send_frame_marker(self->session, 0, self->wm->frame_id);
+        libxrdp_fastpath_send_surface(self->session,
+                                      self->wm->encoding,
+                                      XRDP_SURCMD_PREFIX_BYTES,
+                                      encoding_bytes, 0, 0,
+                                      width, height, 32,
+                                      self->wm->codec_id,
+                                      width, height);
+        libxrdp_fastpath_send_frame_marker(self->session, 1, self->wm->frame_id);
     }
+    else
 
-    xrdp_region_delete(self->dirty_region);
-    self->dirty_region = xrdp_region_create(self->wm);
+#endif /* XRDP_RFXCODEC */
+
+    {
+        jndex = 0;
+        error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        while (error == 0)
+        {
+            cx = rect.right - rect.left;
+            cy = rect.bottom - rect.top;
+            ldata = (char *)g_malloc(cx * cy * Bpp, 0);
+            if (ldata == 0)
+            {
+                return 1;
+            }
+            src = self->wm->screen->data;
+            src += self->wm->screen->line_size * rect.top;
+            src += rect.left * Bpp;
+            dst = ldata;
+            for (index = 0; index < cy; index++)
+            {
+                g_memcpy(dst, src, cx * Bpp);
+                src += self->wm->screen->line_size;
+                dst += cx * Bpp;
+            }
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
+                      rect.left, rect.top, cx, cy);
+            libxrdp_send_bitmap(self->session, cx, cy, bpp,
+                                ldata, rect.left, rect.top, cx, cy);
+            g_free(ldata);
+
+            jndex++;
+            error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        }
+
+        xrdp_region_delete(self->dirty_region);
+        self->dirty_region = xrdp_region_create(self->wm);
+    }
 
     return 0;
 }

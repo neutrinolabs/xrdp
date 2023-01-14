@@ -29,6 +29,13 @@
 #include "log.h"
 #include "string_calls.h"
 
+#ifdef XRDP_RFXCODEC
+#include "rfxcodec_encode.h"
+#endif
+
+#define MAX_RDP_TILES (128 * 128)       /* Per Microsoft max RDP display size  */
+#define MAX_RDP_RECTS ((1 << 16) - 1)   /* Per RDPRFX 2.2.2.3.3 TS_RFX_REGION */
+
 /*****************************************************************************/
 struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
@@ -68,6 +75,34 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     /* to store configuration from xrdp.ini */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
+
+#ifdef XRDP_RFXCODEC
+
+    /* For sending window data w/ RemoteFX */
+    self->codec_id = self->client_info->rfx_codec_id;
+    if (self->codec_id)
+    {
+        self->codec_handle = (struct xrdp_encoder *)rfxcodec_encode_create(
+                                 self->screen->width,
+                                 self->screen->height,
+                                 RFX_FORMAT_BGRA, 0);
+        if (!self->codec_handle)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_painter_create: rfxcodec_encode_create failed");
+            self->codec_id = 0;
+        }
+        else
+        {
+            int meb = self->client_info->max_fastpath_frag_bytes & ~15;
+            meb += sizeof(struct rfx_tile) * MAX_RDP_TILES;
+            meb += sizeof(struct rfx_rect) * MAX_RDP_RECTS;
+            self->max_encoding_bytes = meb;
+            self->encoding = (char *)g_malloc(meb, 0);
+            self->frame_id = 0;
+        }
+    }
+
+#endif /* XRDP_RFXCODEC */
 
     return self;
 }
