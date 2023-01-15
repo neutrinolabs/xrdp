@@ -5,13 +5,19 @@
 #include <sys/signal.h>
 #include <unistd.h>
 
+#include "config_ac.h"
+#include "os_calls.h"
+#include "string_calls.h"
+
 #define ATTEMPTS 10
 #define ALARM_WAIT 30
 
 void
 alarm_handler(int signal_num)
 {
-    printf("Unable to find RandR outputs after %d seconds\n", ALARM_WAIT);
+    /* Avoid printf() in signal handler (see signal-safety(7)) */
+    const char msg[] = "Timed out waiting for RandR outputs\n";
+    g_file_write(1, msg, g_strlen(msg));
     exit(1);
 }
 
@@ -30,8 +36,7 @@ main(int argc, char **argv)
 
     display = getenv("DISPLAY");
 
-    signal(SIGALRM, alarm_handler);
-    alarm(ALARM_WAIT);
+    g_set_alarm(alarm_handler, ALARM_WAIT);
 
     if (!display)
     {
@@ -48,7 +53,7 @@ main(int argc, char **argv)
             printf("Opened display %s\n", display);
             break;
         }
-        sleep(1);
+        g_sleep(1000);
     }
 
     if (!dpy)
@@ -78,7 +83,7 @@ main(int argc, char **argv)
                 }
                 XRRFreeScreenResources(res);
             }
-            sleep(1);
+            g_sleep(1000);
         }
 
         if (outputs > 0)
