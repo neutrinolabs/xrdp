@@ -322,9 +322,17 @@ enum mm_connect_state
 enum display_resize_state
 {
     WMRZ_ENCODER_DELETE = 0,
+    WMRZ_EGFX_DELETE_SURFACE,
+    WMRZ_EGFX_CONN_CLOSE,
+    WMRZ_EGFX_CONN_CLOSING,
+    WMRZ_EGFX_CONN_CLOSED,
+    WRMZ_EGFX_DELETE,
     WMRZ_SERVER_MONITOR_RESIZE,
     WMRZ_SERVER_VERSION_MESSAGE,
     WMRZ_XRDP_CORE_RESIZE,
+    WMRZ_EGFX_INITIALIZE,
+    WMRZ_EGFX_INITALIZING,
+    WMRZ_EGFX_INITIALIZED,
     WMRZ_ENCODER_CREATE,
     WMRZ_SERVER_INVALIDATE,
     WMRZ_COMPLETE,
@@ -333,9 +341,17 @@ enum display_resize_state
 
 #define XRDP_DISPLAY_RESIZE_STATE_TO_STR(status) \
     ((status) == WMRZ_ENCODER_DELETE ? "WMRZ_ENCODER_DELETE" : \
+     (status) == WMRZ_EGFX_DELETE_SURFACE ? "WMRZ_EGFX_DELETE_SURFACE" : \
+     (status) == WMRZ_EGFX_CONN_CLOSE ? "WMRZ_EGFX_CONN_CLOSE" : \
+     (status) == WMRZ_EGFX_CONN_CLOSING ? "WMRZ_EGFX_CONN_CLOSING" : \
+     (status) == WMRZ_EGFX_CONN_CLOSED ? "WMRZ_EGFX_CONN_CLOSED" : \
+     (status) == WRMZ_EGFX_DELETE ? "WMRZ_EGFX_DELETE" : \
      (status) == WMRZ_SERVER_MONITOR_RESIZE ? "WMRZ_SERVER_MONITOR_RESIZE" : \
      (status) == WMRZ_SERVER_VERSION_MESSAGE ? "WMRZ_SERVER_VERSION_MESSAGE" : \
      (status) == WMRZ_XRDP_CORE_RESIZE ? "WMRZ_XRDP_CORE_RESIZE" : \
+     (status) == WMRZ_EGFX_INITIALIZE ? "WMRZ_EGFX_INITIALIZE" : \
+     (status) == WMRZ_EGFX_INITALIZING ? "WMRZ_EGFX_INITALIZING" : \
+     (status) == WMRZ_EGFX_INITIALIZED ? "WMRZ_EGFX_INITIALIZED" : \
      (status) == WMRZ_ENCODER_CREATE ? "WMRZ_ENCODER_CREATE" : \
      (status) == WMRZ_SERVER_INVALIDATE ? "WMRZ_SERVER_INVALIDATE" : \
      (status) == WMRZ_COMPLETE ? "WMRZ_COMPLETE" : \
@@ -374,6 +390,7 @@ struct xrdp_mm
     int cs2xr_cid_map[256];
     int xr2cr_cid_map[256];
     int dynamic_monitor_chanid;
+    struct xrdp_egfx *egfx;
 
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
