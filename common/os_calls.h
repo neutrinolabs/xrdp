@@ -204,6 +204,7 @@ char    *g_get_strerror(void);
 int      g_get_errno(void);
 int      g_execvp(const char *p1, char *args[]);
 int      g_execlp3(const char *a1, const char *a2, const char *a3);
+unsigned int g_set_alarm(void (*func)(int), unsigned int secs);
 void     g_signal_child_stop(void (*func)(int));
 void     g_signal_segfault(void (*func)(int));
 void     g_signal_hang_up(void (*func)(int));

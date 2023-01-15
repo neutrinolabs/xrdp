@@ -2810,6 +2810,22 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
 
 /*****************************************************************************/
 /* does not work in win32 */
+unsigned int
+g_set_alarm(void (*func)(int), unsigned int secs)
+{
+#if defined(_WIN32)
+    return 0;
+#else
+    /* Cancel any previous alarm to prevent a race */
+    unsigned int rv = alarm(0);
+    signal(SIGALRM, func);
+    (void)alarm(secs);
+    return rv;
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
 void
 g_signal_child_stop(void (*func)(int))
 {
