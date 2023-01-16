@@ -1853,6 +1853,8 @@ scard_pcsc_init(void)
     if (g_lis == 0)
     {
         g_lis = trans_create(2, 8192, 8192);
+        // TODO: See #2501. Use needs a way to move PCSCLITE_CSOCK_NAME
+        // to a location not under $HOME.
         home = g_getenv("HOME");
         disp = g_display_num;
         g_snprintf(g_pcsclite_ipc_dir, 255, "%s/.pcsc%d", home, disp);
