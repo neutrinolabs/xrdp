@@ -126,7 +126,23 @@ int      g_sck_send_fd_set(int sck, const void *ptr, unsigned int len,
                            int fds[], unsigned int fdcount);
 int      g_sck_last_error_would_block(int sck);
 int      g_sck_socket_ok(int sck);
+/**
+ * Checks socket writeability with an optional wait
+ *
+ * @param sck - Socket to check
+ * @param millis - Maximum milliseconds to wait for writeability to be true
+ *
+ * @note The wait time may not be reached in the event of an incoming signal
+ *       so do not use this call to impose a hard timeout */
 int      g_sck_can_send(int sck, int millis);
+/**
+ * Checks socket readability with an optional wait
+ *
+ * @param sck - Socket to check
+ * @param millis - Maximum milliseconds to wait for readability to be true
+ *
+ * @note The wait time may not be reached in the event of an incoming signal
+ *       so do not use this call to impose a hard timeout */
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
 

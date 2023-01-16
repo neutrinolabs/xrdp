@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <poll.h>
 #include <X11/Xlib.h>
 #include <sys/select.h>
@@ -52,7 +53,11 @@ int main(int argc, char **argv)
         pollfd.fd = g_x_socket;
         pollfd.events = POLLIN;
         pollfd.revents = 0;
-        i1 = poll(&pollfd, 1, -1);
+        do
+        {
+            i1 = poll(&pollfd, 1, -1);
+        }
+        while (i1 < 0 && errno == EINTR);
 
         if (i1 < 0)
         {

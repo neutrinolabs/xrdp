@@ -47,9 +47,9 @@ struct wts_obj
 
 /* helper functions used by WTSxxx API - do not invoke directly */
 static int
-can_send(int sck, int millis);
+can_send(int sck, int millis, int restart);
 static int
-can_recv(int sck, int millis);
+can_recv(int sck, int millis, int restart);
 static int
 mysend(int sck, const void *adata, int bytes);
 static int
@@ -161,7 +161,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     }
 
     /* wait for connection to complete */
-    if (!can_send(wts->fd, 500))
+    if (!can_send(wts->fd, 500, 1))
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: can_send failed");
         free(wts);
@@ -213,7 +213,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     }
     LOG_DEVEL(LOG_LEVEL_DEBUG, "WTSVirtualChannelOpenEx: sent ok");
 
-    if (!can_recv(wts->fd, 500))
+    if (!can_recv(wts->fd, 500, 1))
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: can_recv failed");
         free(wts);
@@ -264,7 +264,7 @@ mysend(int sck, const void *adata, int bytes)
     sent = 0;
     while (sent < bytes)
     {
-        if (can_send(sck, 100))
+        if (can_send(sck, 100, 0))
         {
             error = send(sck, data + sent, bytes - sent, MSG_NOSIGNAL);
             if (error < 1)
@@ -294,7 +294,7 @@ myrecv(int sck, void *adata, int bytes)
     recd = 0;
     while (recd < bytes)
     {
-        if (can_recv(sck, 100))
+        if (can_recv(sck, 100, 0))
         {
             error = recv(sck, data + recd, bytes - recd, MSG_NOSIGNAL);
             if (error < 1)
@@ -329,7 +329,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;
     }
 
-    if (!can_send(wts->fd, 0))
+    if (!can_send(wts->fd, 0, 0))
     {
         return 1;    /* can't write now, ok to try again */
     }
@@ -370,7 +370,7 @@ WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
         return 0;
     }
 
-    if (can_recv(wts->fd, TimeOut))
+    if (can_recv(wts->fd, TimeOut, 0))
     {
         rv = recv(wts->fd, Buffer, BufferSize, 0);
 
@@ -475,20 +475,29 @@ WTSFreeMemory(void *pMemory)
  *
  * @param  sck    socket to check
  * @param  millis timeout value in milliseconds
+ * @param  restart Try again if interrupted, even if this exceeds the timeout
  *
  * @return 0 if write will block
  * @return 1 if write will not block
  ******************************************************************************/
 static int
-can_send(int sck, int millis)
+can_send(int sck, int millis, int restart)
 {
     int rv = 0;
     struct pollfd pollfd;
+    int status;
 
     pollfd.fd = sck;
     pollfd.events = POLLOUT;
     pollfd.revents = 0;
-    if (poll(&pollfd, 1, millis) > 0)
+
+    do
+    {
+        status = poll(&pollfd, 1, millis);
+    }
+    while (status < 0 && errno == EINTR && restart);
+
+    if (status > 0)
     {
         if ((pollfd.revents & POLLOUT) != 0)
         {
@@ -501,15 +510,22 @@ can_send(int sck, int millis)
 
 /*****************************************************************************/
 static int
-can_recv(int sck, int millis)
+can_recv(int sck, int millis, int restart)
 {
     int rv = 0;
     struct pollfd pollfd;
+    int status;
 
     pollfd.fd = sck;
     pollfd.events = POLLIN;
     pollfd.revents = 0;
-    if (poll(&pollfd, 1, millis) > 0)
+    do
+    {
+        status = poll(&pollfd, 1, millis);
+    }
+    while (status < 0 && errno == EINTR && restart);
+
+    if (status > 0)
     {
         if ((pollfd.revents & (POLLIN | POLLHUP)) != 0)
         {
