@@ -13,6 +13,8 @@ libipm_la_SOURCES = \
   libipm_recv.c \
   libipm_facilities.h \
   libipm_private.h \
+  eicp.h \
+  eicp.c \
   scp.h \
   scp.c \
   scp_application_types.h \

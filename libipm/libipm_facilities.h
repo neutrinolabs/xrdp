@@ -28,6 +28,8 @@
 enum libipm_facility
 {
     LIBIPM_FAC_SCP = 1, /**< SCP - Sesman Control Protocol */
+    LIBIPM_FAC_EICP, /**< EICP - Executive Initialization Control Protocol */
+
     LIBIPM_FAC_TEST = 65535 /**< Used for unit testing */
 };
 
