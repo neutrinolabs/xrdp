@@ -101,6 +101,10 @@ lock_uds(const char *sockname)
                 g_file_close(fd);
                 fd = -1;
             }
+            else
+            {
+                (void)g_file_set_cloexec(fd, 1);
+            }
         }
     }
 

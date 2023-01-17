@@ -1721,6 +1721,8 @@ g_create_wait_obj(const char *name)
         close(fds[1]);
         return 0;
     }
+    g_file_set_cloexec(fds[0], 1);
+    g_file_set_cloexec(fds[1], 1);
     return (fds[1] << 16) | fds[0];
 #endif
 }

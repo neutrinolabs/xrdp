@@ -1020,9 +1020,12 @@ session_start(struct auth_info *auth_info,
         {
             /**
              * We're now forked from the main sesman process, so we
-             * can close file descriptors that we no longer need */
-
+             * can close file descriptors that we no longer need
+             *
+             * Set FD_CLOEXEC on the FD used to send our status back to
+             * sesman, as our sub-processes shouldn't be able to see it */
             g_file_close(fd[0]);
+            g_file_set_cloexec(fd[1], 1);
 
             sesman_close_all(0);
 
