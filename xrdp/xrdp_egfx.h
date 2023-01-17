@@ -18,8 +18,18 @@
  * MS-RDPEGFX
  */
 
+/**
+ *
+ * @file xrdp_egfx.h
+ * @brief Stream function headers for the EGFX extension to the MSRDP protocol.
+ * @author Jay Sorg, Christopher Pitstick
+ *
+ */
+
 #ifndef _XRDP_EGFX_H
 #define _XRDP_EGFX_H
+
+#include "xrdp.h"
 
 #define XR_RDPGFX_CAPVERSION_8      0x00080004
 #define XR_RDPGFX_CAPVERSION_81     0x00080105

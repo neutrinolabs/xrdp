@@ -481,7 +481,7 @@ proc_enc_msg(void *arg)
     mutex = self->mutex;
     event_to_proc = self->xrdp_encoder_event_to_proc;
 
-    term_obj = g_get_term_event();
+    term_obj = g_get_term();
     lterm_obj = self->xrdp_encoder_term;
 
     cont = 1;

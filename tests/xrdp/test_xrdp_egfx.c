@@ -34,31 +34,43 @@
 #include "log.h"
 #include "os_calls.h"
 #include <stdlib.h>
-
+#include "xrdp_egfx.h"
 #include "test_xrdp.h"
 
-int main (void)
+START_TEST(test_xrdp_egfx_send_create_surface__happy_path)
 {
-    int number_failed;
-    SRunner *sr;
-    struct log_config *logging;
+    struct xrdp_egfx_bulk *bulk = g_new0(struct xrdp_egfx_bulk, 1);
 
-    /* Configure the logging sub-system so that functions can use
-     * the log functions as appropriate */
-    logging = log_config_init_for_console(LOG_LEVEL_INFO,
-                                          g_getenv("TEST_LOG_LEVEL"));
-    log_start_from_param(logging);
-    log_config_free(logging);
+    const int surface_id = 0xFF;
+    const int width = 640;
+    const int height = 480;
+    const int pixel_format = 32;
 
-    sr = srunner_create (make_suite_test_bitmap_load());
-    srunner_add_suite(sr, make_suite_egfx_base_functions());
+    struct stream *s = xrdp_egfx_create_surface(
+                           bulk, surface_id, width, height, pixel_format);
+    s->p = s->data;
 
-    srunner_set_tap(sr, "-");
-    srunner_run_all (sr, CK_ENV);
-    number_failed = srunner_ntests_failed(sr);
-    srunner_free(sr);
-
-    log_end();
-
-    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+    unsigned char descriptor;
+    in_uint8(s, descriptor);
+    ck_assert_int_eq(0xE0, descriptor);
 }
+END_TEST
+
+/******************************************************************************/
+Suite *
+make_suite_egfx_base_functions(void)
+{
+    Suite *s;
+    TCase *tc_process_monitors;
+
+    s = suite_create("test_xrdp_egfx_base_functions");
+
+    tc_process_monitors = tcase_create("xrdp_egfx_base_functions");
+    tcase_add_test(tc_process_monitors,
+                   test_xrdp_egfx_send_create_surface__happy_path);
+
+    suite_add_tcase(s, tc_process_monitors);
+
+    return s;
+}
+

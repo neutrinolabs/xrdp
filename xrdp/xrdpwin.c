@@ -124,13 +124,6 @@ g_set_term(int in_val)
 
 /*****************************************************************************/
 tbus
-g_get_term_event(void)
-{
-    return g_term_event;
-}
-
-/*****************************************************************************/
-tbus
 g_get_sync_event(void)
 {
     return g_sync_event;

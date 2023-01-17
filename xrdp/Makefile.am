@@ -60,7 +60,8 @@ xrdp_SOURCES = \
   xrdp_types.h \
   xrdp_egfx.c \
   xrdp_egfx.h \
-  xrdp_wm.c
+  xrdp_wm.c \
+  xrdp_main_utils.c
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \

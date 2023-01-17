@@ -23,6 +23,8 @@
 
 #include "xrdp_rail.h"
 
+struct list;
+
 /* struct xrdp_client_info moved to xrdp_client_info.h */
 
 struct xrdp_brush
