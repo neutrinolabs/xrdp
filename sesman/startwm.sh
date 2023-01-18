@@ -10,7 +10,7 @@
 # Execution sequence for interactive login shell - pseudocode
 #
 # IF /etc/profile is readable THEN
-#     execute ~/.bash_profile
+#     execute /etc/profile
 # END IF
 # IF ~/.bash_profile is readable THEN
 #     execute ~/.bash_profile
