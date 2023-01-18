@@ -803,8 +803,7 @@ devredir_proc_client_core_cap_resp(struct stream *s)
 
             case CAP_SMARTCARD_TYPE:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "got CAP_SMARTCARD_TYPE");
-                g_is_smartcard_redir_supported = 1;
-                scard_init();
+                g_is_smartcard_redir_supported = (scard_init() == 0);
                 break;
         }
         xstream_seek(s, cap_len);
