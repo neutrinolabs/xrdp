@@ -24,6 +24,8 @@ xrdp_sesman_SOURCES = \
   scp_process.h \
   sesman.c \
   sesman.h \
+  sesexec_control.c \
+  sesexec_control.h \
   session.c \
   session.h \
   session_list.c \
