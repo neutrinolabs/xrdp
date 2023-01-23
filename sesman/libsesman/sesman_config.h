@@ -44,6 +44,11 @@ enum SESMAN_CFG_SESS_POLICY_BITS
 };
 
 /**
+ * Name of default sesman.ini file
+ */
+#define DEFAULT_SESMAN_INI XRDP_CFG_PATH "/sesman.ini"
+
+/**
  *
  * @struct config_security
  * @brief struct that contains sesman access control configuration
