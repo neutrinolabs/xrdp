@@ -41,12 +41,28 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             long sync_param2);
 int
 xrdp_child_fork(void);
+long
+g_get_sync_mutex(void);
+void
+g_set_sync_mutex(long mutex);
+long
+g_get_sync1_mutex(void);
+void
+g_set_sync1_mutex(long mutex);
+void
+g_set_term_event(tbus event);
+void
+g_set_sync_event(tbus event);
+long
+g_get_threadid(void);
+void
+g_set_threadid(long id);
+tbus
+g_get_term(void);
 int
 g_is_term(void);
 void
 g_set_term(int in_val);
-tbus
-g_get_term_event(void);
 tbus
 g_get_sync_event(void);
 void

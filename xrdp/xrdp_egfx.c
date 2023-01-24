@@ -18,6 +18,14 @@
  * MS-RDPEGFX
  */
 
+/**
+ *
+ * @file xrdp_egfx.c
+ * @brief Stream functions for the EGFX extension to the MSRDP protocol.
+ * @author Jay Sorg, Christopher Pitstick
+ *
+ */
+
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -29,7 +37,6 @@
 #include "arch.h"
 #include "os_calls.h"
 #include "parse.h"
-#include "xrdp.h"
 #include "xrdp_egfx.h"
 #include "libxrdp.h"
 #include "xrdp_channel.h"

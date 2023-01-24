@@ -1692,12 +1692,7 @@ int
 g_set_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
-    if (obj == 0)
-    {
-        return 0;
-    }
-    SetEvent((HANDLE)obj);
-    return 0;
+#error "Win32 is no longer supported."
 #else
     int error;
     int fd;
@@ -1709,7 +1704,7 @@ g_set_wait_obj(tintptr obj)
     {
         return 0;
     }
-    fd = obj & 0xffff;
+    fd = obj & USHRT_MAX;
     if (g_fd_can_read(fd))
     {
         /* already signalled */

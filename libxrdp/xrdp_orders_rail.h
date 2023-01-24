@@ -19,6 +19,8 @@
 #if !defined(_XRDP_ORDERS_RAIL_H)
 #define _XRDP_ORDERS_RAIL_H
 
+#include "libxrdp.h"
+
 int
 xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id);
 int
