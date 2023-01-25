@@ -25,8 +25,11 @@
 #include <config_ac.h>
 #endif
 
+#include <unistd.h>
+
 #include "xrdpvr.h"
 #include "xrdpvr_internal.h"
+#include "xrdpapi.h"
 
 /* globals */
 PLAYER_STATE_INFO g_psi;
@@ -36,7 +39,7 @@ int g_audio_index = -1;
 /*****************************************************************************/
 /* produce a hex dump */
 void
-hexdump(char *p, int len)
+hexdump(void *p, int len)
 {
     unsigned char *line;
     int i;
@@ -95,7 +98,7 @@ xrdpvr_init_player(void *channel, int stream_id, char *filename)
         return -1;
     }
 
-    xrdpvr_send_init(channel);
+    return xrdpvr_send_init(channel);
 }
 
 /**
@@ -110,8 +113,7 @@ int
 xrdpvr_deinit_player(void *channel, int stream_id)
 {
     STREAM  *s;
-    char    *cptr;
-    int     rv;
+    u8      *cptr;
     int     len;
 
     if ((channel == NULL) || (stream_id <= 0))
@@ -135,10 +137,13 @@ xrdpvr_deinit_player(void *channel, int stream_id)
         avcodec_close(g_psi.p_video_codec_ctx);
         g_psi.p_video_codec_ctx = 0;
     }
-    //avformat_close_input(&g_psi.p_format_ctx);
     if (g_psi.p_format_ctx != 0)
     {
+#if HAVE_AVFORMAT_CLOSE_INPUT
+        avformat_close_input(&g_psi.p_format_ctx);
+#else
         av_close_input_file(g_psi.p_format_ctx);
+#endif
         g_psi.p_format_ctx = 0;
     }
 
@@ -158,7 +163,7 @@ xrdpvr_deinit_player(void *channel, int stream_id)
     s->p = cptr;
 
     /* write data to virtual channel */
-    rv = xrdpvr_write_to_client(channel, s);
+    xrdpvr_write_to_client(channel, s);
     stream_free(s);
 
     return 0;
@@ -176,27 +181,41 @@ xrdpvr_deinit_player(void *channel, int stream_id)
 int
 xrdpvr_play_media(void *channel, int stream_id, char *filename)
 {
-    int i;
+    int i, err;
 
     printf("$$$$$$ xrdpvr_play_media: setting audioTimeout & "
            "videoTimeout to -1\n");
     g_psi.videoTimeout = -1;
     g_psi.audioTimeout = -1;
 
-    /* register all available fileformats and codecs */
+    /* register all available fileformats and codecs
+     *
+     * FIXME -- this function is deprecated and eventually
+     * will be removed from the library. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     av_register_all();
+#pragma GCC diagnostic pop
 
     /* open media file - this will read just the header */
-    //if (avformat_open_input(&g_psi.p_format_ctx, filename, NULL, NULL))
-    if (av_open_input_file(&g_psi.p_format_ctx, filename, NULL, 0, NULL))
+#if HAVE_AVFORMAT_OPEN_INPUT
+    err = avformat_open_input(&g_psi.p_format_ctx, filename, NULL, NULL);
+#else
+    err = av_open_input_file(&g_psi.p_format_ctx, filename, NULL, 0, NULL);
+#endif
+    if (err)
     {
         printf("ERROR opening %s\n", filename);
         return -1;
     }
 
     /* now get the real stream info */
-    //if (avformat_find_stream_info(g_psi.p_format_ctx, NULL) < 0)
-    if (av_find_stream_info(g_psi.p_format_ctx) < 0)
+#if HAVE_AVFORMAT_FIND_STREAM_INFO
+    err = avformat_find_stream_info(g_psi.p_format_ctx, NULL);
+#else
+    err = av_find_stream_info(g_psi.p_format_ctx);
+#endif
+    if (err < 0)
     {
         printf("ERROR reading stream info\n");
         return -1;
@@ -213,8 +232,12 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     g_video_index = -1;
 
     /* find first audio / video stream */
-    for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
+    for (i = 0; i < (int) g_psi.p_format_ctx->nb_streams; i++)
     {
+        /* FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
+         * is deprecated */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type ==
                 CODEC_TYPE_VIDEO &&
                 g_psi.p_format_ctx->streams[i]->codec->codec_id ==
@@ -232,23 +255,33 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
         {
             g_audio_index = i;
         }
+#pragma GCC diagnostic pop
     }
 
     if ((g_audio_index < 0) || (g_video_index < 0))
     {
         /* close file and return with error */
         printf("ERROR: no audio/video stream found in %s\n", filename);
-        //avformat_close_input(&g_psi.p_format_ctx);
+#if HAVE_AVFORMAT_CLOSE_INPUT
+        avformat_close_input(&g_psi.p_format_ctx);
+#else
         av_close_input_file(g_psi.p_format_ctx);
+#endif
         return -1;
     }
 
     g_psi.audio_stream_index = g_audio_index;
     g_psi.video_stream_index = g_video_index;
 
-    /* get pointers to codex contexts for both streams */
+    /* get pointers to codex contexts for both streams
+     *
+     * FIXME -- AVCodecContext::codec (_psi.p_format_ctx->streams[i]->codec)
+     * is deprecated */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     g_psi.p_audio_codec_ctx = g_psi.p_format_ctx->streams[g_audio_index]->codec;
     g_psi.p_video_codec_ctx = g_psi.p_format_ctx->streams[g_video_index]->codec;
+#pragma GCC diagnostic pop
 
     /* find decoder for audio stream */
     g_psi.p_audio_codec =
@@ -269,9 +302,12 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     }
 
     /* open decoder for audio stream */
-    //if (avcodec_open2(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec,
-    //                  NULL) < 0)
-    if (avcodec_open(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec) < 0)
+#if HAVE_AVCODEC_OPEN2
+    err = avcodec_open2(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec, NULL);
+#else
+    err = avcodec_open(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec);
+#endif
+    if (err < 0)
     {
         printf("ERROR: could not open audio decoder\n");
         return -1;
@@ -281,20 +317,29 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     hexdump(g_psi.p_audio_codec_ctx->extradata,
             g_psi.p_audio_codec_ctx->extradata_size);
     printf("%d %d %d %d\n", g_psi.p_audio_codec_ctx->sample_rate,
-           g_psi.p_audio_codec_ctx->bit_rate,
+           (int)g_psi.p_audio_codec_ctx->bit_rate,
            g_psi.p_audio_codec_ctx->channels,
            g_psi.p_audio_codec_ctx->block_align);
 
     /* open decoder for video stream */
-    //if (avcodec_open2(g_psi.p_video_codec_ctx, g_psi.p_video_codec,
-    //                  NULL) < 0)
-    if (avcodec_open(g_psi.p_video_codec_ctx, g_psi.p_video_codec) < 0)
+#if HAVE_AVCODEC_OPEN2
+    err = avcodec_open2(g_psi.p_video_codec_ctx, g_psi.p_video_codec, NULL);
+#else
+    err = avcodec_open(g_psi.p_video_codec_ctx, g_psi.p_video_codec);
+#endif
+    if (err < 0)
     {
         printf("ERROR: could not open video decoder\n");
         return -1;
     }
 
+    /* FIXME -- this function is deprecated and eventually
+     * will be removed from the library. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     g_psi.bsfc = av_bitstream_filter_init("h264_mp4toannexb");
+#pragma GCC diagnostic pop
+
     printf("g_psi.bsfc %p\n", g_psi.bsfc);
 
     if (xrdpvr_set_video_format(channel, 101, 0,
@@ -307,7 +352,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
 
     printf("xrdpvr_play_media: calling xrdpvr_set_audio_format\n");
     if (xrdpvr_set_audio_format(channel, 101, 0,
-                                g_psi.p_audio_codec_ctx->extradata,
+                                (char *)g_psi.p_audio_codec_ctx->extradata,
                                 g_psi.p_audio_codec_ctx->extradata_size,
                                 g_psi.p_audio_codec_ctx->sample_rate,
                                 g_psi.p_audio_codec_ctx->bit_rate,
@@ -378,14 +423,28 @@ xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame, int *delay_in_us)
         while (bsfc != 0)
         {
             new_pkt = *av_pkt;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             error = av_bitstream_filter_filter(bsfc, g_psi.p_video_codec_ctx, 0,
                                                &new_pkt.data, &new_pkt.size,
                                                av_pkt->data, av_pkt->size,
                                                av_pkt->flags & PKT_FLAG_KEY);
+#pragma GCC diagnostic pop
+
             if (error > 0)
             {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
                 av_free_packet(av_pkt);
+#pragma GCC diagnostic pop
+
+                /* Note, if av_destruct_packet is not available (this
+                 * is obsoleted at some point), its functionality is
+                 * implied by av_packet_free()/av_packet_unref() */
+#if HAVE_AV_DESTRUCT_PACKET
                 new_pkt.destruct = av_destruct_packet;
+#endif
             }
             else if (error < 0)
             {
@@ -426,10 +485,17 @@ int
 send_audio_pkt(void *channel, int stream_id, void *pkt_p)
 {
     AVPacket *av_pkt = (AVPacket *) pkt_p;
+    int      err;
 
-    xrdpvr_send_audio_data(channel, stream_id, av_pkt->size, av_pkt->data);
+    err = xrdpvr_send_audio_data(channel, stream_id, av_pkt->size, av_pkt->data);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     av_free_packet(av_pkt);
+#pragma GCC diagnostic pop
     free(av_pkt);
+
+    return err;
 }
 
 /******************************************************************************/
@@ -437,10 +503,17 @@ int
 send_video_pkt(void *channel, int stream_id, void *pkt_p)
 {
     AVPacket *av_pkt = (AVPacket *) pkt_p;
+    int      err;
 
-    xrdpvr_send_video_data(channel, stream_id, av_pkt->size, av_pkt->data);
+    err = xrdpvr_send_video_data(channel, stream_id, av_pkt->size, av_pkt->data);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     av_free_packet(av_pkt);
+#pragma GCC diagnostic pop
     free(av_pkt);
+
+    return err;
 }
 
 /******************************************************************************/
@@ -494,14 +567,27 @@ xrdpvr_play_frame(void *channel, int stream_id, int *videoTimeout,
         while (bsfc != 0)
         {
             new_pkt = av_pkt;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             error = av_bitstream_filter_filter(bsfc, g_psi.p_video_codec_ctx, 0,
                                                &new_pkt.data, &new_pkt.size,
                                                av_pkt.data, av_pkt.size,
                                                av_pkt.flags & PKT_FLAG_KEY);
+#pragma GCC diagnostic pop
+
             if (error > 0)
             {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
                 av_free_packet(&av_pkt);
+#pragma GCC diagnostic pop
+
+                /* Note, if av_destruct_packet is not available (this
+                 * is obsoleted at some point), its functionality is
+                 * implied by av_packet_free()/av_packet_unref() */
+#if HAVE_AV_DESTRUCT_PACKET
                 new_pkt.destruct = av_destruct_packet;
+#endif
             }
             else if (error < 0)
             {
@@ -534,7 +620,11 @@ xrdpvr_play_frame(void *channel, int stream_id, int *videoTimeout,
         usleep(delay_in_us);
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     av_free_packet(&av_pkt);
+#pragma GCC diagnostic pop
+
     return 0;
 }
 
@@ -581,7 +671,7 @@ xrdpvr_set_geometry(void *channel, int stream_id, int xpos, int ypos,
                     int width, int height)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 
@@ -623,7 +713,7 @@ xrdpvr_set_video_format(void *channel, uint32_t stream_id, int format,
                         int width, int height)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 
@@ -663,7 +753,7 @@ xrdpvr_set_audio_format(void *channel, uint32_t stream_id, int format,
                         int bit_rate, int channels, int block_align)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 
@@ -713,7 +803,7 @@ xrdpvr_send_video_data(void *channel, uint32_t stream_id,
                        uint32_t data_len, uint8_t *data)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 
@@ -759,7 +849,7 @@ xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len,
                        uint8_t *data)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 
@@ -798,7 +888,7 @@ int
 xrdpvr_create_metadata_file(void *channel, char *filename)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
     int     fd;
@@ -876,7 +966,7 @@ xrdpvr_read_from_client(void *channel, STREAM *s, int bytes, int timeout)
     {
         //printf("xrdpvr_read_from_client: loop\n");
         bytes_read = bytes - total_read;
-        ok = WTSVirtualChannelRead(channel, timeout, s->p, bytes_read,
+        ok = WTSVirtualChannelRead(channel, timeout, (char *)s->p, bytes_read,
                                    &bytes_read);
         //printf("xrdpvr_read_from_client: loop ok %d\n", ok);
         if (ok)
@@ -901,7 +991,7 @@ static int
 xrdpvr_write_to_client(void *channel, STREAM *s)
 {
     int bytes_to_send;
-    int bytes_written;
+    unsigned int bytes_written;
     int index = 0;
     int rv;
 
@@ -914,7 +1004,7 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
 
     while (1)
     {
-        rv = WTSVirtualChannelWrite(channel, &s->data[index], bytes_to_send,
+        rv = WTSVirtualChannelWrite(channel, (char *)&s->data[index], bytes_to_send,
                                     &bytes_written);
 
         if (rv == 0)
@@ -941,7 +1031,7 @@ int
 xrdpvr_set_volume(void *channel, int volume)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 
@@ -968,7 +1058,7 @@ int
 xrdpvr_send_init(void *channel)
 {
     STREAM  *s;
-    char    *cptr;
+    u8      *cptr;
     int     rv;
     int     len;
 

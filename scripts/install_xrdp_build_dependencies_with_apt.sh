@@ -88,6 +88,8 @@ in
                 PACKAGES="$PACKAGES \
                     $PACKAGES_AMD64_MIN
                     $LIBFREETYPE_DEV \
+		    libavcodec-dev \
+		    libavformat-dev \
                     libfuse-dev \
                     libjpeg-dev \
                     libmp3lame-dev \
