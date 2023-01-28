@@ -869,7 +869,7 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
     }
     else if (g_client_does_mp3lame)
     {
-        g_bbuf_size = 11520;
+        g_bbuf_size = 1152 * 4; // samples per frame (1152) x 16bit(2 Bytes) x 2ch.
         return sound_wave_compress_mp3lame(data, data_bytes, format_index);
     }
     return data_bytes;
@@ -1095,6 +1095,21 @@ process_pcm_message(int id, int size, struct stream *s)
             return sound_send_wave_data(s->p, size);
             break;
         case 1:
+            if (g_client_does_fdk_aac || g_client_does_mp3lame)
+            {
+                /* workaround for mstsc.exe. send silence data before send close */
+                int send_silence_times = g_client_does_fdk_aac ? 4 : 6;  /* This value comes by trial and error */
+                char *buf = (char *)g_malloc(g_bbuf_size, 0);
+                if (buf != NULL)
+                {
+                    for (int i = 0; i < send_silence_times; i++)
+                    {
+                        g_memset(buf, 0, g_bbuf_size - g_buf_index);
+                        sound_send_wave_data(buf, g_bbuf_size - g_buf_index);
+                    }
+                    free(buf);
+                }
+            }
             return sound_send_close();
             break;
         default:
