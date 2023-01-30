@@ -2795,10 +2795,14 @@ static unsigned int format_user_info(char *dest, unsigned int len,
 {
     char uidstr[64];
     char username[64];
+    char display[64];
+    char displaynum[64];
     const struct info_string_tag map[] =
     {
         {'u', uidstr},
         {'U', username},
+        {'d', displaynum},
+        {'D', display},
         INFO_STRING_END_OF_LIST
     };
 
@@ -2808,6 +2812,42 @@ static unsigned int format_user_info(char *dest, unsigned int len,
     {
         /* Fall back to UID */
         g_strncpy(username, uidstr, sizeof(username) - 1);
+    }
+
+    if (getenv("DISPLAY") == NULL)
+    {
+        /* if environment variable is not set, set it to empty string */
+        g_strncpy(display, "", 1);
+        g_strncpy(displaynum, "-1", 3);
+    }
+    else
+    {
+        const char *start = display;
+        const char *end = NULL;
+        g_strncpy(display, getenv("DISPLAY"), sizeof(display) - 1);
+        while (*start != '\0' && *start != ':')
+        {
+            start++;
+        }
+        if (*start == ':')
+        {
+            start++;
+        }
+        else
+        {
+            start = display;
+        }
+
+        end = start;
+        while (*end != '\0' && *end != '.')
+        {
+            end++;
+        }
+        if (end - start > (sizeof(displaynum) - 1))
+        {
+            end = start + sizeof(displaynum) - 1;
+        }
+        g_strncpy(displaynum, start, end - start);
     }
 
     return g_format_info_string(dest, len, format, map);
