@@ -316,6 +316,8 @@ If first character is a '/' this is an absolute path. The following
 substitutions are made in this string:-
     %U - Username
     %u - Numeric UID
+    %d - Numeric display number (ex 10)
+    %D - Display environment variable (ex :10.0)
     %% - Percent character
 .P
 If this format is used:-
