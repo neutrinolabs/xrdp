@@ -18,6 +18,9 @@
  * main include file
  */
 
+#ifndef _XRDP_XRDP_H_
+#define _XRDP_XRDP_H_
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -595,3 +598,4 @@ server_add_char_alpha(struct xrdp_mod *mod, int font, int character,
 int
 server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes);
 
+#endif
