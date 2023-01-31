@@ -312,15 +312,12 @@ Created if it doesn't exist. If not specified, defaults to \fIxrdp_client\fR.
 If first character is not a '/', this is relative to $HOME.
 .P
 .RS
-If first character is a '/' this is an absolute path. The following
-substitutions are made in this string:-
+The following substitutions are made in this string:-
     %U - Username
     %u - Numeric UID
     %d - Numeric display number (ex 10)
     %D - Display environment variable (ex :10.0)
     %% - Percent character
-.P
-If this format is used:-
 .HP 3
 1) The directory path permissions MUST be configured correctly by
 the system administrator or the system itself - xrdp-chansrv will not
