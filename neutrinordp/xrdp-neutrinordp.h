@@ -17,6 +17,9 @@
  * limitations under the License.
  */
 
+#ifndef XRDP_NEUTRINORDP_H
+#define XRDP_NEUTRINORDP_H
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -235,3 +238,5 @@ struct mod
     int allow_client_kbd_settings;
     struct kbd_overrides kbd_overrides; /* neutrinordp.overide_kbd_* values */
 };
+
+#endif // XRDP_NEUTRINORDP_H

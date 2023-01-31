@@ -18,6 +18,9 @@
  * media center
  */
 
+#ifndef MC_H
+#define MC_H
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -102,3 +105,5 @@ struct mod
     int height;
     int bpp;
 };
+
+#endif // MC_H
