@@ -516,10 +516,25 @@ xfuse_init(void)
     {
         /* mount_name is relative to $HOME, e.g. ~/xrdp_client,
          * or ~/thinclient_drives */
-        g_snprintf(g_fuse_root_path, sizeof(g_fuse_root_path), "%s/%s",
-                   g_getenv("HOME"), g_cfg->fuse_mount_name);
-    }
+        int home_path_length = 0;
+        g_strncpy(g_fuse_root_path, g_getenv("HOME"), sizeof(g_fuse_root_path));
+        home_path_length = g_strlen(g_fuse_root_path);
 
+        if (home_path_length + 1 > sizeof(g_fuse_root_path))
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Fuse root path variable is not big enough to hold the full path");
+            return -1;
+        }
+        if (g_fuse_root_path[home_path_length] != '/')
+        {
+            g_fuse_root_path[home_path_length] = '/';
+            home_path_length ++;
+            g_fuse_root_path[home_path_length] = '\0';
+        }
+        format_user_info(g_fuse_root_path + home_path_length, sizeof(g_fuse_root_path) - home_path_length, g_cfg->fuse_mount_name);
+
+    }
     /* Remove all trailing '/' from the root path */
     p = g_fuse_root_path + g_strlen(g_fuse_root_path);
     while ( p > g_fuse_root_path && *(p - 1) == '/')
