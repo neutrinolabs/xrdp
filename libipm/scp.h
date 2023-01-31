@@ -164,19 +164,16 @@ scp_msg_in_wait_available(struct trans *trans);
 
 
 /**
- * Start parsing an SCP message
+ * Gets the SCP message number of an incoming message
  *
  * @param trans SCP transport
  * @return message in the buffer
  *
  * The results of calling this routine before scp_msg_in_check_available()
  * states a message is available are undefined.
- *
- * Calling this function rests the message parsing pointer to the start
- * of the message
  */
 enum scp_msg_code
-scp_msg_in_start(struct trans *trans);
+scp_msg_in_get_msgno(const struct trans *trans);
 
 /**
  * Resets an SCP message buffer ready to receive the next message

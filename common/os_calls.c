@@ -1408,7 +1408,7 @@ g_sck_last_error_would_block(int sck)
 
 /*****************************************************************************/
 int
-g_sck_recv(int sck, void *ptr, int len, int flags)
+g_sck_recv(int sck, void *ptr, unsigned int len, int flags)
 {
 #if defined(_WIN32)
     return recv(sck, (char *)ptr, len, flags);
@@ -1419,13 +1419,152 @@ g_sck_recv(int sck, void *ptr, int len, int flags)
 
 /*****************************************************************************/
 int
-g_sck_send(int sck, const void *ptr, int len, int flags)
+g_sck_send(int sck, const void *ptr, unsigned int len, int flags)
 {
 #if defined(_WIN32)
     return send(sck, (const char *)ptr, len, flags);
 #else
     return send(sck, ptr, len, flags);
 #endif
+}
+
+/*****************************************************************************/
+int
+g_sck_recv_fd_set(int sck, void *ptr, unsigned int len,
+                  int fds[], unsigned int maxfd,
+                  unsigned int *fdcount)
+{
+    int rv = -1;
+#if !defined(_WIN32)
+    // The POSIX API gives us no way to see how much ancillary data is
+    // present for recvmsg() - just use a big buffer.
+    //
+    // Use a union, so control_un.control is properly aligned.
+    union
+    {
+        struct cmsghdr cm;
+        unsigned char control[8192];
+    } control_un;
+    struct msghdr msg = {0};
+
+    *fdcount = 0;
+
+    /* Set up descriptor for vanilla data */
+    struct iovec iov[1] = { {ptr, len} };
+    msg.msg_iov = &iov[0];
+    msg.msg_iovlen = 1;
+
+    /* Add in the ancillary data buffer */
+    msg.msg_control = control_un.control;
+    msg.msg_controllen = sizeof(control_un.control);
+
+    if ((rv = recvmsg(sck, &msg, 0)) > 0)
+    {
+        struct cmsghdr *cmsg;
+        if ((msg.msg_flags & MSG_CTRUNC) != 0)
+        {
+            LOG(LOG_LEVEL_WARNING, "Ancillary data on recvmsg() was truncated");
+        }
+
+        // Iterate over the cmsghdr structures in the ancillary data
+        for (cmsg = CMSG_FIRSTHDR(&msg);
+                cmsg != NULL;
+                cmsg = CMSG_NXTHDR(&msg, cmsg))
+        {
+            if (cmsg->cmsg_level == SOL_SOCKET &&
+                    cmsg->cmsg_type == SCM_RIGHTS)
+            {
+                const unsigned char *data = CMSG_DATA(cmsg);
+                unsigned int data_len = cmsg->cmsg_len - CMSG_LEN(0);
+
+                // Check the data length doesn't point past the end of
+                // control_un.control (see below). This shouldn't happen,
+                // but is conceivable if the ancillary data is truncated
+                // and the OS doesn't handle that properly.
+                //
+                // <--  (sizeof(control_un.control)   -->
+                // +------------------------------------+
+                // |                                    |
+                // +------------------------------------+
+                // ^                       ^
+                // |                       | <- data_len ->
+                // |                       |
+                // control_un.control      data
+                unsigned int max_data_len =
+                    sizeof(control_un.control) - (data - control_un.control);
+                if (len > max_data_len)
+                {
+                    len = max_data_len;
+                }
+
+                // Process all the file descriptors in the structure
+                while (data_len >= sizeof(int))
+                {
+                    int fd;
+                    memcpy(&fd, data, sizeof(int));
+                    data += sizeof(int);
+                    data_len -= sizeof(int);
+
+                    if (*fdcount < maxfd)
+                    {
+                        fds[(*fdcount)++] = fd;
+                    }
+                    else
+                    {
+                        // No room in the user's buffer for this fd
+                        close(fd);
+                    }
+                }
+            }
+        }
+    }
+#endif /* !WIN32 */
+
+    return rv;
+}
+
+/*****************************************************************************/
+int
+g_sck_send_fd_set(int sck, const void *ptr, unsigned int len,
+                  int fds[], unsigned int fdcount)
+{
+    int rv = -1;
+#if !defined(_WIN32)
+    struct msghdr msg = {0};
+
+    /* Set up descriptor for vanilla data */
+    struct iovec iov[1] = { {(void *)ptr, len} };
+    msg.msg_iov = &iov[0];
+    msg.msg_iovlen = 1;
+
+    if (fdcount > 0)
+    {
+        unsigned int fdsize = sizeof(fds[0]) * fdcount; /* Payload size */
+        /* Allocate ancillary data structure */
+        msg.msg_controllen  = CMSG_SPACE(fdsize);
+        msg.msg_control = (struct cmsghdr *)g_malloc(msg.msg_controllen, 1);
+        if (msg.msg_control == NULL)
+        {
+            /* Memory allocation failure */
+            LOG(LOG_LEVEL_ERROR, "Error allocating buffer for %u fds",
+                fdcount);
+            return -1;
+        }
+
+        /* Fill in the ancillary data structure */
+        struct cmsghdr *cmptr = CMSG_FIRSTHDR(&msg);
+        cmptr->cmsg_len = CMSG_LEN(fdsize);
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+        memcpy(CMSG_DATA(cmptr), fds, fdsize);
+    }
+
+    rv = sendmsg(sck, &msg, 0);
+    g_free(msg.msg_control);
+
+#endif /* !WIN32 */
+
+    return rv;
 }
 
 /*****************************************************************************/

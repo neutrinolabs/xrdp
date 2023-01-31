@@ -187,11 +187,10 @@ libipm_msg_in_wait_available(struct trans *trans)
 /*****************************************************************************/
 
 unsigned short
-libipm_msg_in_start(struct trans *trans)
+libipm_msg_in_get_msgno(const struct trans *trans)
 {
     struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
 
-    trans->in_s->p = trans->in_s->data + HEADER_SIZE;
     return (priv == NULL) ? 0 : priv->in_msgno;
 }
 
@@ -461,6 +460,36 @@ extract_char_ptr_type(char c, struct trans *trans, va_list *argptr)
     return rv;
 }
 
+
+/**************************************************************************//**
+ * Extract a file descriptor from the input stream
+ *
+ * @param c Type letter which triggered the call
+ * @param trans libipm transport
+ * @param argptr argptr to pointer to receive the value
+ * @return != 0 for error
+ */
+static enum libipm_status
+extract_fd_type(char c, struct trans *trans, va_list *argptr)
+{
+    enum libipm_status rv = E_LI_SUCCESS;
+    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+
+    /* File descriptor available? */
+    if (priv->in_fd_index >= priv->in_fd_count)
+    {
+        log_parse_error(trans, "No file descriptors available");
+        rv = E_LI_TOO_MANY_FDS;
+    }
+    else
+    {
+        int *tmp = va_arg(*argptr, int *);
+
+        *tmp = priv->in_fds[priv->in_fd_index++];
+    }
+    return rv;
+}
+
 /**************************************************************************//**
  * Extract a fixed size block from the input stream
  *
@@ -589,6 +618,10 @@ libipm_msg_in_parsev(struct trans *trans, const char *format, va_list *argptr)
                     rv = extract_char_ptr_type(c, trans, argptr);
                     break;
 
+                case 'h':
+                    rv = extract_fd_type(c, trans, argptr);
+                    break;
+
                 case 'B':
                     rv = extract_fsb_type(c, trans, argptr);
                     break;
@@ -651,6 +684,7 @@ libipm_msg_in_reset(struct trans *trans)
         }
         priv->in_msgno = 0;
         priv->in_param_count = 0;
+        libipm_msg_in_close_file_descriptors(trans);
     }
 
     trans->extra_flags = 0;

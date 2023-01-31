@@ -33,6 +33,7 @@
 
 #include "log.h"
 #include "os_calls.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "test_xrdp.h"
@@ -49,6 +50,9 @@ int main (void)
                                           g_getenv("TEST_LOG_LEVEL"));
     log_start_from_param(logging);
     log_config_free(logging);
+    /* Disable stdout buffering, as this can confuse the error
+     * reporting when running in libcheck fork mode */
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     sr = srunner_create (make_suite_test_bitmap_load());
     srunner_add_suite(sr, make_suite_egfx_base_functions());

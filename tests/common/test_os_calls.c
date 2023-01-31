@@ -4,6 +4,10 @@
 #endif
 
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <poll.h>
+
 #include "os_calls.h"
 
 #include "test_common.h"
@@ -12,6 +16,55 @@
 #define TOP_SRCDIR "."
 #endif
 
+/******************************************************************************/
+/***
+ * Gets the number of open file descriptors for the current process */
+static unsigned int
+get_open_fd_count(void)
+{
+    unsigned int i;
+    unsigned int rv;
+
+    // What's the max number of file descriptors?
+    struct rlimit nofile;
+    if (getrlimit(RLIMIT_NOFILE, &nofile) < 0)
+    {
+        const char *errstr = g_get_strerror();
+        ck_abort_msg("Can't create socketpair [%s]", errstr);
+    }
+
+    struct pollfd *fds =
+        (struct pollfd *)g_malloc(sizeof(struct pollfd) * nofile.rlim_cur, 0);
+    ck_assert_ptr_nonnull(fds);
+
+    for (i = 0 ; i < nofile.rlim_cur; ++i)
+    {
+        fds[i].fd = i;
+        fds[i].events = 0;
+        fds[i].revents = 0;
+    }
+
+    if (poll(fds, nofile.rlim_cur, 0) < 0)
+    {
+        const char *errstr = g_get_strerror();
+        ck_abort_msg("Can't poll fds [%s]", errstr);
+    }
+
+    rv = nofile.rlim_cur;
+    for (i = 0 ; i < nofile.rlim_cur; ++i)
+    {
+        if (fds[i].revents == POLLNVAL)
+        {
+            --rv;
+        }
+    }
+
+    g_free(fds);
+
+    return rv;
+}
+
+/******************************************************************************/
 START_TEST(test_g_file_get_size__returns_file_size)
 {
     unsigned long long size;
@@ -146,6 +199,172 @@ END_TEST
 #endif
 
 /******************************************************************************/
+START_TEST(test_g_sck_fd_passing)
+{
+    int sck[2];
+    char buff[16];
+    int istatus;
+    unsigned int fdcount;
+
+    int devzerofd = g_file_open("/dev/zero");
+    ck_assert(devzerofd >= 0);
+
+    if (g_sck_local_socketpair(sck) != 0)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(devzerofd);
+        ck_abort_msg("Can't create socketpair [%s]", errstr);
+    }
+
+    // Pass the fd for /dev/zero to sck[0]...
+    istatus = g_sck_send_fd_set(sck[0], "?", 1, &devzerofd, 1);
+    if (istatus != 1)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(devzerofd);
+        g_file_close(sck[0]);
+        g_file_close(sck[1]);
+        ck_abort_msg("Can't send fd set [%s]", errstr);
+    }
+
+    // We can now close the fd for /dev/zero, as it's "in flight"
+    g_file_close(devzerofd);
+    devzerofd = -1;
+
+    // Read the fd for /dev/zero from sck[1]
+    fdcount = -1;
+    istatus = g_sck_recv_fd_set(sck[1], buff, sizeof(buff),
+                                &devzerofd, 1, &fdcount);
+    if (istatus != 1)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(sck[0]);
+        g_file_close(sck[1]);
+        ck_abort_msg("Can't receive fd set [%s]", errstr);
+    }
+
+    // Don't need the socket pair any more
+    g_file_close(sck[0]);
+    g_file_close(sck[1]);
+
+    // We should have got 1 fd back, and received a data byte of '?'
+    if (fdcount != 1)
+    {
+        g_file_close(devzerofd);
+        ck_abort_msg("Should have 1 fd, got %u", fdcount);
+    }
+
+    if (buff[0] != '?')
+    {
+        g_file_close(devzerofd);
+        ck_abort_msg("Should have received '?' in buffer");
+    }
+
+    // Does the fd for /dev/zero work?
+    istatus = g_file_read(devzerofd, buff, 1);
+    if (istatus != 1)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(devzerofd);
+        ck_abort_msg("Can't read from /dev/zero fd %d [%s]", devzerofd, errstr);
+    }
+
+    g_file_close(devzerofd);
+
+    ck_assert_int_eq(buff[0], '\0');
+}
+END_TEST
+
+START_TEST(test_g_sck_fd_overflow)
+{
+    int sck[2];
+    char buff[16];
+    int istatus;
+    unsigned int fdcount;
+    int devzerofd[2];
+
+    // Count the number of file descriptors for the process
+    unsigned int base_fd_count = get_open_fd_count();
+    unsigned int proc_fd_count;
+
+    // Open a couple of file descriptors to /dev/zero
+    devzerofd[0] = g_file_open("/dev/zero");
+    devzerofd[1] = g_file_open("/dev/zero");
+    ck_assert(devzerofd[0] >= 0);
+    ck_assert(devzerofd[1] >= 0);
+    proc_fd_count = get_open_fd_count();
+    ck_assert_int_eq(proc_fd_count, base_fd_count + 2);
+
+    if (g_sck_local_socketpair(sck) != 0)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(devzerofd[0]);
+        g_file_close(devzerofd[1]);
+        ck_abort_msg("Can't create socketpair [%s]", errstr);
+    }
+    proc_fd_count = get_open_fd_count();
+    ck_assert_int_eq(proc_fd_count, base_fd_count + 4);
+
+    // Pass the /dev/zero fds to sck[0]...
+    istatus = g_sck_send_fd_set(sck[0], "?", 1, devzerofd, 2);
+    if (istatus != 1)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(devzerofd[0]);
+        g_file_close(devzerofd[1]);
+        g_file_close(sck[0]);
+        g_file_close(sck[1]);
+        ck_abort_msg("Can't send fd set [%s]", errstr);
+    }
+
+    // We can now close fds for /dev/zero, as  they are "in flight"
+    g_file_close(devzerofd[0]);
+    g_file_close(devzerofd[1]);
+    devzerofd[0] = -1;
+    devzerofd[1] = -1;
+    proc_fd_count = get_open_fd_count();
+    ck_assert_int_eq(proc_fd_count, base_fd_count + 2);
+
+    // Read one fd for /dev/zero from sck[1]
+    fdcount = -1;
+    istatus = g_sck_recv_fd_set(sck[1], buff, sizeof(buff),
+                                &devzerofd[0], 1, &fdcount);
+    if (istatus != 1)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(sck[0]);
+        g_file_close(sck[1]);
+        ck_abort_msg("Can't receive fd set [%s]", errstr);
+    }
+
+    // We should now have just ONE more file descriptor
+    proc_fd_count = get_open_fd_count();
+    ck_assert_int_eq(proc_fd_count, base_fd_count + 3);
+
+    // Don't need the socket pair any more
+    g_file_close(sck[0]);
+    g_file_close(sck[1]);
+    proc_fd_count = get_open_fd_count();
+    ck_assert_int_eq(proc_fd_count, base_fd_count + 1);
+
+    // Does the fd for /dev/zero work?
+    istatus = g_file_read(devzerofd[0], buff, 1);
+    if (istatus != 1)
+    {
+        const char *errstr = g_get_strerror();
+        g_file_close(devzerofd[0]);
+        ck_abort_msg("Can't read from /dev/zero fd %d [%s]",
+                     devzerofd[0], errstr);
+    }
+    ck_assert_int_eq(buff[0], '\0');
+
+    g_file_close(devzerofd[0]);
+    proc_fd_count = get_open_fd_count();
+    ck_assert_int_eq(proc_fd_count, base_fd_count);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_test_os_calls(void)
 {
@@ -163,6 +382,8 @@ make_suite_test_os_calls(void)
     tcase_add_test(tc_os_calls, test_g_file_get_size__2GiB);
     tcase_add_test(tc_os_calls, test_g_file_get_size__5GiB);
 #endif
+    tcase_add_test(tc_os_calls, test_g_sck_fd_passing);
+    tcase_add_test(tc_os_calls, test_g_sck_fd_overflow);
 
     return s;
 }

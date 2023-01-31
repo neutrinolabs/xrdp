@@ -2,6 +2,7 @@
 #include "config_ac.h"
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <check.h>
 #include "log.h"
@@ -22,6 +23,9 @@ int main (void)
     struct log_config *lc = log_config_init_for_console(LOG_LEVEL_INFO, NULL);
     log_start_from_param(lc);
     log_config_free(lc);
+    /* Disable stdout buffering, as this can confuse the error
+     * reporting when running in libcheck fork mode */
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     srunner_run_all (sr, CK_ENV);
     number_failed = srunner_ntests_failed(sr);

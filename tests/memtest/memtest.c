@@ -26,6 +26,9 @@ int main(int argc, char **argv)
     config = log_config_init_for_console(LOG_LEVEL_DEBUG, NULL);
     log_start_from_param(config);
     log_config_free(config);
+    /* Disable stdout buffering, as this can confuse the error
+     * reporting when running in libcheck fork mode */
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     srand(time(0));
     obj = libmem_init(0x80000000, 64 * 1024 * 1024);

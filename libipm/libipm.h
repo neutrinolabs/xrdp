@@ -67,6 +67,7 @@ enum libipm_status
     E_LI_UNIMPLEMENTED_TYPE, /***< Specified type code is unimplemented */
     E_LI_UNEXPECTED_TYPE, /***< Encountered unexpected type on input */
     E_LI_BUFFER_OVERFLOW, /***< End of buffer reached unexpectedly */
+    E_LI_TOO_MANY_FDS, /***< Too many file descriptors encountered */
     E_LI_BAD_VALUE, /***< Specified (or incoming) value is out of range */
     E_LI_BAD_HEADER, /***< Bad incoming message header */
     E_LI_TRANSPORT_ERROR /***< Error detected at the transport level */
@@ -154,13 +155,16 @@ libipm_msg_out_init(struct trans *trans, unsigned short msgno,
  *   x  |int64_t  | Signed (two's complement) 64-bit integer
  *   t  |uint64_t | Unsigned 64-bit integer
  *   s  |char *   | NULL-terminated string
+ *   h  |int      | File descriptor
  *   d  |  -      | (reserved)
- *   h  |  -      | (reserved)
  *   o  |  -      | (reserved)
  *   g  |  -      | (reserved)
  *
  * For the 'b' type, only values 0 and 1 are allowed. Other values
  * generate an error.
+ *
+ * The 'h' type can only be used where the underlying transport is a
+ * UNIX domain socket.
  *
  *  The following additions to the D-Bus type system are also supported:-
  *
@@ -219,6 +223,12 @@ libipm_msg_out_erase(struct trans *trans);
  * @param trans libipm transport
  * @param[out] available != 0 if a complete message is available
  * @return != 0 for error
+ *
+ * When 'available' becomes set, the buffer is guaranteed to
+ * be in a parseable state.
+ *
+ * The results of calling this function after starting to parse a message
+ * and before calling libipm_msg_in_reset() are undefined.
  */
 enum libipm_status
 libipm_msg_in_check_available(struct trans *trans, int *available);
@@ -233,6 +243,9 @@ libipm_msg_in_check_available(struct trans *trans, int *available);
  * While the call is active, data-in callbacks for the transport are
  * disabled.
  *
+ * The results of calling this function after starting to parse a message
+ * and before calling libipm_msg_in_reset() are undefined.
+ *
  * Only use this call if you have nothing to do until a message
  * arrives on the transport. If you have other transports to service, use
  * libipm_msg_in_check_available()
@@ -241,7 +254,7 @@ enum libipm_status
 libipm_msg_in_wait_available(struct trans *trans);
 
 /**
- * Start parsing a message
+ * Get the message number for a message in the input buffer.
  *
  * @param trans libipm transport
  * @return message number in the buffer
@@ -250,12 +263,9 @@ libipm_msg_in_wait_available(struct trans *trans);
  * libipm_msg_in_reset() and before a successful call to
  * libipm_msg_in_check_available() (or libipm_msg_wait_available())
  * are undefined.
- *
- * Calling this function resets the message parsing pointer to the start
- * of the message
  */
 unsigned short
-libipm_msg_in_start(struct trans *trans);
+libipm_msg_in_get_msgno(const struct trans *trans);
 
 /**
  * Returns a letter corresponding to the next available type in the
@@ -290,8 +300,8 @@ libipm_msg_in_peek_type(struct trans *trans);
  *   x  | int64_t *  | Signed (two's complement) 64-bit integer
  *   t  | uint64_t * | Unsigned 64-bit integer
  *   s  | char **    | NULL-terminated string
+ *   h  | int *      | File descriptor
  *   d  |   -        | (reserved)
- *   h  |   -        | (reserved)
  *   o  |   -        | (reserved)
  *   g  |   -        | (reserved)
  *
@@ -304,6 +314,9 @@ libipm_msg_in_peek_type(struct trans *trans);
  * For the 's' type, a pointer into the string in the input buffer is
  * returned. This pointer will only be valid until the next call to
  * libipm_msg_in_reset()
+ *
+ * The 'h' type can only be used where the underlying transport is a
+ * UNIX domain socket.
  *
  * For the 'B' type, pass in the address of an initialised descriptor
  * containing the address and size of the object to copy the data
@@ -319,6 +332,9 @@ libipm_msg_in_parse(struct trans *trans, const char *format, ...);
  *
  * If the LIBIPM_E_MSG_IN_ERASE_AFTER_USE flag is set for the transport,
  * the entire buffer is erased, and the flag is cleared
+ *
+ * Any file descriptors received from the other end but not parsed
+ * by the application are closed.
  *
  * @param trans libipm transport
  */

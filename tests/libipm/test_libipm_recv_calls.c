@@ -116,7 +116,7 @@ check_for_incoming_message(unsigned short expected_msgno)
     status = libipm_msg_in_wait_available(g_t_in);
     ck_assert_int_eq(status, E_LI_SUCCESS);
 
-    msgno = libipm_msg_in_start(g_t_in);
+    msgno = libipm_msg_in_get_msgno(g_t_in);
     ck_assert_int_eq(msgno, expected_msgno);
 }
 
@@ -245,13 +245,14 @@ START_TEST(test_libipm_send_recv_all_test)
     int64_t x;
     uint64_t t;
     char *s;
+    int h = -1;
     char B[sizeof(bin_out)];
     char c;
 
     /* The message is small enough to fit in the socket buffer */
     status = libipm_msg_out_simple_send(
                  g_t_out, TEST_MESSAGE_NO,
-                 "ybnqiuxtsB",
+                 "ybnqiuxtshB",
                  TEST_y_VALUE,
                  TEST_b_VALUE,
                  TEST_n_VALUE,
@@ -261,6 +262,7 @@ START_TEST(test_libipm_send_recv_all_test)
                  TEST_x_VALUE,
                  TEST_t_VALUE,
                  TEST_s_VALUE,
+                 g_fd,
                  &binary_desc);
     ck_assert_int_eq(status, E_LI_SUCCESS);
 
@@ -273,8 +275,8 @@ START_TEST(test_libipm_send_recv_all_test)
 
     status = libipm_msg_in_parse(
                  g_t_in,
-                 "ybnqiuxtsB",
-                 &y, &b, &n, &q, &i, &u, &x, &t, &s, &binary_desc);
+                 "ybnqiuxtshB",
+                 &y, &b, &n, &q, &i, &u, &x, &t, &s, &h, &binary_desc);
 
     ck_assert_int_eq(status, E_LI_SUCCESS);
     ck_assert_int_eq(y, TEST_y_VALUE);
@@ -287,6 +289,13 @@ START_TEST(test_libipm_send_recv_all_test)
     ck_assert_int_eq(t, TEST_t_VALUE);
     check_binary_data_eq(TEST_s_VALUE, sizeof(TEST_s_VALUE) - 1,
                          s, g_strlen(s));
+    /* The file descriptor should not be -1, neither should it be
+     * the value we sent. It should also point to /dev/zero */
+    ck_assert_int_ne(h, -1);
+    ck_assert_int_ne(h, g_fd);
+    check_fd_is_dev_zero(h);
+    g_file_close(h);
+
     check_binary_data_eq(bin_out, sizeof(bin_out), B, sizeof(B));
 
     /* Check we're at the end of the message */
@@ -540,8 +549,62 @@ START_TEST(test_libipm_receive_s_type)
 }
 END_TEST
 
+
 /***************************************************************************//**
- * Checks various receive errors for 's'
+ * Checks various receive errors for 'h'
+ */
+START_TEST(test_libipm_receive_h_type)
+{
+    enum libipm_status status;
+    int istatus;
+    unsigned int i;
+    int fd_count;
+
+    /* Get the number of open file descriptors */
+    int base_fd_count = get_open_fd_count();
+    ck_assert_int_gt(base_fd_count, 0);
+
+    /* Send the max number of copies of the /dev/zero
+     * file descriptor */
+    status = libipm_msg_out_init(g_t_out, TEST_MESSAGE_NO, NULL);
+    ck_assert_int_eq(status, E_LI_SUCCESS);
+
+    for (i = 0 ; i < LIBIPM_MAX_FD_PER_MSG; ++i)
+    {
+        status = libipm_msg_out_append(g_t_out, "h", g_fd);
+        ck_assert_int_eq(status, E_LI_SUCCESS);
+    }
+    libipm_msg_out_mark_end(g_t_out);
+    istatus = trans_force_write(g_t_out);
+    ck_assert_int_eq(istatus, 0);
+
+    check_for_incoming_message(TEST_MESSAGE_NO);
+
+    /* Check the number of file descriptors has gone up as expected */
+    fd_count = get_open_fd_count();
+    ck_assert_int_eq(fd_count, base_fd_count + LIBIPM_MAX_FD_PER_MSG);
+
+    /* Check half the descriptors work */
+    for (i = 0 ; i < LIBIPM_MAX_FD_PER_MSG / 2; ++i)
+    {
+        int h = -1;
+        status = libipm_msg_in_parse(g_t_in, "h", &h);
+        ck_assert_int_eq(status, E_LI_SUCCESS);
+        check_fd_is_dev_zero(h);
+        g_file_close(h);
+    }
+
+    /* Close the message without reading the other descriptors */
+    libipm_msg_in_reset(g_t_in);
+
+    /* Check all the file descriptors we received have been closed */
+    fd_count = get_open_fd_count();
+    ck_assert_int_eq(fd_count, base_fd_count);
+}
+END_TEST
+
+/***************************************************************************//**
+ * Checks various receive errors for 'B'
  */
 START_TEST(test_libipm_receive_B_type)
 {
@@ -844,6 +907,7 @@ make_suite_test_libipm_recv_calls(void)
     tcase_add_test(tc, test_libipm_receive_x_type);
     tcase_add_test(tc, test_libipm_receive_t_type);
     tcase_add_test(tc, test_libipm_receive_s_type);
+    tcase_add_test(tc, test_libipm_receive_h_type);
     tcase_add_test(tc, test_libipm_receive_B_type);
     tcase_add_test(tc, test_libipm_receive_no_type);
     tcase_add_test(tc, test_libipm_receive_unexpected_type);
