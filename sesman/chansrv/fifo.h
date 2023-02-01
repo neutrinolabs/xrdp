@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+#ifndef FIFO_H
+#define FIFO_H
+
 /* FIFO implementation to store a pointer to a user struct */
 
 typedef struct fifo
@@ -33,3 +36,4 @@ int   fifo_insert(FIFO *fp, void *data);
 void *fifo_remove(FIFO *fp);
 void *fifo_peek(FIFO *fp);
 
+#endif // FIFO_H

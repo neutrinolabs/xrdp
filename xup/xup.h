@@ -18,6 +18,9 @@
  * libxup main header file
  */
 
+#ifndef XUP_H
+#define XUP_H
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -176,3 +179,5 @@ struct mod
     char *screen_shmem_pixels;
     struct trans *trans;
 };
+
+#endif // XUP_H
