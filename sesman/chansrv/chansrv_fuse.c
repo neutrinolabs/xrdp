@@ -516,25 +516,14 @@ xfuse_init(void)
     {
         /* mount_name is relative to $HOME, e.g. ~/xrdp_client,
          * or ~/thinclient_drives */
-        int home_path_length = 0;
-        g_strncpy(g_fuse_root_path, g_getenv("HOME"), sizeof(g_fuse_root_path));
-        home_path_length = g_strlen(g_fuse_root_path);
-
-        if (home_path_length + 1 > sizeof(g_fuse_root_path))
+        unsigned int len = g_snprintf(g_fuse_root_path, sizeof(g_fuse_root_path), "%s/", g_getenv("HOME"));
+        if (len < sizeof(g_fuse_root_path))
         {
-            LOG(LOG_LEVEL_ERROR,
-                "Fuse root path variable is not big enough to hold the full path");
-            return -1;
+            format_user_info(g_fuse_root_path + len, sizeof(g_fuse_root_path) - len, g_cfg->fuse_mount_name);
         }
-        if (g_fuse_root_path[home_path_length] != '/')
-        {
-            g_fuse_root_path[home_path_length] = '/';
-            home_path_length ++;
-            g_fuse_root_path[home_path_length] = '\0';
-        }
-        format_user_info(g_fuse_root_path + home_path_length, sizeof(g_fuse_root_path) - home_path_length, g_cfg->fuse_mount_name);
 
     }
+
     /* Remove all trailing '/' from the root path */
     p = g_fuse_root_path + g_strlen(g_fuse_root_path);
     while ( p > g_fuse_root_path && *(p - 1) == '/')
@@ -2803,7 +2792,8 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
 }
 
 /*
- * Scans a user-provided string substituting %u/%U for UID/username
+ * Scans a user-provided string substituting %u/%U/ for UID/username
+ * and %d/%D fordisplaynumber/DISPLAY
  */
 static unsigned int format_user_info(char *dest, unsigned int len,
                                      const char *format)
@@ -2832,37 +2822,14 @@ static unsigned int format_user_info(char *dest, unsigned int len,
     if (getenv("DISPLAY") == NULL)
     {
         /* if environment variable is not set, set it to empty string */
-        g_strncpy(display, "", 1);
-        g_strncpy(displaynum, "-1", 3);
+        display[0] = '\0';
+        displaynum[0] = '\0';
     }
     else
     {
-        const char *start = display;
-        const char *end = NULL;
         g_strncpy(display, getenv("DISPLAY"), sizeof(display) - 1);
-        while (*start != '\0' && *start != ':')
-        {
-            start++;
-        }
-        if (*start == ':')
-        {
-            start++;
-        }
-        else
-        {
-            start = display;
-        }
-
-        end = start;
-        while (*end != '\0' && *end != '.')
-        {
-            end++;
-        }
-        if (end - start > (sizeof(displaynum) - 1))
-        {
-            end = start + sizeof(displaynum) - 1;
-        }
-        g_strncpy(displaynum, start, end - start);
+        g_snprintf(displaynum, sizeof(displaynum), "%d",
+                   g_get_display_num_from_display(display));
     }
 
     return g_format_info_string(dest, len, format, map);
