@@ -516,8 +516,12 @@ xfuse_init(void)
     {
         /* mount_name is relative to $HOME, e.g. ~/xrdp_client,
          * or ~/thinclient_drives */
-        g_snprintf(g_fuse_root_path, sizeof(g_fuse_root_path), "%s/%s",
-                   g_getenv("HOME"), g_cfg->fuse_mount_name);
+        unsigned int len = g_snprintf(g_fuse_root_path, sizeof(g_fuse_root_path), "%s/", g_getenv("HOME"));
+        if (len < sizeof(g_fuse_root_path))
+        {
+            format_user_info(g_fuse_root_path + len, sizeof(g_fuse_root_path) - len, g_cfg->fuse_mount_name);
+        }
+
     }
 
     /* Remove all trailing '/' from the root path */
@@ -2788,17 +2792,22 @@ static char *get_name_for_entry_in_parent(fuse_ino_t parent, const char *name)
 }
 
 /*
- * Scans a user-provided string substituting %u/%U for UID/username
+ * Scans a user-provided string substituting %u/%U/ for UID/username
+ * and %d/%D fordisplaynumber/DISPLAY
  */
 static unsigned int format_user_info(char *dest, unsigned int len,
                                      const char *format)
 {
     char uidstr[64];
     char username[64];
+    char display[64];
+    char displaynum[64];
     const struct info_string_tag map[] =
     {
         {'u', uidstr},
         {'U', username},
+        {'d', displaynum},
+        {'D', display},
         INFO_STRING_END_OF_LIST
     };
 
@@ -2808,6 +2817,19 @@ static unsigned int format_user_info(char *dest, unsigned int len,
     {
         /* Fall back to UID */
         g_strncpy(username, uidstr, sizeof(username) - 1);
+    }
+
+    if (getenv("DISPLAY") == NULL)
+    {
+        /* if environment variable is not set, set it to empty string */
+        display[0] = '\0';
+        displaynum[0] = '\0';
+    }
+    else
+    {
+        g_strncpy(display, getenv("DISPLAY"), sizeof(display) - 1);
+        g_snprintf(displaynum, sizeof(displaynum), "%d",
+                   g_get_display_num_from_display(display));
     }
 
     return g_format_info_string(dest, len, format, map);
