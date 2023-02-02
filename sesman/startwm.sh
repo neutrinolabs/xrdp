@@ -55,6 +55,20 @@ post_start()
   return 0
 }
 
+get_xdg_session_startupcmd()
+{
+  # DESKTOP_SESSION should be set in sesman.ini in the SessionVariables section.
+  # If set and valid then the STARTUP command will be taken from there
+  if [ -n "$1" ] && [ -d /usr/share/xsessions ] \
+    && [ -f "/usr/share/xsessions/$1.desktop" ]; then
+    STARTUP=$(grep ^Exec= "/usr/share/xsessions/$1.desktop")
+    STARTUP=${STARTUP#Exec=*}
+    XDG_CURRENT_DESKTOP=$(grep ^DesktopNames= "/usr/share/xsessions/$1.desktop")
+    XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP#DesktopNames=*}
+    echo "env XDG_CURRENT_DESKTOP=\"$XDG_CURRENT_DESKTOP\" $STARTUP"
+  fi
+}
+
 #start the window manager
 wm_start()
 {
@@ -66,6 +80,15 @@ wm_start()
   # debian
   if [ -r /etc/X11/Xsession ]; then
     pre_start
+    
+    # STARTUP is the default startup command.
+    # if $1 is empty and STARTUP was not set
+    # /etc/X11/Xsession.d/50x11-common_determine-startup will fallback to
+    # x-session-manager
+    if [ -z "$STARTUP" ] && [ -n "$DESKTOP_SESSION" ]; then
+      STARTUP="$(get_xdg_session_startupcmd "$DESKTOP_SESSION")"
+    fi
+    
     . /etc/X11/Xsession
     post_start
     exit 0
