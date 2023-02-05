@@ -26,6 +26,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include <string.h>
 
 #define ASK "ask"
 #define ASK_LEN g_strlen(ASK)
@@ -124,7 +125,7 @@ xrdp_wm_delete_all_children(struct xrdp_wm *self)
     struct xrdp_bitmap *b;
     struct xrdp_rect rect;
 
-    for (index = self->screen->child_list->count - 1; index >= 0; index--)
+    for (index = self->screen->child_list->count - 1; index >= 0; --index)
     {
         b = (struct xrdp_bitmap *)list_get_item(self->screen->child_list, index);
         MAKERECT(rect, b->left, b->top, b->width, b->height);
@@ -506,6 +507,8 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 if ((g_strncasecmp(name, "password", 255) == 0) ||
                         (g_strncasecmp(name, "pampassword", 255) == 0))
                 {
+                    g_strncpy(b->caption1, self->session->client_info->password, 255);
+                    b->edit_pos = g_mbstowcs(0, b->caption1, 0);
                     b->password_char = '*';
 
                     if (username_set)
@@ -742,6 +745,17 @@ xrdp_login_wnd_get_monitor_dpi(struct xrdp_wm *self)
     return result;
 }
 
+void
+split_string_by_newline(const char *str, struct list *lines)
+{
+    char *copy = strdup(str);
+    char *pch = strtok(copy, "\n");
+    while (pch != NULL)
+    {
+        list_add_item(lines, (tintptr) pch);
+        pch = strtok(NULL, "\n");
+    }
+}
 
 /******************************************************************************/
 int
@@ -827,7 +841,6 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     self->login_window->left = primary_x_offset - self->login_window->width / 2;
     self->login_window->top = primary_y_offset - self->login_window->height / 2;
-
 
     self->login_window->notify = xrdp_wm_login_notify;
 
@@ -951,6 +964,51 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     but->top = globals->ls_scaled.input_y_pos;
     set_string(&but->caption1, "Session");
 
+    /* only display acceptable use policy if requested. */
+    if (globals->ls_acceptable_use_policy_filename[0] != 0)
+    {
+        char *file_path = globals->ls_acceptable_use_policy_filename;
+        int file_size = g_file_get_size(file_path);
+        if (file_size < 1)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_login_wnd_create: error reading data from file [%s]",
+                file_path);
+            return 0;
+        }
+        char *str = (char *)g_malloc(sizeof(char) * (file_size + 1024), 1);
+        int fd = g_file_open(file_path);
+        if (fd != -1)
+        {
+            int b = g_file_read(fd, str, file_size + 1024);
+            g_file_close(fd);
+
+            if (b > 0)
+            {
+                self->acceptable_use_policy_lines = list_create();
+                self->acceptable_use_policy_lines->auto_free = 1;
+                split_string_by_newline(str, self->acceptable_use_policy_lines);
+
+                for (int index = 0; index < self->acceptable_use_policy_lines->count; ++index)
+                {
+                    char *text = (char *)list_get_item(self->acceptable_use_policy_lines, index);
+
+                    but = xrdp_bitmap_create(globals->ls_scaled.acceptable_use_width,
+                                             globals->ls_scaled.acceptable_use_row_height,
+                                             self->screen->bpp, WND_TYPE_LABEL, self);
+                    list_add_item(self->login_window->child_list, (long)but);
+                    but->parent = self->login_window;
+                    but->owner = self->login_window;
+                    but->left = globals->ls_scaled.acceptable_use_x_pos;
+                    but->top = globals->ls_scaled.acceptable_use_y_pos
+                               + (index + 2)
+                               * globals->ls_scaled.acceptable_use_row_height;
+                    set_string(&but->caption1, text);
+                }
+            }
+        }
+        g_free(str);
+    }
+
     /* combo */
     combo = xrdp_bitmap_create(globals->ls_scaled.input_width, combo_height,
                                self->screen->bpp, WND_TYPE_COMBO, self);
@@ -970,6 +1028,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     list_add_item(self->login_window->child_list, (long)but);
     but->parent = self->login_window;
     but->owner = self->login_window;
+
     but->left = globals->ls_scaled.btn_ok_x_pos;
     but->top = globals->ls_scaled.btn_ok_y_pos;
     but->id = 3;
@@ -1084,6 +1143,10 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     globals->ls_unscaled.logo_y_pos = 50;
     globals->ls_unscaled.label_x_pos = 30;
     globals->ls_unscaled.label_width = 65;
+    globals->ls_unscaled.acceptable_use_x_pos = 30;  /* acceptable use x co-ordinate */
+    globals->ls_unscaled.acceptable_use_y_pos = 240; /* acceptable use y co-ordinate */
+    globals->ls_unscaled.acceptable_use_row_height = 20; /* height of the acceptable use policy */
+    globals->ls_unscaled.acceptable_use_width = 800;  /* width of the acceptable use policy */
     globals->ls_unscaled.input_x_pos = 110;
     globals->ls_unscaled.input_width = 210;
     globals->ls_unscaled.input_y_pos = 150;
@@ -1274,6 +1337,11 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             globals->require_credentials = g_text2bool(v);
         }
 
+        else if (g_strncmp(n, "always_show_login_window", 64) == 0)
+        {
+            globals->always_show_login_window = g_text2bool(v);
+        }
+
         else if (g_strncmp(n, "bulk_compression", 64) == 0)
         {
             globals->bulk_compression = g_text2bool(v);
@@ -1329,6 +1397,12 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         else if (g_strncmp(n, "ls_bg_color", 64) == 0)
         {
             globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
+        }
+
+        else if (g_strncmp(n, "ls_acceptable_use_policy_filename", 255) == 0)
+        {
+            g_strncpy(globals->ls_acceptable_use_policy_filename, v, 255);
+            globals->ls_acceptable_use_policy_filename[255] = 0;
         }
 
         else if (g_strncmp(n, "ls_title", 255) == 0)
@@ -1390,6 +1464,26 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             globals->ls_unscaled.label_width = g_atoi(v);
         }
 
+        else if (g_strncmp(n, "ls_acceptable_use_x_pos", 64) == 0)
+        {
+            globals->ls_unscaled.acceptable_use_x_pos = g_atoi(v);
+        }
+
+        else if (g_strncmp(n, "ls_acceptable_use_y_pos", 64) == 0)
+        {
+            globals->ls_unscaled.acceptable_use_y_pos = g_atoi(v);
+        }
+
+        else if (g_strncmp(n, "ls_acceptable_use_row_height", 64) == 0)
+        {
+            globals->ls_unscaled.acceptable_use_row_height = g_atoi(v);
+        }
+
+        else if (g_strncmp(n, "ls_acceptable_use_width", 64) == 0)
+        {
+            globals->ls_unscaled.acceptable_use_width = g_atoi(v);
+        }
+
         else if (g_strncmp(n, "ls_input_x_pos", 64) == 0)
         {
             globals->ls_unscaled.input_x_pos = g_atoi(v);
@@ -1446,61 +1540,67 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         }
     }
 
-    LOG(LOG_LEVEL_DEBUG, "ini_version:             %d", globals->ini_version);
-    LOG(LOG_LEVEL_DEBUG, "use_bitmap_cache:        %d", globals->use_bitmap_cache);
-    LOG(LOG_LEVEL_DEBUG, "use_bitmap_compression:  %d", globals->use_bitmap_compression);
-    LOG(LOG_LEVEL_DEBUG, "port:                    %d", globals->port);
-    LOG(LOG_LEVEL_DEBUG, "crypt_level:             %d", globals->crypt_level);
-    LOG(LOG_LEVEL_DEBUG, "allow_channels:          %d", globals->allow_channels);
-    LOG(LOG_LEVEL_DEBUG, "max_bpp:                 %d", globals->max_bpp);
-    LOG(LOG_LEVEL_DEBUG, "fork:                    %d", globals->fork);
-    LOG(LOG_LEVEL_DEBUG, "tcp_nodelay:             %d", globals->tcp_nodelay);
-    LOG(LOG_LEVEL_DEBUG, "tcp_keepalive:           %d", globals->tcp_keepalive);
-    LOG(LOG_LEVEL_DEBUG, "tcp_send_buffer_bytes:   %d", globals->tcp_send_buffer_bytes);
-    LOG(LOG_LEVEL_DEBUG, "tcp_recv_buffer_bytes:   %d", globals->tcp_recv_buffer_bytes);
-    LOG(LOG_LEVEL_DEBUG, "new_cursors:             %d", globals->new_cursors);
-    LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
+    LOG(LOG_LEVEL_DEBUG, "ini_version:                       %d", globals->ini_version);
+    LOG(LOG_LEVEL_DEBUG, "use_bitmap_cache:                  %d", globals->use_bitmap_cache);
+    LOG(LOG_LEVEL_DEBUG, "use_bitmap_compression:            %d", globals->use_bitmap_compression);
+    LOG(LOG_LEVEL_DEBUG, "port:                              %d", globals->port);
+    LOG(LOG_LEVEL_DEBUG, "crypt_level:                       %d", globals->crypt_level);
+    LOG(LOG_LEVEL_DEBUG, "allow_channels:                    %d", globals->allow_channels);
+    LOG(LOG_LEVEL_DEBUG, "max_bpp:                           %d", globals->max_bpp);
+    LOG(LOG_LEVEL_DEBUG, "fork:                              %d", globals->fork);
+    LOG(LOG_LEVEL_DEBUG, "tcp_nodelay:                       %d", globals->tcp_nodelay);
+    LOG(LOG_LEVEL_DEBUG, "tcp_keepalive:                     %d", globals->tcp_keepalive);
+    LOG(LOG_LEVEL_DEBUG, "tcp_send_buffer_bytes:             %d", globals->tcp_send_buffer_bytes);
+    LOG(LOG_LEVEL_DEBUG, "tcp_recv_buffer_bytes:             %d", globals->tcp_recv_buffer_bytes);
+    LOG(LOG_LEVEL_DEBUG, "new_cursors:                       %d", globals->new_cursors);
+    LOG(LOG_LEVEL_DEBUG, "allow_multimon:                    %d", globals->allow_multimon);
 
-    LOG(LOG_LEVEL_DEBUG, "grey:                    %d", globals->grey);
-    LOG(LOG_LEVEL_DEBUG, "black:                   %d", globals->black);
-    LOG(LOG_LEVEL_DEBUG, "dark_grey:               %d", globals->dark_grey);
-    LOG(LOG_LEVEL_DEBUG, "blue:                    %d", globals->blue);
-    LOG(LOG_LEVEL_DEBUG, "dark_blue:               %d", globals->dark_blue);
-    LOG(LOG_LEVEL_DEBUG, "white:                   %d", globals->white);
-    LOG(LOG_LEVEL_DEBUG, "red:                     %d", globals->red);
-    LOG(LOG_LEVEL_DEBUG, "green:                   %d", globals->green);
-    LOG(LOG_LEVEL_DEBUG, "background:              %d", globals->background);
+    LOG(LOG_LEVEL_DEBUG, "grey:                              %d", globals->grey);
+    LOG(LOG_LEVEL_DEBUG, "black:                             %d", globals->black);
+    LOG(LOG_LEVEL_DEBUG, "dark_grey:                         %d", globals->dark_grey);
+    LOG(LOG_LEVEL_DEBUG, "blue:                              %d", globals->blue);
+    LOG(LOG_LEVEL_DEBUG, "dark_blue:                         %d", globals->dark_blue);
+    LOG(LOG_LEVEL_DEBUG, "white:                             %d", globals->white);
+    LOG(LOG_LEVEL_DEBUG, "red:                               %d", globals->red);
+    LOG(LOG_LEVEL_DEBUG, "green:                             %d", globals->green);
+    LOG(LOG_LEVEL_DEBUG, "background:                        %d", globals->background);
 
-    LOG(LOG_LEVEL_DEBUG, "autorun:                 %s", globals->autorun);
-    LOG(LOG_LEVEL_DEBUG, "hidelogwindow:           %d", globals->hidelogwindow);
-    LOG(LOG_LEVEL_DEBUG, "require_credentials:     %d", globals->require_credentials);
-    LOG(LOG_LEVEL_DEBUG, "bulk_compression:        %d", globals->bulk_compression);
-    LOG(LOG_LEVEL_DEBUG, "new_cursors:             %d", globals->new_cursors);
-    LOG(LOG_LEVEL_DEBUG, "nego_sec_layer:          %d", globals->nego_sec_layer);
-    LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
-    LOG(LOG_LEVEL_DEBUG, "enable_token_login:      %d", globals->enable_token_login);
+    LOG(LOG_LEVEL_DEBUG, "autorun:                           %s", globals->autorun);
+    LOG(LOG_LEVEL_DEBUG, "hidelogwindow:                     %d", globals->hidelogwindow);
+    LOG(LOG_LEVEL_DEBUG, "require_credentials:               %d", globals->require_credentials);
+    LOG(LOG_LEVEL_DEBUG, "always_show_login_window:          %d", globals->always_show_login_window);
+    LOG(LOG_LEVEL_DEBUG, "bulk_compression:                  %d", globals->bulk_compression);
+    LOG(LOG_LEVEL_DEBUG, "new_cursors:                       %d", globals->new_cursors);
+    LOG(LOG_LEVEL_DEBUG, "nego_sec_layer:                    %d", globals->nego_sec_layer);
+    LOG(LOG_LEVEL_DEBUG, "allow_multimon:                    %d", globals->allow_multimon);
+    LOG(LOG_LEVEL_DEBUG, "enable_token_login:                %d", globals->enable_token_login);
 
-    LOG(LOG_LEVEL_DEBUG, "ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
-    LOG(LOG_LEVEL_DEBUG, "ls_width (unscaled):     %d", globals->ls_unscaled.width);
-    LOG(LOG_LEVEL_DEBUG, "ls_height (unscaled):    %d", globals->ls_unscaled.height);
-    LOG(LOG_LEVEL_DEBUG, "ls_bg_color:             %x", globals->ls_bg_color);
-    LOG(LOG_LEVEL_DEBUG, "ls_title:                %s", globals->ls_title);
-    LOG(LOG_LEVEL_DEBUG, "ls_logo_filename:        %s", globals->ls_logo_filename);
-    LOG(LOG_LEVEL_DEBUG, "ls_logo_x_pos :          %d", globals->ls_unscaled.logo_x_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_logo_y_pos :          %d", globals->ls_unscaled.logo_y_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_label_x_pos :         %d", globals->ls_unscaled.label_x_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_label_width :         %d", globals->ls_unscaled.label_width);
-    LOG(LOG_LEVEL_DEBUG, "ls_input_x_pos :         %d", globals->ls_unscaled.input_x_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_input_width :         %d", globals->ls_unscaled.input_width);
-    LOG(LOG_LEVEL_DEBUG, "ls_input_y_pos :         %d", globals->ls_unscaled.input_y_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_x_pos :        %d", globals->ls_unscaled.btn_ok_x_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_y_pos :        %d", globals->ls_unscaled.btn_ok_y_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_width :        %d", globals->ls_unscaled.btn_ok_width);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_height :       %d", globals->ls_unscaled.btn_ok_height);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_x_pos :    %d", globals->ls_unscaled.btn_cancel_x_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_y_pos :    %d", globals->ls_unscaled.btn_cancel_y_pos);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_width :    %d", globals->ls_unscaled.btn_cancel_width);
-    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_height :   %d", globals->ls_unscaled.btn_cancel_height);
+    LOG(LOG_LEVEL_DEBUG, "ls_top_window_bg_color:            %x", globals->ls_top_window_bg_color);
+    LOG(LOG_LEVEL_DEBUG, "ls_width (unscaled):               %d", globals->ls_unscaled.width);
+    LOG(LOG_LEVEL_DEBUG, "ls_height (unscaled):              %d", globals->ls_unscaled.height);
+    LOG(LOG_LEVEL_DEBUG, "ls_bg_color:                       %x", globals->ls_bg_color);
+    LOG(LOG_LEVEL_DEBUG, "ls_acceptable_use_policy_filename: %s", globals->ls_acceptable_use_policy_filename);
+    LOG(LOG_LEVEL_DEBUG, "ls_acceptable_use_x_pos:           %d", globals->ls_unscaled.acceptable_use_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_acceptable_use_y_pos:           %d", globals->ls_unscaled.acceptable_use_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_acceptable_use_row_height:      %d", globals->ls_unscaled.acceptable_use_row_height);
+    LOG(LOG_LEVEL_DEBUG, "ls_acceptable_use_width:           %d", globals->ls_unscaled.acceptable_use_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_title:                          %s", globals->ls_title);
+    LOG(LOG_LEVEL_DEBUG, "ls_logo_filename:                  %s", globals->ls_logo_filename);
+    LOG(LOG_LEVEL_DEBUG, "ls_logo_x_pos :                    %d", globals->ls_unscaled.logo_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_logo_y_pos :                    %d", globals->ls_unscaled.logo_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_label_x_pos :                   %d", globals->ls_unscaled.label_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_label_width :                   %d", globals->ls_unscaled.label_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_input_x_pos :                   %d", globals->ls_unscaled.input_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_input_width :                   %d", globals->ls_unscaled.input_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_input_y_pos :                   %d", globals->ls_unscaled.input_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_x_pos :                  %d", globals->ls_unscaled.btn_ok_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_y_pos :                  %d", globals->ls_unscaled.btn_ok_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_width :                  %d", globals->ls_unscaled.btn_ok_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_ok_height :                 %d", globals->ls_unscaled.btn_ok_height);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_x_pos :              %d", globals->ls_unscaled.btn_cancel_x_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_y_pos :              %d", globals->ls_unscaled.btn_cancel_y_pos);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_width :              %d", globals->ls_unscaled.btn_cancel_width);
+    LOG(LOG_LEVEL_DEBUG, "ls_btn_cancel_height :             %d", globals->ls_unscaled.btn_cancel_height);
 
     list_delete(names);
     list_delete(values);
@@ -1544,6 +1644,9 @@ xrdp_login_wnd_scale_config_values(struct xrdp_wm *self)
         LOG(LOG_LEVEL_DEBUG, "Login screen scale factor %f",
             (float)fheight / DEFAULT_FONT_PIXEL_SIZE);
 
+#define LOG_SCALED_VALUE(value) \
+    LOG(LOG_LEVEL_INFO, "%s: Unscaled=%d, Scaled=%d", #value, unscaled->value, scaled->value);
+
         scaled->width = SCALE_AND_ROUND(unscaled->width);
         scaled->height = SCALE_AND_ROUND(unscaled->height);
         scaled->logo_width = SCALE_AND_ROUND(unscaled->logo_width);
@@ -1552,6 +1655,14 @@ xrdp_login_wnd_scale_config_values(struct xrdp_wm *self)
         scaled->logo_y_pos = SCALE_AND_ROUND(unscaled->logo_y_pos);
         scaled->label_x_pos = SCALE_AND_ROUND(unscaled->label_x_pos);
         scaled->label_width = SCALE_AND_ROUND(unscaled->label_width);
+        scaled->acceptable_use_x_pos
+            = SCALE_AND_ROUND(unscaled->acceptable_use_x_pos);
+        scaled->acceptable_use_y_pos
+            = SCALE_AND_ROUND(unscaled->acceptable_use_y_pos);
+        scaled->acceptable_use_row_height
+            = SCALE_AND_ROUND(unscaled->acceptable_use_row_height);
+        scaled->acceptable_use_width
+            = SCALE_AND_ROUND(unscaled->acceptable_use_width);
         scaled->input_x_pos = SCALE_AND_ROUND(unscaled->input_x_pos);
         scaled->input_width = SCALE_AND_ROUND(unscaled->input_width);
         scaled->input_y_pos = SCALE_AND_ROUND(unscaled->input_y_pos);

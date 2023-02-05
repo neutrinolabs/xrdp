@@ -505,6 +505,7 @@ struct xrdp_wm
     /* session log */
     struct list *log;
     struct xrdp_bitmap *log_wnd;
+    struct list *acceptable_use_policy_lines;
     enum wm_login_state login_state;
     tbus login_state_event;
     struct xrdp_mm *mm;
@@ -688,32 +689,36 @@ struct xrdp_startup_params
 
 struct xrdp_ls_dimensions
 {
-    int  width;               /* window width */
-    int  height;              /* window height */
-    int  logo_width;          /* logo width (optional) */
-    int  logo_height;          /* logo height (optional) */
-    int  logo_x_pos;          /* logo x co-ordinate */
-    int  logo_y_pos;          /* logo y co-ordinate */
-    int  label_x_pos;         /* x pos of labels */
-    int  label_width;         /* width of labels */
-    int  input_x_pos;         /* x pos of text and combo boxes */
-    int  input_width;         /* width of input and combo boxes */
-    int  input_y_pos;         /* y pos for for first label and combo box */
-    int  btn_ok_x_pos;        /* x pos for OK button */
-    int  btn_ok_y_pos;        /* y pos for OK button */
-    int  btn_ok_width;        /* width of OK button */
-    int  btn_ok_height;       /* height of OK button */
-    int  btn_cancel_x_pos;    /* x pos for Cancel button */
-    int  btn_cancel_y_pos;    /* y pos for Cancel button */
-    int  btn_cancel_width;    /* width of Cancel button */
-    int  btn_cancel_height;   /* height of Cancel button */
-    int default_btn_height;   /* Default button height (e.g. OK on login box) */
-    int log_wnd_width;        /* Width of log window */
-    int log_wnd_height;       /* Height of log window */
-    int edit_height;          /* Height of an edit box */
-    int combo_height;         /* Height of a combo box */
-    int help_wnd_width;        /* Width of login help window */
-    int help_wnd_height;       /* Height of login help window */
+    int width;                     /* window width */
+    int height;                    /* window height */
+    int logo_width;                /* logo width (optional) */
+    int logo_height;               /* logo height (optional) */
+    int logo_x_pos;                /* logo x co-ordinate */
+    int logo_y_pos;                /* logo y co-ordinate */
+    int label_x_pos;               /* x pos of labels */
+    int label_width;               /* width of labels */
+    int acceptable_use_x_pos;      /* acceptable use x co-ordinate */
+    int acceptable_use_y_pos;      /* acceptable use y co-ordinate */
+    int acceptable_use_row_height; /* height of each line in the acceptable use policy */
+    int acceptable_use_width;      /* width of the acceptable use policy */
+    int input_x_pos;               /* x pos of text and combo boxes */
+    int input_width;               /* width of input and combo boxes */
+    int input_y_pos;               /* y pos for for first label and combo box */
+    int btn_ok_x_pos;              /* x pos for OK button */
+    int btn_ok_y_pos;              /* y pos for OK button */
+    int btn_ok_width;              /* width of OK button */
+    int btn_ok_height;             /* height of OK button */
+    int btn_cancel_x_pos;          /* x pos for Cancel button */
+    int btn_cancel_y_pos;          /* y pos for Cancel button */
+    int btn_cancel_width;          /* width of Cancel button */
+    int btn_cancel_height;         /* height of Cancel button */
+    int default_btn_height;        /* Default button height (e.g. OK on login box) */
+    int log_wnd_width;             /* Width of log window */
+    int log_wnd_height;            /* Height of log window */
+    int edit_height;               /* Height of an edit box */
+    int combo_height;              /* Height of a combo box */
+    int help_wnd_width;            /* Width of login help window */
+    int help_wnd_height;           /* Height of login help window */
 };
 
 struct xrdp_cfg_globals
@@ -733,6 +738,7 @@ struct xrdp_cfg_globals
     char autorun[256];
     int  hidelogwindow;
     int  require_credentials;
+    int  always_show_login_window;
     int  bulk_compression;
     int  new_cursors;
     int  nego_sec_layer;
@@ -740,7 +746,6 @@ struct xrdp_cfg_globals
     int  enable_token_login;
 
     /* colors */
-
     int  grey;
     int  black;
     int  dark_grey;
@@ -757,6 +762,17 @@ struct xrdp_cfg_globals
     int  ls_top_window_bg_color; /* top level window background color */
     int  ls_bg_color;            /* background color */
     char ls_background_image[256];  /* background image file name */
+    /*
+        filename for acceptable use policy for use in enterprise environments
+        useful in conjunction with always_show_login_window, which forces
+        this policy to be displayed if a filename is specified.
+
+        Note that XRDP's behavior is undefined if an
+        invalid filename is specified.
+
+        https://github.com/neutrinolabs/xrdp/issues/547
+    */
+    char ls_acceptable_use_policy_filename[256];
     /* transform to apply to background image */
     enum xrdp_bitmap_load_transform ls_background_transform;
     char ls_logo_filename[256];  /* logo filename */

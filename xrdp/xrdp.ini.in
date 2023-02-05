@@ -87,6 +87,8 @@ new_cursors=true
 use_fastpath=both
 ; when true, userid/password *must* be passed on cmd line
 #require_credentials=true
+; when true, the login window will always be displayed
+always_show_login_window=true
 ; when true, the userid will be used to try to authenticate
 #enable_token_login=true
 ; You can set the PAM error text in a gateway setup (MAX 256 chars)
@@ -137,8 +139,8 @@ ls_top_window_bg_color=003057
 ; larger, and also increase <ls_btn_ok_y_pos> and <ls_btn_cancel_y_pos>
 ; below
 ;
-ls_width=350
-ls_height=360
+ls_width=690
+ls_height=650
 
 ; login screen background color in RGB format
 ls_bg_color=f0f0f0
@@ -164,29 +166,36 @@ ls_logo_filename=
 ls_logo_transform=scale
 ls_logo_width=250
 ls_logo_height=110
-ls_logo_x_pos=55
+ls_logo_x_pos=220
 ls_logo_y_pos=35
 
 ; for positioning labels such as username, password etc
-ls_label_x_pos=30
+ls_label_x_pos=195
 ls_label_width=68
 
+; for positioning the text of the acceptable use policy
+ls_acceptable_use_policy_filename=/home/christopher/policy_text.txt
+ls_acceptable_use_x_pos=30
+ls_acceptable_use_y_pos=240
+ls_acceptable_use_row_height=20
+ls_acceptable_use_width=800
+
 ; for positioning text and combo boxes next to above labels
-ls_input_x_pos=110
+ls_input_x_pos=275
 ls_input_width=210
 
 ; y pos for first label and combo box
 ls_input_y_pos=158
 
 ; OK button
-ls_btn_ok_x_pos=142
-ls_btn_ok_y_pos=308
+ls_btn_ok_x_pos=490
+ls_btn_ok_y_pos=600
 ls_btn_ok_width=85
 ls_btn_ok_height=30
 
 ; Cancel button
-ls_btn_cancel_x_pos=237
-ls_btn_cancel_y_pos=308
+ls_btn_cancel_x_pos=585
+ls_btn_cancel_y_pos=600
 ls_btn_cancel_width=85
 ls_btn_cancel_height=30
 
