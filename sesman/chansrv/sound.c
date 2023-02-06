@@ -869,7 +869,7 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
     }
     else if (g_client_does_mp3lame)
     {
-        g_bbuf_size = 1152 * 4; // samples per frame (1152) x 16bit(2 Bytes) x 2ch.
+        g_bbuf_size = 11520;
         return sound_wave_compress_mp3lame(data, data_bytes, format_index);
     }
     return data_bytes;
@@ -1089,25 +1089,54 @@ sound_process_wave_confirm(struct stream *s, int size)
 static int
 process_pcm_message(int id, int size, struct stream *s)
 {
+    static int sending_silence = 0;
+    static int discard_size = 0;
+    static int silence_start_time = 0;
     switch (id)
     {
         case 0:
+            if ((g_client_does_fdk_aac || g_client_does_mp3lame) && (sending_silence && discard_size >= 0))
+            {
+                if ((g_time3() - silence_start_time) > 300)
+                {
+                    sending_silence = 0;
+                    discard_size = 0;
+                    silence_start_time = 0;
+                }
+                else
+                {
+                    discard_size -= size;
+                    if (discard_size <= 0)
+                    {
+                        int discard_size_tmp = discard_size;
+                        discard_size = 0;
+                        sending_silence = 0;
+                        return sound_send_wave_data((s->p) + discard_size_tmp + size, -discard_size_tmp);
+                    }
+                    return 0;
+                }
+            }
             return sound_send_wave_data(s->p, size);
             break;
         case 1:
-            if (g_client_does_fdk_aac || g_client_does_mp3lame)
+            if ((g_client_does_fdk_aac || g_client_does_mp3lame) && sending_silence == 0)
             {
                 /* workaround for mstsc.exe. send silence data before send close */
-                int send_silence_times = g_client_does_fdk_aac ? 4 : 6;  /* This value comes by trial and error */
-                char *buf = (char *)g_malloc(g_bbuf_size, 0);
+                int send_silence_times = g_client_does_fdk_aac ? 4 : 2;  /* This value comes by trial and error */
+                char *buf = (char *) g_malloc(g_bbuf_size, 0);
                 if (buf != NULL)
                 {
+                    sending_silence = 1;
+                    discard_size = 0;
+                    silence_start_time = g_time3();
                     for (int i = 0; i < send_silence_times; i++)
                     {
-                        g_memset(buf, 0, g_bbuf_size - g_buf_index);
-                        sound_send_wave_data(buf, g_bbuf_size - g_buf_index);
+                        discard_size += g_bbuf_size;
+                        g_memset(buf, 0, g_bbuf_size);
+                        sound_send_wave_data_chunk(buf, g_bbuf_size);
                     }
                     free(buf);
+                    g_time_diff = 0;
                 }
             }
             return sound_send_close();
