@@ -40,6 +40,7 @@
 #define XRDP_MM_IMPLEMENTS_TOUCH(mm) ((mm)->code != XVNC_SESSION_CODE)
 
 struct source_info;
+struct list16;
 
 /* lib */
 struct xrdp_mod
