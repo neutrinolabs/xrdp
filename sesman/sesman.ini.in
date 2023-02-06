@@ -51,6 +51,15 @@ X11DisplayOffset=10
 ; Default: 0
 MaxSessions=50
 
+;; MaxDisplayNumer - maximum number considered for an X display
+; Type: integer
+; Default: 63
+;
+; IANA only allocates TCP ports up to 6063 for X servers. If you are not
+; allowing TCP connections to your X servers you may safely increase this
+; number.
+#MaxDisplayNumber=63
+
 ;; KillDisconnected - kill disconnected sessions
 ; Type: boolean
 ; Default: false

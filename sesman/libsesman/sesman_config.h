@@ -119,6 +119,11 @@ struct config_sessions
      */
     int x11_display_offset;
     /**
+     * @var max_display_number
+     * @brief Highest X11 display number considered for allocation
+     */
+    unsigned int max_display_number;
+    /**
      * @var max_sessions
      * @brief maximum number of allowed sessions. 0 for unlimited
      */
