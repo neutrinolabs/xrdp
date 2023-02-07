@@ -59,6 +59,7 @@ PACKAGES=" \
     nasm \
     pkg-config \
     check \
+    libcmocka-dev
     "
 
 # libfreetype-dev package was renamed from libfreetype6-dev in older
@@ -86,7 +87,7 @@ in
                 ;;
             max)
                 PACKAGES="$PACKAGES \
-                    $PACKAGES_AMD64_MIN
+                    $PACKAGES_AMD64_MIN \
                     $LIBFREETYPE_DEV \
                     libfuse-dev \
                     libjpeg-dev \
@@ -139,6 +140,7 @@ in
 esac
 
 apt-get update
+apt-get upgrade
 apt-get -yq \
     --no-install-suggests \
     --no-install-recommends \

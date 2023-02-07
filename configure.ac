@@ -519,14 +519,22 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 
 CFLAGS="$save_CFLAGS"
 
-# perform unit tests if libcheck found
+# perform unit tests if libcheck and libmocka found
+perform_unit_tests=yes; # Assume packages will be found
 if test "x$ensure_tests_deps" == "xyes"; then
     PKG_CHECK_MODULES([CHECK], [check >= 0.10.0],
-        [perform_unit_tests=yes],
+        [],
         [AC_MSG_ERROR([please install check, the unit test framework])])
+    # Check if cmocka is available - needed for unit testing
+    PKG_CHECK_MODULES([CMOCKA], [cmocka],
+        [],
+        [AC_MSG_ERROR([please install cmocka, the mocking framework])])
 else
     PKG_CHECK_MODULES([CHECK], [check >= 0.10.0],
-        [perform_unit_tests=yes],
+        [],
+        [perform_unit_tests=no])
+    PKG_CHECK_MODULES([CMOCKA], [cmocka],
+        [],
         [perform_unit_tests=no])
 fi
 
@@ -643,4 +651,3 @@ echo "  LDFLAGS = $LDFLAGS"
 echo '#define XRDP_CONFIGURE_OPTIONS \' > ./xrdp_configure_options.h
 ./config.status --config | xargs -n 1 | sed -e 's/^/"      /' -e 's/$/\\n" \\/' >> ./xrdp_configure_options.h
 echo '""' >> ./xrdp_configure_options.h
-
