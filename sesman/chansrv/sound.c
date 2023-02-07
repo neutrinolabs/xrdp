@@ -1090,31 +1090,12 @@ static int
 process_pcm_message(int id, int size, struct stream *s)
 {
     static int sending_silence = 0;
-    static int discard_size = 0;
-    static int silence_start_time = 0;
     switch (id)
     {
         case 0:
-            if ((g_client_does_fdk_aac || g_client_does_mp3lame) && (sending_silence && discard_size >= 0))
+            if ((g_client_does_fdk_aac || g_client_does_mp3lame) && sending_silence)
             {
-                if ((g_time3() - silence_start_time) > 300)
-                {
-                    sending_silence = 0;
-                    discard_size = 0;
-                    silence_start_time = 0;
-                }
-                else
-                {
-                    discard_size -= size;
-                    if (discard_size <= 0)
-                    {
-                        int discard_size_tmp = discard_size;
-                        discard_size = 0;
-                        sending_silence = 0;
-                        return sound_send_wave_data((s->p) + discard_size_tmp + size, -discard_size_tmp);
-                    }
-                    return 0;
-                }
+                sending_silence = 0;
             }
             return sound_send_wave_data(s->p, size);
             break;
@@ -1127,11 +1108,8 @@ process_pcm_message(int id, int size, struct stream *s)
                 if (buf != NULL)
                 {
                     sending_silence = 1;
-                    discard_size = 0;
-                    silence_start_time = g_time3();
                     for (int i = 0; i < send_silence_times; i++)
                     {
-                        discard_size += g_bbuf_size;
                         g_memset(buf, 0, g_bbuf_size);
                         sound_send_wave_data_chunk(buf, g_bbuf_size);
                     }
