@@ -369,14 +369,14 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
                             int nBlockAlign, int wBitsPerSample,
                             int cbSize, char *data)
 {
-    LOG_DEVEL(LOG_LEVEL_INFO, "sound_process_output_format:");
-    LOG_DEVEL(LOG_LEVEL_INFO, "      wFormatTag      %d", wFormatTag);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nChannels       %d", nChannels);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nSamplesPerSec  %d", nSamplesPerSec);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nAvgBytesPerSec %d", nAvgBytesPerSec);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nBlockAlign     %d", nBlockAlign);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      wBitsPerSample  %d", wBitsPerSample);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      cbSize          %d", cbSize);
+    LOG(LOG_LEVEL_INFO, "sound_process_output_format:");
+    LOG(LOG_LEVEL_INFO, "      wFormatTag      %s", audin_wave_format_tag_to_str(wFormatTag));
+    LOG(LOG_LEVEL_INFO, "      nChannels       %d", nChannels);
+    LOG(LOG_LEVEL_INFO, "      nSamplesPerSec  %d", nSamplesPerSec);
+    LOG(LOG_LEVEL_INFO, "      nAvgBytesPerSec %d", nAvgBytesPerSec);
+    LOG(LOG_LEVEL_INFO, "      nBlockAlign     %d", nBlockAlign);
+    LOG(LOG_LEVEL_INFO, "      wBitsPerSample  %d", wBitsPerSample);
+    LOG(LOG_LEVEL_INFO, "      cbSize          %d", cbSize);
 
     LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", data, cbSize);
 
