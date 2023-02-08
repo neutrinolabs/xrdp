@@ -33,8 +33,32 @@
 #endif
 
 
-
 #define XRDP_SURCMD_PREFIX_BYTES 256
+
+#ifdef XRDP_RFXCODEC
+
+/*
+ * LL3, LH3, HL3, HH3, LH2, HL2, HH2, LH1, HL1, HH1
+ *
+ * https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdprfx/3e9c8af4-7539-4c9d-95de-14b1558b902c
+ */
+static const unsigned char rfx_quant_values_default[] =
+{
+    0x66, 0x66, 0x77, 0x88, 0x98
+};
+
+static const unsigned char rfx_quant_values_ulq[] =
+{
+    0x99, 0x99, 0x99, 0x99, 0xaa
+};
+
+static const unsigned char rfx_quant_values_lq[] =
+{
+    0x88, 0x88, 0x88, 0x88, 0x99
+};
+
+#endif
+
 
 /*****************************************************************************/
 static int
@@ -320,6 +344,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     int all_tiles_written;
     int tiles_left;
     int finished;
+    char *quant_values;
     char *out_data;
     XRDP_ENC_DATA_DONE *enc_done;
     FIFO *fifo_processed;
@@ -332,9 +357,19 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx: num_crects %d num_drects %d",
               enc->num_crects, enc->num_drects);
+
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;
+
+    if (enc->flags & XRDP_ENCODER_HINT_QUALITY_LOWEST) {
+        quant_values = rfx_quant_values_ulq;
+    } else if (enc->flags & XRDP_ENCODER_HINT_QUALITY_LOW) {
+        quant_values = rfx_quant_values_lq;
+    } else {
+        quant_values = rfx_quant_values_default;
+    }
+
 
     all_tiles_written = 0;
     do
@@ -393,7 +428,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                                                 &out_data_bytes, enc->data,
                                                 enc->width, enc->height, enc->width * 4,
                                                 rfxrects, enc->num_drects,
-                                                tiles, tiles_left, 0, 0);
+                                                tiles, tiles_left, quant_values, 1);
             }
         }
 
