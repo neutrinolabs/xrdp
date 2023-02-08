@@ -284,6 +284,7 @@ audin_process_formats(int chan_id, struct stream *s)
         in_uint16_le(s, wf->cbSize);
 
         LOG(LOG_LEVEL_INFO, "audin_process_formats:");
+        LOG(LOG_LEVEL_INFO, "      wFormatNo       %d", index);
         LOG(LOG_LEVEL_INFO, "      wFormatTag      %s", audin_wave_format_tag_to_str(wf->wFormatTag));
         LOG(LOG_LEVEL_INFO, "      nChannels       %d", wf->nChannels);
         LOG(LOG_LEVEL_INFO, "      nSamplesPerSec  %d", wf->nSamplesPerSec);
