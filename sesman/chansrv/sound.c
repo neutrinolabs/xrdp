@@ -1090,11 +1090,17 @@ static int
 process_pcm_message(int id, int size, struct stream *s)
 {
     static int sending_silence = 0;
+    static int silence_start_time = 0;
     switch (id)
     {
         case 0:
             if ((g_client_does_fdk_aac || g_client_does_mp3lame) && sending_silence)
             {
+                if ((g_time3() - silence_start_time) < 1000)
+                {
+                    /* do not send data within 1000mS after SNDC_CLOSE is sent. to avoid stutter */
+                    return 0;
+                }
                 sending_silence = 0;
             }
             return sound_send_wave_data(s->p, size);
@@ -1107,6 +1113,7 @@ process_pcm_message(int id, int size, struct stream *s)
                 char *buf = (char *) g_malloc(g_bbuf_size, 0);
                 if (buf != NULL)
                 {
+                    silence_start_time = g_time3();
                     sending_silence = 1;
                     for (int i = 0; i < send_silence_times; i++)
                     {
