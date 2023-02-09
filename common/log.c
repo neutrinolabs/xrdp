@@ -1084,7 +1084,7 @@ internal_log_message(const enum logLevels lvl,
     {
         /* log to syslog*/
         /* %s fix compiler warning 'not a string literal' */
-        syslog(internal_log_xrdp2syslog(lvl), "%s", buff + 20);
+        syslog(internal_log_xrdp2syslog(lvl), "%s", buff + 31);
     }
 
     if (g_staticLogConfig->enable_console
