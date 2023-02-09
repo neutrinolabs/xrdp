@@ -7,6 +7,7 @@
 char *
 bin_to_hex(const char *input, int length);
 
+Suite *make_suite_test_list(void);
 Suite *make_suite_test_string(void);
 Suite *make_suite_test_os_calls(void);
 Suite *make_suite_test_ssl_calls(void);

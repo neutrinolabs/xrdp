@@ -45,11 +45,11 @@ int main (void)
     int number_failed;
     SRunner *sr;
 
-    sr = srunner_create (make_suite_test_string());
+    sr = srunner_create (make_suite_test_list());
+    srunner_add_suite(sr, make_suite_test_string());
     srunner_add_suite(sr, make_suite_test_os_calls());
     srunner_add_suite(sr, make_suite_test_ssl_calls());
     srunner_add_suite(sr, make_suite_test_base64());
-    //   srunner_add_suite(sr, make_list_suite());
 
     srunner_set_tap(sr, "-");
     /*
