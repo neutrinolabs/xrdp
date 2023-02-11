@@ -21,34 +21,43 @@ jobs:
             feature_set: min
             arch: amd64
             os: ubuntu-latest
+            unittests: false
+            DISTCHECK: false
 
           - CC: g++
             feature_set: min
             arch: amd64
             os: ubuntu-latest
+            unittests: false
+            DISTCHECK: false
 
           - CC: clang
             feature_set: min
             arch: amd64
             os: ubuntu-latest
+            unittests: false
+            DISTCHECK: false
 
           # Maximal 64-bit arch builds
           - CC: gcc
             feature_set: max
             arch: amd64
             os: ubuntu-latest
+            unittests: true
             DISTCHECK: true
 
           - CC: g++
             feature_set: max
             arch: amd64
             os: ubuntu-latest
-            DISTCHECK: true
+            unittests: false
+            DISTCHECK: false
 
           - CC: clang
             feature_set: max
             arch: amd64
             os: ubuntu-latest
+            unittests: true
             DISTCHECK: true
 
           # Maximal debug 64-bit arch builds
@@ -58,6 +67,8 @@ jobs:
             feature_set: max
             arch: amd64
             os: ubuntu-latest
+            unittests: true
+            DISTCHECK: false
             name_extra: and DEBUG
             CONF_FLAGS_EXTRA: "--enable-devel-all --disable-static"
 
@@ -65,19 +76,25 @@ jobs:
           - CC: gcc
             feature_set: max
             arch: i386
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            unittests: true
+            DISTCHECK: false
             name_extra: for 32-bit arch (legacy OS)
 
           - CC: g++
             feature_set: max
             arch: i386
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            unittests: false
+            DISTCHECK: false
             name_extra: for 32-bit arch (legacy OS)
 
           - CC: clang
             feature_set: max
             arch: i386
-            os: ubuntu-20.04
+            os: ubuntu-latest
+            unittests: true
+            DISTCHECK: false
             name_extra: for 32-bit arch (legacy OS)
 
     name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
@@ -124,6 +141,9 @@ jobs:
         run: ./configure $CONF_FLAGS
       - name: make
         run: make -j $(nproc)
+      - name: unittests
+        if: ${{ matrix.unittests }}
+        run: make check -j $(nproc)
       - name: distcheck
         id: dist_check
         if: ${{ matrix.DISTCHECK }}
