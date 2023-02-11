@@ -106,7 +106,7 @@ audin_wave_format_tag_to_str(int tag)
         (tag == WAVE_FORMAT_MPEGLAYER3) ? "WAVE_FORMAT_MPEGLAYER3" :
         (tag == WAVE_FORMAT_OPUS)       ? "WAVE_FORMAT_OPUS" :
         (tag == WAVE_FORMAT_AAC)        ? "WAVE_FORMAT_AAC" :
-        NULL;
+        "UNKNOWN";
 }
 
 /*****************************************************************************/
