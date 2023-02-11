@@ -53,6 +53,8 @@ START_TEST(test_xrdp_egfx_send_create_surface__happy_path)
     unsigned char descriptor;
     in_uint8(s, descriptor);
     ck_assert_int_eq(0xE0, descriptor);
+
+    g_free(bulk);
 }
 END_TEST
 
