@@ -35,9 +35,27 @@ struct list
 
 struct list *
 list_create(void);
+/**
+ * Creates a list with at least the specified number of items
+ * reserved
+ * @param size Number of items to reserve
+ * @return list, or NULL if no memory
+ */
+struct list *
+list_create_sized(unsigned int size);
 void
 list_delete(struct list *self);
-void
+/**
+ * Adds an item to a list
+ * @param self The list
+ * @param item The item to add
+ * @result 0 if a memory allocation failure occurred. In this
+ *         case the item is not added
+ *
+ * Memory allocation failures will not occur if the list is
+ * sized appropriately when created.
+ */
+int
 list_add_item(struct list *self, tintptr item);
 tintptr
 list_get_item(const struct list *self, int index);
@@ -47,9 +65,32 @@ int
 list_index_of(struct list *self, tintptr item);
 void
 list_remove_item(struct list *self, int index);
-void
+/**
+ * Inserts an item into a list
+ * @param self The list
+ * @param index The location to insert the item before
+ * @param item The item to add
+ * @result 0 if a memory allocation failure occurred. In this
+ *         case the item is not added
+ *
+ * Memory allocation failures will not occur if the list is
+ * sized appropriately when created.
+ */
+int
 list_insert_item(struct list *self, int index, tintptr item);
-void
+/**
+ * Adds strings to a list from another list
+ * @param self The source list
+ * @param dest Destination list
+ * @param start_index Index to start on the source list (zero based)
+ *
+ * @result 0 if a memory allocation failure occurred. In this
+ *         case the destination list is unaltered.
+ *
+ * Strings from the source list are copied with strdup()
+ * The dest list should have auto_free set, or memory leaks will occur
+ */
+int
 list_append_list_strdup(struct list *self, struct list *dest, int start_index);
 void
 list_dump_items(struct list *self);
