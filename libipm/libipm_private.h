@@ -82,7 +82,7 @@ extern const char *libipm_valid_type_chars;
  * If file descriptors are read from the other end, but not passed to the
  * application, they must be closed to prevent file descriptor leaks
  *
- * @param trans Transport to close file descriptors for
+ * @param self Transport to close file descriptors for
  */
 void
 libipm_msg_in_close_file_descriptors(struct trans *self);

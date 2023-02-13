@@ -52,7 +52,7 @@ libipm_msg_in_close_file_descriptors(struct trans *self)
 /**************************************************************************//**
  * Send function for a struct trans initialised with libipm_init_trans()
  *
- * @param trans Transport to send on
+ * @param self Transport to send on
  * @param data pointer to data to send
  * @param len Length of data to send
  * @return As for write(2)
@@ -80,7 +80,7 @@ libipm_trans_send_proc(struct trans *self, const char *data, int len)
 /**************************************************************************//**
  * Receive function for a struct trans initialised with libipm_init_trans()
  *
- * @param trans Transport to receive on
+ * @param self Transport to receive on
  * @param data pointer to receive data buffer
  * @param len Length of data to read
  * @return As for read(2)
