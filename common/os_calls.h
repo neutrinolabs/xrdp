@@ -126,7 +126,23 @@ int      g_sck_send_fd_set(int sck, const void *ptr, unsigned int len,
                            int fds[], unsigned int fdcount);
 int      g_sck_last_error_would_block(int sck);
 int      g_sck_socket_ok(int sck);
+/**
+ * Checks socket writeability with an optional wait
+ *
+ * @param sck - Socket to check
+ * @param millis - Maximum milliseconds to wait for writeability to be true
+ *
+ * @note The wait time may not be reached in the event of an incoming signal
+ *       so do not use this call to impose a hard timeout */
 int      g_sck_can_send(int sck, int millis);
+/**
+ * Checks socket readability with an optional wait
+ *
+ * @param sck - Socket to check
+ * @param millis - Maximum milliseconds to wait for readability to be true
+ *
+ * @note The wait time may not be reached in the event of an incoming signal
+ *       so do not use this call to impose a hard timeout */
 int      g_sck_can_recv(int sck, int millis);
 int      g_sck_select(int sck1, int sck2);
 
@@ -167,6 +183,21 @@ int      g_set_wait_obj(tintptr obj);
 int      g_reset_wait_obj(tintptr obj);
 int      g_is_wait_obj_set(tintptr obj);
 int      g_delete_wait_obj(tintptr obj);
+/**
+ * Wait for the specified readable and writeable objs
+ *
+ * The wait finishes when at least one of the objects becomes
+ * readable or writeable
+ *
+ * @param read_objs Array of read objects
+ * @param rcount Number of elements in read_objs
+ * @param write_objs Array of write objects
+ * @param rcount Number of elements in write_objs
+ * @param mstimeout Timeout in milliseconds. <= 0 means an infinite timeout.
+ *
+ * @return 0 for success. The objects will need to be polled to
+ * find out what is readable or writeable.
+ */
 int      g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs,
                     int wcount, int mstimeout);
 void     g_random(char *data, int len);

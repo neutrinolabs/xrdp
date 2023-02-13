@@ -44,6 +44,7 @@
 #if defined(XRDP_ENABLE_VSOCK)
 #include <linux/vm_sockets.h>
 #endif
+#include <poll.h>
 #include <sys/un.h>
 #include <sys/time.h>
 #include <sys/times.h>
@@ -1594,26 +1595,24 @@ g_sck_socket_ok(int sck)
 int
 g_sck_can_send(int sck, int millis)
 {
-    fd_set wfds;
-    struct timeval time;
-    int rv;
-
-    time.tv_sec = millis / 1000;
-    time.tv_usec = (millis * 1000) % 1000000;
-    FD_ZERO(&wfds);
-
+    int rv = 0;
     if (sck > 0)
     {
-        FD_SET(((unsigned int)sck), &wfds);
-        rv = select(sck + 1, 0, &wfds, 0, &time);
+        struct pollfd pollfd;
 
-        if (rv > 0)
+        pollfd.fd = sck;
+        pollfd.events = POLLOUT;
+        pollfd.revents = 0;
+        if (poll(&pollfd, 1, millis) > 0)
         {
-            return 1;
+            if ((pollfd.revents & POLLOUT) != 0)
+            {
+                rv = 1;
+            }
         }
     }
 
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1622,77 +1621,64 @@ g_sck_can_send(int sck, int millis)
 int
 g_sck_can_recv(int sck, int millis)
 {
-    fd_set rfds;
-    struct timeval time;
-    int rv;
-
-    g_memset(&time, 0, sizeof(time));
-    time.tv_sec = millis / 1000;
-    time.tv_usec = (millis * 1000) % 1000000;
-    FD_ZERO(&rfds);
+    int rv = 0;
 
     if (sck > 0)
     {
-        FD_SET(((unsigned int)sck), &rfds);
-        rv = select(sck + 1, &rfds, 0, 0, &time);
+        struct pollfd pollfd;
 
-        if (rv > 0)
+        pollfd.fd = sck;
+        pollfd.events = POLLIN;
+        pollfd.revents = 0;
+        if (poll(&pollfd, 1, millis) > 0)
         {
-            return 1;
+            if ((pollfd.revents & (POLLIN | POLLHUP)) != 0)
+            {
+                rv = 1;
+            }
         }
     }
 
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
 int
 g_sck_select(int sck1, int sck2)
 {
-    fd_set rfds;
-    struct timeval time;
-    int max;
-    int rv;
+    struct pollfd pollfd[2] = {0};
+    int rvmask[2] = {0}; /* Output masks corresponding to fds in pollfd */
 
-    g_memset(&time, 0, sizeof(struct timeval));
-    FD_ZERO(&rfds);
+    unsigned int i = 0;
+    int rv = 0;
 
     if (sck1 > 0)
     {
-        FD_SET(((unsigned int)sck1), &rfds);
+        pollfd[i].fd = sck1;
+        pollfd[i].events = POLLIN;
+        rvmask[i] = 1;
+        ++i;
     }
 
     if (sck2 > 0)
     {
-        FD_SET(((unsigned int)sck2), &rfds);
+        pollfd[i].fd = sck2;
+        pollfd[i].events = POLLIN;
+        rvmask[i] = 2;
+        ++i;
     }
 
-    max = sck1;
-
-    if (sck2 > max)
+    if (poll(pollfd, i, 0) > 0)
     {
-        max = sck2;
-    }
-
-    rv = select(max + 1, &rfds, 0, 0, &time);
-
-    if (rv > 0)
-    {
-        rv = 0;
-
-        if (FD_ISSET(((unsigned int)sck1), &rfds))
+        if ((pollfd[0].revents & (POLLIN | POLLHUP)) != 0)
         {
-            rv = rv | 1;
+            rv |= rvmask[0];
         }
 
-        if (FD_ISSET(((unsigned int)sck2), &rfds))
+        if ((pollfd[1].revents & (POLLIN | POLLHUP)) != 0)
         {
-            rv = rv | 2;
+            rv |= rvmask[1];
         }
-    }
-    else
-    {
-        rv = 0;
     }
 
     return rv;
@@ -1703,19 +1689,24 @@ g_sck_select(int sck1, int sck2)
 static int
 g_fd_can_read(int fd)
 {
-    fd_set rfds;
-    struct timeval time;
-    int rv;
-
-    g_memset(&time, 0, sizeof(time));
-    FD_ZERO(&rfds);
-    FD_SET(((unsigned int)fd), &rfds);
-    rv = select(fd + 1, &rfds, 0, 0, &time);
-    if (rv == 1)
+    int rv = 0;
+    if (fd > 0)
     {
-        return 1;
+        struct pollfd pollfd;
+
+        pollfd.fd = fd;
+        pollfd.events = POLLIN;
+        pollfd.revents = 0;
+        if (poll(&pollfd, 1, 0) > 0)
+        {
+            if ((pollfd.revents & (POLLIN | POLLHUP)) != 0)
+            {
+                rv = 1;
+            }
+        }
     }
-    return 0;
+
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1982,8 +1973,9 @@ int
 g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
            int mstimeout)
 {
+#define MAX_HANDLES 256
 #ifdef _WIN32
-    HANDLE handles[256];
+    HANDLE handles[MAX_HANDLES];
     DWORD count;
     DWORD error;
     int j;
@@ -2016,96 +2008,62 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
 
     return 0;
 #else
-    fd_set rfds;
-    fd_set wfds;
-    struct timeval time;
-    struct timeval *ptime;
+    struct pollfd pollfd[MAX_HANDLES];
+    int sck;
     int i = 0;
-    int res = 0;
-    int max = 0;
-    int sck = 0;
+    unsigned int j = 0;
+    int rv = 1;
 
-    max = 0;
-    if (mstimeout < 1)
+    if (read_objs == NULL && rcount != 0)
     {
-        ptime = 0;
+        LOG(LOG_LEVEL_ERROR, "Programming error read_objs is null");
+    }
+    else if (write_objs == NULL && wcount != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Programming error write_objs is null");
+    }
+    /* Check carefully for int overflow in passed-in counts */
+    else if ((unsigned int)rcount > MAX_HANDLES ||
+             (unsigned int)wcount > MAX_HANDLES ||
+             ((unsigned int)rcount + (unsigned int)wcount) > MAX_HANDLES)
+    {
+        LOG(LOG_LEVEL_ERROR, "Programming error too many handles");
     }
     else
     {
-        g_memset(&time, 0, sizeof(struct timeval));
-        time.tv_sec = mstimeout / 1000;
-        time.tv_usec = (mstimeout % 1000) * 1000;
-        ptime = &time;
-    }
+        if (mstimeout < 1)
+        {
+            mstimeout = -1;
+        }
 
-    FD_ZERO(&rfds);
-    FD_ZERO(&wfds);
-
-    /* Find the highest descriptor number in read_obj */
-    if (read_objs != NULL)
-    {
-        for (i = 0; i < rcount; i++)
+        for (i = 0; i < rcount ; ++i)
         {
             sck = read_objs[i] & 0xffff;
-
             if (sck > 0)
             {
-                FD_SET(sck, &rfds);
-
-                if (sck > max)
-                {
-                    max = sck; /* max holds the highest socket/descriptor number */
-                }
+                pollfd[j].fd = sck;
+                pollfd[j].events = POLLIN;
+                ++j;
             }
         }
-    }
-    else if (rcount > 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Programming error read_objs is null");
-        return 1; /* error */
-    }
 
-    if (write_objs != NULL)
-    {
-        for (i = 0; i < wcount; i++)
+        for (i = 0; i < wcount; ++i)
         {
-            sck = (int)(write_objs[i]);
-
+            sck = write_objs[i];
             if (sck > 0)
             {
-                FD_SET(sck, &wfds);
-
-                if (sck > max)
-                {
-                    max = sck; /* max holds the highest socket/descriptor number */
-                }
+                pollfd[j].fd = sck;
+                pollfd[j].events = POLLOUT;
+                ++j;
             }
         }
-    }
-    else if (wcount > 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Programming error write_objs is null");
-        return 1; /* error */
+
+        rv = (poll(pollfd, j, mstimeout) < 0);
     }
 
-    res = select(max + 1, &rfds, &wfds, 0, ptime);
-
-    if (res < 0)
-    {
-        /* these are not really errors */
-        if ((errno == EAGAIN) ||
-                (errno == EWOULDBLOCK) ||
-                (errno == EINPROGRESS) ||
-                (errno == EINTR)) /* signal occurred */
-        {
-            return 0;
-        }
-
-        return 1; /* error */
-    }
-
-    return 0;
+    return rv;
 #endif
+#undef MAX_HANDLES
 }
 
 /*****************************************************************************/

@@ -675,7 +675,7 @@ int xfuse_check_wait_objs(void)
         return 0;
     }
 
-    if (g_tcp_select(g_fd, 0) & 1)
+    if (g_sck_can_recv(g_fd, 0))
     {
         tmpch = g_ch;
 
