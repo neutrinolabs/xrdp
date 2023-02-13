@@ -369,14 +369,15 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
                             int nBlockAlign, int wBitsPerSample,
                             int cbSize, char *data)
 {
-    LOG_DEVEL(LOG_LEVEL_INFO, "sound_process_output_format:");
-    LOG_DEVEL(LOG_LEVEL_INFO, "      wFormatTag      %d", wFormatTag);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nChannels       %d", nChannels);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nSamplesPerSec  %d", nSamplesPerSec);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nAvgBytesPerSec %d", nAvgBytesPerSec);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      nBlockAlign     %d", nBlockAlign);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      wBitsPerSample  %d", wBitsPerSample);
-    LOG_DEVEL(LOG_LEVEL_INFO, "      cbSize          %d", cbSize);
+    LOG(LOG_LEVEL_INFO, "sound_process_output_format:");
+    LOG(LOG_LEVEL_INFO, "      wFormatNo       %d", aindex);
+    LOG(LOG_LEVEL_INFO, "      wFormatTag      %s", audin_wave_format_tag_to_str(wFormatTag));
+    LOG(LOG_LEVEL_INFO, "      nChannels       %d", nChannels);
+    LOG(LOG_LEVEL_INFO, "      nSamplesPerSec  %d", nSamplesPerSec);
+    LOG(LOG_LEVEL_INFO, "      nAvgBytesPerSec %d", nAvgBytesPerSec);
+    LOG(LOG_LEVEL_INFO, "      nBlockAlign     %d", nBlockAlign);
+    LOG(LOG_LEVEL_INFO, "      wBitsPerSample  %d", wBitsPerSample);
+    LOG(LOG_LEVEL_INFO, "      cbSize          %d", cbSize);
 
     LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", data, cbSize);
 
@@ -898,6 +899,8 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     format_index = g_current_client_format_index;
     data_bytes = sound_wave_compress(data, data_bytes, &format_index);
 
+    LOG(LOG_LEVEL_TRACE, "sound_send_wave_data_chunk: wFormatNo %d", format_index);
+
     /* part one of 2 PDU wave info */
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "sound_send_wave_data_chunk: sending %d bytes", data_bytes);
@@ -1057,7 +1060,7 @@ sound_process_wave_confirm(struct stream *s, int size)
     in_uint8(s, cConfirmedBlockNo);
     time_diff = time - g_sent_time[cConfirmedBlockNo & 0xff];
 
-    LOG(LOG_LEVEL_DEBUG, "sound_process_wave_confirm: wTimeStamp %d, "
+    LOG(LOG_LEVEL_TRACE, "sound_process_wave_confirm: wTimeStamp %d, "
         "cConfirmedBlockNo %d time diff %d",
         wTimeStamp, cConfirmedBlockNo, time_diff);
 

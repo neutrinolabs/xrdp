@@ -22,6 +22,8 @@
 #ifndef _AUDIN_H_
 #define _AUDIN_H_
 
+const char *
+audin_wave_format_tag_to_str(int tag);
 int
 audin_init(void);
 int

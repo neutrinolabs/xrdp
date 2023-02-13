@@ -89,6 +89,27 @@ static struct xr_wave_format_ex **g_client_formats = NULL;
 static int g_current_format = 0; /* index in g_client_formats */
 
 /*****************************************************************************/
+
+/*
+ * This can be called from sound.c because it includes audin.h.
+ */
+
+const char *
+audin_wave_format_tag_to_str(int tag)
+{
+    return
+        (tag == WAVE_FORMAT_PCM)        ? "WAVE_FORMAT_PCM" :
+        (tag == WAVE_FORMAT_ADPCM)      ? "WAVE_FORMAT_ADPCM" :
+        (tag == WAVE_FORMAT_ALAW)       ? "WAVE_FORMAT_ALAW" :
+        (tag == WAVE_FORMAT_MULAW)      ? "WAVE_FORMAT_MULAW" :
+        (tag == WAVE_FORMAT_MULAW)      ? "WAVE_FORMAT_MULAW" :
+        (tag == WAVE_FORMAT_MPEGLAYER3) ? "WAVE_FORMAT_MPEGLAYER3" :
+        (tag == WAVE_FORMAT_OPUS)       ? "WAVE_FORMAT_OPUS" :
+        (tag == WAVE_FORMAT_AAC)        ? "WAVE_FORMAT_AAC" :
+        "UNKNOWN";
+}
+
+/*****************************************************************************/
 static int
 cleanup_client_formats(void)
 {
@@ -261,9 +282,17 @@ audin_process_formats(int chan_id, struct stream *s)
         in_uint16_le(s, wf->nBlockAlign);
         in_uint16_le(s, wf->wBitsPerSample);
         in_uint16_le(s, wf->cbSize);
-        LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_formats: recved format wFormatTag 0x%4.4x "
-                  "nChannels %d nSamplesPerSec %d",
-                  wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
+
+        LOG(LOG_LEVEL_INFO, "audin_process_formats:");
+        LOG(LOG_LEVEL_INFO, "      wFormatNo       %d", index);
+        LOG(LOG_LEVEL_INFO, "      wFormatTag      %s", audin_wave_format_tag_to_str(wf->wFormatTag));
+        LOG(LOG_LEVEL_INFO, "      nChannels       %d", wf->nChannels);
+        LOG(LOG_LEVEL_INFO, "      nSamplesPerSec  %d", wf->nSamplesPerSec);
+        LOG(LOG_LEVEL_INFO, "      nAvgBytesPerSec %d", wf->nAvgBytesPerSec);
+        LOG(LOG_LEVEL_INFO, "      nBlockAlign     %d", wf->nBlockAlign);
+        LOG(LOG_LEVEL_INFO, "      wBitsPerSample  %d", wf->wBitsPerSample);
+        LOG(LOG_LEVEL_INFO, "      cbSize          %d", wf->cbSize);
+
         if (wf->cbSize > 0)
         {
             if (!s_check_rem(s, wf->cbSize))
