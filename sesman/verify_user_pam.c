@@ -204,7 +204,7 @@ get_service_name(char *service_name)
     service_name[0] = 0;
 
     if (g_file_exist("/etc/pam.d/xrdp-sesman") ||
-            g_file_exist(XRDP_SYSCONF_PATH "/pam.d/xrdp-sesman"))
+            g_file_exist(XRDP_PAMCONF_PATH "/pam.d/xrdp-sesman")
     {
         g_strncpy(service_name, "xrdp-sesman", 255);
     }
