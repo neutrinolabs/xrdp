@@ -27,11 +27,16 @@ test_xrdp_SOURCES = \
     test_xrdp.h \
     test_xrdp_main.c \
     test_xrdp_egfx.c \
+    test_xrdp_region.c \
     test_bitmap_load.c
 
 test_xrdp_CFLAGS = \
     -D IMAGEDIR=\"$(srcdir)\" \
-    @CHECK_CFLAGS@
+    @CHECK_CFLAGS@ \
+    @CMOCKA_CFLAGS@
+
+test_xrdp_LDFLAGS = -Wl,--wrap=pixman_region_extents, \
+    -Wl,--wrap=pixman_region_not_empty
 
 test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_load.o \
@@ -58,4 +63,5 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_main_utils.o \
     $(PIXMAN_LIBS) \
     $(IMLIB2_LIBS) \
-    @CHECK_LIBS@
+    @CHECK_LIBS@ \
+    @CMOCKA_LIBS@

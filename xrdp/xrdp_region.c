@@ -135,3 +135,33 @@ xrdp_region_get_rect(struct xrdp_region *self, int index,
     }
     return 1;
 }
+
+/*****************************************************************************/
+/* returns error */
+int
+xrdp_region_get_bounds(struct xrdp_region *self, struct xrdp_rect *rect)
+{
+    struct pixman_box16 *box;
+
+    box = pixman_region_extents(self->reg);
+    if (box != 0)
+    {
+        rect->left = box->x1;
+        rect->top = box->y1;
+        rect->right = box->x2;
+        rect->bottom = box->y2;
+        return 0;
+    }
+    return 1;
+}
+
+/*****************************************************************************/
+/* returns boolean */
+int
+xrdp_region_not_empty(struct xrdp_region *self)
+{
+    pixman_bool_t not_empty;
+
+    not_empty = pixman_region_not_empty(self->reg);
+    return not_empty;
+}
