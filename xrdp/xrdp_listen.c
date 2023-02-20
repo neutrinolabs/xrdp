@@ -771,16 +771,33 @@ xrdp_listen_process_startup_params(struct xrdp_listen *self)
 static int
 xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
 {
+    char server_trans_fd_str[32];
+    char executable_path[4096];
+    struct list *child_arguments;
+
     int pid;
     int index;
     struct xrdp_process *process;
     struct trans *ltrans;
 
-    pid = g_fork();
+    g_snprintf(server_trans_fd_str, 32, "%d", (int) server_trans->sck);
+
+    child_arguments = list_create();
+    list_add_item(child_arguments, (intptr_t) g_strdup("--child-process"));
+    list_add_item(child_arguments, (intptr_t) g_strdup("--child-fd"));
+    list_add_item(child_arguments, (intptr_t) g_strdup(server_trans_fd_str));
+
+    g_get_executable_path(executable_path, 4096);
+
+    pid = g_fork_execvp(executable_path, (char **) child_arguments->items);
+
+    list_delete(child_arguments);
 
     if (pid == 0)
     {
         /* child */
+        /* unreachable code */
+
         /* recreate some main globals */
         xrdp_child_fork();
         /* recreate the process done wait object, not used in fork mode */
