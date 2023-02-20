@@ -312,3 +312,22 @@ xrdp_process_main_loop(struct xrdp_process *self)
     g_set_wait_obj(self->done_event);
     return 0;
 }
+
+/*****************************************************************************/
+int
+xrdp_process_child_entrypoint(struct xrdp_listen *owner)
+{
+    struct trans *server_trans;
+    struct xrdp_process *process;
+
+    // FIXME
+    server_trans = trans_create(TRANS_MODE_TCP, 16, 16);
+    server_trans->sck = 0;
+
+    process = xrdp_process_create(owner, 0);
+    process->server_trans = server_trans;
+
+    xrdp_process_main_loop(process);
+
+    return 0;
+}

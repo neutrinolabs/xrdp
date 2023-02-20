@@ -184,6 +184,8 @@ void
 xrdp_process_delete(struct xrdp_process *self);
 int
 xrdp_process_main_loop(struct xrdp_process *self);
+int
+xrdp_process_child_entrypoint(struct xrdp_listen *owner);
 
 /* xrdp_listen.c */
 struct xrdp_listen *
