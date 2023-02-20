@@ -100,6 +100,10 @@ extern char **environ;
 #include <sys/ucred.h>
 #endif
 
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
+
 /* for solaris */
 #if !defined(PF_LOCAL)
 #define PF_LOCAL AF_UNIX
@@ -3064,6 +3068,21 @@ g_set_allusercontext(int uid)
     return (rv != 0);  /* Return 0 or 1 */
 }
 #endif
+
+/*****************************************************************************/
+void
+g_get_executable_path(char *buf, int bufsize)
+{
+#if defined(__APPLE__)
+    uint32_t _bufsize = bufsize;
+    _NSGetExecutablePath(buf, &_bufsize);
+#else
+    LOG(LOG_LEVEL_WARN, "g_get_executable_path(): not implemented yet!");
+    buf = strdup("xrdp");
+#endif
+}
+
+
 /*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred */

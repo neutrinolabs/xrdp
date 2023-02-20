@@ -274,6 +274,7 @@ int      g_setlogin(const char *name);
  */
 int      g_set_allusercontext(int uid);
 #endif
+void     g_get_executable_path(char *buf, int bufsize);
 int      g_waitchild(void);
 int      g_waitpid(int pid);
 struct exit_status g_waitpid_status(int pid);
