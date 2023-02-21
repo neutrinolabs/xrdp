@@ -558,6 +558,12 @@ if test "x$enable_strict_locations" != "xyes"; then
   localstatedir="/var";
 fi
 
+AC_ARG_WITH([pamconfdir],
+  [AS_HELP_STRING([--with-pamconfdir=DIR],
+                  [Use directory for pam.d config (default: /etc/pam.d)])],
+                  [], [with_pamconfdir="$sysconfdir/pam.d"])
+AC_SUBST([pamconfdir], [$with_pamconfdir])
+
 PKG_INSTALLDIR
 
 AC_CHECK_HEADERS([sys/prctl.h])
@@ -638,6 +644,7 @@ echo "  exec_prefix             $exec_prefix"
 echo "  libdir                  $libdir"
 echo "  bindir                  $bindir"
 echo "  sysconfdir              $sysconfdir"
+echo "  pamconfdir              $pamconfdir"
 echo "  localstatedir           $localstatedir"
 echo "  runstatedir             $runstatedir"
 echo "  socketdir               $socketdir"

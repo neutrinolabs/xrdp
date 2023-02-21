@@ -204,7 +204,15 @@ get_service_name(char *service_name)
     service_name[0] = 0;
 
     if (g_file_exist("/etc/pam.d/xrdp-sesman") ||
-            g_file_exist(XRDP_SYSCONF_PATH "/pam.d/xrdp-sesman"))
+#ifdef __LINUX_PAM__
+            /* /usr/lib/pam.d is hardcoded into Linux-PAM */
+            g_file_exist("/usr/lib/pam.d/xrdp-sesman") ||
+#endif
+#ifdef OPENPAM_VERSION
+            /* /usr/local/etc/pam.d is hardcoded into OpenPAM */
+            g_file_exist("/usr/local/etc/pam.d/xrdp-sesman") ||
+#endif
+            g_file_exist(XRDP_PAMCONF_PATH "/xrdp-sesman"))
     {
         g_strncpy(service_name, "xrdp-sesman", 255);
     }

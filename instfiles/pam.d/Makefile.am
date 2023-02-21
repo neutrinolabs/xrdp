@@ -26,7 +26,7 @@ endif
 endif
 endif
 
-pamddir = $(sysconfdir)/pam.d
+pamddir = $(pamconfdir)
 
 pamd_DATA = \
   $(PAMFILE)
