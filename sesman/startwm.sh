@@ -85,13 +85,14 @@ wm_start()
   if [ -r /etc/X11/Xsession ]; then
     pre_start
 
-    # if /etc/xrdp/export_desktop_session file exists, souurce it.
-    # /etc/xrdp/export_desktop_session script exports DESKTOP_SESSION environment varible
-    # The value shall be one of "ls -1 /usr/share/xsessions|cut -d. -f1".
-    # e.g. export DESKTOP_SESSION=ubuntu
-    if [ -r /etc/xrdp/export_desktop_session ]; then
-      . /etc/xrdp/export_desktop_session
-    fi
+    # if you want to start preferred desktop environment,
+    # add following line,
+    #  [ -n "$XRDP_SESSION" ] && export DESKTOP_SESSION=<your preferred desktop>
+    # in either of following file.
+    # 1. ~/.profile
+    # 2. create a file (any filename is OK) in /etc/profile.d
+    # <your preferred desktop> shall be one of "ls -1 /usr/share/xsessions/"
+    # e.g.  [ -n "$XRDP_SESSION" ] && export DESKTOP_SESSION==ubuntu
 
     # STARTUP is the default startup command.
     # if $1 is empty and STARTUP was not set
