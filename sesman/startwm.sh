@@ -57,8 +57,7 @@ post_start()
 
 get_xdg_session_startupcmd()
 {
-  # DESKTOP_SESSION should be set in sesman.ini in the SessionVariables section.
-  # If set and valid then the STARTUP command will be taken from there
+  # If DESKTOP_SESSION is set and valid then the STARTUP command will be taken from there
   # GDM exports environment variables XDG_CURRENT_DESKTOP and XDG_SESSION_DESKTOP.
   # This follows it.
   if [ -n "$1" ] && [ -d /usr/share/xsessions ] \
@@ -90,7 +89,7 @@ wm_start()
     #  [ -n "$XRDP_SESSION" ] && export DESKTOP_SESSION=<your preferred desktop>
     # in either of following file.
     # 1. ~/.profile
-    # 2. create a file (any filename is OK) in /etc/profile.d
+    # 2. create a file (any_filename.sh is OK) in /etc/profile.d
     # <your preferred desktop> shall be one of "ls -1 /usr/share/xsessions/|cut -d. -f1"
     # e.g.  [ -n "$XRDP_SESSION" ] && export DESKTOP_SESSION=ubuntu
 
