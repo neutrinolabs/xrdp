@@ -2059,6 +2059,17 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
         }
 
         rv = (poll(pollfd, j, mstimeout) < 0);
+        if (rv != 0)
+        {
+            /* these are not really errors */
+            if ((errno == EAGAIN) ||
+                    (errno == EWOULDBLOCK) ||
+                    (errno == EINPROGRESS) ||
+                    (errno == EINTR)) /* signal occurred */
+            {
+                rv = 0;
+            }
+        }
     }
 
     return rv;
