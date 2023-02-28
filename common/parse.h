@@ -441,6 +441,15 @@ parser_stream_overflow_check(const struct stream *s, int n, int is_out,
     } while (0)
 
 /******************************************************************************/
+#define in_str(s, v, n) do \
+    { \
+        S_CHECK_REM((s), (n + 1)); \
+        (v) = (s)->p; \
+        (v[n]) = '\0'; \
+        (s)->p++; \
+    } while (0)
+
+/******************************************************************************/
 #define in_uint8a(s, v, n) do \
     { \
         S_CHECK_REM((s), (n)); \
