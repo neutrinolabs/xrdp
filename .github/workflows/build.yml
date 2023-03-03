@@ -134,7 +134,10 @@ jobs:
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
       - uses: actions/checkout@v3
       - name: "Install Dependencies"
-        run: sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
+        # See https://github.com/actions/runner-images/issues/7192
+        run: |
+          echo RESET grub-efi/install_devices | sudo debconf-communicate grub-pc
+          sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
       - name: Bootstrap
         run: ./bootstrap
       - name: configure
