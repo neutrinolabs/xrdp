@@ -1142,3 +1142,4 @@ g_charstr_to_bitmask(const char *str, const struct bitmask_char bitdefs[],
 
     return bitmask;
 }
+

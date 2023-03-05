@@ -95,4 +95,22 @@ list_append_list_strdup(struct list *self, struct list *dest, int start_index);
 void
 list_dump_items(struct list *self);
 
+/**
+ * Splits a string on a separation character and then returns a list of
+ * the string split by the character, without the character contained within
+ * the pieces.
+ *
+ * The list must be disposed of by the caller.
+ *
+ * @param str String to split.
+ * @param character Character used as the delimiter between strings.
+ * @param start_index Index to start on the source list (zero based)
+ *
+ * @result 0 if a memory allocation failure occurred.
+ *
+ * String fragments in the list are created with strdup()
+ */
+struct list *
+split_string_into_list(const char *str, char character);
+
 #endif

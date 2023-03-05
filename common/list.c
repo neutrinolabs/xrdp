@@ -36,7 +36,7 @@ enum
     DEFAULT_GROW_BY_SIZE = 10
 };
 
-/*****************************************************************************/
+/******************************************************************************/
 struct list *
 list_create_sized(unsigned int size)
 {
@@ -64,14 +64,14 @@ list_create_sized(unsigned int size)
     return self;
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 struct list *
 list_create(void)
 {
     return list_create_sized(DEFAULT_LIST_SIZE);
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 void
 list_delete(struct list *self)
 {
@@ -95,7 +95,7 @@ list_delete(struct list *self)
     free(self);
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 static int
 grow_list(struct list *self)
 {
@@ -128,7 +128,7 @@ list_add_item(struct list *self, tbus item)
     return 1;
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 tbus
 list_get_item(const struct list *self, int index)
 {
@@ -140,7 +140,7 @@ list_get_item(const struct list *self, int index)
     return self->items[index];
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 void
 list_clear(struct list *self)
 {
@@ -161,7 +161,7 @@ list_clear(struct list *self)
     self->items = (tbus *)realloc(self->items, sizeof(tbus) * self->alloc_size);
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 int
 list_index_of(struct list *self, tbus item)
 {
@@ -178,7 +178,7 @@ list_index_of(struct list *self, tbus item)
     return -1;
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 void
 list_remove_item(struct list *self, int index)
 {
@@ -201,7 +201,6 @@ list_remove_item(struct list *self, int index)
     }
 }
 
-/*****************************************************************************/
 int
 list_insert_item(struct list *self, int index, tbus item)
 {
@@ -234,7 +233,7 @@ list_insert_item(struct list *self, int index, tbus item)
     return 1;
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 /* append one list to another using strdup for each item in the list */
 /* begins copy at start_index, a zero based index on the source list */
 int
@@ -282,7 +281,7 @@ list_append_list_strdup(struct list *self, struct list *dest, int start_index)
     return rv;
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 void
 list_dump_items(struct list *self)
 {
@@ -297,4 +296,72 @@ list_dump_items(struct list *self)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "%d: %p", index, (void *) list_get_item(self, index));
     }
+}
+
+/******************************************************************************/
+/**
+ * Appends a string fragment to a list
+ * @param[in,out] start Pointer to start of fragment (by reference)
+ * @param end Pointer to one past end of fragment
+ * @param list List to append to
+ * @result 1 for success
+ *
+ * In the event of a memory failure, 0 is returned and the list is deleted.
+ */
+int
+split_string_append_fragment(const char **start, const char *end,
+                             struct list *list)
+{
+    const unsigned int len = end - *start;
+    char *copy = (char *)malloc(len + 1);
+    if (copy == NULL)
+    {
+        list_delete(list);
+        return 0;
+    }
+    g_memcpy(copy, *start, len);
+    copy[len] = '\0';
+    if (!list_add_item(list, (tintptr)copy))
+    {
+        g_free(copy);
+        list_delete(list);
+        return 0;
+    }
+    *start = end + 1;
+    return 1;
+}
+
+/******************************************************************************/
+struct list *
+split_string_into_list(const char *str, char character)
+{
+    struct list *result = list_create();
+    if (result == NULL)
+    {
+        return result;
+    }
+    result->auto_free = 1;
+
+    if (str == NULL)
+    {
+        return result;
+    }
+
+    const char *p;
+    while ((p = g_strchr(str, character)) != NULL)
+    {
+        if (!split_string_append_fragment(&str, p, result))
+        {
+            return NULL;
+        }
+    }
+
+    if (*str != '\0')
+    {
+        if (!split_string_append_fragment(&str, str + g_strlen(str), result))
+        {
+            return NULL;
+        }
+    }
+    return result;
 }
