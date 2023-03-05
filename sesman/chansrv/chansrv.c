@@ -317,6 +317,10 @@ send_rail_drawing_orders(char *data, int size)
     int error;
 
     s = trans_get_out_s(g_con_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
     out_uint32_le(s, 0); /* version */
     out_uint32_le(s, 8 + 8 + size); /* size */
     out_uint32_le(s, 10); /* msg id */
