@@ -205,6 +205,7 @@ list_remove_item(struct list *self, int index)
 int
 list_insert_item(struct list *self, int index, tbus item)
 {
+    int i;
 
     if (index > self->count)
     {
@@ -220,15 +221,13 @@ list_insert_item(struct list *self, int index, tbus item)
         return 0;
     }
 
-    self->count++;
-    if (self->count >= 2)
+    // Move all the items above this location up one
+    for (i = self->count ; i > index ; --i)
     {
-        unsigned int i;
-        for (i = (self->count - 2); i >= (unsigned int)index; i--)
-        {
-            self->items[i + 1] = self->items[i];
-        }
+        self->items[i] = self->items[i - 1];
     }
+
+    self->count++;
 
     self->items[index] = item;
     return 1;
