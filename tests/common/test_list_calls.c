@@ -42,6 +42,11 @@ START_TEST(test_list__simple)
     val = list_get_item(lst, 10);
     ck_assert_int_eq(val, 10);
 
+    list_insert_item(lst, 0, 99);
+    ck_assert_int_eq(lst->count, TEST_LIST_SIZE + 1);
+    val = list_get_item(lst, 10);
+    ck_assert_int_eq(val, 9);
+
     list_clear(lst);
     ck_assert_int_eq(lst->count, 0);
     list_delete(lst);
