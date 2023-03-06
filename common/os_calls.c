@@ -2717,21 +2717,45 @@ g_execvp(const char *p1, char *args[])
     g_strnjoin(args_str, ARGS_STR_LEN, " ", (const char **) args, args_len);
 
     LOG(LOG_LEVEL_DEBUG,
-        "Calling exec (executable: %s, arguments: %s)",
+        "Calling exec (excutable: %s, arguments: %s)",
         p1, args_str);
 
-    g_rm_temp_dir();
     rv = execvp(p1, args);
 
     /* should not get here */
+    int saved_errno = errno;
+
     LOG(LOG_LEVEL_ERROR,
-        "Error calling exec (executable: %s, arguments: %s) "
+        "Error calling exec (excutable: %s, arguments: %s) "
         "returned errno: %d, description: %s",
         p1, args_str, g_get_errno(), g_get_strerror());
 
-    g_mk_socket_path(0);
+    errno = saved_errno;
     return rv;
 #endif
+}
+
+/*****************************************************************************/
+int
+g_execvp_list(const char *file, struct list *argv)
+{
+    int rv = -1;
+
+    /* Push a terminating NULL onto the list for the system call */
+    if (!list_add_item(argv, (tintptr)NULL))
+    {
+        LOG(LOG_LEVEL_ERROR, "No memory for exec to terminate list");
+        errno = ENOMEM;
+    }
+    else
+    {
+        /* Read the argv argument straight from the list */
+        rv = g_execvp(file, (char **)argv->items);
+
+        /* should not get here */
+        list_remove_item(argv, argv->count - 1); // Lose terminating NULL
+    }
+    return rv;
 }
 
 /*****************************************************************************/

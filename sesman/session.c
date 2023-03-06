@@ -344,7 +344,7 @@ static int
 session_start_chansrv(int uid, int display)
 {
     struct list *chansrv_params;
-    char exe_path[262];
+    const char *exe_path = XRDP_SBIN_PATH "/xrdp-chansrv";
     int chansrv_pid;
 
     chansrv_pid = g_fork();
@@ -357,18 +357,15 @@ session_start_chansrv(int uid, int display)
         chansrv_params->auto_free = 1;
 
         /* building parameters */
-        g_snprintf(exe_path, sizeof(exe_path), "%s/xrdp-chansrv",
-                   XRDP_SBIN_PATH);
 
         list_add_strdup(chansrv_params, exe_path);
-        list_add_item(chansrv_params, 0); /* mandatory */
 
         env_set_user(uid, 0, display,
                      g_cfg->env_names,
                      g_cfg->env_values);
 
         /* executing chansrv */
-        g_execvp(exe_path, (char **) (chansrv_params->items));
+        g_execvp_list(exe_path, chansrv_params);
 
         /* should not get here */
         list_delete(chansrv_params);
@@ -422,7 +419,6 @@ session_start(struct auth_info *auth_info,
     char execvpparams[2048];
     char *xserver = NULL; /* absolute/relative path to Xorg/Xvnc */
     char *passwd_file;
-    char **pp1 = (char **)NULL;
     struct session_chain *temp = (struct session_chain *)NULL;
     struct list *xserver_params = (struct list *)NULL;
     char authfile[256]; /* The filename for storing xauth information */
@@ -767,11 +763,6 @@ session_start(struct auth_info *auth_info,
                     /* additional parameters from sesman.ini file */
                     list_append_list_strdup(g_cfg->xorg_params, xserver_params, 1);
 
-                    /* make sure it ends with a zero */
-                    list_add_item(xserver_params, 0);
-
-                    pp1 = (char **) xserver_params->items;
-
                     /* some args are passed via env vars */
                     g_sprintf(geometry, "%d", s->width);
                     g_setenv("XRDP_START_WIDTH", geometry, 1);
@@ -804,10 +795,6 @@ session_start(struct auth_info *auth_info,
                     //config_read_xserver_params(SCP_SESSION_TYPE_XVNC,
                     //                           xserver_params);
                     list_append_list_strdup(g_cfg->vnc_params, xserver_params, 1);
-
-                    /* make sure it ends with a zero */
-                    list_add_item(xserver_params, 0);
-                    pp1 = (char **)xserver_params->items;
                 }
                 else
                 {
@@ -822,7 +809,7 @@ session_start(struct auth_info *auth_info,
                 /* fire up X server */
                 LOG(LOG_LEVEL_INFO, "Starting X server on display %d: %s",
                     display, dumpItemsToString(xserver_params, execvpparams, 2048));
-                g_execvp(xserver, pp1);
+                g_execvp_list(xserver, xserver_params);
 
                 /* should not get here */
                 LOG(LOG_LEVEL_ERROR,
