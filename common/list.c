@@ -23,6 +23,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "arch.h"
 #include "os_calls.h"
@@ -232,6 +233,65 @@ list_insert_item(struct list *self, int index, tbus item)
     return 1;
 }
 
+
+/******************************************************************************/
+int
+list_add_strdup(struct list *self, const char *str)
+{
+    int rv;
+    char *dup;
+
+    if (str == NULL)
+    {
+        rv = list_add_item(self, (tintptr)str);
+    }
+    else if ((dup = g_strdup(str)) == NULL)
+    {
+        rv = 0;
+    }
+    else
+    {
+        rv = list_add_item(self, (tintptr)dup);
+        if (!rv)
+        {
+            g_free(dup);
+        }
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+int
+list_add_strdup_multi(struct list *self, ...)
+{
+    va_list ap;
+    int entry_count = self->count;
+    const char *s;
+    int rv = 1;
+
+    va_start(ap, self);
+    while ((s = va_arg(ap, const char *)) != NULL)
+    {
+        if (!list_add_strdup(self, s))
+        {
+            rv = 0;
+            break;
+        }
+    }
+    va_end(ap);
+
+    if (rv == 0)
+    {
+        // Remove the additional items we added
+        while (self->count > entry_count)
+        {
+            list_remove_item(self, self->count - 1);
+        }
+    }
+
+    return rv;
+}
 /******************************************************************************/
 /* append one list to another using strdup for each item in the list */
 /* begins copy at start_index, a zero based index on the source list */
@@ -245,23 +305,7 @@ list_append_list_strdup(struct list *self, struct list *dest, int start_index)
     for (index = start_index; index < self->count; index++)
     {
         const char *item = (const char *)list_get_item(self, index);
-        char *dup;
-        if (item == NULL)
-        {
-            // This shouldn't really happen, but if it does we'll
-            // copy the item anyway.
-            dup = NULL;
-        }
-        else
-        {
-            dup = g_strdup(item);
-            if (dup == NULL)
-            {
-                rv = 0;
-                break;
-            }
-        }
-        if (!list_add_item(dest, (tbus)dup))
+        if (!list_add_strdup(dest, item))
         {
             rv = 0;
             break;

@@ -652,11 +652,11 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
                     g_strncpy(name, r, 255);
                 }
 
-                list_add_item(mod_data->names, (long)g_strdup(q));
-                list_add_item(mod_data->values, (long)g_strdup(r));
+                list_add_strdup(mod_data->names, q);
+                list_add_strdup(mod_data->values, r);
             }
 
-            list_add_item(b->string_list, (long)g_strdup(name));
+            list_add_strdup(b->string_list, name);
             list_add_item(b->data_list, (long)mod_data);
         }
     }

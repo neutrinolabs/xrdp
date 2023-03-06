@@ -452,8 +452,8 @@ config_read_xorg_params(int file, struct config_sesman *cs,
 
     for (i = 0; i < param_n->count; i++)
     {
-        list_add_item(cs->xorg_params,
-                      (long) g_strdup((char *) list_get_item(param_v, i)));
+        list_add_strdup(cs->xorg_params,
+                        (const char *) list_get_item(param_v, i));
     }
 
     return 0;
@@ -485,7 +485,8 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
 
     for (i = 0; i < param_n->count; i++)
     {
-        list_add_item(cs->vnc_params, (long)g_strdup((char *)list_get_item(param_v, i)));
+        list_add_strdup(cs->vnc_params,
+                        (const char *)list_get_item(param_v, i));
     }
 
     return 0;
@@ -510,10 +511,10 @@ config_read_session_variables(int file, struct config_sesman *cs,
 
     for (i = 0; i < param_n->count; i++)
     {
-        list_add_item(cs->env_names,
-                      (tintptr) g_strdup((char *) list_get_item(param_n, i)));
-        list_add_item(cs->env_values,
-                      (tintptr) g_strdup((char *) list_get_item(param_v, i)));
+        list_add_strdup(cs->env_names,
+                        (const char *) list_get_item(param_n, i));
+        list_add_strdup(cs->env_values,
+                        (const char *) list_get_item(param_v, i));
     }
 
     return 0;

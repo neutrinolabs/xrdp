@@ -360,7 +360,7 @@ session_start_chansrv(int uid, int display)
         g_snprintf(exe_path, sizeof(exe_path), "%s/xrdp-chansrv",
                    XRDP_SBIN_PATH);
 
-        list_add_item(chansrv_params, (intptr_t) g_strdup(exe_path));
+        list_add_strdup(chansrv_params, exe_path);
         list_add_item(chansrv_params, 0); /* mandatory */
 
         env_set_user(uid, 0, display,
@@ -759,10 +759,10 @@ session_start(struct auth_info *auth_info,
                     xserver = g_strdup((const char *)list_get_item(g_cfg->xorg_params, 0));
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (tintptr) g_strdup(xserver));
-                    list_add_item(xserver_params, (tintptr) g_strdup(screen));
-                    list_add_item(xserver_params, (tintptr) g_strdup("-auth"));
-                    list_add_item(xserver_params, (tintptr) g_strdup(authfile));
+                    list_add_strdup_multi(xserver_params,
+                                          xserver, screen,
+                                          "-auth", authfile,
+                                          NULL);
 
                     /* additional parameters from sesman.ini file */
                     list_append_list_strdup(g_cfg->xorg_params, xserver_params, 1);
@@ -791,17 +791,13 @@ session_start(struct auth_info *auth_info,
                     xserver = g_strdup((const char *)list_get_item(g_cfg->vnc_params, 0));
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (tintptr)g_strdup(xserver));
-                    list_add_item(xserver_params, (tintptr)g_strdup(screen));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-auth"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(authfile));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(geometry));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-depth"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(depth));
-                    list_add_item(xserver_params, (tintptr)g_strdup("-rfbauth"));
-                    list_add_item(xserver_params, (tintptr)g_strdup(passwd_file));
-
+                    list_add_strdup_multi(xserver_params,
+                                          xserver, screen,
+                                          "-auth", authfile,
+                                          "-geometry", geometry,
+                                          "-depth", depth,
+                                          "-rfbauth", passwd_file,
+                                          NULL);
                     g_free(passwd_file);
 
                     /* additional parameters from sesman.ini file */

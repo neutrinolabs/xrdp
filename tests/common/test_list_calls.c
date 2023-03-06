@@ -65,7 +65,15 @@ START_TEST(test_list__simple_auto_free)
     {
         char strval[64];
         g_snprintf(strval, sizeof(strval), "%d", i);
-        list_add_item(lst, (tintptr)g_strdup(strval));
+        // Odds, use list_add_item/strdup, evens use list_add_strdup
+        if ((i % 2) != 0)
+        {
+            list_add_item(lst, (tintptr)g_strdup(strval));
+        }
+        else
+        {
+            list_add_strdup(lst, strval);
+        }
     }
 
     list_remove_item(lst, 0);
@@ -113,6 +121,29 @@ START_TEST(test_list__simple_append_list)
     list_delete(src);
     list_clear(dst);  // Exercises auto_free code paths in list.c
     list_delete(dst);
+}
+END_TEST
+
+START_TEST(test_list__simple_strdup_multi)
+{
+    int i;
+    struct list *lst = list_create();
+    lst->auto_free = 1;
+
+    list_add_strdup_multi(lst,
+                          "0", "1", "2", "3", "4", "5",
+                          "6", "7", "8", "9", "10", "11",
+                          NULL);
+
+    ck_assert_int_eq(lst->count, 12);
+
+    for (i = 0 ; i < lst->count; ++i)
+    {
+        int val = g_atoi((const char *)list_get_item(lst, i));
+        ck_assert_int_eq(val, i);
+    }
+
+    list_delete(lst);
 }
 END_TEST
 
@@ -172,6 +203,7 @@ make_suite_test_list(void)
     tcase_add_test(tc_simple, test_list__simple);
     tcase_add_test(tc_simple, test_list__simple_auto_free);
     tcase_add_test(tc_simple, test_list__simple_append_list);
+    tcase_add_test(tc_simple, test_list__simple_strdup_multi);
     tcase_add_test(tc_simple, test_list__append_fragment);
     tcase_add_test(tc_simple, test_list__split_string_into_list);
 
