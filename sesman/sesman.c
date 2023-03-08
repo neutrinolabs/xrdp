@@ -654,7 +654,7 @@ print_help(void)
     g_printf("   -v, --version     show version\n");
     g_printf("   -n, --nodaemon    don't fork into background\n");
     g_printf("   -c, --config      specify new path to sesman.ini\n");
-    g_writeln("      --dump-config display config on stdout on startup");
+    g_printf("       --dump-config display config on stdout on startup\n");
     g_deinit();
 }
 
