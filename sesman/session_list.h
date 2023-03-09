@@ -18,21 +18,23 @@
 
 /**
  *
- * @file session.h
- * @brief Session management definitions
+ * @file session_list.h
+ * @brief Session list management definitions
  * @author Jay Sorg, Simone Fedele
  *
  */
 
 
-#ifndef SESSION_H
-#define SESSION_H
+#ifndef SESSION_LIST_H
+#define SESSION_LIST_H
 
 #include <time.h>
 
 #include "guid.h"
 #include "scp_application_types.h"
 #include "xrdp_constants.h"
+
+struct session_parameters;
 
 #define SESMAN_SESSION_STATUS_ACTIVE        0x01
 #define SESMAN_SESSION_STATUS_IDLE          0x02
@@ -51,6 +53,9 @@ enum session_kill_status
 
 struct scp_session_info;
 
+/**
+ * Object describing a session
+ */
 struct session_item
 {
     int uid; /* UID of session */
@@ -79,21 +84,25 @@ struct session_chain
     struct session_item *item;
 };
 
+/**
+ * Returns the number of sessions currently active
+ * @return Session count
+ */
+unsigned int
+session_get_count(void);
 
 /**
- * Information used to start or find a session
+ * Adds a new session item to the chain
  */
-struct session_parameters
-{
-    int uid;
-    enum scp_session_type type;
-    unsigned short height;
-    unsigned short width;
-    unsigned char  bpp;
-    const char *shell;
-    const char *directory;
-    const char *ip_addr;
-};
+void
+session_chain_add(struct session_chain *element);
+
+/**
+ * Get the next available display
+ */
+int
+session_get_available_display(void);
+
 
 /**
  *
@@ -102,26 +111,12 @@ struct session_parameters
  *
  */
 struct session_item *
-session_get_bydata(const struct session_parameters *params);
-#ifndef session_find_item
-#define session_find_item(a) session_get_bydata(a)
-#endif
-
-/**
- *
- * @brief starts a session
- *
- * @return Connection status.
- */
-enum scp_screate_status
-session_start(struct auth_info *auth_info,
-              const struct session_parameters *params,
-              int *display,
-              struct guid *guid);
-
-int
-session_reconnect(int display, int uid,
-                  struct auth_info *auth_info);
+session_get_bydata(uid_t uid,
+                   enum scp_session_type type,
+                   unsigned short width,
+                   unsigned short height,
+                   unsigned char  bpp,
+                   const char *ip_addr);
 
 /**
  *
@@ -173,22 +168,4 @@ session_get_byuid(int uid, unsigned int *cnt, unsigned char flags);
 void
 free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt);
 
-/**
- *
- * @brief delete socket files
- * @param display number
- * @return non-zero value (number of errors) if failed
- */
-int cleanup_sockets(int display);
-
-/**
- * Clone a session_parameters structure
- *
- * @param sp Parameters to clone
- * @return Cloned parameters, or NULL if no memory
- *
- * The cloned structure can be free'd with a single call to g_free()
- */
-struct session_parameters *
-clone_session_params(const struct session_parameters *sp);
-#endif
+#endif // SESSION_LIST_H

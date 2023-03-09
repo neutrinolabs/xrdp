@@ -35,7 +35,7 @@
 #include "log.h"
 #include "os_calls.h"
 #include "sesman.h"
-#include "session.h"
+#include "session_list.h"
 #include "string_calls.h"
 
 /******************************************************************************/
