@@ -231,7 +231,6 @@ km_read_section(int fd, const char *section_name, struct xrdp_key_info *keymap)
 int
 get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 {
-    int fd;
     int basic_key_layout = keylayout & 0x0000ffff;
     char *filename;
     struct xrdp_keymap *lkeymap;
@@ -258,36 +257,21 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 
     if (g_file_exist(filename))
     {
-        fd = g_file_open(filename);
-        LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
 
-        if (fd != -1)
+        lkeymap = (struct xrdp_keymap *)g_malloc(sizeof(struct xrdp_keymap), 0);
+        /* make a copy of the built-in keymap */
+        g_memcpy(lkeymap, keymap, sizeof(struct xrdp_keymap));
+
+        km_load_file(filename, keymap);
+
+        if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
         {
-            lkeymap = (struct xrdp_keymap *)g_malloc(sizeof(struct xrdp_keymap), 0);
-            /* make a copy of the built-in keymap */
-            g_memcpy(lkeymap, keymap, sizeof(struct xrdp_keymap));
-            /* clear the keymaps */
-            g_memset(keymap, 0, sizeof(struct xrdp_keymap));
-            /* read the keymaps */
-            km_read_section(fd, "noshift", keymap->keys_noshift);
-            km_read_section(fd, "shift", keymap->keys_shift);
-            km_read_section(fd, "altgr", keymap->keys_altgr);
-            km_read_section(fd, "shiftaltgr", keymap->keys_shiftaltgr);
-            km_read_section(fd, "capslock", keymap->keys_capslock);
-            km_read_section(fd, "capslockaltgr", keymap->keys_capslockaltgr);
-            km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
-            km_read_section(fd, "shiftcapslockaltgr", keymap->keys_shiftcapslockaltgr);
-
-            if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
-            {
-                LOG(LOG_LEVEL_WARNING,
-                    "local keymap file for 0x%08x found and doesn't match "
-                    "built in keymap, using local keymap file", keylayout);
-            }
-
-            g_free(lkeymap);
-            g_file_close(fd);
+            LOG(LOG_LEVEL_WARNING,
+                "local keymap file for 0x%08x found and doesn't match "
+                "built in keymap, using local keymap file", keylayout);
         }
+
+        g_free(lkeymap);
     }
     else
     {
@@ -295,5 +279,35 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     }
 
     g_free(filename);
+    return 0;
+}
+
+/*****************************************************************************/
+int km_load_file(const char *filename, struct xrdp_keymap *keymap)
+{
+    int fd;
+
+    fd = g_file_open(filename);
+    LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
+
+    if (fd != -1)
+    {
+        /* read the keymaps */
+        km_read_section(fd, "noshift", keymap->keys_noshift);
+        km_read_section(fd, "shift", keymap->keys_shift);
+        km_read_section(fd, "altgr", keymap->keys_altgr);
+        km_read_section(fd, "shiftaltgr", keymap->keys_shiftaltgr);
+        km_read_section(fd, "capslock", keymap->keys_capslock);
+        km_read_section(fd, "capslockaltgr", keymap->keys_capslockaltgr);
+        km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
+        km_read_section(fd, "shiftcapslockaltgr", keymap->keys_shiftcapslockaltgr);
+
+        g_file_close(fd);
+    }
+    else
+    {
+        return 1;
+    }
+
     return 0;
 }
