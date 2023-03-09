@@ -21,11 +21,11 @@ wait_for_xserver(int display)
 
     LOG(LOG_LEVEL_DEBUG, "Waiting for X server to start on display %d", display);
 
-    g_snprintf(exe_cmd, sizeof(exe_cmd), "%s/xrdp-waitforx", XRDP_BIN_PATH);
+    g_snprintf(exe_cmd, sizeof(exe_cmd), "%s/waitforx", XRDP_LIBEXEC_PATH);
     dp = popen(exe_cmd, "r");
     if (dp == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "Unable to launch xrdp-waitforx");
+        LOG(LOG_LEVEL_ERROR, "Unable to launch waitforx");
         return 1;
     }
 
@@ -38,7 +38,7 @@ wait_for_xserver(int display)
     ret = pclose(dp);
     if (ret != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "An error occurred while running xrdp-waitforx");
+        LOG(LOG_LEVEL_ERROR, "An error occurred while running waitforx");
         return 0;
     }
 
