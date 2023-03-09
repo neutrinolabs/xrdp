@@ -350,9 +350,6 @@ session_start_chansrv(int uid, int display)
     chansrv_pid = g_fork();
     if (chansrv_pid == 0)
     {
-        LOG(LOG_LEVEL_INFO,
-            "Starting the xrdp channel server for display %d", display);
-
         chansrv_params = list_create();
         chansrv_params->auto_free = 1;
 
@@ -363,6 +360,9 @@ session_start_chansrv(int uid, int display)
         env_set_user(uid, 0, display,
                      g_cfg->env_names,
                      g_cfg->env_values);
+
+        LOG(LOG_LEVEL_INFO,
+            "Starting the xrdp channel server for display %d", display);
 
         /* executing chansrv */
         g_execvp_list(exe_path, chansrv_params);
@@ -585,12 +585,16 @@ session_start(struct auth_info *auth_info,
         }
         else if (window_manager_pid == 0)
         {
+            enum xwait_status xws;
+
             env_set_user(s->uid,
                          0,
                          display,
                          g_cfg->env_names,
                          g_cfg->env_values);
-            if (wait_for_xserver(display))
+            xws = wait_for_xserver(display);
+
+            if (xws == XW_STATUS_OK)
             {
                 auth_set_env(auth_info);
                 if (s->directory != 0)
@@ -661,8 +665,18 @@ session_start(struct auth_info *auth_info,
             }
             else
             {
-                LOG(LOG_LEVEL_ERROR,
-                    "There is no X server active on display %d", display);
+                switch (xws)
+                {
+                    case XW_STATUS_TIMED_OUT:
+                        LOG(LOG_LEVEL_ERROR, "Timed out waiting for X server");
+                        break;
+                    case XW_STATUS_FAILED_TO_START:
+                        LOG(LOG_LEVEL_ERROR, "X server failed to start");
+                        break;
+                    default:
+                        LOG(LOG_LEVEL_ERROR,
+                            "An error occurred waiting for the X server");
+                }
             }
 
             LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting to start "

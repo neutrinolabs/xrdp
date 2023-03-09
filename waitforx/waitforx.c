@@ -8,94 +8,152 @@
 #include "config_ac.h"
 #include "os_calls.h"
 #include "string_calls.h"
+#include "xwait.h" // For return status codes
 
 #define ATTEMPTS 10
 #define ALARM_WAIT 30
 
-void
+/*****************************************************************************/
+static void
 alarm_handler(int signal_num)
 {
-    /* Avoid printf() in signal handler (see signal-safety(7)) */
-    const char msg[] = "Timed out waiting for RandR outputs\n";
+    /* Avoid printf() in signal handler (see signal-safety(7))
+     *
+     * Prefix the message with a newline in case another message
+     * has been partly output */
+    const char msg[] = "\n<E>Timed out waiting for RandR outputs\n";
     g_file_write(1, msg, g_strlen(msg));
-    exit(1);
+    exit(XW_STATUS_TIMED_OUT);
 }
 
-int
-main(int argc, char **argv)
+/*****************************************************************************/
+static Display *
+open_display(const char *display)
 {
-    char *display = NULL;
-    int error_base = 0;
-    int event_base = 0;
-    int n = 0;
-    int outputs = 0;
-    int wait = ATTEMPTS;
-
     Display *dpy = NULL;
-    XRRScreenResources *res = NULL;
+    unsigned int wait = ATTEMPTS;
+    unsigned int n;
 
-    display = getenv("DISPLAY");
-
-    g_set_alarm(alarm_handler, ALARM_WAIT);
-
-    if (!display)
+    for (n = 1; n <= ATTEMPTS; ++n)
     {
-        printf("DISPLAY is null");
-        exit(1);
-    }
-
-    for (n = 1; n <= wait; ++n)
-    {
+        printf("<D>Opening display %s. Attempt %u of %u\n", display, n, wait);
         dpy = XOpenDisplay(display);
-        printf("Opening display %s. Attempt %d of %d\n", display, n, wait);
         if (dpy != NULL)
         {
-            printf("Opened display %s\n", display);
+            printf("<D>Opened display %s\n", display);
             break;
         }
         g_sleep(1000);
     }
 
-    if (!dpy)
-    {
-        printf("Unable to open display %s\n", display);
-        exit(1);
-    }
+    return dpy;
+}
+
+/*****************************************************************************/
+/**
+ * Wait for the RandR extension (if in use) to be available
+ *
+ * @param dpy Display
+ * @return 0 if/when outputs are available, 1 otherwise
+ */
+static int
+wait_for_r_and_r(Display *dpy)
+{
+    int error_base = 0;
+    int event_base = 0;
+    unsigned int outputs = 0;
+    unsigned int wait = ATTEMPTS;
+    unsigned int n;
+
+    XRRScreenResources *res = NULL;
 
     if (!XRRQueryExtension(dpy, &event_base, &error_base))
     {
-        printf("RandR not supported on display %s", display);
+        printf("<I>RandR not supported on display %s\n",
+               DisplayString(dpy));
+        return 0;
     }
-    else
+
+    for (n = 1; n <= wait; ++n)
     {
-        for (n = 1; n <= wait; ++n)
+        printf("<D>Waiting for outputs. Attempt %u of %u\n", n, wait);
+        res = XRRGetScreenResources(dpy, DefaultRootWindow(dpy));
+        if (res != NULL)
         {
-            res = XRRGetScreenResources(dpy, DefaultRootWindow(dpy));
-            printf("Waiting for outputs. Attempt %d of %d\n", n, wait);
-            if (res != NULL)
+            if (res->noutput > 0)
             {
-                if (res->noutput > 0)
-                {
-                    outputs = res->noutput;
-                    XRRFreeScreenResources(res);
-                    printf("Found %d output[s]\n", outputs);
-                    break;
-                }
-                XRRFreeScreenResources(res);
+                outputs = res->noutput;
             }
-            g_sleep(1000);
+            XRRFreeScreenResources(res);
         }
 
         if (outputs > 0)
         {
-            printf("display %s ready with %d outputs\n", display, res->noutput);
+            printf("<D>Display %s ready with %u RandR outputs\n",
+                   DisplayString(dpy), outputs);
+            return 0;
         }
-        else
+        g_sleep(1000);
+    }
+
+    printf("<E>Unable to find any RandR outputs\n");
+    return 1;
+}
+
+/*****************************************************************************/
+static void
+usage(const char *argv0, int status)
+{
+    printf("Usage: %s -d display\n", argv0);
+    exit(status);
+}
+
+/*****************************************************************************/
+int
+main(int argc, char **argv)
+{
+    const char *display_name = NULL;
+    int opt;
+    int status = XW_STATUS_MISC_ERROR;
+    Display *dpy = NULL;
+
+    /* Disable stdout buffering so any messages are passed immediately
+     * to sesman */
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    while ((opt = getopt(argc, argv, "d:")) != -1)
+    {
+        switch (opt)
         {
-            printf("Unable to find any outputs\n");
-            exit(1);
+            case 'd':
+                display_name = optarg;
+                break;
+            default: /* '?' */
+                usage(argv[0], status);
         }
     }
 
-    exit(0);
+    if (!display_name)
+    {
+        usage(argv[0], status);
+    }
+
+    g_set_alarm(alarm_handler, ALARM_WAIT);
+
+    dpy = open_display(display_name);
+    if (!dpy)
+    {
+        printf("<E>Unable to open display %s\n", display_name);
+        status = XW_STATUS_FAILED_TO_START;
+    }
+    else
+    {
+        if (wait_for_r_and_r(dpy) == 0)
+        {
+            status = XW_STATUS_OK;
+        }
+        XCloseDisplay(dpy);
+    }
+
+    return status;
 }

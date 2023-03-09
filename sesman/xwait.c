@@ -9,39 +9,82 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 
 /******************************************************************************/
-int
+enum xwait_status
 wait_for_xserver(int display)
 {
     FILE *dp = NULL;
-    int ret = 0;
+    enum xwait_status rv = XW_STATUS_MISC_ERROR;
+    int ret;
+
     char buffer[100];
-    char exe_cmd[262];
+    const char exe[] = XRDP_LIBEXEC_PATH "/waitforx";
+    char cmd[sizeof(exe) + 64];
 
-    LOG(LOG_LEVEL_DEBUG, "Waiting for X server to start on display %d", display);
+    if (!g_file_exist(exe))
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to find %s", exe);
+        return rv;
+    }
 
-    g_snprintf(exe_cmd, sizeof(exe_cmd), "%s/waitforx", XRDP_LIBEXEC_PATH);
-    dp = popen(exe_cmd, "r");
+    g_snprintf(cmd, sizeof(cmd), "%s -d :%d", exe, display);
+    LOG(LOG_LEVEL_DEBUG, "Waiting for X server to start on display :%d",
+        display);
+
+    dp = popen(cmd, "r");
     if (dp == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to launch waitforx");
-        return 1;
+        return rv;
     }
 
     while (fgets(buffer, 100, dp))
     {
+        const char *msg = buffer;
+        enum logLevels level = LOG_LEVEL_ERROR;
+
         g_strtrim(buffer, 2);
-        LOG(LOG_LEVEL_DEBUG, "%s", buffer);
+
+        // Has the message got a class at the start?
+        if (strlen(buffer) > 3 && buffer[0] == '<' && buffer[2] == '>')
+        {
+            switch (buffer[1])
+            {
+                case 'D':
+                    level = LOG_LEVEL_DEBUG;
+                    break;
+                case 'I':
+                    level = LOG_LEVEL_INFO;
+                    break;
+                case 'W':
+                    level = LOG_LEVEL_WARNING;
+                    break;
+                default:
+                    level = LOG_LEVEL_ERROR;
+                    break;
+            }
+            msg = buffer + 3;
+        }
+
+        if (strlen(msg) > 0)
+        {
+            LOG(level, "waitforx: %s", msg);
+        }
     }
 
     ret = pclose(dp);
-    if (ret != 0)
+    if (WIFEXITED(ret))
     {
-        LOG(LOG_LEVEL_ERROR, "An error occurred while running waitforx");
-        return 0;
+        rv = (enum xwait_status)WEXITSTATUS(ret);
+    }
+    else if (WIFSIGNALED(ret))
+    {
+        int sig = WTERMSIG(ret);
+        LOG(LOG_LEVEL_ERROR, "waitforx failed with unexpected signal %d",
+            sig);
     }
 
-
-    return 1;
+    return rv;
 }
