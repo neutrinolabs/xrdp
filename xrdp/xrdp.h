@@ -414,6 +414,9 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap);
 int
 km_load_file(const char *filename, struct xrdp_keymap *keymap);
 
+int
+km_load_file_toml(const char *filename, struct xrdp_keymap *keymap);
+
 /* xrdp_login_wnd.c */
 /**
  * Gets the DPI of the login (primary) monitor

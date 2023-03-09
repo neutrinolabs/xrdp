@@ -29,6 +29,7 @@
 #include "xrdp_configure_options.h"
 #include "copying_third_party.h"
 #include "string_calls.h"
+#include "toml.h"
 
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"

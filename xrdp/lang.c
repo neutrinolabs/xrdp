@@ -27,6 +27,7 @@
 #include "ms-rdpbcgr.h"
 #include "log.h"
 #include "string_calls.h"
+#include "toml.h"
 
 /* map for rdp to x11 scancodes
    code1 is regular scancode, code2 is extended scancode */
@@ -228,6 +229,58 @@ km_read_section(int fd, const char *section_name, struct xrdp_key_info *keymap)
 }
 
 /*****************************************************************************/
+static int
+km_read_section_toml(const toml_table_t *conf, const char *section_name, struct xrdp_key_info *keyinfo)
+{
+    toml_table_t *modifier; /* noshift, shift, altgr, ... */
+    char keyname[8]; /* key8, key9, key10, ... */
+
+    LOG(LOG_LEVEL_TRACE, "%s: processing section [%s]", __func__, section_name);
+
+    if (!conf)
+    {
+        LOG(LOG_LEVEL_ERROR, "%s: failed to process section [%s]", __func__, section_name);
+        return 1;
+    }
+
+    modifier = toml_table_in(conf, section_name);
+
+    if (!modifier)
+    {
+        LOG(LOG_LEVEL_ERROR, "%s: section [%s] not found, skipping...", __func__, section_name);
+        return 1;
+    }
+
+    for (int i = 0; i < 256; i++)
+    {
+        g_snprintf(keyname, sizeof(keyname), "key%d", i);
+
+        toml_array_t *eachkey = toml_array_in(modifier, keyname);
+
+        if (!eachkey)
+        {
+            continue; /* skip if key not found */
+        }
+
+        toml_datum_t sym = toml_int_at(eachkey, 0);
+        toml_datum_t chr = toml_int_at(eachkey, 1);
+
+        if (!sym.ok || !chr.ok)
+        {
+            continue; /* skip if failed to load sym or chr */
+        }
+
+        keyinfo[i].sym = sym.u.i;
+        keyinfo[i].chr = chr.u.i;
+        LOG(LOG_LEVEL_TRACE, "%s: key%d = [%d, %d]", __func__, i, (int) sym.u.i, (int) chr.u.i);
+    }
+
+    toml_free(modifier);
+
+    return 0;
+}
+
+/*****************************************************************************/
 int
 get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 {
@@ -310,5 +363,41 @@ int km_load_file(const char *filename, struct xrdp_keymap *keymap)
         return 1;
     }
 
+    return 0;
+}
+
+int
+km_load_file_toml(const char *filename, struct xrdp_keymap *keymap)
+{
+    FILE *fp = NULL;
+    char errbuf[256];
+    toml_table_t *conf;
+
+    fp = fopen(filename, "r");
+    if (!fp)
+    {
+        LOG(LOG_LEVEL_ERROR, "Failed to open: %s", errbuf);
+        return 1;
+    }
+
+    conf = toml_parse_file(fp, errbuf, sizeof(errbuf));
+    if (!conf)
+    {
+        LOG(LOG_LEVEL_ERROR, "Failed to parse: %s", filename);
+        fclose(fp);
+        return 1;
+    }
+
+    km_read_section_toml(conf, "noshift", keymap->keys_noshift);
+    km_read_section_toml(conf, "shift", keymap->keys_shift);
+    km_read_section_toml(conf, "altgr", keymap->keys_altgr);
+    km_read_section_toml(conf, "shiftaltgr", keymap->keys_shiftaltgr);
+    km_read_section_toml(conf, "capslock", keymap->keys_capslock);
+    km_read_section_toml(conf, "capslockaltgr", keymap->keys_capslockaltgr);
+    km_read_section_toml(conf, "shiftcapslock", keymap->keys_shiftcapslock);
+    km_read_section_toml(conf, "shiftcapslockaltgr", keymap->keys_shiftcapslockaltgr);
+
+    toml_free(conf);
+    fclose(fp);
     return 0;
 }

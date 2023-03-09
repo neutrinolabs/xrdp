@@ -3,6 +3,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \
   -I$(top_srcdir)/common \
+  -I$(top_srcdir)/third_party/tomlc99 \
   $(IMLIB2_CFLAGS)
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
@@ -28,6 +29,7 @@ test_xrdp_SOURCES = \
     test_xrdp_main.c \
     test_xrdp_egfx.c \
     test_xrdp_region.c \
+    test_xrdp_keymap.c \
     test_bitmap_load.c
 
 test_xrdp_CFLAGS = \
@@ -61,6 +63,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_process.o \
     $(top_builddir)/xrdp/xrdp_login_wnd.o \
     $(top_builddir)/xrdp/xrdp_main_utils.o \
+    $(top_builddir)/third_party/tomlc99/libtoml.la \
     $(PIXMAN_LIBS) \
     $(IMLIB2_LIBS) \
     @CHECK_LIBS@ \
