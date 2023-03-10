@@ -105,7 +105,7 @@ sig_sesman_session_end(void)
     LOG(LOG_LEVEL_DEBUG, "receiving SIGCHLD");
     do
     {
-        pid = g_waitchild();
+        pid = g_waitchild(NULL);
 
         if (pid > 0)
         {

@@ -1522,7 +1522,7 @@ child_signal_handler(int sig)
     LOG_DEVEL(LOG_LEVEL_INFO, "child_signal_handler:");
     do
     {
-        pid = g_waitchild();
+        pid = g_waitchild(NULL);
         LOG_DEVEL(LOG_LEVEL_INFO, "child_signal_handler: child pid %d", pid);
         if ((pid == g_exec_pid) && (pid > 0))
         {

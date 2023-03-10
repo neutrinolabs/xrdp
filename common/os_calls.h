@@ -23,13 +23,17 @@
 
 #include "arch.h"
 
+enum exit_reason
+{
+    E_XR_STATUS_CODE = 0, ///< 'val' contains exit status
+    E_XR_SIGNAL, ///< 'val' contains a signal number
+    E_XR_UNEXPECTED
+};
+
 struct exit_status
 {
-    /* set to -1 when the process exited via a signal */
-    uint8_t exit_code;
-
-    /* set to 0 when the process exited normally */
-    uint8_t signal_no;
+    enum exit_reason reason;
+    int val;
 };
 
 struct list;
@@ -178,6 +182,8 @@ const char *
 g_sck_get_peer_description(int sck,
                            char *desc, unsigned int bytes);
 void     g_sleep(int msecs);
+int      g_pipe(int fd[2]);
+
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);
 void     g_delete_wait_obj_from_socket(tintptr wait_obj);
@@ -213,6 +219,7 @@ int      g_file_read(int fd, char *ptr, int len);
 int      g_file_write(int fd, const char *ptr, int len);
 int      g_file_seek(int fd, int offset);
 int      g_file_lock(int fd, int start, int len);
+int      g_file_duplicate_on(int fd, int target_fd);
 int      g_chmod_hex(const char *filename, int flags);
 int      g_umask_hex(int flags);
 int      g_chown(const char *name, int uid, int gid);
@@ -273,7 +280,7 @@ int      g_setlogin(const char *name);
  */
 int      g_set_allusercontext(int uid);
 #endif
-int      g_waitchild(void);
+int      g_waitchild(struct exit_status *e);
 int      g_waitpid(int pid);
 struct exit_status g_waitpid_status(int pid);
 void     g_clearenv(void);

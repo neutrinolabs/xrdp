@@ -402,6 +402,33 @@ username_from_uid(int uid, char *uname, int uname_len)
 }
 
 /******************************************************************************/
+static void
+exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
+{
+    switch (e->reason)
+    {
+        case E_XR_STATUS_CODE:
+            if (e->val == 0)
+            {
+                g_snprintf(buff, bufflen, "exit code zero");
+            }
+            else
+            {
+                g_snprintf(buff, bufflen, "non-zero exit code %d", e->val);
+            }
+            break;
+
+        case E_XR_SIGNAL:
+            g_snprintf(buff, bufflen, "signal %d", e->val);
+            break;
+
+        default:
+            g_snprintf(buff, bufflen, "an unexpected error");
+            break;
+    }
+}
+
+/******************************************************************************/
 
 enum scp_screate_status
 session_start(struct auth_info *auth_info,
@@ -841,7 +868,7 @@ session_start(struct auth_info *auth_info,
                 struct exit_status wm_exit_status;
                 struct exit_status xserver_exit_status;
                 struct exit_status chansrv_exit_status;
-
+                char reason[128];
                 chansrv_pid = session_start_chansrv(s->uid, display);
 
                 LOG(LOG_LEVEL_INFO,
@@ -857,13 +884,20 @@ session_start(struct auth_info *auth_info,
                 wm_wait_time = g_time1();
                 wm_exit_status = g_waitpid_status(window_manager_pid);
                 wm_wait_time = g_time1() - wm_wait_time;
-                if (wm_exit_status.exit_code > 0)
+                if (wm_exit_status.reason == E_XR_STATUS_CODE &&
+                        wm_exit_status.val == 0)
                 {
-                    LOG(LOG_LEVEL_WARNING, "Window manager (pid %d, display %d) "
-                        "exited with non-zero exit code %d and signal %d. This "
+                    // Normal exit
+                }
+                else
+                {
+                    exit_status_to_str(&wm_exit_status, reason, sizeof(reason));
+
+                    LOG(LOG_LEVEL_WARNING,
+                        "Window manager (pid %d, display %d) "
+                        "exited with %s. This "
                         "could indicate a window manager config problem",
-                        window_manager_pid, display, wm_exit_status.exit_code,
-                        wm_exit_status.signal_no);
+                        window_manager_pid, display, reason);
                 }
                 if (wm_wait_time < 10)
                 {
@@ -898,18 +932,17 @@ session_start(struct auth_info *auth_info,
 
                 /* make sure socket cleanup happen after child process exit */
                 xserver_exit_status = g_waitpid_status(display_pid);
+                exit_status_to_str(&xserver_exit_status, reason, sizeof(reason));
                 LOG(LOG_LEVEL_INFO,
-                    "X server on display %d (pid %d) returned exit code %d "
-                    "and signal number %d",
-                    display, display_pid, xserver_exit_status.exit_code,
-                    xserver_exit_status.signal_no);
+                    "X server on display %d (pid %d) exited with %s",
+                    display, display_pid, reason);
 
                 chansrv_exit_status = g_waitpid_status(chansrv_pid);
+                exit_status_to_str(&chansrv_exit_status, reason, sizeof(reason));
                 LOG(LOG_LEVEL_INFO,
-                    "xrdp channel server for display %d (pid %d) "
-                    "exit code %d and signal number %d",
-                    display, chansrv_pid, chansrv_exit_status.exit_code,
-                    chansrv_exit_status.signal_no);
+                    "xrdp channel server for display %d (pid %d)"
+                    " exited with %s",
+                    display, chansrv_pid, reason);
 
                 cleanup_sockets(display);
                 g_deinit();
