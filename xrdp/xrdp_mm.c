@@ -486,8 +486,8 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
            the module should use the last one */
         if (g_strlen(text) > 0)
         {
-            list_add_item(self->login_names, (long)g_strdup("port"));
-            list_add_item(self->login_values, (long)g_strdup(text));
+            list_add_strdup(self->login_names, "port");
+            list_add_strdup(self->login_values, text);
         }
 
         /* always set these */

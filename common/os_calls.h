@@ -32,6 +32,8 @@ struct exit_status
     uint8_t signal_no;
 };
 
+struct list;
+
 #define g_tcp_can_recv g_sck_can_recv
 #define g_tcp_can_send g_sck_can_send
 #define g_tcp_recv g_sck_recv
@@ -234,6 +236,18 @@ int      g_system(const char *aexec);
 char    *g_get_strerror(void);
 int      g_get_errno(void);
 int      g_execvp(const char *p1, char *args[]);
+/**
+ * Issues an execvp() call
+ *
+ * @param file Executable
+ * @param argv Argument list for executable.
+ *
+ * argv does not need to be NULL terminated - the call takes care
+ * of this.
+ *
+ * @return Only if an error has occurred - use g_get_errno() or equivalent
+ */
+int      g_execvp_list(const char *file, struct list *argv);
 int      g_execlp3(const char *a1, const char *a2, const char *a3);
 unsigned int g_set_alarm(void (*func)(int), unsigned int secs);
 void     g_signal_child_stop(void (*func)(int));
