@@ -2,7 +2,10 @@ bin_PROGRAMS = \
   xrdp-waitforx
 
 AM_LDFLAGS = -lX11 -lXrandr
-AM_CFLAGS = -I$(top_srcdir)/common
+
+AM_CPPFLAGS = -I$(top_srcdir)/common
+
+AM_CFLAGS = $(X_CFLAGS)
 
 xrdp_waitforx_SOURCES = waitforx.c
 
