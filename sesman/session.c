@@ -524,15 +524,6 @@ session_start(struct auth_info *auth_info,
             "[session start] (display %d): calling auth_start_session from pid %d",
             display, g_getpid());
 
-        /* Clone the session object, as the passed-in copy will be
-         * deleted by sesman_close_all() */
-        if ((s = clone_session_params(s)) == NULL)
-        {
-            LOG(LOG_LEVEL_ERROR,
-                "Failed to clone the session data - out of memory");
-            g_exit(1);
-        }
-
         /* Wait objects created in a parent are not valid in a child */
         g_delete_wait_obj(g_reload_event);
         g_delete_wait_obj(g_sigchld_event);
@@ -1368,43 +1359,4 @@ cleanup_sockets(int display)
 
     return error;
 
-}
-
-/******************************************************************************/
-struct session_parameters *
-clone_session_params(const struct session_parameters *sp)
-{
-    struct session_parameters *result;
-    char *strptr;
-
-    /* Allocate a single block of memory big enough for the structure and
-     * all the strings it points to */
-    unsigned int len = sizeof(*result);
-    len += g_strlen(sp->shell) + 1;
-    len += g_strlen(sp->directory) + 1;
-    len += g_strlen(sp->ip_addr) + 1;
-
-    if ((result = (struct session_parameters *)g_malloc(len, 0)) != NULL)
-    {
-        *result = *sp; /* Copy all the scalar parameters */
-
-        /* Initialise the string pointers in the result */
-        strptr = (char *)result + sizeof(*result);
-
-#define COPY_STRING_MEMBER(src,dest)\
-    {\
-        unsigned int len = g_strlen(src) + 1;\
-        g_memcpy(strptr, (src), len);\
-        (dest) = strptr;\
-        strptr += len;\
-    }
-
-        COPY_STRING_MEMBER(sp->shell, result->shell);
-        COPY_STRING_MEMBER(sp->directory, result->directory);
-        COPY_STRING_MEMBER(sp->ip_addr, result->ip_addr);
-
-#undef COPY_STRING_MEMBER
-    }
-
-    return result;
 }
