@@ -1121,6 +1121,8 @@ send_suppress_output(struct mod *mod, int suppress,
 static int
 process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 {
+    LOG(LOG_LEVEL_TRACE, "process_server_paint_rect_shmem_ex:");
+
     int num_drects;
     int num_crects;
     int flags;
