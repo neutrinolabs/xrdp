@@ -250,7 +250,7 @@ xrdp_egfx_fill_surface(struct xrdp_egfx_bulk *bulk, int surface_id,
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header  */
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
     /* RDPGFX_HEADER */
     out_uint16_le(s, XR_RDPGFX_CMDID_SOLIDFILL); /* cmdId */
     out_uint16_le(s, 0); /* flags = 0 */
@@ -538,8 +538,8 @@ xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
         /* RDP8_BULK_ENCODED_DATA */
         out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
         out_uint8a(s, bitmap_data8 + index, segment_size);
-        LOG(LOG_LEVEL_DEBUG, "  segment index %d"
-            " segment_size %d", segment_count, segment_size);
+        LOG(LOG_LEVEL_DEBUG, "  segment index %d segment_size %d",
+            segment_count, segment_size);
         index += segment_size;
         segment_count++;
     }
@@ -724,9 +724,8 @@ xrdp_egfx_reset_graphics(struct xrdp_egfx_bulk *bulk, int width, int height,
                 mi[index].is_primary);
         }
     }
-    LOG(LOG_LEVEL_INFO, "xrdp_egfx_send_reset_graphics:"
-        " width %d height %d monitorcount %d",
-        width, height, monitor_count);
+    LOG(LOG_LEVEL_INFO, "xrdp_egfx_reset_graphics: width %d height %d "
+        "monitorcount %d", width, height, monitor_count);
     if (monitor_count < 16)
     {
         bytes = 340 - (20 + (monitor_count * 20));
@@ -901,7 +900,6 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
             default:
                 LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process:"
                     " unknown cmdId 0x%x", cmdId);
-                //g_hexdump(s->p, MIN(pduLength - 8, 64));
                 break;
         }
         if (error != 0)

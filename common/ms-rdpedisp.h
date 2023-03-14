@@ -38,4 +38,7 @@
 #define ORIENTATION_LANDSCAPE_FLIPPED                      180
 #define ORIENTATION_PORTRAIT_FLIPPED                       270
 
+/* Display Control Monitor Layout (2.2.2.2.1) */
+#define DISPLAYCONTROL_MONITOR_PRIMARY                     0x00000001
+
 #endif /* MS_RDPEDISP_H */
