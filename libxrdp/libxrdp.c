@@ -2094,7 +2094,9 @@ libxrdp_process_monitor_stream(struct stream *s,
         }
     }
 
-    /* set wm geometry if the encompassing area is well formed. Otherwise, log and return an error.*/
+    /* set wm geometry if the encompassing area is well formed.
+       Otherwise, log and return an error.
+    */
     if (all_monitors_encompassing_bounds.right
             > all_monitors_encompassing_bounds.left
             && all_monitors_encompassing_bounds.bottom
@@ -2269,4 +2271,16 @@ libxrdp_process_monitor_ex_stream(struct stream *s,
     }
 
     return 0;
+}
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_planar_compress(char *in_data, int width, int height,
+                        struct stream *s, int bpp, int byte_limit,
+                        int start_line, struct stream *temp_s,
+                        int e, int flags)
+{
+    return xrdp_bitmap32_compress(in_data, width, height,
+                                  s, bpp, byte_limit,
+                                  start_line, temp_s,
+                                  e, flags);
 }

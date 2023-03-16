@@ -392,6 +392,7 @@ struct xrdp_mm
     int xr2cr_cid_map[256];
     int dynamic_monitor_chanid;
     struct xrdp_egfx *egfx;
+    int egfx_up;
 
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
@@ -519,6 +520,9 @@ struct xrdp_wm
 
     /* configuration derived from xrdp.ini */
     struct xrdp_config *xrdp_config;
+
+    struct xrdp_region *screen_dirty_region;
+    int last_screen_draw_time;
 };
 
 /* rdp process */
