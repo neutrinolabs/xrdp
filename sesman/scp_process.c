@@ -157,8 +157,8 @@ authenticate_and_authorize_connection(struct sesman_con *sc,
                 }
                 else
                 {
-                    LOG(LOG_LEVEL_INFO, "Access permitted for user: %s",
-                        username);
+                    LOG(LOG_LEVEL_INFO, "Access permitted for user=%s uid=%d",
+                        username, uid);
                     sc->auth_info = auth_info;
                     sc->uid = uid;
                     sc->username = dup_username;
@@ -210,6 +210,7 @@ allocate_and_start_session(struct auth_info *auth_info,
 {
     int pid = 0;
     struct session_chain *temp = (struct session_chain *)NULL;
+    enum scp_screate_status status;
 
     /* check to limit concurrent sessions */
     if (session_list_get_count() >= (unsigned int)g_cfg->sess.max_sessions)
@@ -238,70 +239,39 @@ allocate_and_start_session(struct auth_info *auth_info,
         return E_SCP_SCREATE_NO_MEMORY;
     }
 
-    pid = g_fork();
-    if (pid == -1)
+    status = session_start(auth_info, params, &pid);
+    if (status == E_SCP_SCREATE_OK)
     {
-        LOG(LOG_LEVEL_ERROR,
-            "[session start] (display %d): Failed to fork for scp with "
-            "errno: %d, description: %s",
-            params->display, g_get_errno(), g_get_strerror());
-        g_free(temp->item);
-        g_free(temp);
-        return E_SCP_SCREATE_GENERAL_ERROR;
+        if (ip_addr[0] != '\0')
+        {
+            LOG(LOG_LEVEL_INFO, "++ created session: username %s, ip %s",
+                username, ip_addr);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_INFO, "++ created session: username %s", username);
+        }
+
+        temp->item->pid = pid;
+        temp->item->display = params->display;
+        temp->item->width = params->width;
+        temp->item->height = params->height;
+        temp->item->bpp = params->bpp;
+        temp->item->auth_info = auth_info;
+        g_strncpy(temp->item->start_ip_addr, ip_addr,
+                  sizeof(temp->item->start_ip_addr) - 1);
+        temp->item->uid = params->uid;
+        temp->item->guid = params->guid;
+
+        temp->item->start_time = g_time1();
+
+        temp->item->type = params->type;
+        temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
+
+        session_list_add(temp);
     }
 
-    if (pid == 0)
-    {
-        /**
-         * We're now forked from the main sesman process, so we
-         * can close file descriptors that we no longer need */
-
-        sesman_close_all(0);
-
-        /* Wait objects created in a parent are not valid in a child */
-        g_delete_wait_obj(g_reload_event);
-        g_delete_wait_obj(g_sigchld_event);
-        g_delete_wait_obj(g_term_event);
-
-        session_start(auth_info, params);
-        g_exit(1); /* Should not get here */
-    }
-
-    if (ip_addr[0] != '\0')
-    {
-        LOG(LOG_LEVEL_INFO, "++ created session: username %s, ip %s",
-            username, ip_addr);
-    }
-    else
-    {
-        LOG(LOG_LEVEL_INFO, "++ created session: username %s", username);
-    }
-
-    LOG(LOG_LEVEL_INFO, "Starting session: session_pid %d, "
-        "display :%d.0, width %d, height %d, bpp %d, client ip %s, "
-        "UID %d",
-        pid, params->display, params->width, params->height, params->bpp,
-        ip_addr, params->uid);
-
-    temp->item->pid = pid;
-    temp->item->display = params->display;
-    temp->item->width = params->width;
-    temp->item->height = params->height;
-    temp->item->bpp = params->bpp;
-    temp->item->auth_info = auth_info;
-    g_strncpy(temp->item->start_ip_addr, ip_addr,
-              sizeof(temp->item->start_ip_addr) - 1);
-    temp->item->uid = params->uid;
-    temp->item->guid = params->guid;
-
-    temp->item->start_time = g_time1();
-
-    temp->item->type = params->type;
-    temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
-
-    session_list_add(temp);
-
-    return E_SCP_SCREATE_OK;
+    return status;
 }
 
 /******************************************************************************/
@@ -489,6 +459,8 @@ process_create_session_request(struct sesman_con *sc)
     // Parameters for a new session (if required). Filled in as
     // we go along.
     struct session_parameters sp = {0};
+    const char *shellptr;
+    const char *dirptr;
     enum scp_screate_status status = E_SCP_SCREATE_OK;
 
     int display = 0;
@@ -498,7 +470,7 @@ process_create_session_request(struct sesman_con *sc)
 
     rv = scp_get_create_session_request(sc->t,
                                         &sp.type, &sp.width, &sp.height,
-                                        &sp.bpp, &sp.shell, &sp.directory);
+                                        &sp.bpp, &shellptr, &dirptr);
 
     if (rv == 0)
     {
@@ -509,8 +481,12 @@ process_create_session_request(struct sesman_con *sc)
         else
         {
             LOG(LOG_LEVEL_INFO,
-                "Received request from %s to create a session for user %s",
-                sc->peername, sc->username);
+                "Received request from %s to create a session for user %s"
+                " type=%s"
+                " geometry=%dx%d, bpp=%d, shell=\"%s\", dir=\"%s\"",
+                sc->peername, sc->username,
+                SCP_SESSION_TYPE_TO_STR(sp.type),
+                sp.width, sp.height, sp.bpp, shellptr, dirptr);
 
             struct session_item *s_item =
                 session_list_get_bydata(sc->uid, sp.type, sp.width, sp.height,
@@ -546,9 +522,13 @@ process_create_session_request(struct sesman_con *sc)
                 guid = guid_new();
                 display = session_list_get_available_display();
 
-                sp.guid = guid;
                 sp.display = display;
                 sp.uid = sc->uid;
+                sp.guid = guid;
+                // These need to be copied so they are available
+                // when the sub-process closes all the connections
+                g_snprintf(sp.shell, sizeof(sp.shell), "%s", shellptr);
+                g_snprintf(sp.directory, sizeof(sp.directory), "%s", dirptr);
 
                 if (display == 0)
                 {
@@ -696,4 +676,3 @@ scp_process(struct sesman_con *sc)
     }
     return rv;
 }
-

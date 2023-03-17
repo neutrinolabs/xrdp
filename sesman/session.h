@@ -32,6 +32,7 @@
 
 #include "guid.h"
 #include "scp_application_types.h"
+#include "xrdp_constants.h"
 
 struct auth_info;
 
@@ -47,21 +48,26 @@ struct session_parameters
     unsigned short height;
     unsigned short width;
     unsigned char  bpp;
-    const char *shell;
-    const char *directory;
+    char shell[INFO_CLIENT_MAX_CB_LEN];
+    char directory[INFO_CLIENT_MAX_CB_LEN];
 };
 
 /**
  *
  * @brief starts a session
  *
- * This call does not return.
+ * @param auth_info Authentication info
+ * @param s Session parameters
+ * @param[out] pid PID of sub-process
+ * @return status
  *
- * @return Connection status.
+ * The returned PID is only valid if the status returned is
+ * E_SCP_SCREATE_OK
  */
-void
+enum scp_screate_status
 session_start(struct auth_info *auth_info,
-              const struct session_parameters *s);
+              const struct session_parameters *s,
+              int *pid);
 
 int
 session_reconnect(int display, int uid,
