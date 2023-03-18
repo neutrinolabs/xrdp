@@ -811,38 +811,6 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
         list_delete(child_arguments);
     }
 
-
-    if (pid == 0)
-    {
-        /* child */
-        /* unreachable code */
-
-        /* recreate some main globals */
-        xrdp_child_fork();
-        /* recreate the process done wait object, not used in fork mode */
-        /* close, don't delete this */
-        g_close_wait_obj(self->pro_done_event);
-        xrdp_listen_create_pro_done(self);
-        /* delete listener, child need not listen */
-        for (index = 0; index < self->trans_list->count; index++)
-        {
-            ltrans = (struct trans *) list_get_item(self->trans_list, index);
-            trans_delete_from_child(ltrans);
-        }
-        list_delete(self->trans_list);
-        self->trans_list = NULL;
-        /* new connect instance */
-        process = xrdp_process_create(self, 0);
-        process->server_trans = server_trans;
-        g_process = process;
-        xrdp_process_run(0);
-        tc_sem_dec(g_process_sem);
-        xrdp_process_delete(process);
-        /* mark this process to exit */
-        g_set_term(1);
-        return 1;
-    }
-
     /* parent */
     trans_delete(server_trans);
     return 0;
