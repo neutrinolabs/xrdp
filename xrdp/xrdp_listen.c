@@ -779,19 +779,36 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
     int index;
     struct xrdp_process *process;
     struct trans *ltrans;
-
-    g_snprintf(server_trans_fd_str, 32, "%d", (int) server_trans->sck);
-
-    child_arguments = list_create();
-    list_add_item(child_arguments, (intptr_t) g_strdup("--child-process"));
-    list_add_item(child_arguments, (intptr_t) g_strdup("--child-fd"));
-    list_add_item(child_arguments, (intptr_t) g_strdup(server_trans_fd_str));
-
+    
     g_get_executable_path(E_XE_XRDP, executable_path, 4096);
-
-    pid = g_fork_execvp(executable_path, (char **) child_arguments->items);
-
-    list_delete(child_arguments);
+    g_snprintf(server_trans_fd_str, 32, "%d", (int) server_trans->sck);
+    
+    child_arguments = list_create();
+    
+    if (child_arguments != NULL)
+    {
+        child_arguments->auto_free = 1;
+        if (!list_add_strdup_multi(child_arguments,
+                                   "--child-process",
+                                   "--child-fd", server_trans_fd_str,
+                                   NULL))
+        {
+            list_delete(child_arguments);
+            child_arguments = NULL;
+        }
+    }
+    
+    if (!child_arguments)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_listen_fork(): could not prepare arguments list for child process");
+        return 1;
+    }
+    else
+    {
+        pid = g_fork_execvp(executable_path, (char **) child_arguments->items);
+        list_delete(child_arguments);
+    }
+   
 
     if (pid == 0)
     {
