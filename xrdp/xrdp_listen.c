@@ -790,6 +790,7 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
         /* FIXME: pass log_fd to child */
         child_arguments->auto_free = 1;
         if (!list_add_strdup_multi(child_arguments,
+                                   "xrdp",
                                    "--child-process",
                                    "--child-fd", server_trans_fd_str,
                                    NULL))
