@@ -321,6 +321,7 @@ xrdp_process_child_entrypoint(struct xrdp_listen *owner, int socket_fd)
     struct xrdp_process *process;
 
     server_trans = trans_create(TRANS_MODE_TCP, 16, 16);
+    server_trans->status = TRANS_STATUS_UP;
     server_trans->sck = socket_fd;
 
     process = xrdp_process_create(owner, 0);
@@ -328,5 +329,7 @@ xrdp_process_child_entrypoint(struct xrdp_listen *owner, int socket_fd)
 
     xrdp_process_main_loop(process);
 
+    xrdp_process_delete(process);
+    g_set_term(1);
     return 0;
 }
