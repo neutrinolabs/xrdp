@@ -27,8 +27,8 @@ enum xrdp_exe
 {
     E_XE_XRDP = 0,
     E_XE_SESMAN = 1,
-    
-    // TODO: add others below
+
+    /* TODO: add others below */
 };
 
 struct exit_status

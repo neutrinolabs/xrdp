@@ -2932,15 +2932,16 @@ g_fork_execvp(const char *p1, char *args[])
     int pid;
 
     pid = g_fork();
-    
-    if (pid == 0) {
+
+    if (pid == 0)
+    {
         g_execvp(p1, args);
-        
+
         /* should not get here */
         LOG(LOG_LEVEL_ERROR,
             "Failed to execute %s: execvp(3) failed with %s (%d)",
             p1, g_get_strerror(), g_get_errno());
-        
+
         exit(1);
     }
 
@@ -3084,20 +3085,20 @@ g_get_executable_path(enum xrdp_exe xe, char *buf, int bufsize)
 #if defined(__APPLE__)
     uint32_t _bufsize = bufsize;
 #endif
-    
+
     g_memset(buf, '\0', bufsize);
-    
+
 #if defined(__APPLE__)
     rv = _NSGetExecutablePath(buf, &_bufsize);
 #elif defined(__linux__)
     rv = readlink("/proc/self/exe", buf, bufsize);
 #endif
-    
+
     if (rv > 0)
     {
         return;
     }
-    
+
     // build executable path manually
     switch (xe)
     {
@@ -3107,7 +3108,7 @@ g_get_executable_path(enum xrdp_exe xe, char *buf, int bufsize)
         case E_XE_SESMAN:
             g_snprintf(buf, bufsize, XRDP_SBIN_PATH "/xrdp-sesman");
             break;
-            
+
         default:
             LOG(LOG_LEVEL_WARNING, "g_get_executable_path(): Unsupported exe %d", (int)xe);
     }
