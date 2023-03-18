@@ -386,31 +386,6 @@ main(int argc, char **argv)
         g_exit(0);
     }
 
-    if (startup_params.is_child)
-    {
-        if (startup_params.child_fd < 3)
-        {
-            g_writeln("requested act as child process, but --child-fd option is not given");
-            g_deinit();
-            g_exit(1);
-        }
-
-        g_set_threadid(tc_get_threadid());
-        g_listen = xrdp_listen_create();
-        g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
-        g_signal_pipe(xrdp_sig_no_op);          /* SIGPIPE */
-        g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
-        g_signal_child_stop(xrdp_child);        /* SIGCHLD */
-        g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
-
-        g_listen->startup_params = &startup_params;
-
-        xrdp_process_child_entrypoint(g_listen, startup_params.child_fd);
-
-        g_deinit();
-        g_exit(0);
-    }
-
     /* starting logging subsystem */
     error = log_start(startup_params.xrdp_ini, "xrdp",
                       (startup_params.dump_config) ? LOG_START_DUMP_CONFIG : 0);
@@ -439,7 +414,30 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
+    if (startup_params.is_child)
+    {
+        if (startup_params.child_fd < 3)
+        {
+            g_writeln("requested act as child process, but --child-fd option is not given");
+            g_deinit();
+            g_exit(1);
+        }
 
+        g_set_threadid(tc_get_threadid());
+        g_listen = xrdp_listen_create();
+        g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
+        g_signal_pipe(xrdp_sig_no_op);          /* SIGPIPE */
+        g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
+        g_signal_child_stop(xrdp_child);        /* SIGCHLD */
+        g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
+
+        g_listen->startup_params = &startup_params;
+
+        xrdp_process_child_entrypoint(g_listen, startup_params.child_fd);
+
+        g_deinit();
+        g_exit(0);
+    }
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
