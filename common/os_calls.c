@@ -2932,9 +2932,16 @@ g_fork_execvp(const char *p1, char *args[])
     int pid;
 
     pid = g_fork();
-
+    
     if (pid == 0) {
         g_execvp(p1, args);
+        
+        /* should not get here */
+        LOG(LOG_LEVEL_ERROR,
+            "Failed to execute %s: execvp(3) failed with %s (%d)",
+            p1, g_get_strerror(), g_get_errno());
+        
+        exit(1);
     }
 
     return pid;
