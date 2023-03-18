@@ -403,6 +403,8 @@ main(int argc, char **argv)
         g_signal_child_stop(xrdp_child);        /* SIGCHLD */
         g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
 
+        g_listen->startup_params = &startup_params;
+
         xrdp_process_child_entrypoint(g_listen, startup_params.child_fd);
 
         g_deinit();
