@@ -787,7 +787,7 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
     list_add_item(child_arguments, (intptr_t) g_strdup("--child-fd"));
     list_add_item(child_arguments, (intptr_t) g_strdup(server_trans_fd_str));
 
-    g_get_executable_path(executable_path, 4096);
+    g_get_executable_path(E_XE_XRDP, executable_path, 4096);
 
     pid = g_fork_execvp(executable_path, (char **) child_arguments->items);
 

@@ -3078,15 +3078,39 @@ g_set_allusercontext(int uid)
 
 /*****************************************************************************/
 void
-g_get_executable_path(char *buf, int bufsize)
+g_get_executable_path(enum xrdp_exe xe, char *buf, int bufsize)
 {
+    int rv = -1;
 #if defined(__APPLE__)
     uint32_t _bufsize = bufsize;
-    _NSGetExecutablePath(buf, &_bufsize);
-#else
-    LOG(LOG_LEVEL_WARN, "g_get_executable_path(): not implemented yet!");
-    buf = strdup("xrdp");
 #endif
+    
+    g_memset(buf, '\0', bufsize);
+    
+#if defined(__APPLE__)
+    rv = _NSGetExecutablePath(buf, &_bufsize);
+#elif defined(__linux__)
+    rv = readlink("/proc/self/exe", buf, bufsize);
+#endif
+    
+    if (rv > 0)
+    {
+        return;
+    }
+    
+    // build executable path manually
+    switch (xe)
+    {
+        case E_XE_XRDP:
+            g_snprintf(buf, bufsize, XRDP_SBIN_PATH "/xrdp");
+            break;
+        case E_XE_SESMAN:
+            g_snprintf(buf, bufsize, XRDP_SBIN_PATH "/xrdp-sesman");
+            break;
+            
+        default:
+            LOG(LOG_LEVEL_WARNING, "g_get_executable_path(): Unsupported exe %d", (int)xe);
+    }
 }
 
 
