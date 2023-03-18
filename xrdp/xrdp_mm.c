@@ -34,6 +34,7 @@
 
 #include "xrdp_encoder.h"
 #include "xrdp_sockets.h"
+#include "xrdp_egfx.h"
 #include <limits.h>
 
 
@@ -942,6 +943,140 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm *self, struct stream *s)
     }
 
     return rv;
+}
+
+#define GFX_PLANAR_BYTES (32 * 1024)
+
+/******************************************************************************/
+int
+xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
+                                struct xrdp_bitmap *bitmap,
+                                struct xrdp_rect *rect)
+{
+    struct xrdp_egfx_rect gfx_rect;
+    struct stream *comp_s;
+    struct stream *temp_s;
+    char *pixels;
+    char *src8;
+    char *dst8;
+    int index;
+    int lines;
+    int comp_bytes;
+    int xindex;
+    int yindex;
+    int bwidth;
+    int bheight;
+    int cx;
+    int cy;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap:");
+    bwidth = rect->right - rect->left;
+    bheight = rect->bottom - rect->top;
+    if ((bwidth < 1) || (bheight < 1))
+    {
+        return 0;
+    }
+    if (bwidth < 64)
+    {
+        cx = bwidth;
+        cy = 4096 / cx;
+    }
+    else if (bheight < 64)
+    {
+        cy = bheight;
+        cx = 4096 / cy;
+    }
+    else
+    {
+        cx = 64;
+        cy = 64;
+    }
+    while (cx * cy < 4096)
+    {
+        if (cx < cy)
+        {
+            cx++;
+            cy = 4096 / cx;
+        }
+        else
+        {
+            cy++;
+            cx = 4096 / cy;
+        }
+    }
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap: cx %d cy %d", cx, cy);
+    pixels = g_new(char, GFX_PLANAR_BYTES);
+    make_stream(comp_s);
+    init_stream(comp_s, GFX_PLANAR_BYTES);
+    make_stream(temp_s);
+    init_stream(temp_s, GFX_PLANAR_BYTES);
+    if (xrdp_egfx_send_frame_start(self->egfx, 1, 0) != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
+            "xrdp_egfx_send_frame_start error");
+    }
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap: left %d top %d right %d "
+              "bottom %d", rect->left, rect->top, rect->right, rect->bottom);
+    for (yindex = rect->top; yindex < rect->bottom; yindex += cy)
+    {
+        bheight = rect->bottom - yindex;
+        bheight = MIN(bheight, cy);
+        for (xindex = rect->left; xindex < rect->right; xindex += cx)
+        {
+            bwidth = rect->right - xindex;
+            bwidth = MIN(bwidth, cx);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap: xindex %d "
+                      "yindex %d, bwidth %d bheight %d",
+                      xindex, yindex, bwidth, bheight);
+            src8 = bitmap->data + bitmap->line_size * yindex + xindex * 4;
+            dst8 = pixels + (bheight - 1) * bwidth * 4;
+            for (index = 0; index < bheight; index++)
+            {
+                g_memcpy(dst8, src8, bwidth * 4);
+                src8 += bitmap->line_size;
+                dst8 -= bwidth * 4;
+            }
+            lines = libxrdp_planar_compress(pixels, bwidth, bheight, comp_s,
+                                            32, GFX_PLANAR_BYTES, bheight - 1,
+                                            temp_s, 0, 0x10);
+            comp_s->end = comp_s->p;
+            comp_s->p = comp_s->data;
+            if (lines != bheight)
+            {
+                LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
+                    "lines(%d) != bheight(%d) error", lines, bheight);
+            }
+            else
+            {
+                comp_bytes = (int)(comp_s->end - comp_s->data);
+                LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap: lines %d "
+                          "comp_bytes %d", lines, comp_bytes);
+                gfx_rect.x1 = xindex;
+                gfx_rect.y1 = yindex;
+                gfx_rect.x2 = xindex + bwidth;
+                gfx_rect.y2 = yindex + bheight;
+                if (xrdp_egfx_send_wire_to_surface1(self->egfx, self->egfx->surface_id,
+                                                    XR_RDPGFX_CODECID_PLANAR,
+                                                    XR_PIXEL_FORMAT_XRGB_8888,
+                                                    &gfx_rect, comp_s->data,
+                                                    comp_bytes) != 0)
+                {
+                    LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
+                        "xrdp_egfx_send_wire_to_surface1 error");
+                }
+            }
+        }
+    }
+    if (xrdp_egfx_send_frame_end(self->egfx, 1) != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
+            "xrdp_egfx_send_frame_end error");
+    }
+    g_free(pixels);
+    free_stream(comp_s);
+    free_stream(temp_s);
+    return 0;
 }
 
 /******************************************************************************/
@@ -2789,6 +2924,8 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
     int cx;
     int cy;
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_process_enc_done:");
+
     while (1)
     {
         tc_mutex_lock(self->encoder->mutex);
@@ -2918,6 +3055,37 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
             xrdp_mm_process_enc_done(self);
         }
     }
+
+    if (self->wm->screen_dirty_region != NULL)
+    {
+        if (xrdp_region_not_empty(self->wm->screen_dirty_region))
+        {
+            int error;
+            struct xrdp_rect rect;
+            int now = g_time3();
+            int diff = now - self->wm->last_screen_draw_time;
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_check_wait_objs: not empty diff %d", diff);
+            if ((diff < 0) || (diff >= 40))
+            {
+                if (self->egfx_up)
+                {
+                    error = xrdp_region_get_bounds(self->wm->screen_dirty_region, &rect);
+                    if (error == 0)
+                    {
+                        xrdp_mm_egfx_send_planar_bitmap(self, self->wm->screen, &rect);
+                    }
+                    xrdp_region_delete(self->wm->screen_dirty_region);
+                    self->wm->screen_dirty_region = NULL;
+                    self->wm->last_screen_draw_time = now;
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_TRACE, "xrdp_mm_check_wait_objs: egfx is not up");
+                }
+            }
+        }
+    }
+
     return rv;
 }
 
