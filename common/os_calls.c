@@ -100,10 +100,6 @@ extern char **environ;
 #include <sys/ucred.h>
 #endif
 
-#if defined(__APPLE__)
-#include <mach-o/dyld.h>
-#endif
-
 /* for solaris */
 #if !defined(PF_LOCAL)
 #define PF_LOCAL AF_UNIX
@@ -3081,25 +3077,6 @@ g_set_allusercontext(int uid)
 void
 g_get_executable_path(enum xrdp_exe xe, char *buf, int bufsize)
 {
-    int rv = -1;
-#if defined(__APPLE__)
-    uint32_t _bufsize = bufsize;
-#endif
-
-    g_memset(buf, '\0', bufsize);
-
-#if defined(__APPLE__)
-    rv = _NSGetExecutablePath(buf, &_bufsize);
-#elif defined(__linux__)
-    rv = readlink("/proc/self/exe", buf, bufsize);
-#endif
-
-    if (rv > 0)
-    {
-        return;
-    }
-
-    // build executable path manually
     switch (xe)
     {
         case E_XE_XRDP:
