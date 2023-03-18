@@ -27,6 +27,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "xrdp_configure_options.h"
+#include "copying_third_party.h"
 #include "string_calls.h"
 
 #if !defined(PACKAGE_VERSION)
@@ -35,6 +36,17 @@
 
 static struct xrdp_listen *g_listen = 0;
 
+
+/*****************************************************************************/
+static void
+print_license(void)
+{
+    g_writeln("Third Party Code Additional Copyright Notices and License Terms");
+    g_writeln("%s", "");
+    g_writeln("Following third-party code are used in xrdp %s:", PACKAGE_VERSION);
+    g_writeln("%s", "");
+    g_writeln("%s", copying_third_party);
+}
 /*****************************************************************************/
 static void
 print_version(void)
@@ -68,6 +80,7 @@ print_help(void)
     g_writeln("   -f, --fork        fork on new connection");
     g_writeln("   -c, --config      specify new path to xrdp.ini");
     g_writeln("       --dump-config display config on stdout on startup");
+    g_writeln("       --license     show additional license information");
 }
 
 /*****************************************************************************/
@@ -208,6 +221,10 @@ xrdp_process_params(int argc, char **argv,
         {
             startup_params->dump_config = 1;
         }
+        else if (nocase_matches(option, "--license", NULL))
+        {
+            startup_params->license = 1;
+        }
         else if (nocase_matches(option, "-c", "--config", NULL))
         {
             index++;
@@ -332,6 +349,13 @@ main(int argc, char **argv)
     if (startup_params.version)
     {
         print_version();
+        g_deinit();
+        g_exit(0);
+    }
+
+    if (startup_params.license)
+    {
+        print_license();
         g_deinit();
         g_exit(0);
     }

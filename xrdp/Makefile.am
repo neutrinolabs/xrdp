@@ -14,6 +14,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm \
   -I$(top_srcdir)/libxrdp \
+  -I$(top_srcdir)/third_party \
   -I$(top_srcdir)/third_party/tomlc99 \
   $(IMLIB2_CFLAGS)
 
