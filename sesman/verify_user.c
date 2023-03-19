@@ -39,6 +39,9 @@
 #include <sys/types.h>
 #include <crypt.h>
 #include <shadow.h>
+
+/* Needed for putpwent */
+#define _GNU_SOURCE
 #include <pwd.h>
 
 #ifndef SECS_PER_DAY
