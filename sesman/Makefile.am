@@ -2,15 +2,13 @@ EXTRA_DIST = \
   Doxyfile
 
 AM_CPPFLAGS = \
-  -DXRDP_SYSCONF_PATH=\"${sysconfdir}\" \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_LIBEXEC_PATH=\"${libexecdir}/xrdp\" \
-  -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
-  -DXRDP_PAMCONF_PATH=\"${pamconfdir}\" \
   -DSESMAN_RUNTIME_PATH=\"${sesmanruntimedir}\" \
+  -I$(top_srcdir)/sesman/libsesman \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm
 
@@ -18,11 +16,6 @@ sbin_PROGRAMS = \
   xrdp-sesman
 
 xrdp_sesman_SOURCES = \
-  access.c \
-  access.h \
-  auth.h \
-  config.c \
-  config.h \
   env.c \
   env.h \
   lock_uds.c \
@@ -42,25 +35,11 @@ xrdp_sesman_SOURCES = \
   xwait.c \
   xwait.h
 
-# Possible authentication modules
-# See https://www.gnu.org/software/automake/manual/html_node/Conditional-Sources.html
-EXTRA_xrdp_sesman_SOURCES = \
- verify_user.c \
- verify_user_bsd.c \
- verify_user_kerberos.c \
- verify_user_pam.c \
- verify_user_pam_userpass.c
-
-# Make sure the right authentication module is pulled in
-xrdp_sesman_DEPENDENCIES = $(AUTHMOD_OBJ)
-
 # Make sure the right authentication module is linked with
 xrdp_sesman_LDADD = \
-  $(AUTHMOD_OBJ) \
+  $(top_builddir)/sesman/libsesman/libsesman.la \
   $(top_builddir)/libipm/libipm.la \
-  $(top_builddir)/common/libcommon.la \
-  $(AUTHMOD_LIB) \
-  -lpthread
+  $(top_builddir)/common/libcommon.la
 
 sesmansysconfdir=$(sysconfdir)/xrdp
 
@@ -83,5 +62,6 @@ dist_sesmansysconf_SCRIPTS = \
   reconnectwm.sh
 
 SUBDIRS = \
+  libsesman \
   tools \
   chansrv

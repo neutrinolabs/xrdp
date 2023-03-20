@@ -9,6 +9,7 @@ AM_CPPFLAGS = \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_PATH=\"${socketdir}\" \
+  -I$(top_srcdir)/sesman/libsesman \
   -I$(top_srcdir)/common
 
 CHANSRV_EXTRA_LIBS =
@@ -82,5 +83,6 @@ xrdp_chansrv_LDFLAGS = \
 
 xrdp_chansrv_LDADD = \
   $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libsesman/libsesman.la \
   $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
   $(CHANSRV_EXTRA_LIBS)
