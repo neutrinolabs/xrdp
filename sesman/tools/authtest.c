@@ -31,7 +31,7 @@
 #include <unistd.h>
 
 #include "log.h"
-#include "auth.h"
+#include "sesman_auth.h"
 #include "os_calls.h"
 #include "string_calls.h"
 
