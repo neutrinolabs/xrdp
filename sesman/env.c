@@ -31,7 +31,7 @@
 #include <grp.h>
 
 #include "env.h"
-#include "config.h"
+#include "sesman_config.h"
 #include "list.h"
 #include "log.h"
 #include "os_calls.h"

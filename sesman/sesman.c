@@ -33,8 +33,8 @@
 #include "arch.h"
 #include "sesman.h"
 
-#include "auth.h"
-#include "config.h"
+#include "sesman_auth.h"
+#include "sesman_config.h"
 #include "lock_uds.h"
 #include "os_calls.h"
 #include "scp.h"

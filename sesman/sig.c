@@ -31,7 +31,7 @@
 #include "arch.h"
 #include "sig.h"
 
-#include "config.h"
+#include "sesman_config.h"
 #include "log.h"
 #include "os_calls.h"
 #include "sesman.h"
