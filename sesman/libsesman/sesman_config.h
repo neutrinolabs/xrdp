@@ -18,14 +18,14 @@
 
 /**
  *
- * @file config.h
+ * @file sesman_config.h
  * @brief User authentication definitions
  * @author Simone Fedele @< simo [at] esseemme [dot] org @>
  *
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef SESMAN_CONFIG_H
+#define SESMAN_CONFIG_H
 
 #include "arch.h"
 #include "list.h"

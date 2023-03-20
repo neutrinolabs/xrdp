@@ -32,7 +32,7 @@
 #include "os_calls.h"
 #include "log.h"
 #include "string_calls.h"
-#include "auth.h"
+#include "sesman_auth.h"
 
 #include <stdio.h>
 #include <security/pam_appl.h>

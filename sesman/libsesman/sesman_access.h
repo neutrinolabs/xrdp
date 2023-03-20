@@ -18,14 +18,16 @@
 
 /**
  *
- * @file access.h
+ * @file sesman_access.h
  * @brief User access control definitions
  * @author Simone Fedele
  *
  */
 
-#ifndef ACCESS_H
-#define ACCESS_H
+#ifndef SESMAN_ACCESS_H
+#define SESMAN_ACCESS_H
+
+struct config_security;
 
 /**
  *
@@ -35,7 +37,8 @@
  *
  */
 int
-access_login_allowed(const char *user);
+access_login_allowed(const struct config_security *cfg_sec,
+                     const char *user);
 
 /**
  *
@@ -45,6 +48,7 @@ access_login_allowed(const char *user);
  *
  */
 int
-access_login_mng_allowed(const char *user);
+access_login_mng_allowed(const struct config_security *cfg_sec,
+                         const char *user);
 
 #endif

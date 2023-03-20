@@ -29,7 +29,7 @@
 #endif
 
 #include "arch.h"
-#include "auth.h"
+#include "sesman_auth.h"
 
 #define _XOPEN_SOURCE
 #include <stdio.h>
