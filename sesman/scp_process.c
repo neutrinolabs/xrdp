@@ -209,8 +209,8 @@ allocate_and_start_session(struct auth_info *auth_info,
                            const struct session_parameters *params)
 {
     int pid = 0;
-    struct session_chain *temp = (struct session_chain *)NULL;
     enum scp_screate_status status;
+    struct session_item *si;
 
     /* check to limit concurrent sessions */
     if (session_list_get_count() >= (unsigned int)g_cfg->sess.max_sessions)
@@ -220,22 +220,11 @@ allocate_and_start_session(struct auth_info *auth_info,
         return E_SCP_SCREATE_MAX_REACHED;
     }
 
-    temp = (struct session_chain *)g_malloc(sizeof(struct session_chain), 0);
-
-    if (temp == 0)
+    si = session_new();
+    if (si == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Out of memory error: cannot create new session "
-            "chain element - user %s", username);
-        return E_SCP_SCREATE_NO_MEMORY;
-    }
-
-    temp->item = (struct session_item *)g_malloc(sizeof(struct session_item), 0);
-
-    if (temp->item == 0)
-    {
-        g_free(temp);
-        LOG(LOG_LEVEL_ERROR, "Out of memory error: cannot create new session "
-            "item - user %s", username);
+            "element - user %s", username);
         return E_SCP_SCREATE_NO_MEMORY;
     }
 
@@ -252,23 +241,26 @@ allocate_and_start_session(struct auth_info *auth_info,
             LOG(LOG_LEVEL_INFO, "++ created session: username %s", username);
         }
 
-        temp->item->pid = pid;
-        temp->item->display = params->display;
-        temp->item->width = params->width;
-        temp->item->height = params->height;
-        temp->item->bpp = params->bpp;
-        temp->item->auth_info = auth_info;
-        g_strncpy(temp->item->start_ip_addr, ip_addr,
-                  sizeof(temp->item->start_ip_addr) - 1);
-        temp->item->uid = params->uid;
-        temp->item->guid = params->guid;
+        si->pid = pid;
+        si->display = params->display;
+        si->width = params->width;
+        si->height = params->height;
+        si->bpp = params->bpp;
+        si->auth_info = auth_info;
+        g_strncpy(si->start_ip_addr, ip_addr,
+                  sizeof(si->start_ip_addr) - 1);
+        si->uid = params->uid;
+        si->guid = params->guid;
 
-        temp->item->start_time = g_time1();
+        si->start_time = g_time1();
 
-        temp->item->type = params->type;
-        temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
-
-        session_list_add(temp);
+        si->type = params->type;
+        si->status = SESMAN_SESSION_STATUS_ACTIVE;
+    }
+    else
+    {
+        // Remove session item from the list
+        session_list_kill(-1);
     }
 
     return status;

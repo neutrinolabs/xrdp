@@ -35,6 +35,7 @@
 
 #include "sesman_auth.h"
 #include "sesman_config.h"
+#include "session_list.h"
 #include "lock_uds.h"
 #include "os_calls.h"
 #include "scp.h"
@@ -966,7 +967,12 @@ main(int argc, char **argv)
         g_chmod_hex("/tmp/.X11-unix", 0x1777);
     }
 
-    error = sesman_main_loop();
+    error = session_module_init();
+    if (error == 0)
+    {
+        error = sesman_main_loop();
+        session_module_cleanup();
+    }
 
     /* clean up PID file on exit */
     if (daemon)

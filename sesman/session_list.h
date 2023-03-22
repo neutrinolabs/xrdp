@@ -47,7 +47,6 @@ struct session_parameters;
 enum session_kill_status
 {
     SESMAN_SESSION_KILL_OK = 0,
-    SESMAN_SESSION_KILL_NULLITEM,
     SESMAN_SESSION_KILL_NOTFOUND
 };
 
@@ -78,11 +77,20 @@ struct session_item
     struct guid guid;
 };
 
-struct session_chain
-{
-    struct session_chain *next;
-    struct session_item *item;
-};
+/**
+ * Initialise the module
+ * @return 0 for success
+ *
+ * Errors are logged
+ */
+int
+session_module_init(void);
+
+/**
+ * Clean up the module on program exit
+ */
+void
+session_module_cleanup(void);
 
 /**
  * Returns the number of sessions currently active
@@ -92,17 +100,27 @@ unsigned int
 session_list_get_count(void);
 
 /**
- * Adds a new session item to the chain
+ * Allocates a new session
+ *
+ * The PID and display for the allocated session will be -1 and all other
+ * fields will be blank
+ *
+ * @return pointer to new session object or NULL for no memory
+ *
+ * After allocating the session successfully, you must initialise the
+ * PID and display fields with valid numbers.
+ *
+ * If you allocate a session and want to remove it due to other problems,
+ * use session_kill_pid(-1);
  */
-void
-session_list_add(struct session_chain *element);
+struct session_item *
+session_new(void);
 
 /**
  * Get the next available display
  */
 int
 session_list_get_available_display(void);
-
 
 /**
  *
@@ -138,17 +156,6 @@ void
 session_list_sigkill_all(void);
 
 /**
- *
- * @brief retrieves a session's descriptor
- * @param pid the session pid
- * @return a pointer to the session descriptor on success, NULL otherwise
- *
- */
-struct session_item *
-session_list_get_bypid(int pid);
-
-/**
- *
  * @brief retrieves session descriptions
  * @param UID the UID for the descriptions
  * @return A block of session descriptions

@@ -44,119 +44,100 @@
 #include "string_calls.h"
 #include "xrdp_sockets.h"
 
-static struct session_chain *g_sessions;
-static int g_session_count;
+static struct list *g_session_list = NULL;
+
+#define SESSION_IN_USE(si) \
+    ((si) != NULL && \
+     (si)->display >= 0 && \
+     (si)->pid > 0)
+
+/******************************************************************************/
+int
+session_module_init(void)
+{
+    int rv = 1;
+    if (g_session_list == NULL)
+    {
+        g_session_list = list_create_sized(g_cfg->sess.max_sessions);
+    }
+
+    if (g_session_list == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't allocate session list");
+    }
+    else
+    {
+        g_session_list->auto_free = 0;
+        rv = 0;
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+/**
+ * Frees resources allocated to a session_item
+ *
+ * @param si Session item
+ *
+ * @note Any pointer to this item on g_session_list will be invalid
+ *       after this call.
+ */
+static void
+free_session(struct session_item *si)
+{
+    if (si != NULL)
+    {
+        if (si->auth_info != NULL)
+        {
+            auth_end(si->auth_info);
+        }
+        g_free(si);
+    }
+}
+
+/******************************************************************************/
+void
+session_module_cleanup(void)
+{
+    if (g_session_list != NULL)
+    {
+        int i;
+        for (i = 0 ; i < g_session_list->count ; ++i)
+        {
+            struct session_item *si;
+            si = (struct session_item *)list_get_item(g_session_list, i);
+            free_session(si);
+        }
+        list_delete(g_session_list);
+        g_session_list = NULL;
+    }
+}
 
 /******************************************************************************/
 unsigned int
 session_list_get_count(void)
 {
-    return g_session_count;
-}
-
-/******************************************************************************/
-void
-session_list_add(struct session_chain *element)
-{
-    element->next = g_sessions;
-    g_sessions = element;
-    g_session_count++;
+    return g_session_list->count;
 }
 
 /******************************************************************************/
 struct session_item *
-session_list_get_bydata(uid_t uid,
-                        enum scp_session_type type,
-                        unsigned short width,
-                        unsigned short height,
-                        unsigned char  bpp,
-                        const char *ip_addr)
+session_new(void)
 {
-    char policy_str[64];
-    struct session_chain *tmp;
-    int policy = g_cfg->sess.policy;
-
-    if ((policy & SESMAN_CFG_SESS_POLICY_DEFAULT) != 0)
+    struct session_item *result = g_new0(struct session_item, 1);
+    if (result != NULL)
     {
-        /* In the past (i.e. xrdp before v0.9.14), the default
-         * session policy varied by type. If this is needed again
-         * in the future, here is the place to add it */
-        policy = SESMAN_CFG_SESS_POLICY_U | SESMAN_CFG_SESS_POLICY_B;
+        result->pid = -1;
+        result->display = -1;
+        if (!list_add_item(g_session_list, (tintptr)result))
+        {
+            g_free(result);
+            result = NULL;
+        }
     }
 
-    config_output_policy_string(policy, policy_str, sizeof(policy_str));
-
-    LOG(LOG_LEVEL_DEBUG,
-        "%s: search policy=%s type=%s U=%d B=%d D=(%dx%d) I=%s",
-        __func__,
-        policy_str, SCP_SESSION_TYPE_TO_STR(type),
-        uid, bpp, width, height,
-        ip_addr);
-
-    /* 'Separate' policy never matches */
-    if (policy & SESMAN_CFG_SESS_POLICY_SEPARATE)
-    {
-        LOG(LOG_LEVEL_DEBUG, "%s: No matches possible", __func__);
-        return NULL;
-    }
-
-    for (tmp = g_sessions ; tmp != 0 ; tmp = tmp->next)
-    {
-        struct session_item *item = tmp->item;
-
-        LOG(LOG_LEVEL_DEBUG,
-            "%s: try %p type=%s U=%d B=%d D=(%dx%d) I=%s",
-            __func__,
-            item,
-            SCP_SESSION_TYPE_TO_STR(item->type),
-            item->uid,
-            item->bpp,
-            item->width, item->height,
-            item->start_ip_addr);
-
-        if (item->type != type)
-        {
-            LOG(LOG_LEVEL_DEBUG, "%s: Type doesn't match", __func__);
-            continue;
-        }
-
-        if ((policy & SESMAN_CFG_SESS_POLICY_U) && (int)uid != item->uid)
-        {
-            LOG(LOG_LEVEL_DEBUG,
-                "%s: UID doesn't match for 'U' policy", __func__);
-            continue;
-        }
-
-        if ((policy & SESMAN_CFG_SESS_POLICY_B) && item->bpp != bpp)
-        {
-            LOG(LOG_LEVEL_DEBUG,
-                "%s: bpp doesn't match for 'B' policy", __func__);
-            continue;
-        }
-
-        if ((policy & SESMAN_CFG_SESS_POLICY_D) &&
-                (item->width != width || item->height != height))
-        {
-            LOG(LOG_LEVEL_DEBUG,
-                "%s: Dimensions don't match for 'D' policy", __func__);
-            continue;
-        }
-
-        if ((policy & SESMAN_CFG_SESS_POLICY_I) &&
-                g_strcmp(item->start_ip_addr, ip_addr) != 0)
-        {
-            LOG(LOG_LEVEL_DEBUG,
-                "%s: IPs don't match for 'I' policy", __func__);
-            continue;
-        }
-
-        LOG(LOG_LEVEL_DEBUG,
-            "%s: Got match, display=%d", __func__, item->display);
-        return item;
-    }
-
-    LOG(LOG_LEVEL_DEBUG, "%s: No matches found", __func__);
-    return 0;
+    return result;
 }
 
 /******************************************************************************/
@@ -261,56 +242,211 @@ x_server_running_check_ports(int display)
 }
 
 /******************************************************************************/
-/* called with the main thread
-   returns boolean */
+/* Helper function for get_sorted_display_list():qsort() */
 static int
-is_display_in_chain(int display)
+icmp(const void *i1, const void *i2)
 {
-    struct session_chain *chain;
-    struct session_item *item;
+    return *(const unsigned int *)i2 - *(const unsigned int *)i1;
+}
 
-    chain = g_sessions;
+/******************************************************************************/
+/**
+ * Get a sorted array of all the displays allocated to sessions
+ * @param[out] cnt Count of displays in list
+ * @return Allocated array of displays or NULL for no memory
+ *
+ * Result must always be freed, even if cnt == 0
+ */
 
-    while (chain != 0)
+static unsigned int *
+get_sorted_session_displays(unsigned int *cnt)
+{
+    unsigned int *displays;
+
+    *cnt = 0;
+    displays = g_new(unsigned int, session_list_get_count() + 1);
+    if (displays == NULL)
     {
-        item = chain->item;
+        LOG(LOG_LEVEL_ERROR, "Can't allocate memory for display list");
+    }
+    else if (g_session_list != NULL)
+    {
+        int i;
 
-        if (item->display == display)
+        for (i = 0 ; i < g_session_list->count ; ++i)
         {
-            return 1;
+            const struct session_item *si;
+            si = (const struct session_item *)list_get_item(g_session_list, i);
+            if (SESSION_IN_USE(si) && si->display >= 0)
+            {
+                displays[(*cnt)++] = si->display;
+            }
         }
-
-        chain = chain->next;
+        qsort(displays, *cnt, sizeof(displays[0]), icmp);
     }
 
-    return 0;
+    return displays;
 }
 
 /******************************************************************************/
 int
 session_list_get_available_display(void)
 {
-    int display;
+    int rv = -1;
+    unsigned int max_alloc = 0;
 
-    display = g_cfg->sess.x11_display_offset;
-
-    while ((display - g_cfg->sess.x11_display_offset) <= g_cfg->sess.max_sessions)
+    // Find all displays already allocated. We do this to prevent
+    // unnecessary file system accesses, and also to prevent us allocating
+    // the same display number to two callers who call in quick
+    // succession  i.e. if the first caller has not created its X server
+    // by the time we service the second request
+    unsigned int *allocated_displays = get_sorted_session_displays(&max_alloc);
+    if (allocated_displays != NULL)
     {
-        if (!is_display_in_chain(display))
+        unsigned int i = 0;
+        unsigned int display;
+
+        for (display = g_cfg->sess.x11_display_offset;
+                display <= g_cfg->sess.max_display_number;
+                ++display)
         {
+            // Have we already allocated this one?
+            while (i < max_alloc && display > allocated_displays[i])
+            {
+                ++i;
+            }
+            if (i < max_alloc && display == allocated_displays[i])
+            {
+                continue; // Already allocated
+            }
+
             if (!x_server_running_check_ports(display))
             {
-                return display;
+                break;
             }
         }
 
-        display++;
+        g_free(allocated_displays);
+
+        if (display > g_cfg->sess.max_display_number)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "X server -- no display in range (%d to %d) is available",
+                g_cfg->sess.x11_display_offset,
+                g_cfg->sess.max_display_number);
+        }
+        else
+        {
+            rv = display;
+        }
     }
 
-    LOG(LOG_LEVEL_ERROR, "X server -- no display in range (%d to %d) is available",
-        g_cfg->sess.x11_display_offset,
-        g_cfg->sess.x11_display_offset + g_cfg->sess.max_sessions);
-    return 0;
+    return rv;
+}
+
+/******************************************************************************/
+struct session_item *
+session_list_get_bydata(uid_t uid,
+                        enum scp_session_type type,
+                        unsigned short width,
+                        unsigned short height,
+                        unsigned char  bpp,
+                        const char *ip_addr)
+{
+    char policy_str[64];
+    int policy = g_cfg->sess.policy;
+    int i;
+
+    if (ip_addr == NULL)
+    {
+        ip_addr = "";
+    }
+
+    if ((policy & SESMAN_CFG_SESS_POLICY_DEFAULT) != 0)
+    {
+        /* Before xrdp v0.9.14, the default
+         * session policy varied by type. If this is needed again
+         * in the future, here is the place to add it */
+        policy = SESMAN_CFG_SESS_POLICY_U | SESMAN_CFG_SESS_POLICY_B;
+    }
+
+    config_output_policy_string(policy, policy_str, sizeof(policy_str));
+
+    LOG(LOG_LEVEL_DEBUG,
+        "%s: search policy=%s type=%s U=%d B=%d D=(%dx%d) I=%s",
+        __func__,
+        policy_str, SCP_SESSION_TYPE_TO_STR(type),
+        uid, bpp, width, height,
+        ip_addr);
+
+    /* 'Separate' policy never matches */
+    if (policy & SESMAN_CFG_SESS_POLICY_SEPARATE)
+    {
+        LOG(LOG_LEVEL_DEBUG, "%s: No matches possible", __func__);
+        return NULL;
+    }
+
+    for (i = 0 ; i < g_session_list->count ; ++i)
+    {
+        struct session_item *si;
+        si = (struct session_item *)list_get_item(g_session_list, i);
+        if (!SESSION_IN_USE(si))
+        {
+            continue;
+        }
+
+        LOG(LOG_LEVEL_DEBUG,
+            "%s: try %p type=%s U=%d B=%d D=(%dx%d) I=%s",
+            __func__,
+            si,
+            SCP_SESSION_TYPE_TO_STR(si->type),
+            si->uid, si->bpp,
+            si->width, si->height,
+            si->start_ip_addr);
+
+        if (si->type != type)
+        {
+            LOG(LOG_LEVEL_DEBUG, "%s: Type doesn't match", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_U) && (int)uid != si->uid)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "%s: UID doesn't match for 'U' policy", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_B) && si->bpp != bpp)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "%s: bpp doesn't match for 'B' policy", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_D) &&
+                (si->width != width || si->height != height))
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "%s: Dimensions don't match for 'D' policy", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_I) &&
+                g_strcmp(si->start_ip_addr, ip_addr) != 0)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "%s: IPs don't match for 'I' policy", __func__);
+            continue;
+        }
+
+        LOG(LOG_LEVEL_DEBUG,
+            "%s: Got match, display=%d", __func__, si->display);
+        return si;
+    }
+
+    LOG(LOG_LEVEL_DEBUG, "%s: No matches found", __func__);
+    return NULL;
 }
 
 /******************************************************************************/
@@ -344,172 +480,83 @@ username_from_uid(int uid, char *uname, int uname_len)
 enum session_kill_status
 session_list_kill(int pid)
 {
-    struct session_chain *tmp;
-    struct session_chain *prev;
+    int i = 0;
+    enum session_kill_status status = SESMAN_SESSION_KILL_NOTFOUND;
 
-    tmp = g_sessions;
-    prev = 0;
-
-    while (tmp != 0)
+    while (i < g_session_list->count)
     {
-        if (tmp->item == 0)
+        struct session_item *si;
+        si = (struct session_item *)list_get_item(g_session_list, i);
+        if (si->pid == pid)
         {
-            LOG(LOG_LEVEL_ERROR, "session descriptor for "
-                "pid %d is null!", pid);
-
-            if (prev == 0)
+            status = SESMAN_SESSION_KILL_OK;
+            if (pid > 0)
             {
-                /* prev does no exist, so it's the first element - so we set
-                   g_sessions */
-                g_sessions = tmp->next;
-            }
-            else
-            {
-                prev->next = tmp->next;
-            }
+                char username[256];
+                username_from_uid(si->uid, username, sizeof(username));
 
-            return SESMAN_SESSION_KILL_NULLITEM;
-        }
+                /* Log the deletion */
+                if (si->auth_info != NULL)
+                {
+                    LOG(LOG_LEVEL_INFO,
+                        "Calling auth_end for pid %d from pid %d",
+                        pid, g_getpid());
+                }
 
-        if (tmp->item->pid == pid)
-        {
-            char username[256];
-            username_from_uid(tmp->item->uid, username, sizeof(username));
-
-            /* deleting the session */
-            if (tmp->item->auth_info != NULL)
-            {
                 LOG(LOG_LEVEL_INFO,
-                    "Calling auth_end for pid %d from pid %d",
-                    pid, g_getpid());
-                auth_end(tmp->item->auth_info);
-                tmp->item->auth_info = NULL;
-            }
-            LOG(LOG_LEVEL_INFO,
-                "++ terminated session: UID %d (%s), display :%d.0, "
-                "session_pid %d, ip %s",
-                tmp->item->uid, username, tmp->item->display,
-                tmp->item->pid, tmp->item->start_ip_addr);
-            g_free(tmp->item);
-
-            if (prev == 0)
-            {
-                /* prev does no exist, so it's the first element - so we set
-                   g_sessions */
-                g_sessions = tmp->next;
-            }
-            else
-            {
-                prev->next = tmp->next;
+                    "++ terminated session: UID %d (%s), display :%d.0, "
+                    "session_pid %d, ip %s",
+                    si->uid, username, si->display,
+                    si->pid, si->start_ip_addr);
             }
 
-            g_free(tmp);
-            g_session_count--;
-            return SESMAN_SESSION_KILL_OK;
+            free_session(si);
         }
-
-        /* go on */
-        prev = tmp;
-        tmp = tmp->next;
+        else
+        {
+            ++i;
+        }
     }
 
-    return SESMAN_SESSION_KILL_NOTFOUND;
+    return status;
 }
 
 /******************************************************************************/
 void
 session_list_sigkill_all(void)
 {
-    struct session_chain *tmp;
+    int i;
 
-    tmp = g_sessions;
-
-    while (tmp != 0)
+    for (i = 0 ; i < g_session_list->count ; ++i)
     {
-        if (tmp->item == 0)
+        struct session_item *si;
+        si = (struct session_item *)list_get_item(g_session_list, i);
+        if (si->pid > 0)
         {
-            LOG(LOG_LEVEL_ERROR, "found null session descriptor!");
+            g_sigterm(si->pid);
         }
-        else
-        {
-            g_sigterm(tmp->item->pid);
-        }
-
-        /* go on */
-        tmp = tmp->next;
     }
-}
-
-/******************************************************************************/
-struct session_item *
-session_list_get_bypid(int pid)
-{
-    struct session_chain *tmp;
-    struct session_item *dummy;
-
-    dummy = g_new0(struct session_item, 1);
-
-    if (0 == dummy)
-    {
-        LOG(LOG_LEVEL_ERROR, "session_get_bypid: out of memory");
-        return 0;
-    }
-
-    tmp = g_sessions;
-
-    while (tmp != 0)
-    {
-        if (tmp->item == 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!", pid);
-            g_free(dummy);
-            return 0;
-        }
-
-        if (tmp->item->pid == pid)
-        {
-            g_memcpy(dummy, tmp->item, sizeof(struct session_item));
-            return dummy;
-        }
-
-        /* go on */
-        tmp = tmp->next;
-    }
-
-    g_free(dummy);
-    return 0;
 }
 
 /******************************************************************************/
 struct scp_session_info *
 session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
 {
-    struct session_chain *tmp;
+    int i;
     struct scp_session_info *sess;
     int count;
     int index;
 
     count = 0;
 
-    tmp = g_sessions;
-
-    LOG(LOG_LEVEL_DEBUG, "searching for session by UID: %d", uid);
-    while (tmp != 0)
+    for (i = 0 ; i < g_session_list->count ; ++i)
     {
-        if (uid == tmp->item->uid)
+        const struct session_item *si;
+        si = (const struct session_item *)list_get_item(g_session_list, i);
+        if (SESSION_IN_USE(si) && uid == si->uid && (si->status & flags) != 0)
         {
-            LOG(LOG_LEVEL_DEBUG, "session_list_get_byuid: status=%d, flags=%d, "
-                "result=%d", (tmp->item->status), flags,
-                ((tmp->item->status) & flags));
-
-            if ((tmp->item->status) & flags)
-            {
-                count++;
-            }
+            count++;
         }
-
-        /* go on */
-        tmp = tmp->next;
     }
 
     if (count == 0)
@@ -527,38 +574,32 @@ session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
         return 0;
     }
 
-    tmp = g_sessions;
     index = 0;
-
-    while (tmp != 0 && index < count)
+    for (i = 0 ; i < g_session_list->count ; ++i)
     {
-        if (uid == tmp->item->uid)
+        const struct session_item *si;
+        si = (const struct session_item *)list_get_item(g_session_list, i);
+        if (SESSION_IN_USE(si) && uid == si->uid && (si->status & flags) != 0)
         {
-            if ((tmp->item->status) & flags)
+            (sess[index]).sid = si->pid;
+            (sess[index]).display = si->display;
+            (sess[index]).type = si->type;
+            (sess[index]).height = si->height;
+            (sess[index]).width = si->width;
+            (sess[index]).bpp = si->bpp;
+            (sess[index]).start_time = si->start_time;
+            (sess[index]).uid = si->uid;
+            (sess[index]).start_ip_addr = g_strdup(si->start_ip_addr);
+
+            /* Check for string allocation failures */
+            if ((sess[index]).start_ip_addr == NULL)
             {
-                (sess[index]).sid = tmp->item->pid;
-                (sess[index]).display = tmp->item->display;
-                (sess[index]).type = tmp->item->type;
-                (sess[index]).height = tmp->item->height;
-                (sess[index]).width = tmp->item->width;
-                (sess[index]).bpp = tmp->item->bpp;
-                (sess[index]).start_time = tmp->item->start_time;
-                (sess[index]).uid = tmp->item->uid;
-                (sess[index]).start_ip_addr = g_strdup(tmp->item->start_ip_addr);
-
-                /* Check for string allocation failures */
-                if ((sess[index]).start_ip_addr == NULL)
-                {
-                    free_session_info_list(sess, *cnt);
-                    (*cnt) = 0;
-                    return 0;
-                }
-                index++;
+                free_session_info_list(sess, *cnt);
+                (*cnt) = 0;
+                return 0;
             }
+            index++;
         }
-
-        /* go on */
-        tmp = tmp->next;
     }
 
     (*cnt) = count;
