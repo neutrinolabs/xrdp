@@ -216,3 +216,25 @@ libipm_clear_flags(struct trans *trans, unsigned int flags)
         priv->flags &= ~flags;
     }
 }
+
+/*****************************************************************************/
+
+void
+libipm_change_facility(struct trans *trans,
+                       enum libipm_facility old_facility,
+                       enum libipm_facility new_facility)
+{
+    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+
+    if (priv != NULL)
+    {
+        if (priv->facility != old_facility)
+        {
+            LOG(LOG_LEVEL_WARNING, "Not changing libipm facility - bad value");
+        }
+        else
+        {
+            priv->facility = new_facility;
+        }
+    }
+}
