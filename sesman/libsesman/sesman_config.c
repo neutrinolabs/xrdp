@@ -428,7 +428,11 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_X11DISPLAYOFFSET))
         {
-            se->x11_display_offset = g_atoi(value);
+            int x11off = g_atoi(value);
+            if (x11off >= 0)
+            {
+                se->x11_display_offset = x11off;
+            }
         }
 
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX_DISPLAY))
@@ -442,7 +446,11 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
 
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX))
         {
-            se->max_sessions = g_atoi(value);
+            int sm = g_atoi(value);
+            if (sm >= 0)
+            {
+                se->max_sessions = sm;
+            }
         }
 
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_KILL_DISC))
