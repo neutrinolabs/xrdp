@@ -588,6 +588,7 @@ AC_CONFIG_FILES([
   sesman/libsesman/Makefile
   sesman/chansrv/Makefile
   sesman/Makefile
+  sesman/sesexec/Makefile
   sesman/tools/Makefile
   tests/Makefile
   tests/common/Makefile

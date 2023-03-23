@@ -4,7 +4,7 @@ pkglibexec_PROGRAMS = \
 AM_LDFLAGS = -lX11 -lXrandr
 
 AM_CPPFLAGS = \
-  -I$(top_srcdir)/sesman \
+  -I$(top_srcdir)/sesman/sesexec \
   -I$(top_srcdir)/common
 
 AM_CFLAGS = $(X_CFLAGS)

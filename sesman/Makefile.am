@@ -62,5 +62,6 @@ dist_sesmansysconf_SCRIPTS = \
 
 SUBDIRS = \
   libsesman \
+  sesexec \
   tools \
   chansrv
