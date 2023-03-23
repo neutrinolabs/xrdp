@@ -35,7 +35,6 @@ xrdp_sesman_SOURCES = \
   xwait.c \
   xwait.h
 
-# Make sure the right authentication module is linked with
 xrdp_sesman_LDADD = \
   $(top_builddir)/sesman/libsesman/libsesman.la \
   $(top_builddir)/libipm/libipm.la \
