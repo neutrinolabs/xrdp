@@ -55,7 +55,7 @@ tests/memtest/memtest
 tests/xrdp/test_xrdp
 tools/devel/tcp_proxy/tcp_proxy
 *.trs
-waitforx/xrdp-waitforx
+waitforx/waitforx
 xrdp/xrdp
 xrdp/xrdp.ini
 xrdp_configure_options.h
