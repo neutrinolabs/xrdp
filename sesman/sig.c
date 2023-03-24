@@ -111,7 +111,7 @@ sig_sesman_session_end(void)
         {
             LOG(LOG_LEVEL_INFO, "Process %d has exited", pid);
 
-            session_kill(pid);
+            session_list_kill(pid);
         }
     }
     while (pid > 0);

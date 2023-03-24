@@ -49,14 +49,14 @@ static int g_session_count;
 
 /******************************************************************************/
 unsigned int
-session_get_count(void)
+session_list_get_count(void)
 {
     return g_session_count;
 }
 
 /******************************************************************************/
 void
-session_chain_add(struct session_chain *element)
+session_list_add(struct session_chain *element)
 {
     element->next = g_sessions;
     g_sessions = element;
@@ -65,12 +65,12 @@ session_chain_add(struct session_chain *element)
 
 /******************************************************************************/
 struct session_item *
-session_get_bydata(uid_t uid,
-                   enum scp_session_type type,
-                   unsigned short width,
-                   unsigned short height,
-                   unsigned char  bpp,
-                   const char *ip_addr)
+session_list_get_bydata(uid_t uid,
+                        enum scp_session_type type,
+                        unsigned short width,
+                        unsigned short height,
+                        unsigned char  bpp,
+                        const char *ip_addr)
 {
     char policy_str[64];
     struct session_chain *tmp;
@@ -264,7 +264,7 @@ x_server_running_check_ports(int display)
 /* called with the main thread
    returns boolean */
 static int
-session_is_display_in_chain(int display)
+is_display_in_chain(int display)
 {
     struct session_chain *chain;
     struct session_item *item;
@@ -288,7 +288,7 @@ session_is_display_in_chain(int display)
 
 /******************************************************************************/
 int
-session_get_available_display(void)
+session_list_get_available_display(void)
 {
     int display;
 
@@ -296,7 +296,7 @@ session_get_available_display(void)
 
     while ((display - g_cfg->sess.x11_display_offset) <= g_cfg->sess.max_sessions)
     {
-        if (!session_is_display_in_chain(display))
+        if (!is_display_in_chain(display))
         {
             if (!x_server_running_check_ports(display))
             {
@@ -342,7 +342,7 @@ username_from_uid(int uid, char *uname, int uname_len)
 
 /******************************************************************************/
 enum session_kill_status
-session_kill(int pid)
+session_list_kill(int pid)
 {
     struct session_chain *tmp;
     struct session_chain *prev;
@@ -418,7 +418,7 @@ session_kill(int pid)
 
 /******************************************************************************/
 void
-session_sigkill_all(void)
+session_list_sigkill_all(void)
 {
     struct session_chain *tmp;
 
@@ -442,7 +442,7 @@ session_sigkill_all(void)
 
 /******************************************************************************/
 struct session_item *
-session_get_bypid(int pid)
+session_list_get_bypid(int pid)
 {
     struct session_chain *tmp;
     struct session_item *dummy;
@@ -482,7 +482,7 @@ session_get_bypid(int pid)
 
 /******************************************************************************/
 struct scp_session_info *
-session_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
+session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
 {
     struct session_chain *tmp;
     struct scp_session_info *sess;
@@ -498,7 +498,7 @@ session_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
     {
         if (uid == tmp->item->uid)
         {
-            LOG(LOG_LEVEL_DEBUG, "session_get_byuser: status=%d, flags=%d, "
+            LOG(LOG_LEVEL_DEBUG, "session_list_get_byuid: status=%d, flags=%d, "
                 "result=%d", (tmp->item->status), flags,
                 ((tmp->item->status) & flags));
 

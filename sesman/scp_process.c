@@ -212,7 +212,7 @@ allocate_and_start_session(struct auth_info *auth_info,
     struct session_chain *temp = (struct session_chain *)NULL;
 
     /* check to limit concurrent sessions */
-    if (session_get_count() >= (unsigned int)g_cfg->sess.max_sessions)
+    if (session_list_get_count() >= (unsigned int)g_cfg->sess.max_sessions)
     {
         LOG(LOG_LEVEL_ERROR, "max concurrent session limit "
             "exceeded. login for user %s denied", username);
@@ -299,7 +299,7 @@ allocate_and_start_session(struct auth_info *auth_info,
     temp->item->type = params->type;
     temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
 
-    session_chain_add(temp);
+    session_list_add(temp);
 
     return E_SCP_SCREATE_OK;
 }
@@ -513,8 +513,8 @@ process_create_session_request(struct sesman_con *sc)
                 sc->peername, sc->username);
 
             struct session_item *s_item =
-                session_get_bydata(sc->uid, sp.type, sp.width, sp.height,
-                                   sp.bpp, sc->ip_addr);
+                session_list_get_bydata(sc->uid, sp.type, sp.width, sp.height,
+                                        sp.bpp, sc->ip_addr);
             if (s_item != 0)
             {
                 // Found an existing session
@@ -544,7 +544,7 @@ process_create_session_request(struct sesman_con *sc)
                 //
                 // Get the rest of the parameters for the session
                 guid = guid_new();
-                display = session_get_available_display();
+                display = session_list_get_available_display();
 
                 sp.guid = guid;
                 sp.display = display;
@@ -612,8 +612,8 @@ process_list_sessions_request(struct sesman_con *sc)
             "Received request from %s to list sessions for user %s",
             sc->peername, sc->username);
 
-        info = session_get_byuid(sc->uid, &cnt,
-                                 SESMAN_SESSION_STATUS_ALL);
+        info = session_list_get_byuid(sc->uid, &cnt,
+                                      SESMAN_SESSION_STATUS_ALL);
 
         for (i = 0; rv == 0 && i < cnt; ++i)
         {

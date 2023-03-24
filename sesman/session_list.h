@@ -89,19 +89,19 @@ struct session_chain
  * @return Session count
  */
 unsigned int
-session_get_count(void);
+session_list_get_count(void);
 
 /**
  * Adds a new session item to the chain
  */
 void
-session_chain_add(struct session_chain *element);
+session_list_add(struct session_chain *element);
 
 /**
  * Get the next available display
  */
 int
-session_get_available_display(void);
+session_list_get_available_display(void);
 
 
 /**
@@ -111,12 +111,12 @@ session_get_available_display(void);
  *
  */
 struct session_item *
-session_get_bydata(uid_t uid,
-                   enum scp_session_type type,
-                   unsigned short width,
-                   unsigned short height,
-                   unsigned char  bpp,
-                   const char *ip_addr);
+session_list_get_bydata(uid_t uid,
+                        enum scp_session_type type,
+                        unsigned short width,
+                        unsigned short height,
+                        unsigned char  bpp,
+                        const char *ip_addr);
 
 /**
  *
@@ -126,7 +126,7 @@ session_get_bydata(uid_t uid,
  *
  */
 enum session_kill_status
-session_kill(int pid);
+session_list_kill(int pid);
 
 /**
  *
@@ -135,7 +135,7 @@ session_kill(int pid);
  *
  */
 void
-session_sigkill_all(void);
+session_list_sigkill_all(void);
 
 /**
  *
@@ -145,7 +145,7 @@ session_sigkill_all(void);
  *
  */
 struct session_item *
-session_get_bypid(int pid);
+session_list_get_bypid(int pid);
 
 /**
  *
@@ -157,7 +157,7 @@ session_get_bypid(int pid);
  *
  */
 struct scp_session_info *
-session_get_byuid(int uid, unsigned int *cnt, unsigned char flags);
+session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags);
 
 /**
  *
