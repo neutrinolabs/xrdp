@@ -631,7 +631,6 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     {
         LOG(LOG_LEVEL_ERROR, "scard_process_list_readers: "
             "get_pcsc_context_by_app_context failed");
-        g_free(groups);
         return 1;
     }
     pcscListReaders = g_new0(struct pcsc_list_readers, 1);
