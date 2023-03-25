@@ -359,6 +359,24 @@ GNOME 3 versions later than 3.29.92. Do not use this for any other reason.
 This setting will be removed in a later version of xrdp, when GNOME 3 is
 no longer supported.
 
+.TP
+\fBSoundNumSilentFramesAAC\fR=\fInumber\fR
+Sets the \fInumber\fR of silent frames which are sent to client before close
+message is sent, when AAC is selected. If set to 0, no silent frame is sent.
+If not specified, defaults to \fI4\fR.
+
+.TP
+\fBSoundNumSilentFramesMP3\fR=\fInumber\fR
+Sets the \fInumber\fR of silent frames which are sent to client before close
+message is sent, when MP3 is selected. If set to 0, no silent frame is sent.
+If not specified, defaults to \fI2\fR.
+
+.TP
+\fBSoundMsecDoNotSend\fR=\fInumber\fR
+Sets the duration(msec). Sound data is not send to client during \fInumber\fR
+millisecond(s) after close message is sent, when AAC/MP3 is selected.
+If set to 0, all the data is sent. If not specified, defaults to \fI1000\fR.
+
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as
 environment variables in the user's session.

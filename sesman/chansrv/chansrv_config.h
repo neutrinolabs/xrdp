@@ -38,6 +38,12 @@ struct config_chansrv
 
     /** Whether to use nautilus3-compatible file lists for the clipboard */
     int use_nautilus3_flist_format;
+
+    /** Number of silent frames to send before SNDC_CLOSE is sent, setting from sesman.ini */
+    unsigned int num_silent_frames_aac;
+    unsigned int num_silent_frames_mp3;
+    /** Do net send sound data afer SNDC_CLOSE is sent. unit is millisecond, setting from sesman.ini */
+    unsigned int msec_do_not_send;
 };
 
 
