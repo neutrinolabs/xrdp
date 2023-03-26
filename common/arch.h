@@ -20,6 +20,7 @@
 #define ARCH_H
 
 #include <stdlib.h>
+#include <string.h>
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
