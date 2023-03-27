@@ -771,40 +771,44 @@ xrdp_listen_process_startup_params(struct xrdp_listen *self)
 static int
 xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
 {
+    char server_trans_fd_str[32];
+    char executable_path[4096];
+    struct list *child_arguments;
+
     int pid;
     int index;
     struct xrdp_process *process;
     struct trans *ltrans;
 
-    pid = g_fork();
+    g_get_executable_path(E_XE_XRDP, executable_path, 4096);
+    g_snprintf(server_trans_fd_str, 32, "%d", (int) server_trans->sck);
 
-    if (pid == 0)
+    child_arguments = list_create();
+
+    if (child_arguments != NULL)
     {
-        /* child */
-        /* recreate some main globals */
-        xrdp_child_fork();
-        /* recreate the process done wait object, not used in fork mode */
-        /* close, don't delete this */
-        g_close_wait_obj(self->pro_done_event);
-        xrdp_listen_create_pro_done(self);
-        /* delete listener, child need not listen */
-        for (index = 0; index < self->trans_list->count; index++)
+        /* FIXME: pass log_fd to child */
+        child_arguments->auto_free = 1;
+        if (!list_add_strdup_multi(child_arguments,
+                                   "xrdp",
+                                   "--child-process",
+                                   "--child-fd", server_trans_fd_str,
+                                   NULL))
         {
-            ltrans = (struct trans *) list_get_item(self->trans_list, index);
-            trans_delete_from_child(ltrans);
+            list_delete(child_arguments);
+            child_arguments = NULL;
         }
-        list_delete(self->trans_list);
-        self->trans_list = NULL;
-        /* new connect instance */
-        process = xrdp_process_create(self, 0);
-        process->server_trans = server_trans;
-        g_process = process;
-        xrdp_process_run(0);
-        tc_sem_dec(g_process_sem);
-        xrdp_process_delete(process);
-        /* mark this process to exit */
-        g_set_term(1);
+    }
+
+    if (!child_arguments)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_listen_fork(): could not prepare arguments list for child process");
         return 1;
+    }
+    else
+    {
+        pid = g_fork_execvp(executable_path, (char **) child_arguments->items);
+        list_delete(child_arguments);
     }
 
     /* parent */

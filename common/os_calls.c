@@ -2869,6 +2869,29 @@ g_fork(void)
 }
 
 /*****************************************************************************/
+int
+g_fork_execvp(const char *p1, char *args[])
+{
+    int pid;
+
+    pid = g_fork();
+
+    if (pid == 0)
+    {
+        g_execvp(p1, args);
+
+        /* should not get here */
+        LOG(LOG_LEVEL_ERROR,
+            "Failed to execute %s: execvp(3) failed with %s (%d)",
+            p1, g_get_strerror(), g_get_errno());
+
+        exit(1);
+    }
+
+    return pid;
+}
+
+/*****************************************************************************/
 /* does not work in win32 */
 int
 g_setgid(int pid)
@@ -2996,6 +3019,26 @@ g_set_allusercontext(int uid)
     return (rv != 0);  /* Return 0 or 1 */
 }
 #endif
+
+/*****************************************************************************/
+void
+g_get_executable_path(enum xrdp_exe xe, char *buf, int bufsize)
+{
+    switch (xe)
+    {
+        case E_XE_XRDP:
+            g_snprintf(buf, bufsize, XRDP_SBIN_PATH "/xrdp");
+            break;
+        case E_XE_SESMAN:
+            g_snprintf(buf, bufsize, XRDP_SBIN_PATH "/xrdp-sesman");
+            break;
+
+        default:
+            LOG(LOG_LEVEL_WARNING, "g_get_executable_path(): Unsupported exe %d", (int)xe);
+    }
+}
+
+
 /*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred */

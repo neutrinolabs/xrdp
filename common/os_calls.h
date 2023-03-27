@@ -23,6 +23,14 @@
 
 #include "arch.h"
 
+enum xrdp_exe
+{
+    E_XE_XRDP = 0,
+    E_XE_SESMAN = 1,
+
+    /* TODO: add others below */
+};
+
 struct exit_status
 {
     /* set to -1 when the process exited via a signal */
@@ -253,6 +261,7 @@ void     g_signal_terminate(void (*func)(int));
 void     g_signal_pipe(void (*func)(int));
 void     g_signal_usr1(void (*func)(int));
 int      g_fork(void);
+int      g_fork_execvp(const char *p1, char *args[]);
 int      g_setgid(int pid);
 int      g_initgroups(const char *user);
 int      g_getuid(void);
@@ -268,6 +277,7 @@ int      g_setlogin(const char *name);
  */
 int      g_set_allusercontext(int uid);
 #endif
+void     g_get_executable_path(enum xrdp_exe xe, char *buf, int bufsize);
 int      g_waitchild(void);
 int      g_waitpid(int pid);
 struct exit_status g_waitpid_status(int pid);
