@@ -45,9 +45,6 @@ struct sesman_con
 /* Globals */
 extern struct config_sesman *g_cfg;
 extern unsigned char g_fixedkey[8];
-extern tintptr g_term_event;
-extern tintptr g_sigchld_event;
-extern tintptr g_reload_event;
 
 /**
  * Set the peername of a connection
@@ -58,7 +55,7 @@ extern tintptr g_reload_event;
 int
 sesman_set_connection_peername(struct sesman_con *sc, const char *name);
 
-/*
+/**
  * Close all file descriptors used by sesman.
  *
  * This is generally used after forking, to make sure the
@@ -74,6 +71,14 @@ sesman_set_connection_peername(struct sesman_con *sc, const char *name);
 #define SCA_CLOSE_AUTH_INFO (1<<0)
 int
 sesman_close_all(unsigned int flags);
+
+/**
+ * Delete sesman wait objects.
+ *
+ * Call after forking so we don't break sesman's wait objects
+ */
+void
+sesman_delete_wait_objects(void);
 
 /*
  * Remove the listening transport

@@ -1345,6 +1345,13 @@ g_sleep(int msecs)
 
 /*****************************************************************************/
 int
+g_pipe(int fd[2])
+{
+    return pipe(fd);
+}
+
+/*****************************************************************************/
+int
 g_sck_last_error_would_block(int sck)
 {
 #if defined(_WIN32)
@@ -2292,6 +2299,24 @@ mode_t_to_hex(mode_t mode)
 #endif
 
 /*****************************************************************************/
+/* Duplicates a file descriptor onto another one using the semantics
+ * of dup2() */
+/* return boolean */
+int
+g_file_duplicate_on(int fd, int target_fd)
+{
+    int rv = (dup2(fd, target_fd) >= 0);
+
+    if (rv < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't clone file %d as file %d [%s]",
+            fd, target_fd, g_get_strerror());
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 /* returns error */
 int
 g_chmod_hex(const char *filename, int flags)
@@ -2998,9 +3023,11 @@ g_set_allusercontext(int uid)
 #endif
 /*****************************************************************************/
 /* does not work in win32
-   returns pid of process that exits or zero if signal occurred */
+   returns pid of process that exits or zero if signal occurred
+   an exit_status struct can optionally be passed in to get the
+   exit status of the child */
 int
-g_waitchild(void)
+g_waitchild(struct exit_status *e)
 {
 #if defined(_WIN32)
     return 0;
@@ -3008,14 +3035,35 @@ g_waitchild(void)
     int wstat;
     int rv;
 
+    struct exit_status dummy;
+
+    if (e == NULL)
+    {
+        e = &dummy;  // Set this, then throw it away
+    }
+
+    e->reason = E_XR_UNEXPECTED;
+    e->val = 0;
+
     rv = waitpid(0, &wstat, WNOHANG);
 
     if (rv == -1)
     {
-        if (errno == EINTR) /* signal occurred */
+        if (errno == EINTR)
         {
+            /* This shouldn't happen as signal handlers use SA_RESTART */
             rv = 0;
         }
+    }
+    else if (WIFEXITED(wstat))
+    {
+        e->reason = E_XR_STATUS_CODE;
+        e->val = WEXITSTATUS(wstat);
+    }
+    else if (WIFSIGNALED(wstat))
+    {
+        e->reason = E_XR_SIGNAL;
+        e->val = WTERMSIG(wstat);
     }
 
     return rv;
@@ -3024,7 +3072,10 @@ g_waitchild(void)
 
 /*****************************************************************************/
 /* does not work in win32
-   returns pid of process that exits or <= 0 if no process was found */
+   returns pid of process that exits or <= 0 if no process was found
+
+   Note that signal handlers are established with BSD-style semantics,
+   so this call is NOT interrupted by a signal  */
 int
 g_waitpid(int pid)
 {
@@ -3048,25 +3099,21 @@ g_waitpid(int pid)
 
 /*****************************************************************************/
 /* does not work in win32
-   returns exit status code of child process with pid */
+   returns exit status code of child process with pid
+
+   Note that signal handlers are established with BSD-style semantics,
+   so this call is NOT interrupted by a signal  */
 struct exit_status
 g_waitpid_status(int pid)
 {
-    struct exit_status exit_status;
+    struct exit_status exit_status = {.reason = E_XR_UNEXPECTED, .val = 0};
 
-#if defined(_WIN32)
-    exit_status.exit_code = -1;
-    exit_status.signal_no = 0;
-    return exit_status;
-#else
-    int rv;
-    int status;
-
-    exit_status.exit_code = -1;
-    exit_status.signal_no = 0;
-
+#if !defined(_WIN32)
     if (pid > 0)
     {
+        int rv;
+        int status;
+
         LOG(LOG_LEVEL_DEBUG, "waiting for pid %d to exit", pid);
         rv = waitpid(pid, &status, 0);
 
@@ -3074,11 +3121,13 @@ g_waitpid_status(int pid)
         {
             if (WIFEXITED(status))
             {
-                exit_status.exit_code = WEXITSTATUS(status);
+                exit_status.reason = E_XR_STATUS_CODE;
+                exit_status.val = WEXITSTATUS(status);
             }
             if (WIFSIGNALED(status))
             {
-                exit_status.signal_no = WTERMSIG(status);
+                exit_status.reason = E_XR_SIGNAL;
+                exit_status.val = WTERMSIG(status);
             }
         }
         else
@@ -3087,8 +3136,8 @@ g_waitpid_status(int pid)
         }
     }
 
-    return exit_status;
 #endif
+    return exit_status;
 }
 
 /*****************************************************************************/

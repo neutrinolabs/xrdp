@@ -95,6 +95,7 @@ enum scp_screate_status
     E_SCP_SCREATE_NOT_LOGGED_IN, ///< Connection is not logged in
     E_SCP_SCREATE_MAX_REACHED, ///< Max number of sessions already reached
     E_SCP_SCREATE_NO_DISPLAY, ///< No X server display number is available
+    E_SCP_SCREATE_X_SERVER_FAIL, ///< X server could not be started
     E_SCP_SCREATE_GENERAL_ERROR ///< An unspecific error has occurred
 };
 

@@ -74,9 +74,9 @@ struct sesman_startup_params
 
 struct config_sesman *g_cfg;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-tintptr g_term_event = 0;
-tintptr g_sigchld_event = 0;
-tintptr g_reload_event = 0;
+static tintptr g_term_event = 0;
+static tintptr g_sigchld_event = 0;
+static tintptr g_reload_event = 0;
 
 static struct trans *g_list_trans;
 
@@ -320,6 +320,15 @@ sesman_close_all(unsigned int flags)
         delete_connection(sc);
     }
     return 0;
+}
+
+/******************************************************************************/
+void
+sesman_delete_wait_objects(void)
+{
+    g_delete_wait_obj(g_reload_event);
+    g_delete_wait_obj(g_sigchld_event);
+    g_delete_wait_obj(g_term_event);
 }
 
 /******************************************************************************/
@@ -965,9 +974,7 @@ main(int argc, char **argv)
         g_file_delete(pid_file);
     }
 
-    g_delete_wait_obj(g_reload_event);
-    g_delete_wait_obj(g_sigchld_event);
-    g_delete_wait_obj(g_term_event);
+    sesman_delete_wait_objects();
 
     if (!daemon)
     {

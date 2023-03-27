@@ -35,7 +35,7 @@
 #include "log.h"
 #include "os_calls.h"
 #include "sesman.h"
-#include "session.h"
+#include "session_list.h"
 #include "string_calls.h"
 
 /******************************************************************************/
@@ -105,13 +105,13 @@ sig_sesman_session_end(void)
     LOG(LOG_LEVEL_DEBUG, "receiving SIGCHLD");
     do
     {
-        pid = g_waitchild();
+        pid = g_waitchild(NULL);
 
         if (pid > 0)
         {
             LOG(LOG_LEVEL_INFO, "Process %d has exited", pid);
 
-            session_kill(pid);
+            session_list_kill(pid);
         }
     }
     while (pid > 0);

@@ -2,6 +2,7 @@
 #include "config_ac.h"
 #endif
 
+#include "env.h"
 #include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
@@ -9,38 +10,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/wait.h>
 
 /******************************************************************************/
-enum xwait_status
-wait_for_xserver(int display)
+static void
+log_waitforx_messages(FILE *dp)
 {
-    FILE *dp = NULL;
-    enum xwait_status rv = XW_STATUS_MISC_ERROR;
-    int ret;
-
-    char buffer[100];
-    const char exe[] = XRDP_LIBEXEC_PATH "/waitforx";
-    char cmd[sizeof(exe) + 64];
-
-    if (!g_file_exist(exe))
-    {
-        LOG(LOG_LEVEL_ERROR, "Unable to find %s", exe);
-        return rv;
-    }
-
-    g_snprintf(cmd, sizeof(cmd), "%s -d :%d", exe, display);
-    LOG(LOG_LEVEL_DEBUG, "Waiting for X server to start on display :%d",
-        display);
-
-    dp = popen(cmd, "r");
-    if (dp == NULL)
-    {
-        LOG(LOG_LEVEL_ERROR, "Unable to launch waitforx");
-        return rv;
-    }
-
-    while (fgets(buffer, 100, dp))
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), dp))
     {
         const char *msg = buffer;
         enum logLevels level = LOG_LEVEL_ERROR;
@@ -73,18 +49,136 @@ wait_for_xserver(int display)
             LOG(level, "waitforx: %s", msg);
         }
     }
+}
 
-    ret = pclose(dp);
-    if (WIFEXITED(ret))
+/******************************************************************************/
+/**
+ * Contruct the command to run to check the X server
+ */
+static struct list *
+make_xwait_command(int display)
+{
+    const char exe[] = XRDP_LIBEXEC_PATH "/waitforx";
+    char displaystr[64];
+
+    struct list *cmd = list_create();
+    if (cmd != NULL)
     {
-        rv = (enum xwait_status)WEXITSTATUS(ret);
+        cmd->auto_free = 1;
+        g_snprintf(displaystr, sizeof(displaystr), ":%d", display);
+
+        if (!list_add_strdup_multi(cmd, exe, "-d", displaystr, NULL))
+        {
+            list_delete(cmd);
+            cmd = NULL;
+        }
     }
-    else if (WIFSIGNALED(ret))
+
+    return cmd;
+}
+
+/******************************************************************************/
+enum xwait_status
+wait_for_xserver(uid_t uid,
+                 struct list *env_names,
+                 struct list *env_values,
+                 int display)
+{
+    enum xwait_status rv = XW_STATUS_MISC_ERROR;
+    int fd[2] = {-1, -1};
+    struct list *cmd = make_xwait_command(display);
+
+
+    // Construct the command to execute to check the display
+    if (cmd == NULL)
     {
-        int sig = WTERMSIG(ret);
-        LOG(LOG_LEVEL_ERROR, "waitforx failed with unexpected signal %d",
-            sig);
+        LOG(LOG_LEVEL_ERROR, "Can't create xwait command list - no mem");
     }
+    else if (g_pipe(fd) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't create pipe : %s", g_get_strerror());
+    }
+    else
+    {
+        pid_t pid = g_fork();
+        if (pid < 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't create pipe : %s",
+                g_get_strerror());
+        }
+        else if (pid == 0)
+        {
+            /* Child process */
+
+            /* Send stdout and stderr up the pipe */
+            g_file_close(fd[0]);
+            g_file_duplicate_on(fd[1], 1);
+            g_file_duplicate_on(fd[1], 2);
+
+            /* Move to the user context... */
+            env_set_user(uid,
+                         0,
+                         display,
+                         env_names,
+                         env_values);
+
+            /* ...and run the program */
+            g_execvp_list((const char *)cmd->items[0], cmd);
+            LOG(LOG_LEVEL_ERROR, "Can't run %s - %s",
+                (const char *)cmd->items[0], g_get_strerror());
+            g_exit(rv);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "Waiting for X server to start on display :%d",
+                display);
+
+            g_file_close(fd[1]);
+            fd[1] = -1;
+            FILE *dp = fdopen(fd[0], "r");
+            if (dp == NULL)
+            {
+                LOG(LOG_LEVEL_ERROR, "Unable to launch waitforx");
+            }
+            else
+            {
+                struct exit_status e;
+
+                fd[0] = -1; // File descriptor closed by fclose()
+                log_waitforx_messages(dp);
+                fclose(dp);
+                e = g_waitpid_status(pid);
+                switch (e.reason)
+                {
+                    case E_XR_STATUS_CODE:
+                        rv = (enum xwait_status)e.val;
+                        break;
+
+                    case E_XR_SIGNAL:
+                        LOG(LOG_LEVEL_ERROR,
+                            "waitforx failed with unexpected signal %d",
+                            e.val);
+                        break;
+
+                    default:
+                        LOG(LOG_LEVEL_ERROR,
+                            "waitforx failed with unknown reason");
+                }
+            }
+        }
+        if (fd[0] >= 0)
+        {
+            g_file_close(fd[0]);
+        }
+
+        if (fd[1] >= 0)
+        {
+            g_file_close(fd[1]);
+        }
+    }
+
+    list_delete(cmd);
 
     return rv;
 }

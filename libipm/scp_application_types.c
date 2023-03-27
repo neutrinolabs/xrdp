@@ -66,7 +66,8 @@ scp_screate_status_to_str(enum scp_screate_status n,
         (n == E_SCP_SCREATE_NO_MEMORY) ? "No memory for session" :
         (n == E_SCP_SCREATE_NOT_LOGGED_IN) ? "Connection is not logged in" :
         (n == E_SCP_SCREATE_MAX_REACHED) ? "Max session limit reached" :
-        (n == E_SCP_SCREATE_NO_DISPLAY) ? "No X displays are avaiable" :
+        (n == E_SCP_SCREATE_NO_DISPLAY) ? "No X displays are available" :
+        (n == E_SCP_SCREATE_X_SERVER_FAIL) ? "X server could not be started" :
         (n == E_SCP_SCREATE_GENERAL_ERROR) ? "General session creation error" :
         /* Default */ NULL;
 
