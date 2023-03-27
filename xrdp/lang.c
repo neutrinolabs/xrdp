@@ -287,8 +287,8 @@ int km_load_file(const char *filename, struct xrdp_keymap *keymap)
 {
     int fd;
 
-    fd = g_file_open(filename);
     LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
+    fd = g_file_open(filename);
 
     if (fd != -1)
     {
@@ -306,6 +306,7 @@ int km_load_file(const char *filename, struct xrdp_keymap *keymap)
     }
     else
     {
+        LOG(LOG_LEVEL_ERROR, "Error loading keymap file %s (%s)", filename, g_get_strerror());
         return 1;
     }
 
