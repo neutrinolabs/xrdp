@@ -411,6 +411,9 @@ get_char_from_scan_code(int device_flags, int scan_code, int *keys,
 int
 get_keymaps(int keylayout, struct xrdp_keymap *keymap);
 
+int
+km_load_file(const char *filename, struct xrdp_keymap *keymap);
+
 /* xrdp_login_wnd.c */
 /**
  * Gets the DPI of the login (primary) monitor
