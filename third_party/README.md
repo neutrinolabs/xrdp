@@ -20,5 +20,5 @@ adding new third-party libraries.
 1. Install [adobe/bin2c](https://github.com/adobe/bin2c) to your development
    environment
 2. Write all third-party license terms to `COPYING-THIRD-PARTY`
-3. Run `make copying` to generate `copying_third_party.h`
+3. Run `make -f Makefile.copying` to generate `copying_third_party.h`
 4. Commit generated `copying_third_party.h`
