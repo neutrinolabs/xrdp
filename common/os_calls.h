@@ -50,8 +50,6 @@ int      g_rm_temp_dir(void);
 int      g_mk_socket_path(const char *app_name);
 void     g_init(const char *app_name);
 void     g_deinit(void);
-void    *g_malloc(int size, int zero);
-void     g_free(void *ptr);
 void g_printf(const char *format, ...) printflike(1, 2);
 void g_sprintf(char *dest, const char *format, ...) \
 printflike(2, 3);
@@ -60,8 +58,6 @@ printflike(3, 4);
 void g_writeln(const char *format, ...) printflike(1, 2);
 void g_write(const char *format, ...) printflike(1, 2);
 void     g_hexdump(const char *p, int len);
-void     g_memset(void *ptr, int val, int size);
-void     g_memcpy(void *d_ptr, const void *s_ptr, int size);
 int      g_getchar(void);
 int      g_tcp_set_no_delay(int sck);
 int      g_tcp_set_keepalive(int sck);
@@ -197,5 +193,11 @@ int      g_tcp6_bind_address(int sck, const char *port, const char *address);
     (struct_type *) malloc(sizeof(struct_type) * (n_structs))
 #define g_new0(struct_type, n_structs) \
     (struct_type *) calloc((n_structs), sizeof(struct_type))
+
+/* remove these when no longer used */
+#define g_malloc(_size, _zero) (_zero ? calloc(1, _size) : malloc(_size))
+#define g_free free
+#define g_memset memset
+#define g_memcpy memcpy
 
 #endif

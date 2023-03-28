@@ -172,38 +172,6 @@ g_deinit(void)
 }
 
 /*****************************************************************************/
-/* allocate memory, returns a pointer to it, size bytes are allocated,
-   if zero is non zero, each byte will be set to zero */
-void *
-g_malloc(int size, int zero)
-{
-    char *rv;
-
-    rv = (char *)malloc(size);
-
-    if (zero)
-    {
-        if (rv != 0)
-        {
-            memset(rv, 0, size);
-        }
-    }
-
-    return rv;
-}
-
-/*****************************************************************************/
-/* free the memory pointed to by ptr, ptr can be zero */
-void
-g_free(void *ptr)
-{
-    if (ptr != 0)
-    {
-        free(ptr);
-    }
-}
-
-/*****************************************************************************/
 /* output text to stdout, try to use g_write / g_writeln instead to avoid
    linux / windows EOL problems */
 void
@@ -310,20 +278,6 @@ g_hexdump(const char *p, int len)
         offset += thisline;
         line += thisline;
     }
-}
-
-/*****************************************************************************/
-void
-g_memset(void *ptr, int val, int size)
-{
-    memset(ptr, val, size);
-}
-
-/*****************************************************************************/
-void
-g_memcpy(void *d_ptr, const void *s_ptr, int size)
-{
-    memcpy(d_ptr, s_ptr, size);
 }
 
 /*****************************************************************************/
