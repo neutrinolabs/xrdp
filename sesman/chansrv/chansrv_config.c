@@ -41,6 +41,9 @@
 #define DEFAULT_FUSE_MOUNT_NAME             "xrdp-client"
 #define DEFAULT_FILE_UMASK                  077
 #define DEFAULT_USE_NAUTILUS3_FLIST_FORMAT  0
+#define DEFAULT_NUM_SILENT_FRAMES_AAC       4
+#define DEFAULT_NUM_SILENT_FRAMES_MP3       2
+#define DEFAULT_MSEC_DO_NOT_SEND            1000
 /**
  * Type used for passing a logging function about
  */
@@ -182,6 +185,18 @@ read_config_chansrv(log_func_t logmsg,
         {
             cfg->use_nautilus3_flist_format = g_text2bool(value);
         }
+        else if (g_strcasecmp(name, "SoundNumSilentFramesAAC") == 0)
+        {
+            cfg->num_silent_frames_aac = strtoul(value, NULL, 0);
+        }
+        else if (g_strcasecmp(name, "SoundNumSilentFramesMP3") == 0)
+        {
+            cfg->num_silent_frames_mp3 = strtoul(value, NULL, 0);
+        }
+        else if (g_strcasecmp(name, "SoundMsecDoNotSend") == 0)
+        {
+            cfg->msec_do_not_send = strtoul(value, NULL, 0);
+        }
     }
 
     return error;
@@ -213,6 +228,9 @@ new_config(void)
         cfg->fuse_mount_name = fuse_mount_name;
         cfg->file_umask = DEFAULT_FILE_UMASK;
         cfg->use_nautilus3_flist_format = DEFAULT_USE_NAUTILUS3_FLIST_FORMAT;
+        cfg->num_silent_frames_aac = DEFAULT_NUM_SILENT_FRAMES_AAC;
+        cfg->num_silent_frames_mp3 = DEFAULT_NUM_SILENT_FRAMES_MP3;
+        cfg->msec_do_not_send = DEFAULT_MSEC_DO_NOT_SEND;
     }
 
     return cfg;

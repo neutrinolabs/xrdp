@@ -34,6 +34,7 @@
 #include "xrdp_constants.h"
 #include "xrdp_sockets.h"
 #include "chansrv_common.h"
+#include "chansrv_config.h"
 #include "list.h"
 #include "audin.h"
 
@@ -60,6 +61,7 @@ static lame_global_flags *g_lame_encoder = 0;
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
+extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 /* audio out: sound_server -> xrdp -> NeutrinoRDP */
 static struct trans *g_audio_l_trans_out = 0; /* listener */
@@ -1099,9 +1101,9 @@ process_pcm_message(int id, int size, struct stream *s)
         case 0:
             if ((g_client_does_fdk_aac || g_client_does_mp3lame) && sending_silence)
             {
-                if ((g_time3() - silence_start_time) < 1000)
+                if ((g_time3() - silence_start_time) < (int)g_cfg->msec_do_not_send)
                 {
-                    /* do not send data within 1000mS after SNDC_CLOSE is sent. to avoid stutter */
+                    /* do not send data within msec_do_not_send msec after SNDC_CLOSE is sent, to avoid stutter. setting from sesman.ini */
                     return 0;
                 }
                 sending_silence = 0;
@@ -1112,7 +1114,7 @@ process_pcm_message(int id, int size, struct stream *s)
             if ((g_client_does_fdk_aac || g_client_does_mp3lame) && sending_silence == 0)
             {
                 /* workaround for mstsc.exe. send silence data before send close */
-                int send_silence_times = g_client_does_fdk_aac ? 4 : 2;  /* This value comes by trial and error */
+                int send_silence_times = g_client_does_fdk_aac ? g_cfg->num_silent_frames_aac : g_cfg->num_silent_frames_mp3;  /* setting from sesman.ini */
                 char *buf = (char *) g_malloc(g_bbuf_size, 0);
                 if (buf != NULL)
                 {
@@ -1290,6 +1292,12 @@ sound_init(void)
         g_ack_time_diff = list_create();
     }
     list_clear(g_ack_time_diff);
+
+#if defined(XRDP_FDK_AAC) || defined(XRDP_MP3LAME)
+    LOG(LOG_LEVEL_INFO, "num_silent_frames_aac: %d", g_cfg->num_silent_frames_aac);
+    LOG(LOG_LEVEL_INFO, "num_silent_frames_mp3: %d", g_cfg->num_silent_frames_mp3);
+    LOG(LOG_LEVEL_INFO, "msec_do_not_send: %d", g_cfg->msec_do_not_send);
+#endif
 
     return 0;
 }

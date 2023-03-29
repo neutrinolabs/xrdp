@@ -152,6 +152,16 @@ FileUmask=077
 ; and up, and you wish to cut-paste files between Nautilus and Windows. Do
 ; not use this setting for GNOME 4, or other file managers
 #UseNautilus3FlistFormat=true
+; sound redirection
+; workaround for Microsoft mstsc.exe to suppress noise.
+; SoundNumSilentFramesAAC | SoundNumSilentFramesMP3 silent frames are sent before SNDC_CLOSE is sent.
+; during SoundMsecDoNotSend mS after SNDC_CLOSE is sent, sound data is not send.
+; depending on the environment, it might be necessary to increase values.
+; Defaults: SoundNumSilentFramesAAC=4, SoundNumSilentFramesMP3=2, SoundMsecDoNotSend=1000
+; If set to 0, this workaround is not applied.
+#SoundNumSilentFramesAAC=4
+#SoundNumSilentFramesMP3=2
+#SoundMsecDoNotSend=1000
 
 [ChansrvLogging]
 ; Note: one log file is created per display and the LogFile config value
