@@ -597,7 +597,7 @@ config_dump(struct config_sesman *config)
 
     /* Security configuration */
     g_writeln("Security configuration:");
-    g_writeln("    AllowRootLogin:  esm         %d", sc->allow_root);
+    g_writeln("    AllowRootLogin:            %d", sc->allow_root);
     g_writeln("    MaxLoginRetry:             %d", sc->login_retry);
     g_writeln("    AlwaysGroupCheck:          %d", sc->ts_always_group_check);
     sesman_clip_restrict_mask_to_string(sc->restrict_outbound_clipboard,
