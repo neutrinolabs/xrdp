@@ -36,8 +36,8 @@
 #include "arch.h"
 #include "session_list.h"
 
-#include "auth.h"
-#include "config.h"
+#include "sesman_auth.h"
+#include "sesman_config.h"
 #include "log.h"
 #include "os_calls.h"
 #include "sesman.h"

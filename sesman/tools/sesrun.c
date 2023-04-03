@@ -35,7 +35,7 @@
 #include "parse.h"
 #include "trans.h"
 #include "os_calls.h"
-#include "config.h"
+#include "sesman_config.h"
 #include "log.h"
 #include "string_calls.h"
 #include "guid.h"

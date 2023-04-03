@@ -33,6 +33,7 @@
 #include "chansrv_common.h"
 #include "chansrv_config.h"
 #include "string_calls.h"
+#include "sesman_clip_restrict.h"
 
 /* Default settings */
 #define DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD 0
@@ -51,21 +52,6 @@ typedef
 printflike(2, 3)
 enum logReturns (*log_func_t)(const enum logLevels lvl,
                               const char *msg, ...);
-
-/* Map clipboard strings into bitmask values */
-static const struct bitmask_string clip_restrict_map[] =
-{
-    { CLIP_RESTRICT_TEXT, "text"},
-    { CLIP_RESTRICT_FILE, "file"},
-    { CLIP_RESTRICT_IMAGE, "image"},
-    { CLIP_RESTRICT_ALL, "all"},
-    { CLIP_RESTRICT_NONE, "none"},
-    /* Compatibility values */
-    { CLIP_RESTRICT_ALL, "true"},
-    { CLIP_RESTRICT_ALL, "yes"},
-    { CLIP_RESTRICT_NONE, "false"},
-    BITMASK_STRING_END_OF_LIST
-};
 
 /***************************************************************************//**
  * @brief Error logging function to use to log to stdout
@@ -113,8 +99,8 @@ read_config_security(log_func_t logmsg,
         if (g_strcasecmp(name, "RestrictOutboundClipboard") == 0)
         {
             cfg->restrict_outbound_clipboard =
-                g_str_to_bitmask(value, clip_restrict_map, ",",
-                                 unrecognised, sizeof(unrecognised));
+                sesman_clip_restrict_string_to_bitmask(
+                    value, unrecognised, sizeof(unrecognised));
             if (unrecognised[0] != '\0')
             {
                 LOG(LOG_LEVEL_WARNING,
@@ -125,8 +111,8 @@ read_config_security(log_func_t logmsg,
         if (g_strcasecmp(name, "RestrictInboundClipboard") == 0)
         {
             cfg->restrict_inbound_clipboard =
-                g_str_to_bitmask(value, clip_restrict_map, ",",
-                                 unrecognised, sizeof(unrecognised));
+                sesman_clip_restrict_string_to_bitmask(
+                    value, unrecognised, sizeof(unrecognised));
             if (unrecognised[0] != '\0')
             {
                 LOG(LOG_LEVEL_WARNING,
@@ -300,35 +286,16 @@ config_dump(struct config_chansrv *config)
 
     char buf[256];
     g_writeln("\nSecurity configuration:");
-    if (config->restrict_outbound_clipboard == CLIP_RESTRICT_NONE)
-    {
-        g_writeln("    RestrictOutboundClipboard: %s", "none");
-    }
-    else if (config->restrict_outbound_clipboard == CLIP_RESTRICT_ALL)
-    {
-        g_writeln("    RestrictOutboundClipboard: %s", "all");
-    }
-    else
-    {
-        g_bitmask_to_str(config->restrict_outbound_clipboard,
-                         clip_restrict_map, ',', buf, sizeof(buf));
-        g_writeln("    RestrictOutboundClipboard: %s", buf);
-    }
+    sesman_clip_restrict_mask_to_string(
+        config->restrict_outbound_clipboard,
+        buf, sizeof(buf));
+    g_writeln("    RestrictOutboundClipboard: %s", buf);
 
-    if (config->restrict_inbound_clipboard == CLIP_RESTRICT_NONE)
-    {
-        g_writeln("    RestrictInboundClipboard:  %s", "none");
-    }
-    else if (config->restrict_inbound_clipboard == CLIP_RESTRICT_ALL)
-    {
-        g_writeln("    RestrictInboundClipboard:  %s", "all");
-    }
-    else
-    {
-        g_bitmask_to_str(config->restrict_inbound_clipboard,
-                         clip_restrict_map, ',', buf, sizeof(buf));
-        g_writeln("    RestrictInboundClipboard:  %s", buf);
-    }
+    sesman_clip_restrict_mask_to_string(
+        config->restrict_inbound_clipboard,
+        buf, sizeof(buf));
+    g_writeln("    RestrictInboundClipboard:  %s", buf);
+
     g_writeln("\nChansrv configuration:");
     g_writeln("    EnableFuseMount            %s",
               g_bool2text(config->enable_fuse_mount));

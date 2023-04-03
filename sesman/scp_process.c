@@ -31,11 +31,11 @@
 #include "trans.h"
 #include "os_calls.h"
 #include "scp.h"
-#include "config.h"
+#include "sesman_config.h"
 
 #include "scp_process.h"
-#include "access.h"
-#include "auth.h"
+#include "sesman_access.h"
+#include "sesman_auth.h"
 #include "guid.h"
 #include "os_calls.h"
 #include "session_list.h"
@@ -132,7 +132,7 @@ authenticate_and_authorize_connection(struct sesman_con *sc,
                     "Unexpected status return %d from auth call",
                     (int)status);
             }
-            else if (!access_login_allowed(username))
+            else if (!access_login_allowed(&g_cfg->sec, username))
             {
                 status = E_SCP_LOGIN_NOT_AUTHORIZED;
                 LOG(LOG_LEVEL_INFO, "Username okay but group problem for "

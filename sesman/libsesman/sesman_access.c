@@ -18,7 +18,7 @@
 
 /**
  *
- * @file access.c
+ * @file sesman_access.c
  * @brief User access control code
  * @author Simone Fedele
  *
@@ -30,28 +30,27 @@
 
 #include "arch.h"
 
-#include "access.h"
-#include "config.h"
+#include "sesman_access.h"
+#include "sesman_config.h"
 #include "log.h"
-#include "sesman.h"
 #include "os_calls.h"
 #include "string_calls.h"
 
 /******************************************************************************/
 int
-access_login_allowed(const char *user)
+access_login_allowed(const struct config_security *cfg_sec, const char *user)
 {
     int gid;
     int ok;
 
-    if ((0 == g_strncmp(user, "root", 5)) && (0 == g_cfg->sec.allow_root))
+    if ((0 == g_strncmp(user, "root", 5)) && (0 == cfg_sec->allow_root))
     {
         LOG(LOG_LEVEL_WARNING,
             "ROOT login attempted, but root login is disabled");
         return 0;
     }
 
-    if ((0 == g_cfg->sec.ts_users_enable) && (0 == g_cfg->sec.ts_always_group_check))
+    if ((0 == cfg_sec->ts_users_enable) && (0 == cfg_sec->ts_always_group_check))
     {
         LOG(LOG_LEVEL_INFO, "Terminal Server Users group is disabled, allowing authentication");
         return 1;
@@ -63,13 +62,13 @@ access_login_allowed(const char *user)
         return 0;
     }
 
-    if (g_cfg->sec.ts_users == gid)
+    if (cfg_sec->ts_users == gid)
     {
         LOG(LOG_LEVEL_DEBUG, "ts_users is user's primary group");
         return 1;
     }
 
-    if (0 != g_check_user_in_group(user, g_cfg->sec.ts_users, &ok))
+    if (0 != g_check_user_in_group(user, cfg_sec->ts_users, &ok))
     {
         LOG(LOG_LEVEL_ERROR, "Cannot read group info! - login denied");
         return 0;
@@ -87,19 +86,20 @@ access_login_allowed(const char *user)
 
 /******************************************************************************/
 int
-access_login_mng_allowed(const char *user)
+access_login_mng_allowed(const struct config_security *cfg_sec,
+                         const char *user)
 {
     int gid;
     int ok;
 
-    if ((0 == g_strncmp(user, "root", 5)) && (0 == g_cfg->sec.allow_root))
+    if ((0 == g_strncmp(user, "root", 5)) && (0 == cfg_sec->allow_root))
     {
         LOG(LOG_LEVEL_WARNING,
             "[MNG] ROOT login attempted, but root login is disabled");
         return 0;
     }
 
-    if (0 == g_cfg->sec.ts_admins_enable)
+    if (0 == cfg_sec->ts_admins_enable)
     {
         LOG(LOG_LEVEL_INFO, "[MNG] Terminal Server Admin group is disabled, "
             "allowing authentication");
@@ -112,13 +112,13 @@ access_login_mng_allowed(const char *user)
         return 0;
     }
 
-    if (g_cfg->sec.ts_admins == gid)
+    if (cfg_sec->ts_admins == gid)
     {
         LOG(LOG_LEVEL_INFO, "[MNG] ts_users is user's primary group");
         return 1;
     }
 
-    if (0 != g_check_user_in_group(user, g_cfg->sec.ts_admins, &ok))
+    if (0 != g_check_user_in_group(user, cfg_sec->ts_admins, &ok))
     {
         LOG(LOG_LEVEL_ERROR, "[MNG] Cannot read group info! - login denied");
         return 0;

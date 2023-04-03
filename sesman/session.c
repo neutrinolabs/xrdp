@@ -42,8 +42,8 @@
 #include "arch.h"
 #include "session.h"
 
-#include "auth.h"
-#include "config.h"
+#include "sesman_auth.h"
+#include "sesman_config.h"
 #include "env.h"
 #include "guid.h"
 #include "list.h"

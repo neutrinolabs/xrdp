@@ -18,14 +18,14 @@
 
 /**
  *
- * @file auth.h
+ * @file sesman_auth.h
  * @brief User authentication definitions
  * @author Jay Sorg
  *
  */
 
-#ifndef AUTH_H
-#define AUTH_H
+#ifndef SESMAN_AUTH_H
+#define SESMAN_AUTH_H
 
 /**
  * Opaque type used to represent an authentication handle

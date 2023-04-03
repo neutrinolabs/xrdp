@@ -138,7 +138,7 @@ xrdp
 ├── scripts ····· build scripts
 ├┬─ sesman ······ session manager for xrdp
 |├── chansrv ···· channel server for xrdp
-|├── libscp ····· authorization library
+|├── libsesman ·· Code common to sesman and its related executables
 |└── tools ······ session management tools for sys admins
 ├── tests ······· tests for the code
 ├┬─ tools ······· tools

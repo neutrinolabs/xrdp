@@ -18,60 +18,18 @@
 
 /**
  *
- * @file config.h
+ * @file sesman_config.h
  * @brief User authentication definitions
  * @author Simone Fedele @< simo [at] esseemme [dot] org @>
  *
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef SESMAN_CONFIG_H
+#define SESMAN_CONFIG_H
 
 #include "arch.h"
 #include "list.h"
 #include "log.h"
-
-#define SESMAN_CFG_GLOBALS           "Globals"
-#define SESMAN_CFG_DEFWM             "DefaultWindowManager"
-#define SESMAN_CFG_ADDRESS           "ListenAddress"
-#define SESMAN_CFG_PORT              "ListenPort"
-#define SESMAN_CFG_ENABLE_USERWM     "EnableUserWindowManager"
-#define SESMAN_CFG_USERWM            "UserWindowManager"
-#define SESMAN_CFG_MAX_SESSION       "MaxSessions"
-#define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
-#define SESMAN_CFG_RECONNECT_SH      "ReconnectScript"
-
-#define SESMAN_CFG_XORG_PARAMS       "Xorg"
-#define SESMAN_CFG_VNC_PARAMS        "Xvnc"
-
-#define SESMAN_CFG_SESSION_VARIABLES "SessionVariables"
-
-/*
-#define SESMAN_CFG_LOGGING           "Logging"
-#define SESMAN_CFG_LOG_FILE          "LogFile"
-#define SESMAN_CFG_LOG_LEVEL         "LogLevel"
-#define SESMAN_CFG_LOG_ENABLE_SYSLOG "EnableSyslog"
-#define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
-*/
-#define SESMAN_CFG_SECURITY                        "Security"
-#define SESMAN_CFG_SEC_LOGIN_RETRY                 "MaxLoginRetry"
-#define SESMAN_CFG_SEC_ALLOW_ROOT                  "AllowRootLogin"
-#define SESMAN_CFG_SEC_USR_GROUP                   "TerminalServerUsers"
-#define SESMAN_CFG_SEC_ADM_GROUP                   "TerminalServerAdmins"
-#define SESMAN_CFG_SEC_ALWAYSGROUPCHECK            "AlwaysGroupCheck"
-#define SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD "RestrictOutboundClipboard"
-#define SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD  "RestrictInboundClipboard"
-
-#define SESMAN_CFG_SESSIONS          "Sessions"
-#define SESMAN_CFG_SESS_MAX          "MaxSessions"
-#define SESMAN_CFG_SESS_KILL_DISC    "KillDisconnected"
-#define SESMAN_CFG_SESS_IDLE_LIMIT   "IdleTimeLimit"
-#define SESMAN_CFG_SESS_DISC_LIMIT   "DisconnectedTimeLimit"
-#define SESMAN_CFG_SESS_X11DISPLAYOFFSET "X11DisplayOffset"
-
-#define SESMAN_CFG_SESS_POLICY_S "Policy"
-#define SESMAN_CFG_SESS_POLICY_DFLT_S "Default"
-#define SESMAN_CFG_SESS_POLICY_SEP_S "Separate"
 
 enum SESMAN_CFG_SESS_POLICY_BITS
 {
