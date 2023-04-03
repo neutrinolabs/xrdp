@@ -262,6 +262,23 @@ START_TEST(test_g_file_get_open_fds)
 }
 END_TEST
 
+
+/******************************************************************************/
+START_TEST(test_g_file_is_open)
+{
+    int devzerofd = g_file_open("/dev/zero");
+    ck_assert(devzerofd >= 0);
+
+    // Check open file comes up as open
+    ck_assert_int_ne(g_file_is_open(devzerofd), 0);
+
+    g_file_close(devzerofd);
+
+    // Check the now-closed file no longer registers as open
+    ck_assert_int_eq(g_file_is_open(devzerofd), 0);
+}
+END_TEST
+
 /******************************************************************************/
 START_TEST(test_g_sck_fd_passing)
 {
@@ -448,6 +465,7 @@ make_suite_test_os_calls(void)
 #endif
     tcase_add_test(tc_os_calls, test_g_file_cloexec);
     tcase_add_test(tc_os_calls, test_g_file_get_open_fds);
+    tcase_add_test(tc_os_calls, test_g_file_is_open);
     tcase_add_test(tc_os_calls, test_g_sck_fd_passing);
     tcase_add_test(tc_os_calls, test_g_sck_fd_overflow);
     return s;

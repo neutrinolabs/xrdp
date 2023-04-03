@@ -2161,6 +2161,13 @@ g_file_close(int fd)
 }
 
 /*****************************************************************************/
+int
+g_file_is_open(int fd)
+{
+    return (fcntl(fd, F_GETFD) >= 0);
+}
+
+/*****************************************************************************/
 /* read from file, returns the number of bytes read or -1 on error */
 int
 g_file_read(int fd, char *ptr, int len)

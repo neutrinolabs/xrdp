@@ -210,6 +210,12 @@ int      g_file_open(const char *file_name);
 int      g_file_open_ex(const char *file_name, int aread, int awrite,
                         int acreate, int atrunc);
 int      g_file_close(int fd);
+/**
+ * Returns 1 if a file is open (i.e. the file descriptor is valid)
+ * @param fd File descriptor
+ * @return 1 for file open, 0 for not open
+ */
+int      g_file_is_open(int fd);
 int      g_file_read(int fd, char *ptr, int len);
 int      g_file_write(int fd, const char *ptr, int len);
 int      g_file_seek(int fd, int offset);
