@@ -1,0 +1,15 @@
+{
+  name = {
+    first = "Tom",
+    last = "Preston-Werner",
+  },
+  point = {
+    x = 1,
+    y = 2,
+  },
+  animal = {
+    type = {
+      name = "pug",
+    },
+  },
+}

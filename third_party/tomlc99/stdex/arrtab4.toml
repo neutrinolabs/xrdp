@@ -1,0 +1,4 @@
+# INVALID TOML DOC
+fruits = []
+
+[[fruits]] # Not allowed
