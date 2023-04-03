@@ -65,7 +65,7 @@ if [ ! -f "astyle_config.as" ]; then
     exit 2
 fi
 
-ASTYLE_FLAGS="--options=astyle_config.as ./\*.c ./\*.h"
+ASTYLE_FLAGS="--options=astyle_config.as --exclude=third_party ./\*.c ./\*.h"
 
 # Display the astyle version and command for debugging
 "$ASTYLE" --version && {
