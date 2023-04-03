@@ -138,8 +138,6 @@ env_set_user(int uid, char **passwd_file, int display,
             g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
         }
 #endif
-        g_mk_socket_path(0);
-
         if (error == 0)
         {
             g_setenv("SHELL", pw_shell, 1);
