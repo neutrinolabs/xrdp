@@ -1,8 +1,8 @@
 # Third-Party Software Components
 
 Under this directory, third-party software/libraries developed independently
-of xrdp are imported as git submodules.  Each third-party software is subject
-to its own software license.
+of xrdp are imported as git submodules or subtree.  Each third-party software
+is subject to its own software license.
 
 See [COPYING-THIRD-PARTY](third_party/COPYING-THIRD-PARTY) for full license
 statement of all third-party components.
