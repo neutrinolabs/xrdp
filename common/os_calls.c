@@ -2557,6 +2557,14 @@ g_directory_exist(const char *dirname)
 }
 
 /*****************************************************************************/
+/* returns boolean, non zero if the file exists  and is a readable executable */
+int
+g_executable_exist(const char *exename)
+{
+    return access(exename, R_OK | X_OK) == 0;
+}
+
+/*****************************************************************************/
 /* returns boolean */
 int
 g_create_dir(const char *dirname)
