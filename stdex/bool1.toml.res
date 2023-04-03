@@ -1,0 +1,4 @@
+{
+  bool1 = true,
+  bool2 = false,
+}

@@ -1,0 +1,10 @@
+{
+  fruit = {
+    apple = {
+    },
+    orange = {
+    },
+  },
+  animal = {
+  },
+}

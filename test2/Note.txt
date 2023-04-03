@@ -1,0 +1,6 @@
+Note that we utilize the 'jq' command to normalize json files for comparison. Depending the
+verson of jq on your system, some tests may generate error that looks like this:
+
+   parse error: Exceeds depth limit for parsing at line 1
+
+This is an error in 'jq', and it does not indicate that the tests themselves fail.

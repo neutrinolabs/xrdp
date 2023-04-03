@@ -1,0 +1,6 @@
+{
+  winpath = "C:\\Users\\nodejs\\templates",
+  winpath2 = "\\\\ServerX\\admin$\\system32\\",
+  quoted = "Tom \"Dubs\" Preston-Werner",
+  regex = "<\\i\\c*\\s*>",
+}
