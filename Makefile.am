@@ -44,7 +44,9 @@ else
 ULALACADIR =
 endif
 
+# This should not be dictionary order but build order
 SUBDIRS = \
+  third_party/tomlc99 \
   common \
   vnc \
   xup \

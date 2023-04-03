@@ -14,6 +14,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm \
   -I$(top_srcdir)/libxrdp \
+  -I$(top_srcdir)/third_party/tomlc99 \
   $(IMLIB2_CFLAGS)
 
 XRDP_EXTRA_LIBS =
@@ -67,6 +68,7 @@ xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libipm/libipm.la \
   $(top_builddir)/libxrdp/libxrdp.la \
+  $(top_builddir)/third_party/tomlc99/libtoml.la \
   $(IMLIB2_LIBS) \
   $(XRDP_EXTRA_LIBS)
 
