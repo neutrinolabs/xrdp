@@ -1,4 +1,5 @@
 AM_CPPFLAGS = \
+  -DXRDP_TOP_SRCDIR=\"$(top_srcdir)\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \

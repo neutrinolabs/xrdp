@@ -17,8 +17,8 @@ START_TEST(test_keymap_load__ini_vs_toml)
     keymap_toml = calloc(1, sizeof(struct xrdp_keymap));
     keymap_zero = calloc(1, sizeof(struct xrdp_keymap));
 
-    km_load_file("../../instfiles/km-00000411.ini", keymap_ini);
-    km_load_file_toml("../../instfiles/km-00000411.toml", keymap_toml);
+    km_load_file(XRDP_TOP_SRCDIR "/instfiles/km-00000411.ini", keymap_ini);
+    km_load_file_toml(XRDP_TOP_SRCDIR "/instfiles/km-00000411.toml", keymap_toml);
 
     /* check if keymap is loaded */
     ck_assert_mem_ne(keymap_zero, keymap_ini, sizeof(struct xrdp_keymap));
