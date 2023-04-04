@@ -13,9 +13,9 @@ START_TEST(test_keymap_load__ini_vs_toml)
     struct xrdp_keymap *keymap_toml;
     struct xrdp_keymap *keymap_zero;
 
-    keymap_ini = g_malloc(sizeof(struct xrdp_keymap), 1);
-    keymap_toml = g_malloc(sizeof(struct xrdp_keymap), 1);
-    keymap_zero = g_malloc(sizeof(struct xrdp_keymap), 1);
+    keymap_ini = calloc(1, sizeof(struct xrdp_keymap));
+    keymap_toml = calloc(1, sizeof(struct xrdp_keymap));
+    keymap_zero = calloc(1, sizeof(struct xrdp_keymap));
 
     km_load_file("../../instfiles/km-00000411.ini", keymap_ini);
     km_load_file_toml("../../instfiles/km-00000411.toml", keymap_toml);
