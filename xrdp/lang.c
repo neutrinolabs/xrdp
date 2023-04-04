@@ -275,7 +275,7 @@ km_read_section_toml(const toml_table_t *conf, const char *section_name, struct 
         LOG(LOG_LEVEL_TRACE, "%s: key%d = [%d, %d]", __func__, i, (int) sym.u.i, (int) chr.u.i);
     }
 
-    toml_free(modifier);
+    /* toml_free() is not needed here */
 
     return 0;
 }
