@@ -132,6 +132,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "TEST_LOG_LEVEL=TRACE" >> $GITHUB_ENV
       - uses: actions/checkout@v3
       - name: "Install Dependencies"
         # See https://github.com/actions/runner-images/issues/7192
