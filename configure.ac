@@ -603,6 +603,8 @@ AC_CONFIG_FILES([
   xrdp/Makefile
   xrdpvr/Makefile
   xup/Makefile
+  third_party/Makefile
+  third_party/tomlc99/Makefile
 ])
 
 AC_REQUIRE_AUX_FILE([tap-driver.sh])

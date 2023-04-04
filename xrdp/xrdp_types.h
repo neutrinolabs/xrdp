@@ -679,6 +679,7 @@ struct xrdp_startup_params
     int version;
     int fork;
     int dump_config;
+    int license;
     int tcp_send_buffer_bytes;
     int tcp_recv_buffer_bytes;
     int tcp_nodelay;

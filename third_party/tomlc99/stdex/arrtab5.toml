@@ -1,0 +1,11 @@
+# INVALID TOML DOC
+[[fruits]]
+name = "apple"
+
+[[fruits.varieties]]
+name = "red delicious"
+
+# INVALID: This table conflicts with the previous array of tables
+[fruits.varieties]
+name = "granny smith"
+

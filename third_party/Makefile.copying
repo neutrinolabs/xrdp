@@ -1,0 +1,8 @@
+
+copying: copying_third_party.h
+
+copying_third_party.h:
+	bin2c copying_third_party < COPYING-THIRD-PARTY > copying_third_party.h
+
+clean:
+	rm -f copying_third_party.h

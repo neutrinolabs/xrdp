@@ -1,0 +1,3 @@
+[server]
+    host = "example.com"
+    port = [ 8080, 8181, 8282 ]
