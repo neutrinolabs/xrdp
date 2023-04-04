@@ -84,5 +84,6 @@ xrdp_chansrv_LDFLAGS = \
 xrdp_chansrv_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/sesman/libsesman/libsesman.la \
+  $(top_builddir)/libipm/libipm.la \
   $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
   $(CHANSRV_EXTRA_LIBS)
