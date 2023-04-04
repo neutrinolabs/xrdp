@@ -373,17 +373,18 @@ km_load_file_toml(const char *filename, struct xrdp_keymap *keymap)
     char errbuf[256];
     toml_table_t *conf;
 
+    LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
     fp = fopen(filename, "r");
     if (!fp)
     {
-        LOG(LOG_LEVEL_ERROR, "Failed to open: %s", errbuf);
+        LOG(LOG_LEVEL_ERROR, "Failed to open: %s (%s)", filename, g_get_strerror());
         return 1;
     }
 
     conf = toml_parse_file(fp, errbuf, sizeof(errbuf));
     if (!conf)
     {
-        LOG(LOG_LEVEL_ERROR, "Failed to parse: %s", filename);
+        LOG(LOG_LEVEL_ERROR, "Failed to parse: %s (%s)", filename, errbuf);
         fclose(fp);
         return 1;
     }
