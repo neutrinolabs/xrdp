@@ -308,7 +308,6 @@ main(int argc, char **argv)
                 rv = g_system(amp.command);
                 LOG(LOG_LEVEL_INFO, "command \"%s\" returned %d",
                     amp.command, rv);
-                auth_stop_session(auth_info);
             }
         }
         if (auth_info != NULL)

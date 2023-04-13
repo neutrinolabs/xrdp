@@ -438,7 +438,7 @@ auth_start_session(struct auth_info *auth_info, int display_num)
 
 /******************************************************************************/
 /* returns error */
-int
+static int
 auth_stop_session(struct auth_info *auth_info)
 {
     int rv = 0;
