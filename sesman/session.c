@@ -275,26 +275,46 @@ start_window_manager(struct auth_info *auth_info,
     auth_set_env(auth_info);
     if (s->directory[0] != '\0')
     {
-        g_set_current_dir(s->directory);
+        if (g_cfg->sec.allow_alternate_shell)
+        {
+            g_set_current_dir(s->directory);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "Directory change to %s requested, but not "
+                "allowed by AllowAlternateShell config value.",
+                s->directory);
+        }
     }
 
     if (s->shell[0] != '\0')
     {
-        if (g_strchr(s->shell, ' ') != 0 || g_strchr(s->shell, '\t') != 0)
+        if (g_cfg->sec.allow_alternate_shell)
         {
-            LOG(LOG_LEVEL_INFO,
-                "Using user requested window manager on "
-                "display %u with embedded arguments using a shell: %s",
-                s->display, s->shell);
-            const char *argv[] = {"sh", "-c", s->shell, NULL};
-            g_execvp("/bin/sh", (char **)argv);
+            if (g_strchr(s->shell, ' ') != 0 || g_strchr(s->shell, '\t') != 0)
+            {
+                LOG(LOG_LEVEL_INFO,
+                    "Using user requested window manager on "
+                    "display %u with embedded arguments using a shell: %s",
+                    s->display, s->shell);
+                const char *argv[] = {"sh", "-c", s->shell, NULL};
+                g_execvp("/bin/sh", (char **)argv);
+            }
+            else
+            {
+                LOG(LOG_LEVEL_INFO,
+                    "Using user requested window manager on "
+                    "display %d: %s", s->display, s->shell);
+                g_execlp3(s->shell, s->shell, 0);
+            }
         }
         else
         {
-            LOG(LOG_LEVEL_INFO,
-                "Using user requested window manager on "
-                "display %d: %s", s->display, s->shell);
-            g_execlp3(s->shell, s->shell, 0);
+            LOG(LOG_LEVEL_WARNING,
+                "Shell %s requested by user, but not allowed by "
+                "AllowAlternateShell config value.",
+                s->shell);
         }
     }
     else

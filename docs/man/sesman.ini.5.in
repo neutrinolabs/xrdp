@@ -292,6 +292,10 @@ To keep compatibility, the following aliases are also available.
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, require group membership even
 if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 
+.TP
+\fBAllowAlternateShell\fR=\fI[true|false]\fR
+If set to \fB0\fR, \fBfalse\fR or \fBno\fR, prevent usage of alternate shells by users.
+
 .SH "X11 SERVER"
 Following parameters can be used in the \fB[Xvnc]\fR and
 \fB[Xorg]\fR sections.
