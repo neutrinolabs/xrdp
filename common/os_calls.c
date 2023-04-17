@@ -2293,6 +2293,59 @@ g_file_set_cloexec(int fd, int status)
 }
 
 /*****************************************************************************/
+struct list *
+g_get_open_fds(int min, int max)
+{
+    struct list *result = list_create();
+
+    if (result != NULL)
+    {
+        if (max < 0)
+        {
+            max = sysconf(_SC_OPEN_MAX);
+        }
+
+        if (max > min)
+        {
+            struct pollfd *fds = g_new0(struct pollfd, max - min);
+            int i;
+
+            if (fds == NULL)
+            {
+                goto nomem;
+            }
+
+            for (i = min ; i < max ; ++i)
+            {
+                fds[i - min].fd = i;
+            }
+
+            if (poll(fds, max - min, 0) >= 0)
+            {
+                for (i = min ; i < max ; ++i)
+                {
+                    if (fds[i - min].revents != POLLNVAL)
+                    {
+                        // Descriptor is open
+                        if (!list_add_item(result, i))
+                        {
+                            goto nomem;
+                        }
+                    }
+                }
+            }
+            g_free(fds);
+        }
+    }
+
+    return result;
+
+nomem:
+    list_delete(result);
+    return NULL;
+}
+
+/*****************************************************************************/
 /* Converts a hex mask to a mode_t value */
 #if !defined(_WIN32)
 static mode_t
