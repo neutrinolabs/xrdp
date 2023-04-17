@@ -297,6 +297,15 @@ int      g_set_allusercontext(int uid);
 int      g_waitchild(struct exit_status *e);
 int      g_waitpid(int pid);
 struct exit_status g_waitpid_status(int pid);
+/*
+ * Sets the process group ID of the indicated process to the specified value.
+ * (POSIX.1)
+ *
+ * Errors are logged.
+ *
+ * May do nothing if process groups are not supported
+ */
+int      g_setpgid(int pid, int pgid);
 void     g_clearenv(void);
 int      g_setenv(const char *name, const char *value, int rewrite);
 char    *g_getenv(const char *name);

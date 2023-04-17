@@ -3158,7 +3158,7 @@ g_waitchild(struct exit_status *e)
     e->reason = E_XR_UNEXPECTED;
     e->val = 0;
 
-    rv = waitpid(0, &wstat, WNOHANG);
+    rv = waitpid(-1, &wstat, WNOHANG);
 
     if (rv == -1)
     {
@@ -3251,6 +3251,24 @@ g_waitpid_status(int pid)
 
 #endif
     return exit_status;
+}
+
+/*****************************************************************************/
+int
+g_setpgid(int pid, int pgid)
+{
+    int rv = setpgid(pid, pgid);
+    if (rv < 0)
+    {
+        if (pid == 0)
+        {
+            pid = getpid();
+        }
+        LOG(LOG_LEVEL_ERROR, "Can't set process group ID of %d to %d [%s]",
+            pid, pgid, g_get_strerror());
+    }
+
+    return rv;
 }
 
 /*****************************************************************************/
