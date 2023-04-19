@@ -212,6 +212,7 @@ config_read_security(int file, struct config_security *sc,
     sc->ts_admins_enable = 0;
     sc->restrict_outbound_clipboard = 0;
     sc->restrict_inbound_clipboard = 0;
+    sc->allow_alternate_shell = 1;
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -278,6 +279,11 @@ config_read_security(int file, struct config_security *sc,
                     "Unrecognised tokens parsing 'RestrictInboundClipboard' %s",
                     unrecognised);
             }
+        }
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL))
+        {
+            sc->allow_alternate_shell =
+                g_text2bool((char *)list_get_item(param_v, i));
         }
 
     }
@@ -602,6 +608,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    AllowRootLogin:            %d", sc->allow_root);
     g_writeln("    MaxLoginRetry:             %d", sc->login_retry);
     g_writeln("    AlwaysGroupCheck:          %d", sc->ts_always_group_check);
+    g_writeln("    AllowAlternateShell:       %d", sc->allow_alternate_shell);
     if (sc->restrict_outbound_clipboard == CLIP_RESTRICT_NONE)
     {
         g_writeln("    RestrictOutboundClipboard: %s", "none");

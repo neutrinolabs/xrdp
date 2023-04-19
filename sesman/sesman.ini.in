@@ -37,6 +37,8 @@ RestrictOutboundClipboard=none
 ;   false: an alias of none
 ;   yes: an alias of all
 RestrictInboundClipboard=none
+; Set to 'no' to prevent users from logging in with alternate shells
+#AllowAlternateShell=true
 
 [Sessions]
 ;; X11DisplayOffset - x11 display number offset

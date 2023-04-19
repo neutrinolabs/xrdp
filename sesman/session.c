@@ -596,30 +596,47 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
             if (x_server_running(display))
             {
                 auth_set_env(data);
-                if (s->directory != 0)
+                if (s->directory != 0 && s->directory[0] != 0)
                 {
-                    if (s->directory[0] != 0)
+                    if (g_cfg->sec.allow_alternate_shell)
                     {
                         g_set_current_dir(s->directory);
+                    }
+                    else
+                    {
+                        LOG(LOG_LEVEL_WARNING,
+                            "Directory change to %s requested, but not "
+                            "allowed by AllowAlternateShell config value.",
+                            s->directory);
                     }
                 }
                 if (s->program != 0 && s->program[0] != 0)
                 {
-                    if (g_strchr(s->program, ' ') != 0 || g_strchr(s->program, '\t') != 0)
+                    if (g_cfg->sec.allow_alternate_shell)
                     {
-                        LOG(LOG_LEVEL_INFO,
-                            "Starting user requested window manager on "
-                            "display %d with embedded arguments using a shell: %s",
-                            display, s->program);
-                        const char *params[] = {"sh", "-c", s->program, NULL};
-                        g_execvp("/bin/sh", (char **)params);
+                        if (g_strchr(s->program, ' ') != 0 || g_strchr(s->program, '\t') != 0)
+                        {
+                            LOG(LOG_LEVEL_INFO,
+                                "Starting user requested window manager on "
+                                "display %d with embedded arguments using a shell: %s",
+                                display, s->program);
+                            const char *params[] = {"sh", "-c", s->program, NULL};
+                            g_execvp("/bin/sh", (char **)params);
+                        }
+                        else
+                        {
+                            LOG(LOG_LEVEL_INFO,
+                                "Starting user requested window manager on "
+                                "display %d: %s", display, s->program);
+                            g_execlp3(s->program, s->program, 0);
+                        }
                     }
                     else
                     {
-                        LOG(LOG_LEVEL_INFO,
-                            "Starting user requested window manager on "
-                            "display %d: %s", display, s->program);
-                        g_execlp3(s->program, s->program, 0);
+                        LOG(LOG_LEVEL_WARNING,
+                            "Shell %s requested by user, but not allowed by "
+                            "AllowAlternateShell config value.",
+                            s->program);
                     }
                 }
                 else

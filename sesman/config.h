@@ -62,6 +62,7 @@
 #define SESMAN_CFG_SEC_ALWAYSGROUPCHECK            "AlwaysGroupCheck"
 #define SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD "RestrictOutboundClipboard"
 #define SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD  "RestrictInboundClipboard"
+#define SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL       "AllowAlternateShell"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
@@ -141,6 +142,15 @@ struct config_security
      * @brief if the clipboard should be enforced restricted. If true only allow server -> client, not vice versa.
      */
     int restrict_inbound_clipboard;
+
+    /**
+     * @var allow_alternate_shell
+     * @brief allow an user-supplied alternate shell.
+     * @details 'YES' for all programs allowed, 'NO' for disabling of alternate
+     *          shells.
+     *          If not specified, 'YES' is assumed.
+     */
+    int allow_alternate_shell;
 };
 
 /**
