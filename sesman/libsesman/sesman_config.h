@@ -89,6 +89,15 @@ struct config_security
      * @brief if the clipboard should be enforced restricted. If true only allow server -> client, not vice versa.
      */
     int restrict_inbound_clipboard;
+
+    /**
+     * @var allow_alternate_shell
+     * @brief allow an user-supplied alternate shell.
+     * @details 'YES' for all programs allowed, 'NO' for disabling of alternate
+     *          shells.
+     *          If not specified, 'YES' is assumed.
+     */
+    int allow_alternate_shell;
 };
 
 /**
