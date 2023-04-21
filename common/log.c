@@ -1173,3 +1173,27 @@ getFormattedDateTime(char *replybuf, int bufsize)
     return replybuf;
 }
 
+/*****************************************************************************/
+#ifdef USE_DEVEL_LOGGING
+void
+log_devel_leaking_fds(const char *exe, int min, int max)
+{
+    struct list *fd_list = g_get_open_fds(min, max);
+
+    if (fd_list != NULL)
+    {
+        int i;
+        for (i = 0 ; i < fd_list->count ; ++i)
+        {
+            int fd = (int)fd_list->items[i];
+            if (g_file_get_cloexec(fd) == 0)
+            {
+                LOG_DEVEL(LOG_LEVEL_WARNING,
+                          "File descriptor %d is not CLOEXEC when running %s",
+                          fd, exe);
+            }
+        }
+    }
+}
+#endif // USE_DEVEL_LOGGING
+
