@@ -73,12 +73,10 @@ internal_log_file_open(const char *fname)
         }
     }
 
-#ifdef FD_CLOEXEC
     if (ret != -1)
     {
-        fcntl(ret, F_SETFD, FD_CLOEXEC);
+        g_file_set_cloexec(ret, 1);
     }
-#endif
 
     return ret;
 }

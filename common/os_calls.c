@@ -2250,6 +2250,49 @@ g_file_lock(int fd, int start, int len)
 }
 
 /*****************************************************************************/
+/* Gets the close-on-exec flag for a file descriptor */
+int
+g_file_get_cloexec(int fd)
+{
+    int rv = 0;
+    int flags = fcntl(fd, F_GETFD);
+    if (flags >= 0 && (flags & FD_CLOEXEC) != 0)
+    {
+        rv = 1;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+/* Sets/clears the close-on-exec flag for a file descriptor */
+/* return boolean */
+int
+g_file_set_cloexec(int fd, int status)
+{
+    int rv = 0;
+    int current_flags = fcntl(fd, F_GETFD);
+    if (current_flags >= 0)
+    {
+        int new_flags;
+        if (status)
+        {
+            new_flags = current_flags | FD_CLOEXEC;
+        }
+        else
+        {
+            new_flags = current_flags & ~FD_CLOEXEC;
+        }
+        if (new_flags != current_flags)
+        {
+            rv = (fcntl(fd, F_SETFD, new_flags) >= 0);
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 /* Converts a hex mask to a mode_t value */
 #if !defined(_WIN32)
 static mode_t
