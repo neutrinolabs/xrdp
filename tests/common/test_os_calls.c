@@ -9,6 +9,7 @@
 #include <poll.h>
 
 #include "os_calls.h"
+#include "list.h"
 
 #include "test_common.h"
 
@@ -199,6 +200,69 @@ END_TEST
 #endif
 
 /******************************************************************************/
+/* Just test we can set and clear the flag. We don't test its operation */
+START_TEST(test_g_file_cloexec)
+{
+    int flag;
+    int devzerofd = g_file_open("/dev/zero");
+    ck_assert(devzerofd >= 0);
+
+    (void)g_file_set_cloexec(devzerofd, 1);
+    flag = g_file_get_cloexec(devzerofd);
+    ck_assert(flag != 0);
+
+    (void)g_file_set_cloexec(devzerofd, 0);
+    flag = g_file_get_cloexec(devzerofd);
+    ck_assert(flag == 0);
+
+    g_file_close(devzerofd);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_g_file_get_open_fds)
+{
+    int fd_count = get_open_fd_count();
+    int i;
+
+    struct list *start_list = g_get_open_fds(0, -1);
+    ck_assert_ptr_ne(start_list, NULL);
+    ck_assert_int_eq(start_list->count, fd_count);
+
+    // Open another file
+    int devzerofd = g_file_open("/dev/zero");
+    ck_assert(devzerofd >= 0);
+
+    // Have we now got one more open file?
+    struct list *open_list = g_get_open_fds(0, -1);
+    ck_assert_ptr_ne(open_list, NULL);
+    ck_assert_int_eq(open_list->count, fd_count + 1);
+
+    // Check the new file is not in the start list, but is in the open list
+    ck_assert_int_lt(list_index_of(start_list, devzerofd), 0);
+    ck_assert_int_ge(list_index_of(open_list, devzerofd), 0);
+
+    g_file_close(devzerofd);
+
+    struct list *finish_list = g_get_open_fds(0, -1);
+    ck_assert_ptr_ne(finish_list, NULL);
+
+    // start list same as finish list?
+    ck_assert_int_eq(finish_list->count, fd_count);
+
+    for (i = 0 ; i < start_list->count; ++i)
+    {
+        ck_assert_int_eq((int)finish_list->items[i],
+                         (int)start_list->items[i]);
+    }
+
+    list_delete(start_list);
+    list_delete(open_list);
+    list_delete(finish_list);
+}
+END_TEST
+
+/******************************************************************************/
 START_TEST(test_g_sck_fd_passing)
 {
     int sck[2];
@@ -382,8 +446,9 @@ make_suite_test_os_calls(void)
     tcase_add_test(tc_os_calls, test_g_file_get_size__2GiB);
     tcase_add_test(tc_os_calls, test_g_file_get_size__5GiB);
 #endif
+    tcase_add_test(tc_os_calls, test_g_file_cloexec);
+    tcase_add_test(tc_os_calls, test_g_file_get_open_fds);
     tcase_add_test(tc_os_calls, test_g_sck_fd_passing);
     tcase_add_test(tc_os_calls, test_g_sck_fd_overflow);
-
     return s;
 }
