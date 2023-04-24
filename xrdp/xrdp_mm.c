@@ -2174,6 +2174,8 @@ xrdp_mm_process_login_response(struct xrdp_mm *self)
     int rv;
     int server_closed;
 
+    self->mmcs_expecting_msg = 0;
+
     rv = scp_get_login_response(self->sesman_trans, &login_result, &server_closed);
     if (rv == 0)
     {
@@ -2227,6 +2229,8 @@ xrdp_mm_process_create_session_response(struct xrdp_mm *self)
     struct guid guid;
 
     int rv;
+
+    self->mmcs_expecting_msg = 0;
 
     rv = scp_get_create_session_response(self->sesman_trans, &status,
                                          &display, &guid);
@@ -2569,9 +2573,13 @@ static void
 xrdp_mm_connect_sm(struct xrdp_mm *self)
 {
     int status = 0;
-    int waiting_for_msg = 0; /* Set this to leave the sm to wait for a reply */
 
-    while (status == 0 && !waiting_for_msg && self->connect_state != MMCS_DONE)
+    /* we set self->mmcs_expecting_msg in the loop when we've send a
+       message to sesman, and we need to wait for a response */
+    self->mmcs_expecting_msg = 0;
+
+    while (status == 0 && !self->mmcs_expecting_msg &&
+            self->connect_state != MMCS_DONE)
     {
         switch (self->connect_state)
         {
@@ -2626,7 +2634,7 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                         {
                             /* Now waiting for a reply from sesman - see
                                xrdp_mm_process_login_response() */
-                            waiting_for_msg = 1;
+                            self->mmcs_expecting_msg = 1;
                         }
                     }
                 }
@@ -2677,7 +2685,7 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                         {
                             /* Now waiting for a reply from sesman - see
                                xrdp_mm_process_create_session_response() */
-                            waiting_for_msg = 1;
+                            self->mmcs_expecting_msg = 1;
                         }
                     }
                 }
@@ -2692,10 +2700,10 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                     if ((status = xrdp_mm_create_session(self)) == 0)
                     {
                         /* Now waiting for a reply from sesman. Note that
-                         * at this point sesman is expecting us to
+                         * when it arrives, sesman is expecting us to
                          * close the connection - we can do nothing else
                          * with it */
-                        waiting_for_msg = 1;
+                        self->mmcs_expecting_msg = 1;
                     }
                 }
                 break;
@@ -2752,7 +2760,7 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
         }
     }
 
-    if (!waiting_for_msg)
+    if (!self->mmcs_expecting_msg)
     {
         /* We don't need the sesman transport anymore */
         if (self->sesman_trans != NULL)
@@ -3007,6 +3015,14 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
     {
         if (trans_check_wait_objs(self->sesman_trans) != 0)
         {
+            if (self->mmcs_expecting_msg)
+            {
+                /* The sesman transport has failed with an
+                 * outstanding message */
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                "Unexpected sesman failure - check sesman log");
+                xrdp_wm_mod_connect_done(self->wm, 1);
+            }
             self->delete_sesman_trans = 1;
             if (self->wm->hide_log_window)
             {
