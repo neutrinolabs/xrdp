@@ -156,6 +156,8 @@ start_chansrv(struct auth_info *auth_info,
                      g_cfg->env_names,
                      g_cfg->env_values);
 
+        LOG_DEVEL_LEAKING_FDS("chansrv", 3, -1);
+
         /* executing chansrv */
         g_execvp_list(exe_path, chansrv_params);
 
@@ -273,6 +275,8 @@ start_window_manager(struct auth_info *auth_info,
                  g_cfg->env_values);
 
     auth_set_env(auth_info);
+    LOG_DEVEL_LEAKING_FDS("window manager", 3, -1);
+
     if (s->directory[0] != '\0')
     {
         if (g_cfg->sec.allow_alternate_shell)
@@ -555,6 +559,7 @@ start_x_server(struct auth_info *auth_info,
             LOG(LOG_LEVEL_INFO, "Starting X server on display %u: %s",
                 s->display,
                 dumpItemsToString(xserver_params, execvpparams, 2048));
+            LOG_DEVEL_LEAKING_FDS("X server", 3, -1);
             g_execvp_list((const char *)xserver_params->items[0],
                           xserver_params);
         }
@@ -1117,6 +1122,8 @@ session_reconnect(int display, int uid,
 
         if (g_file_exist(g_cfg->reconnect_sh))
         {
+            LOG_DEVEL_LEAKING_FDS("reconnect script", 3, -1);
+
             LOG(LOG_LEVEL_INFO,
                 "Starting session reconnection script on display %d: %s",
                 display, g_cfg->reconnect_sh);
