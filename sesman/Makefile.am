@@ -16,8 +16,10 @@ sbin_PROGRAMS = \
   xrdp-sesman
 
 xrdp_sesman_SOURCES = \
-  env.c \
-  env.h \
+  eicp_process.c \
+  eicp_process.h \
+  ercp_process.c \
+  ercp_process.h \
   lock_uds.c \
   lock_uds.h \
   pre_session_list.c \
@@ -28,16 +30,10 @@ xrdp_sesman_SOURCES = \
   sesman.h \
   sesexec_control.c \
   sesexec_control.h \
-  session.c \
-  session.h \
   session_list.c \
   session_list.h \
   sig.c \
-  sig.h \
-  xauth.c \
-  xauth.h \
-  xwait.c \
-  xwait.h
+  sig.h
 
 xrdp_sesman_LDADD = \
   $(top_builddir)/sesman/libsesman/libsesman.la \

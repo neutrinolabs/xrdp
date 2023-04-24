@@ -33,11 +33,16 @@
 #include "config_ac.h"
 #endif
 
+#ifdef HAVE_SYS_PRCTL_H
+#include <sys/prctl.h>
+#endif
+
 #include "arch.h"
 #include "session_list.h"
+#include "trans.h"
 
-#include "sesman_auth.h"
 #include "sesman_config.h"
+#include "list.h"
 #include "log.h"
 #include "os_calls.h"
 #include "sesman.h"
@@ -48,12 +53,12 @@ static struct list *g_session_list = NULL;
 
 #define SESSION_IN_USE(si) \
     ((si) != NULL && \
-     (si)->display >= 0 && \
-     (si)->pid > 0)
+     (si)->sesexec_trans != NULL && \
+     (si)->sesexec_trans->status == TRANS_STATUS_UP)
 
 /******************************************************************************/
 int
-session_module_init(void)
+session_list_init(void)
 {
     int rv = 1;
     if (g_session_list == NULL)
@@ -88,9 +93,9 @@ free_session(struct session_item *si)
 {
     if (si != NULL)
     {
-        if (si->auth_info != NULL)
+        if (si->sesexec_trans != NULL)
         {
-            auth_end(si->auth_info);
+            trans_delete(si->sesexec_trans);
         }
         g_free(si);
     }
@@ -98,7 +103,7 @@ free_session(struct session_item *si)
 
 /******************************************************************************/
 void
-session_module_cleanup(void)
+session_list_cleanup(void)
 {
     if (g_session_list != NULL)
     {
@@ -123,13 +128,12 @@ session_list_get_count(void)
 
 /******************************************************************************/
 struct session_item *
-session_new(void)
+session_list_new(void)
 {
     struct session_item *result = g_new0(struct session_item, 1);
     if (result != NULL)
     {
-        result->pid = -1;
-        result->display = -1;
+        result->state = E_SESSION_STARTING;
         if (!list_add_item(g_session_list, (tintptr)result))
         {
             g_free(result);
@@ -401,7 +405,7 @@ session_list_get_bydata(uid_t uid,
             si,
             SCP_SESSION_TYPE_TO_STR(si->type),
             si->uid, si->bpp,
-            si->width, si->height,
+            si->start_width, si->start_height,
             si->start_ip_addr);
 
         if (si->type != type)
@@ -410,7 +414,7 @@ session_list_get_bydata(uid_t uid,
             continue;
         }
 
-        if ((policy & SESMAN_CFG_SESS_POLICY_U) && (int)uid != si->uid)
+        if ((policy & SESMAN_CFG_SESS_POLICY_U) && uid != si->uid)
         {
             LOG(LOG_LEVEL_DEBUG,
                 "%s: UID doesn't match for 'U' policy", __func__);
@@ -425,7 +429,8 @@ session_list_get_bydata(uid_t uid,
         }
 
         if ((policy & SESMAN_CFG_SESS_POLICY_D) &&
-                (si->width != width || si->height != height))
+                (si->start_width != width ||
+                 si->start_height != height))
         {
             LOG(LOG_LEVEL_DEBUG,
                 "%s: Dimensions don't match for 'D' policy", __func__);
@@ -450,97 +455,8 @@ session_list_get_bydata(uid_t uid,
 }
 
 /******************************************************************************/
-/**
- * Convert a UID to a username
- *
- * @param uid UID
- * @param uname pointer to output buffer
- * @param uname_len Length of output buffer
- * @return 0 for success.
- */
-static int
-username_from_uid(int uid, char *uname, int uname_len)
-{
-    char *ustr;
-    int rv = g_getuser_info_by_uid(uid, &ustr, NULL, NULL, NULL, NULL);
-
-    if (rv == 0)
-    {
-        g_snprintf(uname, uname_len, "%s", ustr);
-        g_free(ustr);
-    }
-    else
-    {
-        g_snprintf(uname, uname_len, "<unknown>");
-    }
-    return rv;
-}
-
-/******************************************************************************/
-enum session_kill_status
-session_list_kill(int pid)
-{
-    int i = 0;
-    enum session_kill_status status = SESMAN_SESSION_KILL_NOTFOUND;
-
-    while (i < g_session_list->count)
-    {
-        struct session_item *si;
-        si = (struct session_item *)list_get_item(g_session_list, i);
-        if (si->pid == pid)
-        {
-            status = SESMAN_SESSION_KILL_OK;
-            if (pid > 0)
-            {
-                char username[256];
-                username_from_uid(si->uid, username, sizeof(username));
-
-                /* Log the deletion */
-                if (si->auth_info != NULL)
-                {
-                    LOG(LOG_LEVEL_INFO,
-                        "Calling auth_end for pid %d from pid %d",
-                        pid, g_getpid());
-                }
-
-                LOG(LOG_LEVEL_INFO,
-                    "++ terminated session: UID %d (%s), display :%d.0, "
-                    "session_pid %d, ip %s",
-                    si->uid, username, si->display,
-                    si->pid, si->start_ip_addr);
-            }
-
-            free_session(si);
-        }
-        else
-        {
-            ++i;
-        }
-    }
-
-    return status;
-}
-
-/******************************************************************************/
-void
-session_list_sigkill_all(void)
-{
-    int i;
-
-    for (i = 0 ; i < g_session_list->count ; ++i)
-    {
-        struct session_item *si;
-        si = (struct session_item *)list_get_item(g_session_list, i);
-        if (si->pid > 0)
-        {
-            g_sigterm(si->pid);
-        }
-    }
-}
-
-/******************************************************************************/
 struct scp_session_info *
-session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
+session_list_get_byuid(uid_t uid, unsigned int *cnt, unsigned int flags)
 {
     int i;
     struct scp_session_info *sess;
@@ -549,11 +465,13 @@ session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
 
     count = 0;
 
+    LOG(LOG_LEVEL_DEBUG, "searching for session by UID: %d", uid);
+
     for (i = 0 ; i < g_session_list->count ; ++i)
     {
         const struct session_item *si;
         si = (const struct session_item *)list_get_item(g_session_list, i);
-        if (SESSION_IN_USE(si) && uid == si->uid && (si->status & flags) != 0)
+        if (SESSION_IN_USE(si) && uid == si->uid)
         {
             count++;
         }
@@ -579,13 +497,14 @@ session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags)
     {
         const struct session_item *si;
         si = (const struct session_item *)list_get_item(g_session_list, i);
-        if (SESSION_IN_USE(si) && uid == si->uid && (si->status & flags) != 0)
+
+        if (SESSION_IN_USE(si) && uid == si->uid)
         {
-            (sess[index]).sid = si->pid;
+            (sess[index]).sid = si->sesexec_pid;
             (sess[index]).display = si->display;
             (sess[index]).type = si->type;
-            (sess[index]).height = si->height;
-            (sess[index]).width = si->width;
+            (sess[index]).height = si->start_height;
+            (sess[index]).width = si->start_width;
             (sess[index]).bpp = si->bpp;
             (sess[index]).start_time = si->start_time;
             (sess[index]).uid = si->uid;
@@ -620,4 +539,57 @@ free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt)
     }
 
     g_free(sesslist);
+}
+
+/******************************************************************************/
+int
+session_list_get_wait_objs(tbus robjs[], int *robjs_count)
+{
+    int i;
+
+    for (i = 0 ; i < g_session_list->count; ++i)
+    {
+        const struct session_item *si;
+        si = (const struct session_item *)list_get_item(g_session_list, i);
+        if (SESSION_IN_USE(si))
+        {
+            robjs[(*robjs_count)++] = si->sesexec_trans->sck;
+        }
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+session_list_check_wait_objs(void)
+{
+    int i;
+
+    for (i = 0 ; i < g_session_list->count; ++i)
+    {
+        struct session_item *si;
+        si = (struct session_item *)list_get_item(g_session_list, i);
+        if (SESSION_IN_USE(si))
+        {
+            if (trans_check_wait_objs(si->sesexec_trans) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "sesman_check_wait_objs: "
+                    "trans_check_wait_objs failed, removing trans");
+                si->sesexec_trans->status = TRANS_STATUS_DOWN;
+            }
+        }
+
+        if (SESSION_IN_USE(si))
+        {
+            ++i;
+        }
+        else
+        {
+            free_session(si);
+            list_remove_item(g_session_list, i);
+        }
+    }
+
+    return 0;
 }

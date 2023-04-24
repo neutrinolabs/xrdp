@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2023
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,53 +28,44 @@
 #ifndef SESSION_LIST_H
 #define SESSION_LIST_H
 
-#include <time.h>
+#include <sys/types.h>
 
 #include "guid.h"
 #include "scp_application_types.h"
 #include "xrdp_constants.h"
 
-struct session_parameters;
-
-#define SESMAN_SESSION_STATUS_ACTIVE        0x01
-#define SESMAN_SESSION_STATUS_IDLE          0x02
-#define SESMAN_SESSION_STATUS_DISCONNECTED  0x04
-/* future expansion
-#define SESMAN_SESSION_STATUS_REMCONTROL    0x08
-*/
-#define SESMAN_SESSION_STATUS_ALL           0xFF
-
-enum session_kill_status
+enum session_state
 {
-    SESMAN_SESSION_KILL_OK = 0,
-    SESMAN_SESSION_KILL_NOTFOUND
+    /**
+     * Session definition is little more than a sesexec process. We're
+     * waiting for more details of the session from sesexec */
+    E_SESSION_STARTING,
+    /** Session is fully active */
+    E_SESSION_RUNNING
 };
-
-struct scp_session_info;
 
 /**
  * Object describing a session
+ *
+ * Unless otherwide noted, fields are only valid if
+ * the status is E_SESSION_RUNNING
  */
 struct session_item
 {
-    int uid; /* UID of session */
-    int pid; /* pid of sesman waiting for wm to end */
+    enum session_state state;
+    struct trans *sesexec_trans; // trans for sesexec process. Always valid.
+    pid_t sesexec_pid; // pid for sesexec process. Always valid
+    /**
+     * May be valid if known when the session is starting, otherwise -1 */
     int display;
-    int width;
-    int height;
-    int bpp;
-    struct auth_info *auth_info;
-
-    /* status info */
-    unsigned char status;
+    uid_t uid;
     enum scp_session_type type;
-
-    /* time data  */
-    time_t start_time;
-    // struct session_date disconnect_time; // Currently unused
-    // struct session_date idle_time; // Currently unused
-    char start_ip_addr[MAX_PEER_ADDRSTRLEN];
+    unsigned short start_width;
+    unsigned short start_height;
+    unsigned char bpp;
     struct guid guid;
+    char start_ip_addr[MAX_PEER_ADDRSTRLEN];
+    time_t start_time;
 };
 
 /**
@@ -84,13 +75,13 @@ struct session_item
  * Errors are logged
  */
 int
-session_module_init(void);
+session_list_init(void);
 
 /**
  * Clean up the module on program exit
  */
 void
-session_module_cleanup(void);
+session_list_cleanup(void);
 
 /**
  * Returns the number of sessions currently active
@@ -100,24 +91,27 @@ unsigned int
 session_list_get_count(void);
 
 /**
- * Allocates a new session
+ * Allocates a new session on the list
  *
- * The PID and display for the allocated session will be -1 and all other
- * fields will be blank
+ * state will be E_SESSION_STARTING. Other data must be filled in by
+ * the caller as appropriate.
  *
  * @return pointer to new session object or NULL for no memory
  *
- * After allocating the session successfully, you must initialise the
- * PID and display fields with valid numbers.
+ * After allocating the session, you must initialise the sesexec_trans field
+ * with a valid transport.
  *
- * If you allocate a session and want to remove it due to other problems,
- * use session_kill_pid(-1);
+ * The session is removed by session_check_wait_objs() when the transport
+ * goes down (or wasn't allocated in the first place).
  */
 struct session_item *
-session_new(void);
+session_list_new(void);
 
 /**
  * Get the next available display
+ *
+ * The display isn't reserved until the caller has allocated a new session
+ * (with session_list_new()) and put the new display in it.
  */
 int
 session_list_get_available_display(void);
@@ -137,34 +131,17 @@ session_list_get_bydata(uid_t uid,
                         const char *ip_addr);
 
 /**
- *
- * @brief kills a session
- * @param pid the pid of the session to be killed
- * @return
- *
- */
-enum session_kill_status
-session_list_kill(int pid);
-
-/**
- *
- * @brief sends sigkill to all sessions
- * @return
- *
- */
-void
-session_list_sigkill_all(void);
-
-/**
  * @brief retrieves session descriptions
- * @param UID the UID for the descriptions
+ * @param uid the UID for the descriptions
+ * @param[out] cnt The number of sessions returned
+ * @param flags Future expansion
  * @return A block of session descriptions
  *
  * Pass the return result to free_session_info_list() after use
  *
  */
 struct scp_session_info *
-session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags);
+session_list_get_byuid(uid_t uid, unsigned int *cnt, unsigned int flags);
 
 /**
  *
@@ -174,5 +151,22 @@ session_list_get_byuid(int uid, unsigned int *cnt, unsigned char flags);
  */
 void
 free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt);
+
+/**
+ * @brief Get the wait objs for the session list module
+ * @param @robjs Objects array to update
+ * @param robjs_count Elements in robjs (by reference)
+ * @return 0 for success
+ */
+int
+session_list_get_wait_objs(tbus robjs[], int *robjs_count);
+
+
+/**
+ * @brief Check the wait objs for the session list module
+ * @return 0 for success
+ */
+int
+session_list_check_wait_objs(void);
 
 #endif // SESSION_LIST_H

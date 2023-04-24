@@ -30,168 +30,37 @@
 
 #include "trans.h"
 #include "os_calls.h"
+#include "eicp.h"
+#include "ercp.h"
 #include "scp.h"
-#include "sesman_config.h"
 
 #include "scp_process.h"
+#include "sesman.h"
 #include "sesman_access.h"
 #include "sesman_auth.h"
-#include "guid.h"
+#include "sesman_config.h"
 #include "os_calls.h"
+#include "pre_session_list.h"
 #include "session_list.h"
-#include "session.h"
-#include "sesman.h"
+#include "sesexec_control.h"
 #include "string_calls.h"
-
-/**************************************************************************//**
- * Logs an authentication failure message
- *
- * @param username Username
- * @param ip_addr IP address, if known
- *
- * The message is intended for use by fail2ban. Make changes with care.
- */
-static void
-log_authfail_message(const char *username, const char *ip_addr)
-{
-    if (ip_addr == NULL || ip_addr[0] == '\0')
-    {
-        ip_addr = "unknown";
-    }
-    LOG(LOG_LEVEL_INFO, "AUTHFAIL: user=%s ip=%s time=%d",
-        username, ip_addr, g_time1());
-}
-
-/******************************************************************************/
-
-/**
- * Mode parameter for authenticate_and_authorize_connection()
- */
-enum login_mode
-{
-    AM_SYSTEM,
-    AM_UDS
-};
-
-/**
- * Authenticate and authorize the connection
- *
- * @param sc  Connection to sesman
- * @param login_mode Describes the type of login in use
- * @param uid UID for user
- * @param username Name for user
- * @param password Password (AM_SYSTEM) or NULL.
- * @param ip_addr Remote IP address (AM_SYSTEM) or NULL.
- * @return Status for the operation
- *
- * @pre sc->auth_info, sc->username and sc->ip_addr must be NULL
- *
- * @post If E_SCP_LOGIN_OK is returned, sc->auth_info is non-NULL
- * @post If E_SCP_LOGIN_OK is returned, sc->username is non-NULL
- * @post If E_SCP_LOGIN_OK is returned, sc->ip_addr is non-NULL
- *
- */
-static enum scp_login_status
-authenticate_and_authorize_connection(struct sesman_con *sc,
-                                      enum login_mode login_mode,
-                                      int uid,
-                                      const char *username,
-                                      const char *password,
-                                      const char *ip_addr)
-{
-    enum scp_login_status status = E_SCP_LOGIN_GENERAL_ERROR;
-    struct auth_info *auth_info = NULL;
-
-    /* Check preconditions */
-    if (sc->auth_info != NULL || sc->username != NULL || sc->ip_addr != NULL)
-    {
-        LOG(LOG_LEVEL_ERROR,
-            "Internal error - connection already logged in");
-    }
-    else
-    {
-        switch (login_mode)
-        {
-            case AM_SYSTEM:
-                auth_info = auth_userpass(username, password, ip_addr, &status);
-                break;
-            case AM_UDS:
-                auth_info = auth_uds(username, &status);
-                break;
-            default:
-                LOG(LOG_LEVEL_ERROR, "%s called with invalid mode %d",
-                    __func__, (int)login_mode);
-        }
-
-        if (auth_info != NULL)
-        {
-            if (status != E_SCP_LOGIN_OK)
-            {
-                /* This shouldn't happen */
-                LOG(LOG_LEVEL_ERROR,
-                    "Unexpected status return %d from auth call",
-                    (int)status);
-            }
-            else if (!access_login_allowed(&g_cfg->sec, username))
-            {
-                status = E_SCP_LOGIN_NOT_AUTHORIZED;
-                LOG(LOG_LEVEL_INFO, "Username okay but group problem for "
-                    "user: %s", username);
-            }
-
-            /* If all is well, put the auth_info in the sesman connection
-             * for later use. If not, remove the auth_info */
-            if (status == E_SCP_LOGIN_OK)
-            {
-                char *dup_username = g_strdup(username);
-                char *dup_ip_addr =
-                    (ip_addr == NULL) ? g_strdup("") : g_strdup(ip_addr);
-
-                if (dup_username == NULL || dup_ip_addr == NULL)
-                {
-                    LOG(LOG_LEVEL_ERROR, "%s : Memory allocation failed",
-                        __func__);
-                    g_free(dup_username);
-                    g_free(dup_ip_addr);
-                    status = E_SCP_LOGIN_NO_MEMORY;
-                }
-                else
-                {
-                    LOG(LOG_LEVEL_INFO, "Access permitted for user=%s uid=%d",
-                        username, uid);
-                    sc->auth_info = auth_info;
-                    sc->uid = uid;
-                    sc->username = dup_username;
-                    sc->ip_addr = dup_ip_addr;
-                }
-            }
-
-            if (status != E_SCP_LOGIN_OK)
-            {
-                auth_end(auth_info);
-            }
-        }
-    }
-
-    return status;
-}
 
 /******************************************************************************/
 
 static int
-process_set_peername_request(struct sesman_con *sc)
+process_set_peername_request(struct pre_session_item *psi)
 {
     int rv;
     const char *peername;
 
-    rv = scp_get_set_peername_request(sc->t, &peername);
+    rv = scp_get_set_peername_request(psi->client_trans, &peername);
     if (rv == 0)
     {
-        if (sesman_set_connection_peername(sc, peername) != 0)
+        if (pre_session_list_set_peername(psi, peername) != 0)
         {
             LOG(LOG_LEVEL_WARNING,
                 "Failed to set connection peername from %s to %s",
-                sc->peername, peername);
+                psi->peername, peername);
         }
     }
 
@@ -199,68 +68,142 @@ process_set_peername_request(struct sesman_con *sc)
 }
 
 /******************************************************************************/
-/**
- * Allocates a chain item and starts the session
- */
-static enum scp_screate_status
-allocate_and_start_session(struct auth_info *auth_info,
-                           const char *username,
-                           const char *ip_addr,
-                           const struct session_parameters *params)
+static int
+process_sys_login_request(struct pre_session_item *psi)
 {
-    int pid = 0;
-    enum scp_screate_status status;
-    struct session_item *si;
+    int rv;
+    const char *username;
+    const char *password;
+    const char *ip_addr;
+    int send_client_reply = 1;
 
-    /* check to limit concurrent sessions */
-    if (session_list_get_count() >= (unsigned int)g_cfg->sess.max_sessions)
+    rv = scp_get_sys_login_request(psi->client_trans, &username,
+                                   &password, &ip_addr);
+    if (rv == 0)
     {
-        LOG(LOG_LEVEL_ERROR, "max concurrent session limit "
-            "exceeded. login for user %s denied", username);
-        return E_SCP_SCREATE_MAX_REACHED;
-    }
+        enum scp_login_status errorcode;
 
-    si = session_new();
-    if (si == NULL)
-    {
-        LOG(LOG_LEVEL_ERROR, "Out of memory error: cannot create new session "
-            "element - user %s", username);
-        return E_SCP_SCREATE_NO_MEMORY;
-    }
+        LOG(LOG_LEVEL_INFO,
+            "Received system login request from %s for user: %s IP: %s",
+            psi->peername, username, ip_addr);
 
-    status = session_start(auth_info, params, &pid);
-    if (status == E_SCP_SCREATE_OK)
-    {
-        if (ip_addr[0] != '\0')
+        if (psi->login_state != E_PS_LOGIN_NOT_LOGGED_IN)
         {
-            LOG(LOG_LEVEL_INFO, "++ created session: username %s, ip %s",
-                username, ip_addr);
+            errorcode = E_SCP_LOGIN_ALREADY_LOGGED_IN;
+            LOG(LOG_LEVEL_ERROR, "Connection is already logged in for %s",
+                psi->username);
+        }
+        else if ((psi->username = g_strdup(username)) == NULL)
+        {
+            errorcode = E_SCP_LOGIN_NO_MEMORY;
+            LOG(LOG_LEVEL_ERROR, "Memory allocation failure logging in %s",
+                username);
         }
         else
         {
-            LOG(LOG_LEVEL_INFO, "++ created session: username %s", username);
+            /* Create a sesexec process to handle the login
+             *
+             * We won't check for the user being valid here, as this might
+             * lead to information leakage */
+            if (sesexec_start(psi) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR,
+                    "Can't start sesexec to authenticate user");
+                errorcode = E_SCP_LOGIN_GENERAL_ERROR;
+            }
+            else
+            {
+                int eicp_stat;
+                eicp_stat = eicp_send_sys_login_request(psi->sesexec_trans,
+                                                        username,
+                                                        password,
+                                                        ip_addr,
+                                                        psi->client_trans->sck);
+                if (eicp_stat != 0)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "Can't ask sesexec to authenticate user");
+                    errorcode = E_SCP_LOGIN_GENERAL_ERROR;
+                }
+                else
+                {
+                    /* We've handed over responsibility for the
+                     * SCP communication */
+                    send_client_reply = 0;
+                    psi->dispatcher_action = E_PSD_REMOVE_CLIENT_TRANS;
+                }
+            }
         }
 
-        si->pid = pid;
-        si->display = params->display;
-        si->width = params->width;
-        si->height = params->height;
-        si->bpp = params->bpp;
-        si->auth_info = auth_info;
-        g_strncpy(si->start_ip_addr, ip_addr,
-                  sizeof(si->start_ip_addr) - 1);
-        si->uid = params->uid;
-        si->guid = params->guid;
-
-        si->start_time = g_time1();
-
-        si->type = params->type;
-        si->status = SESMAN_SESSION_STATUS_ACTIVE;
+        if (send_client_reply)
+        {
+            /* We only get here if something has gone
+             * wrong with the handover to sesexec */
+            rv = scp_send_login_response(psi->client_trans, errorcode, 1);
+            psi->dispatcher_action = E_PSD_TERMINATE_PRE_SESSION;
+        }
     }
-    else
+
+    return rv;
+}
+
+/******************************************************************************/
+
+/**
+ * Authenticate and authorize a UDS connection
+ *
+ * @param psi  Connection to sesman
+ * @param uid UID for user
+ * @param username Name for user
+ * @return Status for the operation
+ *
+ * @post If E_SCP_LOGIN_OK is returned, psi->username is non-NULL
+ */
+static enum scp_login_status
+authenticate_and_authorize_uds_connection(struct pre_session_item *psi,
+        int uid,
+        const char *username)
+{
+    enum scp_login_status status = E_SCP_LOGIN_GENERAL_ERROR;
+    struct auth_info *auth_info = auth_uds(username, &status);
+    if (auth_info != NULL)
     {
-        // Remove session item from the list
-        session_list_kill(-1);
+        if (status != E_SCP_LOGIN_OK)
+        {
+            /* This shouldn't happen */
+            LOG(LOG_LEVEL_ERROR,
+                "Unexpected status return %d from auth_uds call",
+                (int)status);
+        }
+        else if (!access_login_allowed(&g_cfg->sec, username))
+        {
+            status = E_SCP_LOGIN_NOT_AUTHORIZED;
+            LOG(LOG_LEVEL_INFO, "Username okay but group problem for "
+                "user: %s", username);
+        }
+
+        /* If all is well, add info to the sesman connection for later use */
+        if (status == E_SCP_LOGIN_OK)
+        {
+            if ((psi->username = g_strdup(username)) == NULL)
+            {
+                LOG(LOG_LEVEL_ERROR, "%s : Memory allocation failed",
+                    __func__);
+                g_free(psi->username);
+                psi->username = NULL;
+                status = E_SCP_LOGIN_NO_MEMORY;
+            }
+            else
+            {
+                LOG(LOG_LEVEL_INFO, "Access permitted for user: %s",
+                    username);
+                psi->login_state = E_PS_LOGIN_UDS;
+                psi->uid = uid;
+                psi->start_ip_addr[0] = '\0';
+            }
+        }
+
+        auth_end(auth_info);
     }
 
     return status;
@@ -269,101 +212,7 @@ allocate_and_start_session(struct auth_info *auth_info,
 /******************************************************************************/
 
 static int
-process_sys_login_request(struct sesman_con *sc)
-{
-    int rv;
-    const char *supplied_username;
-    const char *password;
-    const char *ip_addr;
-
-    rv = scp_get_sys_login_request(sc->t, &supplied_username,
-                                   &password, &ip_addr);
-    if (rv == 0)
-    {
-        enum scp_login_status errorcode;
-        int server_closed = 1;
-        int uid;
-        char *username = NULL;
-
-        LOG(LOG_LEVEL_INFO,
-            "Received system login request from %s for user: %s IP: %s",
-            sc->peername, supplied_username, ip_addr);
-
-        if (sc->auth_info != NULL)
-        {
-            errorcode = E_SCP_LOGIN_ALREADY_LOGGED_IN;
-            LOG(LOG_LEVEL_ERROR, "Connection is already logged in for %s",
-                sc->username);
-        }
-        else if (g_getuser_info_by_name(supplied_username,
-                                        &uid, NULL, NULL, NULL, NULL) != 0)
-        {
-            /* we can't get a UID for the user */
-            errorcode = E_SCP_LOGIN_NOT_AUTHENTICATED;
-            LOG(LOG_LEVEL_ERROR, "Can't get UID for user %s",
-                supplied_username);
-            log_authfail_message(username, ip_addr);
-        }
-        else if (g_getuser_info_by_uid(uid,
-                                       &username, NULL, NULL, NULL, NULL) != 0)
-        {
-            errorcode = E_SCP_LOGIN_GENERAL_ERROR;
-            LOG(LOG_LEVEL_ERROR, "Can't reverse lookup UID %d", uid);
-        }
-        else
-        {
-            if (g_strcmp(supplied_username, username) != 0)
-            {
-                /*
-                 * If using a federated naming service (e.g. AD), the
-                 * username supplied may not match that name mapped to by
-                 * the UID. We will generate a warning in this instance so
-                 * the user can see what is being used within sesman
-                 */
-                LOG(LOG_LEVEL_WARNING,
-                    "Using username %s for the session (from UID %d)",
-                    username, uid);
-            }
-
-            errorcode = authenticate_and_authorize_connection(
-                            sc, AM_SYSTEM,
-                            uid, username,
-                            password, ip_addr);
-            if (errorcode == E_SCP_LOGIN_OK)
-            {
-                server_closed = 0;
-            }
-            else if (errorcode == E_SCP_LOGIN_NOT_AUTHENTICATED)
-            {
-                log_authfail_message(username, ip_addr);
-                if (sc->auth_retry_count > 0)
-                {
-                    /* Password problem? Invite the user to retry */
-                    server_closed = 0;
-                    --sc->auth_retry_count;
-                }
-            }
-
-            g_free(username);
-        }
-
-        if (server_closed)
-        {
-            /* Expecting no more client messages. Close the connection
-             * after returning from this callback */
-            sc->close_requested = 1;
-        }
-
-        rv = scp_send_login_response(sc->t, errorcode, server_closed);
-    }
-
-    return rv;
-}
-
-/******************************************************************************/
-
-static int
-process_uds_login_request(struct sesman_con *sc)
+process_uds_login_request(struct pre_session_item *psi)
 {
     enum scp_login_status errorcode;
     int rv;
@@ -372,25 +221,25 @@ process_uds_login_request(struct sesman_con *sc)
     char *username = NULL;
     int server_closed = 1;
 
-    rv = g_sck_get_peer_cred(sc->t->sck, &pid, &uid, NULL);
+    rv = g_sck_get_peer_cred(psi->client_trans->sck, &pid, &uid, NULL);
     if (rv != 0)
     {
         LOG(LOG_LEVEL_INFO,
             "Unable to get peer credentials for socket %d",
-            (int)sc->t->sck);
+            (int)psi->client_trans->sck);
         errorcode = E_SCP_LOGIN_GENERAL_ERROR;
     }
     else
     {
         LOG(LOG_LEVEL_INFO,
             "Received UDS login request from %s for UID: %d from PID: %d",
-            sc->peername, uid, pid);
+            psi->peername, uid, pid);
 
-        if (sc->auth_info != NULL)
+        if (psi->login_state != E_PS_LOGIN_NOT_LOGGED_IN)
         {
             errorcode = E_SCP_LOGIN_ALREADY_LOGGED_IN;
             LOG(LOG_LEVEL_ERROR, "Connection is already logged in for %s",
-                sc->username);
+                psi->username);
         }
         else if (g_getuser_info_by_uid(uid, &username,
                                        NULL, NULL, NULL, NULL) != 0)
@@ -400,10 +249,8 @@ process_uds_login_request(struct sesman_con *sc)
         }
         else
         {
-            errorcode = authenticate_and_authorize_connection(
-                            sc, AM_UDS,
-                            uid, username,
-                            NULL, NULL);
+            errorcode = authenticate_and_authorize_uds_connection(
+                            psi, uid, username);
             g_free(username);
 
             if (errorcode == E_SCP_LOGIN_OK)
@@ -416,27 +263,40 @@ process_uds_login_request(struct sesman_con *sc)
     if (server_closed)
     {
         /* Close the connection after returning from this callback */
-        sc->close_requested = 1;
+        psi->dispatcher_action = E_PSD_TERMINATE_PRE_SESSION;
     }
 
-    return scp_send_login_response(sc->t, errorcode, server_closed);
+    return scp_send_login_response(psi->client_trans, errorcode, server_closed);
+}
+
+/******************************************************************************/
+
+static void
+logout_pre_session(struct pre_session_item *psi)
+{
+    if (psi->login_state != E_PS_LOGIN_NOT_LOGGED_IN)
+    {
+        (void)eicp_send_logout_request(psi->sesexec_trans);
+        trans_delete(psi->sesexec_trans);
+        psi->sesexec_trans = NULL;
+        psi->uid = (uid_t) -1;
+        g_free(psi->username);
+        psi->username = NULL;
+        psi->start_ip_addr[0] = '\0';
+
+        psi->login_state = E_PS_LOGIN_NOT_LOGGED_IN;
+    }
 }
 
 /******************************************************************************/
 
 static int
-process_logout_request(struct sesman_con *sc)
+process_logout_request(struct pre_session_item *psi)
 {
-    if (sc->auth_info != NULL)
+    if (psi->login_state != E_PS_LOGIN_NOT_LOGGED_IN)
     {
-        LOG(LOG_LEVEL_INFO, "Logging out %s from sesman", sc->username);
-        auth_end(sc->auth_info);
-        sc->auth_info = NULL;
-        sc->uid = -1;
-        g_free(sc->username);
-        sc->username = NULL;
-        g_free(sc->ip_addr);
-        sc->ip_addr = NULL;
+        LOG(LOG_LEVEL_INFO, "Logging out %s from sesman", psi->username);
+        logout_pre_session(psi);
     }
 
     return 0;
@@ -445,117 +305,146 @@ process_logout_request(struct sesman_con *sc)
 /******************************************************************************/
 
 static int
-process_create_session_request(struct sesman_con *sc)
+process_create_session_request(struct pre_session_item *psi)
 {
     int rv;
-    // Parameters for a new session (if required). Filled in as
-    // we go along.
-    struct session_parameters sp = {0};
-    const char *shellptr;
-    const char *dirptr;
+    /* Client parameters describing new session*/
+    enum scp_session_type type;
+    unsigned short width;
+    unsigned short height;
+    unsigned char bpp;
+    const char *shell;
+    const char *directory;
+
+    struct guid guid;
+    int display = 0;
+    struct session_item *s_item = NULL;
+    int send_client_reply = 1;
+
     enum scp_screate_status status = E_SCP_SCREATE_OK;
 
-    int display = 0;
-    struct guid guid;
-
-    guid_clear(&guid);
-
-    rv = scp_get_create_session_request(sc->t,
-                                        &sp.type, &sp.width, &sp.height,
-                                        &sp.bpp, &shellptr, &dirptr);
+    rv = scp_get_create_session_request(psi->client_trans,
+                                        &type, &width, &height,
+                                        &bpp, &shell, &directory);
 
     if (rv == 0)
     {
-        if (sc->auth_info == NULL)
+        if (psi->login_state == E_PS_LOGIN_NOT_LOGGED_IN)
         {
             status = E_SCP_SCREATE_NOT_LOGGED_IN;
         }
         else
         {
             LOG(LOG_LEVEL_INFO,
-                "Received request from %s to create a session for user %s"
-                " type=%s"
-                " geometry=%dx%d, bpp=%d, shell=\"%s\", dir=\"%s\"",
-                sc->peername, sc->username,
-                SCP_SESSION_TYPE_TO_STR(sp.type),
-                sp.width, sp.height, sp.bpp, shellptr, dirptr);
+                "Received request from %s to create a session for user %s",
+                psi->peername, psi->username);
 
-            struct session_item *s_item =
-                session_list_get_bydata(sc->uid, sp.type, sp.width, sp.height,
-                                        sp.bpp, sc->ip_addr);
-            if (s_item != 0)
+            s_item = session_list_get_bydata(psi->uid, type, width, height,
+                                             bpp, psi->start_ip_addr);
+            if (s_item != NULL)
             {
                 // Found an existing session
-                if (sc->ip_addr[0] != '\0')
+                display = s_item->display;
+                guid = s_item->guid;
+
+                // Tell the existing session to run the reconnect script.
+                // We ignore errors at this level, as any comms errors
+                // will be picked up in the main loop
+                (void)ercp_send_session_reconnect_event(s_item->sesexec_trans);
+
+                if (psi->start_ip_addr[0] != '\0')
                 {
                     LOG( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
                          "display :%d.0, session_pid %d, ip %s",
-                         sc->username, s_item->display, s_item->pid,
-                         sc->ip_addr);
+                         psi->username, display,
+                         s_item->sesexec_pid, psi->start_ip_addr);
                 }
                 else
                 {
                     LOG(LOG_LEVEL_INFO, "++ reconnected session: username %s, "
                         "display :%d.0, session_pid %d",
-                        sc->username, s_item->display, s_item->pid);
+                        psi->username, display, s_item->sesexec_pid);
                 }
 
-                // Get values for response to SCP client
-                display = s_item->display;
-                guid = s_item->guid;
-
-                session_reconnect(s_item->display, sc->uid, sc->auth_info);
+                // If we created an authentication process for this SCP
+                // connection, close it gracefully
+                logout_pre_session(psi);
+            }
+            // Need to create a new session
+            else if (g_cfg->sess.max_sessions > 0 &&
+                     session_list_get_count() >= g_cfg->sess.max_sessions)
+            {
+                status = E_SCP_SCREATE_MAX_REACHED;
+            }
+            else if ((display = session_list_get_available_display()) < 0)
+            {
+                status = E_SCP_SCREATE_NO_DISPLAY;
+            }
+            // Create an entry on the session list for the new session
+            else if ((s_item = session_list_new()) == NULL)
+            {
+                status = E_SCP_SCREATE_NO_MEMORY;
+            }
+            // Create a sesexec process if we don't have one (UDS login)
+            else if (psi->sesexec_trans == NULL && sesexec_start(psi) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR,
+                    "Can't start sesexec to authenticate user");
+                status = E_SCP_SCREATE_GENERAL_ERROR;
             }
             else
             {
-                // Need to create a new session
-                //
-                // Get the rest of the parameters for the session
-                guid = guid_new();
-                display = session_list_get_available_display();
+                // Pass the session create request to sesexec
+                int eicp_stat;
+                eicp_stat = eicp_send_create_session_request(
+                                psi->sesexec_trans,
+                                psi->client_trans->sck,
+                                display,
+                                type, width, height,
+                                bpp, shell, directory);
 
-                sp.display = display;
-                sp.uid = sc->uid;
-                sp.guid = guid;
-                // These need to be copied so they are available
-                // when the sub-process closes all the connections
-                g_snprintf(sp.shell, sizeof(sp.shell), "%s", shellptr);
-                g_snprintf(sp.directory, sizeof(sp.directory), "%s", dirptr);
-
-                if (display == 0)
+                if (eicp_stat != 0)
                 {
-                    status = E_SCP_SCREATE_NO_DISPLAY;
+                    LOG(LOG_LEVEL_ERROR,
+                        "Can't ask sesexec to authenticate user");
+                    status = E_SCP_SCREATE_GENERAL_ERROR;
                 }
                 else
                 {
-                    // The new session will have a lifetime longer than
-                    // the sesman connection, and so needs to own
-                    // the auth_info struct.
-                    //
-                    // Copy the auth_info struct out of the connection and pass
-                    // it to the session
-                    struct auth_info *auth_info = sc->auth_info;
-                    sc->auth_info = NULL;
+                    // We've handed over responsibility for the
+                    // SCP communication
+                    send_client_reply = 0;
 
-                    status = allocate_and_start_session(auth_info,
-                                                        sc->username,
-                                                        sc->ip_addr,
-                                                        &sp);
-                    if (status != E_SCP_SCREATE_OK)
-                    {
-                        // Close the auth session down as it can't be re-used.
-                        auth_end(auth_info);
-                    }
+                    // Further comms from sesexec comes over the ERCP
+                    // protocol
+                    ercp_trans_from_eicp_trans(psi->sesexec_trans,
+                                               sesman_ercp_data_in,
+                                               (void *)s_item);
+
+                    // Move the transport over to the session list item
+                    s_item->sesexec_trans = psi->sesexec_trans;
+                    s_item->sesexec_pid = psi->sesexec_pid;
+                    psi->sesexec_trans = NULL;
+                    psi->sesexec_pid = 0;
+
+                    // Add the display to the session item so we don't try
+                    // to allocate it to another session
+                    s_item->display = display;
                 }
             }
         }
 
-        /* Currently a create session request is the last thing on a
-         * connection, and results in automatic closure */
-        sc->close_requested = 1;
-
-        rv = scp_send_create_session_response(sc->t, status,
-                                              display, &guid);
+        // Currently a create session request is the last thing on a
+        // connection, and results in automatic closure
+        //
+        // We may have passed the client_trans over to sesexec. If so,
+        // we can't send a reply here.
+        psi->dispatcher_action = E_PSD_TERMINATE_PRE_SESSION;
+        if (send_client_reply)
+        {
+            rv = scp_send_create_session_response(psi->client_trans,
+                                                  status, display, &guid);
+        }
     }
 
     return rv;
@@ -564,7 +453,7 @@ process_create_session_request(struct sesman_con *sc)
 /******************************************************************************/
 
 static int
-process_list_sessions_request(struct sesman_con *sc)
+process_list_sessions_request(struct pre_session_item *psi)
 {
     int rv = 0;
 
@@ -572,9 +461,9 @@ process_list_sessions_request(struct sesman_con *sc)
     unsigned int cnt = 0;
     unsigned int i;
 
-    if (sc->auth_info == NULL)
+    if (psi->login_state == E_PS_LOGIN_NOT_LOGGED_IN)
     {
-        rv = scp_send_list_sessions_response(sc->t,
+        rv = scp_send_list_sessions_response(psi->client_trans,
                                              E_SCP_LS_NOT_LOGGED_IN,
                                              NULL);
     }
@@ -582,14 +471,13 @@ process_list_sessions_request(struct sesman_con *sc)
     {
         LOG(LOG_LEVEL_INFO,
             "Received request from %s to list sessions for user %s",
-            sc->peername, sc->username);
+            psi->peername, psi->username);
 
-        info = session_list_get_byuid(sc->uid, &cnt,
-                                      SESMAN_SESSION_STATUS_ALL);
+        info = session_list_get_byuid(psi->uid, &cnt, 0);
 
         for (i = 0; rv == 0 && i < cnt; ++i)
         {
-            rv = scp_send_list_sessions_response(sc->t,
+            rv = scp_send_list_sessions_response(psi->client_trans,
                                                  E_SCP_LS_SESSION_INFO,
                                                  &info[i]);
         }
@@ -597,7 +485,7 @@ process_list_sessions_request(struct sesman_con *sc)
 
         if (rv == 0)
         {
-            rv = scp_send_list_sessions_response(sc->t,
+            rv = scp_send_list_sessions_response(psi->client_trans,
                                                  E_SCP_LS_END_OF_LIST,
                                                  NULL);
         }
@@ -609,54 +497,54 @@ process_list_sessions_request(struct sesman_con *sc)
 /******************************************************************************/
 
 static int
-process_close_connection_request(struct sesman_con *sc)
+process_close_connection_request(struct pre_session_item *psi)
 {
     int rv = 0;
 
     LOG(LOG_LEVEL_INFO, "Received request to close connection from %s",
-        sc->peername);
+        psi->peername);
 
     /* Expecting no more client messages. Close the connection
      * after returning from this callback */
-    sc->close_requested = 1;
+    psi->dispatcher_action = E_PSD_TERMINATE_PRE_SESSION;
     return rv;
 }
 
 /******************************************************************************/
 int
-scp_process(struct sesman_con *sc)
+scp_process(struct pre_session_item *psi)
 {
     enum scp_msg_code msgno;
     int rv = 0;
 
-    switch ((msgno = scp_msg_in_get_msgno(sc->t)))
+    switch ((msgno = scp_msg_in_get_msgno(psi->client_trans)))
     {
         case E_SCP_SET_PEERNAME_REQUEST:
-            rv = process_set_peername_request(sc);
+            rv = process_set_peername_request(psi);
             break;
 
         case E_SCP_SYS_LOGIN_REQUEST:
-            rv = process_sys_login_request(sc);
+            rv = process_sys_login_request(psi);
             break;
 
         case E_SCP_UDS_LOGIN_REQUEST:
-            rv = process_uds_login_request(sc);
+            rv = process_uds_login_request(psi);
             break;
 
         case E_SCP_LOGOUT_REQUEST:
-            rv = process_logout_request(sc);
+            rv = process_logout_request(psi);
             break;
 
         case E_SCP_CREATE_SESSION_REQUEST:
-            rv = process_create_session_request(sc);
+            rv = process_create_session_request(psi);
             break;
 
         case E_SCP_LIST_SESSIONS_REQUEST:
-            rv = process_list_sessions_request(sc);
+            rv = process_list_sessions_request(psi);
             break;
 
         case E_SCP_CLOSE_CONNECTION_REQUEST:
-            rv = process_close_connection_request(sc);
+            rv = process_close_connection_request(psi);
             break;
 
         default:
@@ -668,3 +556,4 @@ scp_process(struct sesman_con *sc)
     }
     return rv;
 }
+

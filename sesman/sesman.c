@@ -35,23 +35,26 @@
 
 #include "sesman_auth.h"
 #include "sesman_config.h"
+#include "eicp.h"
+#include "eicp_process.h"
+#include "ercp.h"
+#include "ercp_process.h"
+#include "pre_session_list.h"
 #include "session_list.h"
 #include "lock_uds.h"
 #include "os_calls.h"
 #include "scp.h"
 #include "scp_process.h"
+#include "sesexec_control.h"
 #include "sig.h"
 #include "string_calls.h"
 #include "trans.h"
 #include "xrdp_configure_options.h"
 
 /**
- * Maximum number of short-lived connections to sesman
- *
- * At the moment, all connections to sesman are short-lived. This may change
- * in the future
+ * Maximum number of pre-session items
  */
-#define MAX_SHORT_LIVED_CONNECTIONS 16
+#define MAX_PRE_SESSION_ITEMS 16
 
 /**
  * Define the mode of operation of the program
@@ -74,7 +77,6 @@ struct sesman_startup_params
 };
 
 struct config_sesman *g_cfg;
-unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 static tintptr g_term_event = 0;
 static tintptr g_sigchld_event = 0;
 static tintptr g_reload_event = 0;
@@ -112,68 +114,6 @@ static int nocase_matches(const char *candidate, ...)
 
     va_end(vl);
     return result;
-}
-
-/**
- * Allocates a sesman_con struct
- *
- * @param trans Pointer to  newly-allocated transport
- * @return struct sesman_con pointer
- */
-static struct sesman_con *
-alloc_connection(struct trans *t)
-{
-    struct sesman_con *result;
-
-    if ((result = g_new0(struct sesman_con, 1)) != NULL)
-    {
-        g_snprintf(result->peername, sizeof(result->peername), "%s", "unknown");
-        result->t = t;
-        result->auth_retry_count = g_cfg->sec.login_retry;
-    }
-
-    return result;
-}
-
-/**
- * Deletes a sesman_con struct, freeing resources
- *
- * After this call, the passed-in pointer is invalid and must not be
- * referenced.
- *
- * Any auth_info struct found in the sesman_con is also deallocated.
- *
- * @param sc struct to de-allocate
- */
-static void
-delete_connection(struct sesman_con *sc)
-{
-    if (sc != NULL)
-    {
-        trans_delete(sc->t);
-        if (sc->auth_info != NULL)
-        {
-            auth_end(sc->auth_info);
-        }
-        g_free(sc->username);
-        g_free(sc->ip_addr);
-        g_free(sc);
-    }
-}
-
-/*****************************************************************************/
-int
-sesman_set_connection_peername(struct sesman_con *sc, const char *name)
-{
-    int rv = 1;
-
-    if (sc != NULL && name != NULL)
-    {
-        g_snprintf(sc->peername, sizeof(sc->peername), "%s", name);
-        rv = 0;
-    }
-
-    return rv;
 }
 
 /*****************************************************************************/
@@ -301,40 +241,25 @@ static int sesman_listen_test(struct config_sesman *cfg)
 
 /******************************************************************************/
 int
-sesman_close_all(unsigned int flags)
+sesman_close_all(void)
 {
-    int index;
-    struct sesman_con *sc;
-
     LOG_DEVEL(LOG_LEVEL_TRACE, "sesman_close_all:");
 
+    pre_session_list_cleanup();
+    session_list_cleanup();
+
+    g_delete_wait_obj(g_reload_event);
+    g_delete_wait_obj(g_sigchld_event);
+    g_delete_wait_obj(g_term_event);
 
     sesman_delete_listening_transport();
-    for (index = 0; index < g_con_list->count; index++)
-    {
-        sc = (struct sesman_con *) list_get_item(g_con_list, index);
-        if (sc != NULL && (flags & SCA_CLOSE_AUTH_INFO) == 0)
-        {
-            // Prevent delete_connection() closing the auth_info down
-            sc->auth_info = NULL;
-        }
-        delete_connection(sc);
-    }
+
     return 0;
 }
 
 /******************************************************************************/
-void
-sesman_delete_wait_objects(void)
-{
-    g_delete_wait_obj(g_reload_event);
-    g_delete_wait_obj(g_sigchld_event);
-    g_delete_wait_obj(g_term_event);
-}
-
-/******************************************************************************/
-static int
-sesman_data_in(struct trans *self)
+int
+sesman_scp_data_in(struct trans *self)
 {
     int rv;
     int available;
@@ -343,8 +268,10 @@ sesman_data_in(struct trans *self)
 
     if (rv == 0 && available)
     {
-        struct sesman_con *sc = (struct sesman_con *)self->callback_data;
-        if ((rv = scp_process(sc)) != 0)
+        struct pre_session_item *psi;
+        psi = (struct pre_session_item *)self->callback_data;
+
+        if ((rv = scp_process(psi)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "sesman_data_in: scp_process_msg failed");
         }
@@ -358,28 +285,77 @@ sesman_data_in(struct trans *self)
 static int
 sesman_listen_conn_in(struct trans *self, struct trans *new_self)
 {
-    struct sesman_con *sc;
-    if (g_con_list->count >= MAX_SHORT_LIVED_CONNECTIONS)
+    struct pre_session_item *psi;
+    if (pre_session_list_get_count() >= MAX_PRE_SESSION_ITEMS)
     {
-        LOG(LOG_LEVEL_ERROR, "sesman_data_in: error, too many "
+        LOG(LOG_LEVEL_ERROR, "sesman_listen_conn_in: error, too many "
             "connections, rejecting");
         trans_delete(new_self);
     }
-    else if ((sc = alloc_connection(new_self)) == NULL ||
-             scp_init_trans(new_self) != 0)
+    else if ((psi = pre_session_list_new()) == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "sesman_data_in: No memory to allocate "
             "new connection");
-        delete_connection(sc);
+        trans_delete(new_self);
+    }
+    else if (scp_init_trans(new_self) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "sesman_data_in: Can't init SCP connection");
+        trans_delete(new_self);
     }
     else
     {
-        new_self->callback_data = (void *)sc;
-        new_self->trans_data_in = sesman_data_in;
-        list_add_item(g_con_list, (intptr_t) sc);
+        new_self->callback_data = (void *)psi;
+        new_self->trans_data_in = sesman_scp_data_in;
+        psi->client_trans = new_self;
     }
 
     return 0;
+}
+
+/******************************************************************************/
+int
+sesman_eicp_data_in(struct trans *self)
+{
+    int rv;
+    int available;
+
+    rv = eicp_msg_in_check_available(self, &available);
+
+    if (rv == 0 && available)
+    {
+        struct pre_session_item *psi;
+        psi = (struct pre_session_item *)self->callback_data;
+        if ((rv = eicp_process(psi)) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_eicp_data_in: eicp_process_msg failed");
+        }
+        eicp_msg_in_reset(self);
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+int
+sesman_ercp_data_in(struct trans *self)
+{
+    int rv;
+    int available;
+
+    rv = ercp_msg_in_check_available(self, &available);
+
+    if (rv == 0 && available)
+    {
+        struct session_item *si = (struct session_item *)self->callback_data;
+        if ((rv = ercp_process(si)) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_ercp_data_in: ercp_process_msg failed");
+        }
+        ercp_msg_in_reset(self);
+    }
+
+    return rv;
 }
 
 /******************************************************************************/
@@ -396,9 +372,21 @@ set_term_event(int sig)
     }
 }
 
+/*****************************************************************************/
+/* No-op signal handler.
+ */
+static void
+sig_no_op(int sig)
+{
+    /* no-op */
+}
+
 /******************************************************************************/
 /**
- * Informs the main loop a SIGCHLD has been received
+ * Catch a SIGCHLD and ignore the main loop
+ *
+ * In theory we could use waitpid() in the signal handler, but that
+ * would prevent us adding any logging
  */
 static void
 set_sigchld_event(int sig)
@@ -438,7 +426,7 @@ sesman_delete_listening_transport(void)
     }
     g_list_trans = NULL;
 
-    unlock_uds(g_list_trans_lock);
+    unlock_uds(g_list_trans_lock); // Won't unlock anything for a child process
     g_list_trans_lock = NULL;
 }
 
@@ -490,6 +478,13 @@ sesman_create_listening_transport(const struct config_sesman *cfg)
 }
 
 /******************************************************************************/
+int
+sesman_is_term(void)
+{
+    return g_is_wait_obj_set(g_term_event);
+}
+
+/******************************************************************************/
 /**
  *
  * @brief Starts sesman main loop
@@ -500,12 +495,7 @@ sesman_main_loop(void)
 {
     int error;
     int robjs_count;
-    int wobjs_count;
-    int timeout;
-    int index;
-    intptr_t robjs[32];
-    intptr_t wobjs[32];
-    struct sesman_con *scon;
+    intptr_t robjs[1024];
 
     g_con_list = list_create();
     if (g_con_list == NULL)
@@ -525,47 +515,41 @@ sesman_main_loop(void)
     error = 0;
     while (!error)
     {
-        timeout = -1;
         robjs_count = 0;
         robjs[robjs_count++] = g_term_event;
         robjs[robjs_count++] = g_sigchld_event;
         robjs[robjs_count++] = g_reload_event;
-        wobjs_count = 0;
-        for (index = 0; index < g_con_list->count; index++)
-        {
-            scon = (struct sesman_con *)list_get_item(g_con_list, index);
-            if (scon != NULL)
-            {
-                error = trans_get_wait_objs_rw(scon->t,
-                                               robjs, &robjs_count,
-                                               wobjs, &wobjs_count, &timeout);
-                if (error != 0)
-                {
-                    LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                        "trans_get_wait_objs_rw failed");
-                    break;
-                }
-            }
-        }
-        if (error != 0)
-        {
-            break;
-        }
+
         if (g_list_trans != NULL)
         {
             /* g_list_trans might be NULL on a reconfigure if sesman
              * is unable to listen again */
-            error = trans_get_wait_objs_rw(g_list_trans, robjs, &robjs_count,
-                                           wobjs, &wobjs_count, &timeout);
+            error = trans_get_wait_objs(g_list_trans, robjs, &robjs_count);
             if (error != 0)
             {
                 LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                    "trans_get_wait_objs_rw failed");
+                    "trans_get_wait_objs failed");
                 break;
             }
         }
 
-        if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
+        error = pre_session_list_get_wait_objs(robjs, &robjs_count);
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "pre_session_list_get_wait_objs failed");
+            break;
+        }
+
+        error = session_list_get_wait_objs(robjs, &robjs_count);
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "session_list_get_wait_objs failed");
+            break;
+        }
+
+        if (g_obj_wait(robjs, robjs_count, NULL, 0, -1) != 0)
         {
             /* should not get here */
             LOG(LOG_LEVEL_WARNING, "sesman_main_loop: "
@@ -580,43 +564,20 @@ sesman_main_loop(void)
             break;
         }
 
-        if (g_is_wait_obj_set(g_sigchld_event)) /* A child has exited */
+        if (g_is_wait_obj_set(g_sigchld_event)) /* term */
         {
             g_reset_wait_obj(g_sigchld_event);
-            sig_sesman_session_end();
+            // Prevent any zombies from hanging around
+            while (g_waitchild(NULL) > 0)
+            {
+                ;
+            }
         }
 
         if (g_is_wait_obj_set(g_reload_event)) /* We're asked to reload */
         {
             g_reset_wait_obj(g_reload_event);
             sig_sesman_reload_cfg();
-        }
-
-        index = 0;
-        while (index < g_con_list->count)
-        {
-            int remove_con = 0;
-            scon = (struct sesman_con *)list_get_item(g_con_list, index);
-            if (trans_check_wait_objs(scon->t) != 0)
-            {
-                LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
-                    "trans_check_wait_objs failed, removing trans");
-                remove_con = 1;
-            }
-            else if (scon->close_requested)
-            {
-                remove_con = 1;
-            }
-
-            if (remove_con)
-            {
-                delete_connection(scon);
-                list_remove_item(g_con_list, index);
-            }
-            else
-            {
-                ++index;
-            }
         }
 
         if (g_list_trans != NULL)
@@ -629,11 +590,25 @@ sesman_main_loop(void)
                 break;
             }
         }
+
+        error = pre_session_list_check_wait_objs();
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "pre_session_list_check_wait_objs failed");
+            break;
+        }
+
+        error = session_list_check_wait_objs();
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sesman_main_loop: "
+                "session_list_check_wait_objs failed");
+            break;
+        }
     }
 
-    sesman_close_all(SCA_CLOSE_AUTH_INFO);
-    list_delete(g_con_list);
-    return 0;
+    return error;
 }
 
 /*****************************************************************************/
@@ -642,7 +617,7 @@ print_version(void)
 {
     g_writeln("xrdp-sesman %s", PACKAGE_VERSION);
     g_writeln("  The xrdp session manager");
-    g_writeln("  Copyright (C) 2004-2020 Jay Sorg, "
+    g_writeln("  Copyright (C) 2004-2023 Jay Sorg, "
               "Neutrino Labs, and all contributors.");
     g_writeln("  See https://github.com/neutrinolabs/xrdp for more information.");
     g_writeln("%s", "");
@@ -715,16 +690,14 @@ main(int argc, char **argv)
     enum logReturns log_error;
     char text[256];
     char pid_file[256];
-    char default_sesman_ini[256];
     struct sesman_startup_params startup_params = {0};
     int errored_argc;
     int daemon;
 
     g_init("xrdp-sesman");
     g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
-    g_snprintf(default_sesman_ini, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
-    startup_params.sesman_ini = default_sesman_ini;
+    startup_params.sesman_ini = DEFAULT_SESMAN_INI;
 
     errored_argc = sesman_process_params(argc, argv, &startup_params);
     if (errored_argc > 0)
@@ -922,10 +895,11 @@ main(int argc, char **argv)
     g_snprintf(text, 255, "xrdp_sesman_%8.8x_reload", g_pid);
     g_reload_event = g_create_wait_obj(text);
 
-    g_signal_hang_up(set_reload_event); /* SIGHUP  */
     g_signal_user_interrupt(set_term_event); /* SIGINT  */
     g_signal_terminate(set_term_event); /* SIGTERM */
+    g_signal_pipe(sig_no_op);          /* SIGPIPE */
     g_signal_child_stop(set_sigchld_event); /* SIGCHLD */
+    g_signal_hang_up(set_reload_event); /* SIGHUP  */
 
     if (daemon)
     {
@@ -967,11 +941,10 @@ main(int argc, char **argv)
         g_chmod_hex("/tmp/.X11-unix", 0x1777);
     }
 
-    error = session_module_init();
-    if (error == 0)
+    if ((error = pre_session_list_init(MAX_PRE_SESSION_ITEMS)) == 0 &&
+            (error = session_list_init()) == 0)
     {
         error = sesman_main_loop();
-        session_module_cleanup();
     }
 
     /* clean up PID file on exit */
@@ -980,12 +953,9 @@ main(int argc, char **argv)
         g_file_delete(pid_file);
     }
 
-    sesman_delete_wait_objects();
+    sesman_close_all();
 
-    if (!daemon)
-    {
-        log_end();
-    }
+    log_end();
 
     config_free(g_cfg);
     g_deinit();

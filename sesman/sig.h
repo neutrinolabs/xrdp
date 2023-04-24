@@ -35,12 +35,4 @@
 void
 sig_sesman_reload_cfg(void);
 
-/**
- *
- * @brief SIGCHLD handling code
- *
- */
-void
-sig_sesman_session_end(void);
-
 #endif
