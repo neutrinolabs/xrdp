@@ -103,8 +103,7 @@ wait_for_xserver(uid_t uid,
         pid_t pid = g_fork();
         if (pid < 0)
         {
-            LOG(LOG_LEVEL_ERROR, "Can't create pipe : %s",
-                g_get_strerror());
+            // Error already logged
         }
         else if (pid == 0)
         {
