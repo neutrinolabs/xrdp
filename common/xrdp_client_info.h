@@ -218,6 +218,7 @@ struct xrdp_client_info
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
-#define CLIENT_INFO_CURRENT_VERSION 20230423
+/* also used for changes to all the xrdp installed headers */
+#define CLIENT_INFO_CURRENT_VERSION 20230425
 
 #endif
