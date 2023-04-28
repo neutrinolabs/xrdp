@@ -3,7 +3,6 @@
 #endif
 
 #include <stdlib.h>
-#include <check.h>
 #include "test_libxrdp.h"
 
 int main (void)
