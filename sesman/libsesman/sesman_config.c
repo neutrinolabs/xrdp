@@ -179,7 +179,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     /* resetting the struct */
     cf->listen_port[0] = '\0';
     cf->enable_user_wm = 0;
-    cf->user_wm[0] = '\0';
+    cf->user_wm = g_strdup("");
     cf->default_wm = 0;
     cf->auth_file_path = 0;
     cf->reconnect_sh = 0;
@@ -197,7 +197,8 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         }
         else if (0 == g_strcasecmp(param, SESMAN_CFG_USERWM))
         {
-            g_strncpy(cf->user_wm, val, sizeof(cf->user_wm) - 1);
+            g_free(cf->user_wm);
+            cf->user_wm = g_strdup(val);
         }
         else if (0 == g_strcasecmp(param, SESMAN_CFG_ENABLE_USERWM))
         {
@@ -726,6 +727,7 @@ config_free(struct config_sesman *cs)
     {
         g_free(cs->sesman_ini);
         g_free(cs->default_wm);
+        g_free(cs->user_wm);
         g_free(cs->reconnect_sh);
         g_free(cs->auth_file_path);
         list_delete(cs->vnc_params);
