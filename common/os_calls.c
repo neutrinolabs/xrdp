@@ -1721,6 +1721,8 @@ g_create_wait_obj(const char *name)
         close(fds[1]);
         return 0;
     }
+    g_file_set_cloexec(fds[0], 1);
+    g_file_set_cloexec(fds[1], 1);
     return (fds[1] << 16) | fds[0];
 #endif
 }
@@ -2247,6 +2249,102 @@ g_file_lock(int fd, int start, int len)
 
     return 1;
 #endif
+}
+
+/*****************************************************************************/
+/* Gets the close-on-exec flag for a file descriptor */
+int
+g_file_get_cloexec(int fd)
+{
+    int rv = 0;
+    int flags = fcntl(fd, F_GETFD);
+    if (flags >= 0 && (flags & FD_CLOEXEC) != 0)
+    {
+        rv = 1;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+/* Sets/clears the close-on-exec flag for a file descriptor */
+/* return boolean */
+int
+g_file_set_cloexec(int fd, int status)
+{
+    int rv = 0;
+    int current_flags = fcntl(fd, F_GETFD);
+    if (current_flags >= 0)
+    {
+        int new_flags;
+        if (status)
+        {
+            new_flags = current_flags | FD_CLOEXEC;
+        }
+        else
+        {
+            new_flags = current_flags & ~FD_CLOEXEC;
+        }
+        if (new_flags != current_flags)
+        {
+            rv = (fcntl(fd, F_SETFD, new_flags) >= 0);
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+struct list *
+g_get_open_fds(int min, int max)
+{
+    struct list *result = list_create();
+
+    if (result != NULL)
+    {
+        if (max < 0)
+        {
+            max = sysconf(_SC_OPEN_MAX);
+        }
+
+        if (max > min)
+        {
+            struct pollfd *fds = g_new0(struct pollfd, max - min);
+            int i;
+
+            if (fds == NULL)
+            {
+                goto nomem;
+            }
+
+            for (i = min ; i < max ; ++i)
+            {
+                fds[i - min].fd = i;
+            }
+
+            if (poll(fds, max - min, 0) >= 0)
+            {
+                for (i = min ; i < max ; ++i)
+                {
+                    if (fds[i - min].revents != POLLNVAL)
+                    {
+                        // Descriptor is open
+                        if (!list_add_item(result, i))
+                        {
+                            goto nomem;
+                        }
+                    }
+                }
+            }
+            g_free(fds);
+        }
+    }
+
+    return result;
+
+nomem:
+    list_delete(result);
+    return NULL;
 }
 
 /*****************************************************************************/

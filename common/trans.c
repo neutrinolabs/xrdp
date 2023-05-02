@@ -355,6 +355,7 @@ trans_check_wait_objs(struct trans *self)
                     in_trans->type1 = TRANS_TYPE_SERVER;
                     in_trans->status = TRANS_STATUS_UP;
                     in_trans->is_term = self->is_term;
+                    g_file_set_cloexec(in_sck, 1);
                     g_sck_set_non_blocking(in_sck);
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
@@ -796,6 +797,7 @@ trans_connect(struct trans *self, const char *server, const char *port,
         }
 
         /* Try to connect asynchronously */
+        g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
         error = f_connect(self->sck, server, port);
         if (error == 0)
@@ -881,6 +883,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
             return 1;
         }
 
+        g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
 
         if (g_tcp_bind_address(self->sck, port, address) == 0)
@@ -905,6 +908,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
             return 1;
         }
 
+        g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
 
         if (g_tcp_local_bind(self->sck, port) == 0)
@@ -928,6 +932,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
             return 1;
         }
 
+        g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
 
         if (g_sck_vsock_bind_address(self->sck, port, address) == 0)
@@ -947,6 +952,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
         {
             return 1;
         }
+        g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
         if (g_tcp4_bind_address(self->sck, port, address) == 0)
         {
@@ -965,6 +971,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
         {
             return 1;
         }
+        g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
         if (g_tcp6_bind_address(self->sck, port, address) == 0)
         {

@@ -215,6 +215,18 @@ int      g_file_write(int fd, const char *ptr, int len);
 int      g_file_seek(int fd, int offset);
 int      g_file_lock(int fd, int start, int len);
 int      g_file_duplicate_on(int fd, int target_fd);
+int      g_file_get_cloexec(int fd);
+int      g_file_set_cloexec(int fd, int status);
+/**
+ * Get a list of open file descriptors
+ *
+ * @param min Min FD to consider
+ * @param max Max FD to consider (+1), or -1 for no limit
+ * @result Array of file descriptors, in ascending order.
+ *
+ * Call delete_list() on the result when you've finished with it.
+ */
+struct list *g_get_open_fds(int min, int max);
 int      g_chmod_hex(const char *filename, int flags);
 int      g_umask_hex(int flags);
 int      g_chown(const char *name, int uid, int gid);

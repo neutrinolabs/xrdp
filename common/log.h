@@ -149,6 +149,8 @@ enum logReturns
 #define LOG_HEXDUMP(log_level, message, buffer, length)  \
     log_hexdump_with_location(__func__, __FILE__, __LINE__, log_level, message, buffer, length)
 
+#define LOG_DEVEL_LEAKING_FDS(exe,min,max) log_devel_leaking_fds(exe,min,max)
+
 #else
 #define LOG(log_level, args...) log_message(log_level, args)
 #define LOG_HEXDUMP(log_level, message, buffer, length)  \
@@ -160,6 +162,7 @@ enum logReturns
 #define LOG_DEVEL(log_level, args...) UNUSED_VAR(LOG_STARTUP_OK)
 #define LOG_DEVEL_HEXDUMP(log_level, message, buffer, length) UNUSED_VAR(LOG_STARTUP_OK)
 
+#define LOG_DEVEL_LEAKING_FDS(exe,min,max)
 #endif
 
 /* Flags values for log_start() */
@@ -440,4 +443,22 @@ char *getLogFile(char *replybuf, int bufsize);
  * @return
  */
 char *getFormattedDateTime(char *replybuf, int bufsize);
+
+#ifdef USE_DEVEL_LOGGING
+/**
+ * Log open file descriptors not cloexec before execing another program
+ *
+ * Used to ensure file descriptors aren't leaking when running
+ * non-privileged executables
+ *
+ * Use the LOG_DEVEL_LEAKING_FDS() macro to invoke this function
+ *
+ * @param exe Executable we're about to launch
+ * @param min Minimum FD to consider
+ * @param max Maximum FD to consider + 1, or -1 for no upper FD
+ */
+void
+log_devel_leaking_fds(const char *exe, int min, int max);
+#endif
+
 #endif
