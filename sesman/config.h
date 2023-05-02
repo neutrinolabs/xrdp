@@ -233,9 +233,9 @@ struct config_sesman
     char *default_wm;
     /**
      * @var user_wm
-     * @brief Default window manager
+     * @brief Default window manager.
      */
-    char user_wm[32];
+    char *user_wm;
     /**
      * @var reconnect_sh
      * @brief Script executed when reconnected
