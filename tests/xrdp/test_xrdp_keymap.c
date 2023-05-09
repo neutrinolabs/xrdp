@@ -33,6 +33,9 @@ START_TEST(test_keymap_load__ini_vs_toml)
     /* NOTE: For strict comparsion, we should create a compare function */
     ck_assert_mem_eq(keymap_ini, keymap_toml, sizeof(struct xrdp_keymap));
 
+    free(keymap_ini);
+    free(keymap_toml);
+    free(keymap_zero);
 }
 END_TEST
 
