@@ -95,24 +95,3 @@ sig_sesman_reload_cfg(void)
 
     LOG(LOG_LEVEL_INFO, "configuration reloaded, log subsystem restarted");
 }
-
-/******************************************************************************/
-void
-sig_sesman_session_end(void)
-{
-    int pid;
-
-    LOG(LOG_LEVEL_DEBUG, "receiving SIGCHLD");
-    do
-    {
-        pid = g_waitchild(NULL);
-
-        if (pid > 0)
-        {
-            LOG(LOG_LEVEL_INFO, "Process %d has exited", pid);
-
-            session_list_kill(pid);
-        }
-    }
-    while (pid > 0);
-}

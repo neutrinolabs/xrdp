@@ -77,6 +77,7 @@
 #define SESMAN_CFG_SESS_IDLE_LIMIT   "IdleTimeLimit"
 #define SESMAN_CFG_SESS_DISC_LIMIT   "DisconnectedTimeLimit"
 #define SESMAN_CFG_SESS_X11DISPLAYOFFSET "X11DisplayOffset"
+#define SESMAN_CFG_SESS_MAX_DISPLAY  "MaxDisplayNumber"
 
 #define SESMAN_CFG_SESS_POLICY_S "Policy"
 #define SESMAN_CFG_SESS_POLICY_DFLT_S "Default"
@@ -410,6 +411,8 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
 
     /* setting defaults */
     se->x11_display_offset = 10;
+    // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml`
+    se->max_display_number = 63;
     se->max_sessions = 0;
     se->max_idle_time = 0;
     se->max_disc_time = 0;
@@ -425,12 +428,29 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_X11DISPLAYOFFSET))
         {
-            se->x11_display_offset = g_atoi(value);
+            int x11off = g_atoi(value);
+            if (x11off >= 0)
+            {
+                se->x11_display_offset = x11off;
+            }
+        }
+
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX_DISPLAY))
+        {
+            int mdn = g_atoi(value);
+            if (mdn > 0)
+            {
+                se->max_display_number = mdn;
+            }
         }
 
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX))
         {
-            se->max_sessions = g_atoi(value);
+            int sm = g_atoi(value);
+            if (sm >= 0)
+            {
+                se->max_sessions = sm;
+            }
         }
 
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_KILL_DISC))

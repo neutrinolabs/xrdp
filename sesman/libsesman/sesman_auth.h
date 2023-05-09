@@ -53,6 +53,7 @@ auth_userpass(const char *user, const char *pass,
  *
  * @param uid User ID
  * @param[out] Error code for the operation. E_SCP_LOGIN_OK on success.
+ *             Can be NULL if this information isn't required.
  * @return auth handle on success, NULL on failure
  *
  */
@@ -66,19 +67,11 @@ auth_uds(const char *user, enum scp_login_status *errorcode);
  * @param display_num Display number
  * @return 0 on success, 1 on failure
  *
+ * The resources allocated when the session is started are de-allocated
+ * by auth_end() - there is no separate way to do this.
  */
 int
 auth_start_session(struct auth_info *auth_info, int display_num);
-
-/**
- *
- * @brief Stops a session previously started with auth_start_session()
- * @param auth_info. Auth handle created by auth_userpass
- * @return 0 on success, 1 on failure
- *
- */
-int
-auth_stop_session(struct auth_info *auth_info);
 
 /**
  *

@@ -230,14 +230,6 @@ auth_start_session(struct auth_info *auth_info, int display_num)
 }
 
 /******************************************************************************/
-/* returns error */
-int
-auth_stop_session(struct auth_info *auth_info)
-{
-    return 0;
-}
-
-/******************************************************************************/
 int
 auth_set_env(struct auth_info *auth_info)
 {

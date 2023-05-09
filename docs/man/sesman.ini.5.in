@@ -156,6 +156,13 @@ Sets the maximum number of simultaneous sessions. If not set or set to
 \fI0\fR, unlimited session are allowed.
 
 .TP
+\fBMaxDisplayNumber\fR=\fInumber\fR
+Sets the maximum number which can be assigned to an X11 $DISPLAY. The
+default is compatible with IANA TCP port allocations. If you are not
+allowing TCP connections to your X servers you may safely increase this
+number.
+
+.TP
 \fBKillDisconnected\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
 within \fBDisconnectedTimeLimit\fR seconds after the user disconnects.

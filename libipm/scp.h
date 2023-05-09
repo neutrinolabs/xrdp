@@ -125,7 +125,7 @@ scp_connect(const char *port,
  * Converts a standard trans connected to an SCP endpoint to an SCP transport
  *
  * If you are running on a client, you may wish to use
- * scp_send_set_peername_request() after the commnect to inform the
+ * scp_send_set_peername_request() after the connect to inform the
  * server who you are.
  *
  * @param trans connected endpoint
@@ -133,6 +133,22 @@ scp_connect(const char *port,
  */
 int
 scp_init_trans(struct trans *trans);
+
+/**
+ * Creates an SCP transport from a file descriptor
+ *
+ * If you are running on a client, you may wish to use
+ * scp_send_set_peername_request() after the connect to inform the
+ * server who you are.
+ *
+ * @param fd file descriptor
+ * @param trans_type TRANS_TYPE_SERVER or TRANS_TYPE_CLIENT
+ * @param term_func Function to poll during connection for program
+ *         termination, or NULL for none.
+ * @return SCP transport, or NULL
+ */
+struct trans *
+scp_init_trans_from_fd(int fd, int trans_type, int (*term_func)(void));
 
 /**
  * Checks an SCP transport to see if a complete message is

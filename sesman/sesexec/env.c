@@ -35,7 +35,7 @@
 #include "list.h"
 #include "log.h"
 #include "os_calls.h"
-#include "sesman.h"
+#include "sesexec.h"
 #include "ssl_calls.h"
 #include "string_calls.h"
 #include "xrdp_sockets.h"
@@ -62,10 +62,10 @@ env_check_password_file(const char *filename, const char *passwd)
     ssl_sha1_transform(sha1, passwd, passwd_bytes);
     ssl_sha1_complete(sha1, passwd_hash);
     ssl_sha1_info_delete(sha1);
-    g_snprintf(passwd_hash_text, 39, "%2.2x%2.2x%2.2x%2.2x",
+    g_snprintf(passwd_hash_text, sizeof(passwd_hash_text),
+               "%2.2x%2.2x%2.2x%2.2x",
                (tui8)passwd_hash[0], (tui8)passwd_hash[1],
                (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
-    passwd_hash_text[39] = 0;
     passwd = passwd_hash_text;
 
     /* create file from password */
@@ -138,28 +138,28 @@ env_set_user(int uid, char **passwd_file, int display,
             g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
         }
 #endif
-        g_mk_socket_path(0);
-
         if (error == 0)
         {
             g_setenv("SHELL", pw_shell, 1);
             g_setenv("USER", pw_username, 1);
             g_setenv("LOGNAME", pw_username, 1);
-            g_sprintf(text, "%d", uid);
+            g_snprintf(text, sizeof(text), "%d", uid);
             g_setenv("UID", text, 1);
             g_setenv("HOME", pw_dir, 1);
             g_set_current_dir(pw_dir);
-            g_sprintf(text, ":%d.0", display);
+            g_snprintf(text, sizeof(text), ":%d.0", display);
             g_setenv("DISPLAY", text, 1);
-            g_setenv("XRDP_SESSION", "1", 1);
+            // Use our PID as the XRDP_SESSION value
+            g_snprintf(text, sizeof(text), "%d", g_pid);
+            g_setenv("XRDP_SESSION", text, 1);
             /* XRDP_SOCKET_PATH should be set even here. It's used by
              * xorgxrdp and the pulseaudio plugin */
             g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
             /* pulse sink socket */
-            g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_OUT_BASE_STR, display);
+            g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR, display);
             g_setenv("XRDP_PULSE_SINK_SOCKET", text, 1);
             /* pulse source socket */
-            g_snprintf(text, sizeof(text) - 1, CHANSRV_PORT_IN_BASE_STR, display);
+            g_snprintf(text, sizeof(text), CHANSRV_PORT_IN_BASE_STR, display);
             g_setenv("XRDP_PULSE_SOURCE_SOCKET", text, 1);
             if ((env_names != 0) && (env_values != 0) &&
                     (env_names->count == env_values->count))
@@ -191,29 +191,33 @@ env_set_user(int uid, char **passwd_file, int display,
 
                     len = g_snprintf(NULL, 0, "%s/.vnc/sesman_passwd-%s@%s:%d",
                                      pw_dir, pw_username, hostname, display);
+                    ++len; // Allow for terminator
 
-                    *passwd_file = (char *) g_malloc(len + 1, 1);
+                    *passwd_file = (char *) g_malloc(len, 1);
                     if (*passwd_file != NULL)
                     {
                         /* Try legacy names first, remove if found */
-                        g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd:%d",
-                                  pw_dir, pw_username, display);
+                        g_snprintf(*passwd_file, len,
+                                   "%s/.vnc/sesman_%s_passwd:%d",
+                                   pw_dir, pw_username, display);
                         if (g_file_exist(*passwd_file))
                         {
                             LOG(LOG_LEVEL_WARNING, "Removing old "
                                 "password file %s", *passwd_file);
                             g_file_delete(*passwd_file);
                         }
-                        g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd",
-                                  pw_dir, pw_username);
+                        g_snprintf(*passwd_file, len,
+                                   "%s/.vnc/sesman_%s_passwd",
+                                   pw_dir, pw_username);
                         if (g_file_exist(*passwd_file))
                         {
                             LOG(LOG_LEVEL_WARNING, "Removing insecure "
                                 "password file %s", *passwd_file);
                             g_file_delete(*passwd_file);
                         }
-                        g_sprintf(*passwd_file, "%s/.vnc/sesman_passwd-%s@%s:%d",
-                                  pw_dir, pw_username, hostname, display);
+                        g_snprintf(*passwd_file, len,
+                                   "%s/.vnc/sesman_passwd-%s@%s:%d",
+                                   pw_dir, pw_username, hostname, display);
                     }
                 }
                 else
@@ -221,10 +225,12 @@ env_set_user(int uid, char **passwd_file, int display,
                     /* we use auth_file_path as requested */
                     len = g_snprintf(NULL, 0, g_cfg->auth_file_path, pw_username);
 
-                    *passwd_file = (char *) g_malloc(len + 1, 1);
+                    ++len; // Allow for terminator
+                    *passwd_file = (char *) g_malloc(len, 1);
                     if (*passwd_file != NULL)
                     {
-                        g_sprintf(*passwd_file, g_cfg->auth_file_path, pw_username);
+                        g_snprintf(*passwd_file, len,
+                                   g_cfg->auth_file_path, pw_username);
                     }
                 }
 

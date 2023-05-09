@@ -195,7 +195,38 @@ scp_init_trans(struct trans *trans)
 }
 
 /*****************************************************************************/
+struct trans *
+scp_init_trans_from_fd(int fd, int trans_type, int (*term_func)(void))
+{
+    struct trans *result;
+    if ((result = trans_create(TRANS_MODE_UNIX, 128, 128)) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't create SCP transport [%s]",
+            g_get_strerror());
+    }
+    else
+    {
+        result->sck = fd;
+        result->type1 = trans_type;
+        result->status = TRANS_STATUS_UP;
+        result->is_term = term_func;
 
+        // Make sure child processes don't inherit our FD
+        (void)g_file_set_cloexec(result->sck, 1);
+
+        if (scp_init_trans(result) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "scp_init_trans() call failed");
+            trans_delete(result);
+            result = NULL;
+        }
+    }
+
+    return result;
+}
+
+
+/*****************************************************************************/
 int
 scp_msg_in_check_available(struct trans *trans, int *available)
 {

@@ -133,7 +133,7 @@ g_rm_temp_dir(void)
 
 /*****************************************************************************/
 int
-g_mk_socket_path(const char *app_name)
+g_mk_socket_path(void)
 {
     if (!g_directory_exist(XRDP_SOCKET_PATH))
     {
@@ -176,8 +176,6 @@ g_init(const char *app_name)
         /* use en_US.UTF-8 instead if not available */
         setlocale(LC_CTYPE, "en_US.UTF-8");
     }
-
-    g_mk_socket_path(app_name);
 }
 
 /*****************************************************************************/
@@ -2161,6 +2159,13 @@ g_file_close(int fd)
 }
 
 /*****************************************************************************/
+int
+g_file_is_open(int fd)
+{
+    return (fcntl(fd, F_GETFD) >= 0);
+}
+
+/*****************************************************************************/
 /* read from file, returns the number of bytes read or -1 on error */
 int
 g_file_read(int fd, char *ptr, int len)
@@ -2550,6 +2555,14 @@ g_directory_exist(const char *dirname)
 }
 
 /*****************************************************************************/
+/* returns boolean, non zero if the file exists  and is a readable executable */
+int
+g_executable_exist(const char *exename)
+{
+    return access(exename, R_OK | X_OK) == 0;
+}
+
+/*****************************************************************************/
 /* returns boolean */
 int
 g_create_dir(const char *dirname)
@@ -2866,7 +2879,6 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
         "returned errno: %d, description: %s",
         a1, args_str, g_get_errno(), g_get_strerror());
 
-    g_mk_socket_path(0);
     return rv;
 #endif
 }
@@ -2976,11 +2988,7 @@ g_fork(void)
 
     rv = fork();
 
-    if (rv == 0) /* child */
-    {
-        g_mk_socket_path(0);
-    }
-    else if (rv == -1) /* error */
+    if (rv == -1) /* error */
     {
         LOG(LOG_LEVEL_ERROR,
             "Process fork failed with errno: %d, description: %s",
@@ -3143,7 +3151,7 @@ g_waitchild(struct exit_status *e)
     e->reason = E_XR_UNEXPECTED;
     e->val = 0;
 
-    rv = waitpid(0, &wstat, WNOHANG);
+    rv = waitpid(-1, &wstat, WNOHANG);
 
     if (rv == -1)
     {
@@ -3236,6 +3244,24 @@ g_waitpid_status(int pid)
 
 #endif
     return exit_status;
+}
+
+/*****************************************************************************/
+int
+g_setpgid(int pid, int pgid)
+{
+    int rv = setpgid(pid, pgid);
+    if (rv < 0)
+    {
+        if (pid == 0)
+        {
+            pid = getpid();
+        }
+        LOG(LOG_LEVEL_ERROR, "Can't set process group ID of %d to %d [%s]",
+            pid, pgid, g_get_strerror());
+    }
+
+    return rv;
 }
 
 /*****************************************************************************/

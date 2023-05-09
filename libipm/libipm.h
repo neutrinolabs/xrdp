@@ -119,6 +119,26 @@ libipm_set_flags(struct trans *trans, unsigned int flags);
 void
 libipm_clear_flags(struct trans *trans, unsigned int flags);
 
+
+/**
+ * Change the facility number for the transport
+ * @param trans libipm transport
+ * @param old_facility old transport facility
+ * @param new_facility new transport facility
+ *
+ * This call is required if a libipm transport changes a facility number.
+ * This can be used to implement switches from one functional server state to
+ * another.
+ *
+ * The caller must be aware of the previous facility to change the facility.
+ * In the event of a mismatch, a message is logged and no action is taken.
+ */
+void
+libipm_change_facility(struct trans *trans,
+                       enum libipm_facility old_facility,
+                       enum libipm_facility new_facility);
+
+
 /**
  * Initialise an output message
  *

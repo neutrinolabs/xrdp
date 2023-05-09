@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2023
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,24 @@
 
 /**
  *
- * @file sig.h
- * @brief Signal handling function declarations
- * @author Jay Sorg, Simone Fedele
+ * @file eicp_process.h
+ * @brief eicp (executive initialisation control protocol) handler function
+ * @author Matt Burt
  *
  */
 
-#ifndef SIG_H
-#define SIG_H
+#ifndef EICP_PROCESS_H
+#define EICP_PROCESS_H
+
+struct pre_session_item;
 
 /**
  *
- * @brief SIGHUP handling code
+ * @brief Processes an EICP message
+ * @param sc the sesman connection
  *
  */
-void
-sig_sesman_reload_cfg(void);
+int
+eicp_process(struct pre_session_item *psi);
 
 #endif

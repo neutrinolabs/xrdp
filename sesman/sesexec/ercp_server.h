@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2023
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,22 @@
 
 /**
  *
- * @file sig.h
- * @brief Signal handling function declarations
- * @author Jay Sorg, Simone Fedele
+ * @file ercp_server.h
+ * @brief ercp (executive run-time control protocol) server function
+ * @author Matt Burt
  *
  */
 
-#ifndef SIG_H
-#define SIG_H
+#ifndef ERCP_SERVER_H
+#define ERCP_SERVER_H
 
 /**
  *
- * @brief SIGHUP handling code
+ * @brief Processes an ERCP message
+ * @param self The ERCP transport the message is coming in on
  *
  */
-void
-sig_sesman_reload_cfg(void);
+int
+ercp_server(struct trans *self);
 
-#endif
+#endif // ERCP_SERVER_H

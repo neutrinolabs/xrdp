@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) 2023 Matt Burt
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,32 @@
 
 /**
  *
- * @file sig.h
- * @brief Signal handling function declarations
- * @author Jay Sorg, Simone Fedele
+ * @file sesexec_control.h
+ * @brief Start/stop session executive process
+ * @author Matt Burt
  *
  */
 
-#ifndef SIG_H
-#define SIG_H
+
+#ifndef SESEXEC_H
+#define SESEXEC_H
+
+#include <sys/types.h>
+
+struct trans;
+struct pre_session_item;
 
 /**
+ * Start a session executive
+ * @param psi Pre-session item to allocate EICP transport to
+ * @result 0 for success
  *
- * @brief SIGHUP handling code
- *
+ * If non-zero is returned, all errors have been logged.
+ * If zero is returned, the sesexec_trans and sesexec_pid fields of
+ * the pre-session-item have been initialised.
  */
-void
-sig_sesman_reload_cfg(void);
 
-#endif
+int
+sesexec_start(struct pre_session_item *psi);
+
+#endif // SESEXEC_H

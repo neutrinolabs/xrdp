@@ -27,33 +27,11 @@
 #ifndef SESMAN_H
 #define SESMAN_H
 
-/**
- * Type for managing sesman connections from xrdp (etc)
- */
-struct sesman_con
-{
-    struct trans *t;
-    char peername[15 + 1]; /* Name of peer, if known, for logging */
-    int    close_requested; /* Set to close the connection normally */
-    unsigned int auth_retry_count;
-    struct auth_info *auth_info; /* non-NULL for an authenticated connection */
-    int    uid; /* User */
-    char *username; /* Username from UID (at time of logon) */
-    char  *ip_addr; /* Connecting IP address */
-};
+struct config_sesman;
+struct trans;
 
 /* Globals */
 extern struct config_sesman *g_cfg;
-extern unsigned char g_fixedkey[8];
-
-/**
- * Set the peername of a connection
- *
- * @param name Name to set
- * @result 0 for success
- */
-int
-sesman_set_connection_peername(struct sesman_con *sc, const char *name);
 
 /**
  * Close all file descriptors used by sesman.
@@ -61,24 +39,13 @@ sesman_set_connection_peername(struct sesman_con *sc, const char *name);
  * This is generally used after forking, to make sure the
  * file descriptors used by the main process are not disturbed
  *
- * This call will also release all trans and SCP_SESSION objects
- * held by sesman
- *
- * @param flags Set SCA_CLOSE_AUTH_INFO to close any open auth_info
- *              objects. By default these are not cleared, and should
- *              only be done so when exiting sesman.
+ * This call will also :-
+ * - release all trans objects held by sesman
+ * - Delete sesman wait objects
+ * - Call sesman_delete_listening_transport()
  */
-#define SCA_CLOSE_AUTH_INFO (1<<0)
 int
-sesman_close_all(unsigned int flags);
-
-/**
- * Delete sesman wait objects.
- *
- * Call after forking so we don't break sesman's wait objects
- */
-void
-sesman_delete_wait_objects(void);
+sesman_close_all(void);
 
 /*
  * Remove the listening transport
@@ -95,5 +62,29 @@ sesman_delete_listening_transport(void);
  */
 int
 sesman_create_listening_transport(const struct config_sesman *cfg);
+
+/**
+ * Callback to process incoming SCP data
+ */
+int
+sesman_scp_data_in(struct trans *self);
+
+/**
+ * Callback to process incoming EICP data
+ */
+int
+sesman_eicp_data_in(struct trans *self);
+
+/**
+ * Callback to process incoming ERCP data
+ */
+int
+sesman_ercp_data_in(struct trans *self);
+
+/*
+ * Check for termination
+ */
+int
+sesman_is_term(void);
 
 #endif

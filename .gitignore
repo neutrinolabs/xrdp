@@ -35,7 +35,7 @@ NEWS
 *.o
 README
 sesman/chansrv/xrdp-chansrv
-sesman/sessvc/xrdp-sessvc
+sesman/sesexec/xrdp-sesexec
 sesman/tools/xrdp-authtest
 sesman/tools/xrdp-dis
 sesman/tools/xrdp-sesadmin

@@ -44,6 +44,11 @@ enum SESMAN_CFG_SESS_POLICY_BITS
 };
 
 /**
+ * Name of default sesman.ini file
+ */
+#define DEFAULT_SESMAN_INI XRDP_CFG_PATH "/sesman.ini"
+
+/**
  *
  * @struct config_security
  * @brief struct that contains sesman access control configuration
@@ -112,12 +117,17 @@ struct config_sessions
      * @var x11_display_offset
      * @brief X11 TCP port offset. default value: 10
      */
-    int x11_display_offset;
+    unsigned int x11_display_offset;
+    /**
+     * @var max_display_number
+     * @brief Highest X11 display number considered for allocation
+     */
+    unsigned int max_display_number;
     /**
      * @var max_sessions
      * @brief maximum number of allowed sessions. 0 for unlimited
      */
-    int max_sessions;
+    unsigned int max_sessions;
     /**
      * @var max_idle_time
      * @brief maximum idle time for each session

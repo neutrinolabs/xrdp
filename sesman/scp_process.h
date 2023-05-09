@@ -27,7 +27,7 @@
 #ifndef SCP_PROCESS_H
 #define SCP_PROCESS_H
 
-struct sesman_con;
+struct pre_session_item;
 
 /**
  *
@@ -36,6 +36,6 @@ struct sesman_con;
  *
  */
 int
-scp_process(struct sesman_con *sc);
+scp_process(struct pre_session_item *sc);
 
 #endif
