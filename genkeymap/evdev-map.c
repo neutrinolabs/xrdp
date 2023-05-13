@@ -22,6 +22,10 @@
  * xfree86(base)->evdev keycode mapping
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 int xfree86_to_evdev[137 - 8 + 1] =
 {
     /* MDSW */ 203,

@@ -63,8 +63,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#if defined(HAVE_CONFIG_H)
-#include <config_ac.h>
+#ifndef PIXMAN_REGION_MAX
+#error "This file should be #included from pixman-region16.c, not compiled directly"
+#endif
+#ifndef CONFIG_AC_H
+#error "config_ac.h not visible in pixman-region.c"
 #endif
 
 #define PIXREGION_NIL(reg) ((reg)->data && !(reg)->data->numRects)
