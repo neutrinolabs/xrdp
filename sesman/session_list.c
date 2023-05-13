@@ -33,10 +33,6 @@
 #include "config_ac.h"
 #endif
 
-#ifdef HAVE_SYS_PRCTL_H
-#include <sys/prctl.h>
-#endif
-
 #include "arch.h"
 #include "session_list.h"
 #include "trans.h"

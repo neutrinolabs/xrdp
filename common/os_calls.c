@@ -53,6 +53,9 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#if defined(HAVE_SYS_PRCTL_H)
+#include <sys/prctl.h>
+#endif
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -3952,5 +3955,21 @@ g_tcp6_bind_address(int sck, const char *port, const char *address)
     return rv;
 #else
     return -1;
+#endif
+}
+
+/*****************************************************************************/
+/* returns error, zero is success, non zero is error */
+/* only works in linux */
+int
+g_no_new_privs(void)
+{
+#if defined(HAVE_SYS_PRCTL_H) && defined(PR_SET_NO_NEW_PRIVS)
+    /*
+     * PR_SET_NO_NEW_PRIVS requires Linux kernel 3.5 and newer.
+     */
+    return prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+#else
+    return 0;
 #endif
 }
