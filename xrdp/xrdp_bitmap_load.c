@@ -542,7 +542,7 @@ xrdp_bitmap_load_bmp(struct xrdp_bitmap *self, const char *filename,
         return 1;
     }
 
-    fd = g_file_open(filename);
+    fd = g_file_open_ro(filename);
 
     if (fd == -1)
     {

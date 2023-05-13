@@ -87,7 +87,7 @@ lock_uds(const char *sockname)
             *p++ = '\0';
 
             saved_umask = g_umask_hex(0x77);
-            fd = g_file_open(filename);
+            fd = g_file_open_rw(filename);
             g_umask_hex(saved_umask);
             if (fd < 0)
             {

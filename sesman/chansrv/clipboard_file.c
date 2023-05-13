@@ -462,7 +462,7 @@ clipboard_send_file_data(int streamId, int lindex,
               "nPositionLow %d cbRequested %d", streamId, lindex,
               nPositionLow, cbRequested);
     g_snprintf(full_fn, 255, "%s/%s", cfi->pathname, cfi->filename);
-    fd = g_file_open_ex(full_fn, 1, 0, 0, 0);
+    fd = g_file_open_ro(full_fn);
     if (fd == -1)
     {
         LOG(LOG_LEVEL_ERROR, "clipboard_send_file_data: file open [%s] failed: %s",

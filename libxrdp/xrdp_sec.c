@@ -420,7 +420,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     g_snprintf(keyboard_cfg_file, 255, "%s/xrdp_keyboard.ini", XRDP_CFG_PATH);
     LOG(LOG_LEVEL_DEBUG, "keyboard_cfg_file %s", keyboard_cfg_file);
 
-    fd = g_file_open(keyboard_cfg_file);
+    fd = g_file_open_ro(keyboard_cfg_file);
 
     if (fd >= 0)
     {

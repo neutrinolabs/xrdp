@@ -155,7 +155,7 @@ font_dump(void)
     g_snprintf(filename, 255, "%s-%d.fv1", g_font_name, g_font_size);
     msg("creating file %s", filename);
     g_file_delete(filename);
-    fd = g_file_open(filename);
+    fd = g_file_open_rw(filename);
     g_file_write(fd, "FNT1", 4);
     strlen1 = g_strlen(g_font_name);
     g_file_write(fd, g_font_name, strlen1);

@@ -367,7 +367,7 @@ save_all(const char *e_data, int e_len, const char *n_data, int n_len,
         }
     }
 
-    fd = g_file_open(filename);
+    fd = g_file_open_rw(filename);
 
     if (fd != -1)
     {
