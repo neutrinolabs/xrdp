@@ -344,7 +344,7 @@ prepare_xorg_xserver_params(const struct session_parameters *s,
          * needed. Xorg can fail when run as root and the user has no
          * console permissions.
          */
-        if (g_no_new_privs() != 0)
+        if (g_cfg->sec.xorg_no_new_privileges && g_no_new_privs() != 0)
         {
             LOG(LOG_LEVEL_WARNING,
                 "[session start] (display %u): Failed to disable "
