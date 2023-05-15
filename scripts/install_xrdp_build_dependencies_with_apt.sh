@@ -102,7 +102,10 @@ in
                 exit 1;
                 ;;
         esac
+        apt-get update
+        apt-get upgrade
         ;;
+
     i386)
         # This list is not as complete as the amd64 list. It currently
         # supports 32-bit CI building only, rather than being a generic
@@ -135,6 +138,7 @@ in
         dpkg --print-foreign-architectures
         apt-get update
         remove_64bit_libdev_packages $PACKAGES
+        apt-get install libc6:i386 libgcc-s1:i386 libstdc++6:i386 libatomic1:i386
         ;;
     *)
         echo "unsupported architecture: $ARCH"
@@ -142,8 +146,6 @@ in
         ;;
 esac
 
-apt-get update
-apt-get upgrade
 apt-get -yq \
     --no-install-suggests \
     --no-install-recommends \
