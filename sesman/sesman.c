@@ -658,7 +658,7 @@ read_pid_file(const char *pid_file, int *pid)
     {
         g_printf("sesman is not running (pid file not found - %s)\n", pid_file);
     }
-    else if ((fd = g_file_open(pid_file)) < 0)
+    else if ((fd = g_file_open_ro(pid_file)) < 0)
     {
         g_printf("error opening pid file[%s]: %s\n", pid_file, g_get_strerror());
     }
@@ -838,15 +838,15 @@ main(int argc, char **argv)
         g_file_close(1);
         g_file_close(2);
 
-        if (g_file_open("/dev/null") < 0)
+        if (g_file_open_rw("/dev/null") < 0)
         {
         }
 
-        if (g_file_open("/dev/null") < 0)
+        if (g_file_open_rw("/dev/null") < 0)
         {
         }
 
-        if (g_file_open("/dev/null") < 0)
+        if (g_file_open_rw("/dev/null") < 0)
         {
         }
     }
@@ -905,7 +905,7 @@ main(int argc, char **argv)
     {
         /* writing pid file */
         char pid_s[32];
-        int fd = g_file_open(pid_file);
+        int fd = g_file_open_rw(pid_file);
 
         if (-1 == fd)
         {

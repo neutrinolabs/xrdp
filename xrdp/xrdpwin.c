@@ -214,7 +214,7 @@ MyServiceMain(DWORD dwArgc, LPTSTR *lpszArgv)
     //  int fd;
     //  char text[256];
 
-    //  fd = g_file_open("c:\\temp\\xrdp\\log.txt");
+    //  fd = g_file_open_rw("c:\\temp\\xrdp\\log.txt");
     //  g_file_write(fd, "hi\r\n", 4);
     //event_han = RegisterEventSource(0, "xrdp");
     //log_event(event_han, "hi xrdp log");
@@ -452,7 +452,7 @@ main(int argc, char **argv)
 
             if (g_file_exist(pid_file)) /* xrdp.pid */
             {
-                fd = g_file_open(pid_file); /* xrdp.pid */
+                fd = g_file_open_ro(pid_file); /* xrdp.pid */
             }
 
             if (fd == -1)
@@ -539,7 +539,7 @@ main(int argc, char **argv)
     if (!no_daemon)
     {
         /* make sure we can write to pid file */
-        fd = g_file_open(pid_file); /* xrdp.pid */
+        fd = g_file_open_rw(pid_file); /* xrdp.pid */
 
         if (fd == -1)
         {
@@ -579,9 +579,9 @@ main(int argc, char **argv)
         g_file_close(0);
         g_file_close(1);
         g_file_close(2);
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
+        g_file_open_rw("/dev/null");
+        g_file_open_rw("/dev/null");
+        g_file_open_rw("/dev/null");
         /* end of daemonizing code */
     }
 
@@ -589,7 +589,7 @@ main(int argc, char **argv)
     {
         /* write the pid to file */
         pid = g_getpid();
-        fd = g_file_open(pid_file); /* xrdp.pid */
+        fd = g_file_open_rw(pid_file); /* xrdp.pid */
 
         if (fd == -1)
         {

@@ -39,6 +39,11 @@ RestrictOutboundClipboard=none
 RestrictInboundClipboard=none
 ; Set to 'no' to prevent users from logging in with alternate shells
 #AllowAlternateShell=true
+; On Linux systems, the Xorg X11 server is normally invoked using
+; no_new_privs to avoid problems if the executable is suid. This may,
+; however, interfere with the use of security modules such as AppArmor.
+; Leave this unset unless you need to disable it.
+#XorgNoNewPrivileges=true
 
 [Sessions]
 ;; X11DisplayOffset - x11 display number offset

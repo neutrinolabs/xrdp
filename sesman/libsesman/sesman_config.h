@@ -103,6 +103,12 @@ struct config_security
      *          If not specified, 'YES' is assumed.
      */
     int allow_alternate_shell;
+
+    /*
+     * @var xorg_no_new_privileges
+     * @brief if the Xorg X11 server should be started with no_new_privs (Linux only)
+     */
+    int xorg_no_new_privileges;
 };
 
 /**

@@ -170,7 +170,7 @@ fv1_file_load(const char *filename)
             int fd;
             make_stream(s);
             init_stream(s, file_size + 1024);
-            fd = g_file_open(filename);
+            fd = g_file_open_ro(filename);
 
             if (fd < 0)
             {

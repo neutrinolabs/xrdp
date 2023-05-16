@@ -303,6 +303,15 @@ if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 \fBAllowAlternateShell\fR=\fI[true|false]\fR
 If set to \fB0\fR, \fBfalse\fR or \fBno\fR, prevent usage of alternate shells by users.
 
+.TP
+\fBXorgNoNewPrivileges\fR=\fI[true|false]\fR
+Only applicable on Linux. If set to \fB0\fR, \fBfalse\fR or \fBno\fR, do
+not use the kernel's \fIno_new_privs\fR restriction when invoking the Xorg
+X11 server. The use of \fIno_new_privs\fR is intended to prevent issues due
+to a setuid Xorg executable. However, if a kernel security module (such as
+AppArmor) is used to confine xrdp, \fIno_new_privs\fR may interfere with
+transitions between confinement domains.
+
 .SH "X11 SERVER"
 Following parameters can be used in the \fB[Xvnc]\fR and
 \fB[Xorg]\fR sections.

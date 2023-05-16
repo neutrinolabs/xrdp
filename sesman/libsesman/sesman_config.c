@@ -70,6 +70,7 @@
 #define SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD "RestrictOutboundClipboard"
 #define SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD  "RestrictInboundClipboard"
 #define SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL       "AllowAlternateShell"
+#define SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES      "XorgNoNewPrivileges"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
@@ -310,6 +311,7 @@ config_read_security(int file, struct config_security *sc,
     sc->restrict_outbound_clipboard = 0;
     sc->restrict_inbound_clipboard = 0;
     sc->allow_alternate_shell = 1;
+    sc->xorg_no_new_privileges = 1;
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -383,6 +385,11 @@ config_read_security(int file, struct config_security *sc,
                 g_text2bool((char *)list_get_item(param_v, i));
         }
 
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES))
+        {
+            sc->xorg_no_new_privileges =
+                g_text2bool((char *)list_get_item(param_v, i));
+        }
     }
 
     return 0;
@@ -583,7 +590,7 @@ config_read(const char *sesman_ini)
         if ((cfg->sesman_ini = g_strdup(sesman_ini)) != NULL)
         {
             int fd;
-            if ((fd = g_file_open_ex(cfg->sesman_ini, 1, 0, 0, 0)) != -1)
+            if ((fd = g_file_open_ro(cfg->sesman_ini)) != -1)
             {
                 struct list *sec;
                 struct list *param_n;
@@ -670,6 +677,9 @@ config_dump(struct config_sesman *config)
     g_writeln("    MaxLoginRetry:             %d", sc->login_retry);
     g_writeln("    AlwaysGroupCheck:          %d", sc->ts_always_group_check);
     g_writeln("    AllowAlternateShell:       %d", sc->allow_alternate_shell);
+#ifdef HAVE_SYS_PRCTL_H
+    g_writeln("    XorgNoNewPrivileges:       %d", sc->xorg_no_new_privileges);
+#endif
     sesman_clip_restrict_mask_to_string(sc->restrict_outbound_clipboard,
                                         restrict_s, sizeof(restrict_s));
     g_writeln("    RestrictOutboundClipboard: %s", restrict_s);

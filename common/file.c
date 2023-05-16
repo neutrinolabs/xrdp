@@ -349,7 +349,7 @@ file_by_name_read_sections(const char *file_name, struct list *names)
         return 1;
     }
 
-    fd = g_file_open_ex(file_name, 1, 0, 0, 0);
+    fd = g_file_open_ro(file_name);
 
     if (fd < 0)
     {
@@ -390,7 +390,7 @@ file_by_name_read_section(const char *file_name, const char *section,
         return 1;
     }
 
-    fd = g_file_open_ex(file_name, 1, 0, 0, 0);
+    fd = g_file_open_ro(file_name);
 
     if (fd < 0)
     {

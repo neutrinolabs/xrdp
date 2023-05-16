@@ -245,7 +245,7 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
     make_stream(fs);
     init_stream(fs, 8192);
-    fd = g_file_open(file_name);
+    fd = g_file_open_ro(file_name);
 
     if (fd < 0)
     {
@@ -414,7 +414,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
     self->background = HCOLOR(self->screen->bpp, 0x000000);
 
     /* now load them from the globals in xrdp.ini if defined */
-    fd = g_file_open(self->session->xrdp_ini);
+    fd = g_file_open_ro(self->session->xrdp_ini);
 
     if (fd >= 0)
     {
@@ -638,7 +638,7 @@ xrdp_wm_init(struct xrdp_wm *self)
          * NOTE: this should eventually be accessed from self->xrdp_config
          */
 
-        fd = g_file_open(self->session->xrdp_ini);
+        fd = g_file_open_ro(self->session->xrdp_ini);
         if (fd != -1)
         {
             names = list_create();

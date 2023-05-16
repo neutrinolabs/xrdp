@@ -58,7 +58,7 @@ suite_test_libipm_calls_start(void)
         const char *errstr = g_get_strerror();
         LOG(LOG_LEVEL_ERROR, "Can't create test transport 3 [%s]", errstr);
     }
-    else if ((fd = g_file_open("/dev/zero")) < 0)
+    else if ((fd = g_file_open_rw("/dev/zero")) < 0)
     {
         const char *errstr = g_get_strerror();
         LOG(LOG_LEVEL_ERROR, "Can't open /dev/zero [%s]", errstr);

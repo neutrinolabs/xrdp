@@ -53,6 +53,9 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#if defined(HAVE_SYS_PRCTL_H)
+#include <sys/prctl.h>
+#endif
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -2086,24 +2089,14 @@ g_memcmp(const void *s1, const void *s2, int len)
 /*****************************************************************************/
 /* returns -1 on error, else return handle or file descriptor */
 int
-g_file_open(const char *file_name)
+g_file_open_rw(const char *file_name)
 {
 #if defined(_WIN32)
     return (int)CreateFileA(file_name, GENERIC_READ | GENERIC_WRITE,
                             FILE_SHARE_READ | FILE_SHARE_WRITE,
                             0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 #else
-    int rv;
-
-    rv =  open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-
-    if (rv == -1)
-    {
-        /* can't open read / write, try to open read only */
-        rv =  open(file_name, O_RDONLY);
-    }
-
-    return rv;
+    return open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 #endif
 }
 
@@ -2143,6 +2136,14 @@ g_file_open_ex(const char *file_name, int aread, int awrite,
     rv =  open(file_name, flags, S_IRUSR | S_IWUSR);
     return rv;
 #endif
+}
+
+/*****************************************************************************/
+/* returns -1 on error, else return handle or file descriptor */
+int
+g_file_open_ro(const char *file_name)
+{
+    return g_file_open_ex(file_name, 1, 0, 0, 0);
 }
 
 /*****************************************************************************/
@@ -3954,5 +3955,21 @@ g_tcp6_bind_address(int sck, const char *port, const char *address)
     return rv;
 #else
     return -1;
+#endif
+}
+
+/*****************************************************************************/
+/* returns error, zero is success, non zero is error */
+/* only works in linux */
+int
+g_no_new_privs(void)
+{
+#if defined(HAVE_SYS_PRCTL_H) && defined(PR_SET_NO_NEW_PRIVS)
+    /*
+     * PR_SET_NO_NEW_PRIVS requires Linux kernel 3.5 and newer.
+     */
+    return prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+#else
+    return 0;
 #endif
 }

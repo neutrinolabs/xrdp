@@ -210,7 +210,7 @@ xrdp_font_create(struct xrdp_wm *wm, unsigned int dpi)
     self->wm = wm;
     make_stream(s);
     init_stream(s, file_size + 1024);
-    fd = g_file_open(file_path);
+    fd = g_file_open_ro(file_path);
 
     if (fd != -1)
     {

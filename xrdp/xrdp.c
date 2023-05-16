@@ -375,7 +375,7 @@ main(int argc, char **argv)
 
         if (g_file_exist(pid_file)) /* xrdp.pid */
         {
-            fd = g_file_open(pid_file); /* xrdp.pid */
+            fd = g_file_open_ro(pid_file); /* xrdp.pid */
         }
 
         if (fd == -1)
@@ -450,7 +450,7 @@ main(int argc, char **argv)
         g_create_path(pid_file);
 
         /* make sure we can write to pid file */
-        fd = g_file_open(pid_file); /* xrdp.pid */
+        fd = g_file_open_rw(pid_file); /* xrdp.pid */
 
         if (fd == -1)
         {
@@ -509,7 +509,7 @@ main(int argc, char **argv)
         g_sleep(1000);
         /* write the pid to file */
         pid = g_getpid();
-        fd = g_file_open(pid_file); /* xrdp.pid */
+        fd = g_file_open_rw(pid_file); /* xrdp.pid */
 
         if (fd == -1)
         {
@@ -528,15 +528,15 @@ main(int argc, char **argv)
         g_file_close(1);
         g_file_close(2);
 
-        if (g_file_open("/dev/null") < 0)
+        if (g_file_open_rw("/dev/null") < 0)
         {
         }
 
-        if (g_file_open("/dev/null") < 0)
+        if (g_file_open_rw("/dev/null") < 0)
         {
         }
 
-        if (g_file_open("/dev/null") < 0)
+        if (g_file_open_rw("/dev/null") < 0)
         {
         }
 

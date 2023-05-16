@@ -17,6 +17,9 @@
 #define TOP_SRCDIR "."
 #endif
 
+// File for testing ro/rw opens
+#define RO_RW_FILE "./test_ro_rw"
+
 /******************************************************************************/
 /***
  * Gets the number of open file descriptors for the current process */
@@ -200,11 +203,50 @@ END_TEST
 #endif
 
 /******************************************************************************/
+/* Test we can write to a file which is opened for write */
+START_TEST(test_g_file_rw)
+{
+    const char data[] = "File data\n";
+
+    int fd = g_file_open_rw(RO_RW_FILE);
+    ck_assert(fd >= 0);
+
+    int status = g_file_write(fd, data, sizeof(data) - 1);
+    g_file_close(fd);
+
+    // Assume no signals have occurred
+    ck_assert_int_eq(status, sizeof(data) - 1);
+
+    // Leave file in place for test_g_file_ro
+}
+END_TEST
+
+/******************************************************************************/
+/* Test we can't write to a file which is opened read only */
+START_TEST(test_g_file_ro)
+{
+    const char data[] = "File data\n";
+
+    int fd = g_file_open_ro(RO_RW_FILE);
+    ck_assert(fd >= 0);
+
+    int status = g_file_write(fd, data, sizeof(data) - 1);
+    g_file_close(fd);
+
+    // Write must fail
+    ck_assert_int_lt(status, 0);
+
+    // Tidy-up (not checked)
+    g_file_delete(RO_RW_FILE);
+}
+END_TEST
+
+/******************************************************************************/
 /* Just test we can set and clear the flag. We don't test its operation */
 START_TEST(test_g_file_cloexec)
 {
     int flag;
-    int devzerofd = g_file_open("/dev/zero");
+    int devzerofd = g_file_open_ro("/dev/zero");
     ck_assert(devzerofd >= 0);
 
     (void)g_file_set_cloexec(devzerofd, 1);
@@ -230,7 +272,7 @@ START_TEST(test_g_file_get_open_fds)
     ck_assert_int_eq(start_list->count, fd_count);
 
     // Open another file
-    int devzerofd = g_file_open("/dev/zero");
+    int devzerofd = g_file_open_ro("/dev/zero");
     ck_assert(devzerofd >= 0);
 
     // Have we now got one more open file?
@@ -266,7 +308,7 @@ END_TEST
 /******************************************************************************/
 START_TEST(test_g_file_is_open)
 {
-    int devzerofd = g_file_open("/dev/zero");
+    int devzerofd = g_file_open_ro("/dev/zero");
     ck_assert(devzerofd >= 0);
 
     // Check open file comes up as open
@@ -287,7 +329,7 @@ START_TEST(test_g_sck_fd_passing)
     int istatus;
     unsigned int fdcount;
 
-    int devzerofd = g_file_open("/dev/zero");
+    int devzerofd = g_file_open_ro("/dev/zero");
     ck_assert(devzerofd >= 0);
 
     if (g_sck_local_socketpair(sck) != 0)
@@ -369,8 +411,8 @@ START_TEST(test_g_sck_fd_overflow)
     unsigned int proc_fd_count;
 
     // Open a couple of file descriptors to /dev/zero
-    devzerofd[0] = g_file_open("/dev/zero");
-    devzerofd[1] = g_file_open("/dev/zero");
+    devzerofd[0] = g_file_open_ro("/dev/zero");
+    devzerofd[1] = g_file_open_ro("/dev/zero");
     ck_assert(devzerofd[0] >= 0);
     ck_assert(devzerofd[1] >= 0);
     proc_fd_count = get_open_fd_count();
@@ -463,6 +505,8 @@ make_suite_test_os_calls(void)
     tcase_add_test(tc_os_calls, test_g_file_get_size__2GiB);
     tcase_add_test(tc_os_calls, test_g_file_get_size__5GiB);
 #endif
+    tcase_add_test(tc_os_calls, test_g_file_rw);
+    tcase_add_test(tc_os_calls, test_g_file_ro); // Must follow test_g_file_rw
     tcase_add_test(tc_os_calls, test_g_file_cloexec);
     tcase_add_test(tc_os_calls, test_g_file_get_open_fds);
     tcase_add_test(tc_os_calls, test_g_file_is_open);

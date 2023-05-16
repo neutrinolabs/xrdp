@@ -33,10 +33,6 @@
 #include "config_ac.h"
 #endif
 
-#ifdef HAVE_SYS_PRCTL_H
-#include <sys/prctl.h>
-#endif
-
 #include <errno.h>
 
 #include "arch.h"
@@ -55,10 +51,6 @@
 #include "xauth.h"
 #include "xwait.h"
 #include "xrdp_sockets.h"
-
-#ifndef PR_SET_NO_NEW_PRIVS
-#define PR_SET_NO_NEW_PRIVS 38
-#endif
 
 struct session_data
 {
@@ -347,21 +339,18 @@ prepare_xorg_xserver_params(const struct session_parameters *s,
     {
         params->auto_free = 1;
 
-#ifdef HAVE_SYS_PRCTL_H
         /*
          * Make sure Xorg doesn't run setuid root. Root access is not
          * needed. Xorg can fail when run as root and the user has no
          * console permissions.
-         * PR_SET_NO_NEW_PRIVS requires Linux kernel 3.5 and newer.
          */
-        if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
+        if (g_cfg->sec.xorg_no_new_privileges && g_no_new_privs() != 0)
         {
             LOG(LOG_LEVEL_WARNING,
                 "[session start] (display %u): Failed to disable "
                 "setuid on X server: %s",
                 s->display, g_get_strerror());
         }
-#endif
 
         g_snprintf(screen, sizeof(screen), ":%u", s->display);
 

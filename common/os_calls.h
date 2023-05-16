@@ -206,9 +206,10 @@ int      g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs,
 void     g_random(char *data, int len);
 int      g_abs(int i);
 int      g_memcmp(const void *s1, const void *s2, int len);
-int      g_file_open(const char *file_name);
+int      g_file_open_rw(const char *file_name);
 int      g_file_open_ex(const char *file_name, int aread, int awrite,
                         int acreate, int atrunc);
+int      g_file_open_ro(const char *file_name);
 int      g_file_close(int fd);
 /**
  * Returns 1 if a file is open (i.e. the file descriptor is valid)
@@ -332,6 +333,7 @@ int      g_tcp4_socket(void);
 int      g_tcp4_bind_address(int sck, const char *port, const char *address);
 int      g_tcp6_socket(void);
 int      g_tcp6_bind_address(int sck, const char *port, const char *address);
+int      g_no_new_privs(void);
 
 /* glib-style wrappers */
 #define g_new(struct_type, n_structs) \

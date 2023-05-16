@@ -231,7 +231,7 @@ config_read(int use_logger, const char *sesman_ini)
     log_func_t logmsg = (use_logger) ? log_message : log_to_stdout;
     int fd;
 
-    fd = g_file_open_ex(sesman_ini, 1, 0, 0, 0);
+    fd = g_file_open_ro(sesman_ini);
     if (fd < 0)
     {
         logmsg(LOG_LEVEL_ERROR, "Can't open config file %s", sesman_ini);

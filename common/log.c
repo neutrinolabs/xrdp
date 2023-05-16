@@ -689,7 +689,7 @@ log_config_init_from_config(const char *iniFilename,
         return NULL;
     }
 
-    fd = g_file_open_ex(iniFilename, 1, 0, 0, 0);
+    fd = g_file_open_ro(iniFilename);
 
     if (-1 == fd)
     {
