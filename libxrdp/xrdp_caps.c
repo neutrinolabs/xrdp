@@ -632,6 +632,18 @@ xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
 
 /*****************************************************************************/
 static int
+xrdp_caps_process_largepointer(struct xrdp_rdp *self, struct stream *s,
+                               int len)
+{
+    int largePointerSupportFlags;
+
+    in_uint16_le(s, largePointerSupportFlags);
+    self->client_info.large_pointer_support_flags = largePointerSupportFlags;
+    return 0;
+}
+
+/*****************************************************************************/
+static int
 xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_frame_ack:");
@@ -846,6 +858,11 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                           "capabilitySetType = CAPSSETTYPE_MULTIFRAGMENTUPDATE");
                 xrdp_caps_process_multifragmentupdate(self, s, len);
                 break;
+            case CAPSETTYPE_LARGE_POINTER:
+                LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
+                          "capabilitySetType = CAPSETTYPE_LARGE_POINTER");
+                xrdp_caps_process_largepointer(self, s, len);
+                break;
             case CAPSETTYPE_SURFACE_COMMANDS:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSETTYPE_SURFACE_COMMANDS");
@@ -879,6 +896,46 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         self->client_info.offscreen_support_level = 0;
         self->client_info.offscreen_cache_size = 0;
         self->client_info.offscreen_cache_entries = 0;
+    }
+
+    if (self->client_info.use_fast_path)
+    {
+        if ((self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_96x96) &&
+                (self->client_info.max_fastpath_frag_bytes < 38055))
+        {
+            LOG(LOG_LEVEL_WARNING, "Client Capability: client requested "
+                "LARGE_POINTER_FLAG_96x96 but max_fastpath_frag_bytes(%d) is less then "
+                "the required size of 38055, 96x96 large cursor support disabled",
+                self->client_info.max_fastpath_frag_bytes);
+            self->client_info.large_pointer_support_flags &= ~LARGE_POINTER_FLAG_96x96;
+        }
+        if ((self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_384x384) &&
+                (self->client_info.max_fastpath_frag_bytes < 608299))
+        {
+            LOG(LOG_LEVEL_WARNING, "Client Capability: client requested "
+                "LARGE_POINTER_FLAG_384x384 but max_fastpath_frag_bytes(%d) is less then "
+                "the required size of 608299, 384x384 large cursor support disabled",
+                self->client_info.max_fastpath_frag_bytes);
+            self->client_info.large_pointer_support_flags &= ~LARGE_POINTER_FLAG_384x384;
+        }
+    }
+    else
+    {
+        if (self->client_info.large_pointer_support_flags != 0)
+        {
+            LOG(LOG_LEVEL_WARNING, "Client Capability: client requested "
+                "large pointers but use_fast_path is false, "
+                "all large cursor support disabled");
+            self->client_info.large_pointer_support_flags = 0;
+        }
+    }
+    if (self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_96x96)
+    {
+        LOG(LOG_LEVEL_INFO, "Client Capability: LARGE_POINTER_FLAG_96x96 supported");
+    }
+    if (self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_384x384)
+    {
+        LOG(LOG_LEVEL_INFO, "Client Capability: LARGE_POINTER_FLAG_384x384 supported");
     }
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "Completed processing received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU");
@@ -1224,6 +1281,12 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         out_uint32_le(s, max_request_size);
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
                   "CAPSSETTYPE_MULTIFRAGMENTUPDATE = %d", max_request_size);
+
+        /* large pointer 96x96 */
+        caps_count++;
+        out_uint16_le(s, CAPSETTYPE_LARGE_POINTER);
+        out_uint16_le(s, CAPSETTYPE_LARGE_POINTER_LEN);
+        out_uint16_le(s, LARGE_POINTER_FLAG_96x96);
 
         /* frame acks */
         caps_count++;

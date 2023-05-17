@@ -56,6 +56,7 @@
 #if defined(HAVE_SYS_PRCTL_H)
 #include <sys/prctl.h>
 #endif
+#include <sys/mman.h>
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -2351,6 +2352,37 @@ g_get_open_fds(int min, int max)
 nomem:
     list_delete(result);
     return NULL;
+}
+
+/*****************************************************************************/
+int
+g_file_map(int fd, int aread, int awrite, size_t length, void **addr)
+{
+    int prot = 0;
+    void *laddr;
+
+    if (aread)
+    {
+        prot |= PROT_READ;
+    }
+    if (awrite)
+    {
+        prot |= PROT_WRITE;
+    }
+    laddr = mmap(NULL, length, prot, MAP_SHARED, fd, 0);
+    if (laddr == MAP_FAILED)
+    {
+        return 1;
+    }
+    *addr = laddr;
+    return 0;
+}
+
+/*****************************************************************************/
+int
+g_munmap(void *addr, size_t length)
+{
+    return munmap(addr, length);
 }
 
 /*****************************************************************************/

@@ -221,6 +221,10 @@ int      g_file_read(int fd, char *ptr, int len);
 int      g_file_write(int fd, const char *ptr, int len);
 int      g_file_seek(int fd, int offset);
 int      g_file_lock(int fd, int start, int len);
+int
+g_file_map(int fd, int aread, int awrite, size_t length, void **addr);
+int
+g_munmap(void *addr, size_t length);
 int      g_file_duplicate_on(int fd, int target_fd);
 int      g_file_get_cloexec(int fd);
 int      g_file_set_cloexec(int fd, int status);
