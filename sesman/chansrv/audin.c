@@ -46,7 +46,7 @@
 #define AUDIN_NAME "AUDIO_INPUT"
 #define AUDIN_FLAGS  1 /* WTS_CHANNEL_OPTION_DYNAMIC */
 
-extern FIFO g_in_fifo; /* in sound.c */
+extern struct fifo *g_in_fifo; /* in sound.c */
 extern int g_bytes_in_fifo; /* in sound.c */
 
 struct xr_wave_format_ex
@@ -346,7 +346,7 @@ audin_process_data(int chan_id, struct stream *s)
     g_memcpy(ls->data, s->p, data_bytes);
     ls->p += data_bytes;
     s_mark_end(ls);
-    fifo_insert(&g_in_fifo, (void *) ls);
+    fifo_add_item(g_in_fifo, (void *) ls);
     g_bytes_in_fifo += data_bytes;
 
     return 0;
@@ -514,19 +514,15 @@ int
 audin_start(void)
 {
     int error;
-    struct stream *s;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_start:");
-    if (g_audin_chanid != 0)
+    if (g_audin_chanid != 0 || g_in_fifo == NULL)
     {
         return 1;
     }
 
     /* if there is any data in FIFO, discard it */
-    while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
-    {
-        xstream_free(s);
-    }
+    fifo_clear(g_in_fifo, NULL);
     g_bytes_in_fifo = 0;
 
     error = chansrv_drdynvc_open(AUDIN_NAME, AUDIN_FLAGS,
