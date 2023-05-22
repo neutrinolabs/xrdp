@@ -1,3 +1,18 @@
+# Release notes for xrdp v0.9.22.1 (2023/05/23)
+
+This release is just a re-packing of source code tarball since v0.9.22 tarball includes invalid source code (#2687).
+
+See [v0.9.22 release note](https://github.com/neutrinolabs/xrdp/releases/tag/v0.9.22) for functional changes since v0.9.22.1 is what v0.9.22 should be.
+
+Thanks to [@morgancoxuk](https://github.com/morgancoxuk) and [bsmojver](https://github.com/bsmojver) for reporting and testing!
+
+## References
+* https://github.com/neutrinolabs/xrdp/issues/2687
+* https://bugzilla.redhat.com/show_bug.cgi?id=2208248
+* https://bugzilla.redhat.com/show_bug.cgi?id=2208015
+
+-----------------------
+
 # Release notes for xrdp v0.9.22 (2023/05/07)
 
 ## General announcements
