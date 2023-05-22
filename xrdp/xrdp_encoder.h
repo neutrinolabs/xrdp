@@ -3,7 +3,7 @@
 #define _XRDP_ENCODER_H
 
 #include "arch.h"
-#include "fifo.h"
+struct fifo;
 
 struct xrdp_enc_data;
 
@@ -18,8 +18,8 @@ struct xrdp_encoder
     tbus xrdp_encoder_event_to_proc;
     tbus xrdp_encoder_event_processed;
     tbus xrdp_encoder_term;
-    FIFO *fifo_to_proc;
-    FIFO *fifo_processed;
+    struct fifo *fifo_to_proc;
+    struct fifo *fifo_processed;
     tbus mutex;
     int (*process_enc)(struct xrdp_encoder *self, struct xrdp_enc_data *enc);
     void *codec_handle;
