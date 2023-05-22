@@ -57,6 +57,7 @@ static int g_rdpdr_index = -1;
 static int g_rail_index = -1;
 
 static tbus g_term_event = 0;
+static tintptr g_sigchld_event = 0;
 static tbus g_thread_done_event = 0;
 
 struct config_chansrv *g_cfg = NULL;
@@ -1499,38 +1500,41 @@ channel_thread_loop(void *in_val)
 }
 
 /*****************************************************************************/
-void
+static void
 term_signal_handler(int sig)
 {
-    LOG_DEVEL(LOG_LEVEL_INFO, "term_signal_handler: got signal %d", sig);
     g_set_wait_obj(g_term_event);
 }
 
 /*****************************************************************************/
-void
+static void
 nil_signal_handler(int sig)
 {
-    LOG_DEVEL(LOG_LEVEL_INFO, "nil_signal_handler: got signal %d", sig);
 }
 
 /*****************************************************************************/
-void
-child_signal_handler(int sig)
+static void
+set_sigchld_event(int sig)
+{
+    g_set_wait_obj(g_sigchld_event);
+}
+
+/*****************************************************************************/
+static void
+child_signal_handler(void)
 {
     int pid;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "child_signal_handler:");
-    do
+    while ((pid = g_waitchild(NULL)) > 0)
     {
-        pid = g_waitchild(NULL);
         LOG_DEVEL(LOG_LEVEL_INFO, "child_signal_handler: child pid %d", pid);
-        if ((pid == g_exec_pid) && (pid > 0))
+        if (pid == g_exec_pid)
         {
             LOG_DEVEL(LOG_LEVEL_INFO, "child_signal_handler: found pid %d", pid);
             //shutdownx();
         }
     }
-    while (pid >= 0);
 }
 
 /*****************************************************************************/
@@ -1559,6 +1563,10 @@ main_cleanup(void)
     if (g_term_event != 0)
     {
         g_delete_wait_obj(g_term_event);
+    }
+    if (g_sigchld_event != 0)
+    {
+        g_delete_wait_obj(g_sigchld_event);
     }
     if (g_thread_done_event != 0)
     {
@@ -1641,6 +1649,7 @@ run_exec(void)
     {
         trans_delete(g_con_trans);
         g_close_wait_obj(g_term_event);
+        g_close_wait_obj(g_sigchld_event);
         g_close_wait_obj(g_thread_done_event);
         g_close_wait_obj(g_exec_event);
         tc_mutex_delete(g_exec_mutex);
@@ -1751,7 +1760,7 @@ main(int argc, char **argv)
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */
-    g_signal_child_stop(child_signal_handler); /* SIGCHLD */
+    g_signal_child_stop(set_sigchld_event); /* SIGCHLD */
     g_signal_segfault(segfault_signal_handler);
 
     /* Cater for the X server exiting unexpectedly */
@@ -1762,6 +1771,8 @@ main(int argc, char **argv)
     LOG_DEVEL(LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num);
     g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
     g_term_event = g_create_wait_obj(text);
+    g_snprintf(text, 255, "xrdp_chansrv_%8.8x_sigchld", pid);
+    g_sigchld_event = g_create_wait_obj(text);
     g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
     g_thread_done_event = g_create_wait_obj(text);
     g_snprintf(text, 255, "xrdp_chansrv_%8.8x_exec", pid);
@@ -1774,8 +1785,9 @@ main(int argc, char **argv)
     {
         waiters[0] = g_term_event;
         waiters[1] = g_exec_event;
+        waiters[2] = g_sigchld_event;
 
-        if (g_obj_wait(waiters, 2, 0, 0, 0) != 0)
+        if (g_obj_wait(waiters, 3, 0, 0, 0) != 0)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "main: error, g_obj_wait failed");
             break;
@@ -1784,6 +1796,12 @@ main(int argc, char **argv)
         if (g_is_wait_obj_set(g_term_event))
         {
             break;
+        }
+
+        if (g_is_wait_obj_set(g_sigchld_event))
+        {
+            g_reset_wait_obj(g_sigchld_event);
+            child_signal_handler();
         }
 
         if (g_is_wait_obj_set(g_exec_event))
@@ -1808,4 +1826,3 @@ main(int argc, char **argv)
     LOG_DEVEL(LOG_LEVEL_INFO, "main: app exiting pid %d(0x%8.8x)", pid, pid);
     return 0;
 }
-
