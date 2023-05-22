@@ -14,34 +14,85 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+/**
+ * @file    common/fifo.h
+ * @brief   Fifo for storing generic pointers
  *
- * FIFO implementation to store pointer to data struct
+ * Declares an unbounded FIFO-queue for void * pointers
  */
 
 #ifndef _FIFO_H
 #define _FIFO_H
 
-#include "arch.h"
+struct fifo;
 
-typedef struct user_data USER_DATA;
+/**
+ * Function used by fifo_clear()/fifo_delete() to destroy items
+ *
+ * @param item Item being deleted
+ * @param closure Additional argument to function
+ *
+ * Use this function to free any allocated storage (e.g. if the items
+ * are dynamically allocated)
+ */
+typedef void (*fifo_item_destructor)(void *item, void *closure);
 
-struct user_data
-{
-    USER_DATA *next;
-    void      *item;
-};
+/**
+ * Create new fifo
+ *
+ * @param item_destructor Destructor for fifo items, or NULL for none
+ * @return fifo, or NULL if no memory
+ */
+struct fifo *
+fifo_create(fifo_item_destructor item_destructor);
 
-typedef struct fifo
-{
-    USER_DATA *head;
-    USER_DATA *tail;
-    int        auto_free;
-} FIFO;
+/**
+ * Delete an existing fifo
+ *
+ * Any existing entries on the fifo are passed in order to the
+ * item destructor specified when the fifo was created.
+ *
+ * @param self fifo to delete (may be NULL)
+ * @param closure Additional parameter for fifo item destructor
+ */
+void
+fifo_delete(struct fifo *self, void *closure);
 
-FIFO *fifo_create(void);
-void   fifo_delete(FIFO *self);
-int    fifo_add_item(FIFO *self, void *item);
-void *fifo_remove_item(FIFO *self);
-int    fifo_is_empty(FIFO *self);
+/**
+ * Clear(empty) an existing fifo
+ *
+ * Any existing entries on the fifo are passed in order to the
+ * item destructor specified when the fifo was created.
+ *
+ * @param self fifo to clear (may be NULL)
+ * @param closure Additional parameter for fifo item destructor
+ */
+void
+fifo_clear(struct fifo *self, void *closure);
+
+/** Add an item to a fifo
+ * @param self fifo
+ * @param item Item to add
+ * @return 1 if successful, 0 for no memory, or tried to add NULL
+ */
+int
+fifo_add_item(struct fifo *self, void *item);
+
+/** Remove an item from a fifo
+ * @param self fifo
+ * @return item if successful, NULL for no items in FIFO
+ */
+void *
+fifo_remove_item(struct fifo *self);
+
+/** Is fifo empty?
+ *
+ * @param self fifo
+ * @return 1 if fifo is empty, 0 if not
+ */
+int
+fifo_is_empty(struct fifo *self);
 
 #endif

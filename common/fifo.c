@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2004-2014
+ * Copyright (C) Matt Burt 2023
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,174 +14,250 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * FIFO implementation to store pointer to data struct
  */
+
+/**
+ * @file    common/fifo.c
+ * @brief   Fifo for storing generic pointers
+ *
+ * Defines an unbounded FIFO-queue for void * pointers
+ *
+ * The stored pointers are called 'items' below.
+ *
+ * Items are stored in groups called 'chunks'. Chunks are linked together
+ * in a chain:-
+ *
+ * +-------------+    +--------+    +--------+    +--------+
+ * | first_chunk |--->|  next  |--->|  next  |--->|  NULL  |<-+
+ * | last_chunk  |-+  +--------+    +--------+    +--------+  |
+ * | . . .       | |  | item.0 |    | item.0 |    | item.0 |  |
+ * +-------------+ |  |   ...  |    |   ...  |    |   ...  |  |
+ *                 |  | item.n |    | item.n |    | item.n |  |
+ *                 |  +--------+    +--------+    +--------+  |
+ *                 |                                          |
+ *                 +------------------------------------------+
+ *
+ * This allows items to be added to the FIFO by allocating blocks
+ * as each one fills up.
+ *
+ * The code to read from the FIFO de-allocates blocks as each one is
+ * consumed.
+ *
+ * There is always at least one chunk in the FIFO.
+ */
+
 
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
 
+#include <stdlib.h>
+
 #include "fifo.h"
-#include "os_calls.h"
 
-/**
- * Create new fifo data struct
- *
- * @return pointer to new FIFO or NULL if system out of memory
- *****************************************************************************/
+#define ITEMS_PER_CHUNK 31
 
-FIFO *
-fifo_create(void)
+struct chunk
 {
-    return (FIFO *) g_malloc(sizeof(FIFO), 1);
+    struct chunk *next;
+    void *items[ITEMS_PER_CHUNK];
+};
+
+struct fifo
+{
+    struct chunk *first_chunk;
+    struct chunk *last_chunk;
+    /** Next address to write in 'last_chunk' */
+    unsigned short writer;
+    /** Next address to read in 'first_chunk' */
+    unsigned short reader;
+    /** Item destructor function, or NULL */
+    fifo_item_destructor item_destructor;
+};
+
+/*****************************************************************************/
+
+struct fifo *
+fifo_create(fifo_item_destructor item_destructor)
+{
+    struct fifo *result = NULL;
+    struct chunk *cptr = (struct chunk *)malloc(sizeof(struct chunk));
+    if (cptr != NULL)
+    {
+        /* 'next' pointer in last block is always NULL */
+        cptr->next = NULL;
+        result = (struct fifo *)malloc(sizeof(struct fifo));
+        if (result == NULL)
+        {
+            free(cptr);
+        }
+        else
+        {
+            result->first_chunk = cptr;
+            result->last_chunk = cptr;
+            result->writer = 0;
+            result->reader = 0;
+            result->item_destructor = item_destructor;
+        }
+    }
+    return result;
 }
 
+/*****************************************************************************/
 /**
- * Delete specified FIFO
- *****************************************************************************/
+ * Internal function to call the destructor function on all items in the fifo
+ *
+ * @param self fifo. Can't be NULL
+ * @param closure Additional argument to destructor function
+ */
+static void
+call_item_destructor(struct fifo *self, void *closure)
+{
+    if (self->item_destructor != NULL)
+    {
+        struct chunk *cptr = self->first_chunk;
+        unsigned int i = self->reader;
 
+        // Process all the chunks up to the last one
+        while (cptr != self->last_chunk)
+        {
+            (*self->item_destructor)(cptr->items[i++], closure);
+            if (i == ITEMS_PER_CHUNK)
+            {
+                cptr = cptr->next;
+                i = 0;
+            }
+        }
+
+        // Process all the items in the last chunk
+        while (i < self->writer)
+        {
+            (*self->item_destructor)(cptr->items[i++], closure);
+        }
+    }
+}
+
+
+/*****************************************************************************/
 void
-fifo_delete(FIFO *self)
+fifo_delete(struct fifo *self, void *closure)
 {
-    USER_DATA *udp;
-
-    if (!self)
+    if (self != NULL)
     {
-        return;
-    }
+        call_item_destructor(self, closure);
 
-    if (!self->head)
-    {
-        /* FIFO is empty */
-        g_free(self);
-        return;
-    }
-
-    if (self->head == self->tail)
-    {
-        /* only one item in FIFO */
-        if (self->auto_free)
+        // Now free all the chunks
+        struct chunk *cptr = self->first_chunk;
+        while (cptr != NULL)
         {
-            g_free(self->head->item);
+            struct chunk *next = cptr->next;
+            free(cptr);
+            cptr = next;
         }
 
-        g_free(self->head);
-        g_free(self);
-        return;
+        free(self);
     }
-
-    /* more then one item in FIFO */
-    while (self->head)
-    {
-        udp = self->head;
-
-        if (self->auto_free)
-        {
-            g_free(udp->item);
-        }
-
-        self->head = udp->next;
-        g_free(udp);
-    }
-
-    g_free(self);
 }
 
-/**
- * Add an item to the specified FIFO
- *
- * @param self FIFO to operate on
- * @param item item to add to specified FIFO
- *
- * @return 0 on success, -1 on error
- *****************************************************************************/
 
+/*****************************************************************************/
+void
+fifo_clear(struct fifo *self, void *closure)
+{
+    if (self != NULL)
+    {
+        call_item_destructor(self, closure);
+
+        // Now free all the chunks except the last one
+        struct chunk *cptr = self->first_chunk;
+        while (cptr->next != NULL)
+        {
+            struct chunk *next = cptr->next;
+            free(cptr);
+            cptr = next;
+        }
+
+        // Re-initialise fifo fields
+        self->first_chunk = cptr;
+        self->last_chunk = cptr;
+        self->reader = 0;
+        self->writer = 0;
+    }
+}
+
+/*****************************************************************************/
 int
-fifo_add_item(FIFO *self, void *item)
+fifo_add_item(struct fifo *self, void *item)
 {
-    USER_DATA *udp;
-
-    if (!self || !item)
+    int rv = 0;
+    if (self != NULL && item != NULL)
     {
-        return -1;
+        if (self->writer == ITEMS_PER_CHUNK)
+        {
+            // Add another chunk to the chain
+            struct chunk *cptr;
+            cptr = (struct chunk *)malloc(sizeof(struct chunk));
+            if (cptr == NULL)
+            {
+                return 0;
+            }
+            cptr->next = NULL;
+            self->last_chunk->next = cptr;
+            self->last_chunk = cptr;
+            self->writer = 0;
+        }
+
+        self->last_chunk->items[self->writer++] = item;
+        rv = 1;
     }
-
-    if ((udp = (USER_DATA *) g_malloc(sizeof(USER_DATA), 0)) == 0)
-    {
-        return -1;
-    }
-
-    udp->item = item;
-    udp->next = 0;
-
-    /* if fifo is empty, add to head */
-    if (!self->head)
-    {
-        self->head = udp;
-        self->tail = udp;
-        return 0;
-    }
-
-    /* add to tail */
-    self->tail->next = udp;
-    self->tail = udp;
-
-    return 0;
+    return rv;
 }
 
-/**
- * Return an item from top of FIFO
- *
- * @param self FIFO to operate on
- *
- * @return top item from FIFO or NULL if FIFO is empty
- *****************************************************************************/
-
+/*****************************************************************************/
 void *
-fifo_remove_item(FIFO *self)
+fifo_remove_item(struct fifo *self)
 {
-    void      *item;
-    USER_DATA *udp;
-
-    if (!self || !self->head)
+    void *item = NULL;
+    if (self != NULL)
     {
-        return 0;
-    }
+        // More than one chunk in the fifo?
+        if (self->first_chunk != self->last_chunk)
+        {
+            /* We're not reading the last chunk. There
+             * must be something in the fifo */
+            item = self->first_chunk->items[self->reader++];
 
-    if (self->head == self->tail)
-    {
-        /* only one item in FIFO */
-        item = self->head->item;
-        g_free(self->head);
-        self->head = 0;
-        self->tail = 0;
-        return item;
+            /* At the end of this chunk? */
+            if (self->reader == ITEMS_PER_CHUNK)
+            {
+                struct chunk *old_chunk = self->first_chunk;
+                self->first_chunk = old_chunk->next;
+                free(old_chunk);
+                self->reader = 0;
+            }
+        }
+        else if (self->reader < self->writer)
+        {
+            /* We're reading the last chunk */
+            item = self->first_chunk->items[self->reader++];
+            if (self->reader == self->writer)
+            {
+                // fifo is now empty. We can reset the pointers
+                // to prevent unnecessary allocations in the future.
+                self->reader = 0;
+                self->writer = 0;
+            }
+        }
     }
-
-    /* more then one item in FIFO */
-    udp = self->head;
-    item = self->head->item;
-    self->head = self->head->next;
-    g_free(udp);
     return item;
 }
 
-/**
- * Return FIFO status
- *
- * @param self FIFO to operate on
- *
- * @return true if FIFO is empty, false otherwise
- *****************************************************************************/
+/*****************************************************************************/
 
 int
-fifo_is_empty(FIFO *self)
+fifo_is_empty(struct fifo *self)
 {
-    if (!self)
-    {
-        return 1;
-    }
-
-    return (self->head == 0);
+    return (self == NULL ||
+            (self->first_chunk == self->last_chunk &&
+             self->reader == self->writer));
 }
