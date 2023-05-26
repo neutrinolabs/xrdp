@@ -56,7 +56,7 @@ echo
 
 if [ -z "${BATCH}" ]; then
     echo -n "Copy tarball to ${OLDPWD}? [y/N] "
-    read -t 300 copy_tarball
+    read -t 60 copy_tarball
     case "${copy_tarball}" in
         [Yy]*) cp -i xrdp-${RELVER#v}.tar.gz "${OLDPWD}"; exit ;;
     esac
