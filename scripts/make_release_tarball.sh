@@ -3,7 +3,7 @@
 # Script to generate release tarball
 #
 # This script will generate release tarball. If the repository HEAD is not
-# tagged, the script will aborted. Target GitHub repository, branch can be
+# tagged, the script will be aborted. Target GitHub repository, branch can be
 # customized by GH_* envirnment variable.
 #
 # Usage:
