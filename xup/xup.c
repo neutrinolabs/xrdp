@@ -1307,6 +1307,102 @@ process_server_set_pointer_shmfd(struct mod *amod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
+process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
+{
+    int num_drects;
+    int num_crects;
+    int flags;
+    int frame_id;
+    int shmem_bytes;
+    int shmem_offset;
+    int left;
+    int top;
+    int width;
+    int height;
+    int index;
+    int rv;
+    int16_t *ldrects;
+    int16_t *ldrects1;
+    int16_t *lcrects;
+    int16_t *lcrects1;
+    char *bmpdata;
+    int fd;
+    int recv_bytes;
+    unsigned int num_fds;
+    void *shmem_ptr;
+    char msg[4];
+
+    /* dirty pixels */
+    in_uint16_le(s, num_drects);
+    ldrects = g_new(int16_t, 2 * 4 * num_drects);
+    ldrects1 = ldrects;
+    for (index = 0; index < num_drects; index++)
+    {
+        in_sint16_le(s, ldrects1[0]);
+        in_sint16_le(s, ldrects1[1]);
+        in_sint16_le(s, ldrects1[2]);
+        in_sint16_le(s, ldrects1[3]);
+        ldrects1 += 4;
+    }
+
+    /* copied pixels */
+    in_uint16_le(s, num_crects);
+    lcrects = g_new(int16_t, 2 * 4 * num_crects);
+    lcrects1 = lcrects;
+    for (index = 0; index < num_crects; index++)
+    {
+        in_sint16_le(s, lcrects1[0]);
+        in_sint16_le(s, lcrects1[1]);
+        in_sint16_le(s, lcrects1[2]);
+        in_sint16_le(s, lcrects1[3]);
+        lcrects1 += 4;
+    }
+
+    in_uint32_le(s, flags);
+    in_uint32_le(s, frame_id);
+    in_uint32_le(s, shmem_bytes);
+    in_uint32_le(s, shmem_offset);
+
+    in_uint16_le(s, left);
+    in_uint16_le(s, top);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+    rv = 1;
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_paint_rect_shmfd: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes == 4)
+    {
+        if (num_fds == 1)
+        {
+            if (g_file_map(fd, 1, 1, shmem_bytes, &shmem_ptr) == 0)
+            {
+                bmpdata = (char *)shmem_ptr;
+                bmpdata += shmem_offset;
+                rv = amod->server_paint_rects_ex(amod, num_drects, ldrects,
+                                                 num_crects, lcrects, bmpdata,
+                                                 left, top, width, height,
+                                                 flags, frame_id);
+                g_munmap(shmem_ptr, shmem_bytes);
+            }
+            g_file_close(fd);
+        }
+    }
+    g_free(ldrects);
+    g_free(lcrects);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
 send_server_version_message(struct mod *mod, struct stream *s)
 {
     /* send version message */
@@ -1531,6 +1627,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 63: /* server_set_pointer_shmfd */
             rv = process_server_set_pointer_shmfd(mod, s);
+            break;
+        case 64: /* server_paint_rect_shmfd */
+            rv = process_server_paint_rect_shmfd(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,
