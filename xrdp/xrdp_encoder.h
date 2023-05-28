@@ -38,6 +38,8 @@ struct xrdp_enc_data
     int num_crects;
     short *crects;     /* 4 * num_crects */
     char *data;
+    int left;
+    int top;
     int width;
     int height;
     int flags;

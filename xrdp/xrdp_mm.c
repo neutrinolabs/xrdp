@@ -423,6 +423,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_paint_rects = server_paint_rects;
             self->mod->server_session_info = server_session_info;
             self->mod->server_set_pointer_large = server_set_pointer_large;
+            self->mod->server_paint_rects_ex = server_paint_rects_ex;
             self->mod->si = &(self->wm->session->si);
         }
     }
@@ -3358,6 +3359,17 @@ server_paint_rects(struct xrdp_mod *mod, int num_drects, short *drects,
                    int num_crects, short *crects, char *data, int width,
                    int height, int flags, int frame_id)
 {
+    return server_paint_rects_ex(mod, num_drects, drects, num_crects, crects,
+                                 data, 0, 0, width, height, flags, frame_id);
+}
+
+/*****************************************************************************/
+int
+server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
+                      int num_crects, short *crects, char *data,
+                      int left, int top, int width, int height,
+                      int flags, int frame_id)
+{
     struct xrdp_wm *wm;
     struct xrdp_mm *mm;
     struct xrdp_painter *p;
@@ -3404,6 +3416,8 @@ server_paint_rects(struct xrdp_mod *mod, int num_drects, short *drects,
         enc_data->num_drects = num_drects;
         enc_data->num_crects = num_crects;
         enc_data->data = data;
+        enc_data->left = left;
+        enc_data->top = top;
         enc_data->width = width;
         enc_data->height = height;
         enc_data->flags = flags;
