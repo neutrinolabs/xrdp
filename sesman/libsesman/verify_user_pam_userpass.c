@@ -307,9 +307,6 @@ auth_set_env(struct auth_info *auth_info)
 {
     char **pam_envlist;
     char **pam_env;
-    char item[256];
-    char value[256];
-    int eq_pos;
 
     if (auth_info != NULL)
     {
@@ -320,16 +317,16 @@ auth_set_env(struct auth_info *auth_info)
         {
             for (pam_env = pam_envlist; *pam_env != NULL; ++pam_env)
             {
-                eq_pos = g_pos(*pam_env, "=");
+                char *str = *pam_env;
+                int eq_pos = g_pos(str, "=");
 
-                if (eq_pos >= 0 && eq_pos < 250)
+                if (eq_pos > 0)
                 {
-                    g_strncpy(item, *pam_env, eq_pos);
-                    g_strncpy(value, (*pam_env) + eq_pos + 1, 255);
-                    g_setenv(item, value, 1);
+                    str[eq_pos] = '\0';
+                    g_setenv(str, str + eq_pos + 1, 1);
                 }
 
-                g_free(*pam_env);
+                g_free(str);
             }
 
             g_free(pam_envlist);
