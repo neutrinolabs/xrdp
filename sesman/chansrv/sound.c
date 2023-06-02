@@ -74,7 +74,7 @@ static struct trans *g_audio_c_trans_in = 0;  /* connection */
 static int    g_training_sent_time = 0;
 static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
-FIFO   g_in_fifo;
+struct fifo  *g_in_fifo;
 int    g_bytes_in_fifo = 0;
 static int    g_time_diff = 0;
 static int    g_best_time_diff = 0;
@@ -1260,6 +1260,15 @@ sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 }
 
 /*****************************************************************************/
+/* Item destructor for g_in_fifo
+ */
+static void
+in_fifo_item_destructor(void *item, void *closure)
+{
+    xstream_free((struct stream *)item);
+}
+
+/*****************************************************************************/
 int
 sound_init(void)
 {
@@ -1276,7 +1285,7 @@ sound_init(void)
     sound_start_source_listener();
 
     /* save data from sound_server_source */
-    fifo_init(&g_in_fifo, 100);
+    g_in_fifo = fifo_create(in_fifo_item_destructor);
 
     g_client_does_fdk_aac = 0;
     g_client_fdk_aac_index = 0;
@@ -1340,7 +1349,7 @@ sound_deinit(void)
     }
 #endif
 
-    fifo_deinit(&g_in_fifo);
+    fifo_delete(g_in_fifo, NULL);
 
     return 0;
 }
@@ -1660,7 +1669,6 @@ sound_process_input_formats(struct stream *s, int size)
 
     return 0;
 }
-
 /**
  *
  *****************************************************************************/
@@ -1673,10 +1681,7 @@ sound_input_start_recording(void)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "sound_input_start_recording:");
 
     /* if there is any data in FIFO, discard it */
-    while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
-    {
-        xstream_free(s);
-    }
+    fifo_clear(g_in_fifo, NULL);
     g_bytes_in_fifo = 0;
 
     xstream_new(s, 1024);
@@ -1752,7 +1757,7 @@ sound_process_input_data(struct stream *s, int bytes)
     g_memcpy(ls->data, s->p, bytes);
     ls->p += bytes;
     s_mark_end(ls);
-    fifo_insert(&g_in_fifo, (void *) ls);
+    fifo_add_item(g_in_fifo, (void *) ls);
     g_bytes_in_fifo += bytes;
 
     return 0;
@@ -1805,7 +1810,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         {
             if (g_stream_inp == NULL)
             {
-                g_stream_inp = (struct stream *) fifo_remove(&g_in_fifo);
+                g_stream_inp = (struct stream *) fifo_remove_item(g_in_fifo);
                 if (g_stream_inp != NULL)
                 {
                     g_bytes_in_fifo -= g_stream_inp->size;

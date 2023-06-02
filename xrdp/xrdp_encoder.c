@@ -47,6 +47,26 @@ static int
 process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 
 /*****************************************************************************/
+/* Item destructor for self->fifo_to_proc */
+static void
+xrdp_enc_data_destructor(void *item, void *closure)
+{
+    XRDP_ENC_DATA *enc = (XRDP_ENC_DATA *)item;
+    g_free(enc->drects);
+    g_free(enc->crects);
+    g_free(enc);
+}
+
+/* Item destructor for self->fifo_processed */
+static void
+xrdp_enc_data_done_destructor(void *item, void *closure)
+{
+    XRDP_ENC_DATA_DONE *enc_done = (XRDP_ENC_DATA_DONE *)item;
+    g_free(enc_done->comp_pad_data);
+    g_free(enc_done);
+}
+
+/*****************************************************************************/
 struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm)
 {
@@ -114,8 +134,8 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     LOG_DEVEL(LOG_LEVEL_INFO, "init_xrdp_encoder: initializing encoder codec_id %d", self->codec_id);
 
     /* setup required FIFOs */
-    self->fifo_to_proc = fifo_create();
-    self->fifo_processed = fifo_create();
+    self->fifo_to_proc = fifo_create(xrdp_enc_data_destructor);
+    self->fifo_processed = fifo_create(xrdp_enc_data_done_destructor);
     self->mutex = tc_mutex_create();
 
     pid = g_getpid();
@@ -141,10 +161,6 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 void
 xrdp_encoder_delete(struct xrdp_encoder *self)
 {
-    XRDP_ENC_DATA *enc;
-    XRDP_ENC_DATA_DONE *enc_done;
-    FIFO *fifo;
-
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_delete:");
     if (self == 0)
     {
@@ -175,40 +191,9 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     g_delete_wait_obj(self->xrdp_encoder_event_processed);
     g_delete_wait_obj(self->xrdp_encoder_term);
 
-    /* cleanup fifo_to_proc */
-    fifo = self->fifo_to_proc;
-    if (fifo)
-    {
-        while (!fifo_is_empty(fifo))
-        {
-            enc = (XRDP_ENC_DATA *) fifo_remove_item(fifo);
-            if (enc == 0)
-            {
-                continue;
-            }
-            g_free(enc->drects);
-            g_free(enc->crects);
-            g_free(enc);
-        }
-        fifo_delete(fifo);
-    }
-
-    /* cleanup fifo_processed */
-    fifo = self->fifo_processed;
-    if (fifo)
-    {
-        while (!fifo_is_empty(fifo))
-        {
-            enc_done = (XRDP_ENC_DATA_DONE *) fifo_remove_item(fifo);
-            if (enc_done == 0)
-            {
-                continue;
-            }
-            g_free(enc_done->comp_pad_data);
-            g_free(enc_done);
-        }
-        fifo_delete(fifo);
-    }
+    /* cleanup fifos */
+    fifo_delete(self->fifo_to_proc, NULL);
+    fifo_delete(self->fifo_processed, NULL);
     tc_mutex_delete(self->mutex);
     g_free(self);
 }
@@ -229,7 +214,7 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     int count;
     char *out_data;
     XRDP_ENC_DATA_DONE *enc_done;
-    FIFO *fifo_processed;
+    struct fifo *fifo_processed;
     tbus mutex;
     tbus event_processed;
 
@@ -322,7 +307,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     int finished;
     char *out_data;
     XRDP_ENC_DATA_DONE *enc_done;
-    FIFO *fifo_processed;
+    struct fifo *fifo_processed;
     tbus mutex;
     tbus event_processed;
     struct rfx_tile *tiles;
@@ -455,7 +440,7 @@ THREAD_RV THREAD_CC
 proc_enc_msg(void *arg)
 {
     XRDP_ENC_DATA *enc;
-    FIFO *fifo_to_proc;
+    struct fifo *fifo_to_proc;
     tbus mutex;
     tbus event_to_proc;
     tbus term_obj;
