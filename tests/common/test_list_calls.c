@@ -4,8 +4,8 @@
 
 #include "list.h"
 
-#include "test_common.h"
 #include "os_calls.h"
+#include "test_common.h"
 #include "string_calls.h"
 
 #define TEST_LIST_SIZE 1000
