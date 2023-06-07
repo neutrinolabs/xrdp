@@ -102,9 +102,7 @@ xrdp_shutdown(int sig)
 static void
 xrdp_child(int sig)
 {
-    while (g_waitchild(NULL) > 0)
-    {
-    }
+    g_set_sigchld(1);
 }
 
 /*****************************************************************************/
@@ -562,6 +560,14 @@ main(int argc, char **argv)
         LOG(LOG_LEVEL_WARNING, "error creating g_term_event");
     }
 
+    g_snprintf(text, 255, "xrdp_%8.8x_main_sigchld", pid);
+    g_set_sigchld_event(g_create_wait_obj(text));
+
+    if (g_get_sigchld() == 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "error creating g_sigchld_event");
+    }
+
     g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
     g_set_sync_event(g_create_wait_obj(text));
 
@@ -582,6 +588,9 @@ main(int argc, char **argv)
 
     g_delete_wait_obj(g_get_term());
     g_set_term_event(0);
+
+    g_delete_wait_obj(g_get_sigchld());
+    g_set_sigchld_event(0);
 
     g_delete_wait_obj(g_get_sync_event());
     g_set_sync_event(0);
