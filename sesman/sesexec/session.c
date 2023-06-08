@@ -821,7 +821,7 @@ exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
             break;
 
         case E_XR_SIGNAL:
-            g_snprintf(buff, bufflen, "signal %d", e->val);
+            g_snprintf(buff, bufflen, "signal \"%s\"", g_strsignal(e->val));
             break;
 
         default:

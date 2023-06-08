@@ -267,6 +267,12 @@ int      g_strcasecmp(const char *c1, const char *c2);
 int      g_strncasecmp(const char *c1, const char *c2, int len);
 int      g_atoi(const char *str);
 /**
+ * Implements POSIX 1003.1 strsignal()
+ *
+ * This function never returns NULL
+ */
+char    *g_strsignal(int signum);
+/**
  * Extends g_atoi(), Converts decimal and hexadecimal number String to integer
  *
  * Prefix hexadecimal numbers with '0x'

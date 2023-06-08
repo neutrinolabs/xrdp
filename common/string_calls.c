@@ -423,6 +423,30 @@ g_atoi(const char *str)
 }
 
 /*****************************************************************************/
+char *
+g_strsignal(int signum)
+{
+    char *result = strsignal(signum);
+
+    if (result == NULL)
+    {
+        // Using a static buffer offers the same guarantees as the
+        // strsignal() call
+        static char buff[32];
+        unsigned int len;
+        len = g_snprintf(buff, sizeof(buff), "SIG#%d", signum);
+        if (len >= sizeof(buff))
+        {
+            // Buffer overflow
+            g_snprintf(buff, sizeof(buff), "SIG???");
+        }
+        result = buff;
+    }
+
+    return result;
+}
+
+/*****************************************************************************/
 /* As g_atoi() but allows for hexadecimal too */
 int
 g_atoix(const char *str)

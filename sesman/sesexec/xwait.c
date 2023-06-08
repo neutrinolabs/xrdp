@@ -156,8 +156,8 @@ wait_for_xserver(uid_t uid,
 
                     case E_XR_SIGNAL:
                         LOG(LOG_LEVEL_ERROR,
-                            "waitforx failed with unexpected signal %d",
-                            e.val);
+                            "waitforx failed with unexpected signal \"%s\"",
+                            g_strsignal(e.val));
                         break;
 
                     default:
