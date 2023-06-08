@@ -517,5 +517,5 @@ main(int argc, char **argv)
     }
 
     g_deinit();
-    g_exit(error);
+    return error;
 }

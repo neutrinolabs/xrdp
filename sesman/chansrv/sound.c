@@ -1118,9 +1118,10 @@ process_pcm_message(int id, int size, struct stream *s)
                 char *buf = (char *) g_malloc(g_bbuf_size, 0);
                 if (buf != NULL)
                 {
+                    int i;
                     silence_start_time = g_time3();
                     sending_silence = 1;
-                    for (int i = 0; i < send_silence_times; i++)
+                    for (i = 0; i < send_silence_times; i++)
                     {
                         g_memset(buf, 0, g_bbuf_size);
                         sound_send_wave_data_chunk(buf, g_bbuf_size);
