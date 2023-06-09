@@ -1,5 +1,5 @@
 name: "🕷️ Bug report"
-description: fofofof
+description: Report errors or unexpected behavior
 labels:
   - "bug"
 body:
@@ -28,11 +28,11 @@ body:
     attributes:
       label: Installation method
       description: How was xrdp installed from?
-      multiple: true
       options:
         - dnf / apt / zypper / pkg / etc
         - Homebrew / MacPorts
         - git clone & make install
+        - Doesn't matter
         - other
     validations:
       required: true
@@ -48,6 +48,7 @@ body:
   - type: dropdown
     attributes:
       label: Area(s) with issue?
+      description: What things had an issue? Check all that apply.
       multiple: true
       options:
         - Audio redirection
