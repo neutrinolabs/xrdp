@@ -1,0 +1,84 @@
+name: "🕷️ Bug report"
+description: fofofof
+labels:
+  - "bug"
+body:
+  - type: input
+    attributes:
+      label: xrdp version
+      placeholder: 0.9.20
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Detailed xrdp version, build options
+      description: Copy & paste the result of `xrdp --version`. DO NOT remove `~~~` but paste the result between two `~~~`.
+      value: |
+        ~~~
+        PASTE HERE
+        ~~~
+  - type: input
+    attributes:
+      label: Operating system & version
+      placeholder: "Ubuntu 22.04 / AlmaLinux 9 / FreeBSD 13.2 / etc"
+      description: Tell us about your operating system. See PRETTY_NAME in /etc/os-release if you don't know.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Installation method
+      description: How was xrdp installed from?
+      multiple: true
+      options:
+        - dnf / apt / zypper / pkg / etc
+        - Homebrew / MacPorts
+        - git clone & make install
+        - other
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Which backend do you use?
+      description:
+  - type: input
+    attributes:
+      label: What's your client?
+      description: If you issue occurs with specific clients, tell us the client app name, app version client os version and platform.
+      placeholder: Microsoft's official client from Mac App Store, running on macOS Ventura.
+  - type: dropdown
+    attributes:
+      label: Area(s) with issue?
+      multiple: true
+      options:
+        - Audio redirection
+        - Authentication
+        - Crashes such as segfault
+        - Clipboard
+        - Compatiblity aginst clients
+        - Compile error
+        - File transfer / drive redirection
+        - Graphic glitches
+        - Keyboard / Mouse
+        - Network
+        - Performance
+        - Session manager (sesman)
+        - Smartcard
+        - Other
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      placeholder: Having detailed steps helps us reproduce the bug.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✔️ Expected Behavior
+      placeholder: What were you expecting?
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: ❌ Actual Behavior
+      placeholder: What happened instead?
+    validations:
+      required: false
