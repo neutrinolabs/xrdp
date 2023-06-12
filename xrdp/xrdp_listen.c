@@ -863,9 +863,10 @@ process_pending_sigchld_events(void)
     {
         if (e.reason == E_XR_SIGNAL)
         {
+            char sigstr[MAXSTRSIGLEN];
             LOG(LOG_LEVEL_ERROR,
-                "Child %d terminated unexpectedly with signal \"%s\"",
-                pid, g_strsignal(e.val));
+                "Child %d terminated unexpectedly with signal %s",
+                pid, g_sig2text(e.val, sigstr));
         }
     }
 }
