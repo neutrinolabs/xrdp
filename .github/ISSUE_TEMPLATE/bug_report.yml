@@ -39,7 +39,17 @@ body:
   - type: input
     attributes:
       label: Which backend do you use?
-      description:
+      description: Tell us about xrdp backend and version you're using. Typically, it would be either Xvnc or xorgxrdp or rarely NeutrionRDP / FreeRDP.
+      placeholder: Xvnc (tigervnc-1.12.0-13.el9_2)
+  - type: input
+    attributes:
+      label: What desktop environment do you use?
+      description: Tell us about your desktop (e.g. GNOME / KDE / Xfce / xterm). If you're certain the bug you about to report is not desktop specific, fill "any" here.
+      placeholder: GNOME
+  - type: input
+    attributes:
+      label: Environment xrdp running on
+      description: Tell us whether xrdp is running on a VM, or if on a physical machine what graphics cards are installed.
   - type: input
     attributes:
       label: What's your client?
@@ -83,3 +93,8 @@ body:
       placeholder: What happened instead?
     validations:
       required: false
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description:
+      Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
