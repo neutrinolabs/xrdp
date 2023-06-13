@@ -1,0 +1,5 @@
+contact_links:
+    - name: Questions
+      about: If you are new to xrdp and want to ask community for help, raise it as Q&A in discussion.
+      url: https://github.com/neutrinolabs/xrdp/discussions/new?category=q-a
+
