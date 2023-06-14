@@ -27,8 +27,7 @@ AM_CPPFLAGS = \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  -DXRDP_LOG_PATH=\"${localstatedir}/log\" \
-  -DXRDP_SOCKET_PATH=\"${socketdir}\"
+  -DXRDP_LOG_PATH=\"${localstatedir}/log\"
 
 # -no-suppress is an automake-specific flag which is needed
 # to prevent us missing compiler errors in some circumstances

@@ -151,28 +151,6 @@ g_rm_temp_dir(void)
 }
 
 /*****************************************************************************/
-int
-g_mk_socket_path(void)
-{
-    if (!g_directory_exist(XRDP_SOCKET_PATH))
-    {
-        if (!g_create_path(XRDP_SOCKET_PATH"/"))
-        {
-            /* if failed, still check if it got created by someone else */
-            if (!g_directory_exist(XRDP_SOCKET_PATH))
-            {
-                LOG(LOG_LEVEL_ERROR,
-                    "g_mk_socket_path: g_create_path(%s) failed",
-                    XRDP_SOCKET_PATH);
-                return 1;
-            }
-        }
-        g_chmod_hex(XRDP_SOCKET_PATH, 0x1777);
-    }
-    return 0;
-}
-
-/*****************************************************************************/
 void
 g_init(const char *app_name)
 {
@@ -2666,7 +2644,7 @@ g_create_dir(const char *dirname)
 #if defined(_WIN32)
     return CreateDirectoryA(dirname, 0); // test this
 #else
-    return mkdir(dirname, (mode_t) - 1) == 0;
+    return mkdir(dirname, 0777) == 0;
 #endif
 }
 

@@ -683,6 +683,44 @@ read_pid_file(const char *pid_file, int *pid)
 }
 
 /******************************************************************************/
+/** Creates the socket path for sesman and session sockets
+*/
+static int
+create_xrdp_socket_root_path(void)
+{
+#ifndef XRDP_SOCKET_PATH
+#   error "XRDP_SOCKET_PATH must be defined"
+#endif
+    int uid = g_getuid();
+    int gid = g_getgid();
+
+    /* Create the path using 0755 permissions */
+    int old_umask = g_umask_hex(0x22);
+    (void)g_create_path(XRDP_SOCKET_PATH"/");
+    (void)g_umask_hex(old_umask);
+
+    /* Check the ownership and permissions on the last path element
+     * are as expected */
+    if (g_chown(XRDP_SOCKET_PATH, uid, gid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "create_xrdp_socket_root_path: Can't set owner of %s to %d:%d",
+            XRDP_SOCKET_PATH, uid, gid);
+        return 1;
+    }
+
+    if (g_chmod_hex(XRDP_SOCKET_PATH, 0x755) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "create_xrdp_socket_root_path: Can't set perms of %s to 0x755",
+            XRDP_SOCKET_PATH);
+        return 1;
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
 int
 main(int argc, char **argv)
 {
@@ -928,7 +966,7 @@ main(int argc, char **argv)
         "starting xrdp-sesman with pid %d", g_pid);
 
     /* make sure the socket directory exists */
-    g_mk_socket_path();
+    create_xrdp_socket_root_path();
 
     /* make sure the /tmp/.X11-unix directory exists */
     if (!g_directory_exist("/tmp/.X11-unix"))
