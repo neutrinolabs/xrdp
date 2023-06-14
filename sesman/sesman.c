@@ -50,6 +50,7 @@
 #include "string_calls.h"
 #include "trans.h"
 #include "xrdp_configure_options.h"
+#include "xrdp_sockets.h"
 
 /**
  * Maximum number of pre-session items
@@ -688,9 +689,6 @@ read_pid_file(const char *pid_file, int *pid)
 static int
 create_xrdp_socket_root_path(void)
 {
-#ifndef XRDP_SOCKET_PATH
-#   error "XRDP_SOCKET_PATH must be defined"
-#endif
     int uid = g_getuid();
     int gid = g_getgid();
 

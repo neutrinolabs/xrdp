@@ -2,7 +2,7 @@ AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_LIBEXEC_PATH=\"${libexecdir}/xrdp\" \
-  -DXRDP_SOCKET_PATH=\"${socketdir}\" \
+  -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/sesman/libsesman \
   -I$(top_srcdir)/libipm \
   -I$(top_srcdir)/common

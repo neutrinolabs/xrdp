@@ -61,6 +61,8 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->resize_queue = list_create();
     self->resize_queue->auto_free = 1;
 
+    self->uid = -1; /* Never good to default UIDs to 0 */
+
     pid = g_getpid();
     /* setup wait objects for signalling */
     g_snprintf(buf, sizeof(buf), "xrdp_%8.8x_resize_ready", pid);
@@ -469,11 +471,12 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         {
             if (self->code == XVNC_SESSION_CODE)
             {
-                g_snprintf(text, 255, "%d", 5900 + self->display);
+                g_snprintf(text, sizeof(text), "%d", 5900 + self->display);
             }
             else if (self->code == XORG_SESSION_CODE)
             {
-                g_snprintf(text, 255, XRDP_X11RDP_STR, self->display);
+                g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
+                           self->uid, self->display);
             }
             else
             {
@@ -2178,7 +2181,8 @@ xrdp_mm_process_login_response(struct xrdp_mm *self)
 
     self->mmcs_expecting_msg = 0;
 
-    rv = scp_get_login_response(self->sesman_trans, &login_result, &server_closed);
+    rv = scp_get_login_response(self->sesman_trans, &login_result,
+                                &server_closed, &self->uid);
     if (rv == 0)
     {
         if (login_result != E_SCP_LOGIN_OK)
@@ -2346,11 +2350,16 @@ cleanup_states(struct xrdp_mm *self)
  * @param value assigned to chansrvport
  * @param dest Output buffer
  * @param dest_size Total size of output buffer, including terminator space
+ * @param uid of destination
+ *
+ * Pass in dest of NULL, dest_size of 0 and uid of -1 to simply see if
+ * the string parses OK.
+ *
  * @return 0 for success
  */
 
 static int
-parse_chansrvport(const char *value, char *dest, int dest_size)
+parse_chansrvport(const char *value, char *dest, int dest_size, int uid)
 {
     int rv = 0;
 
@@ -2373,7 +2382,7 @@ parse_chansrvport(const char *value, char *dest, int dest_size)
         }
         else
         {
-            g_snprintf(dest, dest_size, XRDP_CHANSRV_STR, g_atoi(p));
+            g_snprintf(dest, dest_size, XRDP_CHANSRV_STR, uid, g_atoi(p));
         }
     }
     else
@@ -2561,7 +2570,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     {
         const char *csp = xrdp_mm_get_value(self, "chansrvport");
         /* It's defined, but is it a valid string? */
-        if (csp != NULL && parse_chansrvport(csp, NULL, 0) == 0)
+        if (csp != NULL && parse_chansrvport(csp, NULL, 0, -1) == 0)
         {
             self->use_chansrv = 1;
         }
@@ -2652,6 +2661,7 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                                     "access control check was successful");
                     // No reply needed for this one
                     status = scp_send_logout_request(self->sesman_trans);
+                    self->uid = -1;
                 }
 
                 if (status == 0 && self->use_sesman)
@@ -2723,20 +2733,21 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
             {
                 if (self->use_chansrv)
                 {
-                    char portbuff[256];
+                    char portbuff[XRDP_SOCKETS_MAXPATH];
 
                     xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                                     "Connecting to chansrv");
                     if (self->use_sesman)
                     {
                         g_snprintf(portbuff, sizeof(portbuff),
-                                   XRDP_CHANSRV_STR, self->display);
+                                   XRDP_CHANSRV_STR, self->uid, self->display);
                     }
                     else
                     {
                         const char *cp = xrdp_mm_get_value(self, "chansrvport");
                         portbuff[0] = '\0';
-                        parse_chansrvport(cp, portbuff, sizeof(portbuff));
+                        parse_chansrvport(cp, portbuff, sizeof(portbuff),
+                                          self->uid);
 
                     }
                     xrdp_mm_update_allowed_channels(self);

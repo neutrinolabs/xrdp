@@ -370,8 +370,6 @@ prepare_xorg_xserver_params(const struct session_parameters *s,
         g_snprintf(text, sizeof(text), "%d", g_cfg->sess.kill_disconnected);
         g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
-        g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
-
         /* get path of Xorg from config */
         xserver = (const char *)list_get_item(g_cfg->xorg_params, 0);
 
@@ -716,15 +714,14 @@ session_start(struct login_info *login_info,
 
 /******************************************************************************/
 static int
-cleanup_sockets(int display)
+cleanup_sockets(int uid, int display)
 {
-    LOG(LOG_LEVEL_INFO, "cleanup_sockets:");
-    char file[256];
-    int error;
+    LOG_DEVEL(LOG_LEVEL_INFO, "cleanup_sockets:");
 
-    error = 0;
+    char file[XRDP_SOCKETS_MAXPATH];
+    int error = 0;
 
-    g_snprintf(file, 255, CHANSRV_PORT_OUT_STR, display);
+    g_snprintf(file, sizeof(file), CHANSRV_PORT_OUT_STR, uid, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
@@ -737,7 +734,7 @@ cleanup_sockets(int display)
         }
     }
 
-    g_snprintf(file, 255, CHANSRV_PORT_IN_STR, display);
+    g_snprintf(file, sizeof(file), CHANSRV_PORT_IN_STR, uid, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
@@ -750,7 +747,7 @@ cleanup_sockets(int display)
         }
     }
 
-    g_snprintf(file, 255, XRDP_CHANSRV_STR, display);
+    g_snprintf(file, sizeof(file), XRDP_CHANSRV_STR, uid, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
@@ -763,7 +760,7 @@ cleanup_sockets(int display)
         }
     }
 
-    g_snprintf(file, 255, CHANSRV_API_STR, display);
+    g_snprintf(file, sizeof(file), CHANSRV_API_STR, uid, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
@@ -779,7 +776,7 @@ cleanup_sockets(int display)
     /* the following files should be deleted by xorgxrdp
      * but just in case the deletion failed */
 
-    g_snprintf(file, 255, XRDP_X11RDP_STR, display);
+    g_snprintf(file, sizeof(file), XRDP_X11RDP_STR, uid, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
@@ -792,7 +789,7 @@ cleanup_sockets(int display)
         }
     }
 
-    g_snprintf(file, 255, XRDP_DISCONNECT_STR, display);
+    g_snprintf(file, sizeof(file), XRDP_DISCONNECT_STR, uid, display);
     if (g_file_exist(file))
     {
         LOG(LOG_LEVEL_DEBUG, "cleanup_sockets: deleting %s", file);
@@ -908,7 +905,7 @@ session_process_child_exit(struct session_data *sd,
 
     if (!session_active(sd))
     {
-        cleanup_sockets(sd->params.display);
+        cleanup_sockets(g_login_info->uid, sd->params.display);
     }
 }
 

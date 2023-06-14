@@ -140,7 +140,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
     bytes = sizeof(s.sun_path);
-    snprintf(s.sun_path, bytes - 1, CHANSRV_API_STR, wts->display_num);
+    snprintf(s.sun_path, bytes - 1, CHANSRV_API_STR, getuid(), wts->display_num);
     s.sun_path[bytes - 1] = 0;
     bytes = sizeof(struct sockaddr_un);
 

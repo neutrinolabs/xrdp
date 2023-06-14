@@ -4,7 +4,7 @@ EXTRA_DIST = \
   vrplayer.mk
 
 AM_CPPFLAGS = \
-  -DXRDP_SOCKET_PATH=\"${socketdir}\" \
+  -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/common
 
 module_LTLIBRARIES = \

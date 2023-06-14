@@ -284,12 +284,14 @@ scp_get_sys_login_request(struct trans *trans,
  * @param login_result What happened to the login
  * @param server_closed If login fails, whether server has closed connection.
  *        If not, a retry can be made.
+ * @param uid UID for a successful login
  * @return != 0 for error
  */
 int
 scp_send_login_response(struct trans *trans,
                         enum scp_login_status login_result,
-                        int server_closed);
+                        int server_closed,
+                        int uid);
 
 /**
  * Parses an incoming E_SCP_LOGIN_RESPONSE (SCP client)
@@ -298,12 +300,17 @@ scp_send_login_response(struct trans *trans,
  * @param[out] login_result 0 for success, PAM error code otherwise
  * @param[out] server_closed If login fails, whether server has closed
  *             connection. If not a retry can be made.
+ * @param[out] uid UID for a successful login
+ *
+ * server_closed and uid can be passed NULL if the caller isn't interested.
+ *
  * @return != 0 for error
  */
 int
 scp_get_login_response(struct trans *trans,
                        enum scp_login_status *login_result,
-                       int *server_closed);
+                       int *server_closed,
+                       int *uid);
 
 /**
  * Send an E_SCP_LOGOUT_REQUEST (SCP client)

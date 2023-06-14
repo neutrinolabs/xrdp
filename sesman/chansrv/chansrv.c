@@ -1238,7 +1238,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 static int
 setup_listen(void)
 {
-    char port[256];
+    char port[XRDP_SOCKETS_MAXPATH];
     int error = 0;
 
     if (g_lis_trans != 0)
@@ -1248,7 +1248,7 @@ setup_listen(void)
 
     g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
     g_lis_trans->is_term = g_is_term;
-    g_snprintf(port, 255, XRDP_CHANSRV_STR, g_display_num);
+    g_snprintf(port, sizeof(port), XRDP_CHANSRV_STR, g_getuid(), g_display_num);
 
     g_lis_trans->trans_conn_in = my_trans_conn_in;
     error = trans_listen(g_lis_trans, port);
@@ -1267,12 +1267,12 @@ setup_listen(void)
 static int
 setup_api_listen(void)
 {
-    char port[256];
+    char port[XRDP_SOCKETS_MAXPATH];
     int error = 0;
 
     g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192 * 4, 8192 * 4);
     g_api_lis_trans->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_API_STR, g_display_num);
+    g_snprintf(port, sizeof(port), CHANSRV_API_STR, g_getuid(), g_display_num);
     g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
     error = trans_listen(g_api_lis_trans, port);
 

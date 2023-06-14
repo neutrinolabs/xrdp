@@ -29,6 +29,7 @@
 #include <errno.h>
 
 #include "xrdp_sockets.h"
+#include "os_calls.h"
 #include "string_calls.h"
 
 int main(int argc, char **argv)
@@ -62,7 +63,7 @@ int main(int argc, char **argv)
     }
     memset(&sa, 0, sizeof(sa));
     sa.sun_family = AF_UNIX;
-    sprintf(sa.sun_path, XRDP_DISCONNECT_STR, dis);
+    sprintf(sa.sun_path, XRDP_DISCONNECT_STR, g_getuid(), dis);
 
     if (access(sa.sun_path, F_OK) != 0)
     {

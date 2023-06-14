@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_MODULE_PATH=\"${moduledir}\" \
-  -DXRDP_SOCKET_PATH=\"${socketdir}\" \
+  -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm \
