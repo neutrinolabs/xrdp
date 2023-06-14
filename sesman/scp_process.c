@@ -389,7 +389,7 @@ process_create_session_request(struct pre_session_item *psi)
             else if (psi->sesexec_trans == NULL && sesexec_start(psi) != 0)
             {
                 LOG(LOG_LEVEL_ERROR,
-                    "Can't start sesexec to authenticate user");
+                    "Can't start sesexec to manage session");
                 status = E_SCP_SCREATE_GENERAL_ERROR;
             }
             else
