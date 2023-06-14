@@ -194,45 +194,6 @@ sesman_process_params(int argc, char **argv,
 }
 
 /******************************************************************************/
-static int
-create_sesman_runtime_dir(void)
-{
-    int rv = -1;
-    /* Make sure if we create the directory, there's no gap where it
-    * may have the wrong permissions */
-    int entry_umask = g_umask_hex(0x755);
-
-    if (!g_directory_exist(SESMAN_RUNTIME_PATH) &&
-            !g_create_dir(SESMAN_RUNTIME_PATH))
-    {
-        LOG(LOG_LEVEL_ERROR,
-            "Can't create runtime directory '"
-            SESMAN_RUNTIME_PATH "' [%s]", g_get_strerror());
-    }
-    else if (g_chown(SESMAN_RUNTIME_PATH, g_getuid(), g_getuid()) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR,
-            "Can't set ownership of sesman runtime directory [%s]",
-            g_get_strerror());
-    }
-    else if (g_chmod_hex(SESMAN_RUNTIME_PATH, 0x755) != 0)
-    {
-        /* This might seem redundant, but there's a chance the
-         * directory already exists */
-        LOG(LOG_LEVEL_ERROR,
-            "Can't set permissions of sesman runtime directory [%s]",
-            g_get_strerror());
-    }
-    else
-    {
-        rv = 0;
-    }
-    g_umask_hex(entry_umask);
-
-    return rv;
-}
-
-/******************************************************************************/
 static int sesman_listen_test(struct config_sesman *cfg)
 {
     int status = sesman_create_listening_transport(cfg);
@@ -694,24 +655,24 @@ create_xrdp_socket_root_path(void)
 
     /* Create the path using 0755 permissions */
     int old_umask = g_umask_hex(0x22);
-    (void)g_create_path(XRDP_SOCKET_PATH"/");
+    (void)g_create_path(XRDP_SOCKET_ROOT_PATH"/");
     (void)g_umask_hex(old_umask);
 
     /* Check the ownership and permissions on the last path element
      * are as expected */
-    if (g_chown(XRDP_SOCKET_PATH, uid, gid) != 0)
+    if (g_chown(XRDP_SOCKET_ROOT_PATH, uid, gid) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "create_xrdp_socket_root_path: Can't set owner of %s to %d:%d",
-            XRDP_SOCKET_PATH, uid, gid);
+            XRDP_SOCKET_ROOT_PATH, uid, gid);
         return 1;
     }
 
-    if (g_chmod_hex(XRDP_SOCKET_PATH, 0x755) != 0)
+    if (g_chmod_hex(XRDP_SOCKET_ROOT_PATH, 0x755) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "create_xrdp_socket_root_path: Can't set perms of %s to 0x755",
-            XRDP_SOCKET_PATH);
+            XRDP_SOCKET_ROOT_PATH);
         return 1;
     }
 
@@ -887,9 +848,9 @@ main(int argc, char **argv)
         }
     }
 
-    /* Create the runtime directory before we try to listen (or
+    /* Create the socket directory before we try to listen (or
      * test-listen), so there's somewhere for the default socket to live */
-    if (create_sesman_runtime_dir() != 0)
+    if (create_xrdp_socket_root_path() != 0)
     {
         config_free(g_cfg);
         log_end();
@@ -962,9 +923,6 @@ main(int argc, char **argv)
     /* start program main loop */
     LOG(LOG_LEVEL_INFO,
         "starting xrdp-sesman with pid %d", g_pid);
-
-    /* make sure the socket directory exists */
-    create_xrdp_socket_root_path();
 
     /* make sure the /tmp/.X11-unix directory exists */
     if (!g_directory_exist("/tmp/.X11-unix"))

@@ -7,7 +7,6 @@ AM_CPPFLAGS = \
   -DXRDP_LIBEXEC_PATH=\"${libexecdir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
-  -DSESMAN_RUNTIME_PATH=\"${sesmanruntimedir}\" \
   -I$(top_srcdir)/sesman/libsesman \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm

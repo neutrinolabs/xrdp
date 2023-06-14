@@ -1,6 +1,5 @@
 
 AM_CPPFLAGS = \
-  -DSESMAN_RUNTIME_PATH=\"${sesmanruntimedir}\" \
   -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/common
 

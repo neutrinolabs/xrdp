@@ -57,7 +57,7 @@ In this instance, the system administrator is responsible for ensuring
 the socket can only be created by a suitably privileged process.
 .PP
 If the parameter does not start with a '/', a name within
-@sesmanruntimedir@ is used.
+@socketdir@ is used.
 .RE
 
 .TP

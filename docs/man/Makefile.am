@@ -27,7 +27,6 @@ SUBST_VARS = sed \
    -e 's|@localstatedir[@]|$(localstatedir)|g' \
    -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
    -e 's|@socketdir[@]|$(socketdir)|g' \
-   -e 's|@sesmanruntimedir[@]|$(sesmanruntimedir)|g' \
    -e 's|@xrdpconfdir[@]|$(sysconfdir)/xrdp|g' \
    -e 's|@xrdpdatadir[@]|$(datadir)/xrdp|g' \
    -e 's|@xrdphomeurl[@]|http://www.xrdp.org/|g'

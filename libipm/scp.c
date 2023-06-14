@@ -27,6 +27,8 @@
 #include <config_ac.h>
 #endif
 
+#include <ctype.h>
+
 #include "scp.h"
 #include "libipm.h"
 #include "guid.h"
@@ -77,6 +79,23 @@ scp_msgno_to_str(enum scp_msg_code n, char *buff, unsigned int buff_size)
 }
 
 /*****************************************************************************/
+/**
+ * Helper function returning 1 if the passed-in string is an integer >= 0
+ */
+static int is_positive_int(const char *s)
+{
+    for ( ; *s != '\0' ; ++s)
+    {
+        if (!isdigit(*s))
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/*****************************************************************************/
 int
 scp_port_to_unix_domain_path(const char *port, char *buff,
                              unsigned int bufflen)
@@ -111,7 +130,7 @@ scp_port_to_unix_domain_path(const char *port, char *buff,
         {
             port = SCP_LISTEN_PORT_BASE_STR;
         }
-        else if (g_strcmp(port, "3350") == 0)
+        else if (is_positive_int(port))
         {
             /* Version v0.9.x and earlier of xrdp used a TCP port
              * number. If we come across this, we'll ignore it for
@@ -121,7 +140,7 @@ scp_port_to_unix_domain_path(const char *port, char *buff,
             port = SCP_LISTEN_PORT_BASE_STR;
         }
 
-        result = g_snprintf(buff, bufflen, SESMAN_RUNTIME_PATH "/%s", port);
+        result = g_snprintf(buff, bufflen, XRDP_SOCKET_ROOT_PATH "/%s", port);
     }
 
     return result;

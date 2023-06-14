@@ -70,7 +70,7 @@ not running \fBxrdp\-sesman\fR as a daemon.
 .br
 @localstatedir@/run/xrdp\-sesman.pid
 .br
-@sesmanruntimedir@/sesman.socket
+@socketdir@/sesman.socket
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>

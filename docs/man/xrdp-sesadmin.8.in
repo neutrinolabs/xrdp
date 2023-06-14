@@ -28,7 +28,7 @@ Retained for compatibility, but ignored.
 .BI \-i= port
 The sesman \fIUNIX domain socket\fP to connect to.
 Defaults to \fBsesman.socket\fP.
-If no path is specified for the socket, a default of @sesmanruntimedir@ is used.
+If no path is specified for the socket, a default of @socketdir@ is used.
 
 .TP
 .BI \-c= command
