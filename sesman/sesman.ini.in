@@ -185,7 +185,7 @@ FileUmask=077
 ; xrdp-chansrv.${DISPLAY}.log
 ;
 ; Note: Log levels can be any of: core, error, warning, info, debug, or trace
-LogLevel=INFO
+LogLevel=DEBUG
 EnableSyslog=true
 #SyslogLevel=INFO
 #EnableConsole=false

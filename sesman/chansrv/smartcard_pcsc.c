@@ -753,11 +753,11 @@ scard_readers_to_list(struct pcsc_uds_client *uds_client,
                 uds_client->event_states[reader_index] = 0;
             }
             reader_index++; 
-            hold_reader = uds_client->readerStates[reader_index];
             if (reader_index > (MAX_READERS - 1))
             {
                 return 0;
             }
+            hold_reader = uds_client->readerStates[reader_index];
             name_index = 0;
         }
         else
@@ -798,8 +798,6 @@ scard_function_list_readers_return(void *user_data,
     LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_function_list_readers_return:");
     uds_client = (struct pcsc_uds_client *) user_data;
 
-    LOG(LOG_LEVEL_ERROR, "!!F uds_client numReaders %d", uds_client->numReaders);
-
     rv = 0;
     if (status == 0)
     {
@@ -818,9 +816,7 @@ scard_function_list_readers_return(void *user_data,
                 in_uint32_le(in_s, llen);
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_function_list_readers_return: llen %d", llen);
                 //g_hexdump(in_s->p, llen);
-                LOG(LOG_LEVEL_ERROR, "!!F scard_readers_to_list uds_client numReaders %d", uds_client->numReaders);
                 scard_readers_to_list(uds_client, in_s->p, llen);
-                LOG(LOG_LEVEL_ERROR, "!!E scard_readers_to_list uds_client numReaders %d", uds_client->numReaders);
                 for (index = 0; index < uds_client->numReaders; index++)
                 {
                     g_strncpy(rsa[index].reader_name, uds_client->readerStates[index].readerName, 127);

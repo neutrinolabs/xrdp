@@ -3,7 +3,7 @@
 ini_version=1
 
 ; fork a new process for each incoming connection
-fork=true
+fork=false
 
 ; ports to listen on, number alone means listen on all interfaces
 ; 0.0.0.0 or :: if ipv6 is configured
