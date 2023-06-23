@@ -140,6 +140,14 @@ fi
             fi
     esac
 
+    # Use all available CPUs
+    if [ -f /proc/cpuinfo ]; then
+        cpus=`grep ^processor /proc/cpuinfo | wc -l`
+        if [ -n "$cpus" ]; then
+            make_args="$make_args -j $cpus"
+        fi
+    fi
+
     echo "Making cppcheck..."
     # CFGDIR is needed for cppcheck before 1.86
     call_make $make_args
