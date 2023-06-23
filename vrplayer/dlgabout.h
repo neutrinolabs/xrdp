@@ -19,7 +19,7 @@ class DlgAbout : public QDialog
     private:
         Ui::DlgAbout *ui;
 
-    private slots:
+    private slots: // cppcheck-suppress unknownMacro
         void onOk();
 };
 

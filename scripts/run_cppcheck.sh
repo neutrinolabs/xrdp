@@ -45,10 +45,16 @@ if [ -z "$CPPCHECK_FLAGS" ]; then
     CPPCHECK_FLAGS="--quiet --force --std=c11 --std=c++11 --inline-suppr \
                     --enable=warning --error-exitcode=1 -i third_party"
 fi
+CPPCHECK_FLAGS="$CPPCHECK_FLAGS -D__cppcheck__"
 
 # Any options/directories specified?
 if [ $# -eq 0 ]; then
-    set -- -j 2 .
+    if [ -f /proc/cpuinfo ]; then
+        cpus=$(grep '^processor' /proc/cpuinfo | wc -l)
+    else
+        cpus=2
+    fi
+    set -- -j $cpus .
 fi
 
 # Display the cppcheck version and command for debugging
