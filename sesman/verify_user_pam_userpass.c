@@ -42,7 +42,7 @@ int
 auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     pam_handle_t *pamh;
-    pam_userpass_t userpass;
+    pam_userpass_t userpass = NULL;
     struct pam_conv conv = {pam_userpass_conv, &userpass};
     const void *template1;
     int status;
