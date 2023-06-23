@@ -32,7 +32,7 @@ class Decoder : public QObject
 
     signals:
 
-    public slots:
+    public slots: // cppcheck-suppress unknownMacro
         void onGeometryChanged(QRect *geometry);
 };
 

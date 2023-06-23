@@ -46,7 +46,7 @@ class PlayVideo : public QObject
         //void setVcrOp(int op);
         //void onMediaRestarted();
 
-    public slots:
+    public slots: // cppcheck-suppress unknownMacro
         void play();
 
         //signals:

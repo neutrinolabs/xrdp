@@ -42,7 +42,7 @@ class PlayAudio : public QObject
 
         void setVcrOp(int op);
 
-    public slots:
+    public slots: // cppcheck-suppress unknownMacro
         void play();
 
     private:

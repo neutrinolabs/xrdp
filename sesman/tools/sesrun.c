@@ -42,6 +42,11 @@
 
 #include "tools_common.h"
 
+// cppcheck doesn't always set this macro to something in double-quotes
+#if defined(__cppcheck__)
+#undef PACKAGE_VERSION
+#endif
+
 #if !defined(PACKAGE_VERSION)
 #define PACKAGE_VERSION "???"
 #endif
