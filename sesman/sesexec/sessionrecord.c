@@ -69,29 +69,42 @@ typedef struct utmp _utmp;
 #include "string_calls.h"
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
+// ut_id is a very small field on some platforms, so use the display
+// number in hex
+#define XRDP_ID_FORMAT ":%x"
 
 /*
  * Prepare the utmp struct and write it.
  * this can handle login and logout at once with the 'mode' parameter
  */
 
-void
-add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rhostname, enum add_xtmp_mode mode)
+static void
+add_xtmp_entry(int pid, int display, const struct login_info *login_info,
+               enum add_xtmp_mode mode)
 {
 #if USE_UTMP
+    char idbuff[16];
+    char str_display[16];
+
     _utmp ut;
     struct timeval tv;
 
     g_memset(&ut, 0, sizeof(ut));
+    g_snprintf(str_display, sizeof(str_display), XRDP_LINE_FORMAT, display);
+    g_snprintf(idbuff, sizeof(idbuff), XRDP_ID_FORMAT, display);
+    gettimeofday(&tv, NULL);
 
     ut.ut_type = (mode == MODE_LOGIN) ? USER_PROCESS : DEAD_PROCESS;
     ut.ut_pid = pid;
-    gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
     ut.ut_tv.tv_usec = tv.tv_usec;
-    g_strncpy(ut.ut_line, display_id, sizeof(ut.ut_line));
-    g_strncpy(ut.ut_user, user , sizeof(ut.ut_user));
-    g_strncpy(ut.ut_host, rhostname, sizeof(ut.ut_host));
+    g_strncpy(ut.ut_line, str_display, sizeof(ut.ut_line));
+    g_strncpy(ut.ut_id, idbuff, sizeof(ut.ut_id));
+    if (login_info != NULL)
+    {
+        g_strncpy(ut.ut_user, login_info->username , sizeof(ut.ut_user));
+        g_strncpy(ut.ut_host, login_info->ip_addr, sizeof(ut.ut_host));
+    }
 
     /* update the utmp file */
     /* open utmp */
@@ -105,27 +118,21 @@ add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rh
 }
 
 void
-utmp_login(int pid, int display, const char *user, const char *rhostname)
+utmp_login(int pid, int display, const struct login_info *login_info)
 {
-    char str_display[16];
-
     log_message(LOG_LEVEL_DEBUG,
                 "adding login info for utmp: %d - %d - %s - %s",
-                pid, display, user, rhostname);
-    g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
+                pid, display, login_info->username, login_info->ip_addr);
 
-    add_xtmp_entry(pid, str_display, user, rhostname, MODE_LOGIN);
+    add_xtmp_entry(pid, display, login_info, MODE_LOGIN);
 }
 
 void
-utmp_logout(int pid, int display, const char *user, const char *rhostname)
+utmp_logout(int pid, int display)
 {
-    char str_display[16];
 
-    log_message(LOG_LEVEL_DEBUG,
-                "adding logout info for utmp: %d - %d - %s - %s",
-                pid, display, user, rhostname);
-    g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
+    log_message(LOG_LEVEL_DEBUG, "adding logout info for utmp: %d - %d",
+                pid, display);
 
-    add_xtmp_entry(pid, str_display, user, rhostname, MODE_LOGOUT);
+    add_xtmp_entry(pid, display, NULL, MODE_LOGOUT);
 }

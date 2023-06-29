@@ -19,21 +19,30 @@
 /**
  *
  * @file sessionrecord.h
- * @brief utmp/wtmp handling code
+ * @brief utmp handling code
  *
  */
 
 #ifndef SESSIONRECORD_H
 #define SESSIONRECORD_H
 
+struct login_info;
 
 /**
- * @brief functions for adding utmp entries. one at login, one for logout
+ * @brief Record login in utmp
  *
- * @param pid of the session, display, login, and hostname
+ * @param pid PID of window manager
+ * @param display Display number
+ * @param login_info Information about logged in user
  */
-void utmp_login(int pid, int display, const char *user, const char *rhostname);
+void utmp_login(int pid, int display, const struct login_info *login_info);
 
-void utmp_logout(int pid, int display, const char *user, const char *rhostname);
+/**
+ * @brief Record logout in utmp
+ *
+ * @param pid PID of window manager
+ * @param display Display number
+ */
+void utmp_logout(int pid, int display);
 
 #endif
