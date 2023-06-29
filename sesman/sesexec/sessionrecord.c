@@ -19,7 +19,10 @@
 /**
  *
  * @file sessionrecord.c
- * @brief utmp/wtmp handling code
+ * @brief utmp handling code
+ *
+ * wtmp/lastlog/btmp is handled by PAM or (on FreeBSD) UTX
+ *
  * Idea: Only implement actual utmp, i.e. utmpx for 99%.
  *       See http://80386.nl/unix/utmpx/
  */
@@ -28,7 +31,6 @@
 #include <config_ac.h>
 #endif
 
-#include <paths.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,34 +53,6 @@ typedef struct utmp _utmp;
 
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
-
-/*
- * update the wtmp file on UTMPX platforms (~ Linux)
- * but no on FreeBSD : FreeBSD uses utx to do the job
- */
-#ifdef HAVE_UTMPX_H
-#if !defined(__FreeBSD__)
-static inline void
-_updwtmp(const _utmp *ut)
-{
-    updwtmpx(_PATH_WTMP, ut);
-}
-#else
-static inline void
-_updwtmp(const _utmp ut)
-{
-}
-#endif
-#elif defined(HAVE_UTMP_H)
-/* Does such system still exist ? */
-_updwtmp(const _utmp *ut)
-{
-    log_message(LOG_LEVEL_DEBUG,
-            "Unsupported system: HAVE_UTMP_H defined without HAVE_UTMPX_H");
-    updwtmp("/var/log/wtmp", ut);
-}
-#endif
-
 
 /*
  * Prepare the utmp struct and write it.
@@ -109,10 +83,6 @@ add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rh
     pututxline(&ut);
     /* closes utmp */
     endutxent();
-
-    /* update the wtmp file if needed */
-
-    _updwtmp(&ut);
 }
 
 void
@@ -121,7 +91,7 @@ utmp_login(int pid, int display, const char *user, const char *rhostname)
     char str_display[16];
 
     log_message(LOG_LEVEL_DEBUG,
-                "adding login info for utmp/wtmp: %d - %d - %s - %s",
+                "adding login info for utmp: %d - %d - %s - %s",
                 pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
 
@@ -134,7 +104,7 @@ utmp_logout(int pid, int display, const char *user, const char *rhostname)
     char str_display[16];
 
     log_message(LOG_LEVEL_DEBUG,
-                "adding logout info for utmp/wtmp: %d - %d - %s - %s",
+                "adding logout info for utmp: %d - %d - %s - %s",
                 pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
 

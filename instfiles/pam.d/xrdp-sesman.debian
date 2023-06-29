@@ -11,6 +11,8 @@ auth     required  pam_env.so readenv=1 envfile=/etc/default/locale
 
 # Set the loginuid process attribute.
 session    required     pam_loginuid.so
+# Update wtmp/lastlog
+session    optional     pam_lastlog.so quiet
 @include common-session
 -session optional  pam_gnome_keyring.so auto_start
 -session optional  pam_kwallet5.so auto_start
