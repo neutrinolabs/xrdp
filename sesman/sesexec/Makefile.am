@@ -9,6 +9,10 @@ AM_CPPFLAGS = \
 
 SESEXEC_EXTRA_LIBS =
 
+if XRDP_UTMP
+    AM_CPPFLAGS += -DUSE_UTMP
+endif
+
 pkglibexec_PROGRAMS = \
   xrdp-sesexec
 

@@ -183,6 +183,11 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
+AC_ARG_ENABLE(utmp, AS_HELP_STRING([--enable-utmp],
+              [Update utmp (default: no)]),
+              [], [enable_utmp=no])
+AM_CONDITIONAL(XRDP_UTMP, [test x$enable_utmp = xyes])
+
 AC_ARG_WITH(imlib2, AS_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
 AC_ARG_WITH(freetype2, AS_HELP_STRING([--with-freetype2=ARG], [freetype2 library to use for rendering fonts (ARG=yes/no/<abs-path>)]),,)
@@ -515,7 +520,10 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
-AC_CHECK_HEADERS(utmp.h utmpx.h)
+if test "x$enable_utmp" = "xyes"
+then
+    AC_CHECK_HEADERS(utmp.h utmpx.h)
+fi
 
 CFLAGS="$save_CFLAGS"
 
@@ -634,6 +642,7 @@ echo "  ipv6only                $enable_ipv6only"
 echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
+echo "  utmp support            $enable_utmp"
 echo
 echo "  with imlib2             $use_imlib2"
 echo "  with freetype2          $use_freetype2"

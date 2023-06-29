@@ -31,6 +31,8 @@
 #include <config_ac.h>
 #endif
 
+#ifdef USE_UTMP
+
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,19 +40,20 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "log.h"
-#include "os_calls.h"
-#include "string_calls.h"
-#include "sessionrecord.h"
-
 #ifdef HAVE_UTMPX_H
 #include <utmpx.h>
 typedef struct utmpx _utmp;
 #else
-#include <utmpx.h>
+#include <utmp.h>
 typedef struct utmp _utmp;
 #endif
 
+#endif // USE_UTMP
+
+#include "log.h"
+#include "os_calls.h"
+#include "string_calls.h"
+#include "sessionrecord.h"
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
 
@@ -62,6 +65,7 @@ typedef struct utmp _utmp;
 void
 add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rhostname, const short state)
 {
+#if USE_UTMP
     _utmp ut;
     struct timeval tv;
 
@@ -83,6 +87,8 @@ add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rh
     pututxline(&ut);
     /* closes utmp */
     endutxent();
+
+#endif // USE_UTMP
 }
 
 void
