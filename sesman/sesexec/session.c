@@ -888,7 +888,7 @@ session_process_child_exit(struct session_data *sd,
                 sd->win_mgr, sd->params.display, wm_wait_time);
         }
 
-        utmp_logout(sd->win_mgr, sd->params.display);
+        utmp_logout(sd->win_mgr, sd->params.display, e);
         sd->win_mgr = -1;
 
         if (sd->x_server > 0)

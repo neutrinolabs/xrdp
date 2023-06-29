@@ -27,6 +27,7 @@
 #define SESSIONRECORD_H
 
 struct login_info;
+struct proc_exit_status;
 
 /**
  * @brief Record login in utmp
@@ -35,14 +36,17 @@ struct login_info;
  * @param display Display number
  * @param login_info Information about logged in user
  */
-void utmp_login(int pid, int display, const struct login_info *login_info);
+void
+utmp_login(int pid, int display, const struct login_info *login_info);
 
 /**
  * @brief Record logout in utmp
  *
  * @param pid PID of window manager
  * @param display Display number
+ * @param exit_status Exit status of process
  */
-void utmp_logout(int pid, int display);
+void
+utmp_logout(int pid, int display, const struct proc_exit_status *exit_status);
 
 #endif

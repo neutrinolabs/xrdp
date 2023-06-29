@@ -523,6 +523,10 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 if test "x$enable_utmp" = "xyes"
 then
     AC_CHECK_HEADERS(utmp.h utmpx.h)
+
+    # Test for non-standard extensions in struct utmpx
+    AXRDP_CHECK_UTMPX_MEMBER_EXISTS([ut_host], [HAVE_UTMPX_UT_HOST])
+    AXRDP_CHECK_UTMPX_MEMBER_EXISTS([ut_exit], [HAVE_UTMPX_UT_EXIT])
 fi
 
 CFLAGS="$save_CFLAGS"
@@ -643,6 +647,11 @@ echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
 echo "  utmp support            $enable_utmp"
+if test x$enable_utmp = xyes; then
+    echo "    utmpx.ut_host         $ac_cv_utmpx_has_ut_host"
+    echo "    utmpx.ut_exit         $ac_cv_utmpx_has_ut_exit"
+fi
+
 echo
 echo "  with imlib2             $use_imlib2"
 echo "  with freetype2          $use_freetype2"

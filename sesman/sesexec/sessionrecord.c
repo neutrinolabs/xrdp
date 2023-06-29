@@ -48,10 +48,6 @@ enum add_xtmp_mode
 
 #ifdef USE_UTMP
 
-#include <pwd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -80,7 +76,7 @@ typedef struct utmp _utmp;
 
 static void
 add_xtmp_entry(int pid, int display, const struct login_info *login_info,
-               enum add_xtmp_mode mode)
+               enum add_xtmp_mode mode, const struct proc_exit_status *e)
 {
 #if USE_UTMP
     char idbuff[16];
@@ -102,9 +98,22 @@ add_xtmp_entry(int pid, int display, const struct login_info *login_info,
     g_strncpy(ut.ut_id, idbuff, sizeof(ut.ut_id));
     if (login_info != NULL)
     {
-        g_strncpy(ut.ut_user, login_info->username , sizeof(ut.ut_user));
+        g_strncpy(ut.ut_user, login_info->username, sizeof(ut.ut_user));
+#ifdef HAVE_UTMPX_UT_HOST
         g_strncpy(ut.ut_host, login_info->ip_addr, sizeof(ut.ut_host));
+#endif
     }
+
+#ifdef HAVE_UTMPX_UT_EXIT
+    if (e != NULL && e->reason == E_PXR_STATUS_CODE)
+    {
+        ut.ut_exit.e_exit = e->val;
+    }
+    else if (e != NULL && e->reason == E_PXR_SIGNAL)
+    {
+        ut.ut_exit.e_termination = e->val;
+    }
+#endif
 
     /* update the utmp file */
     /* open utmp */
@@ -124,15 +133,15 @@ utmp_login(int pid, int display, const struct login_info *login_info)
                 "adding login info for utmp: %d - %d - %s - %s",
                 pid, display, login_info->username, login_info->ip_addr);
 
-    add_xtmp_entry(pid, display, login_info, MODE_LOGIN);
+    add_xtmp_entry(pid, display, login_info, MODE_LOGIN, NULL);
 }
 
 void
-utmp_logout(int pid, int display)
+utmp_logout(int pid, int display, const struct proc_exit_status *exit_status)
 {
 
     log_message(LOG_LEVEL_DEBUG, "adding logout info for utmp: %d - %d",
                 pid, display);
 
-    add_xtmp_entry(pid, display, NULL, MODE_LOGOUT);
+    add_xtmp_entry(pid, display, NULL, MODE_LOGOUT, exit_status);
 }
