@@ -5,7 +5,7 @@ AC_INIT([xrdp], [0.10.80], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
-AC_GNU_SOURCE
+AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 AC_PROG_CXX
 AC_C_CONST
