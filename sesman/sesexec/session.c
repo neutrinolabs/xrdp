@@ -811,11 +811,11 @@ cleanup_sockets(int uid, int display)
 
 /******************************************************************************/
 static void
-exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
+exit_status_to_str(const struct proc_exit_status *e, char buff[], int bufflen)
 {
     switch (e->reason)
     {
-        case E_XR_STATUS_CODE:
+        case E_PXR_STATUS_CODE:
             if (e->val == 0)
             {
                 g_snprintf(buff, bufflen, "exit code zero");
@@ -826,7 +826,7 @@ exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
             }
             break;
 
-        case E_XR_SIGNAL:
+        case E_PXR_SIGNAL:
         {
             char sigstr[MAXSTRSIGLEN];
             g_snprintf(buff, bufflen, "signal %s",
@@ -844,7 +844,7 @@ exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
 void
 session_process_child_exit(struct session_data *sd,
                            int pid,
-                           const struct exit_status *e)
+                           const struct proc_exit_status *e)
 {
     if (pid == sd->x_server)
     {
@@ -864,7 +864,7 @@ session_process_child_exit(struct session_data *sd,
     {
         int wm_wait_time = g_time1() - sd->start_time;
 
-        if (e->reason == E_XR_STATUS_CODE && e->val == 0)
+        if (e->reason == E_PXR_STATUS_CODE && e->val == 0)
         {
             LOG(LOG_LEVEL_INFO,
                 "Window manager (pid %d, display %d) "

@@ -3302,10 +3302,10 @@ g_set_allusercontext(int uid)
 /*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred
-   an exit_status struct can optionally be passed in to get the
+   a proc_exit_status struct can optionally be passed in to get the
    exit status of the child */
 int
-g_waitchild(struct exit_status *e)
+g_waitchild(struct proc_exit_status *e)
 {
 #if defined(_WIN32)
     return 0;
@@ -3313,14 +3313,14 @@ g_waitchild(struct exit_status *e)
     int wstat;
     int rv;
 
-    struct exit_status dummy;
+    struct proc_exit_status dummy;
 
     if (e == NULL)
     {
         e = &dummy;  // Set this, then throw it away
     }
 
-    e->reason = E_XR_UNEXPECTED;
+    e->reason = E_PXR_UNEXPECTED;
     e->val = 0;
 
     rv = waitpid(-1, &wstat, WNOHANG);
@@ -3335,12 +3335,12 @@ g_waitchild(struct exit_status *e)
     }
     else if (WIFEXITED(wstat))
     {
-        e->reason = E_XR_STATUS_CODE;
+        e->reason = E_PXR_STATUS_CODE;
         e->val = WEXITSTATUS(wstat);
     }
     else if (WIFSIGNALED(wstat))
     {
-        e->reason = E_XR_SIGNAL;
+        e->reason = E_PXR_SIGNAL;
         e->val = WTERMSIG(wstat);
     }
 
@@ -3381,10 +3381,14 @@ g_waitpid(int pid)
 
    Note that signal handlers are established with BSD-style semantics,
    so this call is NOT interrupted by a signal  */
-struct exit_status
+struct proc_exit_status
 g_waitpid_status(int pid)
 {
-    struct exit_status exit_status = {.reason = E_XR_UNEXPECTED, .val = 0};
+    struct proc_exit_status exit_status =
+    {
+        .reason = E_PXR_UNEXPECTED,
+        .val = 0
+    };
 
 #if !defined(_WIN32)
     if (pid > 0)
@@ -3399,12 +3403,12 @@ g_waitpid_status(int pid)
         {
             if (WIFEXITED(status))
             {
-                exit_status.reason = E_XR_STATUS_CODE;
+                exit_status.reason = E_PXR_STATUS_CODE;
                 exit_status.val = WEXITSTATUS(status);
             }
             if (WIFSIGNALED(status))
             {
-                exit_status.reason = E_XR_SIGNAL;
+                exit_status.reason = E_PXR_SIGNAL;
                 exit_status.val = WTERMSIG(status);
             }
         }

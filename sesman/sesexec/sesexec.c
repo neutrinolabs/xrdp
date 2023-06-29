@@ -241,7 +241,7 @@ sesexec_terminate_main_loop(int status)
 static void
 process_sigchld_event(void)
 {
-    struct exit_status e;
+    struct proc_exit_status e;
     int pid;
 
     // Check for any finished children
