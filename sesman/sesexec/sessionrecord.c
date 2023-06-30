@@ -14,6 +14,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * str2memcpy() is taken from util-linux/include/strutils.h v2.39 which
+ * has the following header:-
+ *
+ *     No copyright is claimed.  This code is in the public domain; do with
+ *     it what you wish.
  */
 
 /**
@@ -30,7 +36,6 @@
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
-
 
 #include "sessionrecord.h"
 #include "login_info.h"
@@ -49,6 +54,7 @@ enum add_xtmp_mode
 #ifdef USE_UTMP
 
 #include <sys/time.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifdef HAVE_UTMPX_H
@@ -59,8 +65,6 @@ typedef struct utmpx _utmp;
 typedef struct utmp _utmp;
 #endif
 
-#endif // USE_UTMP
-
 #include "os_calls.h"
 #include "string_calls.h"
 
@@ -69,16 +73,50 @@ typedef struct utmp _utmp;
 // number in hex
 #define XRDP_ID_FORMAT ":%x"
 
-/*
+/******************************************************************************/
+/**
+ * utmp-specific strncpy() replacement
+ *
+ * @param dest Destination pointer
+ * @param src Source pointer
+ * @param n bytes to copy
+ *
+ * This is like strncpy(), but based on memcpy(), so compilers and static
+ * analyzers do not complain when sizeof(destination) is the same as 'n' and
+ * result is not terminated by zero.
+ *
+ *  ONLY use this function to copy string to logs with fixed sizes
+ *  (wtmp/utmp. ...)  where string terminator is optional.
+ */
+static inline void *__attribute__((nonnull (1)))
+str2memcpy(void *dest, const char *src, size_t n)
+{
+    size_t bytes = strlen(src) + 1;
+
+    if (bytes > n)
+    {
+        bytes = n;
+    }
+
+    memcpy(dest, src, bytes);
+    return dest;
+}
+
+/******************************************************************************/
+/**
  * Prepare the utmp struct and write it.
- * this can handle login and logout at once with the 'mode' parameter
+ *
+ * @param pid PID of session manager
+ * @param display Display number of session
+ * @param login_info Login info (NULL for MODE_LOGOUT)
+ * @param mode see enum add_xtmp_mode
+ * @param e Exit status (NULL unless MODE_LOGOUT)
  */
 
 static void
 add_xtmp_entry(int pid, int display, const struct login_info *login_info,
                enum add_xtmp_mode mode, const struct proc_exit_status *e)
 {
-#if USE_UTMP
     char idbuff[16];
     char str_display[16];
 
@@ -92,16 +130,22 @@ add_xtmp_entry(int pid, int display, const struct login_info *login_info,
 
     ut.ut_type = (mode == MODE_LOGIN) ? USER_PROCESS : DEAD_PROCESS;
     ut.ut_pid = pid;
-    ut.ut_tv.tv_sec = tv.tv_sec;
-    ut.ut_tv.tv_usec = tv.tv_usec;
-    g_strncpy(ut.ut_line, str_display, sizeof(ut.ut_line));
-    g_strncpy(ut.ut_id, idbuff, sizeof(ut.ut_id));
-    if (login_info != NULL)
+    str2memcpy(ut.ut_id, idbuff, sizeof(ut.ut_id));
+
+    // Linux utmp(5) suggests ut_line, ut_time, ut_user, and ut_host
+    // are not set for a DEAD_PROCESS
+    if (ut.ut_type != DEAD_PROCESS)
     {
-        g_strncpy(ut.ut_user, login_info->username, sizeof(ut.ut_user));
+        ut.ut_tv.tv_sec = tv.tv_sec;
+        ut.ut_tv.tv_usec = tv.tv_usec;
+        str2memcpy(ut.ut_line, str_display, sizeof(ut.ut_line));
+        if (login_info != NULL)
+        {
+            str2memcpy(ut.ut_user, login_info->username, sizeof(ut.ut_user));
 #ifdef HAVE_UTMPX_UT_HOST
-        g_strncpy(ut.ut_host, login_info->ip_addr, sizeof(ut.ut_host));
+            str2memcpy(ut.ut_host, login_info->ip_addr, sizeof(ut.ut_host));
 #endif
+        }
     }
 
 #ifdef HAVE_UTMPX_UT_EXIT
@@ -123,9 +167,17 @@ add_xtmp_entry(int pid, int display, const struct login_info *login_info,
     /* closes utmp */
     endutxent();
 
-#endif // USE_UTMP
 }
+#else // USE_UTMP
+static void
+add_xtmp_entry(int pid, int display, const struct login_info *login_info,
+               short state, const struct proc_exit_status *e)
+{
+}
+#endif
 
+
+/******************************************************************************/
 void
 utmp_login(int pid, int display, const struct login_info *login_info)
 {
@@ -136,6 +188,7 @@ utmp_login(int pid, int display, const struct login_info *login_info)
     add_xtmp_entry(pid, display, login_info, MODE_LOGIN, NULL);
 }
 
+/******************************************************************************/
 void
 utmp_logout(int pid, int display, const struct proc_exit_status *exit_status)
 {
