@@ -31,6 +31,21 @@
 #include <config_ac.h>
 #endif
 
+
+#include "sessionrecord.h"
+#include "login_info.h"
+#include "log.h"
+
+// Operational mode of add_xtmp_entry()
+//
+// We can't use USER_PROCESS/DEAD_PROCESS directly, as they
+// won't be available for platforms without USE_UTMP
+enum add_xtmp_mode
+{
+    MODE_LOGIN,
+    MODE_LOGOUT
+};
+
 #ifdef USE_UTMP
 
 #include <pwd.h>
@@ -50,20 +65,18 @@ typedef struct utmp _utmp;
 
 #endif // USE_UTMP
 
-#include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
-#include "sessionrecord.h"
 
 #define XRDP_LINE_FORMAT "xrdp:%d"
 
 /*
  * Prepare the utmp struct and write it.
- * this can handle login and logout at once with the 'state' parameter
+ * this can handle login and logout at once with the 'mode' parameter
  */
 
 void
-add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rhostname, const short state)
+add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rhostname, enum add_xtmp_mode mode)
 {
 #if USE_UTMP
     _utmp ut;
@@ -71,7 +84,7 @@ add_xtmp_entry(int pid, const char *display_id, const char *user, const char *rh
 
     g_memset(&ut, 0, sizeof(ut));
 
-    ut.ut_type = state;
+    ut.ut_type = (mode == MODE_LOGIN) ? USER_PROCESS : DEAD_PROCESS;
     ut.ut_pid = pid;
     gettimeofday(&tv, NULL);
     ut.ut_tv.tv_sec = tv.tv_sec;
@@ -101,7 +114,7 @@ utmp_login(int pid, int display, const char *user, const char *rhostname)
                 pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
 
-    add_xtmp_entry(pid, str_display, user, rhostname, USER_PROCESS);
+    add_xtmp_entry(pid, str_display, user, rhostname, MODE_LOGIN);
 }
 
 void
@@ -114,5 +127,5 @@ utmp_logout(int pid, int display, const char *user, const char *rhostname)
                 pid, display, user, rhostname);
     g_snprintf(str_display, 15, XRDP_LINE_FORMAT, display);
 
-    add_xtmp_entry(pid, str_display, user, rhostname, DEAD_PROCESS);
+    add_xtmp_entry(pid, str_display, user, rhostname, MODE_LOGOUT);
 }
