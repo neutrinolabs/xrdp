@@ -821,8 +821,12 @@ exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
             break;
 
         case E_XR_SIGNAL:
-            g_snprintf(buff, bufflen, "signal %d", e->val);
-            break;
+        {
+            char sigstr[MAXSTRSIGLEN];
+            g_snprintf(buff, bufflen, "signal %s",
+                       g_sig2text(e->val, sigstr));
+        }
+        break;
 
         default:
             g_snprintf(buff, bufflen, "an unexpected error");

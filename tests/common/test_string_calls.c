@@ -3,6 +3,10 @@
 #include "config_ac.h"
 #endif
 
+#include <limits.h>
+#include <signal.h>
+
+#include "os_calls.h"
 #include "string_calls.h"
 #include "ms-rdpbcgr.h"
 
@@ -1036,6 +1040,76 @@ END_TEST
 
 /******************************************************************************/
 
+START_TEST(test_sigs__common)
+{
+    char name[MAXSTRSIGLEN];
+    char *res;
+
+    // Check some common POSIX signals
+    res = g_sig2text(SIGHUP, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIGHUP");
+
+    res = g_sig2text(SIGCHLD, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIGCHLD");
+
+    res = g_sig2text(SIGXFSZ, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIGXFSZ");
+
+    res = g_sig2text(SIGRTMIN, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIGRTMIN");
+
+    res = g_sig2text(SIGRTMIN + 2, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIGRTMIN+2");
+
+    res = g_sig2text(SIGRTMAX, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIGRTMAX");
+
+    // Should be invalid
+    res = g_sig2text(0, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIG#0");
+
+    res = g_sig2text(65535, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIG#65535");
+
+
+    // POSIX defines signals as ints, but insists they are positive. So
+    // we ought to trest we get sane behaviour for -ve numbers
+    res = g_sig2text(-1, name);
+    ck_assert_ptr_eq(res, name);
+    ck_assert_str_eq(res, "SIG#-1");
+}
+END_TEST
+
+START_TEST(test_sigs__bigint)
+{
+    char name[MAXSTRSIGLEN];
+    char name2[1024];
+
+    // Check that big integers aren't being truncated by the definition
+    // of MAXSTRSIGLEN
+    int i = INT_MAX;
+
+    g_sig2text(i, name);
+    g_snprintf(name2, sizeof(name2), "SIG#%d", i);
+    ck_assert_str_eq(name, name2);
+
+    i = INT_MIN;
+    g_sig2text(i, name);
+    g_snprintf(name2, sizeof(name2), "SIG#%d", i);
+    ck_assert_str_eq(name, name2);
+}
+END_TEST
+
+/******************************************************************************/
+
 Suite *
 make_suite_test_string(void)
 {
@@ -1046,6 +1120,7 @@ make_suite_test_string(void)
     TCase *tc_bm2char;
     TCase *tc_char2bm;
     TCase *tc_strtrim;
+    TCase *tc_sigs;
 
     s = suite_create("String");
 
@@ -1117,6 +1192,11 @@ make_suite_test_string(void)
     tcase_add_test(tc_strtrim, test_strtrim__trim_right);
     tcase_add_test(tc_strtrim, test_strtrim__trim_both);
     tcase_add_test(tc_strtrim, test_strtrim__trim_through);
+
+    tc_sigs = tcase_create("signals");
+    suite_add_tcase(s, tc_sigs);
+    tcase_add_test(tc_sigs, test_sigs__common);
+    tcase_add_test(tc_sigs, test_sigs__bigint);
 
     return s;
 }

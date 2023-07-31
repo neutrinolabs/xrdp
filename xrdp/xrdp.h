@@ -55,6 +55,8 @@ g_set_sync1_mutex(long mutex);
 void
 g_set_term_event(tbus event);
 void
+g_set_sigchld_event(tbus event);
+void
 g_set_sync_event(tbus event);
 long
 g_get_threadid(void);
@@ -62,10 +64,14 @@ void
 g_set_threadid(long id);
 tbus
 g_get_term(void);
+tbus
+g_get_sigchld(void);
 int
 g_is_term(void);
 void
 g_set_term(int in_val);
+void
+g_set_sigchld(int in_val);
 tbus
 g_get_sync_event(void);
 void

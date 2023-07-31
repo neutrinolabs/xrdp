@@ -39,6 +39,7 @@ static long g_threadid = 0; /* main threadid */
 static long g_sync_mutex = 0;
 static long g_sync1_mutex = 0;
 static tbus g_term_event = 0;
+static tbus g_sigchld_event = 0;
 static tbus g_sync_event = 0;
 /* synchronize stuff */
 static int g_sync_command = 0;
@@ -105,6 +106,19 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
 }
 
 /*****************************************************************************/
+/* Signal handler for SIGCHLD in the child
+ * Note: only signal safe code (eg. setting wait event) should be executed in
+ * this function. For more details see `man signal-safety`
+ */
+static void
+xrdp_child_sigchld_handler(int sig)
+{
+    while (g_waitchild(NULL) > 0)
+    {
+    }
+}
+
+/*****************************************************************************/
 /* called in child just after fork */
 int
 xrdp_child_fork(void)
@@ -112,12 +126,17 @@ xrdp_child_fork(void)
     int pid;
     char text[256];
 
-    /* close, don't delete these */
+    /* SIGCHLD in the child is of no interest to us */
+    g_signal_child_stop(xrdp_child_sigchld_handler);        /* SIGCHLD */
+
     g_close_wait_obj(g_term_event);
+    g_close_wait_obj(g_sigchld_event);
     g_close_wait_obj(g_sync_event);
+
     pid = g_getpid();
     g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
     g_term_event = g_create_wait_obj(text);
+    g_sigchld_event = -1;
     g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
     g_sync_event = g_create_wait_obj(text);
     return 0;
@@ -159,6 +178,13 @@ g_set_term_event(tbus event)
 }
 
 /*****************************************************************************/
+void
+g_set_sigchld_event(tbus event)
+{
+    g_sigchld_event = event;
+}
+
+/*****************************************************************************/
 tbus
 g_get_sync_event(void)
 {
@@ -194,6 +220,13 @@ g_get_term(void)
 }
 
 /*****************************************************************************/
+tbus
+g_get_sigchld(void)
+{
+    return g_sigchld_event;
+}
+
+/*****************************************************************************/
 int
 g_is_term(void)
 {
@@ -211,6 +244,20 @@ g_set_term(int in_val)
     else
     {
         g_reset_wait_obj(g_term_event);
+    }
+}
+
+/*****************************************************************************/
+void
+g_set_sigchld(int in_val)
+{
+    if (in_val)
+    {
+        g_set_wait_obj(g_sigchld_event);
+    }
+    else
+    {
+        g_reset_wait_obj(g_sigchld_event);
     }
 }
 

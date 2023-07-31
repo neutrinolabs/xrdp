@@ -21,6 +21,7 @@
 #if defined(HAVE_CONFIG_H)
 #include "config_ac.h"
 #endif
+#include <signal.h>
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
@@ -1143,3 +1144,147 @@ g_charstr_to_bitmask(const char *str, const struct bitmask_char bitdefs[],
     return bitmask;
 }
 
+/*****************************************************************************/
+/*
+ * Looks for a simple mapping of signal number to name
+ */
+static const char *
+find_sig_name(int signum)
+{
+    typedef struct
+    {
+        int num;
+        const char *name;
+    } sig_to_name_type;
+
+    // Map a string 'zzz' to { SIGzzz, "zzz"} for making
+    // typo-free sig_to_name_type objects
+#   define DEFSIG(sig) { SIG ## sig, # sig }
+
+    // Entries in this array are taken from
+    // The Single UNIX ® Specification, Version 2 (1997)
+    // plus additions from specific operating systems.
+    //
+    // The SUS requires these to be positive integer constants with a
+    // macro definition.  Note that SIGRTMIN and SIGRTMAX on Linux are
+    // NOT constants, so have to be handled separately.
+    static const sig_to_name_type sigmap[] =
+    {
+        // Names from SUS v2, in the order they are listed in that document
+        // that *should* be defined everywhere
+        //
+        // Commented out definitions below are NOT used everywhere
+        DEFSIG(ABRT), DEFSIG(ALRM), DEFSIG(FPE), DEFSIG(HUP),
+        DEFSIG(ILL), DEFSIG(INT), DEFSIG(KILL), DEFSIG(PIPE),
+        DEFSIG(QUIT), DEFSIG(SEGV), DEFSIG(TERM), DEFSIG(USR1),
+        DEFSIG(USR2), DEFSIG(CHLD), DEFSIG(CONT), DEFSIG(STOP),
+        DEFSIG(TSTP), DEFSIG(TTIN), DEFSIG(TTOU), DEFSIG(BUS),
+        /* DEFSIG(POLL), */ /* DEFSIG(PROF), */ DEFSIG(SYS), DEFSIG(TRAP),
+        DEFSIG(URG), DEFSIG(VTALRM), DEFSIG(XCPU), DEFSIG(XFSZ),
+
+        // SIGPOLL and SIGPROF are marked as obselescent in 1003.1-2017,
+        // Also SIGPOLL isn't in *BSD operating systems which use SIGIO
+#ifdef SIGPOLL
+        DEFSIG(POLL),
+#endif
+#ifdef SIGPROF
+        DEFSIG(PROF),
+#endif
+
+        // BSD signals (from FreeBSD/OpenBSD sys/signal.h and
+        // Darwin/Illumos signal.h)
+#ifdef SIGEMT
+        DEFSIG(EMT),
+#endif
+#ifdef SIGIO
+        DEFSIG(IO),
+#endif
+#ifdef SIGWINCH
+        DEFSIG(WINCH),
+#endif
+#ifdef SIGINFO
+        DEFSIG(INFO),
+#endif
+#ifdef SIGTHR
+        DEFSIG(THR),
+#endif
+#ifdef SIGLIBRT
+        DEFSIG(LIBRT),
+#endif
+#ifdef SIGPWR
+        DEFSIG(PWR),
+#endif
+#ifdef SIGWAITING
+        DEFSIG(WAITING),
+#endif
+#ifdef SIGLWP
+        DEFSIG(LWP),
+#endif
+
+        // Linux additions to *BSD (signal(7))
+#ifdef SIGLOST
+        DEFSIG(LOST),
+#endif
+#ifdef SIGSTKFLT
+        DEFSIG(STKFLT),
+#endif
+
+        // Terminator
+        {0, NULL}
+#undef DEFSIG
+    };
+
+    const sig_to_name_type *p;
+
+    for (p = &sigmap[0] ; p->name != NULL ; ++p)
+    {
+        if (p->num == signum)
+        {
+            return p->name;
+        }
+    }
+
+    // These aren't constants on Linux
+#ifdef SIGRTMIN
+    if (signum == SIGRTMIN)
+    {
+        return "RTMIN";
+    }
+#endif
+#ifdef SIGRTMAX
+    if (signum == SIGRTMAX)
+    {
+        return "RTMAX";
+    }
+#endif
+
+    return NULL;
+}
+
+/*****************************************************************************/
+char *
+g_sig2text(int signum, char sigstr[])
+{
+    if (signum >= 0)
+    {
+        const char *name = find_sig_name(signum);
+
+        if (name != NULL)
+        {
+            g_snprintf(sigstr, MAXSTRSIGLEN, "SIG%s", name);
+            return sigstr;
+        }
+
+#if defined(SIGRTMIN) && defined(SIGRTMAX)
+        if (signum > SIGRTMIN && signum < SIGRTMAX)
+        {
+            g_snprintf(sigstr, MAXSTRSIGLEN, "SIGRTMIN+%d", signum - SIGRTMIN);
+            return sigstr;
+        }
+#endif
+    }
+
+    // If all else fails...
+    g_snprintf(sigstr, MAXSTRSIGLEN, "SIG#%d", signum);
+    return sigstr;
+}

@@ -155,10 +155,13 @@ wait_for_xserver(uid_t uid,
                         break;
 
                     case E_XR_SIGNAL:
+                    {
+                        char sigstr[MAXSTRSIGLEN];
                         LOG(LOG_LEVEL_ERROR,
-                            "waitforx failed with unexpected signal %d",
-                            e.val);
-                        break;
+                            "waitforx failed with unexpected signal %s",
+                            g_sig2text(e.val, sigstr));
+                    }
+                    break;
 
                     default:
                         LOG(LOG_LEVEL_ERROR,

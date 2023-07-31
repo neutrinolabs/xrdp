@@ -67,6 +67,26 @@ struct bitmask_char
 
 #define BITMASK_CHAR_END_OF_LIST { 0, '\0' }
 
+enum
+{
+    // See g_sig2text()
+    // Must be able to hold "SIG#%d" for INT_MIN
+    //
+    // ((sizeof(int) * 5 + 1) / 2) provides a very slight overestimate of
+    // the bytes requires to store a decimal expansion of 'int':-
+    // sizeof  INT_MAX     display bytes   ((sizeof(int) * 5 + 1)
+    // (int)               needed           / 2)
+    // ------  -------     -------------   ---------------------------
+    // 1       127         3                3
+    // 2       32767       5                5
+    // 3       8388607     7                8
+    // 4       2147483637  10              10
+    // 8       9*(10**18)  19              20
+    // 16      2*(10**38)  39              40
+    // 32      6*(10**76)  77              80
+    MAXSTRSIGLEN =  (3 + 1 + 1 + ((sizeof(int) * 5 + 1) / 2) + 1)
+};
+
 /**
  * Processes a format string for general info
  *
@@ -266,6 +286,7 @@ int      g_strncmp_d(const char *c1, const char *c2, const char delim, int len);
 int      g_strcasecmp(const char *c1, const char *c2);
 int      g_strncasecmp(const char *c1, const char *c2, int len);
 int      g_atoi(const char *str);
+
 /**
  * Extends g_atoi(), Converts decimal and hexadecimal number String to integer
  *
@@ -283,4 +304,17 @@ char    *g_strstr(const char *haystack, const char *needle);
 int      g_mbstowcs(twchar *dest, const char *src, int n);
 int      g_wcstombs(char *dest, const twchar *src, int n);
 int      g_strtrim(char *str, int trim_flags);
+
+/**
+ * Maps a signal number to a string, i.e. SIGHUP -> "SIGHUP"
+ *
+ * @param signum Signal number
+ * @param sigstr buffer for result
+ * @return sigstr, for convenience
+ *
+ * Buffer is assumed to be at least MAXSTRSIGLEN
+ *
+ * The string "SIG#<num>" is returned for unrecognised signums
+ */
+char    *g_sig2text(int signum, char sigstr[]);
 #endif
