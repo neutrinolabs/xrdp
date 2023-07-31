@@ -21,7 +21,12 @@ body:
     attributes:
       label: Operating system & version
       placeholder: "Ubuntu 22.04 / AlmaLinux 9 / FreeBSD 13.2 / etc"
-      description: Tell us about your operating system. See PRETTY_NAME in /etc/os-release if you don't know.
+      description: Tell us about your operating system. See PRETTY_NAME
+        in /etc/os-release if you don't know.
+
+        Note we are currently unable to provide direct support for Red Hat
+        Enterprise Linux. Either reproduce the issue on CentOS/Alma/Rocky
+        OS, or contact Red Hat directly for support.
     validations:
       required: true
   - type: dropdown
