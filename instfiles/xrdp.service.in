@@ -9,6 +9,8 @@ Type=exec
 EnvironmentFile=-@sysconfdir@/sysconfig/xrdp
 EnvironmentFile=-@sysconfdir@/default/xrdp
 ExecStart=@sbindir@/xrdp $XRDP_OPTIONS --nodaemon
+SystemCallArchitectures=native
+SystemCallFilter=@basic-io @file-system @io-event @ipc @network-io @process @signal ioctl madvise sysinfo uname
 
 [Install]
 WantedBy=multi-user.target
