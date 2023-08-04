@@ -1157,12 +1157,15 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
     return 0;
 }
 
-/*****************************************************************************/
-/* client to server */
-/* sent as a reply to CB_FORMAT_DATA_REQUEST; used to indicate whether
-   processing of the CB_FORMAT_DATA_REQUEST was successful; if processing
-   was successful, CB_FORMAT_DATA_RESPONSE includes contents of requested
-   clipboard data. */
+/**************************************************************************//**
+ * Process a CB_FORMAT_DATA_RESPONSE for an X client requesting an image
+ *
+ * @param s Stream containing CLIPRDR_FILELIST ([MS-RDPECLIP])
+ * @param clip_msg_status msgFlags from Clipboard PDU Header
+ * @param clip_msg_len dataLen from Clipboard PDU Header
+ *
+ * @return Status
+ */
 static int
 clipboard_process_data_response_for_image(struct stream *s,
         int clip_msg_status,
@@ -1289,6 +1292,90 @@ clipboard_process_data_response_for_file(struct stream *s,
     return rv;
 }
 
+/**************************************************************************//**
+ * Process a CB_FORMAT_DATA_RESPONSE for an X client requesting text
+ *
+ * @param s Stream containing CLIPRDR_FILELIST ([MS-RDPECLIP])
+ * @param clip_msg_status msgFlags from Clipboard PDU Header
+ * @param clip_msg_len dataLen from Clipboard PDU Header
+ *
+ * @return Status
+ */
+static int
+clipboard_process_data_response_for_text(struct stream *s,
+        int clip_msg_status,
+        int clip_msg_len)
+{
+    XSelectionRequestEvent *lxev = &g_saved_selection_req_event;
+    twchar *wtext;
+    twchar wchr;
+    int len;
+    int index;
+    int byte_count;
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_text: ");
+    len = (int)(s->end - s->p);
+    if (len < 1)
+    {
+        len = 0;
+    }
+    byte_count = ((len / 2) + 1) * sizeof(twchar);
+    wtext = (twchar *) g_malloc(byte_count, 0);
+    if (wtext == 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't allocate %d bytes for text clip response",
+            byte_count);
+
+        clipboard_refuse_selection(lxev);
+    }
+    else
+    {
+        index = 0;
+        while (s_check_rem(s, 2))
+        {
+            in_uint16_le(s, wchr);
+            wtext[index] = wchr;
+            if (wchr == 0)
+            {
+                break;
+            }
+            index++;
+        }
+        wtext[index] = 0;
+        g_free(g_clip_c2s.data);
+        g_clip_c2s.data = 0;
+        g_clip_c2s.total_bytes = 0;
+        len = g_wcstombs(0, wtext, 0);
+        if (len < 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Received malformed Unicode paste text from client");
+            clipboard_refuse_selection(lxev);
+        }
+        else
+        {
+            byte_count = len + 16;
+            g_clip_c2s.data = (char *) g_malloc(byte_count, 0);
+            if (g_clip_c2s.data == 0)
+            {
+                LOG(LOG_LEVEL_ERROR,
+                    "Can't allocate %d bytes for text clip response",
+                    byte_count);
+                clipboard_refuse_selection(lxev);
+            }
+            else
+            {
+                g_wcstombs(g_clip_c2s.data, wtext, len + 1);
+                g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
+                g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
+                clipboard_provide_selection_c2s(lxev, lxev->target);
+            }
+        }
+        g_free(wtext);
+    }
+    return 0;
+}
+
 /*****************************************************************************/
 /* client to server */
 /* sent as a reply to CB_FORMAT_DATA_REQUEST; used to indicate whether
@@ -1300,74 +1387,45 @@ static int
 clipboard_process_data_response(struct stream *s, int clip_msg_status,
                                 int clip_msg_len)
 {
-    XSelectionRequestEvent *lxev;
-    twchar *wtext;
-    twchar wchr;
-    int len;
-    int index;
+    int rv = 0;
+
+    XSelectionRequestEvent *lxev = &g_saved_selection_req_event;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response:");
-    lxev = &g_saved_selection_req_event;
     g_clip_c2s.in_request = 0;
-    if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
+
+    if ((clip_msg_status & CB_RESPONSE_FAIL) != 0)
+    {
+        /* Requested data was not returned from the client. Most likely
+         * the client has lost the selection between announcing it and
+         * responding to our request */
+        clipboard_refuse_selection(lxev);
+    }
+    else if ((clip_msg_status & CB_RESPONSE_OK) == 0)
+    {
+        /* One of CB_RESPONSE_FAIL or CB_RESPONSE_OK MUST be set in
+         * a CLIPRDR_FORMAT_DATA_RESPONSE msg */
+        LOG(LOG_LEVEL_ERROR, "CLIPRDR_FORMAT_DATA_RESPONSE is badly formed");
+        clipboard_refuse_selection(lxev);
+    }
+    else if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
     {
         clipboard_process_data_response_for_image(s, clip_msg_status,
                 clip_msg_len);
-        return 0;
     }
-    if (g_clip_c2s.xrdp_clip_type == XRDP_CB_FILE)
+    else if (g_clip_c2s.xrdp_clip_type == XRDP_CB_FILE)
     {
         clipboard_process_data_response_for_file(s, clip_msg_status,
                 clip_msg_len);
-        return 0;
     }
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response: "
-              "CLIPRDR_DATA_RESPONSE");
-    len = (int)(s->end - s->p);
-    if (len < 1)
+    else
     {
-        return 0;
+        clipboard_process_data_response_for_text(s, clip_msg_status,
+                clip_msg_len);
     }
-    wtext = (twchar *) g_malloc(((len / 2) + 1) * sizeof(twchar), 0);
-    if (wtext == 0)
-    {
-        return 0;
-    }
-    index = 0;
-    while (s_check_rem(s, 2))
-    {
-        in_uint16_le(s, wchr);
-        wtext[index] = wchr;
-        if (wchr == 0)
-        {
-            break;
-        }
-        index++;
-    }
-    wtext[index] = 0;
-    g_free(g_clip_c2s.data);
-    g_clip_c2s.data = 0;
-    g_clip_c2s.total_bytes = 0;
-    len = g_wcstombs(0, wtext, 0);
-    if (len >= 0)
-    {
-        g_clip_c2s.data = (char *) g_malloc(len + 16, 0);
-        if (g_clip_c2s.data == 0)
-        {
-            g_free(wtext);
-            return 0;
-        }
-        g_wcstombs(g_clip_c2s.data, wtext, len + 1);
-    }
-    if (g_clip_c2s.data != 0)
-    {
-        g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
-        g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
-        clipboard_provide_selection_c2s(lxev, lxev->target);
-    }
-    g_free(wtext);
-    return 0;
+    return rv;
 }
+
 
 /*****************************************************************************/
 static int
