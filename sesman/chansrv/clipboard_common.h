@@ -27,6 +27,7 @@
  * where possible */
 #define CB_FORMAT_RAW                   0x0000
 #define CB_FORMAT_TEXT                  0x0001
+#define CB_FORMAT_OEMTEXT               0x0007
 #define CB_FORMAT_DIB                   0x0008
 #define CB_FORMAT_UNICODETEXT           0x000D
 #define CB_FORMAT_HTML                  0xD010

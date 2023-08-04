@@ -2353,12 +2353,21 @@ clipboard_event_selection_request(XEvent *xevent)
         atom_buf[1] = g_timestamp_atom;
         atom_buf[2] = g_multiple_atom;
         atom_count = 3;
-        if ((g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_TEXT) == 0)
+
+        /* Only announce text if the client is advertising text, or
+         * a file list */
+        if (clipboard_find_format_id(CB_FORMAT_UNICODETEXT) >= 0 ||
+                clipboard_find_format_id(CB_FORMAT_OEMTEXT) >= 0 ||
+                clipboard_find_format_id(CB_FORMAT_TEXT) >= 0 ||
+                clipboard_find_format_id(g_file_format_id) >= 0)
         {
-            atom_buf[atom_count] = XA_STRING;
-            atom_count++;
-            atom_buf[atom_count] = g_utf8_atom;
-            atom_count++;
+            if ((g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_TEXT) == 0)
+            {
+                atom_buf[atom_count] = XA_STRING;
+                atom_count++;
+                atom_buf[atom_count] = g_utf8_atom;
+                atom_count++;
+            }
         }
         if (clipboard_find_format_id(CB_FORMAT_DIB) >= 0 &&
                 (g_cfg->restrict_inbound_clipboard & CLIP_RESTRICT_IMAGE) == 0)
@@ -2445,6 +2454,9 @@ clipboard_event_selection_request(XEvent *xevent)
             }
             else
             {
+                /* The client may have advertised CF_TEXT or CF_OEMTEXT,
+                 * but the Windows clipboard will convert these formats
+                 * to Unicode if asked */
                 g_memcpy(&g_saved_selection_req_event, lxev,
                          sizeof(g_saved_selection_req_event));
                 g_clip_c2s.type = lxev->target;
