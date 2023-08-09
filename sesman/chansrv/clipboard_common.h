@@ -22,19 +22,6 @@
 #include "arch.h"
 #include "parse.h"
 
-/*
- * TODO : Replace these with the definitions in xrdp_constants.h
- * where possible */
-#define CB_FORMAT_RAW                   0x0000
-#define CB_FORMAT_TEXT                  0x0001
-#define CB_FORMAT_DIB                   0x0008
-#define CB_FORMAT_UNICODETEXT           0x000D
-#define CB_FORMAT_HTML                  0xD010
-#define CB_FORMAT_PNG                   0xD011
-#define CB_FORMAT_JPEG                  0xD012
-#define CB_FORMAT_GIF                   0xD013
-#define CB_FORMAT_FILE                  0xC0BC
-
 /* these are the supported general types */
 #define XRDP_CB_TEXT   1
 #define XRDP_CB_BITMAP 2
