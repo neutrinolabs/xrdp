@@ -3,3 +3,6 @@
 @include common-account
 @include common-session
 @include common-password
+
+# Set up user limits from /etc/security/limits.conf.
+session    required     pam_limits.so
