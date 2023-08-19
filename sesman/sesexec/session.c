@@ -568,7 +568,12 @@ session_start_wrapped(struct login_info *login_info,
     int window_manager_pid;
     enum scp_screate_status status = E_SCP_SCREATE_GENERAL_ERROR;
 
-    auth_start_session(login_info->auth_info, s->display);
+    if (auth_start_session(login_info->auth_info, s->display) != 0)
+    {
+        // Errors are logged by the auth module, as they are
+        // specific to that module
+        return E_SCP_SCREATE_GENERAL_ERROR;
+    }
 #ifdef USE_BSD_SETLOGIN
     /**
      * Create a new session and process group since the 4.4BSD

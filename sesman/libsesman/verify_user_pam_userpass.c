@@ -207,8 +207,8 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
 /******************************************************************************/
 
 /* returns error */
-int
-auth_start_session(struct auth_info *auth_info, int display_num)
+static int
+auth_start_session_private(struct auth_info *auth_info, int display_num)
 {
     int error;
     char display[256];
@@ -244,6 +244,26 @@ auth_start_session(struct auth_info *auth_info, int display_num)
 
     auth_info->session_opened = 1;
     return 0;
+}
+
+/******************************************************************************/
+/**
+ * Main routine to start a session
+ *
+ * Calls the private routine and logs an additional error if the private
+ * routine fails
+ */
+int
+auth_start_session(struct auth_info *auth_info, int display_num)
+{
+    int result = auth_start_session_private(auth_info, display_num);
+    if (result != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Can't start PAM session. See PAM logging for more info");
+    }
+
+    return result;
 }
 
 /******************************************************************************/
