@@ -526,7 +526,12 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         g_delete_wait_obj(g_sigchld_event);
         g_delete_wait_obj(g_term_event);
 
-        auth_start_session(data, display);
+        if (auth_start_session(data, display) != 0)
+        {
+            // Errors are logged by the auth module, as they are
+            // specific to that module
+            g_exit(1);
+        }
         sesman_close_all();
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);

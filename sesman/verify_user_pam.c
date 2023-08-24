@@ -316,8 +316,8 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
 /******************************************************************************/
 /* returns error */
-int
-auth_start_session(long in_val, int in_display)
+static int
+auth_start_session_private(long in_val, int in_display)
 {
     struct t_auth_info *auth_info;
     int error;
@@ -355,6 +355,26 @@ auth_start_session(long in_val, int in_display)
 
     auth_info->session_opened = 1;
     return 0;
+}
+
+/******************************************************************************/
+/**
+ * Main routine to start a session
+ *
+ * Calls the private routine and logs an additional error if the private
+ * routine fails
+ */
+int
+auth_start_session(long in_val, int in_display)
+{
+    int result = auth_start_session_private(in_val, in_display);
+    if (result != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Can't start PAM session. See PAM logging for more info");
+    }
+
+    return result;
 }
 
 /******************************************************************************/
