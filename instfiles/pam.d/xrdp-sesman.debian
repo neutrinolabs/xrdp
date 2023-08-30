@@ -1,5 +1,14 @@
 #%PAM-1.0
+auth     required  pam_env.so readenv=1
+auth     required  pam_env.so readenv=1 envfile=/etc/default/locale
 @include common-auth
+-auth    optional  pam_gnome_keyring.so
+-auth    optional  pam_kwallet5.so
+
 @include common-account
-@include common-session
+
 @include common-password
+
+@include common-session
+-session optional  pam_gnome_keyring.so auto_start
+-session optional  pam_kwallet5.so auto_start
