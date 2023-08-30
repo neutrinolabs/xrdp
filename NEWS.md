@@ -1,10 +1,34 @@
+# Release notes for xrdp v0.9.23 (2023/08/31)
+
+## General announcements
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## Security fixes
+* [CVE-2023-40184: Improper handling of session establishment errors allows bypassing OS-level session restrictions](https://www.cve.org/CVERecord?id=CVE-2023-40184) (Reported by [@gafusss](https://github.com/gafusss))
+
+## Bug fixes
+* Environment variables set by PAM modules are no longer restricted to around 250 characters (#2712)
+* X11 clipboard clients now no longer hang when requesting a clipboard format which isn't available (#2767)
+
+## New features
+No new features in this release.
+
+## Internal changes
+* Introduce release tarball generation script (#2703)
+* cppcheck version used for CI bumped to 2.11 (#2738)
+
+## Known issues
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
 # Release notes for xrdp v0.9.22.1 (2023/05/23)
 
 This release is just a re-packing of source code tarball since v0.9.22 tarball includes invalid source code (#2687).
 
 See [v0.9.22 release note](https://github.com/neutrinolabs/xrdp/releases/tag/v0.9.22) for functional changes since v0.9.22.1 is what v0.9.22 should be.
 
-Thanks to [@morgancoxuk](https://github.com/morgancoxuk) and [bsmojver](https://github.com/bsmojver) for reporting and testing!
+Thanks to [@morgancoxuk](https://github.com/morgancoxuk) and [@bsmojver](https://github.com/bsmojver) for reporting and testing!
 
 ## References
 * https://github.com/neutrinolabs/xrdp/issues/2687
