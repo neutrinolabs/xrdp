@@ -181,7 +181,7 @@ jobs:
         with:
           path: ~/cppcheck.local
           key: ${{ steps.os.outputs.image }}-build-${{ env.cache-name }}-${{ env.CPPCHECK_VER }}
-      - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh
+      - run: sudo scripts/install_cppcheck_dependencies_with_apt.sh $CPPCHECK_VER
       - run: ./bootstrap
       - run: scripts/install_cppcheck.sh $CPPCHECK_REPO $CPPCHECK_VER
       - run: scripts/run_cppcheck.sh -v $CPPCHECK_VER
