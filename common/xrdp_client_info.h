@@ -215,6 +215,11 @@ struct xrdp_client_info
     unsigned int session_physical_height; /* in mm */
 
     int large_pointer_support_flags;
+
+    /* Image RemoteFX */
+    int irfx_codec_id;
+    int irfx_prop_len;
+    char irfx_prop[64];
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */

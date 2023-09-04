@@ -113,6 +113,14 @@ xrdp_encoder_create(struct xrdp_mm *mm)
                              mm->wm->screen->height,
                              RFX_FORMAT_YUV, 0);
     }
+    else if (client_info->irfx_codec_id != 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting image rfx codec session");
+        self->codec_id = client_info->irfx_codec_id;
+        self->in_codec_mode = 1;
+        client_info->capture_code = 2;
+        /* TODO */
+    }
 #endif
     else if (client_info->h264_codec_id != 0)
     {
