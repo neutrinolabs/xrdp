@@ -2572,14 +2572,12 @@ clipboard_event_property_notify(XEvent *xevent)
             format_in_bytes = FORMAT_TO_BYTES(actual_format_return);
             new_data_len = nitems_returned * format_in_bytes;
             cptr = (char *) g_malloc(g_clip_s2c.total_bytes + new_data_len, 0);
-            g_memcpy(cptr, g_clip_s2c.data, g_clip_s2c.total_bytes);
-            g_free(g_clip_s2c.data);
-
             if (cptr == NULL)
             {
+                /* cannot add any more data */
+                g_free(g_clip_s2c.data);
                 g_clip_s2c.data = 0;
 
-                /* cannot add any more data */
                 if (data != 0)
                 {
                     XFree(data);
@@ -2588,14 +2586,15 @@ clipboard_event_property_notify(XEvent *xevent)
                 XDeleteProperty(g_display, g_wnd, g_clip_s2c.property);
                 return 0;
             }
+            g_memcpy(cptr, g_clip_s2c.data, g_clip_s2c.total_bytes);
+            g_free(g_clip_s2c.data);
 
             LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_property_notify: new_data_len %d", new_data_len);
             g_clip_s2c.data = cptr;
-            g_memcpy(g_clip_s2c.data + g_clip_s2c.total_bytes, data, new_data_len);
-            g_clip_s2c.total_bytes += new_data_len;
-
             if (data)
             {
+                g_memcpy(g_clip_s2c.data + g_clip_s2c.total_bytes, data, new_data_len);
+                g_clip_s2c.total_bytes += new_data_len;
                 XFree(data);
             }
 

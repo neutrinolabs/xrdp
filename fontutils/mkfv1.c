@@ -37,11 +37,9 @@ static const struct
     const char  *err_msg;
 } ft_errors[] =
 #include <freetype/fterrors.h>
-
-#if 0
-    /* These lines fix problems with astyle formatting following the ft_errors
-     * definition */
-}
+#ifdef __cppcheck__
+    // avoid syntaxError by providing the array contents
+    {};
 #endif
 
 
