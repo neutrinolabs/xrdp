@@ -2928,6 +2928,7 @@ xrdp_mm_update_module_frame_ack(struct xrdp_mm *self)
 static int
 xrdp_mm_process_enc_done(struct xrdp_mm *self)
 {
+    XRDP_ENC_DATA *enc;
     XRDP_ENC_DATA_DONE *enc_done;
     int x;
     int y;
@@ -2976,21 +2977,26 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         /* free enc_done */
         if (enc_done->last)
         {
+            enc = enc_done->enc;
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_process_enc_done: last set");
             if (self->wm->client_info->use_frame_acks == 0)
             {
                 self->mod->mod_frame_ack(self->mod,
-                                         enc_done->enc->flags,
-                                         enc_done->enc->frame_id);
+                                         enc->flags,
+                                         enc->frame_id);
             }
             else
             {
-                self->encoder->frame_id_server = enc_done->enc->frame_id;
+                self->encoder->frame_id_server = enc->frame_id;
                 xrdp_mm_update_module_frame_ack(self);
             }
-            g_free(enc_done->enc->drects);
-            g_free(enc_done->enc->crects);
-            g_free(enc_done->enc);
+            g_free(enc->drects);
+            g_free(enc->crects);
+            if (enc->shmem_ptr != NULL)
+            {
+                g_munmap(enc->shmem_ptr, enc->shmem_bytes);
+            }
+            g_free(enc);
         }
         g_free(enc_done->comp_pad_data);
         g_free(enc_done);
@@ -3360,7 +3366,8 @@ server_paint_rects(struct xrdp_mod *mod, int num_drects, short *drects,
                    int height, int flags, int frame_id)
 {
     return server_paint_rects_ex(mod, num_drects, drects, num_crects, crects,
-                                 data, 0, 0, width, height, flags, frame_id);
+                                 data, 0, 0, width, height, flags, frame_id,
+                                 NULL, 0);
 }
 
 /*****************************************************************************/
@@ -3368,7 +3375,8 @@ int
 server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
                       int num_crects, short *crects, char *data,
                       int left, int top, int width, int height,
-                      int flags, int frame_id)
+                      int flags, int frame_id,
+                      void *shmem_ptr, int shmem_bytes)
 {
     struct xrdp_wm *wm;
     struct xrdp_mm *mm;
@@ -3389,6 +3397,10 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
         enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 1);
         if (enc_data == 0)
         {
+            if (shmem_ptr != NULL)
+            {
+                g_munmap(shmem_ptr, shmem_bytes);
+            }
             return 1;
         }
 
@@ -3396,6 +3408,10 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
                            g_malloc(sizeof(short) * num_drects * 4, 0);
         if (enc_data->drects == 0)
         {
+            if (shmem_ptr != NULL)
+            {
+                g_munmap(shmem_ptr, shmem_bytes);
+            }
             g_free(enc_data);
             return 1;
         }
@@ -3404,6 +3420,10 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
                            g_malloc(sizeof(short) * num_crects * 4, 0);
         if (enc_data->crects == 0)
         {
+            if (shmem_ptr != NULL)
+            {
+                g_munmap(shmem_ptr, shmem_bytes);
+            }
             g_free(enc_data->drects);
             g_free(enc_data);
             return 1;
@@ -3422,6 +3442,8 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
         enc_data->height = height;
         enc_data->flags = flags;
         enc_data->frame_id = frame_id;
+        enc_data->shmem_ptr = shmem_ptr;
+        enc_data->shmem_bytes = shmem_bytes;
         if (width == 0 || height == 0)
         {
             LOG_DEVEL(LOG_LEVEL_WARNING, "server_paint_rects: error");
@@ -3456,6 +3478,10 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
     }
     xrdp_bitmap_delete(b);
     mm->mod->mod_frame_ack(mm->mod, flags, frame_id);
+    if (shmem_ptr != NULL)
+    {
+        g_munmap(shmem_ptr, shmem_bytes);
+    }
     return 0;
 }
 

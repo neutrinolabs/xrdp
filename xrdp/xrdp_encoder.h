@@ -44,6 +44,8 @@ struct xrdp_enc_data
     int height;
     int flags;
     int frame_id;
+    void *shmem_ptr;
+    int shmem_bytes;
 };
 
 typedef struct xrdp_enc_data XRDP_ENC_DATA;

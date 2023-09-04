@@ -1386,11 +1386,14 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
             {
                 bmpdata = (char *)shmem_ptr;
                 bmpdata += shmem_offset;
+                /* we give up ownership of shmem_ptr
+                   will get cleaned up in server_paint_rects_ex or
+                   xrdp_mm_process_enc_done(rfx, gfx) */
                 rv = amod->server_paint_rects_ex(amod, num_drects, ldrects,
                                                  num_crects, lcrects, bmpdata,
                                                  left, top, width, height,
-                                                 flags, frame_id);
-                g_munmap(shmem_ptr, shmem_bytes);
+                                                 flags, frame_id,
+                                                 shmem_ptr, shmem_bytes);
             }
             g_file_close(fd);
         }
