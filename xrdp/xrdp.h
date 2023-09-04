@@ -528,7 +528,8 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
                       int num_crects, short *crects,
                       char *data, int left, int top,
                       int width, int height,
-                      int flags, int frame_id);
+                      int flags, int frame_id,
+                      void *shmem_ptr, int shmem_bytes);
 int
 server_palette(struct xrdp_mod *mod, int *palette);
 int

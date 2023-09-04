@@ -179,7 +179,8 @@ struct xrdp_mod
                                  int num_crects, short *crects,
                                  char *data, int left, int top,
                                  int width, int height,
-                                 int flags, int frame_id);
+                                 int flags, int frame_id,
+                                 void *shmem_ptr, int shmem_bytes);
     tintptr server_dumby[100 - 48]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
