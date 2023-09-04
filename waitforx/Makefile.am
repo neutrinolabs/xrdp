@@ -1,7 +1,7 @@
 pkglibexec_PROGRAMS = \
   waitforx
 
-AM_LDFLAGS = -lX11 -lXrandr
+AM_LDFLAGS = $(X_LIBS) -lX11 -lXrandr
 
 AM_CPPFLAGS = \
   -I$(top_srcdir)/sesman/sesexec \
