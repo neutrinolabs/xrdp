@@ -466,8 +466,6 @@ create_window(void)
 {
     WNDCLASS wc;
     DWORD style;
-    HDC dc;
-    int height;
     int left;
     int top;
 

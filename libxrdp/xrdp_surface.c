@@ -94,10 +94,7 @@ xrdp_surface_send_surface_bits(struct xrdp_surface *self, int bpp, char *data,
                                int x, int y, int cx, int cy)
 {
     RFX_RECT rect;
-    char *buf;
     int Bpp;
-    int i;
-    int j;
     int codecId;
     uint32 bitmapDataLength;
     STREAM *s;

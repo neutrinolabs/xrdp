@@ -131,8 +131,6 @@ int tcp_listen(int skt)
 
 int tcp_accept(int skt)
 {
-    int ret ;
-    char ipAddr[256] ;
     struct sockaddr_in s;
     socklen_t i;
 

@@ -56,14 +56,9 @@ extract_32(uint32_t *value, char *buf)
 int
 main(int argc, char **argv)
 {
-    char    *data;
-    char    *data1;
     void    *channel;
     int     written = 0;
-    int     rv;
     int     first_time = 1;
-    int     length;
-    int     bytes_read;
 
     if (argc < 2)
     {

@@ -723,7 +723,6 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID lpInBuffer,
              DWORD nOutBufferSize, LPDWORD lpBytesReturned)
 {
     LONG rv;
-    char text[8148];
 
     LLOGLN(10, ("SCardControl:"));
     LLOGLN(10, ("  hCard %p", hCard));
