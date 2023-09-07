@@ -564,7 +564,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: NSCodec(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
             self->client_info.ns_codec_id = codec_id;
-            i1 = MIN(64, codec_properties_length);
+            i1 = MIN(sizeof(self->client_info.ns_prop), (size_t) codec_properties_length);
             g_memcpy(self->client_info.ns_prop, s->p, i1);
             self->client_info.ns_prop_len = i1;
         }
@@ -573,7 +573,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: RemoteFX(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
             self->client_info.rfx_codec_id = codec_id;
-            i1 = MIN(64, codec_properties_length);
+            i1 = MIN(sizeof(self->client_info.rfx_prop), (size_t) codec_properties_length);
             g_memcpy(self->client_info.rfx_prop, s->p, i1);
             self->client_info.rfx_prop_len = i1;
         }
@@ -582,7 +582,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: Image RemoteFX(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
             self->client_info.irfx_codec_id = codec_id;
-            i1 = MIN(64, codec_properties_length);
+            i1 = MIN(sizeof(self->client_info.irfx_prop), (size_t) codec_properties_length);
 
             g_memcpy(self->client_info.irfx_prop, s->p, i1);
             self->client_info.irfx_prop_len = i1;
@@ -592,7 +592,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: JPEG(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
             self->client_info.jpeg_codec_id = codec_id;
-            i1 = MIN(64, codec_properties_length);
+            i1 = MIN(sizeof(self->client_info.jpeg_prop), (size_t) codec_properties_length);
             g_memcpy(self->client_info.jpeg_prop, s->p, i1);
             self->client_info.jpeg_prop_len = i1;
             /* make sure that requested quality is  between 0 to 100 */
@@ -609,7 +609,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: H264(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
             self->client_info.h264_codec_id = codec_id;
-            i1 = MIN(64, codec_properties_length);
+            i1 = MIN(sizeof(self->client_info.h264_prop), (size_t) codec_properties_length);
             g_memcpy(self->client_info.h264_prop, s->p, i1);
             self->client_info.h264_prop_len = i1;
         }
