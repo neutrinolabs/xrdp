@@ -2036,7 +2036,8 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
         return 0;
     }
 
-    LOG(LOG_LEVEL_DEBUG, "xrdp_wm_login_mode_changed: login_mode is %d", self->login_state);
+    LOG(LOG_LEVEL_DEBUG, "Login state has changed to %s",
+        xrdp_wm_login_state_to_str(self->login_state));
     if (self->login_state == WMLS_RESET)
     {
         list_clear(self->log);
