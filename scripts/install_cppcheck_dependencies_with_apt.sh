@@ -24,6 +24,8 @@ case "$CPPCHECK_VER" in
             ;;
         2.8 | 2.9 | 2.1*)
             # Cppcheck 2.8 removed the dependency on z3
+            # Cppcheck 2.8 added optional support for utilizing Boost
+            PACKAGES="$PACKAGES libboost-container-dev"
             ;;
         2.*)
             PACKAGES="$PACKAGES libz3-dev z3"
