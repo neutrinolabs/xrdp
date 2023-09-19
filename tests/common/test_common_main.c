@@ -48,6 +48,7 @@ int main (void)
 
     sr = srunner_create (make_suite_test_fifo());
     srunner_add_suite(sr, make_suite_test_list());
+    srunner_add_suite(sr, make_suite_test_parse());
     srunner_add_suite(sr, make_suite_test_string());
     srunner_add_suite(sr, make_suite_test_string_unicode());
     srunner_add_suite(sr, make_suite_test_os_calls());

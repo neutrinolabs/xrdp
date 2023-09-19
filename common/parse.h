@@ -90,6 +90,102 @@ parser_stream_overflow_check(const struct stream *s, int n, int is_out,
 #endif
 
 /******************************************************************************/
+/**
+ * Copies a UTF-8 string to a stream as little-endian UTF-16
+ *
+ * @param s Stream
+ * @param v UTF-8 string
+ * @param vn Length of UTF-8 string.
+ * @param file Caller location (from __FILE__)
+ * @param line Caller location (from __LINE__)
+ *
+ * Caller is expected to check there is room for the result in s
+ */
+void
+out_utf8_as_utf16_le_proc(struct stream *s, const char *v,
+                          unsigned int vn,
+                          const char *file, int line);
+
+#define out_utf8_as_utf16_le(s,v,vn) \
+    out_utf8_as_utf16_le_proc((s), (v), (vn), __FILE__, __LINE__)
+
+
+/******************************************************************************/
+/**
+ * Copies a fixed-size little-endian UTF-16 string from a stream as UTF-8
+ *
+ * @param s Stream
+ * @param n Number of 16-bit words to copy
+ * @param v Pointer to result buffer
+ * @param vn Max size of result buffer
+ *
+ * @return number of characters which would be written to v, INCLUDING
+ *         an additional terminator. This can be used to check for a buffer
+ *         overflow. A terminator is added whether or not the input
+ *         includes one.
+ *
+ * Output is unconditionally NULL-terminated.
+ * Input is not checked for NULLs - these are copied verbatim
+ */
+unsigned int
+in_utf16_le_fixed_as_utf8_proc(struct stream *s, unsigned int n,
+                               char *v, unsigned int vn,
+                               const char *file, int line);
+
+#define in_utf16_le_fixed_as_utf8(s,n,v,vn) \
+    in_utf16_le_fixed_as_utf8_proc((s), (n), (v), (vn), __FILE__, __LINE__)
+
+/******************************************************************************/
+/**
+ * Returns the size of the buffer needed to store a fixed-size
+ * little-endian UTF-16 string in a stream as a UTF-8 string
+ *
+ * @param s Stream
+ * @param n Number of 16-bit words to consider
+ * @return number of characters needed to store the UTF-8 string. This
+ *         includes a terminator, which is written whether the parsed
+ *         string includes one or not.
+ * @post Stream position is not moved between start and end of this call
+ */
+unsigned int
+in_utf16_le_fixed_as_utf8_length(struct stream *s, unsigned int n);
+
+/******************************************************************************/
+/**
+ * Copies a terminated little-endian UTF-16 string from a stream as UTF-8
+ *
+ * @param s Stream
+ * @param v Pointer to result buffer
+ * @param vn Max size of result buffer
+ *
+ * @return number of characters which would be written to v, INCLUDING
+ *         the terminator. This can be used to check for a buffer overflow.
+ *
+ * Output is unconditionally NULL-terminated.
+ * Input processing stops when a NULL is encountered, or the end of the buffer
+ * is reached.
+ */
+unsigned int
+in_utf16_le_terminated_as_utf8(struct stream *s,
+                               char *v, unsigned int vn);
+
+/******************************************************************************/
+/**
+ * Returns the size of the buffer needed to store a terminated
+ * little-endian UTF-16 string in a stream as a terminated UTF-8 string
+ *
+ * @param s Stream
+ * @return number of characters needed to store the UTF-8 string,
+ *         including the terminator
+ * @post Stream position is not moved between start and end of this call
+ *
+ * Input processing stops when a NULL is encountered, or the end of the buffer
+ * is reached.
+ */
+unsigned int
+in_utf16_le_terminated_as_utf8_length(struct stream *s);
+
+/******************************************************************************/
 #define s_check_rem(s, n) ((s)->p + (n) <= (s)->end)
 
 /******************************************************************************/

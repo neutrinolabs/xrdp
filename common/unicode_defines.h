@@ -68,4 +68,33 @@
       INVALID_UNICODE_10000_TO_1FFFFF(c) \
     )
 
+/**
+ * Is this character a UTF-16 high surrogate?
+ */
+#define IS_HIGH_SURROGATE(u16) (((u16) & 0xfc00) == 0xd800)
+
+/**
+ * Is this character a UTF-16 low surrogate?
+ */
+#define IS_LOW_SURROGATE(u16) (((u16) & 0xfc00) == 0xdc00)
+
+/**
+ * Extract the UTF-16 high surrogate from a character
+ */
+#define HIGH_SURROGATE_FROM_C32(c32) \
+    (((((c32) - 0x10000) >> 10) & 0x3ff) | 0xd800)
+
+/**
+ * Extract the UTF-16 low surrogate from a character
+ */
+#define LOW_SURROGATE_FROM_C32(c32) (((c32) & 0x3ff) | 0xdc00)
+
+/**
+ * Reconstruct a character from a UTF-16 surrogate pair
+ *
+ * This macro cannot return values higher than 0x10ffff
+ */
+#define C32_FROM_SURROGATE_PAIR(low,high) \
+    ((char32_t)(((high) & 0x3ff) << 10) + ((low) & 0x3ff) + 0x10000)
+
 #endif // UNICODE_DEFINES_H

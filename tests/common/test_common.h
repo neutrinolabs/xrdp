@@ -9,6 +9,7 @@ bin_to_hex(const char *input, int length);
 
 Suite *make_suite_test_fifo(void);
 Suite *make_suite_test_list(void);
+Suite *make_suite_test_parse(void);
 Suite *make_suite_test_string(void);
 Suite *make_suite_test_string_unicode(void);
 Suite *make_suite_test_os_calls(void);
