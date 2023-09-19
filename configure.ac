@@ -569,7 +569,7 @@ AC_SUBST([pamconfdir], [$with_pamconfdir])
 
 PKG_INSTALLDIR
 
-AC_CHECK_HEADERS([sys/prctl.h])
+AC_CHECK_HEADERS([sys/prctl.h uchar.h])
 
 AC_CONFIG_FILES([
   common/Makefile

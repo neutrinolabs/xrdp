@@ -27,11 +27,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-
 #include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
 #include "defines.h"
+#include "unicode_defines.h"
 
 unsigned int
 g_format_info_string(char *dest, unsigned int len,
@@ -1287,4 +1287,306 @@ g_sig2text(int signum, char sigstr[])
     // If all else fails...
     g_snprintf(sigstr, MAXSTRSIGLEN, "SIG#%d", signum);
     return sigstr;
+}
+
+/*****************************************************************************/
+char32_t
+utf8_get_next_char(const char **utf8str_ref, unsigned int *len_ref)
+{
+    /*
+     * Macro used to parse a continuation character
+     * @param cp Character Pointer (incremented on success)
+     * @param end One character past end of input string
+     * @param value The value we're constructing
+     * @param finish_label Where to go in the event of an error */
+#define PARSE_CONTINUATION_CHARACTER(cp, end, value, finish_label) \
+    { \
+        /* Error if we're out of data, or this char isn't a continuation */ \
+        if (cp == end || !IS_VALID_CONTINUATION_CHAR(*cp)) \
+        { \
+            value = UCS_REPLACEMENT_CHARACTER; \
+            goto finish_label; \
+        } \
+        value = (value) << 6 | (*cp & 0x3f); \
+        ++cp; \
+    }
+
+    char32_t rv;
+
+    /* Easier to work with unsigned chars and no indirection */
+    const unsigned char *cp = (const unsigned char *)*utf8str_ref;
+    const unsigned char *end = (len_ref != NULL) ? cp + *len_ref : cp + 6;
+
+    if (cp == end)
+    {
+        return 0; // Pathological case
+    }
+
+    unsigned int c0 = *cp++;
+
+    if (c0 < 0x80)
+    {
+        rv = c0;
+    }
+    else if (c0 < 0xc0)
+    {
+        /* Unexpected continuation character */
+        rv = UCS_REPLACEMENT_CHARACTER;
+    }
+    else if (c0 < 0xe0)
+    {
+        /* Valid start character for sequence of length 2
+         * U-00000080 – U-000007FF */
+        rv = (c0 & 0x1f);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+
+        if (rv < 0x80 || INVALID_UNICODE_80_TO_7FF(rv))
+        {
+            rv = UCS_REPLACEMENT_CHARACTER;
+        }
+    }
+    else if (c0 < 0xf0)
+    {
+        /* Valid start character for sequence of length 3
+         *  U-00000800 – U-0000FFFF */
+        rv = (c0 & 0xf);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        if (rv < 0x800 || INVALID_UNICODE_800_TO_FFFF(rv))
+        {
+            rv = UCS_REPLACEMENT_CHARACTER;
+        }
+    }
+    else if (c0 < 0xf8)
+    {
+        /* Valid start character for sequence of length 4
+         * U-00010000 – U-0001FFFFF */
+        rv = (c0 & 0x7);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        if (rv < 0x10000 || INVALID_UNICODE_10000_TO_1FFFFF(rv))
+        {
+            rv = UCS_REPLACEMENT_CHARACTER;
+        }
+    }
+    else if (c0 < 0xfc)
+    {
+        /* Valid start character for sequence of length 5
+         * U-00200000 – U-03FFFFFF */
+        rv = (c0 & 0x3);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+
+        // These values are currently unsupported
+        rv = UCS_REPLACEMENT_CHARACTER;
+    }
+
+    else if (c0 < 0xfe)
+    {
+        /* Valid start character for sequence of length 6
+         * U-04000000 – U-7FFFFFFF */
+        rv = (c0 & 0x1);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+        PARSE_CONTINUATION_CHARACTER(cp, end, rv, finish);
+
+        // These values are currently unsupported
+        rv = UCS_REPLACEMENT_CHARACTER;
+    }
+    else
+    {
+        // Invalid characters
+        rv = UCS_REPLACEMENT_CHARACTER;
+    }
+
+finish:
+
+    if (len_ref)
+    {
+        *len_ref -= ((const char *)cp - *utf8str_ref);
+    }
+    *utf8str_ref = (const char *)cp;
+
+    return rv;
+#undef PARSE_CONTINUATION_CHARACTER
+}
+
+/*****************************************************************************/
+unsigned int
+utf_char32_to_utf8(char32_t c32, char *u8str)
+{
+    unsigned int rv;
+
+    if (INVALID_UNICODE(c32))
+    {
+        c32 = UCS_REPLACEMENT_CHARACTER;
+    }
+
+    if (c32 < 0x80)
+    {
+        rv = 1;
+        if (u8str != NULL)
+        {
+            u8str[0] = (char)c32;
+        }
+    }
+    else if (c32 < 0x800)
+    {
+        rv = 2;
+        // 11 bits. Five in first byte, six in second
+        if (u8str != NULL)
+        {
+            u8str[1] = (c32 & 0x3f) | 0x80;
+            c32 >>= 6;
+            u8str[0] = (c32 & 0x1f) | 0xc0;
+        }
+    }
+    else if (c32 < 0xffff)
+    {
+        rv = 3;
+        // 16 bits. Four in first byte, six in second and third
+        if (u8str != NULL)
+        {
+            u8str[2] = (c32 & 0x3f) | 0x80;
+            c32 >>= 6;
+            u8str[1] = (c32 & 0x3f) | 0x80;
+            c32 >>= 6;
+            u8str[0] = (c32 & 0xf) | 0xe0;
+        }
+    }
+    else
+    {
+        rv = 4;
+        // 21 bits. Three in first byte, six in second, third and fourth
+        if (u8str != NULL)
+        {
+            u8str[3] = (c32 & 0x3f) | 0x80;
+            c32 >>= 6;
+            u8str[2] = (c32 & 0x3f) | 0x80;
+            c32 >>= 6;
+            u8str[1] = (c32 & 0x3f) | 0x80;
+            c32 >>= 6;
+            u8str[0] = (c32 & 0x7) | 0xf0;
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+unsigned int
+utf8_char_count(const char *utf8str)
+{
+    unsigned int rv = 0;
+    char32_t c;
+
+    if (utf8str != NULL)
+    {
+        while ((c = utf8_get_next_char(&utf8str, NULL)) != 0)
+        {
+            ++rv;
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+unsigned int
+utf8_as_utf16_word_count(const char *utf8str, unsigned int len)
+{
+    unsigned int rv = 0;
+    while (len > 0)
+    {
+        char32_t c = utf8_get_next_char(&utf8str, &len);
+        // Characters not in the BMP (i.e. over 0xffff) need a high/low
+        // surrogate pair
+        rv += (c >= 0x10000) ? 2 : 1;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+int
+utf8_add_char_at(char *utf8str, unsigned int len, char32_t c32,
+                 unsigned int index)
+{
+    int rv = 0;
+
+    char c8[MAXLEN_UTF8_CHAR];
+    unsigned int c8len = utf_char32_to_utf8(c32, c8);
+
+    // Find out where to insert the character
+    char *insert_pos = utf8str;
+
+    while (index > 0 && *insert_pos != '\0')
+    {
+        utf8_get_next_char((const char **)&insert_pos, NULL);
+        --index;
+    }
+
+    // Did we get to where we need to be?
+    if (index == 0)
+    {
+        unsigned int bytes_to_move = strlen(insert_pos) + 1; // Include terminator
+        // Is there room to insert the character?
+        //
+        //  <----------- len ---------->
+        //            <--> (bytes_to_move)
+        // +----------------------------+
+        // |ABCDEFGHIJLMN\0             |
+        // +----------------------------+
+        //  ^         ^
+        //  +-utf8str +-insert_pos
+        //
+        if ((insert_pos - utf8str) + bytes_to_move + c8len <= len)
+        {
+            memmove(insert_pos + c8len, insert_pos, bytes_to_move);
+            memcpy(insert_pos, c8, c8len);
+            rv = 1;
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+char32_t
+utf8_remove_char_at(char *utf8str, unsigned int index)
+{
+    int rv = 0;
+
+    // Find out where to remove the character
+    char *remove_pos = utf8str;
+
+    while (index > 0)
+    {
+        // Any characters left in string?
+        if (*remove_pos == '\0')
+        {
+            break;
+        }
+
+        utf8_get_next_char((const char **)&remove_pos, NULL);
+        --index;
+    }
+
+    // Did we get to where we need to be?
+    if (index == 0)
+    {
+        // Find the position after the character
+        char *after_pos = remove_pos;
+        rv = utf8_get_next_char((const char **)&after_pos, NULL);
+
+        // Move everything up
+        memmove(remove_pos, after_pos, strlen(after_pos) + 1);
+    }
+
+    return rv;
 }

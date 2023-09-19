@@ -68,6 +68,7 @@ libcommon_la_SOURCES = \
   thread_calls.h \
   trans.c \
   trans.h \
+  unicode_defines.h \
   $(PIXMAN_SOURCES)
 
 libcommon_la_LIBADD = \
