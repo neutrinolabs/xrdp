@@ -312,6 +312,13 @@ int      g_pos(const char *str, const char *to_find);
 char    *g_strstr(const char *haystack, const char *needle);
 int      g_mbstowcs(twchar *dest, const char *src, int n);
 int      g_wcstombs(char *dest, const twchar *src, int n);
+
+/** trim spaces and tabs, anything <= space
+ *
+ * @param str (assumed to be UTF-8)
+ * @param trim_flags 1 trim left, 2 trim right, 3 trim both, 4 trim through
+ * @return != 0 - trim_flags not recognised
+ * this will always shorten the string or not change it */
 int      g_strtrim(char *str, int trim_flags);
 
 /**
