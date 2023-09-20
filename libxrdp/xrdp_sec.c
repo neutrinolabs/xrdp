@@ -774,51 +774,56 @@ xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
     self->encrypt_use_count++;
 }
 
-/*****************************************************************************
- * convert utf-16 encoded string from stream into utf-8 string.
- * note: src_bytes doesn't include the null-terminator char.
- * Copied From: xrdp_sec.c
+/*****************************************************************************/
+/**
+ * Reads a null-terminated unicode string from a stream where the length
+ * of the string is known.
+ *
+ * Strings are part of one of the following from [MS-RDPBCGR] :-
+ * - TS_INFO_PACKET (2.2.1.11.1.1)
+ * - TS_EXTENDED_INFO_PACKET (2.2.1.11.1.1.1)
+ *
+ * @param s Stream
+ * @param src_bytes Size in bytes of the string, EXCLUDING the two-byte
+ *                  terminator
+ * @param dst Destination buffer
+ * @param dst_len Length of buffer, including terminator space
+ *
+ * @return 0 for success, != 0 for a buffer overflow or a missing terminator
  */
 static int
-unicode_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
+ts_info_utf16_in(struct stream *s, int src_bytes, char *dst, int dst_len)
 {
-    twchar *src;
-    int num_chars;
-    int i;
-    int bytes;
+    int rv = 0;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "unicode_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len);
-    if (src_bytes == 0)
+    LOG_DEVEL(LOG_LEVEL_TRACE, "ts_info_utf16_in: uni_len %d, dst_len %d", src_bytes, dst_len);
+
+    if (!s_check_rem_and_log(s, src_bytes + 2, "ts_info_utf16_in"))
     {
-        if (!s_check_rem_and_log(s, 2, "Parsing UTF-16"))
+        rv = 1;
+    }
+    else
+    {
+        int term;
+        int num_chars = in_utf16_le_fixed_as_utf8(s, src_bytes / 2,
+                        dst, dst_len);
+        if (num_chars > dst_len)
         {
-            return 1;
+            LOG(LOG_LEVEL_ERROR, "ts_info_utf16_in: output buffer overflow");
+            rv = 1;
         }
-        LOG_DEVEL(LOG_LEVEL_TRACE, "unicode_utf16_in: num_chars 0, dst '' (empty string)");
-        in_uint8s(s, 2); /* null terminator */
-        return 0;
-    }
 
-    bytes = src_bytes + 2; /* include the null terminator */
-    src = g_new0(twchar, bytes);
-    for (i = 0; i < bytes / 2; ++i)
-    {
-        if (!s_check_rem_and_log(s, 2, "Parsing UTF-16"))
+        // String should be null-terminated. We haven't read the terminator yet
+        in_uint16_le(s, term);
+        if (term != 0)
         {
-            g_free(src);
-            return 1;
+            LOG(LOG_LEVEL_ERROR,
+                "ts_info_utf16_in: bad terminator. Expected 0, got %d", term);
+            rv = 1;
         }
-        in_uint16_le(s, src[i]);
     }
-    num_chars = g_wcstombs(dst, src, dst_len);
-    if (num_chars < 0)
-    {
-        g_memset(dst, '\0', dst_len);
-    }
-    LOG_DEVEL(LOG_LEVEL_TRACE, "unicode_utf16_in: num_chars %d, dst '%s'", num_chars, dst);
-    g_free(src);
 
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -998,13 +1003,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-    if (unicode_utf16_in(s, len_domain, self->rdp_layer->client_info.domain, sizeof(self->rdp_layer->client_info.domain) - 1) != 0)
+    if (ts_info_utf16_in(s, len_domain, self->rdp_layer->client_info.domain, sizeof(self->rdp_layer->client_info.domain)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "ERROR reading domain");
         return 1;
     }
 
-    if (unicode_utf16_in(s, len_user, self->rdp_layer->client_info.username, sizeof(self->rdp_layer->client_info.username) - 1) != 0)
+    if (ts_info_utf16_in(s, len_user, self->rdp_layer->client_info.username, sizeof(self->rdp_layer->client_info.username)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "ERROR reading user name");
         return 1;
@@ -1012,7 +1017,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (flags & RDP_LOGON_AUTO)
     {
-        if (unicode_utf16_in(s, len_password, self->rdp_layer->client_info.password, sizeof(self->rdp_layer->client_info.password) - 1) != 0)
+        if (ts_info_utf16_in(s, len_password, self->rdp_layer->client_info.password, sizeof(self->rdp_layer->client_info.password)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "ERROR reading password");
             return 1;
@@ -1053,13 +1058,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
     }
 
-    if (unicode_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program) - 1) != 0)
+    if (ts_info_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "ERROR reading program");
         return 1;
     }
 
-    if (unicode_utf16_in(s, len_directory, self->rdp_layer->client_info.directory, sizeof(self->rdp_layer->client_info.directory) - 1) != 0)
+    if (ts_info_utf16_in(s, len_directory, self->rdp_layer->client_info.directory, sizeof(self->rdp_layer->client_info.directory)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "ERROR reading directory");
         return 1;
@@ -1093,7 +1098,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         /* TS_EXTENDED_INFO_PACKET required fields */
         in_uint8s(s, 2);         /* clientAddressFamily */
         in_uint16_le(s, len_ip);
-        if (unicode_utf16_in(s, len_ip - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
+        if (ts_info_utf16_in(s, len_ip - 2, tmpdata, sizeof(tmpdata)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "ERROR reading ip");
             return 1;
@@ -1103,7 +1108,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         in_uint16_le(s, len_dll);
-        if (unicode_utf16_in(s, len_dll - 2, tmpdata, sizeof(tmpdata) - 1) != 0)
+        if (ts_info_utf16_in(s, len_dll - 2, tmpdata, sizeof(tmpdata)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "ERROR reading clientDir");
             return 1;
@@ -1961,7 +1966,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
      2 + 2 +        /* desktopWidth + desktopHeight */ \
      2 + 2 +        /* colorDepth + SASSequence */ \
      4 +            /* keyboardLayout */ \
-     4 + 32 +       /* clientBuild + clientName */ \
+     4 + INFO_CLIENT_NAME_BYTES + /* clientBuild + clientName */ \
      4 + 4 + 4 +    /* keyboardType + keyboardSubType + keyboardFunctionKey */ \
      64 +           /* imeFileName */ \
      0)
@@ -2002,7 +2007,15 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint8s(s, 2); /* SASSequence */
     in_uint8s(s, 4); /* keyboardLayout */
     in_uint8s(s, 4); /* clientBuild */
-    unicode_utf16_in(s, INFO_CLIENT_NAME_BYTES - 2, clientName, sizeof(clientName) - 1);  /* clientName */
+
+    /* clientName
+     *
+     * This should be null-terminated. Allow for the possibility it
+     * isn't by ignoring the last two bytes and treating them as a
+     * terminator anyway */
+    in_utf16_le_fixed_as_utf8(s, (INFO_CLIENT_NAME_BYTES - 2) / 2,
+                              clientName, sizeof(clientName));
+    in_uint8s(s, 2); /* See above */
     LOG(LOG_LEVEL_INFO, "Connected client computer name: %s", clientName);
     in_uint8s(s, 4); /* keyboardType */
     in_uint8s(s, 4); /* keyboardSubType */
@@ -2643,8 +2656,6 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 {
     struct stream *s = (struct stream *)NULL;
     struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
-    int index = 0;
-    char c = 0;
 
     client_info = &(self->rdp_layer->client_info);
     s = &(self->client_mcs_data);
@@ -2657,23 +2668,16 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     in_uint8s(s, 47); /* skip [ITU T.124] ConferenceCreateRequest up to the
                          userData field, and skip [MS-RDPBCGR] TS_UD_CS_CORE
                          up to the clientName field */
-    g_memset(client_info->hostname, 0, 32);
-    c = 1;
-    index = 0;
-
-    /* TODO: why aren't we using unicode_utf16_in to parse the client name
-       like we do in xrdp_sec_process_mcs_data_CS_CORE? */
-    while (index < 16 && c != 0)
+    if (!s_check_rem_and_log(s, INFO_CLIENT_NAME_BYTES,
+                             "Parsing [MS-RDPBCGR] TS_UD_CS_CORE clientName"))
     {
-        if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_UD_CS_CORE clientName"))
-        {
-            return 1;
-        }
-        in_uint8(s, c);
-        in_uint8s(s, 1);
-        client_info->hostname[index] = c;
-        index++;
+        return 1;
     }
+    in_utf16_le_fixed_as_utf8(s, (INFO_CLIENT_NAME_BYTES - 2) / 2,
+                              client_info->hostname,
+                              sizeof(client_info->hostname));
+    in_uint8s(s, 2); /* Ignored - terminator for full-size clientName */
+
     /* get build */
     s->p = s->data;
     if (!s_check_rem_and_log(s, 43 + 4, "Parsing [MS-RDPBCGR] TS_UD_CS_CORE clientBuild"))
