@@ -100,8 +100,11 @@ extern char **environ;
 
 /* sys/ucred.h needs to be included to use struct xucred
  * in FreeBSD and OS X. No need for other BSDs except GNU/kFreeBSD */
+/* Solaris uses __sun and needs .h */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__FreeBSD_kernel__)
 #include <sys/ucred.h>
+#elif defined(__sun)
+#include <ucred.h>
 #endif
 
 /* for solaris */
@@ -149,11 +152,14 @@ g_mk_socket_path(void)
                 LOG(LOG_LEVEL_ERROR,
                     "g_mk_socket_path: g_create_path(%s) failed",
                     XRDP_SOCKET_PATH);
+
+		        LOG(LOG_LEVEL_TRACE, "g_mk_socket_path() returned 1");
                 return 1;
             }
         }
         g_chmod_hex(XRDP_SOCKET_PATH, 0x1777);
     }
+
     return 0;
 }
 
@@ -591,6 +597,7 @@ g_sck_vsock_socket(void)
 int
 g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 {
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred(%d)", sck);
 #if defined(SO_PEERCRED)
     socklen_t ucred_length;
     struct myucred
@@ -603,6 +610,7 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
     ucred_length = sizeof(credentials);
     if (getsockopt(sck, SOL_SOCKET, SO_PEERCRED, &credentials, &ucred_length))
     {
+        LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 1");
         return 1;
     }
     if (pid != 0)
@@ -626,6 +634,8 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 
     if (getsockopt(sck, SOL_LOCAL, LOCAL_PEERCRED, &xucred, &xucred_length))
     {
+        LOG(LOG_LEVEL_ERROR, "getsockopt() failed: %s", strerror(errno));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 1");
         return 1;
     }
     if (pid != 0)
@@ -640,8 +650,69 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
     {
         *gid = xucred.cr_gid;
     }
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 0");
+    return 0;
+#elif defined(LOCAL_PEEREID)
+    /* Net BSD */
+    #ifndef SOL_LOCAL
+       #define SOL_LOCAL 0
+    #endif
+    struct unpcbid xucred;
+    unsigned int xucred_length;
+    xucred_length = sizeof(xucred);
+    if (getsockopt(sck, SOL_LOCAL, LOCAL_PEEREID, &xucred, &xucred_length))
+    {
+        LOG(LOG_LEVEL_ERROR, "getsockopt() failed: %s", strerror(errno));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 1");
+        return 1;
+    }
+
+    if (pid != 0)
+    {
+        *pid = xucred.unp_pid;
+    }
+    if (uid != 0)
+    {
+        *uid = xucred.unp_euid;
+    }
+    if (gid != 0)
+    {
+        *gid = xucred.unp_egid;
+    }
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 0");
+    return 0;
+#elif defined(__sun)
+    /* Solaris, OpenIndiana */
+    ucred_t* xucred = NULL;
+
+    if(getpeerucred(sck, &xucred))
+    {
+        LOG(LOG_LEVEL_ERROR, "getsockopt() failed: %s", strerror(errno));
+        LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 1");   
+        return 1;  
+    }
+
+    if (pid != 0)
+    {
+        *pid = ucred_getpid(xucred);
+    }
+    if (uid != 0)
+    {
+        *uid = ucred_geteuid(xucred);
+    }
+    if (gid != 0)
+    {
+        *gid = ucred_getegid(xucred);
+    }
+
+    ucred_free(xucred);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 0");
     return 0;
 #else
+    LOG(LOG_LEVEL_ERROR, "g_sck_get_peer_cred() has no implementation.");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_sck_get_peer_cred() returned 1");
     return 1;
 #endif
 }
@@ -3017,6 +3088,7 @@ g_fork(void)
 #if defined(_WIN32)
     return 0;
 #else
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_fork()");
     int rv;
 
     rv = fork();
@@ -3028,6 +3100,7 @@ g_fork(void)
             g_get_errno(), g_get_strerror());
     }
 
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_fork() returned %d", rv);
     return rv;
 #endif
 }
@@ -3040,7 +3113,10 @@ g_setgid(int pid)
 #if defined(_WIN32)
     return 0;
 #else
-    return setgid(pid);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_setgid(%d)", pid);
+    int retval = setgid(pid);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "--g_setgid()");
+    return retval;
 #endif
 }
 
@@ -3053,12 +3129,15 @@ g_initgroups(const char *username)
 #if defined(_WIN32)
     return 0;
 #else
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_initgroups(%s)", username);
     int gid;
     int error = g_getuser_info_by_name(username, NULL, &gid, NULL, NULL, NULL);
     if (error == 0)
     {
         error = initgroups(username, gid);
     }
+
+     LOG_DEVEL(LOG_LEVEL_TRACE, "g_initgroups() returned %d", error);   
     return error;
 #endif
 }
@@ -3302,14 +3381,16 @@ g_setpgid(int pid, int pgid)
 void
 g_clearenv(void)
 {
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_clearenv()");
 #if defined(_WIN32)
 #else
-#if defined(BSD)
+#if defined(BSD) || defined(__sun) || defined(__APPLE__)
     environ[0] = 0;
 #else
     environ = 0;
 #endif
 #endif
+   LOG_DEVEL(LOG_LEVEL_TRACE, "--g_clearenv()");
 }
 
 /*****************************************************************************/
@@ -3320,7 +3401,10 @@ g_setenv(const char *name, const char *value, int rewrite)
 #if defined(_WIN32)
     return 0;
 #else
-    return setenv(name, value, rewrite);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_setenv(%s, %s, %d)", name, value, rewrite);
+    int retval = setenv(name, value, rewrite);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_setenv() returned %d", retval);
+    return retval;
 #endif
 }
 
@@ -3424,7 +3508,10 @@ g_getuser_info_by_name(const char *username, int *uid, int *gid,
 
             if (gecos != 0)
             {
-                *gecos = g_strdup(pwd_1->pw_gecos);
+	            if( pwd_1->pw_gecos == NULL )
+		            *gecos = g_strdup("");
+	            else
+		            *gecos = g_strdup(pwd_1->pw_gecos);
             }
         }
     }
@@ -3472,7 +3559,10 @@ g_getuser_info_by_uid(int uid, char **username, int *gid,
 
         if (gecos != 0)
         {
-            *gecos = g_strdup(pwd_1->pw_gecos);
+	        if( pwd_1->pw_gecos == NULL )
+		        *gecos = g_strdup("");
+	        else
+		        *gecos = g_strdup(pwd_1->pw_gecos);
         }
 
         return 0;
@@ -3780,7 +3870,10 @@ g_shmdt(const void *shmaddr)
 int
 g_gethostname(char *name, int len)
 {
-    return gethostname(name, len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_gethostname(name, %d)", len);
+    int retval = gethostname(name, len);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_gethostname(%s, %d) returned %d", name, len, retval);
+    return retval;
 }
 
 static unsigned char g_reverse_byte[0x100] =

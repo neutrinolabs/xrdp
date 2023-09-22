@@ -1,0 +1,85 @@
+#!/bin/bash
+. /lib/svc/share/smf_include.sh
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib
+export PATH=$PATH:$ORACLE_HOME/bin
+
+VERBOSE=true
+NAME=xrdp-sesman
+FULLNAME=/usr/local/sbin/$NAME
+TIMEOUT=5
+
+log_if_verbose()
+{
+   if [ -n "$VERBOSE" ]; then
+        echo $@
+   fi
+}
+
+waitFor() {
+    name=$1
+    timeout=$2
+
+    let i=0
+
+    # Loop until we are certain that the process has been stopped
+    while [ $i -lt $timeout ]; do
+        pgrep -xf $name > /dev/null
+        if [ $? -eq 0 ]; then
+            break;
+        fi
+
+        let i=i+1
+        sleep 1
+        log_if_verbose "$i seconds"
+    done
+
+    pgrep -xf $name > /dev/null
+    return $?
+}
+
+function start
+{
+    $FULLNAME
+}
+
+function stop
+{
+    log_if_verbose "Sending TERM to $NAME"
+    pkill -TERM -xf $FULLNAME
+
+    waitFor $FULLNAME $TIMEOUT
+
+    if [ $? -ne 0 ]; then
+        log_if_verbose "Sending KILL to $NAME"
+	pkill -KILL -xf $FULLNAME
+	waitFor $FULLNAME 1
+        rm -f /var/run/$NAME.pid
+    fi
+
+    return $?
+}
+
+function refresh
+{
+   log_if_verbose "Refresh not implemented."
+   return 1;
+}
+
+case $1 in
+    start) start ;;
+    stop)  stop ;;
+    refresh)  refresh;;
+
+    *) echo "Usage: $0 { start | stop | refresh }" >&2
+       exit $SMF_EXIT_ERR_FATAL
+       ;;
+esac
+
+retval=$?
+
+if [ $? -eq 0 ]; then
+  retval=$SMF_EXIT_OK
+fi;
+
+exit $SMF_EXIT_OK

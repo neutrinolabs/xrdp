@@ -10,7 +10,8 @@ AM_CPPFLAGS = \
   -DSESMAN_RUNTIME_PATH=\"${sesmanruntimedir}\" \
   -I$(top_srcdir)/sesman/libsesman \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libipm
+  -I$(top_srcdir)/libipm \
+  $(SDK_FLAGS)
 
 sbin_PROGRAMS = \
   xrdp-sesman
@@ -65,3 +66,10 @@ SUBDIRS = \
   sesexec \
   tools \
   chansrv
+
+if SOLARIS
+# must be tab below.  SOLARIS Xorg does not allow logfile parameter.
+install-data-hook:
+	sed -i 's|param=-logfile|;param=-logfile|g' $(DESTDIR)$(sysconfdir)/xrdp/sesman.ini
+	sed -i 's|param=.xorgxrdp.%s.log|;param=.xorgxrdp.%s.log|g' $(DESTDIR)$(sysconfdir)/xrdp/sesman.ini
+endif

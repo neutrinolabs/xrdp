@@ -66,9 +66,15 @@ systemdsystemunit_DATA = \
   xrdp-sesman.service \
   xrdp.service
 else
+if XRDP_OPENRC
+  SUBDIRS += \
+  default \
+  openrc
+else
 SUBDIRS += \
   default \
   init.d
+endif # XRDP_OPENRC
 endif # HAVE_SYSTEMD
 endif # LINUX
 
@@ -77,6 +83,19 @@ SUBDIRS += \
   pam.d \
   rc.d \
   pulse
+endif
+
+if NETBSD
+SUBDIRS += \
+  pam.d \
+  rc.d \
+  pulse
+endif
+
+if SOLARIS
+SUBDIRS += \
+  manifest \
+  method
 endif
 
 if MACOS
@@ -99,5 +118,15 @@ if FREEBSD
 # must be tab below
 install-data-hook:
 	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
+                                         $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
+endif
+
+
+if NETBSD
+# must be tab below
+install-data-hook:
+	sed -i 's|%%PREFIX%%/sbin|$(prefix)/sbin|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
+                                         $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
+	sed -i 's|%%PREFIX%%||g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
                                          $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
 endif

@@ -117,6 +117,7 @@ static int
 verify_pam_conv(int num_msg, const struct pam_message **msg,
                 struct pam_response **resp, void *appdata_ptr)
 {
+    LOG(LOG_LEVEL_TRACE, "verify_pam_conv(%d, msg, resp, appdata_ptr)", num_msg);
     int i;
     struct pam_response *reply = NULL;
     struct conv_func_data *conv_func_data;
@@ -194,6 +195,7 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
         g_free(reply);
     }
 
+    LOG(LOG_LEVEL_TRACE, "verify_pam_conv() returned %d", rv);
     return rv;
 }
 
@@ -402,6 +404,7 @@ auth_start_session_private(struct auth_info *auth_info, int display_num)
 {
     int error;
     char display[256];
+    LOG(LOG_LEVEL_TRACE, "auth_start_session_private(auth_info, %d)", display_num);
 
     g_sprintf(display, ":%d", display_num);
     error = pam_set_item(auth_info->ph, PAM_TTY, display);
@@ -410,6 +413,7 @@ auth_start_session_private(struct auth_info *auth_info, int display_num)
     {
         LOG(LOG_LEVEL_ERROR, "pam_set_item failed: %s",
             pam_strerror(auth_info->ph, error));
+        LOG(LOG_LEVEL_TRACE, "auth_start_session_private() returned 1");
         return 1;
     }
 
@@ -419,6 +423,7 @@ auth_start_session_private(struct auth_info *auth_info, int display_num)
     {
         LOG(LOG_LEVEL_ERROR, "pam_setcred failed: %s",
             pam_strerror(auth_info->ph, error));
+        LOG(LOG_LEVEL_TRACE, "auth_start_session_private() returned 1");
         return 1;
     }
 
@@ -429,10 +434,12 @@ auth_start_session_private(struct auth_info *auth_info, int display_num)
     {
         LOG(LOG_LEVEL_ERROR, "pam_open_session failed: %s",
             pam_strerror(auth_info->ph, error));
+        LOG(LOG_LEVEL_TRACE, "auth_start_session_private() returned 1");
         return 1;
     }
 
     auth_info->session_opened = 1;
+    LOG(LOG_LEVEL_TRACE, "auth_start_session_private() returned 0");
     return 0;
 }
 
@@ -503,9 +510,10 @@ auth_end(struct auth_info *auth_info)
             pam_end(auth_info->ph, PAM_SUCCESS);
             auth_info->ph = 0;
         }
+        
+	    g_free(auth_info);
     }
 
-    g_free(auth_info);
     return 0;
 }
 

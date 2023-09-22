@@ -20,6 +20,7 @@ AC_CONFIG_SUBDIRS([libpainter librfxcodec])
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
+SDK_FLAGS=
 case $host_os in
 	*linux*)
 		linux=yes
@@ -38,6 +39,10 @@ case $host_os in
 		;;
 	*darwin*)
 		macos=yes
+		SDK_FLAGS="--sysroot $(xcrun --show-sdk-path)"
+		;;
+  *solaris*)
+		solaris=yes
 		;;
 esac
 
@@ -46,6 +51,8 @@ AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
 AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
+AM_CONDITIONAL(SOLARIS, [test "x$solaris" = xyes])
+AC_SUBST(SDK_FLAGS)
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
@@ -110,6 +117,10 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build PAM userpass support (default: no)]),
               [], [enable_pamuserpass=no])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$enable_pamuserpass = xyes])
+AC_ARG_ENABLE(userpass, AS_HELP_STRING([--enable-userpass],
+              [Build userpass support (no pam) (default: no)]),
+              [], [enable_userpass=no])
+AM_CONDITIONAL(SESMAN_USERPASS, [test x$enable_userpass = xyes])
 AC_ARG_ENABLE(pam-config, AS_HELP_STRING([--enable-pam-config=CONF],
               [Select PAM config to install: arch, debian, redhat, suse, freebsd, macos, unix
                (default: autodetect)]))
@@ -187,6 +198,11 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [Use rdpsnd audio in (default: no)]),
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
+
+AC_ARG_ENABLE(openrc, AS_HELP_STRING([--enable-openrc],
+              [Use openrc in (default: no)]),
+              [], [enable_openrc=no])
+AM_CONDITIONAL(XRDP_OPENRC, [test x$enable_openrc = xyes])
 
 AC_ARG_WITH(imlib2, AS_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
@@ -360,6 +376,13 @@ then
   auth_mech="PAM userpass"
   AUTHMOD_OBJ=verify_user_pam_userpass.lo
   AUTHMOD_LIB="-lpam -lpam_userpass"
+fi
+if test x$enable_userpass = xyes
+then
+  auth_cnt=`expr $auth_cnt + 1`
+  auth_mech="Builtin"
+  AUTHMOD_OBJ=verify_user.lo
+  AUTHMOD_LIB=-lcrypt
 fi
 
 if test $auth_cnt -gt 1
@@ -574,6 +597,9 @@ AC_CONFIG_FILES([
   instfiles/pam.d/Makefile
   instfiles/pulse/Makefile
   instfiles/rc.d/Makefile
+  instfiles/openrc/Makefile
+  instfiles/method/Makefile
+  instfiles/manifest/Makefile
   keygen/Makefile
   waitforx/Makefile
   libipm/Makefile
@@ -628,6 +654,7 @@ echo "  ipv6only                $enable_ipv6only"
 echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
+echo "  openrc                  $enable_openrc"
 echo
 echo "  with imlib2             $use_imlib2"
 echo "  with freetype2          $use_freetype2"

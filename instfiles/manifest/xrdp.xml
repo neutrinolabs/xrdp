@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<!--
+ Define a service to control the startup and shutdown of a database instance.
+-->
+
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+
+<service_bundle type="manifest" name="xrdp">
+<service name="site/application/network/xrdp" type="service" version="1">
+    <create_default_instance enabled="true" />
+
+    <!--
+         Wait for all local file systems to be mounted.
+         Wait for all network interfaces to be initialized.
+    -->
+
+    <dependency type="service"
+        name="fs-local"
+        grouping="require_all"
+        restart_on="none">
+        <service_fmri value="svc:/system/filesystem/local" />
+    </dependency>
+
+    <dependency type="service"
+        name="network"
+        grouping="require_all"
+        restart_on="none">
+        <service_fmri value="svc:/milestone/network:default" />
+    </dependency>
+
+    <!-- Define the methods. -->
+    <exec_method type="method"
+        name="start"
+        exec="/lib/svc/method/xrdp start"
+        timeout_seconds="120"/>
+
+    <exec_method type="method"
+        name="stop"
+        exec="/lib/svc/method/xrdp stop"
+        timeout_seconds="120" />
+
+    <exec_method type="method"
+        name="refresh"
+        exec="/lib/svc/method/xrdp refresh"
+        timeout_seconds="120" />
+    <!--
+         What authorization is needed to allow the framework
+         general/enabled property to be changed when performing the
+         action (enable, disable, etc) on the service.
+    -->
+
+    <!-- Define an instance of the database. -->
+
+    <!--<instance name="default" enabled="true" />-->
+
+    <stability value="Evolving" />
+</service>
+</service_bundle>
