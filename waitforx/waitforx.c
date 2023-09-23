@@ -28,13 +28,12 @@ alarm_handler(int signal_num)
 
 /*****************************************************************************/
 static Display *
-open_display(const char *display)
+open_display(const char *display, const int wait)
 {
     Display *dpy = NULL;
-    unsigned int wait = ATTEMPTS;
     unsigned int n;
 
-    for (n = 1; n <= ATTEMPTS; ++n)
+    for (n = 1; n <= wait; ++n)
     {
         printf("<D>Opening display %s. Attempt %u of %u\n", display, n, wait);
         dpy = XOpenDisplay(display);
@@ -57,12 +56,11 @@ open_display(const char *display)
  * @return 0 if/when outputs are available, 1 otherwise
  */
 static int
-wait_for_r_and_r(Display *dpy)
+wait_for_r_and_r(Display *dpy, int wait)
 {
     int error_base = 0;
     int event_base = 0;
     unsigned int outputs = 0;
-    unsigned int wait = ATTEMPTS;
     unsigned int n;
 
     XRRScreenResources *res = NULL;
@@ -115,19 +113,23 @@ main(int argc, char **argv)
     const char *display_name = NULL;
     int opt;
     int status = XW_STATUS_MISC_ERROR;
+    unsigned int wait = ATTEMPTS;
     Display *dpy = NULL;
 
     /* Disable stdout buffering so any messages are passed immediately
      * to sesman */
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    while ((opt = getopt(argc, argv, "d:")) != -1)
+    while ((opt = getopt(argc, argv, "d:w:")) != -1)
     {
         switch (opt)
         {
             case 'd':
                 display_name = optarg;
                 break;
+            case 'w':
+		wait = atoi(optarg);
+  		break;
             default: /* '?' */
                 usage(argv[0], status);
         }
@@ -140,7 +142,7 @@ main(int argc, char **argv)
 
     g_set_alarm(alarm_handler, ALARM_WAIT);
 
-    dpy = open_display(display_name);
+    dpy = open_display(display_name, wait);
     if (!dpy)
     {
         printf("<E>Unable to open display %s\n", display_name);
@@ -148,7 +150,7 @@ main(int argc, char **argv)
     }
     else
     {
-        if (wait_for_r_and_r(dpy) == 0)
+        if (wait_for_r_and_r(dpy, wait) == 0)
         {
             status = XW_STATUS_OK;
         }

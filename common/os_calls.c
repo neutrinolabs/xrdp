@@ -1409,7 +1409,16 @@ g_sleep(int msecs)
 #if defined(_WIN32)
     Sleep(msecs);
 #else
-    usleep(msecs * 1000);
+    //On NetBSD usleep can not be > 1000000, so use sleep instead.
+    if( msecs >= 1000 )
+    {
+        int remainder = msecs % 1000; 
+	sleep(msecs / 1000);
+        if( remainder != 0 )
+        {
+	   usleep(remainder * 1000);
+        } 
+    }
 #endif
 }
 

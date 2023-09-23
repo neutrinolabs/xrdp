@@ -56,18 +56,20 @@ log_waitforx_messages(FILE *dp)
  * Contruct the command to run to check the X server
  */
 static struct list *
-make_xwait_command(int display)
+make_xwait_command(int display, int wait)
 {
     const char exe[] = XRDP_LIBEXEC_PATH "/waitforx";
     char displaystr[64];
+    char waitstr[64];
 
     struct list *cmd = list_create();
     if (cmd != NULL)
     {
         cmd->auto_free = 1;
         g_snprintf(displaystr, sizeof(displaystr), ":%d", display);
-
-        if (!list_add_strdup_multi(cmd, exe, "-d", displaystr, NULL))
+        g_snprintf(waitstr, sizeof(waitstr), "%d", wait);
+	
+        if (!list_add_strdup_multi(cmd, exe, "-d", displaystr, "-w", waitstr, NULL))
         {
             list_delete(cmd);
             cmd = NULL;
@@ -86,7 +88,7 @@ wait_for_xserver(uid_t uid,
 {
     enum xwait_status rv = XW_STATUS_MISC_ERROR;
     int fd[2] = {-1, -1};
-    struct list *cmd = make_xwait_command(display);
+    struct list *cmd = make_xwait_command(display, 10);
 
 
     // Construct the command to execute to check the display
