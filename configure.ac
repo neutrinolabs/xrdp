@@ -20,7 +20,7 @@ AC_CONFIG_SUBDIRS([libpainter librfxcodec])
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-SDK_FLAGS=
+XOPEN_FLAGS=
 case $host_os in
 	*linux*)
 		linux=yes
@@ -39,10 +39,10 @@ case $host_os in
 		;;
 	*darwin*)
 		macos=yes
-		SDK_FLAGS="--sysroot $(xcrun --show-sdk-path)"
 		;;
-  *solaris*)
+        *solaris*)
 		solaris=yes
+		XOPEN_FLAGS="-D_XOPEN_SOURCE=600"
 		;;
 esac
 
@@ -52,7 +52,7 @@ AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
 AM_CONDITIONAL(SOLARIS, [test "x$solaris" = xyes])
-AC_SUBST(SDK_FLAGS)
+AC_SUBST(XOPEN_FLAGS)
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
@@ -93,8 +93,8 @@ AC_ARG_ENABLE(tests,
               [Ensure dependencies for the tests are installed]),
               [ensure_tests_deps=yes], [])
 AC_ARG_ENABLE(pam, AS_HELP_STRING([--enable-pam],
-              [Build PAM support (default: yes)]),
-              [], [enable_pam=yes])
+              [Build PAM support (default: no)]),
+              [], [enable_pam=no])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
 AC_ARG_ENABLE(vsock, AS_HELP_STRING([--enable-vsock],
               [Build AF_VSOCK support (default: no)]),
@@ -117,10 +117,6 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build PAM userpass support (default: no)]),
               [], [enable_pamuserpass=no])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$enable_pamuserpass = xyes])
-AC_ARG_ENABLE(userpass, AS_HELP_STRING([--enable-userpass],
-              [Build userpass support (no pam) (default: no)]),
-              [], [enable_userpass=no])
-AM_CONDITIONAL(SESMAN_USERPASS, [test x$enable_userpass = xyes])
 AC_ARG_ENABLE(pam-config, AS_HELP_STRING([--enable-pam-config=CONF],
               [Select PAM config to install: arch, debian, redhat, suse, freebsd, macos, unix
                (default: autodetect)]))
@@ -376,13 +372,6 @@ then
   auth_mech="PAM userpass"
   AUTHMOD_OBJ=verify_user_pam_userpass.lo
   AUTHMOD_LIB="-lpam -lpam_userpass"
-fi
-if test x$enable_userpass = xyes
-then
-  auth_cnt=`expr $auth_cnt + 1`
-  auth_mech="Builtin"
-  AUTHMOD_OBJ=verify_user.lo
-  AUTHMOD_LIB=-lcrypt
 fi
 
 if test $auth_cnt -gt 1

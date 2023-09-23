@@ -10,8 +10,7 @@ AM_CPPFLAGS = \
   -DSESMAN_RUNTIME_PATH=\"${sesmanruntimedir}\" \
   -I$(top_srcdir)/sesman/libsesman \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libipm \
-  $(SDK_FLAGS)
+  -I$(top_srcdir)/libipm 
 
 sbin_PROGRAMS = \
   xrdp-sesman

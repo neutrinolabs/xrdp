@@ -32,10 +32,6 @@
 #include <windows.h>
 #include <winsock.h>
 #else
-/* fix for solaris 10 with gcc 3.3.2 problem */
-#if defined(sun) || defined(__sun)
-#define ctid_t id_t
-#endif
 #include <unistd.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -44,6 +40,7 @@
 #if defined(XRDP_ENABLE_VSOCK)
 #include <linux/vm_sockets.h>
 #endif
+#include <limits.h>
 #include <poll.h>
 #include <sys/un.h>
 #include <sys/time.h>
