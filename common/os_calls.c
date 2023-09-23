@@ -3004,6 +3004,7 @@ g_set_alarm(void (*func)(int), unsigned int secs)
     /* Cancel any previous alarm to prevent a race */
     unsigned int rv = alarm(0);
     signal(SIGALRM, func);
+    signal(SIGINT, func);
     (void)alarm(secs);
     return rv;
 #endif
@@ -3356,7 +3357,11 @@ g_waitpid_status(int pid)
         }
         else
         {
-            LOG(LOG_LEVEL_WARNING, "wait for pid %d returned unknown result", pid);
+            LOG(LOG_LEVEL_WARNING, "wait for pid %d returned unknown result %s", pid, g_get_strerror());
+	    if( errno == EINTR )
+	    {
+		return g_waitpid_status(pid);
+            }
         }
     }
 

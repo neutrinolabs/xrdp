@@ -40,10 +40,6 @@
         exec="/lib/svc/method/xrdp stop"
         timeout_seconds="120" />
 
-    <exec_method type="method"
-        name="refresh"
-        exec="/lib/svc/method/xrdp refresh"
-        timeout_seconds="120" />
     <!--
          What authorization is needed to allow the framework
          general/enabled property to be changed when performing the

@@ -21,9 +21,13 @@ alarm_handler(int signal_num)
      *
      * Prefix the message with a newline in case another message
      * has been partly output */
+
+    if( signal_num == SIGALRM ) 
+    {
     const char msg[] = "\n<E>Timed out waiting for RandR outputs\n";
     g_file_write(1, msg, g_strlen(msg));
     exit(XW_STATUS_TIMED_OUT);
+    }
 }
 
 /*****************************************************************************/
@@ -102,7 +106,7 @@ wait_for_r_and_r(Display *dpy, int wait)
 static void
 usage(const char *argv0, int status)
 {
-    printf("Usage: %s -d display\n", argv0);
+    printf("Usage: %s -d display [-w waittime]\n", argv0);
     exit(status);
 }
 

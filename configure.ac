@@ -20,7 +20,6 @@ AC_CONFIG_SUBDIRS([libpainter librfxcodec])
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-XOPEN_FLAGS=
 case $host_os in
 	*linux*)
 		linux=yes
@@ -42,7 +41,6 @@ case $host_os in
 		;;
         *solaris*)
 		solaris=yes
-		XOPEN_FLAGS="-D_XOPEN_SOURCE=600"
 		;;
 esac
 
@@ -52,7 +50,6 @@ AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
 AM_CONDITIONAL(SOLARIS, [test "x$solaris" = xyes])
-AC_SUBST(XOPEN_FLAGS)
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
@@ -296,6 +293,11 @@ esac
 
 if test x$use_imlib2 = xyes; then
     AC_DEFINE([USE_IMLIB2],1, [Compile with imlib2 support])
+fi
+
+if test x$solaris = xyes; then
+    CFLAGS="${CFLAGS} -D_XOPEN_SOURCE=600"
+    AC_SUBST(CFLAGS)
 fi
 
 # Find freetype2
@@ -668,6 +670,7 @@ echo "  unit tests performable  $perform_unit_tests"
 echo ""
 echo "  CFLAGS = $CFLAGS"
 echo "  LDFLAGS = $LDFLAGS"
+echo "  CPPFLAGS = $CPPFLAGS"
 
 # xrdp_configure_options.h will be written to the build directory, not the source directory
 echo '#define XRDP_CONFIGURE_OPTIONS \' > ./xrdp_configure_options.h

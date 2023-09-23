@@ -49,15 +49,17 @@ function stop
     pkill -TERM -xf $FULLNAME
 
     waitFor $FULLNAME $TIMEOUT
+    retval=$?
 
     if [ $? -ne 0 ]; then
         log_if_verbose "Sending KILL to $NAME"
 	pkill -KILL -xf $FULLNAME
 	waitFor $FULLNAME 1
+        retval=$?
         rm -f /var/run/$NAME.pid
     fi
 
-    return $?
+    return $retval 
 }
 
 function refresh
