@@ -46,7 +46,8 @@
 #include <linux/vm_sockets.h>
 #elif defined(__FreeBSD__)
 // sockaddr_hvs is not available outside the kernel for whatever reason
-struct sockaddr_hvs {
+struct sockaddr_hvs
+{
     unsigned char sa_len;
     sa_family_t   sa_family;
     unsigned int  hvs_port;
