@@ -601,6 +601,9 @@ g_sck_vsock_socket(void)
 #elif defined(__FreeBSD__)
     LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: returning FreeBSD Hyper-V socket");
     return socket(AF_HYPERV, SOCK_STREAM, 0); // docs say to use AF_HYPERV here - PF_HYPERV does not exist
+#else
+    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: vsock enabled at compile time, but platform is unsupported");
+    return -1;
 #endif
 #else
     LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: vsock disabled at compile time");
@@ -1086,6 +1089,8 @@ g_sck_vsock_bind(int sck, const char *port)
     s.hvs_port = atoi(port);
 
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_hvs));
+#else
+    return -1;
 #endif
 #else
     return -1;
@@ -1115,6 +1120,8 @@ g_sck_vsock_bind_address(int sck, const char *port, const char *address)
     // channel/address currently unsupported in FreeBSD 13.
 
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_hvs));
+#else
+    return -1;
 #endif
 #else
     return -1;
