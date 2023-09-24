@@ -1408,17 +1408,25 @@ g_sleep(int msecs)
 {
 #if defined(_WIN32)
     Sleep(msecs);
-#else
     //On NetBSD usleep can not be > 1000000, so use sleep instead.
+#elif defined(__NetBSD__)
     if( msecs >= 1000 )
     {
+        int secs = msecs / 1000;
         int remainder = msecs % 1000; 
-	sleep(msecs / 1000);
+       
+        if( secs != 0 ) 
+	{
+	    sleep(msecs / 1000);
+        }
+
         if( remainder != 0 )
         {
-	   usleep(remainder * 1000);
+	    usleep(remainder * 1000);
         } 
     }
+#else
+    usleep(msecs * 1000); 
 #endif
 }
 
@@ -3302,7 +3310,7 @@ g_waitchild(struct exit_status *e)
    Note that signal handlers are established with BSD-style semantics,
    so this call is NOT interrupted by a signal  */
 int
-g_waitpid(int pid)
+g_waitpid(int pid, int *stat_loc, int options)
 {
 #if defined(_WIN32)
     return 0;
@@ -3315,7 +3323,13 @@ g_waitpid(int pid)
     }
     else
     {
-        rv = waitpid(pid, 0, 0);
+	again:
+        rv = waitpid(pid, stat_loc, options);
+	//retry EINTR.
+	if( rv == -1 && errno == EINTR )
+	{
+	    goto again;
+        }
     }
 
     return rv;
@@ -3340,7 +3354,7 @@ g_waitpid_status(int pid)
         int status;
 
         LOG(LOG_LEVEL_DEBUG, "waiting for pid %d to exit", pid);
-        rv = waitpid(pid, &status, 0);
+        rv = g_waitpid(pid, &status, 0);
 
         if (rv != -1)
         {
@@ -3358,10 +3372,6 @@ g_waitpid_status(int pid)
         else
         {
             LOG(LOG_LEVEL_WARNING, "wait for pid %d returned unknown result %s", pid, g_get_strerror());
-	    if( errno == EINTR )
-	    {
-		return g_waitpid_status(pid);
-            }
         }
     }
 
