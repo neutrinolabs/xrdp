@@ -3318,17 +3318,24 @@ g_waitpid(int pid, int *stat_loc, int options)
 #else
     int rv = 0;
 
-    again:
-        rv = waitpid(pid, stat_loc, options);
-	//retry EINTR.
-	if( rv == -1 && errno == EINTR )
-	{
-	    goto again;
-        }
+again:
+    rv = waitpid(pid, stat_loc, options);
+    //retry EINTR.
+    if( rv == -1 && errno == EINTR )
+    {
+        goto again;
+    }
 
     if( rv == -1 ) 
     {
-	LOG(LOG_LEVEL_ERROR, "waitpid returned %s", g_get_strerror());
+	if( errno == ECHILD )
+	{
+	    LOG(LOG_LEVEL_INFO, "waitpid returned %s", g_get_strerror());
+	}
+	else
+        {
+	    LOG(LOG_LEVEL_ERROR, "waitpid returned %s", g_get_strerror());
+	}
     }
 
     return rv;
