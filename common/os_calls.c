@@ -3278,7 +3278,7 @@ g_waitchild(struct exit_status *e)
     e->reason = E_XR_UNEXPECTED;
     e->val = 0;
 
-    rv = waitpid(-1, &wstat, WNOHANG);
+    rv = g_waitpid(-1, &wstat, WNOHANG);
 
     if (rv == -1)
     {
