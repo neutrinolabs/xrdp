@@ -591,6 +591,7 @@ AC_CONFIG_FILES([
   instfiles/openrc/Makefile
   instfiles/method/Makefile
   instfiles/manifest/Makefile
+  instfiles/launchdaemons/Makefile
   keygen/Makefile
   waitforx/Makefile
   libipm/Makefile

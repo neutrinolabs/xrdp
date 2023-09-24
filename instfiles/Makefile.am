@@ -99,7 +99,8 @@ SUBDIRS += \
 endif
 
 if MACOS
-SUBDIRS += pam.d
+SUBDIRS += pam.d \
+  launchdaemons
 endif
 
 #
