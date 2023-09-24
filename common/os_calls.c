@@ -3024,6 +3024,7 @@ void
 g_signal_child_stop(void (*func)(int))
 {
 #if defined(_WIN32)
+    return; 
 #else
     signal(SIGCHLD, func);
 #endif
@@ -3317,19 +3318,17 @@ g_waitpid(int pid, int *stat_loc, int options)
 #else
     int rv = 0;
 
-    if (pid < 0)
-    {
-        rv = -1;
-    }
-    else
-    {
-	again:
+    again:
         rv = waitpid(pid, stat_loc, options);
 	//retry EINTR.
 	if( rv == -1 && errno == EINTR )
 	{
 	    goto again;
         }
+
+    if( rv == -1 ) 
+    {
+	LOG(LOG_LEVEL_ERROR, "waitpid returned %s", g_get_strerror());
     }
 
     return rv;
