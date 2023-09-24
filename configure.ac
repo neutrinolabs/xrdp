@@ -407,10 +407,18 @@ fi
 if test "x$enable_vsock" = "xyes"
 then
   enable_vsock=yes
-  AC_CHECK_HEADERS([linux/socket.h linux/vm_sockets.h],
-                   [AC_DEFINE([XRDP_ENABLE_VSOCK], 1, [Enable AF_VSOCK])],
-                   [],
-                   [#include <sys/socket.h>])
+  if test "x$freebsd" = "xyes"
+  then
+    # unconditionally define XRDP_ENABLE_VSOCK because there are no headers
+    # to check for. AF_HYPERV is present in FreeBSD 13 and may be present in
+    # earlier versions.
+    AC_DEFINE([XRDP_ENABLE_VSOCK], 1, [Enable AF_HYPERV])
+  else
+    AC_CHECK_HEADERS([linux/socket.h linux/vm_sockets.h],
+                    [AC_DEFINE([XRDP_ENABLE_VSOCK], 1, [Enable AF_VSOCK])],
+                    [],
+                    [#include <sys/socket.h>])
+  fi
 fi
 
 if test "x$enable_ipv6only" = "xyes"
