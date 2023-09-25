@@ -381,6 +381,15 @@ xrdp_font_delete(struct xrdp_font *self);
 int
 xrdp_font_item_compare(struct xrdp_font_char *font1,
                        struct xrdp_font_char *font2);
+/**
+ * Gets a checked xrdp_font_char from a font
+ * @param f Font
+ * @param c32 Unicode codepoint
+ */
+#define XRDP_FONT_GET_CHAR(f, c32) \
+    (((unsigned int)(c32) >= ' ') && ((unsigned int)(c32) < (f)->char_count) \
+     ? ((f)->chars + (unsigned int)(c32)) \
+     : (f)->default_char)
 
 /* funcs.c */
 int
