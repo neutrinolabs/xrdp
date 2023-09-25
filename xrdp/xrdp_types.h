@@ -574,7 +574,7 @@ struct xrdp_bitmap
     int crc16;
 };
 
-#define NUM_FONTS 0x4e00
+#define MAX_FONT_CHARS 0x4e00
 #define DEFAULT_FONT_NAME "sans-10.fv1"
 
 #define DEFAULT_ELEMENT_TOP   35
@@ -594,7 +594,11 @@ struct xrdp_bitmap
 struct xrdp_font
 {
     struct xrdp_wm *wm;
-    struct xrdp_font_char font_items[NUM_FONTS];
+    // Font characters, accessed by Unicode codepoint. The first 32
+    // entries are unused.
+    struct xrdp_font_char chars[MAX_FONT_CHARS];
+    unsigned int char_count; // # elements in above array
+    struct xrdp_font_char *default_char; // Pointer into above array
     char name[32];
     int size;
     int style;
