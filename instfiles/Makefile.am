@@ -107,3 +107,10 @@ install-data-hook:
 	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
                                          $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
 endif
+
+if XRDP_OPENRC 
+# must be tab below
+install-data-hook:
+	sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp \ 
+		$(DESTDIR)$(sysconfdir)/init.d/xrdp-sesman 
+endif

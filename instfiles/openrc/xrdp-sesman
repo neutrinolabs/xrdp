@@ -1,4 +1,4 @@
 #!/sbin/openrc-run
 
-command="/usr/local/sbin/xrdp-sesman"
+command="__BASE__/sbin/xrdp-sesman"
 pidfile="/run/${RC_SVCNAME}.pid"
