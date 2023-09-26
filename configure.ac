@@ -188,6 +188,11 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
 
+AC_ARG_ENABLE(openrc, AS_HELP_STRING([--enable-openrc],
+              [Use openrc in (default: no)]),
+              [], [enable_openrc=no])
+AM_CONDITIONAL(XRDP_OPENRC, [test x$enable_openrc = xyes])
+
 AC_ARG_WITH(imlib2, AS_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
 AC_ARG_WITH(freetype2, AS_HELP_STRING([--with-freetype2=ARG], [freetype2 library to use for rendering fonts (ARG=yes/no/<abs-path>)]),,)
@@ -574,6 +579,7 @@ AC_CONFIG_FILES([
   instfiles/pam.d/Makefile
   instfiles/pulse/Makefile
   instfiles/rc.d/Makefile
+  instfiles/openrc/Makefile
   keygen/Makefile
   waitforx/Makefile
   libipm/Makefile
@@ -628,6 +634,7 @@ echo "  ipv6only                $enable_ipv6only"
 echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
+echo "  openrc                  $enable_openrc"
 echo
 echo "  with imlib2             $use_imlib2"
 echo "  with freetype2          $use_freetype2"

@@ -66,9 +66,15 @@ systemdsystemunit_DATA = \
   xrdp-sesman.service \
   xrdp.service
 else
+if XRDP_OPENRC
+  SUBDIRS += \
+  default \
+  openrc
+else
 SUBDIRS += \
   default \
   init.d
+endif # XRDP_OPENRC
 endif # HAVE_SYSTEMD
 endif # LINUX
 
