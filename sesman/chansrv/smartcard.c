@@ -18,22 +18,6 @@
  *
  */
 
-/**
- * @file sesman/chansrv/smartcard.c
- *
- * smartcard redirection support
- *
- * This file implements some of the PDUs detailed in [MS-RDPESC].
- *
- * The PDUs use DCE IDL structs. These are required to be re-interpreted
- * in DCE NDR (Netword Data Representation)
- *
- * For more information on this subject see DCE publication C706
- * "DCE 1.1: Remote Procedure Call" 1997. In particular:-
- * Section 4.2 : Describes the IDL
- * Section 14 : Describes the NDR
- */
-
 /*
  * smartcard redirection support
  */
@@ -1101,51 +1085,13 @@ static void
 scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
                        char *groups, int cchReaders, int wide)
 {
-    /* see [MS-RDPESC] 2.2.2.4
-     *
-     * IDL:-
-     *
-     * typedef struct _REDIR_SCARDCONTEXT {
-     *    [range(0,16)] unsigned long cbContext;
-     *    [unique] [size_is(cbContext)] byte *pbContext;
-     *    } REDIR_SCARDCONTEXT;
-     *
-     * struct _ListReaders_Call {
-     *     REDIR_SCARDCONTEXT Context;
-     *     [range(0, 65536)] unsigned long cBytes;
-     *     [unique] [size_is(cBytes)] const byte *mszGroups;
-     *     long fmszReadersIsNULL;
-     *     unsigned long cchReaders;
-     *     } ListReaders_Call;
-     *
-     * Type summary:-
-     *
-     * Context.cbContext  Unsigned 32-bit word
-     * Context.pbContext  Embedded full pointer to conformant array of bytes
-     * cBytes             Unsigned 32-bit word
-     * mszGroups          Embedded full pointer to conformant array of bytes
-     * fmszReaders        32-bit word
-     * cchReaders         Unsigned 32-bit word
-     *
-     * NDL:-
-     *
-     * Offset   Decription
-     * 0        Context.cbContext
-     * 4        Referent Identifier for pbContext
-     * 8        cBytes
-     * 12       Referent Identifier for mszGroups (or NULL)
-     * 16       fmszReadersIsNULL
-     * 20       cchReaders
-     * 24       Conformant Array pointed to by pbContext
-     * ??       Conformant Array pointed to by mszGroups
-     *
-     */
+    /* see [MS-RDPESC] 2.2.2.4 */
 
     SMARTCARD     *sc;
     struct stream *s;
     int            bytes;
-    int            bytes_groups; // Length of NDR for groups + 2 terminators
-    int            val;    // Referent Id for mszGroups (assume NULL)
+    int            bytes_groups;
+    int            val;
     int            index;
     int            num_chars;
     tui32          ioctl;
@@ -1183,25 +1129,17 @@ scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    // REDIR_SCARDCONTEXT Context;
     out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    // [range(0, 65536)] unsigned long cBytes;
     out_uint32_le(s, bytes_groups);
-    // [unique] [size_is(cBytes)] const byte *mszGroups; (pointer)
     out_uint32_le(s, val);
-    // long fmszReadersIsNULL;
     out_uint32_le(s, 0x00000000);
-    // unsigned long cchReaders;
     out_uint32_le(s, cchReaders);
 
-    // At the end of the struct come the pointed-to structures
-
-    // Context field pbContext is a Uni-dimensional conformant array
+    /* insert context */
     out_uint32_le(s, context_bytes);
     out_uint8a(s, context, context_bytes);
 
-    // mszGroups is also a Uni-dimensional conformant array of bytes
     if (bytes_groups > 0)
     {
         if (wide)
@@ -1277,69 +1215,8 @@ scard_send_GetStatusChange(IRP *irp, char *context, int context_bytes,
                            int wide, tui32 timeout,
                            tui32 num_readers, READER_STATE *rsa)
 {
-    /* see [MS-RDPESC] 2.2.2.11 for ASCII
-     * see [MS-RDPESC] 2.2.2.12 for Wide char
-     *
-     * Here is a breakdown of the Wide-char variant
-     *
-     * IDL:-
-     *
-     * typedef struct _REDIR_SCARDCONTEXT {
-     *    [range(0,16)] unsigned long cbContext;
-     *    [unique] [size_is(cbContext)] byte *pbContext;
-     *    } REDIR_SCARDCONTEXT;
-     *
-     * typedef struct _ReaderState_Common_Call {
-     *    unsigned long dwCurrentState;
-     *    unsigned long dwEventState;
-     *    [range(0,36)] unsigned long cbAtr;
-     *    byte rgbAtr[36];
-     *    } ReaderState_Common_Call;
-     *
-     * typedef struct _ReaderStateW {
-     *   [string] const wchar_t* szReader;
-     *   ReaderState_Common_Call Common;
-     *   } ReaderStateW;
-     *
-     * struct _GetStatusChangeW_Call {
-     *    REDIR_SCARDCONTEXT Context;
-     *    unsigned long dwTimeOut;
-     *    [range(0,11)] unsigned long cReaders;
-     *    [size_is(cReaders)] ReaderStateW* rgReaderStates;
-     *    } GetStatusChangeW_Call;
-     *
-     * Type summary:-
-     *
-     * Context.cbContext  Unsigned 32-bit word
-     * Context.pbContext  Embedded full pointer to conformant array of bytes
-     * dwTimeOut          Unsigned 32-bit word
-     * cReaders           Unsigned 32-bit word
-     * rgReaderStates
-     *                    Embedded full pointer to array of rgReaderStates
-     * rgReaderStates.szReader
-     *                    Embedded full pointer to conformant and varying
-     *                    string of [Windows] wchar_t
-     * rgReaderStates.Common.dwCurrentState
-     *                    Unsigned 32-bit word
-     * rgReaderStates.Common.dwEventState
-     *                    Unsigned 32-bit word
-     * rgReaderStates.Common.cbAtr
-     *                    Unsigned 32-bit word
-     * rgReaderStates.Common.rgbAtr[36]
-     *                    Uni-dimensional fixed array
-     *
-     * NDL:-
-     * Offset   Decription
-     * 0        Context.cbContext
-     * 4        Referent Identifier for pbContext
-     * 8        dwTimeOut;
-     * 12       cReaders;
-     * 16       Referent Identifier for rgReaderStates
-     * 20       Conformant Array pointed to by pbContext
-     * ??       Conformant Array pointed to by rgReaderStates. Each element
-     *          of this array has a pointer to a string for the name
-     * ??       String names pointed to in the above array.
-     */
+    /* see [MS-RDPESC] 2.2.2.11 for ASCII     */
+    /* see [MS-RDPESC] 2.2.2.12 for Wide char */
 
     SMARTCARD     *sc;
     READER_STATE  *rs;
@@ -1368,40 +1245,27 @@ scard_send_GetStatusChange(IRP *irp, char *context, int context_bytes,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    // REDIR_SCARDCONTEXT Context;
     out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
 
-    // unsigned long dwTimeOut;
     out_uint32_le(s, timeout);
-    // [range(0,11)] unsigned long cReaders;
     out_uint32_le(s, num_readers);
-    // [size_is(cReaders)] ReaderStateW* rgReaderStates;
-    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, 0x00020004);     /* ? */
 
-    // At the end of the struct come the pointed-to structures
-
-    // Context field pbContext is a Uni-dimensional conformant array
+    /* insert context */
     out_uint32_le(s, context_bytes);
     out_uint8a(s, context, context_bytes);
 
-    // rgReaderState is a Uni-dimensional conformant array
     out_uint32_le(s, num_readers);
 
     /* insert card reader state */
     for (i = 0; i < num_readers; i++)
     {
         rs = &rsa[i];
-        //  [string] const wchar_t* szReader (wide)
-        //  [string] const char_t* szReader (ASCII)
-        out_uint32_le(s, 0x00020008 + (i * 4));
-        //  unsigned long dwCurrentState;
+        out_uint32_le(s, 0x00020008); /* ? */
         out_uint32_le(s, rs->current_state);
-        //  unsigned long dwEventState;
         out_uint32_le(s, rs->event_state);
-        //  [range(0,36)] unsigned long cbAtr;
         out_uint32_le(s, rs->atr_len);
-        //  byte rgbAtr[36];
         out_uint8p(s, rs->atr, 33);
         out_uint8s(s, 3);
     }
@@ -1478,53 +1342,8 @@ static void
 scard_send_Connect(IRP *irp, char *context, int context_bytes,
                    int wide, READER_STATE *rs)
 {
-    /* see [MS-RDPESC] 2.2.2.13 for ASCII
-     * see [MS-RDPESC] 2.2.2.14 for Wide char
-     *
-     * Here is a breakdown of the Wide-char variant
-     *
-     * IDL:-
-     *
-     * typedef struct _REDIR_SCARDCONTEXT {
-     *    [range(0,16)] unsigned long cbContext;
-     *    [unique] [size_is(cbContext)] byte *pbContext;
-     *    } REDIR_SCARDCONTEXT;
-     *
-     * typedef struct _Connect_Common {
-     *     REDIR_SCARDCONTEXT Context;
-     *     unsigned long dwShareMode;
-     *     unsigned long dwPreferredProtocols;
-     * } Connect_Common;
-     *
-     * typedef struct _ConnectW_Call {
-     *     [string] const wchar_t* szReader;
-     *     Connect_Common Common;
-     * } ConnectW_Call;
-     *
-     * Type summary:-
-     *
-     * szReader           Embedded full pointer to conformant and varying
-     *                    string of [Windows] wchar_t
-     * Common.Context.cbContext
-     *                    Unsigned 32-bit word
-     * Common.Context.pbContext
-     *                    Embedded full pointer to conformant array of bytes
-     * Common.dwShareMode Unsigned 32-bit word
-     * Common.dwPreferredProtocols
-     *                    Unsigned 32-bit word
-     *
-     * NDL:-
-     *
-     * Offset   Decription
-     * 0        Referent Identifier for szReader
-     * 4        Context.cbContext
-     * 8        Referent Identifier for pbContext
-     * 12       dwShareMode
-     * 16       dwPreferredProtocols
-     * 20       Conformant Array pointed to by szReader
-     * ??       Conformant Array pointed to by pbContext
-     *
-     */
+    /* see [MS-RDPESC] 2.2.2.13 for ASCII     */
+    /* see [MS-RDPESC] 2.2.2.14 for Wide char */
 
     SMARTCARD     *sc;
     struct stream *s;
@@ -1551,19 +1370,11 @@ scard_send_Connect(IRP *irp, char *context, int context_bytes,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    // [string] const wchar_t* szReader;
     out_uint32_le(s, 0x00020000);
-
-    // REDIR_SCARDCONTEXT Context;
     out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020004);
-
-    // unsigned long dwShareMode;
     out_uint32_le(s, rs->dwShareMode);
-    // unsigned long dwPreferredProtocols;
     out_uint32_le(s, rs->dwPreferredProtocols);
-
-    /* insert card reader name */
     num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
     out_uint32_le(s, num_chars + 2);
     out_uint32_le(s, 0x00000000);
