@@ -153,7 +153,7 @@ get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
 }
 
 /*****************************************************************************/
-twchar
+char32_t
 get_char_from_scan_code(int device_flags, int scan_code, int *keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         struct xrdp_keymap *keymap)
@@ -169,7 +169,7 @@ get_char_from_scan_code(int device_flags, int scan_code, int *keys,
         return 0;
     }
 
-    return (twchar)(ki->chr);
+    return ki->chr;
 }
 
 /*****************************************************************************/

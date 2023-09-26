@@ -419,7 +419,7 @@ struct xrdp_mm
 struct xrdp_key_info
 {
     int sym;
-    int chr;
+    char32_t chr;
 };
 
 struct xrdp_keymap
@@ -632,7 +632,7 @@ struct xrdp_bitmap
     struct list *child_list;
     /* for edit */
     int edit_pos;
-    twchar password_char;
+    char32_t password_char;
     /* for button or combo */
     int state; /* for button 0 = normal 1 = down */
     /* for combo */
