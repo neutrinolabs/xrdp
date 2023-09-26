@@ -261,7 +261,7 @@ xrdp_font_create(struct xrdp_wm *wm, unsigned int dpi)
                      * that it can be added to the glyph cache if required */
                     f->width = 1;
                     f->height = 1;
-                    f->data = (char *)g_malloc(1, 1);
+                    f->data = (char *)g_malloc(FONT_DATASIZE(f), 1);
                 }
                 else if (s_check_rem(s, datasize))
                 {
