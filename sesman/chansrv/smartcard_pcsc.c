@@ -18,9 +18,21 @@
  */
 
 /*
+ * @file sesman/chansrv/smartcard_pcsc.c
+ *
  * smartcard redirection support, PCSC daemon standin
  * this will act like pcsc daemon
  * pcsc lib and daemon write struct on unix domain socket for communication
+ *
+ * Currently this file implements some of the PDUs detailed in [MS-RDPESC].
+ *
+ * The PDUs use DCE IDL structs. These are required to be re-interpreted
+ * in DCE NDR (Netword Data Representation)
+ *
+ * For more information on this subject see DCE publication C706
+ * "DCE 1.1: Remote Procedure Call" 1997. In particular:-
+ * Section 4.2 : Describes the IDL
+ * Section 14 : Describes the NDR
  */
 
 #if defined(HAVE_CONFIG_H)
@@ -647,6 +659,31 @@ scard_function_list_readers_return(void *user_data,
                                    struct stream *in_s,
                                    int len, int status)
 {
+    /* see [MS-RDPESC] 2.2.3.4
+     *
+     * IDL:-
+     *
+     * typedef struct _longAndMultiString_Return {
+     *     long ReturnCode;
+     *     [range(0,65536)] unsigned long cBytes;
+     *     [unique] [size_is(cBytes)] byte *msz;
+     *     } ListReaderGroups_Return, ListReaders_Return;
+     *
+     * Type summary:-
+     *
+     * ReturnCode         32-bit word
+     * CBytes             Unsigned 32-bit word
+     * msz                Embedded full pointer to conformant array of bytes
+     *
+     * NDR:-
+     *
+     * Offset   Decription
+     * 0        ReturnCode
+     * 4        cBytes
+     * 8        msz pointer Referent Identifier
+     * 12       length of multistring in bytes
+     * 16       Multistring data
+     */
     struct stream *out_s;
     int            chr;
     int            readers;
@@ -691,7 +728,11 @@ scard_function_list_readers_return(void *user_data,
     llen = 0;
     if (status == 0)
     {
-        in_uint8s(in_s, 28);
+        // Skip [C706] PDU Header
+        in_uint8s(in_s, 16);
+        // Move to length of multistring in bytes
+        in_uint8s(in_s, 12);
+
         in_uint32_le(in_s, len);
         llen = len;
         if (cchReaders > 0)
@@ -1397,6 +1438,33 @@ scard_function_status_return(void *user_data,
                              struct stream *in_s,
                              int len, int status)
 {
+    /* see [MS-RDPESC] 2.2.3.10
+     *
+     * IDL:-
+     *
+     * typedef struct _Status_Return {
+     *     long ReturnCode;
+     *     unsigned long cBytes;
+     *     [unique] [size_is(cBytes)] byte *mszReaderNames;
+     *     unsigned long dwState;
+     *     unsigned long dwProtocol;
+     *     byte pbAtr[32];
+     *     [range(0,32)] unsigned long cbAtrLen;
+     * } Status_Return;
+     *
+     * NDR:-
+     *
+     * Offset   Decription
+     * 0        ReturnCode
+     * 4        cBytes
+     * 8        Referent Identifier for mszReaderNames;
+     * 12       dwState
+     * 16       dwProtocol
+     * 20       pbAtr
+     * 52       cbAtrLen
+     * 56       length of multistring in bytes (same as cBytes)
+     * 60       Multistring data
+     */
     struct stream *out_s;
     int index;
     int bytes;
@@ -1442,9 +1510,10 @@ scard_function_status_return(void *user_data,
     lreader_name[0] = 0;
     if (status == 0)
     {
-        in_uint8s(in_s, 20);
+        in_uint8s(in_s, 16); // Skip [C706] PDU Header
+        in_uint8s(in_s, 4);  // ReturnCode
         in_uint32_le(in_s, dwReaderLen);
-        in_uint8s(in_s, 4);
+        in_uint8s(in_s, 4); // Referent Identifier
         in_uint32_le(in_s, dwState);
         dwState = g_ms2pc[dwState % 6];
         in_uint32_le(in_s, dwProtocol);
@@ -1747,6 +1816,7 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
             break;
 
         case 0x03: /* SCARD_LIST_READERS */
+            /* This is only called from xrdp_pcsc.c */
             LOG_DEVEL(LOG_LEVEL_INFO, "scard_process_msg: SCARD_LIST_READERS");
             rv = scard_process_list_readers(con, in_s);
             break;
