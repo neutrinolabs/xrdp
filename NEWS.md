@@ -1,3 +1,22 @@
+# Release notes for xrdp v0.9.23.1 (2023/09/27)
+
+This is a security fix release for CVE-2023-42822. This update is recommended for all xrdp users.
+
+## Security fixes
+
+* [CVE-2023-42822: Unchecked access to font glyph info](https://www.cve.org/CVERecord?id=CVE-2023-42822)
+
+## Bug fixes
+No bug fixes other than the above security fix in this release.
+
+## New features
+No new features in this release.
+
+## Internal changes
+* cppcheck install script no longer installs z3 for cppcheck >= 2.8 (#2782)
+
+-----------------------
+
 # Release notes for xrdp v0.9.23 (2023/08/31)
 
 ## General announcements
