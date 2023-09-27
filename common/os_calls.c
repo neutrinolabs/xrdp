@@ -42,7 +42,18 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #if defined(XRDP_ENABLE_VSOCK)
+#if defined(__linux__)
 #include <linux/vm_sockets.h>
+#elif defined(__FreeBSD__)
+// sockaddr_hvs is not available outside the kernel for whatever reason
+struct sockaddr_hvs
+{
+    unsigned char sa_len;
+    sa_family_t   sa_family;
+    unsigned int  hvs_port;
+    unsigned char hvs_zero[sizeof(struct sockaddr) -  sizeof(sa_family_t) - sizeof(unsigned char) - sizeof(unsigned int)];
+};
+#endif
 #endif
 #include <poll.h>
 #include <sys/un.h>
@@ -124,7 +135,11 @@ union sock_info
 #endif
     struct sockaddr_un sa_un;
 #if defined(XRDP_ENABLE_VSOCK)
+#if defined(__linux__)
     struct sockaddr_vm sa_vm;
+#elif defined(__FreeBSD__)
+    struct sockaddr_hvs sa_hvs;
+#endif
 #endif
 };
 
@@ -580,8 +595,18 @@ int
 g_sck_vsock_socket(void)
 {
 #if defined(XRDP_ENABLE_VSOCK)
+#if defined(__linux__)
+    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: returning Linux vsock socket");
     return socket(PF_VSOCK, SOCK_STREAM, 0);
+#elif defined(__FreeBSD__)
+    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: returning FreeBSD Hyper-V socket");
+    return socket(AF_HYPERV, SOCK_STREAM, 0); // docs say to use AF_HYPERV here - PF_HYPERV does not exist
 #else
+    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: vsock enabled at compile time, but platform is unsupported");
+    return -1;
+#endif
+#else
+    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: vsock disabled at compile time");
     return -1;
 #endif
 }
@@ -702,6 +727,7 @@ get_peer_description(const union sock_info *sock_info,
             }
 
 #if defined(XRDP_ENABLE_VSOCK)
+#if defined(__linux__)
 
             case AF_VSOCK:
             {
@@ -713,6 +739,18 @@ get_peer_description(const union sock_info *sock_info,
                 break;
             }
 
+#elif defined(__FreeBSD__)
+
+            case AF_HYPERV:
+            {
+                const struct sockaddr_hvs *sa_hvs = &sock_info->sa_hvs;
+
+                g_snprintf(desc, bytes, "AF_HYPERV:port=%u", sa_hvs->hvs_port);
+
+                break;
+            }
+
+#endif
 #endif
             default:
                 g_snprintf(desc, bytes, "Unknown address family %d", family);
@@ -1034,6 +1072,7 @@ int
 g_sck_vsock_bind(int sck, const char *port)
 {
 #if defined(XRDP_ENABLE_VSOCK)
+#if defined(__linux__)
     struct sockaddr_vm s;
 
     g_memset(&s, 0, sizeof(struct sockaddr_vm));
@@ -1042,6 +1081,17 @@ g_sck_vsock_bind(int sck, const char *port)
     s.svm_cid = VMADDR_CID_ANY;
 
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_vm));
+#elif defined(__FreeBSD__)
+    struct sockaddr_hvs s;
+
+    g_memset(&s, 0, sizeof(struct sockaddr_hvs));
+    s.sa_family = AF_HYPERV;
+    s.hvs_port = atoi(port);
+
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_hvs));
+#else
+    return -1;
+#endif
 #else
     return -1;
 #endif
@@ -1052,6 +1102,7 @@ int
 g_sck_vsock_bind_address(int sck, const char *port, const char *address)
 {
 #if defined(XRDP_ENABLE_VSOCK)
+#if defined(__linux__)
     struct sockaddr_vm s;
 
     g_memset(&s, 0, sizeof(struct sockaddr_vm));
@@ -1060,6 +1111,18 @@ g_sck_vsock_bind_address(int sck, const char *port, const char *address)
     s.svm_cid = atoi(address);
 
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_vm));
+#elif defined(__FreeBSD__)
+    struct sockaddr_hvs s;
+
+    g_memset(&s, 0, sizeof(struct sockaddr_hvs));
+    s.sa_family = AF_HYPERV;
+    s.hvs_port = atoi(port);
+    // channel/address currently unsupported in FreeBSD 13.
+
+    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_hvs));
+#else
+    return -1;
+#endif
 #else
     return -1;
 #endif
