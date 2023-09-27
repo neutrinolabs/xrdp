@@ -454,7 +454,7 @@ xrdp_painter_text_width(struct xrdp_painter *self, const char *text)
 
     for (index = 0; index < len; index++)
     {
-        font_item = self->font->font_items + wstr[index];
+        font_item = XRDP_FONT_GET_CHAR(self->font, wstr[index]);
         rv = rv + font_item->incby;
     }
 
@@ -837,7 +837,7 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
             total_height = 0;
             for (index = 0; index < len; index++)
             {
-                font_item = font->font_items + wstr[index];
+                font_item = XRDP_FONT_GET_CHAR(font, wstr[index]);
                 k = font_item->incby;
                 total_width += k;
                 /* Use the nominal height of the font to work out the
@@ -875,7 +875,7 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
                                      draw_rect.bottom - draw_rect.top);
                     for (index = 0; index < len; index++)
                     {
-                        font_item = font->font_items + wstr[index];
+                        font_item = XRDP_FONT_GET_CHAR(font, wstr[index]);
                         g_memset(&pat, 0, sizeof(pat));
                         pat.format = PT_FORMAT_c1;
                         pat.width = font_item->width;
@@ -917,7 +917,7 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
 
     for (index = 0; index < len; index++)
     {
-        font_item = font->font_items + wstr[index];
+        font_item = XRDP_FONT_GET_CHAR(font, wstr[index]);
         i = xrdp_cache_add_char(self->wm->cache, font_item);
         f = HIWORD(i);
         c = LOWORD(i);
