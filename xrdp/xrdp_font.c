@@ -65,6 +65,12 @@ static char w_char[] =
 };
 #endif
 
+// Unicode definitions
+#define UNICODE_WHITE_SQUARE 0x25a1
+
+// First character allocated in the 'struct xrdp_font.chars' array
+#define FIRST_CHAR ' '
+
 /*****************************************************************************/
 struct xrdp_font *
 xrdp_font_create(struct xrdp_wm *wm)
@@ -74,7 +80,7 @@ xrdp_font_create(struct xrdp_wm *wm)
     int fd;
     int b;
     int i;
-    int index;
+    unsigned int char_count;
     int datasize;
     int file_size;
     struct xrdp_font_char *f;
@@ -100,17 +106,39 @@ xrdp_font_create(struct xrdp_wm *wm)
     }
 
     self = (struct xrdp_font *)g_malloc(sizeof(struct xrdp_font), 1);
+    if (self == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_font_create: "
+            "Can't allocate memory for font");
+        return self;
+    }
     self->wm = wm;
     make_stream(s);
     init_stream(s, file_size + 1024);
     fd = g_file_open(file_path);
 
-    if (fd != -1)
+    if (fd < 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_font_create: Can't open %s - %s", file_path,
+            g_get_strerror());
+        g_free(self);
+        self = NULL;
+    }
+    else
     {
         b = g_file_read(fd, s->data, file_size + 1024);
         g_file_close(fd);
 
-        if (b > 0)
+        // Got at least a header?
+        if (b < (4 + 32 + 2 + 2 + 8))
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "xrdp_font_create: Font %s is truncated", file_path);
+            g_free(self);
+            self = NULL;
+        }
+        else
         {
             s->end = s->data + b;
             in_uint8s(s, 4);
@@ -118,11 +146,27 @@ xrdp_font_create(struct xrdp_wm *wm)
             in_uint16_le(s, self->size);
             in_uint16_le(s, self->style);
             in_uint8s(s, 8);
-            index = 32;
+            char_count = FIRST_CHAR;
 
-            while (s_check_rem(s, 16))
+            while (!s_check_end(s))
             {
-                f = self->font_items + index;
+                if (!s_check_rem(s, 16))
+                {
+                    LOG(LOG_LEVEL_WARNING,
+                        "xrdp_font_create: "
+                        "Can't parse header for character U+%X", char_count);
+                    break;
+                }
+
+                if (char_count >= MAX_FONT_CHARS)
+                {
+                    LOG(LOG_LEVEL_WARNING,
+                        "xrdp_font_create: "
+                        "Ignoring characters >= U+%x", MAX_FONT_CHARS);
+                    break;
+                }
+
+                f = self->chars + char_count;
                 in_sint16_le(s, i);
                 f->width = i;
                 in_sint16_le(s, i);
@@ -139,23 +183,56 @@ xrdp_font_create(struct xrdp_wm *wm)
                 if (datasize < 0 || datasize > 512)
                 {
                     /* shouldn't happen */
-                    LOG(LOG_LEVEL_ERROR, "error in xrdp_font_create, datasize wrong "
-                        "width %d, height %d, datasize %d, index %d",
-                        f->width, f->height, datasize, index);
+                    LOG(LOG_LEVEL_ERROR,
+                        "xrdp_font_create: "
+                        "datasize for U+%x wrong "
+                        "width %d, height %d, datasize %d",
+                        char_count, f->width, f->height, datasize);
                     break;
                 }
 
-                if (s_check_rem(s, datasize))
+                if (!s_check_rem(s, datasize))
                 {
-                    f->data = (char *)g_malloc(datasize, 0);
-                    in_uint8a(s, f->data, datasize);
+                    LOG(LOG_LEVEL_ERROR,
+                        "xrdp_font_create: "
+                        "Not enough data for character U+%X", char_count);
+                    break;
+                }
+
+                if ((f->data = (char *)g_malloc(datasize, 0)) == NULL)
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "xrdp_font_create: "
+                        "Allocation error for character U+%X", char_count);
+                    break;
+                }
+                in_uint8a(s, f->data, datasize);
+
+                ++char_count;
+            }
+
+            self->char_count = char_count;
+            if (char_count <= FIRST_CHAR)
+            {
+                /* We read no characters from the font */
+                xrdp_font_delete(self);
+                self = NULL;
+            }
+            else
+            {
+                // Find a default glyph
+                if (char_count > UNICODE_WHITE_SQUARE)
+                {
+                    self->default_char = &self->chars[UNICODE_WHITE_SQUARE];
+                }
+                else if (char_count > '?')
+                {
+                    self->default_char = &self->chars['?'];
                 }
                 else
                 {
-                    LOG(LOG_LEVEL_ERROR, "error in xrdp_font_create");
+                    self->default_char = &self->chars[FIRST_CHAR];
                 }
-
-                index++;
             }
         }
     }
@@ -178,16 +255,16 @@ xrdp_font_create(struct xrdp_wm *wm)
 void
 xrdp_font_delete(struct xrdp_font *self)
 {
-    int i;
+    unsigned int i;
 
     if (self == 0)
     {
         return;
     }
 
-    for (i = 0; i < NUM_FONTS; i++)
+    for (i = FIRST_CHAR; i < self->char_count; i++)
     {
-        g_free(self->font_items[i].data);
+        g_free(self->chars[i].data);
     }
 
     g_free(self);
