@@ -1489,161 +1489,6 @@ clipboard_process_clip_caps(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-static int
-ss_part(char *data, int data_bytes)
-{
-    int index;
-    char *text;
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_part: data_bytes %d read_bytes_done %d "
-              "incr_bytes_done %d", data_bytes,
-              g_clip_c2s.read_bytes_done,
-              g_clip_c2s.incr_bytes_done);
-    /* copy to buffer */
-    if (g_clip_c2s.type == g_utf8_atom)
-    {
-        /* todo unicode */
-        text = (char *)g_malloc(data_bytes, 0);
-        index = 0;
-        data_bytes /= 2;
-        while (index < data_bytes)
-        {
-            text[index] = data[index * 2];
-            index++;
-        }
-        text[index] = 0;
-        g_memcpy(g_clip_c2s.data + g_clip_c2s.read_bytes_done, text, data_bytes);
-        g_clip_c2s.read_bytes_done += data_bytes;
-        g_free(text);
-    }
-    else
-    {
-        g_memcpy(g_clip_c2s.data + g_clip_c2s.read_bytes_done, data, data_bytes);
-        g_clip_c2s.read_bytes_done += data_bytes;
-    }
-    if (g_clip_c2s.incr_in_progress)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_part: incr_in_progress set");
-        return 0;
-    }
-    if (g_clip_c2s.read_bytes_done <= g_clip_c2s.incr_bytes_done)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_part: read_bytes_done < incr_bytes_done");
-        return 0;
-    }
-    data = g_clip_c2s.data + g_clip_c2s.incr_bytes_done;
-    data_bytes = g_clip_c2s.read_bytes_done - g_clip_c2s.incr_bytes_done;
-    if (data_bytes > g_incr_max_req_size)
-    {
-        data_bytes = g_incr_max_req_size;
-    }
-    g_clip_c2s.incr_bytes_done += data_bytes;
-    XChangeProperty(g_display, g_clip_c2s.window,
-                    g_clip_c2s.property, g_clip_c2s.type, 8,
-                    PropModeReplace, (tui8 *)data, data_bytes);
-    g_clip_c2s.incr_in_progress = 1;
-    return 0;
-}
-
-/*****************************************************************************/
-static int
-ss_end(void)
-{
-    char *data;
-    int data_bytes;
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_end:");
-    g_clip_c2s.doing_response_ss = 0;
-    g_clip_c2s.in_request = 0;
-
-    if (g_clip_c2s.incr_in_progress)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_end: incr_in_progress set");
-        return 0;
-    }
-    if (g_clip_c2s.read_bytes_done <= g_clip_c2s.incr_bytes_done)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_end: read_bytes_done < incr_bytes_done");
-        return 0;
-    }
-    data = g_clip_c2s.data + g_clip_c2s.incr_bytes_done;
-    data_bytes = g_clip_c2s.read_bytes_done - g_clip_c2s.incr_bytes_done;
-    if (data_bytes > g_incr_max_req_size)
-    {
-        data_bytes = g_incr_max_req_size;
-    }
-    g_clip_c2s.incr_bytes_done += data_bytes;
-    XChangeProperty(g_display, g_clip_c2s.window,
-                    g_clip_c2s.property, g_clip_c2s.type, 8,
-                    PropModeReplace, (tui8 *)data, data_bytes);
-    g_clip_c2s.incr_in_progress = 1;
-    return 0;
-}
-
-/*****************************************************************************/
-static int
-ss_start(char *data, int data_bytes, int total_bytes)
-{
-    XEvent xev;
-    XSelectionRequestEvent *req;
-    long val1[2];
-    int incr_bytes;
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "ss_start: data_bytes %d total_bytes %d",
-              data_bytes, total_bytes);
-    req = &g_saved_selection_req_event;
-
-    incr_bytes = total_bytes;
-    if (req->target == g_image_bmp_atom)
-    {
-        incr_bytes += 14;
-    }
-    else if (req->target == g_utf8_atom)
-    {
-        incr_bytes /= 2;
-    }
-    val1[0] = incr_bytes; /* a guess */
-    val1[1] = 0;
-
-    g_clip_c2s.doing_response_ss = 1;
-    g_clip_c2s.incr_bytes_done = 0;
-    g_clip_c2s.read_bytes_done = 0;
-    g_clip_c2s.type = req->target;
-    g_clip_c2s.property = req->property;
-    g_clip_c2s.window = req->requestor;
-    g_free(g_clip_c2s.data);
-    g_clip_c2s.data = (char *)g_malloc(incr_bytes + 64, 0);
-    g_clip_c2s.total_bytes = incr_bytes;
-
-    XChangeProperty(g_display, req->requestor, req->property,
-                    g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
-    /* we need events from that other window */
-    XSelectInput(g_display, req->requestor, PropertyChangeMask);
-    g_memset(&xev, 0, sizeof(xev));
-    xev.xselection.type = SelectionNotify;
-    xev.xselection.send_event = True;
-    xev.xselection.display = req->display;
-    xev.xselection.requestor = req->requestor;
-    xev.xselection.selection = req->selection;
-    xev.xselection.target = req->target;
-    xev.xselection.property = req->property;
-    xev.xselection.time = req->time;
-    XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
-
-    if (req->target == g_image_bmp_atom)
-    {
-        g_memcpy(g_clip_c2s.data, g_bmp_image_header, 14);
-        g_clip_c2s.read_bytes_done = 14;
-    }
-
-    g_clip_c2s.incr_in_progress = 1;
-
-    ss_part(data, data_bytes);
-
-    return 0;
-}
-
-/*****************************************************************************/
 int
 clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                   int total_length)
@@ -1653,7 +1498,6 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     int clip_msg_status;
     int rv;
     struct stream *ls;
-    char *holdp;
 
     if (!g_clip_up)
     {
@@ -1668,37 +1512,6 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
               "in_request %d g_ins->size %d",
               chan_id, chan_flags, length, total_length,
               g_clip_c2s.in_request, g_ins->size);
-
-    if (g_clip_c2s.doing_response_ss)
-    {
-        ss_part(s->p, length);
-        if ((chan_flags & 3) == 2)
-        {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_data_in: calling ss_end");
-            ss_end();
-        }
-        return 0;
-    }
-
-    if (g_clip_c2s.in_request)
-    {
-        if (total_length > 32 * 1024)
-        {
-            if ((chan_flags & 3) == 1)
-            {
-                holdp = s->p;
-                in_uint16_le(s, clip_msg_id);
-                in_uint16_le(s, clip_msg_status);
-                in_uint32_le(s, clip_msg_len);
-                if (clip_msg_id == CB_FORMAT_DATA_RESPONSE)
-                {
-                    ss_start(s->p, length - 8, total_length - 8);
-                    return 0;
-                }
-                s->p = holdp;
-            }
-        }
-    }
 
     if ((chan_flags & 3) == 3)
     {
