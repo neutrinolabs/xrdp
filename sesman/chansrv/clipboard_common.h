@@ -52,8 +52,6 @@ struct clip_c2s /* client to server, pasting from mstsc to linux app */
     int xrdp_clip_type; /* XRDP_CB_TEXT, XRDP_CB_BITMAP, XRDP_CB_FILE, ... */
     int converted;
     int in_request; /* a data request has been sent to client */
-    int doing_response_ss; /* doing response short circuit */
-    Time clip_time;
 };
 
 struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
