@@ -39,6 +39,9 @@ case $host_os in
 	*darwin*)
 		macos=yes
 		;;
+        *solaris*)
+		solaris=yes
+		;;
 esac
 
 AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
@@ -46,6 +49,7 @@ AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
 AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
+AM_CONDITIONAL(SOLARIS, [test "x$solaris" = xyes])
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
@@ -86,8 +90,8 @@ AC_ARG_ENABLE(tests,
               [Ensure dependencies for the tests are installed]),
               [ensure_tests_deps=yes], [])
 AC_ARG_ENABLE(pam, AS_HELP_STRING([--enable-pam],
-              [Build PAM support (default: yes)]),
-              [], [enable_pam=yes])
+              [Build PAM support (default: no)]),
+              [], [enable_pam=no])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
 AC_ARG_ENABLE(vsock, AS_HELP_STRING([--enable-vsock],
               [Build AF_VSOCK support (default: no)]),
@@ -284,6 +288,11 @@ esac
 
 if test x$use_imlib2 = xyes; then
     AC_DEFINE([USE_IMLIB2],1, [Compile with imlib2 support])
+fi
+
+if test x$solaris = xyes; then
+    CFLAGS="${CFLAGS} -D_XOPEN_SOURCE=600"
+    AC_SUBST(CFLAGS)
 fi
 
 # Find freetype2
@@ -580,6 +589,8 @@ AC_CONFIG_FILES([
   instfiles/pam.d/Makefile
   instfiles/pulse/Makefile
   instfiles/rc.d/Makefile
+  instfiles/method/Makefile
+  instfiles/manifest/Makefile
   keygen/Makefile
   waitforx/Makefile
   libipm/Makefile
@@ -658,6 +669,7 @@ echo "  unit tests performable  $perform_unit_tests"
 echo ""
 echo "  CFLAGS = $CFLAGS"
 echo "  LDFLAGS = $LDFLAGS"
+echo "  CPPFLAGS = $CPPFLAGS"
 
 # xrdp_configure_options.h will be written to the build directory, not the source directory
 echo '#define XRDP_CONFIGURE_OPTIONS \' > ./xrdp_configure_options.h

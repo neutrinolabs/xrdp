@@ -79,6 +79,19 @@ SUBDIRS += \
   pulse
 endif
 
+if NETBSD
+SUBDIRS += \
+  pam.d \
+  rc.d \
+  pulse
+endif
+
+if SOLARIS
+SUBDIRS += \
+  manifest \
+  method
+endif
+
 if MACOS
 SUBDIRS += pam.d
 endif
@@ -99,5 +112,14 @@ if FREEBSD
 # must be tab below
 install-data-hook:
 	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
+                                         $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
+endif
+
+if NETBSD
+# must be tab below
+install-data-hook:
+	sed -i 's|%%PREFIX%%/sbin|$(prefix)/sbin|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
+                                         $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
+	sed -i 's|%%PREFIX%%||g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp \
                                          $(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
 endif
