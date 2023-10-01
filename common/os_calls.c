@@ -3365,14 +3365,16 @@ g_setpgid(int pid, int pgid)
 void
 g_clearenv(void)
 {
+    LOG_DEVEL(LOG_LEVEL_TRACE, "g_clearenv()");
 #if defined(_WIN32)
 #else
-#if defined(BSD)
+#if defined(BSD) || defined(__sun) || defined(__APPLE__)
     environ[0] = 0;
 #else
     environ = 0;
 #endif
 #endif
+    LOG_DEVEL(LOG_LEVEL_TRACE, "--g_clearenv()");
 }
 
 /*****************************************************************************/

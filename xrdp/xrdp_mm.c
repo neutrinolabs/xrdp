@@ -2605,13 +2605,32 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
 
                     gw_username = xrdp_mm_get_value(self, "pamusername");
                     gw_password = xrdp_mm_get_value(self, "pampassword");
-                    if (!g_strcmp(gw_username, "same"))
+                    if ( gw_username != NULL )
                     {
-                        gw_username = xrdp_mm_get_value(self, "username");
+                        if (!g_strcmp(gw_username, "same"))
+                        {
+                            gw_username = xrdp_mm_get_value(self, "username");
+                        }
+
+                        if ( !g_strncmp("ask", gw_username, 3))
+                        {
+                            gw_username = self->wm->session->client_info->username;
+                        }
                     }
 
-                    if (gw_password == NULL ||
-                            !g_strcmp(gw_password, "same"))
+                    if (gw_password != NULL )
+                    {
+                        if ( !g_strcmp(gw_password, "same"))
+                        {
+                            gw_password = xrdp_mm_get_value(self, "password");
+                        }
+
+                        if ( !g_strncmp("ask", gw_password, 3))
+                        {
+                            gw_password = self->wm->session->client_info->password;
+                        }
+                    }
+                    else
                     {
                         gw_password = xrdp_mm_get_value(self, "password");
                     }

@@ -580,6 +580,7 @@ AC_CONFIG_FILES([
   instfiles/pam.d/Makefile
   instfiles/pulse/Makefile
   instfiles/rc.d/Makefile
+  instfiles/launchdaemons/Makefile
   keygen/Makefile
   waitforx/Makefile
   libipm/Makefile
