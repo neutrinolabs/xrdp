@@ -3141,42 +3141,95 @@ g_getgroup_info(const char *groupname, int *gid)
 }
 
 /*****************************************************************************/
-/* returns error */
-/* if zero is returned, then ok is set */
-/* does not work in win32 */
+#ifdef HAVE_GETGROUPLIST
+int
+g_check_user_in_group(const char *username, int gid, int *ok)
+{
+    int rv = 1;
+    struct passwd *pwd_1 = getpwnam(username);
+    if (pwd_1 != NULL)
+    {
+        // Get number of groups for user
+        //
+        // Some implementations of getgrouplist() (i.e. muslc) don't
+        // allow ngroups to be <1 on entry
+        int ngroups = 1;
+        GETGROUPS_T dummy;
+        getgrouplist(username, pwd_1->pw_gid, &dummy, &ngroups);
+
+        if (ngroups > 0) // Should always be true
+        {
+            GETGROUPS_T *grouplist;
+            grouplist = (GETGROUPS_T *)malloc(ngroups * sizeof(grouplist[0]));
+            if (grouplist != NULL)
+            {
+                // Now get the actual groups. The number of groups returned
+                // by this call is not necessarily the same as the number
+                // returned by the first call.
+                int allocgroups = ngroups;
+                getgrouplist(username, pwd_1->pw_gid, grouplist, &ngroups);
+                ngroups = MIN(ngroups, allocgroups);
+
+                rv = 0;
+                *ok = 0;
+
+                int i;
+                for (i = 0 ; i < ngroups; ++i)
+                {
+                    if (grouplist[i] == (GETGROUPS_T)gid)
+                    {
+                        *ok = 1;
+                        break;
+                    }
+                }
+                free(grouplist);
+            }
+        }
+    }
+    return rv;
+}
+/*****************************************************************************/
+#else // HAVE_GETGROUPLIST
 int
 g_check_user_in_group(const char *username, int gid, int *ok)
 {
 #if defined(_WIN32)
     return 1;
 #else
-    struct group *groups;
     int i;
 
-    groups = getgrgid(gid);
-
-    if (groups == 0)
+    struct passwd *pwd_1 = getpwnam(username);
+    struct group *groups = getgrgid(gid);
+    if (pwd_1 == NULL || groups == NULL)
     {
         return 1;
     }
 
-    *ok = 0;
-    i = 0;
-
-    while (0 != groups->gr_mem[i])
+    if (pwd_1->pw_gid == gid)
     {
-        if (0 == g_strcmp(groups->gr_mem[i], username))
-        {
-            *ok = 1;
-            break;
-        }
+        *ok = 1;
+    }
+    else
+    {
+        *ok = 0;
+        i = 0;
 
-        i++;
+        while (0 != groups->gr_mem[i])
+        {
+            if (0 == g_strcmp(groups->gr_mem[i], username))
+            {
+                *ok = 1;
+                break;
+            }
+
+            i++;
+        }
     }
 
     return 0;
 #endif
 }
+#endif // HAVE_GETGROUPLIST
 
 /*****************************************************************************/
 /* returns the time since the Epoch (00:00:00 UTC, January 1, 1970),
