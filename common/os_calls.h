@@ -176,6 +176,14 @@ g_sck_get_peer_ip_address(int sck,
 const char *
 g_sck_get_peer_description(int sck,
                            char *desc, unsigned int bytes);
+/**
+ * Sleep for the specified number of milli-seconds
+ * @param msecs Milli-seconds
+ *
+ * If a signal is processed, it is possible that this call will
+ * sleep for less than the specified number of milli-seconds. This
+ * is platform-specific
+ */
 void     g_sleep(int msecs);
 int      g_pipe(int fd[2]);
 
@@ -275,13 +283,56 @@ int      g_execvp(const char *p1, char *args[]);
  */
 int      g_execvp_list(const char *file, struct list *argv);
 int      g_execlp3(const char *a1, const char *a2, const char *a3);
+/**
+ * Set an alarm using SIGALRM
+ * @param func Signal handler, or NULL to cancel an alarm
+ * @param secs Number of seconds until an alarm is raised
+ * @return Number of seconds remaining before a previously requested
+ *         alarm is raised
+ */
 unsigned int g_set_alarm(void (*func)(int), unsigned int secs);
+/**
+ * Set a handler up for SIGCHLD
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler remains in place until explicitly replaced.
+ */
 void     g_signal_child_stop(void (*func)(int));
+/**
+ * Set a handler up for SIGSEGV
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler can only be called once, at which point the
+ * default handler is restored. This is to avoid infinite loops
+ */
 void     g_signal_segfault(void (*func)(int));
+/**
+ * Set a handler up for SIGHUP
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler remains in place until explicitly replaced.
+ */
 void     g_signal_hang_up(void (*func)(int));
+/**
+ * Set a handler up for SIGINT
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler remains in place until explicitly replaced.
+ */
 void     g_signal_user_interrupt(void (*func)(int));
+/**
+ * Set a handler up for SIGTERM
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler remains in place until explicitly replaced.
+ */
 void     g_signal_terminate(void (*func)(int));
+/**
+ * Set a handler up for SIGPIPE
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler remains in place until explicitly replaced.
+ */
 void     g_signal_pipe(void (*func)(int));
+/**
+ * Set a handler up for SIGUSR1
+ * @param func signal handler, or NULL to restore the default handler
+ * The handler remains in place until explicitly replaced.
+ */
 void     g_signal_usr1(void (*func)(int));
 int      g_fork(void);
 int      g_setgid(int pid);

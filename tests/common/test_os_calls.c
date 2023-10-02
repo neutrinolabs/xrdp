@@ -512,5 +512,9 @@ make_suite_test_os_calls(void)
     tcase_add_test(tc_os_calls, test_g_file_is_open);
     tcase_add_test(tc_os_calls, test_g_sck_fd_passing);
     tcase_add_test(tc_os_calls, test_g_sck_fd_overflow);
+
+    // Add other test cases in other files
+    suite_add_tcase(s, make_tcase_test_os_calls_signals());
+
     return s;
 }
