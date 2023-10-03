@@ -217,7 +217,10 @@ AM_COND_IF([DEVEL_DEBUG],
 AC_SEARCH_LIBS([setusercontext], [util])
 
 # Define HAVE_XXXXX macros for some system functions
-AC_CHECK_FUNCS([setusercontext])
+AC_CHECK_FUNCS([setusercontext getgrouplist])
+
+# The type used by getgrouplist() is the same type used by getgroups()
+AC_TYPE_GETGROUPS
 
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
