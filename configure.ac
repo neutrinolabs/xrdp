@@ -189,6 +189,12 @@ AM_COND_IF([DEVEL_DEBUG],
   [AX_APPEND_COMPILE_FLAGS([-g -O0])],
   [AX_APPEND_COMPILE_FLAGS([-O2])])
 
+# Define HAVE_XXXXX macros for some system functions
+AC_CHECK_FUNCS([getgrouplist])
+
+# The type used by getgrouplist() is the same type used by getgroups()
+AC_TYPE_GETGROUPS
+
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
   with_simd=no
