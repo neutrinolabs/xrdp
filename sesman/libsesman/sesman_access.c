@@ -40,7 +40,6 @@
 int
 access_login_allowed(const struct config_security *cfg_sec, const char *user)
 {
-    int gid;
     int ok;
 
     if ((0 == g_strncmp(user, "root", 5)) && (0 == cfg_sec->allow_root))
@@ -53,18 +52,6 @@ access_login_allowed(const struct config_security *cfg_sec, const char *user)
     if ((0 == cfg_sec->ts_users_enable) && (0 == cfg_sec->ts_always_group_check))
     {
         LOG(LOG_LEVEL_INFO, "Terminal Server Users group is disabled, allowing authentication");
-        return 1;
-    }
-
-    if (0 != g_getuser_info_by_name(user, 0, &gid, 0, 0, 0))
-    {
-        LOG(LOG_LEVEL_ERROR, "Cannot read user info! - login denied");
-        return 0;
-    }
-
-    if (cfg_sec->ts_users == gid)
-    {
-        LOG(LOG_LEVEL_DEBUG, "ts_users is user's primary group");
         return 1;
     }
 
@@ -89,7 +76,6 @@ int
 access_login_mng_allowed(const struct config_security *cfg_sec,
                          const char *user)
 {
-    int gid;
     int ok;
 
     if ((0 == g_strncmp(user, "root", 5)) && (0 == cfg_sec->allow_root))
@@ -103,18 +89,6 @@ access_login_mng_allowed(const struct config_security *cfg_sec,
     {
         LOG(LOG_LEVEL_INFO, "[MNG] Terminal Server Admin group is disabled, "
             "allowing authentication");
-        return 1;
-    }
-
-    if (0 != g_getuser_info_by_name(user, 0, &gid, 0, 0, 0))
-    {
-        LOG(LOG_LEVEL_ERROR, "[MNG] Cannot read user info! - login denied");
-        return 0;
-    }
-
-    if (cfg_sec->ts_admins == gid)
-    {
-        LOG(LOG_LEVEL_INFO, "[MNG] ts_users is user's primary group");
         return 1;
     }
 
