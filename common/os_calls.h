@@ -173,6 +173,15 @@ int      g_sigterm(int pid);
 int      g_getuser_info(const char *username, int *gid, int *uid, char **shell,
                         char **dir, char **gecos);
 int      g_getgroup_info(const char *groupname, int *gid);
+/**
+ * Checks whether a user is in the specified group
+ * @param username Name of user
+ * @param gid GID of group
+ * @param[out] ok Whether user is in group
+ * @return Non-zero if a system error occurred. In this instance OK is not set
+ *
+ * Primary group of username is also checked
+ */
 int      g_check_user_in_group(const char *username, int gid, int *ok);
 int      g_time1(void);
 int      g_time2(void);
