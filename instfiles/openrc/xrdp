@@ -1,0 +1,4 @@
+#!/sbin/openrc-run
+
+command="__BASE__/sbin/xrdp"
+pidfile="/run/${RC_SVCNAME}.pid"
