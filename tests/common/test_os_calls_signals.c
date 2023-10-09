@@ -232,6 +232,33 @@ START_TEST(test_g_signal_usr1)
 }
 
 /******************************************************************************/
+START_TEST(test_waitpid_not_interrupted_by_sig)
+{
+    /* Start a child which waits 3 seconds and exits */
+    int child_pid = g_fork();
+    if (child_pid == 0)
+    {
+        g_sleep(3000);
+        g_exit(42);
+    }
+
+    /* Set an alarm for 1 second's time */
+    g_reset_wait_obj(g_wobj1);
+    g_set_alarm(set_wobj1, 1);
+
+    struct exit_status e = g_waitpid_status(child_pid);
+    // We should have had the alarm...
+    ck_assert_int_ne(g_is_wait_obj_set(g_wobj1), 0);
+
+    // ..and got the status of the child
+    ck_assert_int_eq(e.reason, E_XR_STATUS_CODE);
+    ck_assert_int_eq(e.val, 42);
+
+    // Clean up
+    g_set_alarm(NULL, 0);
+}
+
+/******************************************************************************/
 TCase *
 make_tcase_test_os_calls_signals(void)
 {
@@ -246,6 +273,7 @@ make_tcase_test_os_calls_signals(void)
     tcase_add_test(tc, test_g_signal_terminate);
     tcase_add_test(tc, test_g_signal_pipe);
     tcase_add_test(tc, test_g_signal_usr1);
+    tcase_add_test(tc, test_waitpid_not_interrupted_by_sig);
 
     return tc;
 }
