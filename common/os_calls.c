@@ -2987,10 +2987,28 @@ g_set_alarm(void (*func)(int), unsigned int secs)
 #if defined(_WIN32)
     return 0;
 #else
+    struct sigaction action;
+
     /* Cancel any previous alarm to prevent a race */
     unsigned int rv = alarm(0);
-    signal(SIGALRM, func);
-    (void)alarm(secs);
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGALRM, &action, NULL);
+    if (func != NULL && secs > 0)
+    {
+        (void)alarm(secs);
+    }
     return rv;
 #endif
 }
@@ -3002,7 +3020,22 @@ g_signal_child_stop(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGCHLD, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        // Don't need to know when children are stopped or started
+        action.sa_flags = (SA_RESTART | SA_NOCLDSTOP);
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGCHLD, &action, NULL);
 #endif
 }
 
@@ -3013,7 +3046,21 @@ g_signal_segfault(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGSEGV, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESETHAND; // This is a one-shot
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGSEGV, &action, NULL);
 #endif
 }
 
@@ -3024,7 +3071,21 @@ g_signal_hang_up(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGHUP, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGHUP, &action, NULL);
 #endif
 }
 
@@ -3035,7 +3096,21 @@ g_signal_user_interrupt(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGINT, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGINT, &action, NULL);
 #endif
 }
 
@@ -3046,7 +3121,21 @@ g_signal_terminate(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGTERM, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGTERM, &action, NULL);
 #endif
 }
 
@@ -3057,7 +3146,21 @@ g_signal_pipe(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGPIPE, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGPIPE, &action, NULL);
 #endif
 }
 
@@ -3068,7 +3171,21 @@ g_signal_usr1(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGUSR1, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGUSR1, &action, NULL);
 #endif
 }
 
