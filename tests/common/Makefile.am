@@ -18,6 +18,7 @@ test_common_SOURCES = \
     test_list_calls.c \
     test_string_calls.c \
     test_os_calls.c \
+    test_os_calls_signals.c \
     test_ssl_calls.c \
     test_base64.c \
     test_guid.c

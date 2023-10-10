@@ -3072,11 +3072,29 @@ g_set_alarm(void (*func)(int), unsigned int secs)
 #if defined(_WIN32)
     return 0;
 #else
+    struct sigaction action;
+
     /* Cancel any previous alarm to prevent a race */
     unsigned int rv = alarm(0);
-    signal(SIGALRM, func);
-    signal(SIGINT, func);
-    (void)alarm(secs);
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGALRM, &action, NULL);
+    if (func != NULL && secs > 0)
+    {
+        (void)alarm(secs);
+    }
+
     return rv;
 #endif
 }
@@ -3089,7 +3107,22 @@ g_signal_child_stop(void (*func)(int))
 #if defined(_WIN32)
     return; 
 #else
-    signal(SIGCHLD, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        // Don't need to know when children are stopped or started
+        action.sa_flags = (SA_RESTART | SA_NOCLDSTOP);
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGCHLD, &action, NULL);
 #endif
 }
 
@@ -3100,7 +3133,21 @@ g_signal_segfault(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGSEGV, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESETHAND; // This is a one-shot
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGSEGV, &action, NULL);
 #endif
 }
 
@@ -3111,7 +3158,21 @@ g_signal_hang_up(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGHUP, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGHUP, &action, NULL);
 #endif
 }
 
@@ -3122,7 +3183,21 @@ g_signal_user_interrupt(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGINT, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGINT, &action, NULL);
 #endif
 }
 
@@ -3133,7 +3208,21 @@ g_signal_terminate(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGTERM, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGTERM, &action, NULL);
 #endif
 }
 
@@ -3144,7 +3233,21 @@ g_signal_pipe(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGPIPE, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGPIPE, &action, NULL);
 #endif
 }
 
@@ -3155,7 +3258,21 @@ g_signal_usr1(void (*func)(int))
 {
 #if defined(_WIN32)
 #else
-    signal(SIGUSR1, func);
+    struct sigaction action;
+
+    if (func == NULL)
+    {
+        action.sa_handler = SIG_DFL;
+        action.sa_flags = 0;
+    }
+    else
+    {
+        action.sa_handler = func;
+        action.sa_flags = SA_RESTART;
+    }
+    sigemptyset (&action.sa_mask);
+
+    sigaction(SIGUSR1, &action, NULL);
 #endif
 }
 
@@ -3690,42 +3807,95 @@ g_getgroup_info(const char *groupname, int *gid)
 }
 
 /*****************************************************************************/
-/* returns error */
-/* if zero is returned, then ok is set */
-/* does not work in win32 */
+#ifdef HAVE_GETGROUPLIST
+int
+g_check_user_in_group(const char *username, int gid, int *ok)
+{
+    int rv = 1;
+    struct passwd *pwd_1 = getpwnam(username);
+    if (pwd_1 != NULL)
+    {
+        // Get number of groups for user
+        //
+        // Some implementations of getgrouplist() (i.e. muslc) don't
+        // allow ngroups to be <1 on entry
+        int ngroups = 1;
+        GETGROUPS_T dummy;
+        getgrouplist(username, pwd_1->pw_gid, &dummy, &ngroups);
+
+        if (ngroups > 0) // Should always be true
+        {
+            GETGROUPS_T *grouplist;
+            grouplist = (GETGROUPS_T *)malloc(ngroups * sizeof(grouplist[0]));
+            if (grouplist != NULL)
+            {
+                // Now get the actual groups. The number of groups returned
+                // by this call is not necessarily the same as the number
+                // returned by the first call.
+                int allocgroups = ngroups;
+                getgrouplist(username, pwd_1->pw_gid, grouplist, &ngroups);
+                ngroups = MIN(ngroups, allocgroups);
+
+                rv = 0;
+                *ok = 0;
+
+                int i;
+                for (i = 0 ; i < ngroups; ++i)
+                {
+                    if (grouplist[i] == (GETGROUPS_T)gid)
+                    {
+                        *ok = 1;
+                        break;
+                    }
+                }
+                free(grouplist);
+            }
+        }
+    }
+    return rv;
+}
+/*****************************************************************************/
+#else // HAVE_GETGROUPLIST
 int
 g_check_user_in_group(const char *username, int gid, int *ok)
 {
 #if defined(_WIN32)
     return 1;
 #else
-    struct group *groups;
     int i;
 
-    groups = getgrgid(gid);
-
-    if (groups == 0)
+    struct passwd *pwd_1 = getpwnam(username);
+    struct group *groups = getgrgid(gid);
+    if (pwd_1 == NULL || groups == NULL)
     {
         return 1;
     }
 
-    *ok = 0;
-    i = 0;
-
-    while (0 != groups->gr_mem[i])
+    if (pwd_1->pw_gid == gid)
     {
-        if (0 == g_strcmp(groups->gr_mem[i], username))
-        {
-            *ok = 1;
-            break;
-        }
+        *ok = 1;
+    }
+    else
+    {
+        *ok = 0;
+        i = 0;
 
-        i++;
+        while (0 != groups->gr_mem[i])
+        {
+            if (0 == g_strcmp(groups->gr_mem[i], username))
+            {
+                *ok = 1;
+                break;
+            }
+
+            i++;
+        }
     }
 
     return 0;
 #endif
 }
+#endif // HAVE_GETGROUPLIST
 
 /*****************************************************************************/
 /* returns the time since the Epoch (00:00:00 UTC, January 1, 1970),

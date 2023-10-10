@@ -15,4 +15,9 @@ Suite *make_suite_test_ssl_calls(void);
 Suite *make_suite_test_base64(void);
 Suite *make_suite_test_guid(void);
 
+TCase *make_tcase_test_os_calls_signals(void);
+
+void os_calls_signals_init(void);
+void os_calls_signals_deinit(void);
+
 #endif /* TEST_COMMON_H */

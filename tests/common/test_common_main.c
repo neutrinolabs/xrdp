@@ -64,14 +64,17 @@ int main (void)
      * reporting when running in libcheck fork mode */
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    /* Initialise the ssl module */
+    /* Initialise modules */
     ssl_init();
+    os_calls_signals_init();
 
     srunner_run_all (sr, CK_ENV);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
 
     ssl_finish();
+    os_calls_signals_deinit();
+
     log_end();
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
