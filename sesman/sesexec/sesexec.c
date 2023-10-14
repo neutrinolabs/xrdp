@@ -222,7 +222,7 @@ set_sigchld_event(int sig)
     }
 
 #ifdef __sun
-/* On solaris we need to re-register for the signal hander. */
+    /* On solaris we need to re-register for the signal hander. */
     g_signal_child_stop(set_sigchld_event);
 #endif
 }

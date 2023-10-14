@@ -503,9 +503,10 @@ auth_end(struct auth_info *auth_info)
             pam_end(auth_info->ph, PAM_SUCCESS);
             auth_info->ph = 0;
         }
+
+        g_free(auth_info);
     }
 
-    g_free(auth_info);
     return 0;
 }
 
