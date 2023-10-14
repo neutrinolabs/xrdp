@@ -110,3 +110,4 @@ dist_xrdppkgdata_DATA = \
   sans-18.fv1 \
   cursor0.cur \
   cursor1.cur
+

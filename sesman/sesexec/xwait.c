@@ -68,7 +68,7 @@ make_xwait_command(int display, int wait)
         cmd->auto_free = 1;
         g_snprintf(displaystr, sizeof(displaystr), ":%d", display);
         g_snprintf(waitstr, sizeof(waitstr), "%d", wait);
-	
+
         if (!list_add_strdup_multi(cmd, exe, "-d", displaystr, "-w", waitstr, NULL))
         {
             list_delete(cmd);

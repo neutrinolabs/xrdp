@@ -22,11 +22,11 @@ alarm_handler(int signal_num)
      * Prefix the message with a newline in case another message
      * has been partly output */
 
-    if( signal_num == SIGALRM ) 
+    if ( signal_num == SIGALRM )
     {
-    const char msg[] = "\n<E>Timed out waiting for RandR outputs\n";
-    g_file_write(1, msg, g_strlen(msg));
-    exit(XW_STATUS_TIMED_OUT);
+        const char msg[] = "\n<E>Timed out waiting for RandR outputs\n";
+        g_file_write(1, msg, g_strlen(msg));
+        exit(XW_STATUS_TIMED_OUT);
     }
 }
 
@@ -132,8 +132,8 @@ main(int argc, char **argv)
                 display_name = optarg;
                 break;
             case 'w':
-		wait = atoi(optarg);
-  		break;
+                wait = atoi(optarg);
+                break;
             default: /* '?' */
                 usage(argv[0], status);
         }
