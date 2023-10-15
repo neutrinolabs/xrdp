@@ -89,10 +89,10 @@ AC_ARG_ENABLE(tests,
               AS_HELP_STRING([--enable-tests],
               [Ensure dependencies for the tests are installed]),
               [ensure_tests_deps=yes], [])
-AC_ARG_ENABLE(pam, AS_HELP_STRING([--enable-pam],
+AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
               [Build PAM support (default: no)]),
-              [], [enable_pam=no])
-AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
+              [enable_nopam=yes], [enable_nopam=no])
+AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_nopam = xyes])
 AC_ARG_ENABLE(vsock, AS_HELP_STRING([--enable-vsock],
               [Build AF_VSOCK support (default: no)]),
               [], [enable_vsock=no])
@@ -103,7 +103,7 @@ AC_ARG_ENABLE(ipv6only, AS_HELP_STRING([--enable-ipv6only],
               [Build IPv6-only (default: no)]),
               [], [enable_ipv6only=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
-              [Build kerberos support (prefer --enable-pam if available) (default: no)]),
+              [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
 AC_ARG_ENABLE(bsd, AS_HELP_STRING([--enable-bsd],
               [Build BSD auth support (default: no)]),
@@ -345,12 +345,12 @@ auth_cnt=0
 auth_mech="Builtin"
 AUTHMOD_OBJ=verify_user.lo
 AUTHMOD_LIB=-lcrypt
-if test x$enable_pam = xyes
+if test x$enable_nopam = xyes
 then
   auth_cnt=`expr $auth_cnt + 1`
-  auth_mech="PAM"
-  AUTHMOD_OBJ=verify_user_pam.lo
-  AUTHMOD_LIB=-lpam
+  auth_mech="No PAM"
+  AUTHMOD_OBJ=verify_user.lo
+  AUTHMOD_LIB=
 fi
 if test x$bsd = xtrue
 then
@@ -373,17 +373,23 @@ then
   AUTHMOD_OBJ=verify_user_pam_userpass.lo
   AUTHMOD_LIB="-lpam -lpam_userpass"
 fi
-
+if test $auth_cnt -eq 0
+then
+  auth_cnt=`expr $auth_cnt + 1`
+  auth_mech="Enable PAM"
+  AUTHMOD_OBJ=verify_user_pam.lo
+  AUTHMOD_LIB=-lpam
+fi
 if test $auth_cnt -gt 1
 then
-  AC_MSG_ERROR([--enable-pam, --enable-bsd, --enable-pamuserpass and --enable-kerberos are mutually exclusive])
+  AC_MSG_ERROR([--enable-nopam, --enable-bsd, --enable-pamuserpass and --enable-kerberos are mutually exclusive])
 fi
 
 AC_SUBST([AUTHMOD_OBJ])
 AC_SUBST([AUTHMOD_LIB])
 
 # checking if pam should be autodetected.
-if test "x$enable_pam" = "xyes"
+if test "x$enable_nopam" != "xyes"
 then
   if test -z "$enable_bsd"
   then
