@@ -32,7 +32,7 @@ alarm_handler(int signal_num)
 
 /*****************************************************************************/
 static Display *
-open_display(const char *display, const int wait)
+open_display(const char *display, const unsigned int wait)
 {
     Display *dpy = NULL;
     unsigned int n;
@@ -60,7 +60,7 @@ open_display(const char *display, const int wait)
  * @return 0 if/when outputs are available, 1 otherwise
  */
 static int
-wait_for_r_and_r(Display *dpy, int wait)
+wait_for_r_and_r(Display *dpy, unsigned int wait)
 {
     int error_base = 0;
     int event_base = 0;
