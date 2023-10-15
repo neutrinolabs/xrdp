@@ -389,7 +389,7 @@ AC_SUBST([AUTHMOD_OBJ])
 AC_SUBST([AUTHMOD_LIB])
 
 # checking if pam should be autodetected.
-if test "x$enable_nopam" != "xyes"
+if test "x$enable_nopam" = "xno"
 then
   if test -z "$enable_bsd"
   then
