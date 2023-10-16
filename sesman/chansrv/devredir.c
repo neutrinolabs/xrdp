@@ -134,7 +134,7 @@ static int devredir_proc_client_core_cap_resp(struct stream *s);
 static int devredir_proc_client_devlist_announce_req(struct stream *s);
 static int devredir_proc_client_devlist_remove_req(struct stream *s);
 static int devredir_proc_device_iocompletion(struct stream *s);
-static void devredir_proc_query_dir_response(IRP *irp,
+static int devredir_proc_query_dir_response(IRP *irp,
         struct stream *s_in,
         tui32 DeviceId,
         tui32 CompletionId,
@@ -1095,8 +1095,12 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_DIRECTORY_CONTROL:
-                devredir_proc_query_dir_response(irp, s, DeviceId,
-                                                 CompletionId, IoStatus);
+                if (devredir_proc_query_dir_response(irp, s, DeviceId,
+                                                     CompletionId,
+                                                     IoStatus) != 0)
+                {
+                    return -1;
+                }
                 break;
 
             case CID_RMDIR_OR_FILE:
@@ -1143,31 +1147,52 @@ devredir_proc_device_iocompletion(struct stream *s)
     return 0;
 }
 
-static void
+/**
+ * Parse a query directory response
+ *
+ * See:-
+ * - [MS-RDPEFS] 2.2.3.4.10 (DR_DRIVE_QUERY_DIRECTORY_RSP)
+ * - [MS-FSCC] 2.4.10 (FileDirectoryInformation)
+ *
+ *   return 0 on success, -1 on failure
+ */
+static int
 devredir_proc_query_dir_response(IRP *irp,
                                  struct stream *s_in,
                                  tui32 DeviceId,
                                  tui32 CompletionId,
                                  enum NTSTATUS IoStatus)
 {
-    tui32 Length;
-    xstream_rd_u32_le(s_in, Length);
+    // Size of FILE_DIRECTORY_INFORMATION structure with a particular
+    // filename length
+#define FILE_DIRECTORY_INFORMATION_SIZE(FileNameLength) \
+    ((4 + 4 + 8 + 8 + 8 + 8 + 8 + 8 + 4 + 4) + FileNameLength)
+
+    xstream_seek(s_in, 4);  /* Length */
 
     if (IoStatus == STATUS_SUCCESS)
     {
-        unsigned int i;
         /* process FILE_DIRECTORY_INFORMATION structures */
-        for (i = 0 ; i < Length ; ++i)
+        while (1)
         {
+            /* Can we read up to the filename? */
+            if (!s_check_rem_and_log(s_in,
+                                     FILE_DIRECTORY_INFORMATION_SIZE(0),
+                                     "FILE_DIRECTORY_INFORMATION"))
+            {
+                return -1;
+            }
+
             char  filename[256];
             tui64 LastAccessTime;
             tui64 LastWriteTime;
             tui64 EndOfFile;
+            tui32 NextEntryOffset;
             tui32 FileAttributes;
             tui32 FileNameLength;
             struct file_attr fattr;
 
-            xstream_seek(s_in, 4);  /* NextEntryOffset */
+            xstream_rd_u32_le(s_in, NextEntryOffset);
             xstream_seek(s_in, 4);  /* FileIndex */
             xstream_seek(s_in, 8);  /* CreationTime */
             xstream_rd_u64_le(s_in, LastAccessTime);
@@ -1177,10 +1202,14 @@ devredir_proc_query_dir_response(IRP *irp,
             xstream_seek(s_in, 8);  /* AllocationSize */
             xstream_rd_u32_le(s_in, FileAttributes);
             xstream_rd_u32_le(s_in, FileNameLength);
+            if (!s_check_rem_and_log(s_in,
+                                     FileNameLength,
+                                     "FILE_DIRECTORY_INFORMATION:FileName"))
+            {
+                return -1;
+            }
 
             devredir_cvt_from_unicode_len(filename, s_in->p, FileNameLength);
-
-            i += 64 + FileNameLength;
 
             //LOG_DEVEL(LOG_LEVEL_DEBUG, "LastAccessTime:    0x%llx", LastAccessTime);
             //LOG_DEVEL(LOG_LEVEL_DEBUG, "LastWriteTime:     0x%llx", LastWriteTime);
@@ -1198,6 +1227,29 @@ devredir_proc_query_dir_response(IRP *irp,
             xfuse_devredir_cb_enum_dir_add_entry(
                 (struct state_dirscan *) irp->fuse_info,
                 filename, &fattr);
+
+            /* From [MS-FSCC]
+             * {NextEntryOffset} MUST be zero if no other entries follow
+             * this one. An implementation MUST use this value to determine
+             * the location of the next entry (if multiple entries are
+             * present in a buffer). */
+            if (NextEntryOffset == 0)
+            {
+                break;
+            }
+
+            int pad = NextEntryOffset -
+                      FILE_DIRECTORY_INFORMATION_SIZE(FileNameLength);
+            if (pad > 0)
+            {
+                if (!s_check_rem_and_log(s_in,
+                                         pad,
+                                         "FILE_DIRECTORY_INFORMATION:pad"))
+                {
+                    return -1;
+                }
+                xstream_seek(s_in, pad);
+            }
         }
 
         /* Ask for more directory entries */
@@ -1219,6 +1271,9 @@ devredir_proc_query_dir_response(IRP *irp,
                                           irp->CompletionId,
                                           IRP_MJ_CLOSE, IRP_MN_NONE, 32);
     }
+
+    return 0;
+#undef FILE_DIRECTORY_INFORMATION_SIZE
 }
 
 /**
