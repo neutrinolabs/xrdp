@@ -3483,8 +3483,9 @@ g_waitpid(int pid, int *stat_loc, int options)
     return 0;
 #else
     int rv = 0;
-
+#if defined(__NetBSD__) || defined(__sun)
 again:
+#endif
     rv = waitpid(pid, stat_loc, options);
 #if defined(__NetBSD__) || defined(__sun)
     //Retry EINTR for NetBSD and OpenIndiana.
