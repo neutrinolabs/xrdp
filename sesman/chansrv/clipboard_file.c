@@ -293,7 +293,8 @@ clipboard_send_data_response_for_file(const char *data, int data_size)
     int flags;
     int index;
     tui32 ui32;
-    char fn[256];
+    unsigned int utf8_count;
+    unsigned int utf16_count;
     struct cb_file_info *cfi;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_file: data_size %d",
@@ -334,9 +335,19 @@ clipboard_send_data_response_for_file(const char *data, int data_size)
         /* file size */
         out_uint32_le(s, 0);
         out_uint32_le(s, cfi->size);
-        g_snprintf(fn, 255, "%s", cfi->filename);
-        clipboard_out_unicode(s, fn, 256);
-        out_uint8s(s, 8); /* pad */
+        /* Name is fixed-size 260 UTF-16 words */
+        utf8_count = strlen(cfi->filename) + 1;  // Include terminator
+        utf16_count = utf8_as_utf16_word_count(cfi->filename, utf8_count);
+        if (utf16_count > 260)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "clipboard_send_data_response_for_file:"
+                " filename overflow (%u words)", utf16_count);
+            utf8_count = 0;
+            utf16_count = 0;
+        }
+        out_utf8_as_utf16_le(s, cfi->filename, utf8_count);
+        out_uint8s(s, (260 - utf16_count) * 2);
     }
     out_uint32_le(s, 0);
     s_mark_end(s);
@@ -620,7 +631,6 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
 static int
 clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 {
-    int num_chars;
     int filename_bytes;
     int ex_bytes;
 
@@ -637,8 +647,16 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
     in_uint32_le(s, cfd->lastWriteTimeHigh);
     in_uint32_le(s, cfd->fileSizeHigh);
     in_uint32_le(s, cfd->fileSizeLow);
-    num_chars = sizeof(cfd->cFileName);
-    filename_bytes = clipboard_in_unicode(s, cfd->cFileName, &num_chars);
+    filename_bytes =
+        clipboard_in_utf16_le_as_utf8(s, cfd->cFileName,
+                                      sizeof(cfd->cFileName));
+    if (filename_bytes > 520)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Filename in CLIPRDR_FILEDESCRIPTOR is too long (%d bytes)",
+            filename_bytes);
+        return 1;
+    }
     ex_bytes = 520 - filename_bytes;
     in_uint8s(s, ex_bytes);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_c2s_in_file_info:");
@@ -648,7 +666,7 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
               cfd->lastWriteTimeLow);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  fileSize 0x%8.8x%8.8x", cfd->fileSizeHigh,
               cfd->fileSizeLow);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "  num_chars %d cFileName [%s]", num_chars, cfd->cFileName);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "  cFileName [%s]", cfd->cFileName);
     return 0;
 }
 

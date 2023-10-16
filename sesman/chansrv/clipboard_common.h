@@ -65,8 +65,15 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
     char cFileName[260 * 4]; /* Allow each UCS-16 char to become 32 bits */
 };
 
-int clipboard_out_unicode(struct stream *s, const char *text,
-                          int num_chars);
-int clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
+/**
+ * Input a terminated UTF-16 string from a stream as UTF-8.
+ * @param s stream
+ * @param text UTF-8 String buffer
+ * @param text_len Length of above
+ * @return number of bytes copied from stream
+ */
+unsigned int
+clipboard_in_utf16_le_as_utf8(struct stream *s, char *text,
+                              unsigned int num_chars);
 
 #endif
