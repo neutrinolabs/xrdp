@@ -182,8 +182,8 @@ swap_pixel_data(struct xrdp_bitmap *a, struct xrdp_bitmap *b)
  * Scales a bitmap image
  *
  * @param self Bitmap to scale
- * @param target_width target width
- * @param target_height target height
+ * @param targ_width target width
+ * @param targ_height target height
  * @return 0 for success
  */
 static int
@@ -230,8 +230,8 @@ xrdp_bitmap_scale(struct xrdp_bitmap *self, int targ_width, int targ_height)
  * Zooms a bitmap image
  *
  * @param self Bitmap to zoom
- * @param target_width target width
- * @param target_height target height
+ * @param targ_width target width
+ * @param targ_height target height
  * @return 0 for success
  *
  * This works the same way as a scaled image, but the aspect ratio is
@@ -776,7 +776,7 @@ log_imlib2_error(enum logLevels level, const char *filename,
  * @param filename Filename we're working on (for error reporting)
  * @param r Background red
  * @param g Background green
- * @param g Background blue
+ * @param b Background blue
  *
  * @return 0 for success. On failure the current context image is unchanged.
  */

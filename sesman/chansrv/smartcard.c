@@ -452,7 +452,6 @@ scard_send_list_readers(void *user_data, char *context, int context_bytes,
 /**
  * Send get change in status command
  *
- * @param  con          connection to client
  * @param  wide         TRUE if unicode string
  * @param  timeout      timeout in milliseconds, -1 for infinity
  * @param  num_readers  number of entries in rsa
@@ -488,7 +487,6 @@ scard_send_get_status_change(void *user_data, char *context, int context_bytes,
 /**
  * Open a connection to the smart card located in the reader
  *
- * @param  con   connection to client
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 int
@@ -520,8 +518,6 @@ scard_send_connect(void *user_data, char *context, int context_bytes,
  * The reconnect method re-establishes a smart card reader handle. On success,
  * the handle is valid once again.
  *
- * @param  con        connection to client
- * @param  sc_handle  handle to device
  * @param  rs         reader state where following fields are set
  *                        rs.shared_mode_flag
  *                        rs.preferred_protocol
@@ -556,7 +552,6 @@ scard_send_reconnect(void *user_data, char *context, int context_bytes,
  * Lock smart card reader for exclusive access for specified smart
  * card reader handle.
  *
- * @param  con   connection to client
  *****************************************************************************/
 int
 scard_send_begin_transaction(void *user_data, char *context, int context_bytes,
@@ -587,8 +582,6 @@ scard_send_begin_transaction(void *user_data, char *context, int context_bytes,
  * Release a smart card reader after being locked by a previously
  * successful call to Begin Transaction
  *
- * @param  con        connection to client
- * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 int
 scard_send_end_transaction(void *user_data, char *context, int context_bytes,
@@ -620,7 +613,6 @@ scard_send_end_transaction(void *user_data, char *context, int context_bytes,
 /**
  * Get the status of a connection for a valid smart card reader handle
  *
- * @param  con   connection to client
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 int
@@ -653,8 +645,6 @@ scard_send_status(void *user_data, int wide, char *context, int context_bytes,
 /**
  * Release a smart card reader handle that was acquired in ConnectA/ConnectW
  *
- * @param  con        connection to client
- * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 int
 scard_send_disconnect(void *user_data, char *context, int context_bytes,
@@ -1584,8 +1574,6 @@ scard_send_Connect(IRP *irp, char *context, int context_bytes,
  * The reconnect method re-establishes a smart card reader handle. On success,
  * the handle is valid once again.
  *
- * @param  con        connection to client
- * @param  sc_handle  handle to device
  * @param  rs         reader state where following fields are set
  *                        rs.shared_mode_flag
  *                        rs.preferred_protocol
@@ -1660,7 +1648,6 @@ scard_send_Reconnect(IRP *irp, char *context, int context_bytes,
  * Lock smart card reader for exclusive access for specified smart
  * card reader handle.
  *
- * @param  con   connection to client
  *****************************************************************************/
 static void
 scard_send_BeginTransaction(IRP *irp, char *context, int context_bytes,
@@ -1726,8 +1713,6 @@ scard_send_BeginTransaction(IRP *irp, char *context, int context_bytes,
  * Release a smart card reader after being locked by a previously
  * successful call to Begin Transaction
  *
- * @param  con        connection to client
- * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 static void
 scard_send_EndTransaction(IRP *irp, char *context, int context_bytes,
@@ -1793,7 +1778,6 @@ scard_send_EndTransaction(IRP *irp, char *context, int context_bytes,
 /**
  * Get the status of a connection for a valid smart card reader handle
  *
- * @param  con   connection to client
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 static void
@@ -1881,8 +1865,6 @@ scard_send_Status(IRP *irp, int wide, char *context, int context_bytes,
 /**
  * Release a smart card reader handle that was acquired in ConnectA/ConnectW
  *
- * @param  con        connection to client
- * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 static void
 scard_send_Disconnect(IRP *irp, char *context, int context_bytes,

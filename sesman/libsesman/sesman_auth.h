@@ -39,7 +39,7 @@ struct auth_info;
  * @param user user's login name
  * @param pass user's password
  * @param client_ip IP address of connecting client (or ""/NULL if not known)
- * @param[out] Error code for the operation. E_SCP_LOGIN_OK on success.
+ * @param[out] errorcode Error code for the operation. E_SCP_LOGIN_OK on success.
  * @return auth handle on success, NULL on failure
  *
  */
@@ -51,8 +51,8 @@ auth_userpass(const char *user, const char *pass,
  *
  * @brief Gets an auth handle for a UDS login
  *
- * @param uid User ID
- * @param[out] Error code for the operation. E_SCP_LOGIN_OK on success.
+ * @param user User ID
+ * @param[out] errorcode Error code for the operation. E_SCP_LOGIN_OK on success.
  *             Can be NULL if this information isn't required.
  * @return auth handle on success, NULL on failure
  *
@@ -63,7 +63,7 @@ auth_uds(const char *user, enum scp_login_status *errorcode);
 /**
  *
  * @brief Starts a session
- * @param auth_info. Auth handle created by auth_userpass
+ * @param auth_info Auth handle created by auth_userpass
  * @param display_num Display number
  * @return 0 on success, 1 on failure
  *
@@ -76,7 +76,7 @@ auth_start_session(struct auth_info *auth_info, int display_num);
 /**
  *
  * @brief Deallocates an auth handle and releases all resources
- * @param auth_info. Auth handle created by auth_userpass
+ * @param auth_info Auth handle created by auth_userpass
  * @return 0 on success, 1 on failure
  *
  */
@@ -91,7 +91,7 @@ auth_end(struct auth_info *auth_info);
  * This call is only effective for PAM-based environments. It must be made
  * after the context has been switched to the logged-in user.
  *
- * @param auth_info. Auth handle created by auth_userpass
+ * @param auth_info Auth handle created by auth_userpass
  * @return 0 on success, 1 on failure
  *
  */

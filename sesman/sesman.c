@@ -123,7 +123,7 @@ static int nocase_matches(const char *candidate, ...)
  * @brief  Command line argument parser
  * @param[in] argc number of command line arguments
  * @param[in] argv pointer array of commandline arguments
- * @param[out] sesman_startup_params Returned startup parameters
+ * @param[out] startup_params Returned startup parameters
  * @return 0 on success, n on nth argument is unknown
  *
  */

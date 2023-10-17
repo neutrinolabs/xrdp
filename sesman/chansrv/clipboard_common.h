@@ -69,7 +69,7 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
  * Input a terminated UTF-16 string from a stream as UTF-8.
  * @param s stream
  * @param text UTF-8 String buffer
- * @param text_len Length of above
+ * @param num_chars Length of above
  * @return number of bytes copied from stream
  */
 unsigned int

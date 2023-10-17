@@ -253,7 +253,6 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
  * Parse the identifier and length of a [ITU-T X.690] BER (Basic Encoding Rules)
  * structure header.
  *
- * @param self
  * @param s [in] - the stream to read from
  * @param tag_val [in] - the expected tag value
  * @param len [out] - the length of the structure
@@ -1488,7 +1487,6 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
 /**
  * Internal help function to close the socket
- * @param self
  */
 void
 close_rdp_socket(struct xrdp_mcs *self)

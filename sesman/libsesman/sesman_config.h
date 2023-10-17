@@ -165,7 +165,7 @@ struct config_sessions
  * @struct config_sesman
  * @brief struct that contains sesman configuration
  *
- * This struct contains all of sesman configuration parameters\n
+ * This struct contains all of sesman configuration parameters<br>
  * Every parameter in [globals] is a member of this struct, other
  * sections options are embedded in this struct as member structures
  *
@@ -261,7 +261,7 @@ config_read(const char *sesman_ini);
 /**
  *
  * @brief Dumps configuration
- * @param pointer to a config_sesman struct
+ * @param config pointer to a config_sesman struct
  *
  */
 void
@@ -270,7 +270,7 @@ config_dump(struct config_sesman *config);
 /**
  *
  * @brief Frees configuration allocated by config_read()
- * @param pointer to a config_sesman struct (may be NULL)
+ * @param cs pointer to a config_sesman struct (may be NULL)
  *
  */
 void

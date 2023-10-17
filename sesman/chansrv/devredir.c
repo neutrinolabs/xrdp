@@ -1417,7 +1417,6 @@ devredir_get_dir_listing(struct state_dirscan *fusep, tui32 device_id,
  * @param fusep     opaque data struct that we just pass back to FUSE when done
  * @param device_id device_id of the redirected share
  * @param path      the name of the directory containing the file
- * @param file      the filename
  *
  * @return 0 on success, -1 on failure
  *****************************************************************************/

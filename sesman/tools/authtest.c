@@ -91,7 +91,7 @@ usage(void)
  * Read a password from a file descriptor
  *
  * @param fd_str string representing file descriptor
- * @param sp Authmod parameter structure for resulting password
+ * @param amp Authmod parameter structure for resulting password
  * @return !=0 for success
  */
 static int
@@ -122,7 +122,7 @@ read_password_from_fd(const char *fd_str, struct authmod_params *amp)
  * Parses the program args
  *
  * @param argc Passed to main
- * @param @argv Passed to main
+ * @param argv Passed to main
  * @param amp Authmod parameter structure for resulting values
  * @return !=0 for success
  */

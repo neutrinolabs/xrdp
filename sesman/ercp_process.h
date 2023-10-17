@@ -32,7 +32,6 @@ struct session_item;
 /**
  *
  * @brief Processes an ERCP message
- * @param sc the sesman connection
  *
  */
 int

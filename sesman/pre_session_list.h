@@ -130,7 +130,7 @@ pre_session_list_set_peername(struct pre_session_item *psi, const char *name);
 
 /**
  * @brief Get the wait objs for the pre-session list module
- * @param @robjs Objects array to update
+ * @param robjs Objects array to update
  * @param robjs_count Elements in robjs (by reference)
  * @return 0 for success
  */

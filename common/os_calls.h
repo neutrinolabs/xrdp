@@ -151,7 +151,7 @@ int      g_sck_select(int sck1, int sck2);
  * @param sck File descriptor for peer
  * @param ip buffer to write IP address to
  * @param bytes Size of ip buffer. Should be at least MAX_IP_ADDRSTRLEN
- * @param[out] portptr Optional variable to receive the port number
+ * @param[out] port Optional variable to receive the port number
  * @return Pointer to IP for convenience
  *
  * If the peer has no IP address (for example, it is a Unix Domain Socket),
@@ -202,7 +202,7 @@ int      g_delete_wait_obj(tintptr obj);
  * @param read_objs Array of read objects
  * @param rcount Number of elements in read_objs
  * @param write_objs Array of write objects
- * @param rcount Number of elements in write_objs
+ * @param wcount Number of elements in write_objs
  * @param mstimeout Timeout in milliseconds. < 0 means an infinite timeout.
  *
  * @return 0 for success. The objects will need to be polled to

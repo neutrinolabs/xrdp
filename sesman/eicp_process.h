@@ -32,7 +32,6 @@ struct pre_session_item;
 /**
  *
  * @brief Processes an EICP message
- * @param sc the sesman connection
  *
  */
 int
