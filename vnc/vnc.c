@@ -1296,9 +1296,9 @@ lib_framebuffer_update(struct vnc *v)
     int srcy;
     unsigned int encoding;
     int pixel;
-    int r;
-    int g;
-    int b;
+    int r = 0;
+    int g = 0;
+    int b = 0;
     int error;
     int need_size;
     struct stream *s;
