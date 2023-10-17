@@ -54,7 +54,7 @@ static struct list *g_pre_session_list = NULL;
  *
  * Any auth_info struct found in the sesman_con is also deallocated.
  *
- * @param sc struct to de-allocate
+ * @param psi struct to de-allocate
  */
 static void
 free_pre_session_item(struct pre_session_item *psi)

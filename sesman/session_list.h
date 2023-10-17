@@ -154,7 +154,7 @@ free_session_info_list(struct scp_session_info *sesslist, unsigned int cnt);
 
 /**
  * @brief Get the wait objs for the session list module
- * @param @robjs Objects array to update
+ * @param robjs Objects array to update
  * @param robjs_count Elements in robjs (by reference)
  * @return 0 for success
  */

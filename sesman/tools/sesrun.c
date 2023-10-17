@@ -107,7 +107,7 @@ struct session_params
 /**************************************************************************//**
  * Maps a string to a session type value
  *
- * @param string session type string
+ * @param t session type string
  * @param[out] value session type value
  * @return 0 for success or != 0 if not found
  */
@@ -274,7 +274,7 @@ read_password_from_fd(const char *fd_str, struct session_params *sp)
  * Parses the program args
  *
  * @param argc Passed to main
- * @param @argv Passed to main
+ * @param argv Passed to main
  * @param sp Session parameter structure for resulting values
  * @param sesman_ini Pointer to an alternative config file if one is specified
  * @return !=0 for success

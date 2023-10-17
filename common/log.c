@@ -84,7 +84,7 @@ internal_log_file_open(const char *fname)
 /**
  *
  * @brief Converts xrdp log level to syslog logging level
- * @param xrdp logging level
+ * @param lvl logging level
  * @return syslog equivalent logging level
  *
  */
@@ -114,7 +114,6 @@ internal_log_xrdp2syslog(const enum logLevels lvl)
  * @brief Converts xrdp log levels to textual logging levels
  * @param lvl logging level
  * @param str pointer to a string, must be allocated before
- * @return The log string in str pointer.
  *
  */
 void
@@ -232,8 +231,6 @@ internal_log_end(struct log_config *l_cfg)
 
 /**
  * Converts a string representing the log level to a value
- * @param buf
- * @return
  */
 enum logLevels
 internal_log_text2level(const char *buf)
@@ -828,8 +825,7 @@ log_start_from_param(const struct log_config *src_log_config)
 /**
  * This function initialize the log facilities according to the configuration
  * file, that is described by the in parameter.
- * @param iniFile
- * @param applicationName, the name that is used in the log for the running application
+ * @param applicationName the name that is used in the log for the running application
  * @return 0 on success
  */
 enum logReturns
@@ -873,7 +869,6 @@ log_start(const char *iniFile, const char *applicationName,
 
 /**
  * Function that terminates all logging
- * @return
  */
 enum logReturns
 log_end(void)
@@ -1121,7 +1116,6 @@ internal_log_message(const enum logLevels lvl,
 
 /**
  * Return the configured log file name
- * @return
  */
 char *
 getLogFile(char *replybuf, int bufsize)
@@ -1147,7 +1141,6 @@ getLogFile(char *replybuf, int bufsize)
 
 /**
  * Returns formatted datetime for log
- * @return
  */
 char *
 getFormattedDateTime(char *replybuf, int bufsize)

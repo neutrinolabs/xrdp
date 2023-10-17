@@ -396,7 +396,7 @@ config_read_security(int file, struct config_security *sc,
  *
  * @brief Reads sesman [Sessions] configuration section
  * @param file configuration file descriptor
- * @param ss pointer to a config_sessions struct
+ * @param se pointer to a config_sessions struct
  * @param param_n parameter name list
  * @param param_v parameter value list
  * @return 0 on success, 1 on failure

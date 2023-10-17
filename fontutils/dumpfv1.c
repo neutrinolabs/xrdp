@@ -57,7 +57,7 @@ struct program_args
  * Parses the program args
  *
  * @param argc Passed to main
- * @param @argv Passed to main
+ * @param argv Passed to main
  * @param pa program_pargs structure for resulting values
  * @return !=0 for success
  */

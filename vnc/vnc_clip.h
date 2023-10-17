@@ -39,7 +39,7 @@ vnc_clip_exit(struct vnc *v);
 /**
  * Process incoming data from the RDP clip channel
  * @param v VNC Object
- * @param s Stream object containing data
+ * @param data Stream object containing data
  *
  * @return Non-zero if error occurs
  */

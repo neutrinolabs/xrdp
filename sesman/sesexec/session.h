@@ -118,7 +118,7 @@ session_send_term(struct session_data *sd);
 /**
  * Frees a session_data object
  *
- * @param sd session_data for this session
+ * @param session_data session_data for this session
  *
  * Do not call this until session_active() returns zero, or you
  * lose the ability to track the session PIDs
