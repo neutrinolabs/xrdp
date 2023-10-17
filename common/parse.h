@@ -151,7 +151,7 @@ parser_stream_overflow_check(const struct stream *s, int n, int is_out,
 /******************************************************************************/
 #define init_stream(s, v) do \
     { \
-        if ((v) > (s)->size) \
+        if ((int)(v) > (s)->size) \
         { \
             g_free((s)->data); \
             (s)->data = (char*)g_malloc((v), 0); \
