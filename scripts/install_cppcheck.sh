@@ -123,17 +123,20 @@ fi
 
     cd "$workdir"
 
+    make_args="MATCHCOMPILER=yes FILESDIR=$FILESDIR PREFIX=$FILESDIR"
+
     case "$CPPCHECK_VER" in
         1.*)
             # CFGDIR is needed for cppcheck before 1.86
-            make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR CFGDIR=$FILESDIR"
+            make_args="$make_args CFGDIR=$FILESDIR"
             ;;
         2.8 | 2.9 | 2.1*)
             # Cppcheck 2.8 removed the dependency on z3
-            make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR"
+            # Cppcheck 2.8 added optional support for utilizing Boost
+            make_args="$make_args CPPFLAGS=-DHAVE_BOOST"
             ;;
         2.*)
-            make_args="FILESDIR=$FILESDIR PREFIX=$FILESDIR USE_Z3=yes"
+            make_args="$make_args USE_Z3=yes"
             # Check that the Z3 development files appear to be installed
             # before trying to create z3_version.h. Otherwise we may
             # mislead the user as to what needs to be done.
