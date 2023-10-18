@@ -408,83 +408,101 @@ rail_startup(void)
 
 /*****************************************************************************/
 static char *
-read_uni(struct stream *s, int num_chars)
+read_uni(struct stream *s, unsigned int num_bytes)
 {
-    twchar *rchrs;
-    char *rv;
-    int index;
-    int lchars;
-
-    rchrs = 0;
-    rv = 0;
-
-    if (num_chars > 0)
+    char *rv = NULL;
+    if (s_check_rem_and_log(s, num_bytes, "Reading RAIL string"))
     {
-        rchrs = (twchar *)g_malloc((num_chars + 1) * sizeof(twchar), 0);
+        unsigned int num_words = num_bytes / 2;
+        unsigned int utf8len = in_utf16_le_fixed_as_utf8_length(s, num_words);
 
-        for (index = 0; index < num_chars; index++)
+        // Allocate space for a back-stop terminator
+        rv = (char *)g_malloc(utf8len + 1, 0);
+        if (rv != NULL)
         {
-            in_uint16_le(s, rchrs[index]);
-        }
-
-        rchrs[num_chars] = 0;
-        lchars = g_wcstombs(0, rchrs, 0);
-
-        if (lchars > 0)
-        {
-            rv = (char *)g_malloc((lchars + 1) * 4, 0);
-            g_wcstombs(rv, rchrs, lchars);
-            rv[lchars] = 0;
+            rv[utf8len] = '\0';
+            in_utf16_le_fixed_as_utf8(s, num_words, rv, utf8len);
+            if ((num_bytes % 2) != 0)
+            {
+                /* Skip unused character */
+                in_uint8s(s, 1);
+            }
         }
     }
-
-    g_free(rchrs);
     return rv;
 }
 
 /*****************************************************************************/
+/* See [MS-RDPERP] 2.2.2.3.1 (TS_RAIL_ORDER_EXEC) */
 static int
 rail_process_exec(struct stream *s, int size)
 {
+    int rv = 1;
+
     int flags;
-    int ExeOrFileLength;
-    int WorkingDirLength;
-    int ArgumentsLen;
-    char *ExeOrFile;
-    char *WorkingDir;
-    char *Arguments;
+    unsigned int ExeOrFileLength;
+    unsigned int WorkingDirLength;
+    unsigned int ArgumentsLen;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "chansrv::rail_process_exec:");
     in_uint16_le(s, flags);
     in_uint16_le(s, ExeOrFileLength);
     in_uint16_le(s, WorkingDirLength);
     in_uint16_le(s, ArgumentsLen);
-    ExeOrFile = read_uni(s, ExeOrFileLength);
-    WorkingDir = read_uni(s, WorkingDirLength);
-    Arguments = read_uni(s, ArgumentsLen);
-    LOG(LOG_LEVEL_DEBUG, "  flags 0x%8.8x ExeOrFileLength %d WorkingDirLength %d "
-        "ArgumentsLen %d ExeOrFile [%s] WorkingDir [%s] "
-        "Arguments [%s]", flags, ExeOrFileLength, WorkingDirLength,
-        ArgumentsLen, ExeOrFile, WorkingDir, Arguments);
-
-    if (g_strlen(ExeOrFile) > 0)
+    // The constants below are taken from [MS-RDPERP] 2.2.2.3.1
+    if (ExeOrFileLength == 0 || ExeOrFileLength > 520)
     {
-        rail_startup();
-
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "rail_process_exec: pre");
-        /* ask main thread to fork */
-        tc_mutex_lock(g_exec_mutex);
-        g_exec_name = ExeOrFile;
-        g_set_wait_obj(g_exec_event);
-        tc_sem_dec(g_exec_sem);
-        tc_mutex_unlock(g_exec_mutex);
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "rail_process_exec: post");
+        LOG(LOG_LEVEL_ERROR, "ExeOrFileLength field is out of range %u",
+            ExeOrFileLength);
     }
+    else if (WorkingDirLength > 520)
+    {
+        LOG(LOG_LEVEL_ERROR, "WorkingDirLength field is out of range %d",
+            WorkingDirLength);
+    }
+    else if (ArgumentsLen > 16000)
+    {
+        LOG(LOG_LEVEL_ERROR, "ArgumentsLen field is out of range %d",
+            ArgumentsLen);
+    }
+    else
+    {
+        char *ExeOrFile = read_uni(s, ExeOrFileLength);
+        char *WorkingDir = read_uni(s, WorkingDirLength);
+        char *Arguments = read_uni(s, ArgumentsLen);
+        if (ExeOrFile == NULL || WorkingDir == NULL || Arguments == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Out of memory reading TS_RAIL_ORDER_EXEC PDU");
+        }
+        else
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "  flags 0x%8.8x ExeOrFileLength %d WorkingDirLength %d "
+                "ArgumentsLen %d ExeOrFile [%s] WorkingDir [%s] "
+                "Arguments [%s]", flags, ExeOrFileLength, WorkingDirLength,
+                ArgumentsLen, ExeOrFile, WorkingDir, Arguments);
 
-    g_free(ExeOrFile);
-    g_free(WorkingDir);
-    g_free(Arguments);
-    return 0;
+            rail_startup();
+
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "rail_process_exec: pre");
+            /* ask main thread to fork */
+            tc_mutex_lock(g_exec_mutex);
+            g_exec_name = ExeOrFile;
+            g_set_wait_obj(g_exec_event);
+            tc_sem_dec(g_exec_sem);
+            tc_mutex_unlock(g_exec_mutex);
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "rail_process_exec: post");
+
+            rv = 0;
+        }
+
+        /* TODO : Looks like a race condition here */
+        g_free(ExeOrFile);
+        g_free(WorkingDir);
+        g_free(Arguments);
+    }
+    return rv;
 }
 
 /******************************************************************************/
