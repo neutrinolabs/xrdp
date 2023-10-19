@@ -29,6 +29,9 @@
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "ms-rdperp.h"
+#if defined(XRDP_RFXCODEC)
+#include "ms-rdprfx.h"
+#endif
 
 /**
  * The largest supported size for a fastpath update
@@ -572,20 +575,25 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         {
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: RemoteFX(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
+#if defined(XRDP_RFXCODEC)
             self->client_info.rfx_codec_id = codec_id;
             i1 = MIN(sizeof(self->client_info.rfx_prop), (size_t) codec_properties_length);
             g_memcpy(self->client_info.rfx_prop, s->p, i1);
             self->client_info.rfx_prop_len = i1;
+            self->client_info.rfx_codec_mode = CODEC_MODE_VIDEO;
+#endif
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_IMAGE_REMOTEFX, 16) == 0)
         {
             LOG(LOG_LEVEL_INFO, "xrdp_caps_process_codecs: Image RemoteFX(%s), codec id [%d], properties len [%d]",
                 codec_guid_str, codec_id, codec_properties_length);
-            self->client_info.irfx_codec_id = codec_id;
-            i1 = MIN(sizeof(self->client_info.irfx_prop), (size_t) codec_properties_length);
-
-            g_memcpy(self->client_info.irfx_prop, s->p, i1);
-            self->client_info.irfx_prop_len = i1;
+#if defined(XRDP_RFXCODEC)
+            self->client_info.rfx_codec_id = codec_id;
+            i1 = MIN(sizeof(self->client_info.rfx_prop), (size_t) codec_properties_length);
+            g_memcpy(self->client_info.rfx_prop, s->p, i1);
+            self->client_info.rfx_prop_len = i1;
+            self->client_info.rfx_codec_mode = CODEC_MODE_IMAGE;
+#endif
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
         {

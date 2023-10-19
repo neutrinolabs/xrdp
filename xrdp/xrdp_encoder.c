@@ -28,11 +28,10 @@
 #include "thread_calls.h"
 #include "fifo.h"
 
-#ifdef XRDP_RFXCODEC
+#if defined(XRDP_RFXCODEC)
 #include "rfxcodec_encode.h"
+#include "ms-rdprfx.h"
 #endif
-
-
 
 #define XRDP_SURCMD_PREFIX_BYTES 256
 
@@ -101,25 +100,28 @@ xrdp_encoder_create(struct xrdp_mm *mm)
             (32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8;
         self->process_enc = process_enc_jpg;
     }
-#ifdef XRDP_RFXCODEC
-    else if (client_info->rfx_codec_id != 0)
+#if defined(XRDP_RFXCODEC)
+    else if (client_info->rfx_codec_id != 0 && client_info->rfx_codec_mode == CODEC_MODE_IMAGE)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting rfx codec session");
+        LOG(LOG_LEVEL_TRACE, "xrdp_encoder_create: starting image rfx codec session");
         self->codec_id = client_info->rfx_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
         self->process_enc = process_enc_rfx;
         self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
                              mm->wm->screen->height,
-                             RFX_FORMAT_YUV, 0);
+                             RFX_FORMAT_YUV, 0, CODEC_MODE_IMAGE);
     }
-    else if (client_info->irfx_codec_id != 0)
+    else if (client_info->rfx_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting image rfx codec session");
-        self->codec_id = client_info->irfx_codec_id;
+        LOG(LOG_LEVEL_TRACE, "xrdp_encoder_create: starting rfx codec session");
+        self->codec_id = client_info->rfx_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
-        /* TODO */
+        self->process_enc = process_enc_rfx;
+        self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
+                             mm->wm->screen->height,
+                             RFX_FORMAT_YUV, 0, CODEC_MODE_VIDEO);
     }
 #endif
     else if (client_info->h264_codec_id != 0)
@@ -296,7 +298,7 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     return 0;
 }
 
-#ifdef XRDP_RFXCODEC
+#if defined(XRDP_RFXCODEC)
 /*****************************************************************************/
 /* called from encoder thread */
 static int

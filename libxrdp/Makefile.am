@@ -20,7 +20,8 @@ LIBXRDP_EXTRA_LIBS += $(FREERDP_LIBS)
 endif
 
 if XRDP_RFXCODEC
-AM_CPPFLAGS += -DXRDP_RFXCODEC
+AM_CPPFLAGS += -DXRDP_RFXCODEC \
+               -I$(top_srcdir)/librfxcodec/include
 endif
 
 if XRDP_TJPEG

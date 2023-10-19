@@ -217,9 +217,7 @@ struct xrdp_client_info
     int large_pointer_support_flags;
 
     /* Image RemoteFX */
-    int irfx_codec_id;
-    int irfx_prop_len;
-    char irfx_prop[64];
+    int rfx_codec_mode;
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
