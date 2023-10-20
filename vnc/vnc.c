@@ -444,7 +444,7 @@ resize_server_to_client_layout(struct vnc *v)
 }
 
 /*****************************************************************************/
-int
+static int
 lib_mod_event(struct vnc *v, int msg, long param1, long param2,
               long param3, long param4)
 {
@@ -619,7 +619,7 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
 }
 
 //******************************************************************************
-int
+static int
 get_pixel_safe(char *data, int x, int y, int width, int height, int bpp)
 {
     int start = 0;
@@ -688,7 +688,7 @@ get_pixel_safe(char *data, int x, int y, int width, int height, int bpp)
 }
 
 /******************************************************************************/
-void
+static void
 set_pixel_safe(char *data, int x, int y, int width, int height, int bpp,
                int pixel)
 {
@@ -747,7 +747,7 @@ set_pixel_safe(char *data, int x, int y, int width, int height, int bpp,
 }
 
 /******************************************************************************/
-int
+static int
 split_color(int pixel, int *r, int *g, int *b, int bpp, int *palette)
 {
     if (bpp == 8)
@@ -786,7 +786,7 @@ split_color(int pixel, int *r, int *g, int *b, int bpp, int *palette)
 }
 
 /******************************************************************************/
-int
+static int
 make_color(int r, int g, int b, int bpp)
 {
     if (bpp == 24)
@@ -1229,7 +1229,7 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
 }
 
 /******************************************************************************/
-int
+static int
 lib_framebuffer_update(struct vnc *v)
 {
     char *d1;
@@ -1418,7 +1418,7 @@ lib_framebuffer_update(struct vnc *v)
 }
 
 /******************************************************************************/
-int
+static int
 lib_palette_update(struct vnc *v)
 {
     struct stream *s;
@@ -1474,7 +1474,7 @@ lib_palette_update(struct vnc *v)
 }
 
 /******************************************************************************/
-int
+static int
 lib_bell_trigger(struct vnc *v)
 {
     int error;
@@ -1484,7 +1484,7 @@ lib_bell_trigger(struct vnc *v)
 }
 
 /******************************************************************************/
-int
+static int
 lib_mod_signal(struct vnc *v)
 {
     return 0;
@@ -1543,7 +1543,7 @@ lib_mod_process_message(struct vnc *v, struct stream *s)
 }
 
 /******************************************************************************/
-int
+static int
 lib_mod_start(struct vnc *v, int w, int h, int bpp)
 {
     v->server_begin_update(v);
@@ -1591,7 +1591,7 @@ lib_data_in(struct trans *trans)
 /*
   return error
 */
-int
+static int
 lib_mod_connect(struct vnc *v)
 {
     char cursor_data[32 * (32 * 3)];
@@ -2001,7 +2001,7 @@ lib_mod_connect(struct vnc *v)
 }
 
 /******************************************************************************/
-int
+static int
 lib_mod_end(struct vnc *v)
 {
     if (v->vnc_desktop != 0)
@@ -2052,7 +2052,7 @@ init_client_layout(struct vnc *v,
 }
 
 /******************************************************************************/
-int
+static int
 lib_mod_set_param(struct vnc *v, const char *name, const char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
@@ -2111,7 +2111,7 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
@@ -2131,7 +2131,7 @@ lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_check_wait_objs(struct vnc *v)
 {
     int rv;
@@ -2153,7 +2153,7 @@ lib_mod_check_wait_objs(struct vnc *v)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_frame_ack(struct vnc *v, int flags, int frame_id)
 {
     return 0;
@@ -2161,7 +2161,7 @@ lib_mod_frame_ack(struct vnc *v, int flags, int frame_id)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_suppress_output(struct vnc *v, int suppress,
                         int left, int top, int right, int bottom)
 {
@@ -2189,7 +2189,7 @@ lib_mod_suppress_output(struct vnc *v, int suppress,
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_server_version_message(struct vnc *v)
 {
     return 0;
@@ -2197,7 +2197,7 @@ lib_mod_server_version_message(struct vnc *v)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_server_monitor_resize(struct vnc *v, int width, int height,
                               int num_monitors,
                               const struct monitor_info *monitors,
@@ -2226,7 +2226,7 @@ lib_mod_server_monitor_resize(struct vnc *v, int width, int height,
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_server_monitor_full_invalidate(struct vnc *v, int param1, int param2)
 {
     return 0;

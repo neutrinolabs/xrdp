@@ -306,7 +306,7 @@ alloc_data (size_t n)
         }                                                               \
     } while (0)
 
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX (_equal) (region_type_t *reg1, region_type_t *reg2)
 {
     int i;
@@ -367,7 +367,7 @@ PREFIX (_equal) (region_type_t *reg1, region_type_t *reg2)
     return TRUE;
 }
 
-int
+static int
 PREFIX (_print) (region_type_t *rgn)
 {
     int num, size;
@@ -429,7 +429,7 @@ PREFIX (_init_rect) (region_type_t     *region,
     region->data = NULL;
 }
 
-PIXMAN_EXPORT void
+static PIXMAN_EXPORT void
 PREFIX (_init_with_extents) (region_type_t *region, box_type_t *extents)
 {
     if (!GOOD_RECT (extents))
@@ -453,7 +453,7 @@ PREFIX (_fini) (region_type_t *region)
     FREE_DATA (region);
 }
 
-PIXMAN_EXPORT int
+static PIXMAN_EXPORT int
 PREFIX (_n_rects) (region_type_t *region)
 {
     return PIXREGION_NUMRECTS (region);
@@ -551,7 +551,7 @@ pixman_rect_alloc (region_type_t *region,
     return TRUE;
 }
 
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX (_copy) (region_type_t *dst, region_type_t *src)
 {
     GOOD (dst);
@@ -1408,7 +1408,7 @@ pixman_region_union_o (region_type_t *region,
     return TRUE;
 }
 
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX(_intersect_rect) (region_type_t *dest,
                          region_type_t *source,
                          int x, int y,
@@ -1528,7 +1528,7 @@ PREFIX (_union) (region_type_t *new_reg,
 /* Convenience function for performing union of region with a
  * single rectangle
  */
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX (_union_rect) (region_type_t *dest,
                       region_type_t *source,
                       int            x,
@@ -2182,7 +2182,7 @@ PREFIX (_subtract) (region_type_t *reg_d,
  *
  *-----------------------------------------------------------------------
  */
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX (_inverse) (region_type_t *new_reg,  /* Destination region */
                    region_type_t *reg1,     /* Region to invert */
                    box_type_t    *inv_rect) /* Bounding box for inversion */
@@ -2286,7 +2286,7 @@ find_box_for_y (box_type_t *begin, box_type_t *end, int y)
  *   partially in the region) or is outside the region (we reached a band
  *   that doesn't overlap the box at all and part_in is false)
  */
-PIXMAN_EXPORT pixman_region_overlap_t
+static PIXMAN_EXPORT pixman_region_overlap_t
 PREFIX (_contains_rectangle) (region_type_t   *region,
                               box_type_t      *prect)
 {
@@ -2417,7 +2417,7 @@ PREFIX (_contains_rectangle) (region_type_t   *region,
  * translates in place
  */
 
-PIXMAN_EXPORT void
+static PIXMAN_EXPORT void
 PREFIX (_translate) (region_type_t *region, int x, int y)
 {
     overflow_int_t x1, x2, y1, y2;
@@ -2529,7 +2529,7 @@ PREFIX (_translate) (region_type_t *region, int x, int y)
     GOOD (region);
 }
 
-PIXMAN_EXPORT void
+static PIXMAN_EXPORT void
 PREFIX (_reset) (region_type_t *region, box_type_t *box)
 {
     GOOD (region);
@@ -2543,7 +2543,7 @@ PREFIX (_reset) (region_type_t *region, box_type_t *box)
     region->data = NULL;
 }
 
-PIXMAN_EXPORT void
+static PIXMAN_EXPORT void
 PREFIX (_clear) (region_type_t *region)
 {
     GOOD (region);
@@ -2554,7 +2554,7 @@ PREFIX (_clear) (region_type_t *region)
 }
 
 /* box is "return" value */
-PIXMAN_EXPORT int
+static PIXMAN_EXPORT int
 PREFIX (_contains_point) (region_type_t *region,
                           int x, int y,
                           box_type_t *box)
@@ -2631,7 +2631,7 @@ PREFIX (_extents) (region_type_t *region)
  * returns the number of new, clipped scanlines.
  */
 
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX (_selfcheck) (region_type_t *reg)
 {
     int i, numRects;
@@ -2696,7 +2696,7 @@ PREFIX (_selfcheck) (region_type_t *reg)
     }
 }
 
-PIXMAN_EXPORT pixman_bool_t
+static PIXMAN_EXPORT pixman_bool_t
 PREFIX (_init_rects) (region_type_t *region,
                       const box_type_t *boxes, int count)
 {

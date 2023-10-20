@@ -51,6 +51,7 @@
 #include "trans.h"
 #include "chansrv.h"
 #include "list.h"
+#include "smartcard_pcsc.h"
 
 #if PCSC_STANDIN
 
@@ -147,7 +148,7 @@ get_uds_client_by_id(int uds_client_id)
 }
 
 /*****************************************************************************/
-struct pcsc_context *
+static struct pcsc_context *
 get_pcsc_context_by_app_context(struct pcsc_uds_client *uds_client,
                                 tui32 app_context)
 {
@@ -175,7 +176,7 @@ get_pcsc_context_by_app_context(struct pcsc_uds_client *uds_client,
 }
 
 /*****************************************************************************/
-struct pcsc_card *
+static struct pcsc_card *
 get_pcsc_card_by_app_card(struct pcsc_uds_client *uds_client,
                           tui32 app_card, struct pcsc_context **acontext)
 {
@@ -441,7 +442,7 @@ scard_pcsc_check_wait_objs(void)
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_establish_context(struct trans *con, struct stream *in_s)
 {
     int dwScope;
@@ -525,7 +526,7 @@ scard_function_establish_context_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_release_context(struct trans *con, struct stream *in_s)
 {
     int hContext;
@@ -601,7 +602,7 @@ struct pcsc_list_readers
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_list_readers(struct trans *con, struct stream *in_s)
 {
     int hContext;
@@ -662,7 +663,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
  * The string is guaranteed to have at least the returned number of NULL
  * characters in it
  */
-unsigned int
+static unsigned int
 count_multistring_elements(const char *str, unsigned int len)
 {
     unsigned int rv = 0;
@@ -822,7 +823,7 @@ scard_function_list_readers_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_connect(struct trans *con, struct stream *in_s)
 {
     int hContext;
@@ -925,7 +926,7 @@ scard_function_connect_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_disconnect(struct trans *con, struct stream *in_s)
 {
     int hCard;
@@ -995,7 +996,7 @@ scard_function_disconnect_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_begin_transaction(struct trans *con, struct stream *in_s)
 {
     int hCard;
@@ -1065,7 +1066,7 @@ scard_function_begin_transaction_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_end_transaction(struct trans *con, struct stream *in_s)
 {
     int hCard;
@@ -1157,7 +1158,7 @@ struct pcsc_transmit
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_transmit(struct trans *con, struct stream *in_s)
 {
     int hCard;
@@ -1298,7 +1299,7 @@ scard_function_transmit_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_control(struct trans *con, struct stream *in_s)
 {
     int hCard;
@@ -1400,7 +1401,7 @@ struct pcsc_status
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_status(struct trans *con, struct stream *in_s)
 {
     int hCard;
@@ -1588,7 +1589,7 @@ scard_function_status_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_get_status_change(struct trans *con, struct stream *in_s)
 {
     int index;
@@ -1725,7 +1726,7 @@ scard_function_get_status_change_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_cancel(struct trans *con, struct stream *in_s)
 {
     int hContext;
@@ -1811,7 +1812,7 @@ int scard_function_reconnect_return(void *user_data,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 scard_process_msg(struct trans *con, struct stream *in_s, int command)
 {
     int rv;
@@ -1906,7 +1907,7 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 my_pcsc_trans_data_in(struct trans *trans)
 {
     struct stream *s;
@@ -1933,7 +1934,7 @@ my_pcsc_trans_data_in(struct trans *trans)
 
 /*****************************************************************************/
 /* got a new connection from libpcsclite */
-int
+static int
 my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
     struct pcsc_uds_client *uds_client;

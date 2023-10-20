@@ -32,6 +32,7 @@
 #include "log.h"
 #include "xrdp_constants.h"
 #include "fifo.h"
+#include "audin.h"
 
 #define MSG_SNDIN_VERSION       1
 #define MSG_SNDIN_FORMATS       2

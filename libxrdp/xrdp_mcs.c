@@ -878,7 +878,7 @@ xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
  * with ConnectGCCPDU, ConferenceCreateResponse,
  * and [MS-RDPBCGR] Server Data Blocks as user data.
  */
-int
+static int
 xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 {
     struct stream *s;
@@ -1490,7 +1490,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
  * Internal help function to close the socket
  * @param self
  */
-void
+static void
 close_rdp_socket(struct xrdp_mcs *self)
 {
     if (self->iso_layer != 0)

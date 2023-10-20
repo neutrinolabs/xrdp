@@ -194,7 +194,7 @@ devredir_deinit(void)
 /*
  * Convert a COMPLETION_TYPE to a string
  */
-const char *completion_type_to_str(enum COMPLETION_TYPE cid)
+static const char *completion_type_to_str(enum COMPLETION_TYPE cid)
 {
     return
         (cid == CID_CREATE_DIR_REQ)     ?  "CID_CREATE_DIR_REQ" :

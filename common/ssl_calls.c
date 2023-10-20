@@ -1525,7 +1525,7 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
 
 /*****************************************************************************/
 const char
-*get_openssl_version()
+*get_openssl_version(void)
 {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     return SSLeay_version(SSLEAY_VERSION);

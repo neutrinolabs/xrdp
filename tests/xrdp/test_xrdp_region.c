@@ -61,7 +61,7 @@ static pixman_box16_t test_box =
     0, 0, 100, 100
 };
 
-pixman_box16_t *__wrap_pixman_region_extents(pixman_region16_t *region)
+static pixman_box16_t *__wrap_pixman_region_extents(pixman_region16_t *region)
 {
     check_expected_ptr(region);
     return mock_ptr_type(pixman_box16_t *);
@@ -107,7 +107,7 @@ static void test_xrdp_region_get_bounds__happy_path(void **state)
     g_free(rect);
 }
 
-pixman_bool_t __wrap_pixman_region_not_empty(pixman_region16_t *region)
+static pixman_bool_t __wrap_pixman_region_not_empty(pixman_region16_t *region)
 {
     check_expected_ptr(region);
     return mock_type(pixman_bool_t);
