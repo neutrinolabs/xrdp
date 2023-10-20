@@ -231,7 +231,7 @@ fv1_file_free(struct fv1_file *fv1)
 }
 
 /*****************************************************************************/
-int
+static int
 write_stream(int fd, struct stream *s)
 {
     const char *p = s->data;

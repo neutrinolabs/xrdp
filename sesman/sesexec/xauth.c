@@ -28,6 +28,7 @@
 #endif
 
 #include <stdio.h>
+#include "xauth.h"
 #include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"

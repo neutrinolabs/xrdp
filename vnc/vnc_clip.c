@@ -804,7 +804,7 @@ vnc_clip_exit(struct vnc *v)
 
 
 /******************************************************************************/
-int
+static int
 vnc_clip_process_eclip_pdu(struct vnc *v, struct stream *s)
 {
     int type;

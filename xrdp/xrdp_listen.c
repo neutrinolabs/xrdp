@@ -140,7 +140,7 @@ xrdp_listen_delete_done_pro(struct xrdp_listen *self)
 
 /*****************************************************************************/
 /* i can't get stupid in_val to work, hum using global var for now */
-THREAD_RV THREAD_CC
+static THREAD_RV THREAD_CC
 xrdp_process_run(void *in_val)
 {
     struct xrdp_process *process;

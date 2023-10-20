@@ -2511,7 +2511,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 /*****************************************************************************/
 /* Process a [MS-RDPBCGR] TS_UD_CS_MONITOR_EX message.
    reads the client monitor's extended data */
-int
+static int
 xrdp_sec_process_mcs_data_monitors_ex(struct xrdp_sec *self, struct stream *s)
 {
     int flags;
@@ -2755,7 +2755,7 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 xrdp_sec_init_rdp_security(struct xrdp_sec *self)
 {
     switch (self->rdp_layer->client_info.crypt_level)

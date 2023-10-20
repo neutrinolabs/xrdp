@@ -55,6 +55,7 @@ xrdp_SOURCES = \
   xrdp_listen.c \
   xrdp_login_wnd.c \
   xrdp_mm.c \
+  xrdp_mm.h \
   xrdp_painter.c \
   xrdp_process.c \
   xrdp_region.c \

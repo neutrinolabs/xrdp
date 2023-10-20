@@ -155,7 +155,7 @@ session_data_free(struct session_data *session_data)
  * @param len the allocated len for outstr
  * @return
  */
-char *
+static char *
 dumpItemsToString(struct list *self, char *outstr, int len)
 {
     int index;
@@ -557,7 +557,7 @@ fork_child(
 }
 
 /******************************************************************************/
-enum scp_screate_status
+static enum scp_screate_status
 session_start_wrapped(struct login_info *login_info,
                       const struct session_parameters *s,
                       struct session_data *sd)

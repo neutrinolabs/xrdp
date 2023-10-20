@@ -441,7 +441,7 @@ xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
 
 /*****************************************************************************/
 /* get the type of client brush cache */
-int
+static int
 xrdp_caps_process_brushcache(struct xrdp_rdp *self, struct stream *s,
                              int len)
 {
@@ -485,7 +485,7 @@ xrdp_caps_process_glyphcache(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-int
+static int
 xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
                                      int len)
 {
@@ -511,7 +511,7 @@ xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-int
+static int
 xrdp_caps_process_rail(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int i32;
