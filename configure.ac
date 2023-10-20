@@ -319,7 +319,7 @@ case "$with_freetype2" in
         fi
 
         if test -f $with_freetype2/include/freetype2/ft2build.h; then
-            FREETYPE2_CFLAGS="-I $with_freetype2/include/freetype2"
+            FREETYPE2_CFLAGS="-isystem $with_freetype2/include/freetype2"
         else
             AC_MSG_RESULT([no])
             AC_MSG_ERROR([Can't find $with_freetype2/include/freetype2/ft2build.h])
