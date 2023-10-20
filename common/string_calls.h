@@ -310,8 +310,6 @@ int      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
                            int bytes_out_str);
 int      g_pos(const char *str, const char *to_find);
 char    *g_strstr(const char *haystack, const char *needle);
-int      g_mbstowcs(twchar *dest, const char *src, int n);
-int      g_wcstombs(char *dest, const twchar *src, int n);
 
 /** trim spaces and tabs, anything <= space
  *

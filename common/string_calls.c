@@ -711,30 +711,6 @@ g_strstr(const char *haystack, const char *needle)
 }
 
 /*****************************************************************************/
-int
-g_mbstowcs(twchar *dest, const char *src, int n)
-{
-    wchar_t *ldest;
-    int rv;
-
-    ldest = (wchar_t *)dest;
-    rv = mbstowcs(ldest, src, n);
-    return rv;
-}
-
-/*****************************************************************************/
-int
-g_wcstombs(char *dest, const twchar *src, int n)
-{
-    const wchar_t *lsrc;
-    int rv;
-
-    lsrc = (const wchar_t *)src;
-    rv = wcstombs(dest, lsrc, n);
-    return rv;
-}
-
-/*****************************************************************************/
 /* returns error */
 int
 g_strtrim(char *str, int trim_flags)

@@ -145,12 +145,10 @@ typedef bool_t tbool;
 typedef intptr_t tbus;
 typedef intptr_t tintptr;
 
-/* wide char, socket */
+/* socket */
 #if defined(_WIN32)
-typedef unsigned short twchar;
 typedef unsigned int tsock;
 #else
-typedef int twchar;
 typedef int tsock;
 #endif
 #endif /* DEFINED_Ts */
