@@ -96,6 +96,19 @@ void
 list_dump_items(struct list *self);
 
 /**
+ * Appends a string fragment to a list
+ * @param[in,out] start Pointer to start of fragment (by reference)
+ * @param end Pointer to one past end of fragment
+ * @param list List to append to
+ * @result 1 for success
+ *
+ * In the event of a memory failure, 0 is returned and the list is deleted.
+ */
+int
+split_string_append_fragment(const char **start, const char *end,
+                             struct list *list);
+
+/**
  * Splits a string on a separation character and then returns a list of
  * the string split by the character, without the character contained within
  * the pieces.

@@ -51,7 +51,7 @@ xrdp_fastpath_delete(struct xrdp_fastpath *self)
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 xrdp_fastpath_reset(struct xrdp_fastpath *self)
 {
     return 0;

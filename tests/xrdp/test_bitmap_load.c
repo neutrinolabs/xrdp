@@ -45,11 +45,11 @@ static int WHITE = COLOR24RGB(255, 255, 255);
  * be considered close enough to each other */
 #define MAX_SIMILAR_COLOR_DISTANCE 3
 
-void setup(void)
+static void setup(void)
 {
 }
 
-void teardown(void)
+static void teardown(void)
 {
 }
 

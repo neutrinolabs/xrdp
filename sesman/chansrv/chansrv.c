@@ -894,7 +894,7 @@ process_message(void)
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 my_trans_data_in(struct trans *trans)
 {
     struct stream *s = (struct stream *)NULL;
@@ -938,7 +938,7 @@ my_trans_data_in(struct trans *trans)
 }
 
 /*****************************************************************************/
-struct trans *
+static struct trans *
 get_api_trans_from_chan_id(int chan_id)
 {
     return g_drdynvcs[chan_id].xrdp_api_trans;
@@ -1038,7 +1038,7 @@ my_api_data(int chan_id, char *data, int bytes)
  * called when WTSVirtualChannelWrite() is invoked in xrdpapi.c
  *
  ******************************************************************************/
-int
+static int
 my_api_trans_data_in(struct trans *trans)
 {
     struct stream *s;
@@ -1172,7 +1172,7 @@ my_api_trans_data_in(struct trans *trans)
 }
 
 /*****************************************************************************/
-int
+static int
 my_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
     if (trans == 0)
@@ -1209,7 +1209,7 @@ my_trans_conn_in(struct trans *trans, struct trans *new_trans)
  * called when WTSVirtualChannelOpenEx is invoked in xrdpapi.c
  *
  ******************************************************************************/
-int
+static int
 my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
     struct xrdp_api_data *ad;
@@ -1377,7 +1377,7 @@ api_con_trans_list_remove_all(void)
 }
 
 /*****************************************************************************/
-THREAD_RV THREAD_CC
+static THREAD_RV THREAD_CC
 channel_thread_loop(void *in_val)
 {
     tbus objs[32];
@@ -1538,7 +1538,7 @@ child_signal_handler(void)
 }
 
 /*****************************************************************************/
-void
+static void
 segfault_signal_handler(int sig)
 {
     LOG_DEVEL(LOG_LEVEL_ERROR, "segfault_signal_handler: entered.......");

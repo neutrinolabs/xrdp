@@ -21,6 +21,7 @@
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
+#include "xrdp_mm.h"
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
@@ -1540,7 +1541,7 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
 }
 
 /******************************************************************************/
-int
+static int
 dynamic_monitor_initialize(struct xrdp_mm *self)
 {
     struct xrdp_drdynvc_procs d_procs;

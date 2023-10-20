@@ -224,7 +224,7 @@ xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
 
 /*****************************************************************************/
 /* returns error */
-int
+static int
 xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
                      char *mask, int *x, int *y)
 {
@@ -1645,7 +1645,7 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 }
 
 /*****************************************************************************/
-int
+static int
 xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int unicode)
 {
     int index;

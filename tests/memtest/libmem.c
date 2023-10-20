@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "libmem.h"
 #include "log.h"
 
 #define ALIGN_BY 32

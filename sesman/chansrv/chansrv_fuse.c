@@ -413,21 +413,21 @@ static unsigned int format_user_info(char *dest, unsigned int len,
                                      const char *format);
 
 /*****************************************************************************/
-int
+static int
 load_fuse_config(void)
 {
     return 0;
 }
 
 /*****************************************************************************/
-XFUSE_HANDLE *
+static XFUSE_HANDLE *
 xfuse_handle_create()
 {
     return g_new0(XFUSE_HANDLE, 1);
 }
 
 /*****************************************************************************/
-void
+static void
 xfuse_handle_delete(XFUSE_HANDLE *self)
 {
     if (self == NULL)
@@ -443,14 +443,14 @@ xfuse_handle_delete(XFUSE_HANDLE *self)
 }
 
 /*****************************************************************************/
-uint64_t
+static uint64_t
 xfuse_handle_to_fuse_handle(XFUSE_HANDLE *self)
 {
     return (uint64_t) (tintptr) self;
 }
 
 /*****************************************************************************/
-XFUSE_HANDLE *
+static XFUSE_HANDLE *
 xfuse_handle_from_fuse_handle(uint64_t handle)
 {
     return (XFUSE_HANDLE *) (tintptr) handle;
