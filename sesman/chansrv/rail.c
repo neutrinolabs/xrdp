@@ -1696,6 +1696,7 @@ rail_configure_request_window(XConfigureRequestEvent *config)
 }
 
 /*****************************************************************************/
+#if 0
 /* returns 0, event handled, 1 unhandled */
 static int
 rail_configure_window(XConfigureEvent *config)
@@ -1778,6 +1779,7 @@ rail_configure_window(XConfigureEvent *config)
     free_stream(s);
     return 0;
 }
+#endif
 
 /*****************************************************************************/
 static int
