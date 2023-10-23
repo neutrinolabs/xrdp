@@ -333,14 +333,12 @@ config_read_security(int file, struct config_security *sc,
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_USR_GROUP))
         {
             g_free(sc->ts_users);
-            sc->ts_users = NULL;
             sc->ts_users = g_strdup(value);
         }
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP))
         {
             g_free(sc->ts_admins);
-            sc->ts_admins = NULL;
             sc->ts_admins = g_strdup(value);
         }
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
