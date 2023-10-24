@@ -39,6 +39,9 @@ case $host_os in
 	*darwin*)
 		macos=yes
 		;;
+        *solaris*)
+		solaris=yes
+		;;
 esac
 
 AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
@@ -46,6 +49,7 @@ AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
 AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
+AM_CONDITIONAL(SOLARIS, [test "x$solaris" = xyes])
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
@@ -85,10 +89,10 @@ AC_ARG_ENABLE(tests,
               AS_HELP_STRING([--enable-tests],
               [Ensure dependencies for the tests are installed]),
               [ensure_tests_deps=yes], [])
-AC_ARG_ENABLE(pam, AS_HELP_STRING([--enable-pam],
-              [Build PAM support (default: yes)]),
-              [], [enable_pam=yes])
-AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
+AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
+              [Build PAM support (default: no)]),
+              [enable_nopam=yes], [enable_nopam=no])
+AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_nopam = xyes])
 AC_ARG_ENABLE(vsock, AS_HELP_STRING([--enable-vsock],
               [Build AF_VSOCK support (default: no)]),
               [], [enable_vsock=no])
@@ -99,7 +103,7 @@ AC_ARG_ENABLE(ipv6only, AS_HELP_STRING([--enable-ipv6only],
               [Build IPv6-only (default: no)]),
               [], [enable_ipv6only=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
-              [Build kerberos support (prefer --enable-pam if available) (default: no)]),
+              [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
 AC_ARG_ENABLE(bsd, AS_HELP_STRING([--enable-bsd],
               [Build BSD auth support (default: no)]),
@@ -289,6 +293,11 @@ if test x$use_imlib2 = xyes; then
     AC_DEFINE([USE_IMLIB2],1, [Compile with imlib2 support])
 fi
 
+if test x$solaris = xyes; then
+    CFLAGS="${CFLAGS} -D_XOPEN_SOURCE=600"
+    AC_SUBST(CFLAGS)
+fi
+
 # Find freetype2
 #
 # The modversion used by pkgcheck does not correspond to the
@@ -336,12 +345,12 @@ auth_cnt=0
 auth_mech="Builtin"
 AUTHMOD_OBJ=verify_user.lo
 AUTHMOD_LIB=-lcrypt
-if test x$enable_pam = xyes
+if test x$enable_nopam = xyes
 then
   auth_cnt=`expr $auth_cnt + 1`
-  auth_mech="PAM"
-  AUTHMOD_OBJ=verify_user_pam.lo
-  AUTHMOD_LIB=-lpam
+  auth_mech="No PAM"
+  AUTHMOD_OBJ=verify_user.lo
+  AUTHMOD_LIB=
 fi
 if test x$bsd = xtrue
 then
@@ -364,17 +373,23 @@ then
   AUTHMOD_OBJ=verify_user_pam_userpass.lo
   AUTHMOD_LIB="-lpam -lpam_userpass"
 fi
-
+if test $auth_cnt -eq 0
+then
+  auth_cnt=`expr $auth_cnt + 1`
+  auth_mech="Enable PAM"
+  AUTHMOD_OBJ=verify_user_pam.lo
+  AUTHMOD_LIB=-lpam
+fi
 if test $auth_cnt -gt 1
 then
-  AC_MSG_ERROR([--enable-pam, --enable-bsd, --enable-pamuserpass and --enable-kerberos are mutually exclusive])
+  AC_MSG_ERROR([--enable-nopam, --enable-bsd, --enable-pamuserpass and --enable-kerberos are mutually exclusive])
 fi
 
 AC_SUBST([AUTHMOD_OBJ])
 AC_SUBST([AUTHMOD_LIB])
 
 # checking if pam should be autodetected.
-if test "x$enable_pam" = "xyes"
+if test "x$enable_nopam" = "xno"
 then
   if test -z "$enable_bsd"
   then
@@ -583,6 +598,8 @@ AC_CONFIG_FILES([
   instfiles/pam.d/Makefile
   instfiles/pulse/Makefile
   instfiles/rc.d/Makefile
+  instfiles/method/Makefile
+  instfiles/manifest/Makefile
   keygen/Makefile
   waitforx/Makefile
   libipm/Makefile
@@ -661,6 +678,7 @@ echo "  unit tests performable  $perform_unit_tests"
 echo ""
 echo "  CFLAGS = $CFLAGS"
 echo "  LDFLAGS = $LDFLAGS"
+echo "  CPPFLAGS = $CPPFLAGS"
 
 # xrdp_configure_options.h will be written to the build directory, not the source directory
 echo '#define XRDP_CONFIGURE_OPTIONS \' > ./xrdp_configure_options.h

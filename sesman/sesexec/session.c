@@ -641,7 +641,7 @@ session_start_wrapped(struct login_info *login_info,
             /* Kill it anyway in case it did start and we just failed to
              * pick up on it */
             g_sigterm(display_pid);
-            g_waitpid(display_pid);
+            g_waitpid(display_pid, 0, 0);
         }
         else
         {
@@ -654,7 +654,7 @@ session_start_wrapped(struct login_info *login_info,
             if (window_manager_pid < 0)
             {
                 g_sigterm(display_pid);
-                g_waitpid(display_pid);
+                g_waitpid(display_pid, 0, 0);
             }
             else
             {

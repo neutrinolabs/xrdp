@@ -32,6 +32,10 @@ xrdp_dis_SOURCES = \
 xrdp_dis_LDADD = \
   $(top_builddir)/common/libcommon.la
 
+if SOLARIS
+  xrdp_dis_LDADD += -lsocket
+endif
+
 xrdp_xcon_SOURCES = \
   xcon.c
 
@@ -42,6 +46,10 @@ xrdp_sesrun_LDADD = \
   $(top_builddir)/sesman/libsesman/libsesman.la \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libipm/libipm.la
+
+if SOLARIS
+  xrdp_sesrun_LDADD += -lsocket
+endif
 
 xrdp_sesadmin_LDADD = \
   $(top_builddir)/sesman/libsesman/libsesman.la \

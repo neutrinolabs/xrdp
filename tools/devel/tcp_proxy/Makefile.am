@@ -11,3 +11,7 @@ tcp_proxy_SOURCES = \
 tcp_proxy_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(DLOPEN_LIBS)
+
+if SOLARIS
+  tcp_proxy_LDADD += -lsocket
+endif

@@ -220,6 +220,11 @@ set_sigchld_event(int sig)
     {
         g_set_wait_obj(g_sigchld_event);
     }
+
+#ifdef __sun
+    /* On solaris we need to re-register for the signal hander. */
+    g_signal_child_stop(set_sigchld_event);
+#endif
 }
 
 /******************************************************************************/
@@ -241,6 +246,7 @@ sesexec_terminate_main_loop(int status)
 static void
 process_sigchld_event(void)
 {
+    LOG(LOG_LEVEL_TRACE, "process_sigchld_event()");
     struct exit_status e;
     int pid;
 
@@ -249,6 +255,7 @@ process_sigchld_event(void)
     {
         session_process_child_exit(g_session_data, pid, &e);
     }
+    LOG(LOG_LEVEL_TRACE, "process_sigchld_event() returned");
 }
 
 /******************************************************************************/
