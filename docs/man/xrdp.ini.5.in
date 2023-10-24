@@ -34,6 +34,11 @@ with be used to select the section. If no domain name is supplied, the
 first suitable section will be used for automatic login.
 
 .TP
+\fBskiploginwindow\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP, \fByes\fP or  \fBon\fP it will skip the login window and uses the session specified in autorun or the first one in the \fBxrdp.ini\fR. It is required that all login-related fields are set, and no field in the is set to \fIask\fR in the session.
+If not specified, defaults to \fBfalse\fP.
+
+.TP
 \fBbitmap_cache\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap caching in \fBxrdp\fR(8).
 

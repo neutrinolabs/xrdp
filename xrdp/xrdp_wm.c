@@ -489,6 +489,11 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                             g_strncpy(autorun_name, val, 255);
                         }
                     }
+                    else if (g_strcasecmp(val, "skiploginwindow") == 0)
+                    {
+                        val = (char *)list_get_item(values, index);
+                        self->skip_login_window = g_text2bool(val);
+                    }
                     else if (g_strcasecmp(val, "hidelogwindow") == 0)
                     {
                         val = (char *)list_get_item(values, index);
@@ -636,7 +641,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
-    if (self->session->client_info->rdp_autologin)
+    if (self->session->client_info->rdp_autologin || self->skip_login_window)
     {
         /*
          * NOTE: this should eventually be accessed from self->xrdp_config

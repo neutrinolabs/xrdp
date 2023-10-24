@@ -1264,6 +1264,11 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             g_strncpy(globals->autorun, v, 255);
         }
 
+        else if (g_strncmp(n, "skiploginwindow", 64) == 0)
+        {
+            globals->skiploginwindow = g_text2bool(v);
+        }
+
         else if (g_strncmp(n, "hidelogwindow", 64) == 0)
         {
             globals->hidelogwindow = g_text2bool(v);
@@ -1472,6 +1477,7 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     LOG(LOG_LEVEL_DEBUG, "background:              %d", globals->background);
 
     LOG(LOG_LEVEL_DEBUG, "autorun:                 %s", globals->autorun);
+    LOG(LOG_LEVEL_DEBUG, "skiploginwindow:         %d", globals->skiploginwindow);
     LOG(LOG_LEVEL_DEBUG, "hidelogwindow:           %d", globals->hidelogwindow);
     LOG(LOG_LEVEL_DEBUG, "require_credentials:     %d", globals->require_credentials);
     LOG(LOG_LEVEL_DEBUG, "bulk_compression:        %d", globals->bulk_compression);

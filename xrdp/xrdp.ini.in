@@ -74,6 +74,7 @@ ssl_protocols=TLSv1.2, TLSv1.3
 ; If empty and no domain name is given, the first suitable section in
 ; this file will be used.
 autorun=
+#skiploginwindow=true
 
 allow_channels=true
 allow_multimon=true
