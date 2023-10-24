@@ -62,12 +62,6 @@ AC_ARG_WITH([socketdir],
                   [], [with_socketdir="$runstatedir/xrdp"])
 AC_SUBST([socketdir], [$with_socketdir])
 
-AC_ARG_WITH([sesmanruntimedir],
-  [AS_HELP_STRING([--with-sesmanruntimedir=DIR],
-                  [Use directory for sesman runtime data (default: RUNSTATEDIR/xrdp-sesman)])],
-                  [], [with_sesmanruntimedir="$runstatedir/xrdp-sesman"])
-AC_SUBST([sesmanruntimedir], [$with_sesmanruntimedir])
-
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files, no to disable]),
         [], [
@@ -655,7 +649,6 @@ echo "  pamconfdir              $pamconfdir"
 echo "  localstatedir           $localstatedir"
 echo "  runstatedir             $runstatedir"
 echo "  socketdir               $socketdir"
-echo "  sesmanruntimedir        $sesmanruntimedir"
 echo ""
 echo "  unit tests performable  $perform_unit_tests"
 echo ""

@@ -152,9 +152,10 @@ env_set_user(int uid, char **passwd_file, int display,
             // Use our PID as the XRDP_SESSION value
             g_snprintf(text, sizeof(text), "%d", g_pid);
             g_setenv("XRDP_SESSION", text, 1);
-            /* XRDP_SOCKET_PATH should be set even here. It's used by
+            /* XRDP_SOCKET_PATH should be set here. It's used by
              * xorgxrdp and the pulseaudio plugin */
-            g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
+            g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
+            g_setenv("XRDP_SOCKET_PATH", text, 1);
             /* pulse sink socket */
             g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR, display);
             g_setenv("XRDP_PULSE_SINK_SOCKET", text, 1);

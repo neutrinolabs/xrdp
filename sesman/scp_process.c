@@ -44,6 +44,7 @@
 #include "session_list.h"
 #include "sesexec_control.h"
 #include "string_calls.h"
+#include "xrdp_sockets.h"
 
 /******************************************************************************/
 
@@ -139,7 +140,7 @@ process_sys_login_request(struct pre_session_item *psi)
         {
             /* We only get here if something has gone
              * wrong with the handover to sesexec */
-            rv = scp_send_login_response(psi->client_trans, errorcode, 1);
+            rv = scp_send_login_response(psi->client_trans, errorcode, 1, -1);
             psi->dispatcher_action = E_PSD_TERMINATE_PRE_SESSION;
         }
     }
@@ -219,15 +220,15 @@ process_uds_login_request(struct pre_session_item *psi)
     int uid;
     int pid;
     char *username = NULL;
-    int server_closed = 1;
+    int server_closed;
 
     rv = g_sck_get_peer_cred(psi->client_trans->sck, &pid, &uid, NULL);
     if (rv != 0)
     {
+        errorcode = E_SCP_LOGIN_GENERAL_ERROR;
         LOG(LOG_LEVEL_INFO,
             "Unable to get peer credentials for socket %d",
             (int)psi->client_trans->sck);
-        errorcode = E_SCP_LOGIN_GENERAL_ERROR;
     }
     else
     {
@@ -252,21 +253,26 @@ process_uds_login_request(struct pre_session_item *psi)
             errorcode = authenticate_and_authorize_uds_connection(
                             psi, uid, username);
             g_free(username);
-
-            if (errorcode == E_SCP_LOGIN_OK)
-            {
-                server_closed = 0;
-            }
         }
     }
 
-    if (server_closed)
+    if (errorcode == E_SCP_LOGIN_OK)
     {
+        server_closed = 0;
+    }
+    else
+    {
+        server_closed = 1;
+
         /* Close the connection after returning from this callback */
         psi->dispatcher_action = E_PSD_TERMINATE_PRE_SESSION;
+
+        /* Never return the UID if the server is closing */
+        uid = -1;
     }
 
-    return scp_send_login_response(psi->client_trans, errorcode, server_closed);
+    return scp_send_login_response(psi->client_trans, errorcode,
+                                   server_closed, uid);
 }
 
 /******************************************************************************/
@@ -300,6 +306,58 @@ process_logout_request(struct pre_session_item *psi)
     }
 
     return 0;
+}
+
+/******************************************************************************/
+/**
+ * Create xrdp socket path for the user
+ *
+ * We do this here rather than in sesexec as we're single-threaded here
+ * and so don't have to worry about race conditions
+ *
+ * Directory is owned by UID of session, but can be accessed by
+ * the group specified in the config.
+ *
+ * Errors are logged so the caller doesn't have to
+ */
+static int
+create_xrdp_socket_path(uid_t uid)
+{
+    int rv = 1;
+    const char *sockdir_group = g_cfg->sec.session_sockdir_group;
+    int gid = 0; // Default if no group specified
+
+    char sockdir[XRDP_SOCKETS_MAXPATH];
+    g_snprintf(sockdir, sizeof(sockdir), XRDP_SOCKET_PATH, (int)uid);
+
+    // Create directory permissions 0x750, if it doesn't exist already.
+    int old_umask = g_umask_hex(0x750 ^ 0x777);
+    if (!g_directory_exist(sockdir) && !g_create_dir(sockdir))
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "create_xrdp_socket_path: Can't create %s [%s]",
+            sockdir, g_get_strerror());
+    }
+    else if (sockdir_group != NULL && sockdir_group[0] != '\0' &&
+             g_getgroup_info(sockdir_group, &gid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "create_xrdp_socket_path: Can't get GID of group %s [%s]",
+            sockdir_group, g_get_strerror());
+    }
+    else if (g_chown(sockdir, uid, gid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "create_xrdp_socket_path: Can't set owner of %s to %d:%d [%s]",
+            sockdir, uid, gid, g_get_strerror());
+    }
+    else
+    {
+        rv = 0;
+    }
+    (void)g_umask_hex(old_umask);
+
+    return rv;
 }
 
 /******************************************************************************/
@@ -385,11 +443,16 @@ process_create_session_request(struct pre_session_item *psi)
             {
                 status = E_SCP_SCREATE_NO_MEMORY;
             }
+            // Create a socket dir for this user
+            else if (create_xrdp_socket_path(psi->uid) != 0)
+            {
+                status = E_SCP_SCREATE_GENERAL_ERROR;
+            }
             // Create a sesexec process if we don't have one (UDS login)
             else if (psi->sesexec_trans == NULL && sesexec_start(psi) != 0)
             {
                 LOG(LOG_LEVEL_ERROR,
-                    "Can't start sesexec to authenticate user");
+                    "Can't start sesexec to manage session");
                 status = E_SCP_SCREATE_GENERAL_ERROR;
             }
             else

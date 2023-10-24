@@ -57,7 +57,7 @@ In this instance, the system administrator is responsible for ensuring
 the socket can only be created by a suitably privileged process.
 .PP
 If the parameter does not start with a '/', a name within
-@sesmanruntimedir@ is used.
+@socketdir@ is used.
 .RE
 
 .TP
@@ -311,6 +311,11 @@ X11 server. The use of \fIno_new_privs\fR is intended to prevent issues due
 to a setuid Xorg executable. However, if a kernel security module (such as
 AppArmor) is used to confine xrdp, \fIno_new_privs\fR may interfere with
 transitions between confinement domains.
+
+.TP
+\fBSessionSockdirGroup\fR=\fIgroup\fR
+Sets the group owner of the directories containing session sockets. This
+is normally the GID of the xrdp process so xrdp can connect to user sessions.
 
 .SH "X11 SERVER"
 Following parameters can be used in the \fB[Xvnc]\fR and

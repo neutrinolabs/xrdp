@@ -53,7 +53,6 @@ struct list;
 #define g_close_wait_obj g_delete_wait_obj
 
 int      g_rm_temp_dir(void);
-int      g_mk_socket_path(void);
 void     g_init(const char *app_name);
 void     g_deinit(void);
 void g_printf(const char *format, ...) printflike(1, 2);

@@ -107,6 +107,12 @@ struct config_security
      * @brief if the Xorg X11 server should be started with no_new_privs (Linux only)
      */
     int xorg_no_new_privileges;
+
+    /*
+     * @var session_sockdir_group
+     * @brief Group to have read access to the session sockdirs
+     */
+    char *session_sockdir_group;
 };
 
 /**

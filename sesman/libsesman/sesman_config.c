@@ -71,6 +71,7 @@
 #define SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD  "RestrictInboundClipboard"
 #define SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL       "AllowAlternateShell"
 #define SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES      "XorgNoNewPrivileges"
+#define SESMAN_CFG_SEC_SESSION_SOCKDIR_GROUP       "SessionSockdirGroup"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
@@ -312,6 +313,7 @@ config_read_security(int file, struct config_security *sc,
     sc->xorg_no_new_privileges = 1;
     sc->ts_users = g_strdup("");
     sc->ts_admins = g_strdup("");
+    sc->session_sockdir_group = g_strdup("");
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -324,29 +326,25 @@ config_read_security(int file, struct config_security *sc,
         {
             sc->allow_root = g_text2bool(value);
         }
-
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_LOGIN_RETRY))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_LOGIN_RETRY))
         {
             sc->login_retry = g_atoi(value);
         }
-
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_USR_GROUP))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_USR_GROUP))
         {
             g_free(sc->ts_users);
             sc->ts_users = g_strdup(value);
         }
-
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP))
         {
             g_free(sc->ts_admins);
             sc->ts_admins = g_strdup(value);
         }
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
         {
             sc->ts_always_group_check = g_text2bool(value);
         }
-
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD))
         {
             char unrecognised[256];
             sc->restrict_outbound_clipboard =
@@ -360,7 +358,7 @@ config_read_security(int file, struct config_security *sc,
                     unrecognised);
             }
         }
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD))
         {
             char unrecognised[256];
             sc->restrict_inbound_clipboard =
@@ -374,16 +372,20 @@ config_read_security(int file, struct config_security *sc,
                     unrecognised);
             }
         }
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL))
         {
             sc->allow_alternate_shell =
                 g_text2bool(value);
         }
-
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES))
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES))
         {
             sc->xorg_no_new_privileges =
                 g_text2bool(value);
+        }
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_SESSION_SOCKDIR_GROUP))
+        {
+            g_free(sc->session_sockdir_group);
+            sc->session_sockdir_group = g_strdup(value);
         }
     }
 
@@ -684,6 +686,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    RestrictInboundClipboard:  %s", restrict_s);
     g_writeln("    TSUsersGroup:              %s", sc->ts_users);
     g_writeln("    TSAdminsGroup:             %s", sc->ts_admins);
+    g_writeln("    SessionSockdirGroup:       %s", sc->session_sockdir_group);
 
 
     /* Xorg */
@@ -741,6 +744,7 @@ config_free(struct config_sesman *cs)
         list_delete(cs->env_values);
         g_free(cs->sec.ts_users);
         g_free(cs->sec.ts_admins);
+        g_free(cs->sec.session_sockdir_group);
         g_free(cs);
     }
 }

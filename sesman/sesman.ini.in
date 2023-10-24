@@ -44,6 +44,12 @@ RestrictInboundClipboard=none
 ; however, interfere with the use of security modules such as AppArmor.
 ; Leave this unset unless you need to disable it.
 #XorgNoNewPrivileges=true
+; Specify the group which is to have read access to the directory where
+; local sockets for the session are created. This is normally the GID
+; which the xrdp process runs as.
+; Default is 'root'
+#SessionSockdirGroup=root
+
 
 [Sessions]
 ;; X11DisplayOffset - x11 display number offset

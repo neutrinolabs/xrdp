@@ -95,7 +95,7 @@ int main(int argc, char **argv)
         if ((rv = scp_send_uds_login_request(t)) == 0 &&
                 (rv = wait_for_sesman_reply(t, E_SCP_LOGIN_RESPONSE)) == 0)
         {
-            rv = scp_get_login_response(t, &login_result, NULL);
+            rv = scp_get_login_response(t, &login_result, NULL, NULL);
             if (rv == 0)
             {
                 if (login_result != E_SCP_LOGIN_OK)
