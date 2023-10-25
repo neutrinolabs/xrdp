@@ -119,5 +119,10 @@ enum IRP_MN
     IRP_MN_NOTIFY_CHANGE_DIRECTORY  = 0x00000002
 };
 
+/*
+ * General Capability Set (2.2.2.7.1)
+ */
+/* extendedPDU fields */
+#define RDPDR_USER_LOGGEDON_PDU         0x00000004
 
 #endif /* MS_RDPEFS_H */
