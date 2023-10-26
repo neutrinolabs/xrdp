@@ -98,11 +98,20 @@ enum COMPLETION_TYPE
 
 /* globals */
 extern int g_rdpdr_chan_id; /* in chansrv.c */
-int g_is_printer_redir_supported = 0;
-int g_is_port_redir_supported = 0;
-int g_is_drive_redir_supported = 0;
-int g_is_smartcard_redir_supported = 0;
-int g_drive_redir_version = 1;
+
+/* Capabilities from GENERAL_CAPS_SET in Client Core Capability Response */
+struct client_caps
+{
+    tui32 extended_pdu;
+    int printer_redir_supported;
+    int port_redir_supported;
+    int drive_redir_supported;
+    int smartcard_redir_supported;
+    unsigned int drive_redir_version;
+};
+
+static struct client_caps g_ccap;
+
 tui32 g_completion_id = 1;
 
 tui32 g_clientID;           /* unique client ID - announced by client */
@@ -370,19 +379,18 @@ devredir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                     case RDP_CLIENT_60_61:
                         break;
                 }
-                // LK_TODO devredir_send_server_clientID_confirm();
             }
             break;
 
         case PAKID_CORE_CLIENT_NAME:
             /* client is telling us its computer name; do we even care? */
 
-            /* let client know login was successful */
-            devredir_send_server_user_logged_on();
-            usleep(1000 * 100);
-
-            /* let client know our capabilities */
-            devredir_send_server_core_cap_req();
+            /* See 3.3.5.1.6 for sequencing rules */
+            if (g_client_rdp_version >= RDP_CLIENT_51)
+            {
+                /* let client know our capabilities */
+                devredir_send_server_core_cap_req();
+            }
 
             /* send confirm clientID */
             devredir_send_server_clientID_confirm();
@@ -390,6 +398,19 @@ devredir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 
         case PAKID_CORE_CLIENT_CAPABILITY:
             rv = devredir_proc_client_core_cap_resp(ls);
+            if (rv == 0)
+            {
+                if ((g_ccap.extended_pdu & RDPDR_USER_LOGGEDON_PDU) != 0)
+                {
+                    /* Tell client to announce remaining devices */
+                    devredir_send_server_user_logged_on();
+                }
+                else if (g_client_rdp_version >= RDP_CLIENT_51)
+                {
+                    /* See 3.3.5.1.7 */
+                    devredir_send_server_clientID_confirm();
+                }
+            }
             break;
 
         case PAKID_CORE_DEVICELIST_ANNOUNCE:
@@ -424,7 +445,7 @@ done:
 int
 devredir_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
-    if (g_is_smartcard_redir_supported)
+    if (g_ccap.smartcard_redir_supported)
     {
         return scard_get_wait_objs(objs, count, timeout);
     }
@@ -435,7 +456,7 @@ devredir_get_wait_objs(tbus *objs, int *count, int *timeout)
 int
 devredir_check_wait_objs(void)
 {
-    if (g_is_smartcard_redir_supported)
+    if (g_ccap.smartcard_redir_supported)
     {
         return scard_check_wait_objs();
     }
@@ -735,6 +756,47 @@ devredir_send_drive_dir_request(IRP *irp, tui32 device_id,
 ******************************************************************************/
 
 /**
+ * Process a GENERAL_CAPS_SET packet from the client
+ * @param s Stream. CAPABILITY_HEADER is already read
+ * @param cap_len Amount of data left in stream for the packet
+ * @return 0 for success, -1 otherwise
+ *
+ * Caller is responsible for skipping unused data from this
+ * capability in the input stream.
+ */
+static int
+process_client_general_caps_set(struct stream *s, unsigned int cap_len,
+                                struct client_caps *ccap)
+{
+    int rv = -1;
+
+    // Data we don't check at the start of the packet
+#define PACKET_SKIP_LENGTH ( \
+                             4 + /* osType */ \
+                             4 + /* osVersion */ \
+                             2 + /* protocolMajorVersion */ \
+                             2 + /* protocolMinorVersion */ \
+                             4 + /* ioCode1 */ \
+                             4) /* ioCode2 */
+
+    if (cap_len < (PACKET_SKIP_LENGTH + 4))
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "[MS-RDPEFS] GENERAL_CAPS_SET: Short packet (%u bytes) encountered",
+            cap_len);
+    }
+    else
+    {
+        xstream_seek(s, PACKET_SKIP_LENGTH);
+        xstream_rd_u32_le(s, ccap->extended_pdu);
+        rv = 0;
+    }
+
+    return rv;
+#undef PACKET_SKIP_LENGTH
+}
+
+/**
  * @brief process client's response to our core_capability_req() msg
  *
  * @param   s   stream containing client's response
@@ -743,12 +805,16 @@ devredir_send_drive_dir_request(IRP *irp, tui32 device_id,
 static int
 devredir_proc_client_core_cap_resp(struct stream *s)
 {
+#define CAPABILITY_HEADER_LEN 8
     int i;
     tui16 num_caps;
     tui16 cap_type;
     tui16 cap_len;
     tui32 cap_version;
-    char *holdp;
+
+    // Reset to defaults
+    memset(&g_ccap, 0, sizeof(g_ccap));
+    g_ccap.drive_redir_version = 1;
 
     if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CORE_CAPABLITY_RSP"))
     {
@@ -759,8 +825,8 @@ devredir_proc_client_core_cap_resp(struct stream *s)
 
     for (i = 0; i < num_caps; i++)
     {
-        holdp = s->p;
-        if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPEFS] CAPABILITY_HEADER"))
+        if (!s_check_rem_and_log(s, CAPABILITY_HEADER_LEN,
+                                 "Parsing [MS-RDPEFS] CAPABILITY_HEADER"))
         {
             return -1;
         }
@@ -769,46 +835,55 @@ devredir_proc_client_core_cap_resp(struct stream *s)
         xstream_rd_u32_le(s, cap_version);
         /* Convert the length to a remaining length. Underflow is possible,
          * but this is an unsigned type so that's OK */
-        cap_len -= (s->p - holdp);
-        if (cap_len > 0 &&
-                !s_check_rem_and_log(s, cap_len, "Parsing [MS-RDPEFS] CAPABILITY_HEADER length"))
+        cap_len -= CAPABILITY_HEADER_LEN;
+        if (!s_check_rem_and_log(s, cap_len,
+                                 "Parsing [MS-RDPEFS] CAPABILITY_HEADER data"))
         {
             return -1;
         }
 
+        // Save our stream position. iso_hdr is otherwise
+        // unused in this stream
+        s_push_layer(s, iso_hdr, 0);
         switch (cap_type)
         {
             case CAP_GENERAL_TYPE:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "got CAP_GENERAL_TYPE");
+                if (process_client_general_caps_set(s, cap_len, &g_ccap) < 0)
+                {
+                    return -1;
+                }
                 break;
 
             case CAP_PRINTER_TYPE:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "got CAP_PRINTER_TYPE");
-                g_is_printer_redir_supported = 1;
+                g_ccap.printer_redir_supported = 1;
                 break;
 
             case CAP_PORT_TYPE:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "got CAP_PORT_TYPE");
-                g_is_port_redir_supported = 1;
+                g_ccap.port_redir_supported = 1;
                 break;
 
             case CAP_DRIVE_TYPE:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "got CAP_DRIVE_TYPE");
-                g_is_drive_redir_supported = 1;
+                g_ccap.drive_redir_supported = 1;
                 if (cap_version == 2)
                 {
-                    g_drive_redir_version = 2;
+                    g_ccap.drive_redir_version = 2;
                 }
                 break;
 
             case CAP_SMARTCARD_TYPE:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "got CAP_SMARTCARD_TYPE");
-                g_is_smartcard_redir_supported = (scard_init() == 0);
+                g_ccap.smartcard_redir_supported = (scard_init() == 0);
                 break;
         }
+        s_pop_layer(s, iso_hdr); // Move back to start of capability data
         xstream_seek(s, cap_len);
     }
     return 0;
+#undef CAPABILITY_HEADER_LEN
 }
 
 static int
