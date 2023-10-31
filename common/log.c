@@ -55,7 +55,7 @@ static struct log_config *g_staticLogConfig = NULL;
  * @return see open(2) return values
  *
  */
-int
+static int
 internal_log_file_open(const char *fname)
 {
     int ret = -1;
@@ -88,7 +88,7 @@ internal_log_file_open(const char *fname)
  * @return syslog equivalent logging level
  *
  */
-int
+static int
 internal_log_xrdp2syslog(const enum logLevels lvl)
 {
     switch (lvl)
@@ -275,7 +275,7 @@ internal_log_text2level(const char *buf)
 }
 
 /******************************************************************************/
-struct log_config *
+static struct log_config *
 internal_config_read_logging(int file,
                              const char *applicationName,
                              const char *section_prefix)
@@ -547,7 +547,7 @@ internal_log_config_copy_levels(struct log_config *dest,
 #endif
 }
 
-void
+static void
 internal_log_config_copy(struct log_config *dest, const struct log_config *src)
 {
     if (src != NULL && dest != NULL)

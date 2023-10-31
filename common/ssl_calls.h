@@ -108,7 +108,7 @@ ssl_get_cipher_name(const struct ssl_tls *ssl);
 int
 ssl_get_protocols_from_string(const char *str, long *ssl_protocols);
 const char *
-get_openssl_version();
+get_openssl_version(void);
 tintptr
 ssl_get_rwo(const struct ssl_tls *ssl);
 

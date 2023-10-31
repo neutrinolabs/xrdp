@@ -50,14 +50,6 @@ xrdp_fastpath_delete(struct xrdp_fastpath *self)
 }
 
 /*****************************************************************************/
-/* returns error */
-int
-xrdp_fastpath_reset(struct xrdp_fastpath *self)
-{
-    return 0;
-}
-
-/*****************************************************************************/
 int
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 {

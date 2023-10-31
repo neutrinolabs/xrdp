@@ -20,6 +20,7 @@
 #include <config_ac.h>
 #endif
 
+#include "xrdp_orders_rail.h"
 #include "libxrdp.h"
 #include "ms-rdpegdi.h"
 #include "xrdp_rail.h"

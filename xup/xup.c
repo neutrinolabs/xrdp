@@ -50,7 +50,7 @@ lib_send_copy(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_start(struct mod *mod, int w, int h, int bpp)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_start");
@@ -145,7 +145,7 @@ lib_data_in(struct trans *trans)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_connect(struct mod *mod)
 {
     int error;
@@ -262,7 +262,7 @@ lib_mod_connect(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
               tbus param3, tbus param4)
 {
@@ -1754,7 +1754,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_signal(struct mod *mod)
 {
     // no-op
@@ -1763,7 +1763,7 @@ lib_mod_signal(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_end(struct mod *mod)
 {
     if (mod->screen_shmem_pixels != 0)
@@ -1776,7 +1776,7 @@ lib_mod_end(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
@@ -1805,7 +1805,7 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
@@ -1822,7 +1822,7 @@ lib_mod_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_check_wait_objs(struct mod *mod)
 {
     int rv;
@@ -1841,7 +1841,7 @@ lib_mod_check_wait_objs(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE,
@@ -1852,7 +1852,7 @@ lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 
 /******************************************************************************/
 /* return error */
-int
+static int
 lib_mod_suppress_output(struct mod *amod, int suppress,
                         int left, int top, int right, int bottom)
 {

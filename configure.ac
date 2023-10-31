@@ -199,6 +199,9 @@ AX_GCC_FUNC_ATTRIBUTE([format])
 AX_TYPE_SOCKLEN_T
 AX_CFLAGS_WARN_ALL
 AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
+AX_APPEND_COMPILE_FLAGS([-Wmissing-prototypes], ,[-Werror])
+# libpainter and librfxcodec still issue this warning
+AX_APPEND_COMPILE_FLAGS([-Wno-error=missing-prototypes], ,[-Werror])
 
 AM_COND_IF([LINUX],
   [AX_APPEND_COMPILE_FLAGS([-Werror])]) # bsd has warnings that have not been fixed yet

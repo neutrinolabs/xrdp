@@ -360,7 +360,7 @@ rail_deinit(void)
     return 0;
 }
 
-int
+static int
 rail_startup(void)
 {
     int dummy;
@@ -547,7 +547,7 @@ rail_close_window(int window_id)
 }
 
 /*****************************************************************************/
-void
+static void
 my_timeout(void *data)
 {
     LOG_DEVEL(LOG_LEVEL_DEBUG, "my_timeout: g_got_focus %d", g_got_focus);
@@ -1309,7 +1309,7 @@ rail_destroy_window(Window window_id)
 }
 
 /*****************************************************************************/
-static int
+int
 rail_show_window(Window window_id, int show_state)
 {
     int flags;
@@ -1492,7 +1492,7 @@ rail_create_window(Window window_id, Window owner_id)
 
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
-int
+static int
 rail_configure_request_window(XConfigureRequestEvent *config)
 {
     int num_window_rects = 1;
@@ -1696,8 +1696,9 @@ rail_configure_request_window(XConfigureRequestEvent *config)
 }
 
 /*****************************************************************************/
+#if 0
 /* returns 0, event handled, 1 unhandled */
-int
+static int
 rail_configure_window(XConfigureEvent *config)
 {
     int num_window_rects = 1;
@@ -1778,6 +1779,7 @@ rail_configure_window(XConfigureEvent *config)
     free_stream(s);
     return 0;
 }
+#endif
 
 /*****************************************************************************/
 static int
