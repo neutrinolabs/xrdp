@@ -333,6 +333,17 @@ xrdp_painter_draw_bitmap(struct xrdp_painter *self,
                          int x, int y, int cx, int cy);
 int
 xrdp_painter_text_width(struct xrdp_painter *self, const char *text);
+
+/* As above, but have a maximum Unicode character count for the string */
+int
+xrdp_painter_text_width_count(struct xrdp_painter *self,
+                              const char *text, unsigned int c32_count);
+
+/* Size of a string composed of a repeated number of Unicode characters */
+int
+xrdp_painter_repeated_char_width(struct xrdp_painter *self,
+                                 char32_t c32, unsigned int repeat_count);
+
 unsigned int
 xrdp_painter_font_body_height(const struct xrdp_painter *self);
 int
@@ -348,6 +359,11 @@ xrdp_painter_draw_text2(struct xrdp_painter *self,
                         int box_left, int box_top,
                         int box_right, int box_bottom,
                         int x, int y, char *data, int data_len);
+int
+xrdp_painter_draw_char(struct xrdp_painter *self,
+                       struct xrdp_bitmap *bitmap,
+                       int x, int y, char32_t chr,
+                       unsigned int repeat_count);
 int
 xrdp_painter_copy(struct xrdp_painter *self,
                   struct xrdp_bitmap *src,
@@ -403,13 +419,7 @@ rect_contained_by(struct xrdp_rect *in1, int left, int top,
 int
 check_bounds(struct xrdp_bitmap *b, int *x, int *y, int *cx, int *cy);
 int
-add_char_at(char *text, int text_size, twchar ch, int index);
-int
-remove_char_at(char *text, int text_size, int index);
-int
 set_string(char **in_str, const char *in);
-int
-wchar_repeat(twchar *dest, int dest_size_in_wchars, twchar ch, int repeat);
 
 /* in lang.c */
 struct xrdp_key_info *
@@ -420,7 +430,7 @@ int
 get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
                           int caps_lock, int num_lock, int scroll_lock,
                           struct xrdp_keymap *keymap);
-twchar
+char32_t
 get_char_from_scan_code(int device_flags, int scan_code, int *keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         struct xrdp_keymap *keymap);

@@ -52,9 +52,6 @@ static char w_char[] =
 };
 #endif
 
-// Unicode definitions
-#define UNICODE_WHITE_SQUARE 0x25a1
-
 // First character allocated in the 'struct xrdp_font.chars' array
 #define FIRST_CHAR ' '
 
@@ -354,9 +351,9 @@ xrdp_font_create(struct xrdp_wm *wm, unsigned int dpi)
                 }
 
                 // Find a default glyph
-                if (char_count > UNICODE_WHITE_SQUARE)
+                if (char_count > UCS_WHITE_SQUARE)
                 {
-                    self->default_char = &self->chars[UNICODE_WHITE_SQUARE];
+                    self->default_char = &self->chars[UCS_WHITE_SQUARE];
                 }
                 else if (char_count > '?')
                 {

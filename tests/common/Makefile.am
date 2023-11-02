@@ -16,7 +16,9 @@ test_common_SOURCES = \
     test_common_main.c \
     test_fifo_calls.c \
     test_list_calls.c \
+    test_parse.c \
     test_string_calls.c \
+    test_string_calls_unicode.c \
     test_os_calls.c \
     test_os_calls_signals.c \
     test_ssl_calls.c \

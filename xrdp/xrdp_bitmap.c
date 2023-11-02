@@ -621,8 +621,6 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
     struct xrdp_rect r2;
     struct xrdp_painter *painter;
     unsigned int font_height;
-    twchar wtext[256];
-    char text[256];
     char *p;
 
     if (self == 0) /* if no bitmap */
@@ -821,10 +819,9 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
 
         if (self->password_char != 0)
         {
-            i = g_mbstowcs(0, self->caption1, 0);
-            g_memset(text, self->password_char, i);
-            text[i] = 0;
-            xrdp_painter_draw_text(painter, self, 4, 2, text);
+            unsigned int repeat_count = utf8_char_count(self->caption1);
+            xrdp_painter_draw_char(painter, self, 4, 2, self->password_char,
+                                   repeat_count);
         }
         else
         {
@@ -838,18 +835,16 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
             {
                 if (self->password_char != 0)
                 {
-                    wchar_repeat(wtext, 255, self->password_char, self->edit_pos);
-                    wtext[self->edit_pos] = 0;
-                    g_wcstombs(text, wtext, 255);
+                    w = xrdp_painter_repeated_char_width(painter,
+                                                         self->password_char,
+                                                         self->edit_pos);
                 }
                 else
                 {
-                    g_mbstowcs(wtext, self->caption1, 255);
-                    wtext[self->edit_pos] = 0;
-                    g_wcstombs(text, wtext, 255);
+                    w = xrdp_painter_text_width_count(painter, self->caption1,
+                                                      self->edit_pos);
                 }
 
-                w = xrdp_painter_text_width(painter, text);
                 painter->fg_color = self->wm->white;
                 painter->rop = 0x5a;
                 xrdp_painter_fill_rect(painter, self, 4 + w, 3, 2, self->height - 6);
@@ -1027,14 +1022,11 @@ int
 xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
                      int param1, int param2)
 {
-    twchar c;
     int n;
     int i;
     int shift;
     int ext;
     int scan_code;
-    int num_bytes;
-    int num_chars;
     struct xrdp_bitmap *b;
     struct xrdp_bitmap *focus_out_control;
 
@@ -1174,7 +1166,7 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             else if ((scan_code == 77 || scan_code == 80) &&
                      (ext || self->wm->num_lock == 0))
             {
-                if (self->edit_pos < g_mbstowcs(0, self->caption1, 0))
+                if (self->edit_pos < (int)utf8_char_count(self->caption1))
                 {
                     self->edit_pos++;
                     xrdp_bitmap_invalidate(self, 0);
@@ -1183,14 +1175,14 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             /* backspace */
             else if (scan_code == 14)
             {
-                n = g_mbstowcs(0, self->caption1, 0);
+                n = utf8_char_count(self->caption1);
 
                 if (n > 0)
                 {
                     if (self->edit_pos > 0)
                     {
                         self->edit_pos--;
-                        remove_char_at(self->caption1, 255, self->edit_pos);
+                        utf8_remove_char_at(self->caption1, self->edit_pos);
                         xrdp_bitmap_invalidate(self, 0);
                     }
                 }
@@ -1199,13 +1191,13 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             else if (scan_code == 83  &&
                      (ext || self->wm->num_lock == 0))
             {
-                n = g_mbstowcs(0, self->caption1, 0);
+                n = utf8_char_count(self->caption1);
 
                 if (n > 0)
                 {
                     if (self->edit_pos < n)
                     {
-                        remove_char_at(self->caption1, 255, self->edit_pos);
+                        utf8_remove_char_at(self->caption1, self->edit_pos);
                         xrdp_bitmap_invalidate(self, 0);
                     }
                 }
@@ -1214,7 +1206,7 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             else if (scan_code == 79  &&
                      (ext || self->wm->num_lock == 0))
             {
-                n = g_mbstowcs(0, self->caption1, 0);
+                n = utf8_char_count(self->caption1);
 
                 if (self->edit_pos < n)
                 {
@@ -1234,16 +1226,15 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             }
             else
             {
-                c = get_char_from_scan_code
-                    (param2, scan_code, self->wm->keys, self->wm->caps_lock,
-                     self->wm->num_lock, self->wm->scroll_lock,
-                     &(self->wm->keymap));
-                num_chars = g_mbstowcs(0, self->caption1, 0);
-                num_bytes = g_strlen(self->caption1);
-
-                if ((c >= 32) && (num_chars < 127) && (num_bytes < 250))
+                char32_t c = get_char_from_scan_code
+                             (param2, scan_code, self->wm->keys, self->wm->caps_lock,
+                              self->wm->num_lock, self->wm->scroll_lock,
+                              &(self->wm->keymap));
+                // Add a printing character to the string. If successful,
+                // bump the edit position and re-display the string
+                if (c >= ' ' &&
+                        utf8_add_char_at(self->caption1, 256, c, self->edit_pos))
                 {
-                    add_char_at(self->caption1, 255, c, self->edit_pos);
                     self->edit_pos++;
                     xrdp_bitmap_invalidate(self, 0);
                 }

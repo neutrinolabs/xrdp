@@ -244,35 +244,11 @@ xrdp_orders_send_window_icon(struct xrdp_orders *self,
 static int
 xrdp_orders_send_as_unicode(struct stream *s, const char *text)
 {
-    int str_chars;
-    int index;
-    int i32;
-    int len;
-    twchar *wdst;
+    unsigned int text_len = strlen(text);
+    int i32 = utf8_as_utf16_word_count(text, text_len) * 2;
 
-    len = g_strlen(text) + 1;
-
-    wdst = (twchar *) g_malloc(sizeof(twchar) * len, 1);
-    if (wdst == 0)
-    {
-        return 1;
-    }
-    str_chars = g_mbstowcs(wdst, text, len);
-    if (str_chars > 0)
-    {
-        i32 = str_chars * 2;
-        out_uint16_le(s, i32);
-        for (index = 0; index < str_chars; index++)
-        {
-            i32 = wdst[index];
-            out_uint16_le(s, i32);
-        }
-    }
-    else
-    {
-        out_uint16_le(s, 0);
-    }
-    g_free(wdst);
+    out_uint16_le(s, i32);
+    out_utf8_as_utf16_le(s, text, text_len);
     return 0;
 }
 
@@ -280,21 +256,9 @@ xrdp_orders_send_as_unicode(struct stream *s, const char *text)
 static int
 xrdp_orders_get_unicode_bytes(const char *text)
 {
-    int num_chars;
-
-    num_chars = g_mbstowcs(0, text, 0);
-    if (num_chars < 0)
-    {
-        /* g_mbstowcs failed, we ignore that text by returning zero bytes */
-        num_chars = 0;
-    }
-    else
-    {
-        /* calculate the number of bytes of the resulting null-terminated wide-string */
-        num_chars = (num_chars + 1) * 2;
-    }
-
-    return num_chars;
+    unsigned int text_len = strlen(text);
+    /* Add 1 to word size to include length ([MS-RDPERP] 2.2.1.2.1) */
+    return (utf8_as_utf16_word_count(text, text_len) + 1) * 2;
 }
 
 /*****************************************************************************/

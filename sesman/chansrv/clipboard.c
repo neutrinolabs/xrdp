@@ -561,71 +561,36 @@ clipboard_send_format_ack(void)
 }
 
 /*****************************************************************************/
-/* returns number of bytes written */
-int
-clipboard_out_unicode(struct stream *s, const char *text, int num_chars)
+/**
+ * Output null-terminated string as Unicode with a null terminator
+ * @param s stream
+ * @param text UTF-8 String
+ */
+static void
+clipboard_out_utf8_as_utf16_le(struct stream *s, const char *text)
 {
-    int index;
-    int lnum_chars;
-    twchar *ltext;
+    out_utf8_as_utf16_le(s, text, strlen(text) + 1);
+}
+
+/*****************************************************************************/
+unsigned int
+clipboard_in_utf16_le_as_utf8(struct stream *s, char *text,
+                              unsigned int num_chars)
+{
+    char *orig_p = s->p;
+    unsigned int needed_chars;
 
     if ((num_chars < 1) || (text == 0))
     {
         return 0;
     }
 
-    lnum_chars = g_mbstowcs(0, text, num_chars);
-
-    if (lnum_chars < 0)
+    needed_chars = in_utf16_le_terminated_as_utf8(s, text, num_chars);
+    if (needed_chars > num_chars)
     {
-        return 0;
+        LOG(LOG_LEVEL_WARNING, "UTF-16 string was truncated on input");
     }
-
-    ltext = (twchar *) g_malloc((num_chars + 1) * sizeof(twchar), 1);
-    g_mbstowcs(ltext, text, num_chars);
-    index = 0;
-
-    while (index < num_chars)
-    {
-        out_uint16_le(s, ltext[index]);
-        index++;
-    }
-
-    g_free(ltext);
-    return index * 2;
-}
-
-/*****************************************************************************/
-/* returns number of bytes read */
-int
-clipboard_in_unicode(struct stream *s, char *text, int *num_chars)
-{
-    int index;
-    twchar *ltext;
-    twchar chr;
-
-    if ((num_chars == 0) || (*num_chars < 1) || (text == 0))
-    {
-        return 0;
-    }
-    ltext = (twchar *) g_malloc(512 * sizeof(twchar), 1);
-    index = 0;
-    while (s_check_rem(s, 2))
-    {
-        in_uint16_le(s, chr);
-        if (index < 511)
-        {
-            ltext[index] = chr;
-        }
-        index++;
-        if (chr == 0)
-        {
-            break;
-        }
-    }
-    *num_chars = g_wcstombs(text, ltext, *num_chars);
-    g_free(ltext);
-    return index * 2;
+    return s->p - orig_p;
 }
 
 static char windows_native_format[] =
@@ -660,35 +625,35 @@ clipboard_send_format_announce(int xrdp_clip_type)
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_format_announce: XRDP_CB_FILE");
                 /* canned response for "file" */
                 out_uint32_le(s, CB_FORMAT_FILE_GROUP_DESCRIPTOR);
-                clipboard_out_unicode(s, "FileGroupDescriptorW", 21);
+                clipboard_out_utf8_as_utf16_le(s, "FileGroupDescriptorW");
                 out_uint32_le(s, 0x0000c0ba);
-                clipboard_out_unicode(s, "FileContents", 13);
+                clipboard_out_utf8_as_utf16_le(s, "FileContents");
                 out_uint32_le(s, 0x0000c0c1);
-                clipboard_out_unicode(s, "DropEffect", 11);
+                clipboard_out_utf8_as_utf16_le(s, "DropEffect");
                 break;
             case XRDP_CB_BITMAP:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_format_announce: XRDP_CB_BITMAP");
                 /* canned response for "bitmap" */
                 out_uint32_le(s, 0x0000c004);
-                clipboard_out_unicode(s, "Native", 7);
+                clipboard_out_utf8_as_utf16_le(s, "Native");
                 out_uint32_le(s, 0x00000003);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 out_uint32_le(s, 0x00000008);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 out_uint32_le(s, 0x00000011);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 break;
             case XRDP_CB_TEXT:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_format_announce: XRDP_CB_TEXT");
                 /* canned response for "bitmap" */
                 out_uint32_le(s, 0x0000000d);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 out_uint32_le(s, 0x00000010);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 out_uint32_le(s, 0x00000001);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 out_uint32_le(s, 0x00000007);
-                clipboard_out_unicode(s, "", 1);
+                clipboard_out_utf8_as_utf16_le(s, "");
                 break;
             default:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_format_announce: unknown "
@@ -788,37 +753,27 @@ clipboard_send_data_response_for_text(const char *data, int data_size)
     struct stream *s;
     int size;
     int rv;
-    int num_chars;
+    int num_words;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data_size %d",
               data_size);
     LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "clipboard send data response:", data, data_size);
-    num_chars = g_mbstowcs(0, data, 0);
-    if (num_chars < 0)
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_data_response_for_text: "
-                  "bad string");
-        num_chars = 0;
-    }
+    num_words = utf8_as_utf16_word_count(data, data_size);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data_size %d "
-              "num_chars %d", data_size, num_chars);
+              "num_words %d", data_size, num_words);
     make_stream(s);
-    init_stream(s, 64 + num_chars * 2);
+    init_stream(s, 64 + num_words * 2);
     out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
     out_uint16_le(s, CB_RESPONSE_OK); /* 1 status */
-    out_uint32_le(s, num_chars * 2 + 2); /* length */
-    if (clipboard_out_unicode(s, data, num_chars) != num_chars * 2)
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_data_response_for_text: error "
-                  "clipboard_out_unicode didn't write right number of bytes");
-    }
+    out_uint32_le(s, num_words * 2 + 2); /* length */
+    out_utf8_as_utf16_le(s, data, data_size);
     out_uint16_le(s, 0); /* nil for string */
     out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data out, "
               "sending CLIPRDR_DATA_RESPONSE (clip_msg_id = 5) size %d "
-              "num_chars %d", size, num_chars);
+              "num_words %d", size, num_words);
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
@@ -991,10 +946,8 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
                                   int clip_msg_len)
 {
     int formatId;
-    int count;
     int bytes;
     char desc[256];
-    char *holdp;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_format_announce: "
               "CLIPRDR_FORMAT_ANNOUNCE");
@@ -1013,18 +966,14 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
         if (g_cliprdr_flags & CB_USE_LONG_FORMAT_NAMES)
         {
             /* CLIPRDR_LONG_FORMAT_NAME */
-            count = 255;
-            bytes = clipboard_in_unicode(s, desc, &count);
+            bytes = clipboard_in_utf16_le_as_utf8(s, desc, sizeof(desc));
             clip_msg_len -= bytes;
         }
         else
         {
             /* CLIPRDR_SHORT_FORMAT_NAME */
             /* 32 ASCII 8 characters or 16 Unicode characters */
-            count = 15;
-            holdp = s->p;
-            clipboard_in_unicode(s, desc, &count);
-            s->p = holdp + 32;
+            in_utf16_le_fixed_as_utf8(s, 16, desc, sizeof(desc));
             desc[15] = 0;
             clip_msg_len -= 32;
         }
@@ -1320,71 +1269,31 @@ clipboard_process_data_response_for_text(struct stream *s,
         int clip_msg_len)
 {
     XSelectionRequestEvent *lxev = &g_saved_selection_req_event;
-    twchar *wtext;
-    twchar wchr;
-    int len;
-    int index;
-    int byte_count;
+    unsigned int byte_count;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_text: ");
-    len = (int)(s->end - s->p);
-    if (len < 1)
+
+    /* Get the buffer size we need */
+    byte_count = in_utf16_le_terminated_as_utf8_length(s);
+
+    g_free(g_clip_c2s.data);
+    g_clip_c2s.total_bytes = 0;
+    if ((g_clip_c2s.data = (char *)g_malloc(byte_count, 0)) == NULL)
     {
-        len = 0;
-    }
-    byte_count = ((len / 2) + 1) * sizeof(twchar);
-    wtext = (twchar *) g_malloc(byte_count, 0);
-    if (wtext == 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Can't allocate %d bytes for text clip response",
+        LOG(LOG_LEVEL_ERROR, "Can't allocate %u bytes for text clip response",
             byte_count);
 
         clipboard_refuse_selection(lxev);
     }
     else
     {
-        index = 0;
-        while (s_check_rem(s, 2))
-        {
-            in_uint16_le(s, wchr);
-            wtext[index] = wchr;
-            if (wchr == 0)
-            {
-                break;
-            }
-            index++;
-        }
-        wtext[index] = 0;
-        g_free(g_clip_c2s.data);
-        g_clip_c2s.data = 0;
-        g_clip_c2s.total_bytes = 0;
-        len = g_wcstombs(0, wtext, 0);
-        if (len < 0)
-        {
-            LOG(LOG_LEVEL_ERROR,
-                "Received malformed Unicode paste text from client");
-            clipboard_refuse_selection(lxev);
-        }
-        else
-        {
-            byte_count = len + 16;
-            g_clip_c2s.data = (char *) g_malloc(byte_count, 0);
-            if (g_clip_c2s.data == 0)
-            {
-                LOG(LOG_LEVEL_ERROR,
-                    "Can't allocate %d bytes for text clip response",
-                    byte_count);
-                clipboard_refuse_selection(lxev);
-            }
-            else
-            {
-                g_wcstombs(g_clip_c2s.data, wtext, len + 1);
-                g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
-                g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
-                clipboard_provide_selection_c2s(lxev, lxev->target);
-            }
-        }
-        g_free(wtext);
+        /* Re-parse the data into the allocated buffer */
+        in_utf16_le_terminated_as_utf8(s, g_clip_c2s.data, byte_count);
+        --byte_count; /* Ignore the terminator at the end */
+
+        g_clip_c2s.total_bytes = byte_count;
+        g_clip_c2s.read_bytes_done = byte_count;
+        clipboard_provide_selection_c2s(lxev, lxev->target);
     }
     return 0;
 }

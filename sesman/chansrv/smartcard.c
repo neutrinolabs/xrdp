@@ -34,10 +34,6 @@
  * Section 14 : Describes the NDR
  */
 
-/*
- * smartcard redirection support
- */
-
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -1094,6 +1090,17 @@ scard_send_IsContextValid(IRP *irp, char *context, int context_bytes)
     free_stream(s);
 }
 
+/*****************************************************************************/
+static void
+align_s(struct stream *s, unsigned int boundary)
+{
+    unsigned int over = (unsigned int)(s->p - s->data) % boundary;
+    if (over != 0)
+    {
+        out_uint8s(s, boundary - over);
+    }
+}
+
 /**
  *
  *****************************************************************************/
@@ -1144,13 +1151,10 @@ scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
     SMARTCARD     *sc;
     struct stream *s;
     int            bytes;
-    int            bytes_groups; // Length of NDR for groups + 2 terminators
-    int            val;    // Referent Id for mszGroups (assume NULL)
-    int            index;
-    int            num_chars;
+    int            bytes_groups = 0; // Length of NDR for groups + 2 terminators
+    int            val = 0;    // Referent Id for mszGroups (assume NULL)
+    int            groups_len = 0; // strlen(groups)
     tui32          ioctl;
-    twchar         w_groups[100];
-
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -1167,18 +1171,18 @@ scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
         return;
     }
 
-    num_chars = 0;
-    bytes_groups = 0;
-    w_groups[0] = 0;
-    val = 0;
-    if (groups != 0)
+    if (groups != NULL && *groups != '\0')
     {
-        if (groups[0] != 0)
+        groups_len = g_strlen(groups);
+        if (wide)
         {
-            num_chars = g_mbstowcs(w_groups, groups, 99);
-            bytes_groups = wide ? (num_chars + 2) * 2 : num_chars + 2;
-            val = 0x00020004;
+            bytes_groups = (utf8_as_utf16_word_count(groups, groups_len) + 2) * 2;
         }
+        else
+        {
+            bytes_groups = groups_len + 2;
+        }
+        val = 0x00020004;
     }
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
@@ -1204,25 +1208,19 @@ scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
     // mszGroups is also a Uni-dimensional conformant array of bytes
     if (bytes_groups > 0)
     {
+        align_s(s, 4);
+        out_uint32_le(s, bytes_groups);
         if (wide)
         {
-            out_uint32_le(s, bytes_groups);
-            for (index = 0; index < num_chars; index++)
-            {
-                out_uint16_le(s, w_groups[index]);
-            }
+            out_utf8_as_utf16_le(s, groups, groups_len);
             out_uint16_le(s, 0);
             out_uint16_le(s, 0);
         }
         else
         {
-            out_uint32_le(s, bytes_groups);
-            for (index = 0; index < num_chars; index++)
-            {
-                out_uint8(s, w_groups[index]);
-            }
-            out_uint16_le(s, 0);
-            out_uint16_le(s, 0);
+            out_uint8p(s, groups, groups_len);
+            out_uint8(s, 0);
+            out_uint8(s, 0);
         }
     }
 
@@ -1249,18 +1247,46 @@ scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
 }
 
 /*****************************************************************************/
-static int
-align_s(struct stream *s, int bytes)
+/**
+ * Outputs the pointed-to-data for one of these IDL pointer types:-
+ *     [string] const wchar_t* str;  (wide != 0)
+ *     [string] const char* str;     (wide == 0)
+ *
+ * It is assumed that the referent identifier for the string has already
+ * been sent
+ *
+ * @param s Output stream
+ * @param str UTF-8 string to output
+ * @param wide Whether to output as a wide string or ASCII
+ *
+ * Note that wchar_t on Windows is 16-bit
+ * TODO: These strings have two terminators. Is this necessary?
+ */
+static void
+out_conformant_and_varying_string(struct stream *s, const char *str, int wide)
 {
-    int i32;
-
-    i32 = (int) (s->p - s->data);
-    while ((i32 % bytes) != 0)
+    align_s(s, 4);
+    unsigned int len = strlen(str);
+    if (wide)
     {
-        out_uint8s(s, 1);
-        i32 = (int) (s->p - s->data);
+        unsigned int num_chars = utf8_as_utf16_word_count(str, len);
+        // Max number, offset and actual count
+        out_uint32_le(s, num_chars + 2);
+        out_uint32_le(s, 0);
+        out_uint32_le(s, num_chars + 2);
+        out_utf8_as_utf16_le(s, str, len);
+        out_uint16_le(s, 0);  // Terminate string
+        out_uint16_le(s, 0); // ?
     }
-    return 0;
+    else
+    {
+        out_uint32_le(s, len + 2);
+        out_uint32_le(s, 0);
+        out_uint32_le(s, len + 2);
+        out_uint8p(s, str, len);
+        out_uint8(s, 0);
+        out_uint8(s, 0);
+    }
 }
 
 /**
@@ -1347,9 +1373,6 @@ scard_send_GetStatusChange(IRP *irp, char *context, int context_bytes,
     tui32          ioctl;
     int            bytes;
     unsigned int   i;
-    int            num_chars;
-    int            index;
-    twchar         w_reader_name[100];
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -1386,6 +1409,7 @@ scard_send_GetStatusChange(IRP *irp, char *context, int context_bytes,
     out_uint8a(s, context, context_bytes);
 
     // rgReaderState is a Uni-dimensional conformant array
+    align_s(s, 4);
     out_uint32_le(s, num_readers);
 
     /* insert card reader state */
@@ -1406,43 +1430,11 @@ scard_send_GetStatusChange(IRP *irp, char *context, int context_bytes,
         out_uint8s(s, 3);
     }
 
-    if (wide)
+    /* insert card reader names */
+    for (i = 0; i < num_readers; i++)
     {
-        /* insert card reader names */
-        for (i = 0; i < num_readers; i++)
-        {
-            rs = &rsa[i];
-            num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
-            out_uint32_le(s, num_chars + 2);
-            out_uint32_le(s, 0);
-            out_uint32_le(s, num_chars + 2);
-            for (index = 0; index < num_chars; index++)
-            {
-                out_uint16_le(s, w_reader_name[index]);
-            }
-            out_uint16_le(s, 0);
-            out_uint16_le(s, 0);
-            align_s(s, 4);
-        }
-    }
-    else
-    {
-        /* insert card reader names */
-        for (i = 0; i < num_readers; i++)
-        {
-            rs = &rsa[i];
-            num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
-            out_uint32_le(s, num_chars + 2);
-            out_uint32_le(s, 0);
-            out_uint32_le(s, num_chars + 2);
-            for (index = 0; index < num_chars; index++)
-            {
-                out_uint8(s, w_reader_name[index]);
-            }
-            out_uint8(s, 0);
-            out_uint8(s, 0);
-            align_s(s, 4);
-        }
+        rs = &rsa[i];
+        out_conformant_and_varying_string(s, rs->reader_name, wide);
     }
 
     s_mark_end(s);
@@ -1525,14 +1517,10 @@ scard_send_Connect(IRP *irp, char *context, int context_bytes,
      * ??       Conformant Array pointed to by pbContext
      *
      */
-
     SMARTCARD     *sc;
     struct stream *s;
     tui32          ioctl;
     int            bytes;
-    int            num_chars;
-    int            index;
-    twchar         w_reader_name[100];
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -1564,34 +1552,13 @@ scard_send_Connect(IRP *irp, char *context, int context_bytes,
     out_uint32_le(s, rs->dwPreferredProtocols);
 
     /* insert card reader name */
-    num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
-    out_uint32_le(s, num_chars + 2);
-    out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, num_chars + 2);
-    if (wide)
-    {
-        for (index = 0; index < num_chars; index++)
-        {
-            out_uint16_le(s, w_reader_name[index]);
-        }
-        out_uint16_le(s, 0);
-        out_uint16_le(s, 0);
-    }
-    else
-    {
-        for (index = 0; index < num_chars; index++)
-        {
-            out_uint8(s, w_reader_name[index]);
-        }
-        out_uint8(s, 0);
-        out_uint8(s, 0);
-    }
-    align_s(s, 4);
+    out_conformant_and_varying_string(s, rs->reader_name, wide);
 
     /* insert context */
+    align_s(s, 4);
     out_uint32_le(s, context_bytes);
     out_uint8a(s, context, context_bytes);
-    out_uint32_le(s, 0);
+    out_uint32_le(s, 0); // ?
 
     s_mark_end(s);
 

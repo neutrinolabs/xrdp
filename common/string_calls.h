@@ -87,6 +87,15 @@ enum
     MAXSTRSIGLEN =  (3 + 1 + 1 + ((sizeof(int) * 5 + 1) / 2) + 1)
 };
 
+/*
+ * Significant Universal Character Set (Unicode) characters
+ */
+enum
+{
+    UCS_WHITE_SQUARE  = 0x25a1,
+    UCS_REPLACEMENT_CHARACTER  = 0xfffd
+};
+
 /**
  * Processes a format string for general info
  *
@@ -301,8 +310,13 @@ int      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
                            int bytes_out_str);
 int      g_pos(const char *str, const char *to_find);
 char    *g_strstr(const char *haystack, const char *needle);
-int      g_mbstowcs(twchar *dest, const char *src, int n);
-int      g_wcstombs(char *dest, const twchar *src, int n);
+
+/** trim spaces and tabs, anything <= space
+ *
+ * @param str (assumed to be UTF-8)
+ * @param trim_flags 1 trim left, 2 trim right, 3 trim both, 4 trim through
+ * @return != 0 - trim_flags not recognised
+ * this will always shorten the string or not change it */
 int      g_strtrim(char *str, int trim_flags);
 
 /**
@@ -317,4 +331,76 @@ int      g_strtrim(char *str, int trim_flags);
  * The string "SIG#<num>" is returned for unrecognised signums
  */
 char    *g_sig2text(int signum, char sigstr[]);
+
+/**
+ * Get the next Unicode character from a UTF-8 string
+ *
+ * @param utf8str_ref UTF 8 string [by reference]
+ * @param len_ref Length of string [by reference] or NULL
+ * @return Unicode character
+ *
+ * On return, utf8str and len are updated to point past the decoded character.
+ * Unrecognised characters are mapped to UCS_REPLACEMENT_CHARACTER
+ *
+ * len is not needed if your utf8str has a terminator, or is known to
+ * be well-formed.
+ */
+char32_t
+utf8_get_next_char(const char **utf8str_ref, unsigned int *len_ref);
+
+/**
+ * Convert a Unicode character to UTF-8
+ * @param c32 Unicode character
+ * @param u8str buffer containing at least MAXLEN_UTF8_CHAR  bytes for result
+ * @return Number of bytes written to u8str. Can be NULL if only the
+ *         length is needed.
+ *
+ * The bytes written to u8str are unterminated
+ */
+#define MAXLEN_UTF8_CHAR 4
+unsigned int
+utf_char32_to_utf8(char32_t c32, char *u8str);
+
+/**
+ * Returns the number of Unicode characters in a UTF-8 string
+ * @param utf8str UTF-8 string
+ * @result Number of Unicode characters in the string (terminator not included)
+ */
+unsigned int
+utf8_char_count(const char *utf8str);
+
+/**
+ * Returns the number of UTF-16 words required to store a UTF-8 string
+ * @param utf8str UTF-8 string
+ * @param len Length of UTF-8 string
+ * @result number of words to store UTF-8 string as UTF-16.
+ */
+unsigned int
+utf8_as_utf16_word_count(const char *utf8str, unsigned int len);
+
+/**
+ * Add a Unicode character into a UTF-8 string
+ * @param utf8str Pointer to UTF-8 string
+ * @param len Length of buffer for UTF-8 string (includes NULL)
+ * @param c32 character to add
+ * @param index Where to add the codepoint
+ * @return 1 for success, 0 if no character was inserted
+ *
+ * This routine has to parse the string as it goes, so can be slow.
+ */
+int
+utf8_add_char_at(char *utf8str, unsigned int len, char32_t c32,
+                 unsigned int index);
+
+/**
+ * Remove a Unicode character from a UTF-8 string
+ * @param utf8str Pointer to UTF-8 string
+ * @param index Where to remove the codepoint from (0-based)
+ * @return Character removed, or 0 if no character was removed
+ *
+ * This routine has to parse the string as it goes, so can be slow.
+ */
+char32_t
+utf8_remove_char_at(char *utf8str, unsigned int index);
+
 #endif

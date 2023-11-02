@@ -467,7 +467,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 {
                     g_strncpy(b->caption1, value + ASK_LEN, 255);
                 }
-                b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+                b->edit_pos = utf8_char_count(b->caption1);
 
                 if (self->login_window->focused_control == 0)
                 {
@@ -486,7 +486,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                             self->session->client_info->domain,
                             combo->data_list->count, 0, resultIP);
                         g_strncpy(b->caption1, resultIP, 255);
-                        b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+                        b->edit_pos = utf8_char_count(b->caption1);
                     }
 
                 }
@@ -495,7 +495,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                         self->session->client_info->username[0])
                 {
                     g_strncpy(b->caption1, self->session->client_info->username, 255);
-                    b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+                    b->edit_pos = utf8_char_count(b->caption1);
 
                     if (b->edit_pos > 0)
                     {

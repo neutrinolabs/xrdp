@@ -46,6 +46,17 @@ typedef unsigned long uintptr_t;
 
 typedef int bool_t;
 
+// Define Unicode character types
+#if defined(HAVE_UCHAR_H)
+#include <uchar.h>
+#elif defined(HAVE_STDINT_H)
+typedef uint_least16_t char16_t;
+typedef uint_least32_t char32_t;
+#else
+typedef uint16_t char16_t;
+typedef uint32_t char32_t;
+#endif
+
 /* you can define L_ENDIAN or B_ENDIAN and NEED_ALIGN or NO_NEED_ALIGN
    in the makefile to override */
 
@@ -134,12 +145,10 @@ typedef bool_t tbool;
 typedef intptr_t tbus;
 typedef intptr_t tintptr;
 
-/* wide char, socket */
+/* socket */
 #if defined(_WIN32)
-typedef unsigned short twchar;
 typedef unsigned int tsock;
 #else
-typedef int twchar;
 typedef int tsock;
 #endif
 #endif /* DEFINED_Ts */
