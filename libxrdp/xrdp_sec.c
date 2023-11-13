@@ -833,18 +833,15 @@ static int
 xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 {
     int flags = 0;
-    int len_domain = 0;
-    int len_user = 0;
-    int len_password = 0;
-    int len_program = 0;
-    int len_directory = 0;
-    int len_ip = 0;
-    int len_dll = 0;
-    char tmpdata[256];
+    unsigned int len_domain = 0;
+    unsigned int len_user = 0;
+    unsigned int len_password = 0;
+    unsigned int len_program = 0;
+    unsigned int len_directory = 0;
+    unsigned int len_clnt_addr = 0;
+    unsigned int len_clnt_dir = 0;
     const char *sep;
 
-    /* initialize (zero out) local variables */
-    g_memset(tmpdata, 0, sizeof(char) * 256);
     if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_INFO_PACKET"))
     {
         return 1;
@@ -1097,22 +1094,33 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
         /* TS_EXTENDED_INFO_PACKET required fields */
         in_uint8s(s, 2);         /* clientAddressFamily */
-        in_uint16_le(s, len_ip);
-        if (ts_info_utf16_in(s, len_ip - 2, tmpdata, sizeof(tmpdata)) != 0)
+        in_uint16_le(s, len_clnt_addr);
+        if (len_clnt_addr > EXTENDED_INFO_MAX_CLIENT_ADDR_LENGTH ||
+                !s_check_rem(s, len_clnt_addr))
         {
-            LOG(LOG_LEVEL_ERROR, "ERROR reading ip");
+            LOG(LOG_LEVEL_ERROR, "clientAddress is too long (%u bytes)",
+                len_clnt_addr);
             return 1;
         }
+        // The clientAddress is currently unused. [MS-RDPBCGR] requires
+        // a mandatory null terminator, but some clients set
+        // len_clnt_addr == 0 if this field is missing. Allow for this
+        // in any future implementation.
+        in_uint8s(s, len_clnt_addr); // Skip Unicode clientAddress
+
         if (!s_check_rem_and_log(s, 2, "Parsing [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET clientDir"))
         {
             return 1;
         }
-        in_uint16_le(s, len_dll);
-        if (ts_info_utf16_in(s, len_dll - 2, tmpdata, sizeof(tmpdata)) != 0)
+        in_uint16_le(s, len_clnt_dir);
+        if (len_clnt_dir > INFO_CLIENT_MAX_CB_LEN ||
+                !s_check_rem(s, len_clnt_dir))
         {
-            LOG(LOG_LEVEL_ERROR, "ERROR reading clientDir");
+            LOG(LOG_LEVEL_ERROR, "clientDir is too long (%u bytes)", len_clnt_dir);
             return 1;
         }
+        in_uint8s(s, len_clnt_dir); // Skip Unicode clientDir
+
         LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_EXTENDED_INFO_PACKET "
                   "<Required Fields> clientAddressFamily (ignored), "
                   "cbClientAddress (ignored), clientAddress (ignored), "

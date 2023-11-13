@@ -131,6 +131,9 @@
 #define RDP_LOGON_LEAVE_AUDIO          0x2000
 #define RDP_LOGON_RAIL                 0x8000
 
+/* Extended Info Packet: clientAddress (2.2.1.11.1.1.1) */
+#define EXTENDED_INFO_MAX_CLIENT_ADDR_LENGTH 80
+
 /* Extended Info Packet: performanceFlags (2.2.1.11.1.1.1) */
 /* TODO: to be renamed */
 #define RDP5_DISABLE_NOTHING           0x00
