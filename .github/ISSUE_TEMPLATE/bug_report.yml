@@ -3,6 +3,11 @@ description: Report errors or unexpected behavior
 labels:
   - "bug"
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting a bug, read the [FAQ](https://github.com/neutrinolabs/xrdp/wiki/Tips-and-FAQ).
+        **In particular, on systemd-based systems. make sure you are not logged in on the console as the same user you are trying to use for xrdp**
   - type: input
     attributes:
       label: xrdp version
