@@ -486,7 +486,7 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     error = 0;
     make_stream(s);
 
-    if (msg == 0x5555) /* channel data */
+    if (msg == WM_CHANNEL_DATA)
     {
         chanid = LOWORD(param1);
         flags = HIWORD(param1);
