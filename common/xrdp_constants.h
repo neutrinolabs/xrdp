@@ -257,6 +257,7 @@
 #define WM_PAINT       3
 #define WM_KEYDOWN     15
 #define WM_KEYUP       16
+#define WM_KEYBRD_SYNC 17
 #define WM_MOUSEMOVE   100
 #define WM_LBUTTONUP   101
 #define WM_LBUTTONDOWN 102
@@ -281,6 +282,7 @@
 #define WM_TOUCH_HSCROLL 141
 
 #define WM_INVALIDATE  200
+#define WM_CHANNEL_DATA 201
 
 #define CB_ITEMCHANGE  300
 

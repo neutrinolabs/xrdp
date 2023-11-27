@@ -1636,8 +1636,8 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
     {
         if (self->mm->mod->mod_event != 0)
         {
-            self->mm->mod->mod_event(self->mm->mod, 17, key_flags, device_flags,
-                                     key_flags, device_flags);
+            self->mm->mod->mod_event(self->mm->mod, WM_KEYBRD_SYNC, key_flags,
+                                     device_flags, key_flags, device_flags);
         }
     }
 
@@ -1946,8 +1946,8 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
         {
             if (self->mm->mod->mod_event != 0)
             {
-                rv = self->mm->mod->mod_event(self->mm->mod, 0x5555, param1, param2,
-                                              param3, param4);
+                rv = self->mm->mod->mod_event(self->mm->mod, WM_CHANNEL_DATA,
+                                              param1, param2, param3, param4);
             }
         }
     }

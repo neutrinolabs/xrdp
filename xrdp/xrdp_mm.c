@@ -557,8 +557,8 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         {
             if (self->mod->mod_event != 0)
             {
-                self->mod->mod_event(self->mod, 17, key_flags, device_flags,
-                                     key_flags, device_flags);
+                self->mod->mod_event(self->mod, WM_KEYBRD_SYNC, key_flags,
+                                     device_flags, key_flags, device_flags);
             }
         }
     }

@@ -315,7 +315,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
 
     switch (msg)
     {
-        case 15: /* key down */
+        case WM_KEYDOWN:
 
             /* Before we handle the first character we synchronize
                capslock and numlock. */
@@ -331,11 +331,11 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->KeyboardEvent(mod->inst->input, param4, param3);
             break;
 
-        case 16: /* key up */
+        case WM_KEYUP:
             mod->inst->input->KeyboardEvent(mod->inst->input, param4, param3);
             break;
 
-        case 17: /* Synchronize */
+        case WM_KEYBRD_SYNC:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "Synchronized event handled : %ld", param1);
             /* In some situations the Synchronize event come to early.
                Therefore we store this information and use it when we
@@ -351,7 +351,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
 
             break;
 
-        case 100: /* mouse move */
+        case WM_MOUSEMOVE: /* mouse move */
             LOG_DEVEL(LOG_LEVEL_DEBUG, "mouse move %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -359,7 +359,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 101: /* left button up */
+        case WM_LBUTTONUP:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "left button up %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -367,7 +367,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 102: /* left button down */
+        case WM_LBUTTONDOWN:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "left button down %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -375,7 +375,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 103: /* right button up */
+        case WM_RBUTTONUP:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "right button up %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -383,7 +383,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 104: /* right button down */
+        case WM_RBUTTONDOWN:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "right button down %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -391,7 +391,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 105: /* middle button up */
+        case WM_BUTTON3UP: /* middle button up */
             LOG_DEVEL(LOG_LEVEL_DEBUG, "middle button up %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -399,7 +399,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 106: /* middle button down */
+        case WM_BUTTON3DOWN: /* middle button down */
             LOG_DEVEL(LOG_LEVEL_DEBUG, "middle button down %ld %ld", param1, param2);
             x = param1;
             y = param2;
@@ -407,23 +407,55 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
 
-        case 107: /* wheel up */
+        case WM_BUTTON4UP: /* wheel up */
             flags = PTR_FLAGS_WHEEL | 0x0078;
             mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
             break;
 
-        case 108:
+        case WM_BUTTON4DOWN:
             break;
 
-        case 109: /* wheel down */
+        case WM_BUTTON5UP: /* wheel down */
             flags = PTR_FLAGS_WHEEL | PTR_FLAGS_WHEEL_NEGATIVE | 0x0088;
             mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
             break;
 
-        case 110:
+        case WM_BUTTON5DOWN:
             break;
 
-        case 200:
+        case WM_BUTTON8UP:
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button8 up %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON1;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case WM_BUTTON8DOWN:
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button8 down %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON1 | PTR_XFLAGS_DOWN;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case WM_BUTTON9UP:
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button9 up %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON2;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case WM_BUTTON9DOWN:
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button9 down %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON2 | PTR_XFLAGS_DOWN;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case WM_INVALIDATE:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "Invalidate request sent from client");
             x = (param1 >> 16) & 0xffff;
             y = (param1 >> 0) & 0xffff;
@@ -432,7 +464,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->SendInvalidate(mod->inst, -1, x, y, cx, cy);
             break;
 
-        case 0x5555:
+        case WM_CHANNEL_DATA:
             chanid = LOWORD(param1);
             flags = HIWORD(param1);
             size = (int)param2;
