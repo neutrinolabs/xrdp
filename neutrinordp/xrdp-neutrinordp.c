@@ -425,6 +425,38 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
         case 110:
             break;
 
+        case 115: /* extended mouse button8 up */
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button8 up %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON1;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case 116: /* extended mouse button8 down */
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button8 down %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON1 | PTR_XFLAGS_DOWN;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case 117: /* extended mouse button9 up */
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button9 up %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON2;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
+        case 118: /* extended mouse button9 down */
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "extended mouse button9 down %ld %ld", param1, param2);
+            x = param1;
+            y = param2;
+            flags = PTR_XFLAGS_BUTTON2 | PTR_XFLAGS_DOWN;
+            mod->inst->input->ExtendedMouseEvent(mod->inst->input, flags, x, y);
+            break;
+
         case 200:
             LOG_DEVEL(LOG_LEVEL_DEBUG, "Invalidate request sent from client");
             x = (param1 >> 16) & 0xffff;
