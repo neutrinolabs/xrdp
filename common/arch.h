@@ -94,7 +94,7 @@ typedef uint32_t char32_t;
     defined(__ia64__) || defined(__arm__) || defined(__sh__) || \
     (defined(__PPC__) && defined(__BIG_ENDIAN__)) || \
     (defined(__ppc__) && defined(__BIG_ENDIAN__)) || \
-    defined(__loongarch__)
+    defined(__loongarch__) || defined(__e2k__)
 #define NEED_ALIGN
 #elif defined(__x86__) || defined(__x86_64__) || \
       defined(__AMD64__) || defined(_M_IX86) || defined (_M_AMD64) || \
