@@ -93,35 +93,54 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
         Bpp = 4;
     }
 
-    jndex = 0;
-    error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
-    while (error == 0)
+    if (self->session->client_info->gfx)
     {
-        cx = rect.right - rect.left;
-        cy = rect.bottom - rect.top;
-        ldata = (char *)g_malloc(cx * cy * Bpp, 0);
-        if (ldata == 0)
+        if (self->wm->screen_dirty_region == NULL)
         {
-            return 1;
+            self->wm->screen_dirty_region = xrdp_region_create(self->wm);
         }
-        src = self->wm->screen->data;
-        src += self->wm->screen->line_size * rect.top;
-        src += rect.left * Bpp;
-        dst = ldata;
-        for (index = 0; index < cy; index++)
-        {
-            g_memcpy(dst, src, cx * Bpp);
-            src += self->wm->screen->line_size;
-            dst += cx * Bpp;
-        }
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
-                  rect.left, rect.top, cx, cy);
-        libxrdp_send_bitmap(self->session, cx, cy, bpp,
-                            ldata, rect.left, rect.top, cx, cy);
-        g_free(ldata);
-
-        jndex++;
+        jndex = 0;
         error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        while (error == 0)
+        {
+            xrdp_region_add_rect(self->wm->screen_dirty_region, &rect);
+            jndex++;
+            error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        }
+    }
+    else
+    {
+        jndex = 0;
+        error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        while (error == 0)
+        {
+            cx = rect.right - rect.left;
+            cy = rect.bottom - rect.top;
+            ldata = (char *)g_malloc(cx * cy * Bpp, 0);
+            if (ldata == 0)
+            {
+                return 1;
+            }
+            src = self->wm->screen->data;
+            src += self->wm->screen->line_size * rect.top;
+            src += rect.left * Bpp;
+            dst = ldata;
+            for (index = 0; index < cy; index++)
+            {
+                g_memcpy(dst, src, cx * Bpp);
+                src += self->wm->screen->line_size;
+                dst += cx * Bpp;
+            }
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_send_dirty:"
+                      " x %d y %d cx %d cy %d",
+                      rect.left, rect.top, cx, cy);
+            libxrdp_send_bitmap(self->session, cx, cy, bpp,
+                                ldata, rect.left, rect.top, cx, cy);
+            g_free(ldata);
+
+            jndex++;
+            error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+        }
     }
 
     xrdp_region_delete(self->dirty_region);
@@ -145,8 +164,8 @@ xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
     self->rop = 0xcc; /* copy will use 0xcc */
     self->clip_children = 1;
 
-
-    if (self->session->client_info->no_orders_supported)
+    if (self->session->client_info->no_orders_supported ||
+            self->session->client_info->gfx)
     {
 #if defined(XRDP_PAINTER)
         if (painter_create(&(self->painter)) != PT_ERROR_NONE)
