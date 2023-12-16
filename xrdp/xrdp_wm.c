@@ -767,10 +767,19 @@ xrdp_wm_init(struct xrdp_wm *self)
                     list_add_strdup(self->mm->login_values, r);
                 }
 
-                /*
-                 * Skip the login box and go straight to the connection phase
-                 */
-                xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
+                if (self->session->client_info->gfx && !self->mm->egfx_up)
+                {
+                    /* gfx session but have not recieved caps advertise yet,
+                       set flag so we will connect to backend later */
+                    self->mm->gfx_delay_autologin = 1;
+                }
+                else
+                {
+                    /*
+                    * Skip the login box and go straight to the connection phase
+                    */
+                    xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
+                }
             }
             else
             {

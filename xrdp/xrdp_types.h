@@ -374,6 +374,13 @@ enum display_resize_state
      "unknown" \
     )
 
+enum xrdp_egfx_flags
+{
+    XRDP_EGFX_NONE = 0,
+    XRDP_EGFX_H264 = 1,
+    XRDP_EGFX_RFX_PRO = 2
+};
+
 struct xrdp_mm
 {
     struct xrdp_wm *wm; /* owner */
@@ -410,7 +417,8 @@ struct xrdp_mm
     int dynamic_monitor_chanid;
     struct xrdp_egfx *egfx;
     int egfx_up;
-
+    int egfx_flags;
+    int gfx_delay_autologin;
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
     struct list *resize_queue;

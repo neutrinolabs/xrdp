@@ -2114,10 +2114,14 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint16_le(s, supportedColorDepths);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> supportedColorDepths %s",
-              supportedColorDepths == 0x0001 ? "RNS_UD_24BPP_SUPPORT" :
-              supportedColorDepths == 0x0002 ? "RNS_UD_16BPP_SUPPORT" :
-              supportedColorDepths == 0x0004 ? "RNS_UD_15BPP_SUPPORT" :
-              supportedColorDepths == 0x0008 ? "RNS_UD_32BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_24BPP_SUPPORT
+              ? "RNS_UD_24BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_16BPP_SUPPORT
+              ? "RNS_UD_16BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_15BPP_SUPPORT
+              ? "RNS_UD_15BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_32BPP_SUPPORT
+              ? "RNS_UD_32BPP_SUPPORT" :
               "unknown");
 
     if (!s_check_rem(s, 2))
@@ -2129,11 +2133,20 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> earlyCapabilityFlags 0x%4.4x",
               earlyCapabilityFlags);
-    if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
+    if ((earlyCapabilityFlags & RNS_UD_CS_WANT_32BPP_SESSION)
+            && (supportedColorDepths & RNS_UD_32BPP_SUPPORT))
     {
         client_info->bpp = 32;
     }
-
+    if (earlyCapabilityFlags & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL)
+    {
+        LOG(LOG_LEVEL_INFO, "client supports gfx protocol");
+        self->rdp_layer->client_info.gfx = 1;
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO, "client DOES NOT support gfx");
+    }
     if (!s_check_rem(s, 64))
     {
         return 0;
