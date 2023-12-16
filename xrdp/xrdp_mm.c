@@ -79,7 +79,13 @@ xrdp_mm_create(struct xrdp_wm *owner)
               self->wm->client_info->rfx_codec_id,
               self->wm->client_info->h264_codec_id);
 
-    self->encoder = xrdp_encoder_create(self);
+    if ((self->wm->client_info->gfx == 0) &&
+            ((self->wm->client_info->h264_codec_id != 0) ||
+             (self->wm->client_info->jpeg_codec_id != 0) ||
+             (self->wm->client_info->rfx_codec_id != 0)))
+    {
+        self->encoder = xrdp_encoder_create(self);
+    }
 
     return self;
 }

@@ -52,19 +52,29 @@
 
 /* TS_UD_HEADER: type ((2.2.1.3.1) */
 /* TODO: to be renamed */
-#define SEC_TAG_CLI_INFO               0xc001 /* CS_CORE? */
-#define SEC_TAG_CLI_CRYPT              0xc002 /* CS_SECURITY? */
-#define SEC_TAG_CLI_CHANNELS           0xc003 /* CS_CHANNELS? */
-#define SEC_TAG_CLI_4                  0xc004 /* CS_CLUSTER? */
-#define SEC_TAG_CLI_MONITOR            0xc005 /* CS_MONITOR */
-#define SEC_TAG_CLI_MONITOR_EX         0xc008 /* CS_MONITOR_EX */
+#define SEC_TAG_CLI_INFO       0xc001 /* CS_CORE? */
+#define SEC_TAG_CLI_CRYPT      0xc002 /* CS_SECURITY? */
+#define SEC_TAG_CLI_CHANNELS   0xc003 /* CS_CHANNELS? */
+#define SEC_TAG_CLI_4          0xc004 /* CS_CLUSTER? */
+#define SEC_TAG_CLI_MONITOR    0xc005 /* CS_MONITOR */
+#define SEC_TAG_CLI_MONITOR_EX 0xc008 /* CS_MONITOR_EX */
 
 /* Client Core Data: colorDepth, postBeta2ColorDepth (2.2.1.3.2) */
-#define RNS_UD_COLOR_4BPP              0xCA00
-#define RNS_UD_COLOR_8BPP              0xCA01
-#define RNS_UD_COLOR_16BPP_555         0xCA02
-#define RNS_UD_COLOR_16BPP_565         0xCA03
-#define RNS_UD_COLOR_24BPP             0xCA04
+#define RNS_UD_COLOR_4BPP      0xCA00
+#define RNS_UD_COLOR_8BPP      0xCA01
+#define RNS_UD_COLOR_16BPP_555 0xCA02
+#define RNS_UD_COLOR_16BPP_565 0xCA03
+#define RNS_UD_COLOR_24BPP     0xCA04
+
+/* Client Core Data: supportedColorDepths (2.2.1.3.2) */
+#define RNS_UD_24BPP_SUPPORT 0x0001
+#define RNS_UD_16BPP_SUPPORT 0x0002
+#define RNS_UD_15BPP_SUPPORT 0x0004
+#define RNS_UD_32BPP_SUPPORT 0x0008
+
+/* Client Core Data: earlyCapabilityFlags (2.2.1.3.2) */
+#define RNS_UD_CS_WANT_32BPP_SESSION         0x0002
+#define RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL 0x0100
 
 /* Client Core Data: connectionType  (2.2.1.3.2) */
 #define CONNECTION_TYPE_MODEM          0x01
