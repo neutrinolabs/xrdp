@@ -215,6 +215,14 @@ struct xrdp_client_info
     unsigned int session_physical_height; /* in mm */
 
     int large_pointer_support_flags;
+    int gfx;
+};
+
+enum xrdp_encoder_flags
+{
+    NONE                                   = 0,
+    ENCODE_COMPLETE                        = 1 << 0,
+    GFX_PROGRESSIVE_RFX                    = 1 << 1
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
