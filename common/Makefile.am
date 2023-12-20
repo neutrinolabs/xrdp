@@ -71,6 +71,6 @@ libcommon_la_SOURCES = \
   $(PIXMAN_SOURCES)
 
 libcommon_la_LIBADD = \
-  -lpthread \
+  -lpthread -lrt \
   $(OPENSSL_LIBS) \
   $(DLOPEN_LIBS)
