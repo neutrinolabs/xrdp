@@ -525,9 +525,9 @@ session_list_get_wait_objs(tbus robjs[], int *robjs_count)
 int
 session_list_check_wait_objs(void)
 {
-    int i;
+    int i = 0;
 
-    for (i = 0 ; i < g_session_list->count; ++i)
+    while (i < g_session_list->count)
     {
         struct session_item *si;
         si = (struct session_item *)list_get_item(g_session_list, i);
