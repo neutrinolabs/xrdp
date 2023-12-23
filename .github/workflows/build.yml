@@ -165,7 +165,7 @@ jobs:
       CC: gcc
       # This is required to use a version of cppcheck other than that
       # supplied with the operating system
-      CPPCHECK_VER: "2.12.1"
+      CPPCHECK_VER: "2.13.0"
       CPPCHECK_REPO: https://github.com/danmar/cppcheck.git
     steps:
       # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
