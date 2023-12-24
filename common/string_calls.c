@@ -715,6 +715,7 @@ g_strstr(const char *haystack, const char *needle)
 int
 g_strtrim(char *str, int trim_flags)
 {
+#define TRIMMABLE_CHAR(c) ((unsigned char)(c) <= ' ')
     int rv = 0;
     int index;
     int j;
@@ -726,7 +727,7 @@ g_strtrim(char *str, int trim_flags)
             j = 0;
             for (index = 0; str[index] != '\0'; index++)
             {
-                if (str[index] > ' ')
+                if (!TRIMMABLE_CHAR(str[index]))
                 {
                     str[j++] = str[index];
                 }
@@ -741,7 +742,7 @@ g_strtrim(char *str, int trim_flags)
 
         case 2: /* trim right */
             index = strlen(str);
-            while (index > 0 && str[index - 1] <= ' ')
+            while (index > 0 && TRIMMABLE_CHAR(str[index - 1]))
             {
                 --index;
             }
@@ -750,7 +751,7 @@ g_strtrim(char *str, int trim_flags)
 
         case 1: /* trim left */
             index = 0;
-            while (str[index] != '\0' && str[index] <= ' ')
+            while (str[index] != '\0' && TRIMMABLE_CHAR(str[index]))
             {
                 ++index;
             }
@@ -765,6 +766,7 @@ g_strtrim(char *str, int trim_flags)
     }
 
     return rv;
+#undef TRIMMABLE_CHAR
 }
 
 /*****************************************************************************/

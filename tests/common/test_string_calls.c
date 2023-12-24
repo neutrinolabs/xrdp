@@ -14,6 +14,24 @@
 
 #define RESULT_LEN 1024
 
+/* Universal character names need a C99 compiler */
+#if __STDC_VERSION__ >= 199901L
+#   define CJK_UNIFIED_IDEOGRAPH_5E78 "\u5e78"
+#   define CJK_UNIFIED_IDEOGRAPH_798F "\u798f"
+#   define CJK_UNIFIED_IDEOGRAPH_5B89 "\u5b89"
+#   define CJK_UNIFIED_IDEOGRAPH_5EB7 "\u5eb7"
+#else
+// Assume we're using UTF-8
+#   define CJK_UNIFIED_IDEOGRAPH_5E78 "\xe5\xb9\xb8"
+#   define CJK_UNIFIED_IDEOGRAPH_798F "\xe7\xa6\x8f"
+#   define CJK_UNIFIED_IDEOGRAPH_5B89 "\xe5\xae\x89"
+#   define CJK_UNIFIED_IDEOGRAPH_5EB7 "\xe5\xba\xb7"
+#endif
+
+#define HAPPINESS_AND_WELL_BEING  \
+    CJK_UNIFIED_IDEOGRAPH_5E78 CJK_UNIFIED_IDEOGRAPH_798F \
+    CJK_UNIFIED_IDEOGRAPH_5B89 CJK_UNIFIED_IDEOGRAPH_5EB7
+
 START_TEST(test_strnjoin__when_src_is_null__returns_empty_string)
 {
     /* setup */
@@ -1038,6 +1056,19 @@ START_TEST(test_strtrim__trim_through)
 }
 END_TEST
 
+START_TEST(test_strtrim__chinese_chars)
+{
+    /* setup */
+    char output[] = "\t\t    \t" HAPPINESS_AND_WELL_BEING "\t\t    \n\n";
+
+    /* test */
+    g_strtrim(output, 4);
+
+    /* verify */
+    ck_assert_str_eq(output, HAPPINESS_AND_WELL_BEING);
+}
+END_TEST
+
 /******************************************************************************/
 
 START_TEST(test_sigs__common)
@@ -1192,6 +1223,7 @@ make_suite_test_string(void)
     tcase_add_test(tc_strtrim, test_strtrim__trim_right);
     tcase_add_test(tc_strtrim, test_strtrim__trim_both);
     tcase_add_test(tc_strtrim, test_strtrim__trim_through);
+    tcase_add_test(tc_strtrim, test_strtrim__chinese_chars);
 
     tc_sigs = tcase_create("signals");
     suite_add_tcase(s, tc_sigs);
