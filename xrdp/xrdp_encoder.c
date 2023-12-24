@@ -33,6 +33,7 @@
 #endif
 
 #define XRDP_SURCMD_PREFIX_BYTES 256
+#define OUT_DATA_BYTES_DEFAULT_SIZE (16 * 1024 * 1024)
 
 #ifdef XRDP_RFXCODEC
 /* LH3 LL3, HH3 HL3, HL2 LH2, LH1 HH2, HH1 HL1 todo check this */
@@ -77,6 +78,8 @@ xrdp_enc_data_done_destructor(void *item, void *closure)
 struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm)
 {
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_encoder_create:");
+
     struct xrdp_encoder *self;
     struct xrdp_client_info *client_info;
     char buf[1024];
@@ -106,7 +109,8 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 
     if (client_info->jpeg_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting jpeg codec session");
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: "
+                  "starting jpeg codec session");
         self->codec_id = client_info->jpeg_codec_id;
         self->in_codec_mode = 1;
         self->codec_quality = client_info->jpeg_prop[0];
@@ -136,7 +140,8 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     }
     else if (client_info->rfx_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting rfx codec session");
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: "
+                  "starting rfx codec session");
         self->codec_id = client_info->rfx_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
@@ -148,7 +153,8 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 #endif
     else if (client_info->h264_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: starting h264 codec session");
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: "
+                  "starting h264 codec session");
         self->codec_id = client_info->h264_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 3;
@@ -277,15 +283,18 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
             continue;
         }
 
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_jpg: x %d y %d cx %d cy %d", x, y, cx, cy);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_jpg: x %d y %d cx %d cy %d",
+                  x, y, cx, cy);
 
         out_data_bytes = MAX((cx + 4) * cy * 4, 8192);
-        if ((out_data_bytes < 1) || (out_data_bytes > 16 * 1024 * 1024))
+        if ((out_data_bytes < 1)
+                || (out_data_bytes > OUT_DATA_BYTES_DEFAULT_SIZE))
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: error 2");
             return 1;
         }
-        out_data = (char *) g_malloc(out_data_bytes + 256 + 2, 0);
+        out_data = (char *) g_malloc(out_data_bytes
+                                     + XRDP_SURCMD_PREFIX_BYTES + 2, 0);
         if (out_data == 0)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: error 3");
@@ -298,15 +307,18 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                                             enc->width, enc->height,
                                             enc->width * 4, x, y, cx, cy,
                                             quality,
-                                            out_data + 256 + 2, &out_data_bytes);
+                                            out_data
+                                            + XRDP_SURCMD_PREFIX_BYTES + 2,
+                                            &out_data_bytes);
         if (error < 0)
         {
-            LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: jpeg error %d bytes %d",
-                      error, out_data_bytes);
+            LOG_DEVEL(LOG_LEVEL_ERROR, "process_enc_jpg: jpeg error %d "
+                      "bytes %d", error, out_data_bytes);
             g_free(out_data);
             return 1;
         }
-        LOG_DEVEL(LOG_LEVEL_WARNING, "jpeg error %d bytes %d", error, out_data_bytes);
+        LOG_DEVEL(LOG_LEVEL_WARNING,
+                  "jpeg error %d bytes %d", error, out_data_bytes);
         enc_done = (XRDP_ENC_DATA_DONE *)
                    g_malloc(sizeof(XRDP_ENC_DATA_DONE), 1);
         enc_done->comp_bytes = out_data_bytes + 2;

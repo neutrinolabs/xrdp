@@ -27,16 +27,14 @@
 #include "guid.h"
 #include "ms-rdpedisp.h"
 #include "ms-rdpbcgr.h"
-
 #include "scp.h"
-
 #include <ctype.h>
-
 #include "xrdp_encoder.h"
 #include "xrdp_sockets.h"
 #include "xrdp_egfx.h"
+#include "libxrdp.h"
+#include "xrdp_channel.h"
 #include <limits.h>
-
 
 /* Forward declarations */
 static int
@@ -49,8 +47,6 @@ struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner)
 {
     struct xrdp_mm *self;
-    char buf[1024];
-    int pid;
 
     self = (struct xrdp_mm *)g_malloc(sizeof(struct xrdp_mm), 1);
     self->wm = owner;
@@ -58,16 +54,8 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_names->auto_free = 1;
     self->login_values = list_create();
     self->login_values->auto_free = 1;
-    self->resize_queue = list_create();
-    self->resize_queue->auto_free = 1;
 
     self->uid = -1; /* Never good to default UIDs to 0 */
-
-    pid = g_getpid();
-    /* setup wait objects for signalling */
-    g_snprintf(buf, sizeof(buf), "xrdp_%8.8x_resize_ready", pid);
-    self->resize_ready = g_create_wait_obj(buf);
-    self->resize_data = NULL;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_create: bpp %d mcs_connection_type %d "
               "jpeg_codec_id %d v3_codec_id %d rfx_codec_id %d "
@@ -170,6 +158,7 @@ xrdp_mm_delete(struct xrdp_mm *self)
     list_delete(self->resize_queue);
     g_free(self->resize_data);
     g_delete_wait_obj(self->resize_ready);
+    xrdp_egfx_shutdown_full(self->egfx);
     g_free(self);
 }
 
@@ -1092,6 +1081,30 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
 
 /******************************************************************************/
 static int
+xrdp_mm_egfx_invalidate_all(struct xrdp_mm *self)
+{
+    struct xrdp_rect xr_rect;
+    struct xrdp_bitmap *screen;
+    int error;
+
+    LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_invalidate_all:");
+
+    screen = self->wm->screen;
+
+    xr_rect.left = 0;
+    xr_rect.top = 0;
+    xr_rect.right = screen->width;
+    xr_rect.bottom = screen->height;
+    if (self->wm->screen_dirty_region == NULL)
+    {
+        self->wm->screen_dirty_region = xrdp_region_create(self->wm);
+    }
+    error = xrdp_region_add_rect(self->wm->screen_dirty_region, &xr_rect);
+    return error;
+}
+
+/******************************************************************************/
+static int
 dynamic_monitor_open_response(intptr_t id, int chan_id, int creation_status)
 {
     struct xrdp_process *pro;
@@ -1140,6 +1153,265 @@ dynamic_monitor_data_first(intptr_t id, int chan_id, char *data, int bytes,
 }
 
 /******************************************************************************/
+int
+advance_resize_state_machine(struct xrdp_mm *mm,
+                             enum display_resize_state new_state)
+{
+    struct display_control_monitor_layout_data *description = mm->resize_data;
+    LOG_DEVEL(LOG_LEVEL_INFO,
+              "advance_resize_state_machine:"
+              " Processing resize to: %d x %d."
+              " Advancing state from %s to %s."
+              " Previous state took %d MS.",
+              description->description.session_width,
+              description->description.session_height,
+              XRDP_DISPLAY_RESIZE_STATE_TO_STR(description->state),
+              XRDP_DISPLAY_RESIZE_STATE_TO_STR(new_state),
+              g_time3() - description->last_state_update_timestamp);
+    description->state = new_state;
+    description->last_state_update_timestamp = g_time3();
+    g_set_wait_obj(mm->resize_ready);
+    return 0;
+}
+
+/******************************************************************************/
+static int
+xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
+                            int *versions, int *flagss)
+{
+    struct xrdp_mm *self;
+    struct xrdp_bitmap *screen;
+    int index;
+    int best_index;
+    int best_h264_index;
+    int best_pro_index;
+    int error;
+    int version;
+    int flags;
+
+    LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise:");
+    self = (struct xrdp_mm *) user;
+    screen = self->wm->screen;
+    if (screen->data == NULL)
+    {
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: can not do gfx");
+    }
+    best_index = -1;
+    best_h264_index = -1;
+    best_pro_index = -1;
+    for (index = 0; index < caps_count; index++)
+    {
+        version = versions[index];
+        flags = flagss[index];
+        LOG(LOG_LEVEL_INFO, "  version 0x%8.8x flags 0x%8.8x (index: %d)",
+            version, flags, index);
+        switch (version)
+        {
+            case XR_RDPGFX_CAPVERSION_8:
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_81:
+                if (flags & XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED)
+                {
+                    best_h264_index = index;
+                }
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_10:
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_101:
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_102:
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_103:
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_104:
+                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
+                {
+                    best_h264_index = index;
+                }
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_105:
+                best_pro_index = index;
+                break;
+            case XR_RDPGFX_CAPVERSION_106:
+                best_pro_index = index;
+                break;
+        }
+    }
+    if (best_pro_index >= 0)
+    {
+        best_index = best_pro_index;
+        self->egfx_flags = XRDP_EGFX_RFX_PRO;
+    }
+    /* prefer h264, todo use setting in xrdp.ini for this */
+    if (best_h264_index >= 0)
+    {
+#if defined(XRDP_X264) || defined(XRDP_NVENC)
+        best_index = best_h264_index;
+        self->egfx_flags = XRDP_EGFX_H264;
+#endif
+    }
+    if (best_index >= 0)
+    {
+        LOG(LOG_LEVEL_INFO, "  replying version 0x%8.8x flags 0x%8.8x",
+            versions[best_index], flagss[best_index]);
+        error = xrdp_egfx_send_capsconfirm(self->egfx,
+                                           versions[best_index],
+                                           flagss[best_index]);
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_capsconfirm "
+            "error %d best_index %d", error, best_index);
+        error = xrdp_egfx_send_reset_graphics(self->egfx,
+                                              screen->width, screen->height,
+                                              self->wm->client_info->display_sizes.monitorCount,
+                                              self->wm->client_info->display_sizes.minfo_wm);
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_reset_graphics "
+            "error %d monitorCount %d",
+            error, self->wm->client_info->display_sizes.monitorCount);
+        self->egfx_up = 1;
+        xrdp_egfx_send_create_surface(self->egfx, self->egfx->surface_id,
+                                      screen->width, screen->height,
+                                      XR_PIXEL_FORMAT_XRGB_8888);
+        xrdp_egfx_send_map_surface(self->egfx, self->egfx->surface_id, 0, 0);
+        self->encoder = xrdp_encoder_create(self);
+        xrdp_mm_egfx_invalidate_all(self);
+
+        if (self->resize_data != NULL
+                && self->resize_data->state == WMRZ_EGFX_INITALIZING)
+        {
+            advance_resize_state_machine(self, WMRZ_EGFX_INITIALIZED);
+        }
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: egfx created.");
+        if (self->gfx_delay_autologin)
+        {
+            self->gfx_delay_autologin = 0;
+            xrdp_wm_set_login_state(self->wm, WMLS_START_CONNECT);
+        }
+    }
+    else
+    {
+        struct xrdp_rect lrect;
+
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: no good gfx, canceling");
+        lrect.left = 0;
+        lrect.top = 0;
+        lrect.right = screen->width;
+        lrect.bottom = screen->height;
+        self->wm->client_info->gfx = 0;
+        xrdp_encoder_delete(self->encoder);
+        self->encoder = xrdp_encoder_create(self);
+        xrdp_bitmap_invalidate(screen, &lrect);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_update_module_frame_ack(struct xrdp_mm *self)
+{
+    int fif;
+    struct xrdp_encoder *encoder;
+
+    encoder = self->encoder;
+    fif = encoder->frames_in_flight;
+    if (encoder->frame_id_client + fif > encoder->frame_id_server)
+    {
+        if (encoder->frame_id_server > encoder->frame_id_server_sent)
+        {
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_update_module_ack: "
+                      "frame_id_server %d", encoder->frame_id_server);
+            encoder->frame_id_server_sent = encoder->frame_id_server;
+            self->mod->mod_frame_ack(self->mod, 0, encoder->frame_id_server);
+        }
+    }
+    return 0;
+}
+
+static int
+xrdp_mm_egfx_frame_ack(void *user, uint32_t queue_depth, int frame_id,
+                       int frames_decoded)
+{
+    struct xrdp_mm *self;
+    struct xrdp_encoder *encoder;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_frame_ack:");
+    self = (struct xrdp_mm *) user;
+    encoder = self->encoder;
+    if (encoder == NULL)
+    {
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_frame_ack: encoder is nil");
+        return 0;
+    }
+    if (queue_depth == XR_SUSPEND_FRAME_ACKNOWLEDGEMENT)
+    {
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_frame_ack: "
+            "queue_depth %d frame_id %d frames_decoded %d",
+            queue_depth, frame_id, frames_decoded);
+        if (encoder->gfx_ack_off == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_frame_ack: "
+                "client request turn off frame acks.");
+            encoder->gfx_ack_off = 1;
+            frame_id = -1;
+        }
+    }
+    else
+    {
+        if (encoder->gfx_ack_off)
+        {
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_frame_ack: "
+                      "client request turn on frame acks");
+            encoder->gfx_ack_off = 0;
+        }
+    }
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_frame_ack: "
+              "incoming %d, client %d, server %d",
+              frame_id, encoder->frame_id_client, encoder->frame_id_server);
+    if (frame_id < 0 || frame_id > encoder->frame_id_server)
+    {
+        /* if frame_id is negative or bigger then what server last sent
+           just ack all sent frames */
+        /* some clients can send big number just to clear all
+           pending frames */
+        encoder->frame_id_client = encoder->frame_id_server;
+    }
+    else
+    {
+        /* frame acks can come out of order so ignore older one */
+        encoder->frame_id_client = MAX(frame_id, encoder->frame_id_client);
+    }
+    xrdp_mm_update_module_frame_ack(self);
+    return 0;
+}
+
+/******************************************************************************/
+int
+egfx_initialize(struct xrdp_mm *self)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "egfx_initialize");
+    if (!(self->wm->client_info->mcs_early_capability_flags
+            & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL))
+    {
+        return 0;
+    }
+    LOG_DEVEL(LOG_LEVEL_INFO, "egfx_initialize: gfx capable client");
+    if (xrdp_egfx_create(self, &(self->egfx)) == 0)
+    {
+        self->egfx->user = self;
+        self->egfx->caps_advertise = xrdp_mm_egfx_caps_advertise;
+        self->egfx->frame_ack = xrdp_mm_egfx_frame_ack;
+        return 0;
+    }
+    LOG_DEVEL(LOG_LEVEL_INFO, "egfx_initialize: xrdp_egfx_create failed");
+    return 1;
+}
+
+/******************************************************************************/
 static const int MAXIMUM_MONITOR_SIZE
     = sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS;
 
@@ -1160,27 +1432,6 @@ sync_dynamic_monitor_data(struct xrdp_wm *wm,
     g_memcpy(display_sizes->minfo_wm,
              description->minfo_wm,
              MAXIMUM_MONITOR_SIZE);
-}
-
-int
-advance_resize_state_machine(struct xrdp_mm *mm,
-                             enum display_resize_state new_state)
-{
-    struct display_control_monitor_layout_data *description = mm->resize_data;
-    LOG_DEVEL(LOG_LEVEL_INFO,
-              "advance_resize_state_machine:"
-              " Processing resize to: %d x %d."
-              " Advancing state from %s to %s."
-              " Previous state took %d MS.",
-              description->description.session_width,
-              description->description.session_height,
-              XRDP_DISPLAY_RESIZE_STATE_TO_STR(description->state),
-              XRDP_DISPLAY_RESIZE_STATE_TO_STR(new_state),
-              g_time3() - description->last_state_update_timestamp);
-    description->state = new_state;
-    description->last_state_update_timestamp = g_time3();
-    g_set_wait_obj(mm->resize_ready);
-    return 0;
 }
 
 /******************************************************************************/
@@ -1269,7 +1520,8 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     list_add_item(wm->mm->resize_queue, (tintptr)display_size_data);
     g_set_wait_obj(wm->mm->resize_ready);
     LOG(LOG_LEVEL_DEBUG, "dynamic_monitor_data:"
-        " received width %d, received height %d.", display_size_data->session_width, display_size_data->session_height);
+        " received width %d, received height %d.",
+        display_size_data->session_width, display_size_data->session_height);
     return 0;
 }
 
@@ -1289,6 +1541,9 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
     int error = 0;
     struct xrdp_mm *mm;
     struct xrdp_mod *module;
+    struct xrdp_rdp *rdp;
+    struct xrdp_sec *sec;
+    struct xrdp_channel *chan;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "process_display_control_monitor_layout_data:");
 
@@ -1326,6 +1581,56 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                 xrdp_encoder_delete(mm->encoder);
                 mm->encoder = NULL;
             }
+            if (mm->egfx == 0)
+            {
+                advance_resize_state_machine(mm, WMRZ_SERVER_MONITOR_RESIZE);
+            }
+            else
+            {
+                advance_resize_state_machine(mm, WMRZ_EGFX_DELETE_SURFACE);
+            }
+            break;
+        case WMRZ_EGFX_DELETE_SURFACE:
+            if (error == 0 && module != 0)
+            {
+                xrdp_egfx_shutdown_delete_surface(mm->egfx);
+            }
+            advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSE);
+            break;
+        case WMRZ_EGFX_CONN_CLOSE:
+            if (error == 0 && module != 0)
+            {
+                xrdp_egfx_shutdown_close_connection(wm->mm->egfx);
+            }
+            advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSING);
+            break;
+        // Also processed in xrdp_egfx_close_response
+        case WMRZ_EGFX_CONN_CLOSING:
+            rdp = (struct xrdp_rdp *) (mm->wm->session->rdp);
+            sec = rdp->sec_layer;
+            chan = sec->chan_layer;
+
+            // Continue to check to see if the connection is closed. If it
+            // ever is, advance the state machine!
+            if (chan->drdynvcs[mm->egfx->channel_id].status
+                    == XRDP_DRDYNVC_STATUS_CLOSED
+                    || (g_time3() - description->last_state_update_timestamp) > 100)
+            {
+                advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSED);
+                break;
+            }
+            g_set_wait_obj(mm->resize_ready);
+            break;
+        case WMRZ_EGFX_CONN_CLOSED:
+            advance_resize_state_machine(mm, WRMZ_EGFX_DELETE);
+            break;
+        case WRMZ_EGFX_DELETE:
+            if (error == 0 && module != 0)
+            {
+                xrdp_egfx_shutdown_delete(wm->mm->egfx);
+                mm->egfx = NULL;
+                mm->egfx_up = 0;
+            }
             advance_resize_state_machine(mm, WMRZ_SERVER_MONITOR_RESIZE);
             break;
         case WMRZ_SERVER_MONITOR_RESIZE:
@@ -1338,9 +1643,10 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " mod_server_monitor_resize failed %d", error);
                 return advance_error(error, mm);
             }
-            advance_resize_state_machine(mm, WMRZ_SERVER_VERSION_MESSAGE);
+            advance_resize_state_machine(
+                mm, WMRZ_SERVER_VERSION_MESSAGE_START);
             break;
-        case WMRZ_SERVER_VERSION_MESSAGE:
+        case WMRZ_SERVER_VERSION_MESSAGE_START:
             error = module->mod_server_version_message(module);
             if (error != 0)
             {
@@ -1349,6 +1655,12 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " mod_server_version_message failed %d", error);
                 return advance_error(error, mm);
             }
+            advance_resize_state_machine(
+                mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING);
+            break;
+        // Not processed here. Processed in server_reset
+        // case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING:
+        case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED:
             advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESIZE);
             break;
         case WMRZ_XRDP_CORE_RESIZE:
@@ -1400,6 +1712,22 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                 return advance_error(error, mm);
             }
             sync_dynamic_monitor_data(wm, &(description->description));
+            advance_resize_state_machine(mm, WMRZ_EGFX_INITIALIZE);
+            break;
+        case WMRZ_EGFX_INITIALIZE:
+            if (error == 0 && mm->egfx == NULL && mm->egfx_up == 0)
+            {
+                egfx_initialize(mm);
+                advance_resize_state_machine(mm, WMRZ_EGFX_INITALIZING);
+            }
+            else
+            {
+                advance_resize_state_machine(mm, WMRZ_EGFX_INITIALIZED);
+            }
+            break;
+        // Not processed here. Processed in xrdp_mm_egfx_caps_advertise
+        // case WMRZ_EGFX_INITALIZING:
+        case WMRZ_EGFX_INITIALIZED:
             advance_resize_state_machine(mm, WMRZ_ENCODER_CREATE);
             break;
         case WMRZ_ENCODER_CREATE:
@@ -1450,7 +1778,7 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
         return 0;
     }
 
-    if (self->resize_data == NULL)
+    if (self->resize_data == NULL && self->resize_queue != NULL)
     {
         if  (self->resize_queue->count <= 0)
         {
@@ -1518,6 +1846,11 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
                   " Resize data is not null.");
     }
 
+    if (self->resize_data == NULL)
+    {
+        return 0;
+    }
+
     if (self->resize_data->state == WMRZ_COMPLETE)
     {
         LOG(LOG_LEVEL_INFO, "dynamic_monitor_process_queue: Clearing"
@@ -1552,6 +1885,8 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
     struct xrdp_drdynvc_procs d_procs;
     int flags;
     int error;
+    char buf[1024];
+    int pid;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_initialize:");
 
@@ -1567,9 +1902,20 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
                                  &(self->dynamic_monitor_chanid));
     if (error != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_mm_drdynvc_up: "
+        LOG(LOG_LEVEL_ERROR, "dynamic_monitor_initialize: "
             "libxrdp_drdynvc_open failed %d", error);
+        return error;
     }
+
+    // Initialize xrdp_mm specific variables.
+    self->resize_queue = list_create();
+    self->resize_queue->auto_free = 1;
+    pid = g_getpid();
+    /* setup wait objects for signaling */
+    g_snprintf(buf, sizeof(buf), "xrdp_%8.8x_resize_ready", pid);
+    self->resize_ready = g_create_wait_obj(buf);
+    self->resize_data = NULL;
+
     return error;
 }
 
@@ -1583,6 +1929,12 @@ xrdp_mm_drdynvc_up(struct xrdp_mm *self)
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_drdynvc_up:");
 
+    error = egfx_initialize(self);
+    if (error != 0)
+    {
+        return error;
+    }
+
     enable_dynamic_resize = xrdp_mm_get_value(self, "enable_dynamic_resizing");
     /*
      * User can disable dynamic resizing if necessary
@@ -1593,10 +1945,17 @@ xrdp_mm_drdynvc_up(struct xrdp_mm *self)
         LOG(LOG_LEVEL_INFO, "User has disabled dynamic resizing.");
         return error;
     }
-    ignore_marker = (struct display_control_monitor_layout_data *)
-                    g_malloc(sizeof(struct display_control_monitor_layout_data), 1);
-    list_add_item(self->resize_queue, (tintptr)ignore_marker);
     error = dynamic_monitor_initialize(self);
+    if (error != 0)
+    {
+        LOG(LOG_LEVEL_INFO, "Dynamic monitor initialize failed."
+            " Client likely does not support it.");
+        return error;
+    }
+    ignore_marker = (struct display_control_monitor_layout_data *)
+                    g_malloc(sizeof(struct display_control_monitor_layout_data),
+                             1);
+    list_add_item(self->resize_queue, (tintptr)ignore_marker);
     return error;
 }
 
@@ -2795,7 +3154,10 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
     }
 }
 
-
+#define MIN_MS_BETWEEN_FRAMES 40
+/* can not change this to zero yet, g_obj_wait in os_calls.c treats
+   everything less then 1 to mean wait forever */
+#define MIN_MS_TO_WAIT_FOR_MORE_UPDATES 1
 /*****************************************************************************/
 int
 xrdp_mm_get_wait_objs(struct xrdp_mm *self,
@@ -2842,6 +3204,25 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
         read_objs[(*rcount)++] = self->resize_ready;
     }
 
+    if (self->wm->screen_dirty_region != NULL)
+    {
+        if (xrdp_region_not_empty(self->wm->screen_dirty_region))
+        {
+            int now = g_time3();
+            int next_screen_draw_time = self->wm->last_screen_draw_time +
+                                        MIN_MS_BETWEEN_FRAMES;
+            int diff = next_screen_draw_time - now;
+            int ltimeout = *timeout;
+            diff = MAX(diff, MIN_MS_TO_WAIT_FOR_MORE_UPDATES);
+            diff = MIN(diff, MIN_MS_BETWEEN_FRAMES);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_get_wait_objs:"
+                      " not empty diff %d", diff);
+            if ((ltimeout < 0) || (ltimeout > diff))
+            {
+                *timeout = diff;
+            }
+        }
+    }
     return rv;
 }
 
@@ -2921,28 +3302,6 @@ xrdp_mm_check_chan(struct xrdp_mm *self)
 
 /*****************************************************************************/
 static int
-xrdp_mm_update_module_frame_ack(struct xrdp_mm *self)
-{
-    int fif;
-    struct xrdp_encoder *encoder;
-
-    encoder = self->encoder;
-    fif = encoder->frames_in_flight;
-    if (encoder->frame_id_client + fif > encoder->frame_id_server)
-    {
-        if (encoder->frame_id_server > encoder->frame_id_server_sent)
-        {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_update_module_ack: frame_id_server %d",
-                      encoder->frame_id_server);
-            encoder->frame_id_server_sent = encoder->frame_id_server;
-            self->mod->mod_frame_ack(self->mod, 0, encoder->frame_id_server);
-        }
-    }
-    return 0;
-}
-
-/*****************************************************************************/
-static int
 xrdp_mm_process_enc_done(struct xrdp_mm *self)
 {
     XRDP_ENC_DATA *enc;
@@ -2973,22 +3332,45 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         cy = enc_done->cy;
         if (enc_done->comp_bytes > 0)
         {
-            if (!enc_done->continuation)
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_process_enc_done: "
+                      "x %d y %d cx %d cy %d frame_id %d use_frame_acks %d",
+                      x, y, cx, cy, enc_done->enc->frame_id,
+                      self->wm->client_info->use_frame_acks);
+            if (enc_done->flags & GFX_H264)
             {
-                libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
-                                                   enc_done->enc->frame_id);
+                LOG(LOG_LEVEL_INFO, "GFX H264 Unimplemeted.");
             }
-            libxrdp_fastpath_send_surface(self->wm->session,
-                                          enc_done->comp_pad_data,
-                                          enc_done->pad_bytes,
-                                          enc_done->comp_bytes,
-                                          x, y, x + cx, y + cy,
-                                          32, self->encoder->codec_id,
-                                          cx, cy);
-            if (enc_done->last)
+            else if (enc_done->flags & GFX_PROGRESSIVE_RFX) /* gfx progressive rfx */
             {
-                libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
-                                                   enc_done->enc->frame_id);
+                xrdp_egfx_send_frame_start(self->egfx,
+                                           enc_done->enc->frame_id, 0);
+                xrdp_egfx_send_wire_to_surface2(self->egfx,
+                                                self->egfx->surface_id, 9, 1,
+                                                XR_PIXEL_FORMAT_XRGB_8888,
+                                                enc_done->comp_pad_data
+                                                + enc_done->pad_bytes,
+                                                enc_done->comp_bytes);
+                xrdp_egfx_send_frame_end(self->egfx, enc_done->enc->frame_id);
+            }
+            else
+            {
+                if (!enc_done->continuation)
+                {
+                    libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
+                                                       enc_done->enc->frame_id);
+                }
+                libxrdp_fastpath_send_surface(self->wm->session,
+                                              enc_done->comp_pad_data,
+                                              enc_done->pad_bytes,
+                                              enc_done->comp_bytes,
+                                              x, y, x + cx, y + cy,
+                                              32, self->encoder->codec_id,
+                                              cx, cy);
+                if (enc_done->last)
+                {
+                    libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
+                                                       enc_done->enc->frame_id);
+                }
             }
         }
         /* free enc_done */
@@ -2996,16 +3378,35 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         {
             enc = enc_done->enc;
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_process_enc_done: last set");
-            if (self->wm->client_info->use_frame_acks == 0)
+            if (enc_done->flags & GFX_H264) /* gfx */
             {
-                self->mod->mod_frame_ack(self->mod,
-                                         enc->flags,
-                                         enc->frame_id);
+                if (self->encoder->gfx_ack_off)
+                {
+                    /* gfx and client turned off client frame acks */
+                    self->mod->mod_frame_ack(self->mod,
+                                             enc->flags,
+                                             enc->frame_id);
+                }
+                else
+                {
+                    self->encoder->frame_id_server = enc->frame_id;
+                    xrdp_mm_update_module_frame_ack(self);
+                }
             }
             else
             {
-                self->encoder->frame_id_server = enc->frame_id;
-                xrdp_mm_update_module_frame_ack(self);
+                if (self->wm->client_info->use_frame_acks == 0)
+                {
+                    /* surface commmand and client does not do frame acks */
+                    self->mod->mod_frame_ack(self->mod,
+                                             enc->flags,
+                                             enc->frame_id);
+                }
+                else
+                {
+                    self->encoder->frame_id_server = enc_done->enc->frame_id;
+                    xrdp_mm_update_module_frame_ack(self);
+                }
             }
             g_free(enc->drects);
             g_free(enc->crects);
@@ -3143,8 +3544,9 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
         return 1;
     }
     encoder = self->encoder;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_frame_ack: incoming %d, client %d, server %d",
-              frame_id, encoder->frame_id_client, encoder->frame_id_server);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_frame_ack: "
+              "incoming %d, client %d, server %d", frame_id,
+              encoder->frame_id_client, encoder->frame_id_server);
     if ((frame_id < 0) || (frame_id > encoder->frame_id_server))
     {
         /* if frame_id is negative or bigger then what server last sent
@@ -3389,9 +3791,11 @@ server_paint_rects(struct xrdp_mod *mod, int num_drects, short *drects,
 
 /*****************************************************************************/
 int
-server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
-                      int num_crects, short *crects, char *data,
-                      int left, int top, int width, int height,
+server_paint_rects_ex(struct xrdp_mod *mod,
+                      int num_drects, short *drects,
+                      int num_crects, short *crects,
+                      char *data, int left, int top,
+                      int width, int height,
                       int flags, int frame_id,
                       void *shmem_ptr, int shmem_bytes)
 {
@@ -3406,7 +3810,7 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
     wm = (struct xrdp_wm *)(mod->wm);
     mm = wm->mm;
 
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "server_paint_rects: %p", mm->encoder);
+    LOG(LOG_LEVEL_TRACE, "server_paint_rects_ex: %p", mm->encoder);
 
     if (mm->encoder != 0)
     {
@@ -3477,7 +3881,12 @@ server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
         return 0;
     }
 
-    LOG(LOG_LEVEL_TRACE, "server_paint_rects:");
+    if (wm->client_info->gfx)
+    {
+        LOG(LOG_LEVEL_DEBUG, "server_paint_rects: gfx session and no encoder");
+        mm->mod->mod_frame_ack(mm->mod, flags, frame_id);
+        return 0;
+    }
 
     p = (struct xrdp_painter *)(mod->painter);
     if (p == 0)
@@ -3796,8 +4205,16 @@ int
 server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
 {
     struct xrdp_wm *wm;
+    struct xrdp_mm *mm;
+
+    LOG(LOG_LEVEL_TRACE, "server_reset:");
 
     wm = (struct xrdp_wm *)(mod->wm);
+    if (wm == 0)
+    {
+        return 1;
+    }
+    mm = wm->mm;
 
     if (wm->client_info == 0)
     {
@@ -3807,6 +4224,42 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
     /* older client can't resize */
     if (wm->client_info->build <= 419)
     {
+        return 0;
+    }
+
+    // bpp of zero is impossible.
+    // This is a signal from xup that
+    // It is finished resizing.
+    if (bpp == 0)
+    {
+        if (mm == 0)
+        {
+            return 1;
+        }
+        if (!xrdp_wm_can_resize(wm))
+        {
+            return 1;
+        }
+        if (mm->resize_data == NULL)
+        {
+            mm->mod->mod_server_monitor_full_invalidate(mm->mod, width, height);
+            return 0;
+        }
+        if (mm->resize_data != NULL
+                && mm->resize_data->state
+                == WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING)
+        {
+            LOG(LOG_LEVEL_INFO,
+                "server_reset: Advancing server monitor resized.");
+            advance_resize_state_machine(
+                mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED);
+        }
+        else if (mm->resize_data != NULL
+                 && mm->resize_data->description.session_height == 0
+                 && mm->resize_data->description.session_width == 0)
+        {
+            mm->mod->mod_server_monitor_full_invalidate(mm->mod, width, height);
+        }
         return 0;
     }
 
