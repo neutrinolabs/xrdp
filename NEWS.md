@@ -1,3 +1,31 @@
+# Release notes for xrdp v0.9.24 (2023/12/30)
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## General announcements
+We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!
+
+Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Security fixes
+No new security fixes in this release.
+
+## Bug fixes
+* Checking group membership should now work better on systems using directory services (#2806 #2817)
+* Pasting more than 32K characters of text to the clipboard now succeeds (#1839 #2824)
+* An incompatibility with FreeRDP 2.11.2 in the drive redirector has been fixed (#2834 #2839)
+
+## New features
+* Side buttons on some mice are now supported by NeutrinoRDP (#2860). Thanks to new contributor @naruhito for this patch.
+
+## Internal changes
+* cppcheck version used for CI bumped to 2.13.0 (#2830/#2887). Note that this greatly increases cppcheck scan times.
+
+## Known issues
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.23.1 (2023/09/27)
 
 This is a security fix release for CVE-2023-42822. This update is recommended for all xrdp users.
