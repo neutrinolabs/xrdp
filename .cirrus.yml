@@ -4,7 +4,7 @@ FreeBSD_task:
       SSL: libressl
   matrix:
     freebsd_instance:
-      image_family: freebsd-12-4
+      image_family: freebsd-13-2
   prepare_script:
     - pkg install -y $SSL git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr nasm fusefs-libs check imlib2 freetype2 cmocka
     - git submodule update --init --recursive
