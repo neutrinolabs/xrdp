@@ -9,6 +9,11 @@
 
 #include "test_common.h"
 
+/* Time to allow RSA-based test suites to run on older, slower platforms
+ *
+ * These platforms are most often seen on build farms (e.g. Debian CI) */
+#define RSA_BASED_TEST_SUITE_TIMEOUT 60
+
 START_TEST(test_rc4_enc_ok)
 {
     const char *key = "16_byte_key-----";
@@ -369,23 +374,39 @@ Suite *
 make_suite_test_ssl_calls(void)
 {
     Suite *s;
-    TCase *tc_ssl_calls;
+    TCase *tc;
 
     s = suite_create("SSL-Calls");
 
-    tc_ssl_calls = tcase_create("ssl_calls");
-    suite_add_tcase(s, tc_ssl_calls);
-    tcase_add_test(tc_ssl_calls, test_rc4_enc_ok);
-    tcase_add_test(tc_ssl_calls, test_rc4_enc_tv0_ok);
-    tcase_add_test(tc_ssl_calls, test_rc4_enc_tv1_ok);
-    tcase_add_test(tc_ssl_calls, test_rc4_enc_tv2_ok);
-    tcase_add_test(tc_ssl_calls, test_rc4_enc_tv3_ok);
-    tcase_add_test(tc_ssl_calls, test_rc4_enc_tv4_ok);
-    tcase_add_test(tc_ssl_calls, test_sha1_hash_ok);
-    tcase_add_test(tc_ssl_calls, test_md5_hash_ok);
-    tcase_add_test(tc_ssl_calls, test_des3_enc_ok);
-    tcase_add_test(tc_ssl_calls, test_hmac_sha1_dgst_ok);
-    tcase_add_test(tc_ssl_calls, test_gen_key_xrdp1);
+    tc = tcase_create("ssl_calls_rc4");
+    suite_add_tcase(s, tc);
+    tcase_add_test(tc, test_rc4_enc_ok);
+    tcase_add_test(tc, test_rc4_enc_tv0_ok);
+    tcase_add_test(tc, test_rc4_enc_tv1_ok);
+    tcase_add_test(tc, test_rc4_enc_tv2_ok);
+    tcase_add_test(tc, test_rc4_enc_tv3_ok);
+    tcase_add_test(tc, test_rc4_enc_tv4_ok);
+
+    tc = tcase_create("ssl_calls_sha1");
+    suite_add_tcase(s, tc);
+    tcase_add_test(tc, test_sha1_hash_ok);
+
+    tc = tcase_create("ssl_calls_md5");
+    suite_add_tcase(s, tc);
+    tcase_add_test(tc, test_md5_hash_ok);
+
+    tc = tcase_create("ssl_calls_des3");
+    suite_add_tcase(s, tc);
+    tcase_add_test(tc, test_des3_enc_ok);
+
+    tc = tcase_create("ssl_calls_hmac_sha1");
+    suite_add_tcase(s, tc);
+    tcase_add_test(tc, test_hmac_sha1_dgst_ok);
+
+    tc = tcase_create("ssl_calls_rsa_key");
+    suite_add_tcase(s, tc);
+    tcase_set_timeout(tc, RSA_BASED_TEST_SUITE_TIMEOUT);
+    tcase_add_test(tc, test_gen_key_xrdp1);
 
     return s;
 }
