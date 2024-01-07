@@ -109,8 +109,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 
     if (client_info->jpeg_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: "
-                  "starting jpeg codec session");
+        LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting jpeg codec session");
         self->codec_id = client_info->jpeg_codec_id;
         self->in_codec_mode = 1;
         self->codec_quality = client_info->jpeg_prop[0];
@@ -140,8 +139,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     }
     else if (client_info->rfx_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: "
-                  "starting rfx codec session");
+        LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting rfx codec session");
         self->codec_id = client_info->rfx_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
@@ -153,8 +151,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 #endif
     else if (client_info->h264_codec_id != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_create: "
-                  "starting h264 codec session");
+        LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting h264 codec session");
         self->codec_id = client_info->h264_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 3;
