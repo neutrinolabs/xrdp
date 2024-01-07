@@ -1974,7 +1974,7 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
         handles[j++] = (HANDLE)(write_objs[i]);
     }
 
-    if (mstimeout < 1)
+    if (mstimeout < 0)
     {
         mstimeout = INFINITE;
     }
@@ -2011,7 +2011,7 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
     }
     else
     {
-        if (mstimeout < 1)
+        if (mstimeout < 0)
         {
             mstimeout = -1;
         }

@@ -3155,9 +3155,7 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
 }
 
 #define MIN_MS_BETWEEN_FRAMES 40
-/* can not change this to zero yet, g_obj_wait in os_calls.c treats
-   everything less then 1 to mean wait forever */
-#define MIN_MS_TO_WAIT_FOR_MORE_UPDATES 1
+#define MIN_MS_TO_WAIT_FOR_MORE_UPDATES 0
 /*****************************************************************************/
 int
 xrdp_mm_get_wait_objs(struct xrdp_mm *self,
