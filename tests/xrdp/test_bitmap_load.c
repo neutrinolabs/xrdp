@@ -45,6 +45,9 @@ static int WHITE = COLOR24RGB(255, 255, 255);
  * be considered close enough to each other */
 #define MAX_SIMILAR_COLOR_DISTANCE 3
 
+/* Time to allow some large bitmap test suites to run on slower platforms */
+#define LARGE_BM_TEST_SUITE_TIMEOUT 10
+
 void setup(void)
 {
 }
@@ -301,37 +304,48 @@ Suite *
 make_suite_test_bitmap_load(void)
 {
     Suite *s;
-    TCase *tc_bitmap_load;
-#ifdef USE_IMLIB2
-    TCase *tc_other_load;
-#endif
+    TCase *tc;
 
     s = suite_create("BitmapLoad");
 
-    tc_bitmap_load = tcase_create("xrdp_bitmap_load");
-    tcase_add_checked_fixture(tc_bitmap_load, setup, teardown);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__with_invalid_image__fail);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__4_bit__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__8_bit__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__24_bit__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__max_width_zoom__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__max_height_zoom__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__min_zoom__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__max_width_scale__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__max_height_scale__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__min_scale__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_4_bit__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_8_bit__ok);
-    tcase_add_test(tc_bitmap_load, test_bitmap_load__not_4_pixels_wide_24_bit__ok);
+    tc = tcase_create("xrdp_bitmap_load_basic");
+    suite_add_tcase(s, tc);
+    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_add_test(tc, test_bitmap_load__with_invalid_image__fail);
+    tcase_add_test(tc, test_bitmap_load__4_bit__ok);
+    tcase_add_test(tc, test_bitmap_load__8_bit__ok);
+    tcase_add_test(tc, test_bitmap_load__24_bit__ok);
 
-    suite_add_tcase(s, tc_bitmap_load);
+    tc = tcase_create("xrdp_bitmap_load_zoom");
+    suite_add_tcase(s, tc);
+    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_set_timeout(tc, LARGE_BM_TEST_SUITE_TIMEOUT);
+    tcase_add_test(tc, test_bitmap_load__max_width_zoom__ok);
+    tcase_add_test(tc, test_bitmap_load__max_height_zoom__ok);
+    tcase_add_test(tc, test_bitmap_load__min_zoom__ok);
+
+    tc = tcase_create("xrdp_bitmap_load_scale");
+    suite_add_tcase(s, tc);
+    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_set_timeout(tc, LARGE_BM_TEST_SUITE_TIMEOUT);
+    tcase_add_test(tc, test_bitmap_load__max_width_scale__ok);
+    tcase_add_test(tc, test_bitmap_load__max_height_scale__ok);
+    tcase_add_test(tc, test_bitmap_load__min_scale__ok);
+
+    tc = tcase_create("xrdp_bitmap_load_not_mod_4");
+    suite_add_tcase(s, tc);
+    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_add_test(tc, test_bitmap_load__not_4_pixels_wide_4_bit__ok);
+    tcase_add_test(tc, test_bitmap_load__not_4_pixels_wide_8_bit__ok);
+    tcase_add_test(tc, test_bitmap_load__not_4_pixels_wide_24_bit__ok);
+
 
 #ifdef USE_IMLIB2
-    tc_other_load = tcase_create("xrdp_other_load");
-    tcase_add_checked_fixture(tc_other_load, setup, teardown);
-    tcase_add_test(tc_other_load, test_png_load__blend_ok);
-    tcase_add_test(tc_other_load, test_jpg_load__ok);
-    suite_add_tcase(s, tc_other_load);
+    tc = tcase_create("xrdp_other_load");
+    suite_add_tcase(s, tc);
+    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_add_test(tc, test_png_load__blend_ok);
+    tcase_add_test(tc, test_jpg_load__ok);
 #endif
 
     return s;
