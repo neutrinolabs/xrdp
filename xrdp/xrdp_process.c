@@ -306,6 +306,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
     }
     /* Run end in module */
     xrdp_process_mod_end(self);
+    xrdp_wm_delete(self->wm);
+    self->wm = NULL;
     libxrdp_exit(self->session);
     self->session = 0;
     self->status = -1;
