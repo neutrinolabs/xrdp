@@ -1665,6 +1665,9 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int type;
     char *phold;
 
+    int width;
+    int height;
+
     LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message:");
     in_uint16_le(s, type);
     in_uint16_le(s, num_orders);
@@ -1674,7 +1677,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     rv = 0;
     if (type == 1) /* original order list */
     {
-        for (index = 0; index < num_orders; index++)
+        for (index = 0; index < num_orders; ++index)
         {
             in_uint16_le(s, type);
             rv = lib_mod_process_orders(mod, type, s);
@@ -1724,6 +1727,29 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                 break;
             }
 
+            s->p = phold + len;
+        }
+    }
+    else if (type == 100) // metadata commands.
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO,
+                  "lib_mod_process_message: type 100 len %d", len);
+        for (index = 0; index < num_orders; ++index)
+        {
+            phold = s->p;
+            in_uint16_le(s, type);
+            in_uint16_le(s, len);
+            switch (type)
+            {
+                case 3: // memory allocation complete
+                    in_uint16_le(s, width);
+                    in_uint16_le(s, height);
+                    LOG(LOG_LEVEL_INFO, "Received memory_allocation_complete"
+                        " command. width: %d, height: %d",
+                        width, height);
+                    rv = mod->server_reset(mod, width, height, 0);
+                    break;
+            }
             s->p = phold + len;
         }
     }
