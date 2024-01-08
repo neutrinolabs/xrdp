@@ -470,11 +470,11 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         tc_mutex_lock(mutex);
         fifo_add_item(fifo_processed, enc_done);
         tc_mutex_unlock(mutex);
-        /* signal completion for main thread */
-        g_set_wait_obj(event_processed);
-
     }
     while (!finished);
+
+    /* signal completion for main thread */
+    g_set_wait_obj(event_processed);
 
     return 0;
 }
