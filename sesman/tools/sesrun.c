@@ -68,8 +68,8 @@
 #   define DEFAULT_BPP 32
 #endif
 
-#ifndef DEFAULT_TYPE
-#   define DEFAULT_TYPE "Xorg"
+#ifndef DEFAULT_SESSION_TYPE
+#   define DEFAULT_SESSION_TYPE "Xorg"
 #endif
 
 /**
@@ -176,7 +176,7 @@ usage(void)
     g_printf("    -g <geometry>         Default:%dx%d\n",
              DEFAULT_WIDTH, DEFAULT_HEIGHT);
     g_printf("    -b <bits-per-pixel>   Default:%d\n", DEFAULT_BPP);
-    g_printf("    -t <type>             Default:%s\n", DEFAULT_TYPE);
+    g_printf("    -t <type>             Default:%s\n", DEFAULT_SESSION_TYPE);
     g_printf("    -D <directory>        Default: $HOME\n"
              "    -S <shell>            Default: Defined window manager\n"
              "    -p <password>         TESTING ONLY - DO NOT USE IN PRODUCTION\n"
@@ -290,7 +290,7 @@ parse_program_args(int argc, char *argv[], struct session_params *sp,
     sp->width = DEFAULT_WIDTH;
     sp->height = DEFAULT_HEIGHT;
     sp->bpp = DEFAULT_BPP;
-    (void)string_to_session_type(DEFAULT_TYPE, &sp->session_type);
+    (void)string_to_session_type(DEFAULT_SESSION_TYPE, &sp->session_type);
 
     sp->directory = "";
     sp->shell = "";

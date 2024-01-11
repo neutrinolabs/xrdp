@@ -95,15 +95,10 @@ struct sockaddr_hvs
 #endif
 
 #include "os_calls.h"
+#include "limits.h"
 #include "string_calls.h"
 #include "log.h"
 #include "xrdp_constants.h"
-
-/* for clearenv() */
-#if defined(_WIN32)
-#else
-extern char **environ;
-#endif
 
 #if defined(__linux__)
 #include <linux/unistd.h>
@@ -3446,13 +3441,15 @@ g_setpgid(int pid, int pgid)
 void
 g_clearenv(void)
 {
-#if defined(_WIN32)
-#else
-#if defined(BSD)
+#if defined(HAVE_CLEARENV)
+    clearenv();
+#elif defined(_WIN32)
+#elif defined(BSD)
+    extern char **environ;
     environ[0] = 0;
 #else
+    extern char **environ;
     environ = 0;
-#endif
 #endif
 }
 

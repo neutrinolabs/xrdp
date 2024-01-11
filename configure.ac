@@ -211,7 +211,7 @@ AM_COND_IF([DEVEL_DEBUG],
 AC_SEARCH_LIBS([setusercontext], [util])
 
 # Define HAVE_XXXXX macros for some system functions
-AC_CHECK_FUNCS([setusercontext getgrouplist])
+AC_CHECK_FUNCS([setusercontext getgrouplist clearenv])
 
 # The type used by getgrouplist() is the same type used by getgroups()
 AC_TYPE_GETGROUPS
