@@ -438,23 +438,6 @@ g_tcp_socket(void)
         }
     }
 
-    option_len = sizeof(option_value);
-
-    if (getsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                   &option_len) == 0)
-    {
-        if (option_value < (1024 * 32))
-        {
-            option_value = 1024 * 32;
-            option_len = sizeof(option_value);
-            if (setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                           option_len) < 0)
-            {
-                LOG(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
-            }
-        }
-    }
-
     return rv;
 }
 
