@@ -1235,7 +1235,8 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             version, flags, index);
         switch (version)
         {
-            case XR_RDPGFX_CAPVERSION_8:
+            case XR_RDPGFX_CAPVERSION_8: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_101:
                 best_pro_index = index;
                 break;
             case XR_RDPGFX_CAPVERSION_81:
@@ -1252,50 +1253,20 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                 }
                 best_pro_index = index;
                 break;
-            case XR_RDPGFX_CAPVERSION_101:
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_102:
-                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
-                {
-                    best_h264_index = index;
-                }
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_103:
-                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
-                {
-                    best_h264_index = index;
-                }
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_104:
-                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
-                {
-                    best_h264_index = index;
-                }
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_105:
-                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
-                {
-                    best_h264_index = index;
-                }
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_106:
-                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
-                {
-                    best_h264_index = index;
-                }
-                best_pro_index = index;
-                break;
+            case XR_RDPGFX_CAPVERSION_102: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_103: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_104: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_105: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_106: /* FALLTHROUGH */
             case XR_RDPGFX_CAPVERSION_107:
                 if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
                 {
                     best_h264_index = index;
                 }
                 best_pro_index = index;
+                break;
+            default:
+                /* just skip unknwown */
                 break;
         }
     }
