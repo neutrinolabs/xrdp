@@ -1174,6 +1174,20 @@ advance_resize_state_machine(struct xrdp_mm *mm,
     return 0;
 }
 
+struct ver_flags_t
+{
+    int version;
+    int flags;
+};
+
+/******************************************************************************/
+static int
+cmpverfunc (const void *a, const void *b)
+{
+    return ((struct ver_flags_t *)a)->version -
+           ((struct ver_flags_t *)b)->version;
+}
+
 /******************************************************************************/
 static int
 xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
@@ -1188,6 +1202,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     int error;
     int version;
     int flags;
+    struct ver_flags_t *ver_flags;
 
     LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise:");
     self = (struct xrdp_mm *) user;
@@ -1196,18 +1211,32 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     {
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: can not do gfx");
     }
+    /* create copy for sorting */
+    ver_flags = g_new(struct ver_flags_t, caps_count);
+    if (ver_flags == NULL)
+    {
+        return 1;
+    }
+    for (index = 0; index < caps_count; index++)
+    {
+        ver_flags[index].version = versions[index];
+        ver_flags[index].flags = flagss[index];
+    }
+    /* sort by version */
+    g_qsort(ver_flags, caps_count, sizeof(struct ver_flags_t), cmpverfunc);
     best_index = -1;
     best_h264_index = -1;
     best_pro_index = -1;
     for (index = 0; index < caps_count; index++)
     {
-        version = versions[index];
-        flags = flagss[index];
+        version = ver_flags[index].version;
+        flags = ver_flags[index].flags;
         LOG(LOG_LEVEL_INFO, "  version 0x%8.8x flags 0x%8.8x (index: %d)",
             version, flags, index);
         switch (version)
         {
-            case XR_RDPGFX_CAPVERSION_8:
+            case XR_RDPGFX_CAPVERSION_8: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_101:
                 best_pro_index = index;
                 break;
             case XR_RDPGFX_CAPVERSION_81:
@@ -1218,29 +1247,27 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                 best_pro_index = index;
                 break;
             case XR_RDPGFX_CAPVERSION_10:
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_101:
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_102:
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_103:
-                best_pro_index = index;
-                break;
-            case XR_RDPGFX_CAPVERSION_104:
                 if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
                 {
                     best_h264_index = index;
                 }
                 best_pro_index = index;
                 break;
-            case XR_RDPGFX_CAPVERSION_105:
+            case XR_RDPGFX_CAPVERSION_102: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_103: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_104: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_105: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_106: /* FALLTHROUGH */
+            case XR_RDPGFX_CAPVERSION_107:
+                if (!(flags & XR_RDPGFX_CAPS_FLAG_AVC_DISABLED))
+                {
+                    best_h264_index = index;
+                }
                 best_pro_index = index;
                 break;
-            case XR_RDPGFX_CAPVERSION_106:
-                best_pro_index = index;
+            default:
+                /* just skip unknwown */
+                LOG(LOG_LEVEL_INFO, "unknown version 0x%8.8x", version);
                 break;
         }
     }
@@ -1260,10 +1287,10 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     if (best_index >= 0)
     {
         LOG(LOG_LEVEL_INFO, "  replying version 0x%8.8x flags 0x%8.8x",
-            versions[best_index], flagss[best_index]);
+            ver_flags[best_index].version, ver_flags[best_index].flags);
         error = xrdp_egfx_send_capsconfirm(self->egfx,
-                                           versions[best_index],
-                                           flagss[best_index]);
+                                           ver_flags[best_index].version,
+                                           ver_flags[best_index].flags);
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_capsconfirm "
             "error %d best_index %d", error, best_index);
         error = xrdp_egfx_send_reset_graphics(self->egfx,
@@ -1307,6 +1334,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         self->encoder = xrdp_encoder_create(self);
         xrdp_bitmap_invalidate(screen, &lrect);
     }
+    g_free(ver_flags);
     return 0;
 }
 

@@ -4199,3 +4199,11 @@ g_no_new_privs(void)
     return 0;
 #endif
 }
+
+/*****************************************************************************/
+void
+g_qsort(void *base, size_t nitems, size_t size,
+        int (*compar)(const void *, const void *))
+{
+    qsort(base, nitems, size, compar);
+}
