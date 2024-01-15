@@ -400,6 +400,9 @@ int      g_tcp4_bind_address(int sck, const char *port, const char *address);
 int      g_tcp6_socket(void);
 int      g_tcp6_bind_address(int sck, const char *port, const char *address);
 int      g_no_new_privs(void);
+void
+g_qsort(void *base, size_t nitems, size_t size,
+        int (*compar)(const void *, const void *));
 
 /* glib-style wrappers */
 #define g_new(struct_type, n_structs) \
