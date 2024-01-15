@@ -1267,6 +1267,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                 break;
             default:
                 /* just skip unknwown */
+                LOG(LOG_LEVEL_INFO, "unknown version 0x%8.8x", version);
                 break;
         }
     }
