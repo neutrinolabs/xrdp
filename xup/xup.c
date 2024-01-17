@@ -1275,7 +1275,7 @@ process_server_set_pointer_shmfd(struct mod *amod, struct stream *s)
         {
             Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
             shmembytes = width * height * Bpp + width * height / 8;
-            if (g_file_map(fd, 1, 1, shmembytes, &shmemptr) == 0)
+            if (g_file_map(fd, 1, 0, shmembytes, &shmemptr) == 0)
             {
                 cur_data = (char *)shmemptr;
                 cur_mask = cur_data + width * height * Bpp;
@@ -1368,7 +1368,7 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     {
         if (num_fds == 1)
         {
-            if (g_file_map(fd, 1, 1, shmem_bytes, &shmem_ptr) == 0)
+            if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
             {
                 bmpdata = (char *)shmem_ptr;
                 bmpdata += shmem_offset;
