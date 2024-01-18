@@ -223,7 +223,8 @@ enum xrdp_encoder_flags
     NONE                                   = 0,
     ENCODE_COMPLETE                        = 1 << 0,
     GFX_PROGRESSIVE_RFX                    = 1 << 1,
-    GFX_H264                               = 1 << 2
+    GFX_H264                               = 1 << 2,
+    KEY_FRAME_REQUESTED                    = 1 << 3
 };
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
