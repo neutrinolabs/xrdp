@@ -184,6 +184,8 @@ struct mod
                             int srcx, int srcy, int mskx, int msky,
                             int dstx, int dsty, int width, int height,
                             int dstformat);
+    // Module must call this before server_paint_rects / server_paint_rects_ex
+    int (*server_start_encoder)(struct mod *v);
     int (*server_paint_rects)(struct mod *v,
                               int num_drects, short *drects,
                               int num_crects, short *crects,
@@ -191,7 +193,7 @@ struct mod
                               int flags, int frame_id);
     int (*server_session_info)(struct mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 46]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 47]; /* align, 100 minus the number of server
                                        functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

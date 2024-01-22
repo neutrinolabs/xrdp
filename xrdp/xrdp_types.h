@@ -165,6 +165,7 @@ struct xrdp_mod
                             int srcx, int srcy, int mskx, int msky,
                             int dstx, int dsty, int width, int height,
                             int dstformat);
+    int (*server_start_encoder)(struct xrdp_mod *v);
     int (*server_paint_rects)(struct xrdp_mod *v,
                               int num_drects, short *drects,
                               int num_crects, short *crects,
@@ -182,7 +183,7 @@ struct xrdp_mod
                                  int width, int height,
                                  int flags, int frame_id,
                                  void *shmem_ptr, int shmem_bytes);
-    tintptr server_dumby[100 - 48]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 49]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */
