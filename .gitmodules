@@ -3,7 +3,6 @@
 	url = https://github.com/neutrinolabs/librfxcodec.git
 	branch = .
 	ignore = untracked
-
 [submodule "libpainter"]
 	path = libpainter
 	url = https://github.com/neutrinolabs/libpainter.git
