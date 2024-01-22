@@ -363,6 +363,8 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     struct rfx_tile *tiles;
     struct rfx_rect *rfxrects;
     int alloc_bytes;
+    int encode_flags;
+    int encode_passes;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_enc_rfx: num_crects %d num_drects %d",
@@ -372,6 +374,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     event_processed = self->xrdp_encoder_event_processed;
 
     all_tiles_written = 0;
+    encode_passes = 0;
     do
     {
         tiles_written = 0;
@@ -423,15 +426,23 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                 }
 
                 out_data_bytes = self->max_compressed_bytes;
-                tiles_written = rfxcodec_encode(self->codec_handle,
-                                                out_data + XRDP_SURCMD_PREFIX_BYTES,
-                                                &out_data_bytes, enc->data,
-                                                enc->width, enc->height,
-                                                enc->width * 4,
-                                                rfxrects, enc->num_drects,
-                                                tiles, enc->num_crects,
-                                                self->quants, self->num_quants);
+
+                encode_flags = 0;
+                if (((int)enc->flags & KEY_FRAME_REQUESTED) && encode_passes == 0)
+                {
+                    encode_flags = RFX_FLAGS_PRO_KEY;
+                }
+                tiles_written = rfxcodec_encode_ex(self->codec_handle,
+                                                   out_data + XRDP_SURCMD_PREFIX_BYTES,
+                                                   &out_data_bytes, enc->data,
+                                                   enc->width, enc->height,
+                                                   enc->width * 4,
+                                                   rfxrects, enc->num_drects,
+                                                   tiles, enc->num_crects,
+                                                   self->quants, self->num_quants,
+                                                   encode_flags);
             }
+            ++encode_passes;
         }
 
         LOG_DEVEL(LOG_LEVEL_DEBUG,
