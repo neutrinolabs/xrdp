@@ -77,7 +77,7 @@ lib_mod_log_peer(struct mod *mod)
             "to Xorg_pid=%d Xorg_uid=%d Xorg_gid=%d "
             "client=%s",
             my_pid, pid, uid, gid,
-            mod->client_info.client_description);
+            mod->client_info->client_description);
     }
     else
     {
@@ -1642,8 +1642,8 @@ lib_send_client_info(struct mod *mod)
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 104);
-    g_memcpy(s->p, &(mod->client_info), sizeof(mod->client_info));
-    s->p += sizeof(mod->client_info);
+    g_memcpy(s->p, mod->client_info, sizeof(*mod->client_info));
+    s->p += sizeof(*mod->client_info);
     s_mark_end(s);
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
@@ -1806,7 +1806,7 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
     }
     else if (g_strcasecmp(name, "client_info") == 0)
     {
-        g_memcpy(&(mod->client_info), value, sizeof(mod->client_info));
+        mod->client_info = (struct xrdp_client_info *)value;
     }
 
     return 0;

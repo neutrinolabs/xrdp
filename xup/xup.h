@@ -184,7 +184,7 @@ struct mod
     char ip[256];
     char port[256];
     int shift_state;
-    struct xrdp_client_info client_info;
+    struct xrdp_client_info *client_info;
     int screen_shmem_id;
     int screen_shmem_id_mapped; /* boolean */
     char *screen_shmem_pixels;

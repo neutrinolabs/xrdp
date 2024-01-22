@@ -113,26 +113,26 @@ set_keyboard_overrides(struct mod *mod)
 
     if (mod->allow_client_kbd_settings)
     {
-        settings->kbd_type = mod->client_info.keyboard_type;
-        settings->kbd_subtype = mod->client_info.keyboard_subtype;
+        settings->kbd_type = mod->client_info->keyboard_type;
+        settings->kbd_subtype = mod->client_info->keyboard_subtype;
         /* Define the most common number of function keys, 12.
            because we can't get it from client. */
         settings->kbd_fn_keys = 12;
-        settings->kbd_layout = mod->client_info.keylayout;
+        settings->kbd_layout = mod->client_info->keylayout;
 
         /* Exception processing for each RDP Keyboard type */
-        if (mod->client_info.keyboard_type == 0x00)
+        if (mod->client_info->keyboard_type == 0x00)
         {
             /* 0x00000000 : Set on Server */
             LOG(LOG_LEVEL_WARNING, "keyboard_type:[0x%02x] ,Set on Server",
-                mod->client_info.keyboard_type);
+                mod->client_info->keyboard_type);
         }
-        else if (mod->client_info.keyboard_type == 0x04)
+        else if (mod->client_info->keyboard_type == 0x04)
         {
             /* 0x00000004 : IBM enhanced (101- or 102-key) keyboard */
             /* Nothing to do. */
         }
-        else if (mod->client_info.keyboard_type == 0x07)
+        else if (mod->client_info->keyboard_type == 0x07)
         {
             /* 0x00000007 : Japanese keyboard */
             /* Nothing to do. */
@@ -281,7 +281,7 @@ lxrdp_connect(struct mod *mod)
         LOG(LOG_LEVEL_ERROR, "NeutrinoRDP proxy connection: status [Failed],"
             " RDP client [%s], RDP server [%s:%d], RDP server username [%s],"
             " xrdp pamusername [%s], xrdp process id [%d]",
-            mod->client_info.client_description,
+            mod->client_info->client_description,
             mod->inst->settings->hostname,
             mod->inst->settings->port,
             mod->inst->settings->username,
@@ -294,7 +294,7 @@ lxrdp_connect(struct mod *mod)
         LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Success],"
             " RDP client [%s], RDP server [%s:%d], RDP server username [%s],"
             " xrdp pamusername [%s], xrdp process id [%d]",
-            mod->client_info.client_description,
+            mod->client_info->client_description,
             mod->inst->settings->hostname,
             mod->inst->settings->port,
             mod->inst->settings->username,
@@ -574,7 +574,7 @@ lxrdp_end(struct mod *mod)
     LOG(LOG_LEVEL_INFO, "NeutrinoRDP proxy connection: status [Disconnect],"
         " RDP client [%s], RDP server [%s:%d], RDP server username [%s],"
         " xrdp pamusername [%s], xrdp process id [%d]",
-        mod->client_info.client_description,
+        mod->client_info->client_description,
         mod->inst->settings->hostname,
         mod->inst->settings->port,
         mod->inst->settings->username,
@@ -636,7 +636,7 @@ lxrdp_set_param(struct mod *mod, const char *name, const char *value)
     }
     else if (g_strcmp(name, "client_info") == 0)
     {
-        g_memcpy(&(mod->client_info), value, sizeof(mod->client_info));
+        mod->client_info = (struct xrdp_client_info *)value;
         /* This is a Struct and cannot be printed in next else*/
         LOG_DEVEL(LOG_LEVEL_DEBUG, "Client_info struct ignored");
     }
@@ -1906,15 +1906,15 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->password = g_strdup(mod->password);
     instance->settings->domain = g_strdup(mod->domain);
 
-    if (mod->client_info.rail_enable && (mod->client_info.rail_support_level > 0))
+    if (mod->client_info->rail_enable && (mod->client_info->rail_support_level > 0))
     {
         LOG_DEVEL(LOG_LEVEL_INFO, "Railsupport !!!!!!!!!!!!!!!!!!");
         instance->settings->remote_app = 1;
         instance->settings->rail_langbar_supported = 1;
         instance->settings->workarea = 1;
         instance->settings->performance_flags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG;
-        instance->settings->num_icon_caches = mod->client_info.wnd_num_icon_caches;
-        instance->settings->num_icon_cache_entries = mod->client_info.wnd_num_icon_cache_entries;
+        instance->settings->num_icon_caches = mod->client_info->wnd_num_icon_caches;
+        instance->settings->num_icon_cache_entries = mod->client_info->wnd_num_icon_cache_entries;
 
 
     }
@@ -1930,14 +1930,14 @@ lfreerdp_pre_connect(freerdp *instance)
     /* Allow users or administrators to configure the mstsc experience settings. #1903 */
 
     if ((mod->allow_client_experiencesettings == 1) &&
-            (mod->client_info.mcs_connection_type == CONNECTION_TYPE_AUTODETECT))
+            (mod->client_info->mcs_connection_type == CONNECTION_TYPE_AUTODETECT))
     {
         /* auto-detect not yet supported - use default performance settings */
     }
     else if (mod->allow_client_experiencesettings == 1)
     {
         instance->settings->performance_flags =
-            (mod->client_info.rdp5_performanceflags &
+            (mod->client_info->rdp5_performanceflags &
              /* Mask to avoid accepting invalid flags. */
              (PERF_DISABLE_WALLPAPER |
               PERF_DISABLE_FULLWINDOWDRAG |
@@ -1951,11 +1951,11 @@ lfreerdp_pre_connect(freerdp *instance)
         LOG(LOG_LEVEL_DEBUG, "RDP client experience settings, "
             "rdp5_performance_flags:[0x%08x], "
             "masked performance_flags:[0x%08x]",
-            mod->client_info.rdp5_performanceflags,
+            mod->client_info->rdp5_performanceflags,
             instance->settings->performance_flags);
 
-        if (mod->client_info.rail_enable &&
-                (mod->client_info.rail_support_level > 0))
+        if (mod->client_info->rail_enable &&
+                (mod->client_info->rail_support_level > 0))
         {
             instance->settings->performance_flags |= (PERF_DISABLE_WALLPAPER |
                     PERF_DISABLE_FULLWINDOWDRAG);
@@ -1986,7 +1986,7 @@ lfreerdp_pre_connect(freerdp *instance)
 
     // Multi Monitor Settings
     const struct display_size_description *display_sizes =
-            &mod->client_info.display_sizes;
+            &mod->client_info->display_sizes;
     instance->settings->num_monitors = display_sizes->monitorCount;
 
     for (index = 0; index < display_sizes->monitorCount; index++)

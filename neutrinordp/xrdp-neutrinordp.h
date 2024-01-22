@@ -217,7 +217,7 @@ struct mod
     int bool_keyBoardSynced ; /* Numlock can be out of sync, we hold state here to resolve */
     int keyBoardLockInfo ; /* Holds initial numlock capslock state */
 
-    struct xrdp_client_info client_info;
+    struct xrdp_client_info *client_info;
 
     struct rdp_freerdp *inst;
     struct bitmap_item bitmap_cache[4][4096];
