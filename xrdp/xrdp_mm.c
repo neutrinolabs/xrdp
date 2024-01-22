@@ -1674,6 +1674,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             // Disable the encoder until the resize is complete.
             if (mm->encoder != NULL)
             {
+                description->restart_encoder = 1;
                 xrdp_encoder_delete(mm->encoder);
                 mm->encoder = NULL;
             }
@@ -1833,7 +1834,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             advance_resize_state_machine(mm, WMRZ_ENCODER_CREATE);
             break;
         case WMRZ_ENCODER_CREATE:
-            if (mm->encoder == NULL)
+            if (description->restart_encoder)
             {
                 mm->encoder = xrdp_encoder_create(mm);
             }

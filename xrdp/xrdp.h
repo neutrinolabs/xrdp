@@ -474,6 +474,7 @@ struct display_control_monitor_layout_data
     /// This flag is set if the state machine needs to
     /// shutdown/startup EGFX
     int using_egfx;
+    int restart_encoder;
 };
 
 int
