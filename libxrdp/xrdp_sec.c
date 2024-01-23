@@ -2138,15 +2138,25 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     {
         client_info->bpp = 32;
     }
+#ifdef XRDP_RFXCODEC
     if (earlyCapabilityFlags & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL)
     {
-        LOG(LOG_LEVEL_INFO, "client supports gfx protocol");
-        self->rdp_layer->client_info.gfx = 1;
+        if (client_info->bpp < 32)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "client requested gfx protocol with insufficient color depth");
+        }
+        else
+        {
+            LOG(LOG_LEVEL_INFO, "client supports gfx protocol");
+            self->rdp_layer->client_info.gfx = 1;
+        }
     }
     else
     {
         LOG_DEVEL(LOG_LEVEL_INFO, "client DOES NOT support gfx");
     }
+#endif
     if (!s_check_rem(s, 64))
     {
         return 0;
