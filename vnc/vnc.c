@@ -1643,10 +1643,16 @@ lib_mod_connect(struct vnc *v)
     char cursor_mask[32 * (32 / 8)];
     char con_port[256];
     char text[256];
+    char version_str[12];
+    char *err_reason;
+    char j;
     struct stream *s;
     struct stream *pixel_format;
     int error;
     int i;
+    int sec_lvl = 0;
+    int version;
+    int n_sec_lvls;
     int check_sec_result;
 
     v->server_msg(v, "VNC started connecting", 0);
@@ -1710,8 +1716,32 @@ lib_mod_connect(struct vnc *v)
         error = trans_force_read_s(v->trans, s, 12);
         if (error == 0)
         {
-            s->p = s->data;
-            out_uint8a(s, "RFB 003.003\n", 12);
+            in_uint8a(s, version_str, 12);
+            if (g_strncmp(version_str, "RFB 003.00", 10) != 0)
+            {
+                version_str[11] = '\0';
+                LOG(LOG_LEVEL_ERROR, "Invalid server version string %s", version_str);
+                error = 1;
+            }
+            if (version_str[11] != '\n')
+            {
+                LOG(LOG_LEVEL_ERROR, "Invalid server version string (missing trailing newline)");
+                error = 1;
+            }
+        }
+        if (error == 0)
+        {
+            version = version_str[10] - '0';
+            if (version != 3 && version != 7 && version != 8)
+            {
+                LOG(LOG_LEVEL_ERROR, "Unsupported VNC version 3.%d", version);
+                error = 1;
+            }
+        }
+        if (error == 0)
+        {
+            init_stream(s, 8192);
+            out_uint8p(s, version_str, 12);
             s_mark_end(s);
             error = trans_force_write_s(v->trans, s);
         }
@@ -1720,53 +1750,132 @@ lib_mod_connect(struct vnc *v)
         if (error == 0)
         {
             init_stream(s, 8192);
-            error = trans_force_read_s(v->trans, s, 4);
-        }
-
-        if (error == 0)
-        {
-            in_uint32_be(s, i);
-            g_sprintf(text, "VNC security level is %d (1 = none, 2 = standard)", i);
-            v->server_msg(v, text, 0);
-
-            if (i == 1) /* none */
+            if (version == 3)
             {
-                check_sec_result = 0;
-            }
-            else if (i == 2) /* dec the password and the server random */
-            {
-                init_stream(s, 8192);
-                error = trans_force_read_s(v->trans, s, 16);
-
+                // The server chooses the security type
+                error = trans_force_read_s(v->trans, s, 4);
                 if (error == 0)
                 {
-                    init_stream(s, 8192);
-                    if (guid_is_set(&v->guid))
+                    in_uint32_be(s, sec_lvl);
+                }
+            }
+            else if (version >= 7)
+            {
+                // The client chooses the security type
+                error = trans_force_read_s(v->trans, s, 1);
+                if (error == 0)
+                {
+                    in_uint8(s, n_sec_lvls);
+                    if (n_sec_lvls > 0)
                     {
-                        char guid_str[GUID_STR_SIZE];
-                        guid_to_str(&v->guid, guid_str);
-                        rfbHashEncryptBytes(s->data, guid_str);
+                        error = trans_force_read_s(v->trans, s, n_sec_lvls);
                     }
                     else
                     {
-                        rfbEncryptBytes(s->data, v->password);
+                        // Read size of reason
+                        error = trans_force_read_s(v->trans, s, 4);
+                        if (error == 0)
+                        {
+                            in_uint32_be(s, i);
+                            if (i <= 1024)
+                            {
+                                error = trans_force_read_s(v->trans, s, i);
+                            }
+                            else
+                            {
+                                LOG(LOG_LEVEL_ERROR, "Connection closed by server. Reason string exceeds size limit (%d > 1024 bytes)", i);
+                                error = 1;
+                            }
+                        }
+                        else
+                        {
+                            i = 0;
+                        }
+                        if (error == 0)
+                        {
+                            error = trans_force_read_s(v->trans, s, i);
+                        }
+                        if (error == 0)
+                        {
+                            in_str(s, err_reason, i);
+                            LOG(LOG_LEVEL_ERROR, "Connection closed by server with reason: %s", err_reason);
+                            error = 1;
+                        }
                     }
-                    s->p += 16;
-                    s_mark_end(s);
-                    error = trans_force_write_s(v->trans, s);
-                    check_sec_result = 1; // not needed
+                }
+                if (error == 0)
+                {
+                    for (; n_sec_lvls > 0; --n_sec_lvls)
+                    {
+                        in_uint8(s, j);
+                        // Choose the highest security level that we support
+                        if (j > sec_lvl && j <= 2)
+                        {
+                            sec_lvl = j;
+                        }
+                    }
+                    if (sec_lvl != 0)
+                    {
+                        init_stream(s, 8192);
+                        out_uint8(s, sec_lvl);
+                        s_mark_end(s);
+
+                        error = trans_force_write_s(v->trans, s);
+                    }
                 }
             }
-            else if (i == 0)
+        }
+    }
+
+    if (error == 0)
+    {
+        g_sprintf(text, "VNC security level is %d (1 = none, 2 = standard)", sec_lvl);
+        v->server_msg(v, text, 0);
+
+        if (sec_lvl == 1) /* none */
+        {
+            if (version >= 8)
             {
-                LOG(LOG_LEVEL_ERROR, "VNC Server will disconnect");
-                error = 1;
+                check_sec_result = 1;
             }
             else
             {
-                LOG(LOG_LEVEL_ERROR, "VNC unsupported security level %d", i);
-                error = 1;
+                check_sec_result = 0;
             }
+        }
+        else if (sec_lvl == 2) /* dec the password and the server random */
+        {
+            init_stream(s, 8192);
+            error = trans_force_read_s(v->trans, s, 16);
+
+            if (error == 0)
+            {
+                init_stream(s, 8192);
+                if (guid_is_set(&v->guid))
+                {
+                    char guid_str[GUID_STR_SIZE];
+                    guid_to_str(&v->guid, guid_str);
+                    rfbHashEncryptBytes(s->data, guid_str);
+                }
+                else
+                {
+                    rfbEncryptBytes(s->data, v->password);
+                }
+                s->p += 16;
+                s_mark_end(s);
+                error = trans_force_write_s(v->trans, s);
+                check_sec_result = 1; // not needed
+            }
+        }
+        else if (sec_lvl == 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "VNC Server will disconnect");
+            error = 1;
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR, "VNC unsupported security level %d", sec_lvl);
+            error = 1;
         }
     }
 
@@ -1788,8 +1897,37 @@ lib_mod_connect(struct vnc *v)
 
             if (i != 0)
             {
-                v->server_msg(v, "VNC password failed", 0);
-                error = 2;
+                if (version >= 8)
+                {
+                    error = trans_force_read_s(v->trans, s, 4);
+                    if (error == 0)
+                    {
+                        in_uint32_be(s, i);
+                        if (i <= 1024)
+                        {
+                            error = trans_force_read_s(v->trans, s, i);
+                        }
+                        else
+                        {
+                            LOG(LOG_LEVEL_ERROR, "VNC security failure reason exceeds size limit (%d > 1024 bytes)", i);
+                            error = 1;
+                        }
+                    }
+                    else
+                    {
+                        i = 0;
+                    }
+                    if (error == 0)
+                    {
+                        in_str(s, err_reason, i);
+                        v->server_msg(v, err_reason, 0);
+                    }
+                }
+                if (version < 8 || error != 0)
+                {
+                    v->server_msg(v, "VNC password failed", 0);
+                    error = 2;
+                }
             }
             else
             {
@@ -1802,8 +1940,7 @@ lib_mod_connect(struct vnc *v)
     {
         v->server_msg(v, "VNC sending share flag", 0);
         init_stream(s, 8192);
-        s->data[0] = 1;
-        s->p++;
+        out_uint8(s, 1);
         s_mark_end(s);
         error = trans_force_write_s(v->trans, s); /* share flag */
     }
@@ -2073,7 +2210,7 @@ init_client_layout(struct vnc_screen_layout *layout,
     for (i = 0 ; i < client_info->display_sizes.monitorCount ; ++i)
     {
         /* Use minfo_wm, as this is normalised for a top-left of (0,0)
-         * as required by RFC6143 */
+        * as required by RFC6143 */
         layout->s[i].id = i;
         layout->s[i].x = client_info->display_sizes.minfo_wm[i].left;
         layout->s[i].y = client_info->display_sizes.minfo_wm[i].top;
