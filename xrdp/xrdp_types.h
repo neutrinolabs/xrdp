@@ -182,7 +182,10 @@ struct xrdp_mod
                                  int width, int height,
                                  int flags, int frame_id,
                                  void *shmem_ptr, int shmem_bytes);
-    tintptr server_dumby[100 - 48]; /* align, 100 minus the number of server
+    int (*server_egfx_cmd)(struct xrdp_mod *v,
+                           char *cmd, int cmd_bytes,
+                           char *data, int data_bytes);
+    tintptr server_dumby[100 - 49]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */
