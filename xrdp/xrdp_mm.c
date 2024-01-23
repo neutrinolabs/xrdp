@@ -1484,8 +1484,7 @@ int
 egfx_initialize(struct xrdp_mm *self)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "egfx_initialize");
-    if (!(self->wm->client_info->mcs_early_capability_flags
-            & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL))
+    if (!(self->wm->client_info->gfx))
     {
         return 0;
     }
