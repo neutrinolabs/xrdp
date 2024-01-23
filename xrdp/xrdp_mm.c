@@ -419,6 +419,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_composite = server_composite;
             self->mod->server_paint_rects = server_paint_rects;
             self->mod->server_session_info = server_session_info;
+            self->mod->server_egfx_cmd = server_egfx_cmd;
             self->mod->server_set_pointer_large = server_set_pointer_large;
             self->mod->server_paint_rects_ex = server_paint_rects_ex;
             self->mod->si = &(self->wm->session->si);
@@ -3430,8 +3431,11 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
     int y;
     int cx;
     int cy;
+    int is_gfx;
+    int got_frame_id;
+    int client_ack;
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_process_enc_done:");
+    LOG(LOG_LEVEL_TRACE, "xrdp_mm_process_enc_done:");
 
     while (1)
     {
@@ -3443,42 +3447,37 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         {
             break;
         }
-        /* do something with msg */
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_process_enc_done: message back bytes %d",
-                  enc_done->comp_bytes);
-        x = enc_done->x;
-        y = enc_done->y;
-        cx = enc_done->cx;
-        cy = enc_done->cy;
+        is_gfx = ENC_IS_BIT_SET(enc_done->flags, ENC_DONE_FLAGS_GFX_BIT);
+        if (is_gfx)
+        {
+            got_frame_id = ENC_IS_BIT_SET(enc_done->flags,
+                                          ENC_DONE_FLAGS_FRAME_ID_BIT);
+            client_ack = self->encoder->gfx_ack_off == 0;
+        }
+        else
+        {
+            got_frame_id = 1;
+            client_ack = self->wm->client_info->use_frame_acks;
+        }
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_process_enc_done: message back "
+                  "bytes %d", enc_done->comp_bytes);
         if (enc_done->comp_bytes > 0)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_process_enc_done: "
-                      "x %d y %d cx %d cy %d frame_id %d use_frame_acks %d",
-                      x, y, cx, cy, enc_done->enc->frame_id,
-                      self->wm->client_info->use_frame_acks);
-            if (enc_done->flags & GFX_H264)
+            if (is_gfx)
             {
-                LOG(LOG_LEVEL_INFO, "GFX H264 Unimplemeted.");
-            }
-            else if (enc_done->flags & GFX_PROGRESSIVE_RFX) /* gfx progressive rfx */
-            {
-                xrdp_egfx_send_frame_start(self->egfx,
-                                           enc_done->enc->frame_id, 0);
-                xrdp_egfx_send_wire_to_surface2(self->egfx,
-                                                self->egfx->surface_id, 9, 1,
-                                                XR_PIXEL_FORMAT_XRGB_8888,
-                                                enc_done->comp_pad_data
-                                                + enc_done->pad_bytes,
-                                                enc_done->comp_bytes);
-                xrdp_egfx_send_frame_end(self->egfx, enc_done->enc->frame_id);
+                xrdp_egfx_send_data(self->egfx,
+                                    enc_done->comp_pad_data +
+                                    enc_done->pad_bytes,
+                                    enc_done->comp_bytes);
             }
             else
             {
-                if (!enc_done->continuation)
-                {
-                    libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
-                                                       enc_done->enc->frame_id);
-                }
+                x = enc_done->x;
+                y = enc_done->y;
+                cx = enc_done->cx;
+                cy = enc_done->cy;
+                libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
+                                                   enc_done->frame_id);
                 libxrdp_fastpath_send_surface(self->wm->session,
                                               enc_done->comp_pad_data,
                                               enc_done->pad_bytes,
@@ -3486,11 +3485,8 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                                               x, y, x + cx, y + cy,
                                               32, self->encoder->codec_id,
                                               cx, cy);
-                if (enc_done->last)
-                {
-                    libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
-                                                       enc_done->enc->frame_id);
-                }
+                libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
+                                                   enc_done->frame_id);
             }
         }
         /* free enc_done */
@@ -3498,38 +3494,28 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         {
             enc = enc_done->enc;
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_process_enc_done: last set");
-            if (enc_done->flags & GFX_H264) /* gfx */
+            if (got_frame_id)
             {
-                if (self->encoder->gfx_ack_off)
+                if (client_ack)
                 {
-                    /* gfx and client turned off client frame acks */
-                    self->mod->mod_frame_ack(self->mod,
-                                             enc->flags,
-                                             enc->frame_id);
+                    self->encoder->frame_id_server = enc_done->frame_id;
+                    xrdp_mm_update_module_frame_ack(self);
                 }
                 else
                 {
-                    self->encoder->frame_id_server = enc->frame_id;
-                    xrdp_mm_update_module_frame_ack(self);
+                    self->mod->mod_frame_ack(self->mod, 0,
+                                             enc_done->frame_id);
                 }
+            }
+            if (is_gfx)
+            {
+                g_free(enc->u.gfx.cmd);
             }
             else
             {
-                if (self->wm->client_info->use_frame_acks == 0)
-                {
-                    /* surface commmand and client does not do frame acks */
-                    self->mod->mod_frame_ack(self->mod,
-                                             enc->flags,
-                                             enc->frame_id);
-                }
-                else
-                {
-                    self->encoder->frame_id_server = enc_done->enc->frame_id;
-                    xrdp_mm_update_module_frame_ack(self);
-                }
+                g_free(enc->u.sc.drects);
+                g_free(enc->u.sc.crects);
             }
-            g_free(enc->drects);
-            g_free(enc->crects);
             if (enc->shmem_ptr != NULL)
             {
                 g_munmap(enc->shmem_ptr, enc->shmem_bytes);
@@ -4013,9 +3999,9 @@ server_paint_rects_ex(struct xrdp_mod *mod,
             return 1;
         }
 
-        enc_data->drects = (short *)
-                           g_malloc(sizeof(short) * num_drects * 4, 0);
-        if (enc_data->drects == 0)
+        enc_data->u.sc.drects = (short *)
+                                g_malloc(sizeof(short) * num_drects * 4, 0);
+        if (enc_data->u.sc.drects == 0)
         {
             if (shmem_ptr != NULL)
             {
@@ -4025,32 +4011,32 @@ server_paint_rects_ex(struct xrdp_mod *mod,
             return 1;
         }
 
-        enc_data->crects = (short *)
-                           g_malloc(sizeof(short) * num_crects * 4, 0);
-        if (enc_data->crects == 0)
+        enc_data->u.sc.crects = (short *)
+                                g_malloc(sizeof(short) * num_crects * 4, 0);
+        if (enc_data->u.sc.crects == 0)
         {
             if (shmem_ptr != NULL)
             {
                 g_munmap(shmem_ptr, shmem_bytes);
             }
-            g_free(enc_data->drects);
+            g_free(enc_data->u.sc.drects);
             g_free(enc_data);
             return 1;
         }
 
-        g_memcpy(enc_data->drects, drects, sizeof(short) * num_drects * 4);
-        g_memcpy(enc_data->crects, crects, sizeof(short) * num_crects * 4);
+        g_memcpy(enc_data->u.sc.drects, drects, sizeof(short) * num_drects * 4);
+        g_memcpy(enc_data->u.sc.crects, crects, sizeof(short) * num_crects * 4);
 
         enc_data->mod = mod;
-        enc_data->num_drects = num_drects;
-        enc_data->num_crects = num_crects;
-        enc_data->data = data;
-        enc_data->left = left;
-        enc_data->top = top;
-        enc_data->width = width;
-        enc_data->height = height;
-        enc_data->flags = flags;
-        enc_data->frame_id = frame_id;
+        enc_data->u.sc.num_drects = num_drects;
+        enc_data->u.sc.num_crects = num_crects;
+        enc_data->u.sc.data = data;
+        enc_data->u.sc.left = left;
+        enc_data->u.sc.top = top;
+        enc_data->u.sc.width = width;
+        enc_data->u.sc.height = height;
+        enc_data->u.sc.flags = flags;
+        enc_data->u.sc.frame_id = frame_id;
         enc_data->shmem_ptr = shmem_ptr;
         enc_data->shmem_bytes = shmem_bytes;
         if (width == 0 || height == 0)
@@ -4108,6 +4094,53 @@ server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "server_session_info:");
     wm = (struct xrdp_wm *)(mod->wm);
     return libxrdp_send_session_info(wm->session, data, data_bytes);
+}
+
+/*****************************************************************************/
+int
+server_egfx_cmd(struct xrdp_mod *mod,
+                char *cmd, int cmd_bytes,
+                char *data, int data_bytes)
+{
+    XRDP_ENC_DATA *enc;
+    struct xrdp_wm *wm;
+    struct xrdp_mm *mm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    mm = wm->mm;
+    enc = g_new0(struct xrdp_enc_data, 1);
+    if (enc == NULL)
+    {
+        if (data != NULL)
+        {
+            g_munmap(data, data_bytes);
+        }
+        return 1;
+    }
+    ENC_SET_BIT(enc->flags, ENC_FLAGS_GFX_BIT);
+    enc->u.gfx.cmd = g_new(char, cmd_bytes);
+    if (enc->u.gfx.cmd == NULL)
+    {
+        if (data != NULL)
+        {
+            g_munmap(data, data_bytes);
+        }
+        g_free(enc);
+        return 1;
+    }
+    g_memcpy(enc->u.gfx.cmd, cmd, cmd_bytes);
+    enc->u.gfx.cmd_bytes = cmd_bytes;
+    enc->u.gfx.data = data;
+    enc->u.gfx.data_bytes = data_bytes;
+    enc->shmem_ptr = data;
+    enc->shmem_bytes = data_bytes;
+    /* insert into fifo for encoder thread to process */
+    tc_mutex_lock(mm->encoder->mutex);
+    fifo_add_item(mm->encoder->fifo_to_proc, enc);
+    tc_mutex_unlock(mm->encoder->mutex);
+    /* signal xrdp_encoder thread */
+    g_set_wait_obj(mm->encoder->xrdp_encoder_event_to_proc);
+    return 0;
 }
 
 /*****************************************************************************/
