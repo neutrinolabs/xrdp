@@ -62,13 +62,25 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->mm = xrdp_mm_create(self);
     /* this will use built in keymap or load from file */
     get_keymaps(self->session->client_info->keylayout, &(self->keymap));
-    xrdp_wm_set_login_state(self, WMLS_RESET);
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
 
     /* to store configuration from xrdp.ini */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
 
+    if (self->session->client_info->gfx && !self->mm->egfx_up)
+    {
+        /* gfx session but have not recieved caps advertise yet.
+         *
+         * Don't do any login state machine processing
+         */
+        LOG(LOG_LEVEL_INFO, "Waiting for egfx virtual channel to come up...");
+        g_reset_wait_obj(self->login_state_event);
+    }
+    else
+    {
+        xrdp_wm_set_login_state(self, WMLS_RESET);
+    }
     return self;
 }
 
@@ -767,19 +779,10 @@ xrdp_wm_init(struct xrdp_wm *self)
                     list_add_strdup(self->mm->login_values, r);
                 }
 
-                if (self->session->client_info->gfx && !self->mm->egfx_up)
-                {
-                    /* gfx session but have not recieved caps advertise yet,
-                       set flag so we will connect to backend later */
-                    self->mm->gfx_delay_autologin = 1;
-                }
-                else
-                {
-                    /*
-                    * Skip the login box and go straight to the connection phase
-                    */
-                    xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
-                }
+                /*
+                 * Skip the login box and go straight to the connection phase
+                 */
+                xrdp_wm_set_login_state(self, WMLS_START_CONNECT);
             }
             else
             {

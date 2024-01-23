@@ -432,7 +432,6 @@ struct xrdp_mm
     struct xrdp_egfx *egfx;
     int egfx_up;
     enum xrdp_egfx_flags egfx_flags;
-    int gfx_delay_autologin;
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
     struct list *resize_queue;

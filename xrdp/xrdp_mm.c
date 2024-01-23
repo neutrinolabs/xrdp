@@ -1376,11 +1376,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             advance_resize_state_machine(self, WMRZ_EGFX_INITIALIZED);
         }
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: egfx created.");
-        if (self->gfx_delay_autologin)
-        {
-            self->gfx_delay_autologin = 0;
-            xrdp_wm_set_login_state(self->wm, WMLS_START_CONNECT);
-        }
+        xrdp_wm_set_login_state(self->wm, WMLS_RESET);
     }
     else
     {

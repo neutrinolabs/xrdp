@@ -79,10 +79,15 @@ xrdp_process_loop(struct xrdp_process *self, struct stream *s)
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "calling xrdp_wm_init and creating wm");
             self->wm = xrdp_wm_create(self, self->session->client_info);
-            /* at this point the wm(window manager) is created and
-               wm::login_state is WMLS_RESET and wm::login_state_event is set
-               so xrdp_wm_init should be called by xrdp_wm_check_wait_objs
-               */
+            /* at this point the wm(window manager) is created. One of
+             * the following is true:-
+             * 1) (non-GFX) wm::login_state is WMLS_RESET and
+             *     wm::login_state_event is set so xrdp_wm_init should
+             *     be called by xrdp_wm_check_wait_objs
+             * 2) (GFX) We're waiting for the EGFX virtual channel to
+             *     come up. wm::login_state_event is clear, and gets set
+             *     when the EGFX virtual channel comes up
+             */
         }
     }
 
