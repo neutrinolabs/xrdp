@@ -951,7 +951,8 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm *self, struct stream *s)
 int
 xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
                                 struct xrdp_bitmap *bitmap,
-                                struct xrdp_rect *rect)
+                                struct xrdp_rect *rect, int surface_id,
+                                int x, int y)
 {
     struct xrdp_egfx_rect gfx_rect;
     struct stream *comp_s;
@@ -970,6 +971,10 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
     int cy;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap:");
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
+              "surface_id %d rect %d %d %d %d x %d y %d",
+              surface_id, rect->left, rect->top, rect->right, rect->bottom,
+              x, y);
     bwidth = rect->right - rect->left;
     bheight = rect->bottom - rect->top;
     if ((bwidth < 1) || (bheight < 1))
@@ -1052,11 +1057,11 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
                 comp_bytes = (int)(comp_s->end - comp_s->data);
                 LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap: lines %d "
                           "comp_bytes %d", lines, comp_bytes);
-                gfx_rect.x1 = xindex;
-                gfx_rect.y1 = yindex;
-                gfx_rect.x2 = xindex + bwidth;
-                gfx_rect.y2 = yindex + bheight;
-                if (xrdp_egfx_send_wire_to_surface1(self->egfx, self->egfx->surface_id,
+                gfx_rect.x1 = xindex - x;
+                gfx_rect.y1 = yindex - y;
+                gfx_rect.x2 = gfx_rect.x1 + bwidth;
+                gfx_rect.y2 = gfx_rect.y1 + bheight;
+                if (xrdp_egfx_send_wire_to_surface1(self->egfx, surface_id,
                                                     XR_RDPGFX_CODECID_PLANAR,
                                                     XR_PIXEL_FORMAT_XRGB_8888,
                                                     &gfx_rect, comp_s->data,
@@ -1190,6 +1195,59 @@ cmpverfunc (const void *a, const void *b)
 
 /******************************************************************************/
 static int
+xrdp_mm_egfx_create_surfaces(struct xrdp_mm *self)
+{
+    int surface_id;
+    int index;
+    int count;
+    int left;
+    int top;
+    int width;
+    int height;
+    struct monitor_info *mi;
+    struct xrdp_bitmap *screen;
+
+    screen = self->wm->screen;
+    count = self->wm->client_info->display_sizes.monitorCount;
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_egfx_create_surfaces: "
+              "monitor count %d", count);
+    if (count < 1)
+    {
+        left = 0;
+        top = 0;
+        width = screen->width;
+        height = screen->height;
+        xrdp_egfx_send_create_surface(self->egfx, self->egfx->surface_id,
+                                      width, height,
+                                      XR_PIXEL_FORMAT_XRGB_8888);
+        xrdp_egfx_send_map_surface(self->egfx, self->egfx->surface_id,
+                                   left, top);
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_create_surfaces: map "
+            "surface_id %d left %d top %d width %d height %d",
+            self->egfx->surface_id, left, top, width, height);
+        return 0;
+    }
+    for (index = 0; index < count; index++)
+    {
+        surface_id = index;
+        mi = self->wm->client_info->display_sizes.minfo_wm + index;
+        left = mi->left;
+        top = mi->top;
+        width = mi->right - mi->left + 1;
+        height = mi->bottom - mi->top + 1;
+        xrdp_egfx_send_create_surface(self->egfx, surface_id,
+                                  width, height,
+                                  XR_PIXEL_FORMAT_XRGB_8888);
+        xrdp_egfx_send_map_surface(self->egfx, surface_id, left, top);
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_create_surfaces: map "
+            "surface_id %d left %d top %d width %d height %d",
+            surface_id, left, top, width, height);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+static int
 xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                             int *versions, int *flagss)
 {
@@ -1301,10 +1359,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             "error %d monitorCount %d",
             error, self->wm->client_info->display_sizes.monitorCount);
         self->egfx_up = 1;
-        xrdp_egfx_send_create_surface(self->egfx, self->egfx->surface_id,
-                                      screen->width, screen->height,
-                                      XR_PIXEL_FORMAT_XRGB_8888);
-        xrdp_egfx_send_map_surface(self->egfx, self->egfx->surface_id, 0, 0);
+        xrdp_mm_egfx_create_surfaces(self);
         self->encoder = xrdp_encoder_create(self);
         xrdp_mm_egfx_invalidate_all(self);
 
@@ -3449,6 +3504,79 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
 }
 
 /*****************************************************************************/
+static int
+xrdp_mm_draw_dirty(struct xrdp_mm *self)
+{
+    struct xrdp_rect rect;
+    struct xrdp_rect mon_rect;
+    struct xrdp_region *mon_reg;
+    int error;
+    int index;
+    int jndex;
+    int count;
+    int surface_id;
+    struct monitor_info *mi;
+
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_draw_dirty:");
+    count = self->wm->client_info->display_sizes.monitorCount;
+    if (count < 1)
+    {
+        error = xrdp_region_get_bounds(self->wm->screen_dirty_region, &rect);
+        if (error == 0)
+        {
+            xrdp_mm_egfx_send_planar_bitmap(self,
+                                            self->wm->screen, &rect,
+                                            self->egfx->surface_id, 0, 0);
+        }
+    }
+    else
+    {
+        for (index = 0; index < count; index++)
+        {
+            /* make a copy of screen_dirty_region */
+            mon_reg = xrdp_region_create(self->wm);
+            if (mon_reg == NULL)
+            {
+                return 1;
+            }
+            jndex = 0;
+            while (xrdp_region_get_rect(self->wm->screen_dirty_region,
+                                        jndex, &mon_rect) == 0)
+            {
+                LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_draw_dirty: jndex %d "
+                          "mon_rect %d %d %d %d",
+                          jndex, mon_rect.left, mon_rect.top,
+                          mon_rect.right, mon_rect.bottom);
+                xrdp_region_add_rect(mon_reg, &mon_rect);
+                jndex++;
+            }
+            /* intercect monitor */
+            mi = self->wm->client_info->display_sizes.minfo_wm + index;
+            mon_rect.left = mi->left;
+            mon_rect.top = mi->top;
+            mon_rect.right = mi->right + 1;
+            mon_rect.bottom = mi->bottom + 1;
+            xrdp_region_intersect_rect(mon_reg, &mon_rect);
+            if (xrdp_region_not_empty(mon_reg))
+            {
+                error = xrdp_region_get_bounds(mon_reg, &rect);
+                if (error == 0)
+                {
+                    surface_id = index;
+                    xrdp_mm_egfx_send_planar_bitmap(self,
+                                                    self->wm->screen,
+                                                    &rect,
+                                                    surface_id,
+                                                    mi->left, mi->top);
+                }
+            }
+            xrdp_region_delete(mon_reg);
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 int
 xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 {
@@ -3528,8 +3656,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
     {
         if (xrdp_region_not_empty(self->wm->screen_dirty_region))
         {
-            int error;
-            struct xrdp_rect rect;
             int now = g_time3();
             int diff = now - self->wm->last_screen_draw_time;
             LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_check_wait_objs: not empty diff %d", diff);
@@ -3537,11 +3663,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
             {
                 if (self->egfx_up)
                 {
-                    error = xrdp_region_get_bounds(self->wm->screen_dirty_region, &rect);
-                    if (error == 0)
-                    {
-                        xrdp_mm_egfx_send_planar_bitmap(self, self->wm->screen, &rect);
-                    }
+                    xrdp_mm_draw_dirty(self);
                     xrdp_region_delete(self->wm->screen_dirty_region);
                     self->wm->screen_dirty_region = NULL;
                     self->wm->last_screen_draw_time = now;
