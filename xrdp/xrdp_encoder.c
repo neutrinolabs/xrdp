@@ -75,29 +75,30 @@ xrdp_enc_data_done_destructor(void *item, void *closure)
 }
 
 /*****************************************************************************/
-struct xrdp_encoder *
-xrdp_encoder_create(struct xrdp_mm *mm)
+/**
+ * Allocate the xrdp_encoder struct
+ *
+ * @param mm Module manager
+ * @return pointer to encoder, or NULL if one was not allocated.
+ *
+ * Finds the best encoder for the session and returns it to
+ * xrdp_encoder_create() for common initialization.
+ */
+static struct xrdp_encoder *
+xrdp_encoder_new(struct xrdp_mm *mm)
 {
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_encoder_create:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_encoder_new:");
 
     struct xrdp_encoder *self;
     struct xrdp_client_info *client_info;
-    char buf[1024];
-    int pid;
 
     client_info = mm->wm->client_info;
 
-    /* RemoteFX 7.1 requires LAN but GFX does not */
-    if (client_info->mcs_connection_type != CONNECTION_TYPE_LAN)
-    {
-        if ((mm->egfx_flags & (XRDP_EGFX_H264 | XRDP_EGFX_RFX_PRO)) == 0)
-        {
-            return 0;
-        }
-    }
     if (client_info->bpp < 24)
     {
-        return 0;
+        LOG(LOG_LEVEL_INFO,
+            "xrdp_encoder_new: Insufficient color depth for any codec");
+        return NULL;
     }
 
     self = g_new0(struct xrdp_encoder, 1);
@@ -109,19 +110,21 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 
     if (client_info->jpeg_codec_id != 0)
     {
-        LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting jpeg codec session");
+        LOG(LOG_LEVEL_INFO, "xrdp_encoder_new: starting jpeg codec session");
         self->codec_id = client_info->jpeg_codec_id;
         self->in_codec_mode = 1;
         self->codec_quality = client_info->jpeg_prop[0];
         client_info->capture_code = 0;
         client_info->capture_format = XRDP_a8b8g8r8;
         self->process_enc = process_enc_jpg;
+        return self;
     }
+
 #ifdef XRDP_RFXCODEC
-    else if (mm->egfx_flags & XRDP_EGFX_RFX_PRO)
+    if (mm->egfx_flags & XRDP_EGFX_RFX_PRO)
     {
         LOG(LOG_LEVEL_INFO,
-            "xrdp_encoder_create: starting gfx rfx pro codec session");
+            "xrdp_encoder_new: starting gfx rfx pro codec session");
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
         self->process_enc = process_enc_rfx;
@@ -136,36 +139,69 @@ xrdp_encoder_create(struct xrdp_mm *mm)
                                  mm->wm->screen->height,
                                  RFX_FORMAT_YUV,
                                  RFX_FLAGS_RLGR1 | RFX_FLAGS_PRO1);
+        return self;
     }
-    else if (client_info->rfx_codec_id != 0)
+
+    if (client_info->rfx_codec_id != 0)
     {
-        LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting rfx codec session");
-        self->codec_id = client_info->rfx_codec_id;
-        self->in_codec_mode = 1;
-        client_info->capture_code = 2;
-        self->process_enc = process_enc_rfx;
-        self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
-                             mm->wm->screen->height,
-                             RFX_FORMAT_YUV, 0);
+        /* RemoteFX 7.1 requires LAN */
+        if (client_info->mcs_connection_type != CONNECTION_TYPE_LAN)
+        {
+            LOG(LOG_LEVEL_INFO, "xrdp_encoder_new: "
+                "Skipping rfx codec session - incorrect connection_type");
+        }
+        else
+        {
+            LOG(LOG_LEVEL_INFO, "xrdp_encoder_new: starting rfx codec session");
+            self->codec_id = client_info->rfx_codec_id;
+            self->in_codec_mode = 1;
+            client_info->capture_code = 2;
+            self->process_enc = process_enc_rfx;
+            self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
+                                 mm->wm->screen->height,
+                                 RFX_FORMAT_YUV, 0);
+            return self;
+        }
     }
 #endif
-    else if (client_info->h264_codec_id != 0)
+    if (client_info->h264_codec_id != 0)
     {
-        LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting h264 codec session");
+        LOG(LOG_LEVEL_INFO, "xrdp_encoder_new: starting h264 codec session");
         self->codec_id = client_info->h264_codec_id;
         self->in_codec_mode = 1;
         client_info->capture_code = 3;
         client_info->capture_format = XRDP_nv12;
         self->process_enc = process_enc_h264;
+        return self;
     }
-    else
+
+    LOG(LOG_LEVEL_INFO,
+        "xrdp_encoder_new: No codec could be found for session");
+    g_free(self);
+    return NULL;
+}
+
+
+/*****************************************************************************/
+struct xrdp_encoder *
+xrdp_encoder_create(struct xrdp_mm *mm)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_encoder_create:");
+
+    struct xrdp_encoder *self;
+    char buf[1024];
+    int pid;
+    struct xrdp_client_info *client_info;
+
+    client_info = mm->wm->client_info;
+
+    if ((self = xrdp_encoder_new(mm)) == NULL)
     {
-        g_free(self);
-        return 0;
+        return NULL;
     }
 
     LOG_DEVEL(LOG_LEVEL_INFO,
-              "init_xrdp_encoder: initializing encoder codec_id %d",
+              "xrdp_encoder_create: initializing encoder codec_id %d",
               self->codec_id);
 
     /* setup required FIFOs */
