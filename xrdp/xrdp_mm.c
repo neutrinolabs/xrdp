@@ -969,9 +969,10 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
     int bheight;
     int cx;
     int cy;
+    int rv = 0;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap:");
-    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_egfx_send_planar_bitmap: "
               "surface_id %d rect %d %d %d %d x %d y %d",
               surface_id, rect->left, rect->top, rect->right, rect->bottom,
               x, y);
@@ -1019,6 +1020,8 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
     {
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
             "xrdp_egfx_send_frame_start error");
+        rv = 1;
+        goto cleanup;
     }
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap: left %d top %d right %d "
@@ -1069,6 +1072,8 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
                 {
                     LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
                         "xrdp_egfx_send_wire_to_surface1 error");
+                    rv = 1;
+                    goto cleanup;
                 }
             }
         }
@@ -1077,11 +1082,13 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
     {
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
             "xrdp_egfx_send_frame_end error");
+        rv = 1;
     }
+cleanup:
     g_free(pixels);
     free_stream(comp_s);
     free_stream(temp_s);
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -3516,17 +3523,18 @@ xrdp_mm_draw_dirty(struct xrdp_mm *self)
     int count;
     int surface_id;
     struct monitor_info *mi;
+    int rv = 0;
 
-    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_draw_dirty:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_draw_dirty:");
     count = self->wm->client_info->display_sizes.monitorCount;
     if (count < 1)
     {
         error = xrdp_region_get_bounds(self->wm->screen_dirty_region, &rect);
         if (error == 0)
         {
-            xrdp_mm_egfx_send_planar_bitmap(self,
-                                            self->wm->screen, &rect,
-                                            self->egfx->surface_id, 0, 0);
+            rv = xrdp_mm_egfx_send_planar_bitmap(self,
+                                                 self->wm->screen, &rect,
+                                                 self->egfx->surface_id, 0, 0);
         }
     }
     else
@@ -3563,17 +3571,17 @@ xrdp_mm_draw_dirty(struct xrdp_mm *self)
                 if (error == 0)
                 {
                     surface_id = index;
-                    xrdp_mm_egfx_send_planar_bitmap(self,
-                                                    self->wm->screen,
-                                                    &rect,
-                                                    surface_id,
-                                                    mi->left, mi->top);
+                    rv = xrdp_mm_egfx_send_planar_bitmap(self,
+                                                         self->wm->screen,
+                                                         &rect,
+                                                         surface_id,
+                                                         mi->left, mi->top);
                 }
             }
             xrdp_region_delete(mon_reg);
         }
     }
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -3663,7 +3671,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
             {
                 if (self->egfx_up)
                 {
-                    xrdp_mm_draw_dirty(self);
+                    rv = xrdp_mm_draw_dirty(self);
                     xrdp_region_delete(self->wm->screen_dirty_region);
                     self->wm->screen_dirty_region = NULL;
                     self->wm->last_screen_draw_time = now;
