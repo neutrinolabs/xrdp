@@ -221,6 +221,11 @@ lib_mod_connect(struct mod *mod)
 
     if (error == 0)
     {
+        error = mod->server_start_encoder(mod);
+    }
+
+    if (error == 0)
+    {
         error = send_server_version_message(mod, s);
     }
 

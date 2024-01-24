@@ -67,14 +67,6 @@ xrdp_mm_create(struct xrdp_wm *owner)
               self->wm->client_info->rfx_codec_id,
               self->wm->client_info->h264_codec_id);
 
-    if ((self->wm->client_info->gfx == 0) &&
-            ((self->wm->client_info->h264_codec_id != 0) ||
-             (self->wm->client_info->jpeg_codec_id != 0) ||
-             (self->wm->client_info->rfx_codec_id != 0)))
-    {
-        self->encoder = xrdp_encoder_create(self);
-    }
-
     return self;
 }
 
@@ -417,6 +409,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_create_os_surface_bpp = server_create_os_surface_bpp;
             self->mod->server_paint_rect_bpp = server_paint_rect_bpp;
             self->mod->server_composite = server_composite;
+            self->mod->server_start_encoder = server_start_encoder;
             self->mod->server_paint_rects = server_paint_rects;
             self->mod->server_session_info = server_session_info;
             self->mod->server_set_pointer_large = server_set_pointer_large;
@@ -1367,7 +1360,6 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             error, self->wm->client_info->display_sizes.monitorCount);
         self->egfx_up = 1;
         xrdp_mm_egfx_create_surfaces(self);
-        self->encoder = xrdp_encoder_create(self);
         xrdp_mm_egfx_invalidate_all(self);
 
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: egfx created.");
@@ -1383,8 +1375,6 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         lrect.bottom = screen->height;
         self->wm->client_info->gfx = 0;
         self->egfx_flags = XRDP_EGFX_NONE;
-        xrdp_encoder_delete(self->encoder);
-        self->encoder = xrdp_encoder_create(self);
         xrdp_bitmap_invalidate(screen, &lrect);
     }
 
@@ -1435,7 +1425,8 @@ xrdp_mm_egfx_frame_ack(void *user, uint32_t queue_depth, int frame_id,
     encoder = self->encoder;
     if (encoder == NULL)
     {
-        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_frame_ack: encoder is nil");
+        // This can happen if we're at the login screen, or we're using
+        // a backend other than xup.
         return 0;
     }
     if (queue_depth == XR_SUSPEND_FRAME_ACKNOWLEDGEMENT)
@@ -3966,6 +3957,18 @@ server_composite(struct xrdp_mod *mod, int srcidx, int srcformat,
         LOG(LOG_LEVEL_WARNING, "server_composite: error finding id %d or %d", srcidx, mskidx);
     }
     return 0;
+}
+/*****************************************************************************/
+int
+server_start_encoder(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm = (struct xrdp_wm *)(mod->wm);
+    struct xrdp_mm *mm = wm->mm;
+    int error = 0;
+
+    mm->encoder = xrdp_encoder_create(mm);
+
+    return error;
 }
 
 /*****************************************************************************/
