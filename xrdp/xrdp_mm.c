@@ -1370,13 +1370,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         self->encoder = xrdp_encoder_create(self);
         xrdp_mm_egfx_invalidate_all(self);
 
-        if (self->resize_data != NULL
-                && self->resize_data->state == WMRZ_EGFX_INITALIZING)
-        {
-            advance_resize_state_machine(self, WMRZ_EGFX_INITIALIZED);
-        }
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: egfx created.");
-        xrdp_wm_set_login_state(self->wm, WMLS_RESET);
     }
     else
     {
@@ -1388,10 +1382,21 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         lrect.right = screen->width;
         lrect.bottom = screen->height;
         self->wm->client_info->gfx = 0;
+        self->egfx_flags = XRDP_EGFX_NONE;
         xrdp_encoder_delete(self->encoder);
         self->encoder = xrdp_encoder_create(self);
         xrdp_bitmap_invalidate(screen, &lrect);
     }
+
+    if (self->resize_data != NULL
+            && self->resize_data->state == WMRZ_EGFX_INITALIZING)
+    {
+        advance_resize_state_machine(self, WMRZ_EGFX_INITIALIZED);
+    }
+
+    // Now the virtual channel is up (or can't be started), kick the
+    // window manager state machine into life.
+    xrdp_wm_set_login_state(self->wm, WMLS_RESET);
     g_free(ver_flags);
     return 0;
 }
