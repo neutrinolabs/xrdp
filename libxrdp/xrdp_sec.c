@@ -2388,10 +2388,10 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     in_uint32_le(s, num_channels);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_NET "
               "channelCount %d", num_channels);
-    if (num_channels > 31)
+    if (num_channels > MAX_STATIC_CHANNELS)
     {
         LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Protocol error: too many channels requested. "
-            "max 31, received %d", num_channels);
+            "max %d, received %d", MAX_STATIC_CHANNELS, num_channels);
         return 1;
     }
 

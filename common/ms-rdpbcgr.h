@@ -85,11 +85,15 @@
 #define CONNECTION_TYPE_LAN            0x06
 #define CONNECTION_TYPE_AUTODETECT     0x07
 
-/* Channel definition structure CHANNEL_DEF (2.2.1.3.4.1) */
+/* TS_UD_CS_NET (2.2.1.3.4) */
 /* This isn't explicitly named in MS-RDPBCGR */
+#define MAX_STATIC_CHANNELS            31
+
+/* Channel definition structure CHANNEL_DEF (2.2.1.3.4.1) */
 #define CHANNEL_NAME_LEN                7
 /* These names are also not explicitly defined in MS-RDPBCGR */
 #define CLIPRDR_SVC_CHANNEL_NAME        "cliprdr"
+#define DRDYNVC_SVC_CHANNEL_NAME        "drdynvc"
 #define RAIL_SVC_CHANNEL_NAME           "rail"
 #define RDPSND_SVC_CHANNEL_NAME         "rdpsnd"
 #define RDPDR_SVC_CHANNEL_NAME          "rdpdr"
