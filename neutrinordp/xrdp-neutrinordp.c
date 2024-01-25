@@ -1779,8 +1779,10 @@ lfreerdp_pre_connect(freerdp *instance)
     int index;
     int error;
     int num_chans;
+    int target_chan;
     int ch_flags;
     char ch_name[256];
+    const char *ch_names[MAX_STATIC_CHANNELS];
     char *dst_ch_name;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "lfreerdp_pre_connect:");
@@ -1794,6 +1796,7 @@ lfreerdp_pre_connect(freerdp *instance)
         num_chans = 0;
     }
 
+    target_chan = 0;
     for (index = 0 ; index < num_chans; ++index)
     {
         error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
@@ -1802,21 +1805,31 @@ lfreerdp_pre_connect(freerdp *instance)
             LOG_DEVEL(LOG_LEVEL_DEBUG, "lfreerdp_pre_connect: "
                       "got channel [%s], id [%d], flags [0x%8.8x]",
                       ch_name, index, ch_flags);
-            dst_ch_name = instance->settings->channels[index].name;
-            g_memset(dst_ch_name, 0, 8);
-            g_snprintf(dst_ch_name, 8, "%s", ch_name);
-            instance->settings->channels[index].options = ch_flags;
-        }
-        else
-        {
-            LOG(LOG_LEVEL_ERROR, "lfreerdp_pre_connect: "
-                "Expected %d channels, got %d",
-                num_chans, index);
-            num_chans = index;
+
+            if (g_strcmp(ch_name, DRDYNVC_SVC_CHANNEL_NAME) == 0)
+            {
+                /* xrdp currently reserves dynamic channels for its
+                 * exclusive use (e.g. for GFX support) */
+                LOG(LOG_LEVEL_INFO, "Channel '%s' not passed to module",
+                    ch_name);
+            }
+            else if (target_chan < MAX_STATIC_CHANNELS)
+            {
+                dst_ch_name = instance->settings->channels[target_chan].name;
+                ch_names[target_chan] = dst_ch_name;
+                g_memset(dst_ch_name, 0, CHANNEL_NAME_LEN + 1);
+                g_snprintf(dst_ch_name, CHANNEL_NAME_LEN + 1, "%s", ch_name);
+                instance->settings->channels[target_chan].options = ch_flags;
+                ++target_chan;
+            }
         }
     }
 
-    instance->settings->num_channels = num_chans;
+    g_strnjoin(ch_name, sizeof(ch_name), ",", ch_names, target_chan);
+    LOG(LOG_LEVEL_INFO, "Static channels (from %d) passed to module : %s",
+        num_chans, ch_name);
+
+    instance->settings->num_channels = target_chan;
 
     instance->settings->offscreen_bitmap_cache = 0;
     instance->settings->draw_nine_grid = 0;
