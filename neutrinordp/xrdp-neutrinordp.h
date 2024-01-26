@@ -20,22 +20,15 @@
 #ifndef XRDP_NEUTRINORDP_H
 #define XRDP_NEUTRINORDP_H
 
-/* include other h files */
 #include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "defines.h"
-#include "xrdp_rail.h"
-#include "xrdp_client_info.h"
 #include "xrdp_constants.h"
+#include "xrdp_client_info.h"
 
-/* this is the freerdp main header */
-#include <freerdp/freerdp.h>
-#include <freerdp/rail.h>
-#include <freerdp/rail/rail.h>
-#include <freerdp/codec/bitmap.h>
-//#include <freerdp/utils/memory.h>
-//#include "/home/jay/git/jsorg71/staging/include/freerdp/freerdp.h"
+/* Incomplete type definitions, referenced below */
+struct rail_window_state_order;
+struct rail_notify_state_order;
+struct rail_monitored_desktop_order;
+struct rail_icon_info;
 
 struct bitmap_item
 {
