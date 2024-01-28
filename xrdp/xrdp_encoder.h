@@ -62,8 +62,6 @@ struct xrdp_enc_surface_command
     int top;
     int width;
     int height;
-    int twidth;
-    int theight;
     int flags;
     int frame_id;
 };

@@ -462,7 +462,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                                                    out_data + XRDP_SURCMD_PREFIX_BYTES,
                                                    &out_data_bytes, enc->u.sc.data,
                                                    enc->u.sc.width, enc->u.sc.height,
-                                                   enc->u.sc.width * 4,
+                                                   ((enc->u.sc.width + 63) & ~63) * 4,
                                                    rfxrects, enc->u.sc.num_drects,
                                                    tiles, enc->u.sc.num_crects,
                                                    self->quants, self->num_quants,
@@ -486,13 +486,11 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         enc_done->pad_bytes = XRDP_SURCMD_PREFIX_BYTES;
         enc_done->comp_pad_data = out_data;
         enc_done->enc = enc;
-        enc_done->cx = self->mm->wm->screen->width;
-        enc_done->cy = self->mm->wm->screen->height;
-        if (self->gfx)
-        {
-            enc_done->flags = (enum xrdp_encoder_flags)
-                              ((int)enc_done->flags | GFX_PROGRESSIVE_RFX);
-        }
+        enc_done->x = enc->u.sc.left;
+        enc_done->y = enc->u.sc.top;
+        enc_done->cx = enc->u.sc.width;
+        enc_done->cy = enc->u.sc.height;
+        enc_done->frame_id = enc->u.sc.frame_id;
         enc_done->continuation = all_tiles_written > 0;
         if (tiles_written > 0)
         {
@@ -559,8 +557,6 @@ gfx_wiretosurface2(struct xrdp_encoder *self,
     short top;
     short width;
     short height;
-    short twidth;
-    short theight;
     char *bitmap_data;
     int bitmap_data_length;
     struct rfx_tile *tiles;
@@ -635,7 +631,7 @@ gfx_wiretosurface2(struct xrdp_encoder *self,
         tiles[index].quant_cb = self->quant_idx_u;
         tiles[index].quant_cr = self->quant_idx_v;
     }
-    if (!s_check_rem(in_s, 12))
+    if (!s_check_rem(in_s, 8))
     {
         g_free(tiles);
         g_free(rfxrects);
@@ -645,8 +641,6 @@ gfx_wiretosurface2(struct xrdp_encoder *self,
     in_uint16_le(in_s, top);
     in_uint16_le(in_s, width);
     in_uint16_le(in_s, height);
-    in_uint16_le(in_s, twidth);
-    in_uint16_le(in_s, theight);
     if (self->codec_handle_prfx_gfx[mon_index] == NULL)
     {
         self->codec_handle_prfx_gfx[mon_index] = rfxcodec_encode_create(
@@ -684,8 +678,8 @@ gfx_wiretosurface2(struct xrdp_encoder *self,
                                         bitmap_data,
                                         &bitmap_data_length,
                                         enc_gfx_cmd->data,
-                                        twidth, theight,
-                                        twidth * 4,
+                                        width, height,
+                                        ((width + 63) & ~63) * 4,
                                         rfxrects, num_rects_d,
                                         tiles, num_rects_c,
                                         self->quants, self->num_quants);
