@@ -1670,7 +1670,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                 xrdp_encoder_delete(mm->encoder);
                 mm->encoder = NULL;
             }
-            if (mm->egfx == 0)
+            if (mm->resize_data->using_egfx == 0)
             {
                 advance_resize_state_machine(mm, WMRZ_SERVER_MONITOR_RESIZE);
             }
@@ -1772,6 +1772,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " xrdp_cache_reset failed %d", error);
                 return advance_error(error, mm);
             }
+
             /* load some stuff */
             error = xrdp_wm_load_static_colors_plus(wm, 0);
             if (error != 0)
@@ -1804,7 +1805,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             advance_resize_state_machine(mm, WMRZ_EGFX_INITIALIZE);
             break;
         case WMRZ_EGFX_INITIALIZE:
-            if (error == 0 && mm->egfx == NULL && mm->egfx_up == 0)
+            if (mm->resize_data->using_egfx)
             {
                 egfx_initialize(mm);
                 advance_resize_state_machine(mm, WMRZ_EGFX_INITALIZING);
@@ -1920,6 +1921,7 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
             const int time = g_time3();
             self->resize_data->start_time = time;
             self->resize_data->last_state_update_timestamp = time;
+            self->resize_data->using_egfx = (self->egfx != NULL);
             advance_resize_state_machine(self, WMRZ_ENCODER_DELETE);
         }
         else
