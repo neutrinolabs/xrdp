@@ -1292,6 +1292,14 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         self->session->up_and_running = 1;
         LOG_DEVEL(LOG_LEVEL_INFO, "yeah, up_and_running");
         xrdp_rdp_send_data_update_sync(self);
+
+        /* This is also the end of an Deactivation-reactivation
+         * sequence [MS-RDPBCGR] 1.3.1.3 */
+        xrdp_rdp_suppress_output(self, 0, XSO_REASON_DEACTIVATE_REACTIVATE,
+                                 0, 0,
+                                 self->client_info.display_sizes.session_width,
+                                 self->client_info.display_sizes.session_height);
+
         xrdp_channel_drdynvc_start(self->sec_layer->chan_layer);
     }
     else

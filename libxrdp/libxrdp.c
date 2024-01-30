@@ -1181,6 +1181,12 @@ libxrdp_reset(struct xrdp_session *session,
         return 1;
     }
 
+    /*
+     * Stop output from the client during the deactivation-reactivation
+     * sequence [MS-RDPBCGR] 1.3.1.3 */
+    xrdp_rdp_suppress_output((struct xrdp_rdp *)session->rdp, 1,
+                             XSO_REASON_DEACTIVATE_REACTIVATE, 0, 0, 0, 0);
+
     /* shut down the rdp client
      *
      * When resetting the lib, disable application input checks, as
