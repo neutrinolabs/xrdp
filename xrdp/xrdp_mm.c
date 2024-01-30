@@ -1541,10 +1541,11 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     pro = (struct xrdp_process *) id;
     wm = pro->wm;
 
-    if (wm->client_info->suppress_output == 1)
+    if (OUTPUT_SUPPRESSED_FOR_REASON(wm->client_info,
+                                     XSO_REASON_CLIENT_REQUEST))
     {
         LOG(LOG_LEVEL_INFO, "dynamic_monitor_data: Not allowing resize."
-            " Suppress output is active.");
+            " Suppress output requested by client");
         return error;
     }
 
@@ -1695,7 +1696,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             break;
         // Also processed in xrdp_egfx_close_response
         case WMRZ_EGFX_CONN_CLOSING:
-            rdp = (struct xrdp_rdp *) (mm->wm->session->rdp);
+            rdp = (struct xrdp_rdp *) (wm->session->rdp);
             sec = rdp->sec_layer;
             chan = sec->chan_layer;
 

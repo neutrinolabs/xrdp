@@ -1402,68 +1402,82 @@ xrdp_rdp_process_frame_ack(struct xrdp_rdp *self, struct stream *s)
 }
 
 /*****************************************************************************/
+void
+xrdp_rdp_suppress_output(struct xrdp_rdp *self, int suppress,
+                         enum suppress_output_reason reason,
+                         int left, int top, int right, int bottom)
+{
+    int old_suppress = self->client_info.suppress_output_mask != 0;
+    if (suppress)
+    {
+        self->client_info.suppress_output_mask |= (unsigned int)reason;
+    }
+    else
+    {
+        self->client_info.suppress_output_mask &= ~(unsigned int)reason;
+    }
+
+    int current_suppress =  self->client_info.suppress_output_mask != 0;
+    if (current_suppress != old_suppress && self->session->callback != 0)
+    {
+        self->session->callback(self->session->id, 0x5559, suppress,
+                                MAKELONG(left, top),
+                                MAKELONG(right, bottom), 0);
+    }
+}
+
+/*****************************************************************************/
 /* Process a [MS-RDPBCGR] TS_SUPPRESS_OUTPUT_PDU message */
 static int
 xrdp_rdp_process_suppress(struct xrdp_rdp *self, struct stream *s)
 {
+    int rv = 1;
     int allowDisplayUpdates;
     int left;
     int top;
     int right;
     int bottom;
 
-    if (!s_check_rem_and_log(s, 1, "Parsing [MS-RDPBCGR] TS_SUPPRESS_OUTPUT_PDU"))
+    if (s_check_rem_and_log(s, 1, "Parsing [MS-RDPBCGR] TS_SUPPRESS_OUTPUT_PDU"))
     {
-        return 1;
+        in_uint8(s, allowDisplayUpdates);
+        LOG_DEVEL(LOG_LEVEL_TRACE,
+                  "Received [MS-RDPBCGR] TS_SUPPRESS_OUTPUT_PDU "
+                  "allowDisplayUpdates %d", allowDisplayUpdates);
+        switch (allowDisplayUpdates)
+        {
+            case 0: /* SUPPRESS_DISPLAY_UPDATES */
+                LOG_DEVEL(LOG_LEVEL_DEBUG,
+                          "Client requested display output to be suppressed");
+                xrdp_rdp_suppress_output(self, 1,
+                                         XSO_REASON_CLIENT_REQUEST,
+                                         0, 0, 0, 0);
+                rv = 0;
+                break;
+            case 1: /* ALLOW_DISPLAY_UPDATES */
+                LOG_DEVEL(LOG_LEVEL_DEBUG,
+                          "Client requested display output to be enabled");
+                if (s_check_rem_and_log(s, 11,
+                                        "Parsing [MS-RDPBCGR] Padding and TS_RECTANGLE16"))
+                {
+                    in_uint8s(s, 3); /* pad */
+                    in_uint16_le(s, left);
+                    in_uint16_le(s, top);
+                    in_uint16_le(s, right);
+                    in_uint16_le(s, bottom);
+                    LOG_DEVEL(LOG_LEVEL_TRACE,
+                              "Received [MS-RDPBCGR] TS_RECTANGLE16 "
+                              "left %d, top %d, right %d, bottom %d",
+                              left, top, right, bottom);
+                    xrdp_rdp_suppress_output(self, 0,
+                                             XSO_REASON_CLIENT_REQUEST,
+                                             left, top, right, bottom);
+                    rv = 0;
+                }
+                break;
+        }
     }
-    in_uint8(s, allowDisplayUpdates);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_SUPPRESS_OUTPUT_PDU "
-              "allowDisplayUpdates %d", allowDisplayUpdates);
-    switch (allowDisplayUpdates)
-    {
-        case 0: /* SUPPRESS_DISPLAY_UPDATES */
-            self->client_info.suppress_output = 1;
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "Client requested display output to be suppressed");
-            if (self->session->callback != 0)
-            {
-                self->session->callback(self->session->id, 0x5559, 1,
-                                        0, 0, 0);
-            }
-            else
-            {
-                LOG_DEVEL(LOG_LEVEL_WARNING,
-                          "Bug: no callback registered for xrdp_rdp_process_suppress");
-            }
-            break;
-        case 1: /* ALLOW_DISPLAY_UPDATES */
-            self->client_info.suppress_output = 0;
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "Client requested display output to be enabled");
-            if (!s_check_rem_and_log(s, 11, "Parsing [MS-RDPBCGR] Padding and TS_RECTANGLE16"))
-            {
-                return 1;
-            }
-            in_uint8s(s, 3); /* pad */
-            in_uint16_le(s, left);
-            in_uint16_le(s, top);
-            in_uint16_le(s, right);
-            in_uint16_le(s, bottom);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_RECTANGLE16 "
-                      "left %d, top %d, right %d, bottom %d",
-                      left, top, right, bottom);
-            if (self->session->callback != 0)
-            {
-                self->session->callback(self->session->id, 0x5559, 0,
-                                        MAKELONG(left, top),
-                                        MAKELONG(right, bottom), 0);
-            }
-            else
-            {
-                LOG_DEVEL(LOG_LEVEL_WARNING,
-                          "Bug: no callback registered for xrdp_rdp_process_suppress");
-            }
-            break;
-    }
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
