@@ -481,6 +481,8 @@ xrdp_mm_drdynvc_up(struct xrdp_mm *self);
 int
 xrdp_mm_suppress_output(struct xrdp_mm *self, int suppress,
                         int left, int top, int right, int bottom);
+int
+xrdp_mm_up_and_running(struct xrdp_mm *self);
 struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner);
 void

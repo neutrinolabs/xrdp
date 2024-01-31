@@ -1300,6 +1300,12 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
                                  self->client_info.display_sizes.session_width,
                                  self->client_info.display_sizes.session_height);
 
+        if (self->session->callback != 0)
+        {
+            /* call to xrdp_wm.c : callback */
+            self->session->callback(self->session->id, 0x555a, 0, 0,
+                                    0, 0);
+        }
         xrdp_channel_drdynvc_start(self->sec_layer->chan_layer);
     }
     else

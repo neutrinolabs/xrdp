@@ -1751,9 +1751,9 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
         // Not processed here. Processed in server_reset
         // case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING:
         case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED:
-            advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESIZE);
+            advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESET);
             break;
-        case WMRZ_XRDP_CORE_RESIZE:
+        case WMRZ_XRDP_CORE_RESET:
             // TODO: Unify this logic with server_reset
             error = libxrdp_reset(
                         wm->session, desc_width, desc_height, wm->screen->bpp);
@@ -1773,7 +1773,12 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " xrdp_cache_reset failed %d", error);
                 return advance_error(error, mm);
             }
+            advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESET_PROCESSING);
+            break;
 
+        // Not processed here. Processed in xrdp_mm_up_and_running()
+        // case WMRZ_XRDP_CORE_RESET_PROCESSING:
+        case WMRZ_XRDP_CORE_RESET_PROCESSED:
             /* load some stuff */
             error = xrdp_wm_load_static_colors_plus(wm, 0);
             if (error != 0)
@@ -2066,6 +2071,21 @@ xrdp_mm_suppress_output(struct xrdp_mm *self, int suppress,
             self->mod->mod_suppress_output(self->mod, suppress,
                                            left, top, right, bottom);
         }
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+xrdp_mm_up_and_running(struct xrdp_mm *self)
+{
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_up_and_running:");
+    if (self->resize_data != NULL &&
+            self->resize_data->state == WMRZ_XRDP_CORE_RESET_PROCESSING)
+    {
+        LOG(LOG_LEVEL_INFO,
+            "xrdp_mm_up_and_running: Core reset done.");
+        advance_resize_state_machine(self, WMRZ_XRDP_CORE_RESET_PROCESSED);
     }
     return 0;
 }
