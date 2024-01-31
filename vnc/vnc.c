@@ -1249,6 +1249,12 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
             {
                 LOG(LOG_LEVEL_DEBUG, "VNC server successfully resized");
                 log_screen_layout(LOG_LEVEL_INFO, "NewLayout", &layout);
+                // If this resize was requested by the client mid-session
+                // (dynamic resize), we need to tell xrdp_mm that
+                // it's OK to continue with the resize state machine.
+                // We do this by sending a reset with bpp == 0
+                error = v->server_reset(v, v->server_width,
+                                        v->server_height, 0);
             }
             else
             {
