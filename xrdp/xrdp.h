@@ -471,6 +471,9 @@ struct display_control_monitor_layout_data
     enum display_resize_state state;
     int last_state_update_timestamp;
     int start_time;
+    /// This flag is set if the state machine needs to
+    /// shutdown/startup EGFX
+    int using_egfx;
 };
 
 int
@@ -478,6 +481,8 @@ xrdp_mm_drdynvc_up(struct xrdp_mm *self);
 int
 xrdp_mm_suppress_output(struct xrdp_mm *self, int suppress,
                         int left, int top, int right, int bottom);
+int
+xrdp_mm_up_and_running(struct xrdp_mm *self);
 struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner);
 void
