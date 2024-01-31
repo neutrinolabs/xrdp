@@ -412,7 +412,9 @@ enum suppress_output_reason
     /// Client has requested suppress via TS_SUPPRESS_OUTPUT_PDU
     XSO_REASON_CLIENT_REQUEST = (1 << 0),
     /// Deactivation-Reactivation Sequence [MS-RDPBCGR] 1.3.1.3
-    XSO_REASON_DEACTIVATE_REACTIVATE = (1 << 1)
+    XSO_REASON_DEACTIVATE_REACTIVATE = (1 << 1),
+    /// Dynamic resize in progress
+    XSO_REASON_DYNAMIC_RESIZE = (1 << 2)
 };
 
 struct xrdp_rdp *

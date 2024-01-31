@@ -1665,6 +1665,11 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
     switch (description->state)
     {
         case WMRZ_ENCODER_DELETE:
+            // Stop any output from the module
+            rdp = (struct xrdp_rdp *) (wm->session->rdp);
+            xrdp_rdp_suppress_output(rdp,
+                                     1, XSO_REASON_DYNAMIC_RESIZE,
+                                     0, 0, 0, 0);
             // Disable the encoder until the resize is complete.
             if (mm->encoder != NULL)
             {
@@ -1834,6 +1839,16 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             advance_resize_state_machine(mm, WMRZ_SERVER_INVALIDATE);
             break;
         case WMRZ_SERVER_INVALIDATE:
+            if (module != 0)
+            {
+                // Ack all frames to speed up resize.
+                module->mod_frame_ack(module, 0, INT_MAX);
+            }
+            // Restart module output
+            rdp = (struct xrdp_rdp *) (wm->session->rdp);
+            xrdp_rdp_suppress_output(rdp,
+                                     0, XSO_REASON_DYNAMIC_RESIZE,
+                                     0, 0, desc_width, desc_height);
             /* redraw */
             error = xrdp_bitmap_invalidate(wm->screen, 0);
             if (error != 0)
@@ -1842,11 +1857,6 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           "process_display_control_monitor_layout_data:"
                           " xrdp_bitmap_invalidate failed %d", error);
                 return advance_error(error, mm);
-            }
-            if (module != 0)
-            {
-                // Ack all frames to speed up resize.
-                module->mod_frame_ack(module, 0, INT_MAX);
             }
             advance_resize_state_machine(mm, WMRZ_COMPLETE);
             break;
