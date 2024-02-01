@@ -1235,6 +1235,58 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
+int
+process_server_egfx_shmfd(struct mod *amod, struct stream *s)
+{
+    char *data;
+    char *cmd;
+    int rv;
+    int cmd_bytes;
+    int shmem_bytes;
+    int fd;
+    int recv_bytes;
+    unsigned int num_fds;
+    void *shmem_ptr;
+    char msg[4];
+
+    rv = 0;
+    in_uint32_le(s, cmd_bytes);
+    in_uint8p(s, cmd, cmd_bytes);
+    in_uint32_le(s, shmem_bytes);
+    if (shmem_bytes == 0)
+    {
+        return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0);
+    }
+    fd = -1;
+    num_fds = -1;
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        return 1;
+    }
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_egfx_shmfd: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes == 4)
+    {
+        if (num_fds == 1)
+        {
+            if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
+            {
+                /* we give up ownership of shmem_ptr
+                   will get cleaned up in server_egfx_cmd or
+                   xrdp_mm_process_enc_done(gfx) */
+                data = (char *) shmem_ptr;
+                rv = amod->server_egfx_cmd(amod, cmd, cmd_bytes,
+                                           data, shmem_bytes);
+            }
+            g_file_close(fd);
+        }
+    }
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
 static int
 process_server_set_pointer_shmfd(struct mod *amod, struct stream *s)
 {
@@ -1613,6 +1665,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 61: /* server_paint_rect_shmem_ex */
             rv = process_server_paint_rect_shmem_ex(mod, s);
+            break;
+        case 62:
+            rv = process_server_egfx_shmfd(mod, s);
             break;
         case 63: /* server_set_pointer_shmfd */
             rv = process_server_set_pointer_shmfd(mod, s);
