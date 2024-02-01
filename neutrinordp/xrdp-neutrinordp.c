@@ -17,6 +17,17 @@
  * limitations under the License.
  */
 
+#include <freerdp/freerdp.h>
+#include <freerdp/codec/bitmap.h>
+
+// FreeRDP defines some macros that we have different values for.
+// To catch this we need to include the freerdp includes before our
+// local ones (see gcc bug #16358)
+#undef WM_LBUTTONUP
+#undef WM_LBUTTONDOWN
+#undef WM_RBUTTONUP
+#undef WM_RBUTTONDOWN
+
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -26,8 +37,8 @@
 #include "xrdp_rail.h"
 #include "trans.h"
 #include "log.h"
+#include "os_calls.h"
 #include "string_calls.h"
-#include <freerdp/settings.h>
 
 #if defined(VERSION_STRUCT_RDP_FREERDP)
 #if VERSION_STRUCT_RDP_FREERDP > 1
