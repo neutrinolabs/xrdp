@@ -843,7 +843,7 @@ get_bytes_per_pixel(int bpp)
 /**************************************************************************//**
  * Skips the specified number of bytes from the transport
  *
- * @param transport Transport to read
+ * @param trans Transport to read
  * @param bytes Bytes to skip
  * @return != 0 for error
  */

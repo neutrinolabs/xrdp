@@ -258,7 +258,6 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
  * On exit, the TPKT header and the fixed part of the PDU header will have been
  * removed from the stream.
  *
- * @param self
  * @param s [in]
  * @param code [out]
  * @param len [out]

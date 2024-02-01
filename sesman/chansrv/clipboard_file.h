@@ -35,7 +35,7 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
  *
  * Files in the list are added to the xfs filesystem in the clipboard
  * directory. The filenames names are added to the 'file_list' for the user.
- * Files are prefixed with '<fprefix><clipboard_dir>/' and separated by '\n'.
+ * Files are prefixed with '<fprefix><clipboard_dir>/' and separated by '\\n'.
  *
  * If the list is not big enough, whole filenames are omitted, and a warning
  * message is logged. This is not an error.

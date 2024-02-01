@@ -471,7 +471,6 @@ libipm_msg_out_appendv(struct trans *trans, const char *format, va_list *argptr)
  * Prepare the transport to build an output message
  * @param trans libipm trans
  * @param msgno Number of message
- * @return != 0 for error
  */
 static void
 init_output_buffer(struct trans *trans, unsigned short msgno)

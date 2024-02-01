@@ -224,7 +224,6 @@ struct log_config
  *
  * @brief Starts the logging subsystem
  * @param l_cfg logging system configuration
- * @return
  *
  */
 enum logReturns
@@ -241,7 +240,7 @@ internal_log_end(struct log_config *l_cfg);
 
 /**
  * Converts a log level to a string
- * @param lvl, the loglevel
+ * @param lvl the loglevel
  * @param str pointer where the string will be stored.
  */
 void
@@ -250,7 +249,7 @@ internal_log_lvl2str(const enum logLevels lvl, char *str);
 /**
  *
  * @brief Converts a string to a log level
- * @param s The string to convert
+ * @param buf The string to convert
  * @return The corresponding level or LOG_LEVEL_DEBUG if error
  *
  */
@@ -273,12 +272,11 @@ internal_log_config_dump(struct log_config *config);
 
 /**
  * the log function that all files use to log an event.
- * @param lvl, the loglevel
- * @param override_destination_level, if true then the destination log level is not used
- * @param override_log_level, the loglevel instead of the destination log level if override_destination_level is true
- * @param msg, the logtext.
- * @param ap, the values for the message format arguments
- * @return
+ * @param lvl the loglevel
+ * @param override_destination_level if true then the destination log level is not used
+ * @param override_log_level the loglevel instead of the destination log level if override_destination_level is true
+ * @param msg the logtext.
+ * @param ap the values for the message format arguments
  */
 enum logReturns
 internal_log_message(const enum logLevels lvl,
@@ -288,9 +286,9 @@ internal_log_message(const enum logLevels lvl,
                      va_list ap);
 
 /**
- * @param log_level, the log level
- * @param override_destination_level, if true then the destination log level is ignored.
- * @param override_log_level, the log level to use instead of the destination log level
+ * @param log_level the log level
+ * @param override_destination_level if true then the destination log level is ignored.
+ * @param override_log_level the log level to use instead of the destination log level
  *      if override_destination_level is true
  * @return true if at least one log destination will accept a message logged at the given level.
  */
@@ -300,9 +298,9 @@ internal_log_is_enabled_for_level(const enum logLevels log_level,
                                   const enum logLevels override_log_level);
 
 /**
- * @param function_name, the function name (typically the __func__ macro)
- * @param file_name, the file name (typically the __FILE__ macro)
- * @param[out] log_level_return, the log level to use instead of the destination log level
+ * @param function_name the function name (typically the __func__ macro)
+ * @param file_name the file name (typically the __FILE__ macro)
+ * @param[out] log_level_return the log level to use instead of the destination log level
  * @return true if the logger location overrides the destination log levels
  */
 bool_t
@@ -316,7 +314,6 @@ internal_log_location_overrides_level(const char *function_name,
 /**
  * This function initialize the log facilities according to the configuration
  * file, that is described by the in parameter.
- * @param iniFile
  * @param applicationName the name that is used in the log for the running
  *                        application
  * @param flags Flags to affect the operation of the call
@@ -328,8 +325,6 @@ log_start(const char *iniFile, const char *applicationName,
 
 /**
  * An alternative log_start where the caller gives the params directly.
- * @param config
- * @return
  *
  * @post to avoid memory leaks, the config argument must be free'ed using
  * `log_config_free()`
@@ -344,8 +339,8 @@ log_start_from_param(const struct log_config *src_log_config);
  * The config can be customised by the caller before calling
  * log_start_from_param()
  *
- * @param Default log level
- * @param Log level name, or NULL. This can be used to provide an
+ * @param lvl log level
+ * @param override_name level name, or NULL. This can be used to provide an
  *        override to the default log level, by environment variable or
  *        argument.
  *
@@ -357,10 +352,8 @@ log_config_init_for_console(enum logLevels lvl, const char *override_name);
 /**
  * Read configuration from a file and store the values in the returned
  * log_config.
- * @param file
- * @param applicationName, the application name used in the log events.
- * @param section_prefix, prefix for the logging sections to parse
- * @return
+ * @param applicationName the application name used in the log events.
+ * @param section_prefix prefix for the logging sections to parse
  */
 struct log_config *
 log_config_init_from_config(const char *iniFilename,
@@ -375,7 +368,6 @@ log_config_free(struct log_config *config);
 
 /**
  * Function that terminates all logging
- * @return
  */
 enum logReturns
 log_end(void);
@@ -385,10 +377,8 @@ log_end(void);
  *
  * Please prefer to use the LOG and LOG_DEVEL macros instead of this function directly.
  *
- * @param lvl, the loglevel
- * @param msg, the logtext.
- * @param ...
- * @return
+ * @param lvl the loglevel
+ * @param msg the logtext.
  */
 enum logReturns
 log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
@@ -405,13 +395,11 @@ log_hexdump(const enum logLevels log_level,
  *
  * Please prefer to use the LOG and LOG_DEVEL macros instead of this function directly.
  *
- * @param function_name, the function name (typically the __func__ macro)
- * @param file_name, the file name (typically the __FILE__ macro)
- * @param line_number, the line number in the file (typically the __LINE__ macro)
- * @param lvl, the loglevel
- * @param msg, the logtext.
- * @param ...
- * @return
+ * @param function_name the function name (typically the __func__ macro)
+ * @param file_name the file name (typically the __FILE__ macro)
+ * @param line_number the line number in the file (typically the __LINE__ macro)
+ * @param lvl the loglevel
+ * @param msg the logtext.
  */
 enum logReturns
 log_message_with_location(const char *function_name,
@@ -434,13 +422,11 @@ log_hexdump_with_location(const char *function_name,
  * This function returns the configured file name for the logfile
  * @param replybuf the buffer where the reply is stored
  * @param bufsize how big is the reply buffer.
- * @return
  */
 char *getLogFile(char *replybuf, int bufsize);
 
 /**
  * Returns formatted datetime for log
- * @return
  */
 char *getFormattedDateTime(char *replybuf, int bufsize);
 

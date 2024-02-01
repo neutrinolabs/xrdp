@@ -249,7 +249,7 @@ char_count_in(const struct stream *s, char c)
  *
  * @param v VNC module
  * @param msg_flags clipHeader msgFlags field
- * @params s formatListData object.
+ * @param s formatListData object.
  * @return Preferred text format, or 0 if not found
  */
 static int

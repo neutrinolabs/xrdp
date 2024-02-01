@@ -78,7 +78,6 @@ login_info_sys_login_user(struct trans *scp_trans,
  * Errors are logged.
  *
  * @param scp_trans SCP transport for talking to the client
- * @param ip_addr IP address for xrdp client
  *
  * @result Allocated login_info struct for a successful login
  */

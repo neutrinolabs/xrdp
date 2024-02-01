@@ -65,7 +65,7 @@ log_authfail_message(const char *username, const char *ip_addr)
 /**
  * Authenticate and authorize the connection
  *
- * @param username Name for user
+ * @param supplied_username Name for user
  * @param password Password
  * @param ip_addr Remote IP address
  * @param login_info Structure to fill in for a successful login

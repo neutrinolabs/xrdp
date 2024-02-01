@@ -192,7 +192,7 @@ g_bytes_to_hexdump(const char *src, int len);
 /**
  * Extracts the display number from an X11 display string
  *
- * @param Display string (i.e. g_getenv("DISPLAY"))
+ * @param display_text Display string (i.e. g_getenv("DISPLAY"))
  *
  * @result <0 if the string could not be parsed, or >=0 for a display number
  */
@@ -270,7 +270,6 @@ g_bitmask_to_charstr(int bitmask, const struct bitmask_char bitdefs[],
  *
  * @param str Input string
  * @param bitdefs Array mapping tokens to bitmask values
- * @param delim Delimiter for tokens in str
  * @param[out] unrecognised Buffer for any unrecognised tokens
  * @param unrecognised_len Length of unrecognised including '\0';
  * @return bitmask value for recognised tokens

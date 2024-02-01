@@ -65,7 +65,7 @@ struct scp_session_info
 enum scp_login_status
 {
     E_SCP_LOGIN_OK = 0, ///< The connection is now loggned in
-    E_SCP_LOGIN_ALREADY_LOGGED_IN, //< A user is currently logged in
+    E_SCP_LOGIN_ALREADY_LOGGED_IN, ///< A user is currently logged in
     E_SCP_LOGIN_NO_MEMORY, ///< Memory allocation failure
     /**
      * User couldn't be authenticated, or user doesn't exist */

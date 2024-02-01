@@ -154,7 +154,7 @@ libipm_msg_out_init(struct trans *trans, unsigned short msgno,
  *
  * @param trans libipm transport
  * @param format a description of any arguments to add to the buffer.
- * @param != 0 if an error occurs
+ * @return != 0 if an error occurs
  *
  * The format string is followed immediately by the arguments it
  * describes. The format string may contain these characters (from the
@@ -299,7 +299,7 @@ libipm_msg_in_peek_type(struct trans *trans);
  *
  * @param trans libipm transport
  * @param format a description of the arguments to read from the buffer.
- * @param != 0 if an error occurs
+ * @return != 0 if an error occurs
  *
  * The format string is followed immediately by the arguments it
  * describes. The format string may contain these characters (from the
