@@ -4114,6 +4114,10 @@ server_egfx_cmd(struct xrdp_mod *mod,
 
     wm = (struct xrdp_wm *)(mod->wm);
     mm = wm->mm;
+    if (mm->encoder == NULL)
+    {
+        return 0;
+    }
     enc = g_new0(struct xrdp_enc_data, 1);
     if (enc == NULL)
     {
