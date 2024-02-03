@@ -51,7 +51,30 @@ dist_startscript_DATA = \
   km-00000816.ini \
   km-0000100c.ini \
   km-00010409.ini \
-  km-19360409.ini
+  km-19360409.ini \
+  km-00000406.toml \
+  km-00000407.toml \
+  km-00000409.toml \
+  km-0000040a.toml \
+  km-0000040b.toml \
+  km-0000040c.toml \
+  km-00000410.toml \
+  km-00000411.toml \
+  km-00000412.toml \
+  km-00000414.toml \
+  km-00000415.toml \
+  km-00000416.toml \
+  km-00000419.toml \
+  km-0000041d.toml \
+  km-00000807.toml \
+  km-00000809.toml \
+  km-0000080a.toml \
+  km-0000080c.toml \
+  km-00000813.toml \
+  km-00000816.toml \
+  km-0000100c.toml \
+  km-00010409.toml \
+  km-19360409.toml
 
 #
 # platform specific files
