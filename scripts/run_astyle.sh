@@ -7,7 +7,7 @@
 # Note: the script must be run from the root directory of the xrdp repository
 
 INSTALL_ROOT=~/astyle.local
-ASTYLE_FROM_XRDP=$INSTALL_ROOT/3.1/usr/bin/astyle
+ASTYLE_FROM_XRDP=$INSTALL_ROOT/3.4.12/usr/bin/astyle
 MIN_ASTYLE_VER="3.1"
 
 # ----------------------------------------------------------------------------

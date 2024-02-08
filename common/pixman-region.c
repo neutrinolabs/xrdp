@@ -2655,7 +2655,7 @@ PREFIX (_selfcheck) (region_type_t *reg)
     }
     else
     {
-        box_type_t *pbox_p, * pbox_n;
+        box_type_t *pbox_p, *pbox_n;
         box_type_t box;
 
         pbox_p = PIXREGION_RECTS (reg);

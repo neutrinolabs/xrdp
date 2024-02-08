@@ -1390,9 +1390,9 @@ devredir_get_dir_listing(struct state_dirscan *fusep, tui32 device_id,
         CreateDisposition = CD_FILE_OPEN;
 
         rval = devredir_send_drive_create_request(device_id, irp->pathname,
-                DesiredAccess, CreateOptions,
-                0, CreateDisposition,
-                irp->CompletionId);
+               DesiredAccess, CreateOptions,
+               0, CreateDisposition,
+               irp->CompletionId);
 
         LOG_DEVEL(LOG_LEVEL_DEBUG, "looking for device_id=%d path=%s", device_id, irp->pathname);
 
@@ -1457,10 +1457,10 @@ devredir_lookup_entry(struct state_lookup *fusep, tui32 device_id,
                   device_id, irp->pathname, irp->CompletionId);
 
         rval = devredir_send_drive_create_request(device_id,
-                irp->pathname,
-                DesiredAccess, CreateOptions,
-                0, CreateDisposition,
-                irp->CompletionId);
+               irp->pathname,
+               DesiredAccess, CreateOptions,
+               0, CreateDisposition,
+               irp->CompletionId);
     }
 
     return rval;
@@ -1526,10 +1526,10 @@ devredir_setattr_for_entry(struct state_setattr *fusep, tui32 device_id,
                   device_id, irp->pathname);
 
         rval = devredir_send_drive_create_request(device_id,
-                irp->pathname,
-                DesiredAccess, CreateOptions,
-                0, CreateDisposition,
-                irp->CompletionId);
+               irp->pathname,
+               DesiredAccess, CreateOptions,
+               0, CreateDisposition,
+               irp->CompletionId);
     }
 
     return rval;
@@ -1578,10 +1578,10 @@ devredir_file_create(struct state_create *fusep, tui32 device_id,
         CreateDisposition  = 0x02; /* got this value from windows */
 
         rval = devredir_send_drive_create_request(device_id, path,
-                DesiredAccess, CreateOptions,
-                FileAttributes,
-                CreateDisposition,
-                irp->CompletionId);
+               DesiredAccess, CreateOptions,
+               FileAttributes,
+               CreateDisposition,
+               irp->CompletionId);
     }
 
     return rval;
@@ -1640,10 +1640,10 @@ devredir_file_open(struct state_open *fusep, tui32 device_id,
         CreateDisposition = CD_FILE_OPEN; // WAS 1
 
         rval = devredir_send_drive_create_request(device_id, path,
-                DesiredAccess, CreateOptions,
-                FileAttributes,
-                CreateDisposition,
-                irp->CompletionId);
+               DesiredAccess, CreateOptions,
+               FileAttributes,
+               CreateDisposition,
+               irp->CompletionId);
     }
 
     return rval;
@@ -1720,9 +1720,9 @@ devredir_rmdir_or_file(struct state_remove *fusep, tui32 device_id,
         CreateDisposition = 0x01; /* got this value from windows */
 
         rval = devredir_send_drive_create_request(device_id, path,
-                DesiredAccess, CreateOptions,
-                0, CreateDisposition,
-                irp->CompletionId);
+               DesiredAccess, CreateOptions,
+               0, CreateDisposition,
+               irp->CompletionId);
     }
 
     return rval;
@@ -1898,10 +1898,10 @@ int devredir_file_rename(struct state_rename *fusep, tui32 device_id,
         CreateDisposition = CD_FILE_OPEN; // WAS 1
 
         rval = devredir_send_drive_create_request(device_id, old_name,
-                DesiredAccess, CreateOptions,
-                FileAttributes,
-                CreateDisposition,
-                irp->CompletionId);
+               DesiredAccess, CreateOptions,
+               FileAttributes,
+               CreateDisposition,
+               irp->CompletionId);
     }
 
     return rval;

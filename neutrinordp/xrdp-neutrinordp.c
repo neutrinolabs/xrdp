@@ -1945,7 +1945,7 @@ lfreerdp_pre_connect(freerdp *instance)
                 (mod->client_info.rail_support_level > 0))
         {
             instance->settings->performance_flags |= (PERF_DISABLE_WALLPAPER |
-                    PERF_DISABLE_FULLWINDOWDRAG);
+                PERF_DISABLE_FULLWINDOWDRAG);
             LOG(LOG_LEVEL_DEBUG, "Add in performance setting for Railsupport:"
                 "[0x%08x]", PERF_DISABLE_WALLPAPER |
                 PERF_DISABLE_FULLWINDOWDRAG);
