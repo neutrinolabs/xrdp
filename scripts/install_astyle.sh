@@ -15,8 +15,8 @@ INSTALL_ROOT=~/astyle.local
 # ----------------------------------------------------------------------------
 usage()
 {
-    echo "** Usage: $0 <svn-tags-url> <tag-name>"
-    echo "   e.g. $0 https://svn.code.sf.net/p/astyle/code/tags 3.1"
+    echo "** Usage: $0 <git-repo> <version-tag>"
+    echo "   e.g. $0 https://gitlab.com/saalen/astyle.git 3.4.12"
 } >&2
 
 # ----------------------------------------------------------------------------
@@ -80,9 +80,12 @@ fi
     # Put everything in this directory
     FILESDIR=$INSTALL_ROOT/$ASTYLE_VER
 
-    svn checkout ${REPO_URL}/${ASTYLE_VER}/AStyle "$workdir"
-
+    git clone --sparse ${REPO_URL} "$workdir"
     cd "$workdir"
+    git sparse-checkout set AStyle
+    git checkout tags/${ASTYLE_VER}
+
+    cd "AStyle"
 
     make_args="DESTDIR=$FILESDIR"
 

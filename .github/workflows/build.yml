@@ -194,8 +194,8 @@ jobs:
       CC: gcc
       # This is required to use a version of astyle other than that
       # supplied with the operating system
-      ASTYLE_VER: 3.1
-      ASTYLE_REPO: https://svn.code.sf.net/p/astyle/code/tags
+      ASTYLE_VER: 3.4.12
+      ASTYLE_REPO: https://gitlab.com/saalen/astyle.git
     steps:
       # Set steps.os.outputs.image to the specific OS (e.g. 'ubuntu20')
       - name: Get operating system name and version.
