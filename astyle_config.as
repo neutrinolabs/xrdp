@@ -19,13 +19,13 @@
 --convert-tabs
 
 # requires --convert-tabs to work properly
---indent-preprocessor
+--indent-preproc-define
 
 --indent-col1-comments
 
 --min-conditional-indent=2
 
---max-instatement-indent=40
+--max-continuation-indent=40
 
 # Insert space padding around operators.
 --pad-oper
@@ -35,7 +35,7 @@
 
 
 # Add brackets to unbracketed one line conditional statements (e.g. 'if', 'for', 'while'...).
---add-brackets
+--add-braces
 
 --align-pointer=name
 
