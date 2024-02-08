@@ -613,14 +613,14 @@ in_utf16_le_terminated_as_utf8_length(struct stream *s);
     do                                                            \
     {                                                             \
         _v =                                                      \
-                (tui64)(*((unsigned char *)_s->p)) |                      \
-                (((tui64) (*(((unsigned char *)_s->p) + 1))) << 8)  |     \
-                (((tui64) (*(((unsigned char *)_s->p) + 2))) << 16) |     \
-                (((tui64) (*(((unsigned char *)_s->p) + 3))) << 24) |     \
-                (((tui64) (*(((unsigned char *)_s->p) + 4))) << 32) |     \
-                (((tui64) (*(((unsigned char *)_s->p) + 5))) << 40) |     \
-                (((tui64) (*(((unsigned char *)_s->p) + 6))) << 48) |     \
-                (((tui64) (*(((unsigned char *)_s->p) + 7))) << 56);      \
+            (tui64)(*((unsigned char *)_s->p)) |                      \
+            (((tui64) (*(((unsigned char *)_s->p) + 1))) << 8)  |     \
+            (((tui64) (*(((unsigned char *)_s->p) + 2))) << 16) |     \
+            (((tui64) (*(((unsigned char *)_s->p) + 3))) << 24) |     \
+            (((tui64) (*(((unsigned char *)_s->p) + 4))) << 32) |     \
+            (((tui64) (*(((unsigned char *)_s->p) + 5))) << 40) |     \
+            (((tui64) (*(((unsigned char *)_s->p) + 6))) << 48) |     \
+            (((tui64) (*(((unsigned char *)_s->p) + 7))) << 56);      \
         _s->p += 8;                                               \
     } while (0)
 
