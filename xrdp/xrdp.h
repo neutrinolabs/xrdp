@@ -471,6 +471,9 @@ struct display_control_monitor_layout_data
     enum display_resize_state state;
     int last_state_update_timestamp;
     int start_time;
+    /// This flag is set if the state machine needs to
+    /// shutdown/startup EGFX
+    int using_egfx;
 };
 
 int
@@ -478,6 +481,8 @@ xrdp_mm_drdynvc_up(struct xrdp_mm *self);
 int
 xrdp_mm_suppress_output(struct xrdp_mm *self, int suppress,
                         int left, int top, int right, int bottom);
+int
+xrdp_mm_up_and_running(struct xrdp_mm *self);
 struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner);
 void
@@ -500,7 +505,8 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id);
 int
 xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
                                 struct xrdp_bitmap *bitmap,
-                                struct xrdp_rect *rect);
+                                struct xrdp_rect *rect,
+                                int surface_id, int x, int y);
 int
 server_begin_update(struct xrdp_mod *mod);
 int
@@ -543,7 +549,8 @@ server_set_pointer_large(struct xrdp_mod *mod, int x, int y,
                          char *data, char *mask, int bpp,
                          int width, int height);
 int
-server_paint_rects_ex(struct xrdp_mod *mod, int num_drects, short *drects,
+server_paint_rects_ex(struct xrdp_mod *mod,
+                      int num_drects, short *drects,
                       int num_crects, short *crects,
                       char *data, int left, int top,
                       int width, int height,
@@ -645,5 +652,9 @@ server_add_char_alpha(struct xrdp_mod *mod, int font, int character,
                       int width, int height, char *data);
 int
 server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes);
+int
+server_egfx_cmd(struct xrdp_mod *v,
+                char *cmd, int cmd_bytes,
+                char *data, int data_bytes);
 
 #endif

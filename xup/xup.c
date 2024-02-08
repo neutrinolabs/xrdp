@@ -1174,47 +1174,33 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     in_uint16_le(s, height);
 
     bmpdata = 0;
-    if (flags == 0) /* screen */
+    if (amod->screen_shmem_id_mapped == 0)
     {
-        /* Do we need to map (or remap) the memory
-         * area shared with the X server ? */
-        if (amod->screen_shmem_id_mapped == 0 ||
-                amod->screen_shmem_id != shmem_id)
+        amod->screen_shmem_id = shmem_id;
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+        if (amod->screen_shmem_pixels == (void *) -1)
         {
-            if (amod->screen_shmem_id_mapped != 0)
-            {
-                g_shmdt(amod->screen_shmem_pixels);
-            }
-            amod->screen_shmem_pixels = (char *) g_shmat(shmem_id);
-            if (amod->screen_shmem_pixels == (void *) -1)
-            {
-                /* failed */
-                if (amod->screen_shmem_id_mapped == 0)
-                {
-                    LOG(LOG_LEVEL_ERROR,
-                        "Can't attach to shared memory id %d [%s]",
-                        shmem_id, g_get_strerror());
-                }
-                else
-                {
-                    LOG(LOG_LEVEL_ERROR,
-                        "Can't attach to shared memory id %d from id %d [%s]",
-                        shmem_id, amod->screen_shmem_id, g_get_strerror());
-                }
-                amod->screen_shmem_id = 0;
-                amod->screen_shmem_pixels = 0;
-                amod->screen_shmem_id_mapped = 0;
-            }
-            else
-            {
-                amod->screen_shmem_id = shmem_id;
-                amod->screen_shmem_id_mapped = 1;
-            }
+            /* failed */
+            amod->screen_shmem_id = 0;
+            amod->screen_shmem_pixels = 0;
+            amod->screen_shmem_id_mapped = 0;
         }
-
-        if (amod->screen_shmem_pixels != 0)
+        else
         {
-            bmpdata = amod->screen_shmem_pixels + shmem_offset;
+            amod->screen_shmem_id_mapped = 1;
+        }
+    }
+    else if (amod->screen_shmem_id != shmem_id)
+    {
+        amod->screen_shmem_id = shmem_id;
+        g_shmdt(amod->screen_shmem_pixels);
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+        if (amod->screen_shmem_pixels == (void *) -1)
+        {
+            /* failed */
+            amod->screen_shmem_id = 0;
+            amod->screen_shmem_pixels = 0;
+            amod->screen_shmem_id_mapped = 0;
         }
     }
     else
@@ -1225,7 +1211,10 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
                   flags, frame_id, shmem_id, shmem_offset,
                   width, height);
     }
-
+    if (amod->screen_shmem_pixels != 0)
+    {
+        bmpdata = amod->screen_shmem_pixels + shmem_offset;
+    }
     if (bmpdata != 0)
     {
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
@@ -1238,12 +1227,61 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
         rv = 1;
     }
 
-    //LOG_DEVEL(LOG_LEVEL_TRACE, "frame_id %d", frame_id);
-    //send_paint_rect_ex_ack(amod, flags, frame_id);
-
     g_free(lcrects);
     g_free(ldrects);
 
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+int
+process_server_egfx_shmfd(struct mod *amod, struct stream *s)
+{
+    char *data;
+    char *cmd;
+    int rv;
+    int cmd_bytes;
+    int shmem_bytes;
+    int fd;
+    int recv_bytes;
+    unsigned int num_fds;
+    void *shmem_ptr;
+    char msg[4];
+
+    rv = 0;
+    in_uint32_le(s, cmd_bytes);
+    in_uint8p(s, cmd, cmd_bytes);
+    in_uint32_le(s, shmem_bytes);
+    if (shmem_bytes == 0)
+    {
+        return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0);
+    }
+    fd = -1;
+    num_fds = -1;
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        return 1;
+    }
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_egfx_shmfd: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes == 4)
+    {
+        if (num_fds == 1)
+        {
+            if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
+            {
+                /* we give up ownership of shmem_ptr
+                   will get cleaned up in server_egfx_cmd or
+                   xrdp_mm_process_enc_done(gfx) */
+                data = (char *) shmem_ptr;
+                rv = amod->server_egfx_cmd(amod, cmd, cmd_bytes,
+                                           data, shmem_bytes);
+            }
+            g_file_close(fd);
+        }
+    }
     return rv;
 }
 
@@ -1289,7 +1327,7 @@ process_server_set_pointer_shmfd(struct mod *amod, struct stream *s)
         {
             Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
             shmembytes = width * height * Bpp + width * height / 8;
-            if (g_file_map(fd, 1, 1, shmembytes, &shmemptr) == 0)
+            if (g_file_map(fd, 1, 0, shmembytes, &shmemptr) == 0)
             {
                 cur_data = (char *)shmemptr;
                 cur_mask = cur_data + width * height * Bpp;
@@ -1382,7 +1420,7 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     {
         if (num_fds == 1)
         {
-            if (g_file_map(fd, 1, 1, shmem_bytes, &shmem_ptr) == 0)
+            if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
             {
                 bmpdata = (char *)shmem_ptr;
                 bmpdata += shmem_offset;
@@ -1628,6 +1666,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case 61: /* server_paint_rect_shmem_ex */
             rv = process_server_paint_rect_shmem_ex(mod, s);
             break;
+        case 62:
+            rv = process_server_egfx_shmfd(mod, s);
+            break;
         case 63: /* server_set_pointer_shmfd */
             rv = process_server_set_pointer_shmfd(mod, s);
             break;
@@ -1679,74 +1720,97 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int type;
     char *phold;
 
+    int width;
+    int height;
+
     LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message:");
+    in_uint16_le(s, type);
+    in_uint16_le(s, num_orders);
+    in_uint32_le(s, len);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "lib_mod_process_message: type %d", type);
+
     rv = 0;
-    if (rv == 0)
+    if (type == 1) /* original order list */
     {
-        in_uint16_le(s, type);
-        in_uint16_le(s, num_orders);
-        in_uint32_le(s, len);
-        LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message: type %d", type);
-
-        if (type == 1) /* original order list */
+        for (index = 0; index < num_orders; ++index)
         {
-            for (index = 0; index < num_orders; index++)
-            {
-                in_uint16_le(s, type);
-                rv = lib_mod_process_orders(mod, type, s);
+            in_uint16_le(s, type);
+            rv = lib_mod_process_orders(mod, type, s);
 
-                if (rv != 0)
-                {
+            if (rv != 0)
+            {
+                break;
+            }
+        }
+    }
+    else if (type == 2) /* caps */
+    {
+        LOG_DEVEL(LOG_LEVEL_TRACE,
+                  "lib_mod_process_message: type 2 len %d", len);
+        for (index = 0; index < num_orders; index++)
+        {
+            phold = s->p;
+            in_uint16_le(s, type);
+            in_uint16_le(s, len);
+
+            switch (type)
+            {
+                default:
+                    LOG_DEVEL(LOG_LEVEL_TRACE,
+                              "lib_mod_process_message: unknown"
+                              " cap type %d len %d",
+                              type, len);
                     break;
-                }
             }
+            s->p = phold + len;
         }
-        else if (type == 2) /* caps */
+        lib_send_client_info(mod);
+    }
+    else if (type == 3) /* order list with len after type */
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO,
+                  "lib_mod_process_message: type 3 len %d", len);
+        for (index = 0; index < num_orders; index++)
         {
-            LOG_DEVEL(LOG_LEVEL_TRACE,
-                      "lib_mod_process_message: type 2 len %d", len);
-            for (index = 0; index < num_orders; index++)
+            phold = s->p;
+            in_uint16_le(s, type);
+            in_uint16_le(s, len);
+            rv = lib_mod_process_orders(mod, type, s);
+
+            if (rv != 0)
             {
-                phold = s->p;
-                in_uint16_le(s, type);
-                in_uint16_le(s, len);
-
-                switch (type)
-                {
-                    default:
-                        LOG_DEVEL(LOG_LEVEL_TRACE,
-                                  "lib_mod_process_message: unknown"
-                                  " cap type %d len %d",
-                                  type, len);
-                        break;
-                }
-
-                s->p = phold + len;
+                break;
             }
 
-            lib_send_client_info(mod);
+            s->p = phold + len;
         }
-        else if (type == 3) /* order list with len after type */
+    }
+    else if (type == 100) // metadata commands.
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO,
+                  "lib_mod_process_message: type 100 len %d", len);
+        for (index = 0; index < num_orders; ++index)
         {
-            for (index = 0; index < num_orders; index++)
+            phold = s->p;
+            in_uint16_le(s, type);
+            in_uint16_le(s, len);
+            switch (type)
             {
-                phold = s->p;
-                in_uint16_le(s, type);
-                in_uint16_le(s, len);
-                rv = lib_mod_process_orders(mod, type, s);
-
-                if (rv != 0)
-                {
+                case 3: // memory allocation complete
+                    in_uint16_le(s, width);
+                    in_uint16_le(s, height);
+                    LOG(LOG_LEVEL_INFO, "Received memory_allocation_complete"
+                        " command. width: %d, height: %d",
+                        width, height);
+                    rv = mod->server_reset(mod, width, height, 0);
                     break;
-                }
-
-                s->p = phold + len;
             }
+            s->p = phold + len;
         }
-        else
-        {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "unknown type %d", type);
-        }
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_TRACE, "unknown type %d", type);
     }
 
     return rv;

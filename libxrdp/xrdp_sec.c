@@ -2114,10 +2114,14 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     in_uint16_le(s, supportedColorDepths);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> supportedColorDepths %s",
-              supportedColorDepths == 0x0001 ? "RNS_UD_24BPP_SUPPORT" :
-              supportedColorDepths == 0x0002 ? "RNS_UD_16BPP_SUPPORT" :
-              supportedColorDepths == 0x0004 ? "RNS_UD_15BPP_SUPPORT" :
-              supportedColorDepths == 0x0008 ? "RNS_UD_32BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_24BPP_SUPPORT
+              ? "RNS_UD_24BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_16BPP_SUPPORT
+              ? "RNS_UD_16BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_15BPP_SUPPORT
+              ? "RNS_UD_15BPP_SUPPORT" :
+              supportedColorDepths == RNS_UD_32BPP_SUPPORT
+              ? "RNS_UD_32BPP_SUPPORT" :
               "unknown");
 
     if (!s_check_rem(s, 2))
@@ -2129,11 +2133,30 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_CORE "
               "<Optional Field> earlyCapabilityFlags 0x%4.4x",
               earlyCapabilityFlags);
-    if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
+    if ((earlyCapabilityFlags & RNS_UD_CS_WANT_32BPP_SESSION)
+            && (supportedColorDepths & RNS_UD_32BPP_SUPPORT))
     {
         client_info->bpp = 32;
     }
-
+#ifdef XRDP_RFXCODEC
+    if (earlyCapabilityFlags & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL)
+    {
+        if (client_info->bpp < 32)
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "client requested gfx protocol with insufficient color depth");
+        }
+        else
+        {
+            LOG(LOG_LEVEL_INFO, "client supports gfx protocol");
+            self->rdp_layer->client_info.gfx = 1;
+        }
+    }
+    else
+    {
+        LOG_DEVEL(LOG_LEVEL_INFO, "client DOES NOT support gfx");
+    }
+#endif
     if (!s_check_rem(s, 64))
     {
         return 0;
@@ -2365,10 +2388,10 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     in_uint32_le(s, num_channels);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_NET "
               "channelCount %d", num_channels);
-    if (num_channels > 31)
+    if (num_channels > MAX_STATIC_CHANNELS)
     {
         LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Protocol error: too many channels requested. "
-            "max 31, received %d", num_channels);
+            "max %d, received %d", MAX_STATIC_CHANNELS, num_channels);
         return 1;
     }
 

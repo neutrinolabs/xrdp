@@ -203,10 +203,13 @@ int      g_delete_wait_obj(tintptr obj);
  * @param rcount Number of elements in read_objs
  * @param write_objs Array of write objects
  * @param rcount Number of elements in write_objs
- * @param mstimeout Timeout in milliseconds. <= 0 means an infinite timeout.
+ * @param mstimeout Timeout in milliseconds. < 0 means an infinite timeout.
  *
  * @return 0 for success. The objects will need to be polled to
  * find out what is readable or writeable.
+ *
+ * An mstimeout of zero will return immediately, although
+ * error conditions may be checked for.
  */
 int      g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs,
                     int wcount, int mstimeout);
@@ -397,6 +400,9 @@ int      g_tcp4_bind_address(int sck, const char *port, const char *address);
 int      g_tcp6_socket(void);
 int      g_tcp6_bind_address(int sck, const char *port, const char *address);
 int      g_no_new_privs(void);
+void
+g_qsort(void *base, size_t nitems, size_t size,
+        int (*compar)(const void *, const void *));
 
 /* glib-style wrappers */
 #define g_new(struct_type, n_structs) \

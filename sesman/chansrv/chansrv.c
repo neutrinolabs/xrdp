@@ -1787,7 +1787,7 @@ main(int argc, char **argv)
         waiters[1] = g_exec_event;
         waiters[2] = g_sigchld_event;
 
-        if (g_obj_wait(waiters, 3, 0, 0, 0) != 0)
+        if (g_obj_wait(waiters, 3, 0, 0, -1) != 0)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "main: error, g_obj_wait failed");
             break;
@@ -1814,7 +1814,7 @@ main(int argc, char **argv)
     while (g_thread_done_event > 0 && !g_is_wait_obj_set(g_thread_done_event))
     {
         /* wait for thread to exit */
-        if (g_obj_wait(&g_thread_done_event, 1, 0, 0, 0) != 0)
+        if (g_obj_wait(&g_thread_done_event, 1, 0, 0, -1) != 0)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "main: error, g_obj_wait failed");
             break;

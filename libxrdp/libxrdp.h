@@ -403,6 +403,20 @@ int
 xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s);
 
 /* xrdp_rdp.c */
+
+/**
+ * Reasons why output is being suppressed or restarted
+ */
+enum suppress_output_reason
+{
+    /// Client has requested suppress via TS_SUPPRESS_OUTPUT_PDU
+    XSO_REASON_CLIENT_REQUEST = (1 << 0),
+    /// Deactivation-Reactivation Sequence [MS-RDPBCGR] 1.3.1.3
+    XSO_REASON_DEACTIVATE_REACTIVATE = (1 << 1),
+    /// Dynamic resize in progress
+    XSO_REASON_DYNAMIC_RESIZE = (1 << 2)
+};
+
 struct xrdp_rdp *
 xrdp_rdp_create(struct xrdp_session *session, struct trans *trans);
 void
@@ -438,6 +452,21 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self);
 int
 xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
                            int data_bytes);
+/**
+ * Request output suppress or resume
+ *
+ * @param self RDP struct
+ * @param suppress (!= 0 for suppress, 0 for resume)
+ * @param reason Why the output is being suppressed or resumed
+ * @param left Left pixel of repaint area (ignored for suppress)
+ * @param top Top pixel of repaint area (ignored for suppress)
+ * @param right Right pixel of inclusive repaint area (ignored for suppress)
+ * @param bottom Bottom pixel of inclusive repaint area (ignored for suppress)
+ */
+void
+xrdp_rdp_suppress_output(struct xrdp_rdp *self, int suppress,
+                         enum suppress_output_reason reason,
+                         int left, int top, int right, int bottom);
 
 /* xrdp_orders.c */
 struct xrdp_orders *
