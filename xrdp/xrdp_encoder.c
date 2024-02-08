@@ -644,10 +644,10 @@ gfx_wiretosurface2(struct xrdp_encoder *self,
     if (self->codec_handle_prfx_gfx[mon_index] == NULL)
     {
         self->codec_handle_prfx_gfx[mon_index] = rfxcodec_encode_create(
-                    width,
-                    height,
-                    RFX_FORMAT_YUV,
-                    RFX_FLAGS_RLGR1 | RFX_FLAGS_PRO1);
+                width,
+                height,
+                RFX_FORMAT_YUV,
+                RFX_FLAGS_RLGR1 | RFX_FLAGS_PRO1);
         if (self->codec_handle_prfx_gfx[mon_index] == NULL)
         {
             return NULL;
