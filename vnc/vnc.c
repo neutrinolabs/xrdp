@@ -2133,6 +2133,7 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
             (const struct xrdp_client_info *) value;
 
         g_free(v->client_layout.s);
+        v->client_layout.count = 0;
 
         /* Save monitor information from the client */
         if (!client_info->multimon || client_info->display_sizes.monitorCount < 1)

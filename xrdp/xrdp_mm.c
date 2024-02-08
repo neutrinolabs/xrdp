@@ -1743,6 +1743,13 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                 mm, WMRZ_SERVER_VERSION_MESSAGE_START);
             break;
         case WMRZ_SERVER_VERSION_MESSAGE_START:
+            /* Update the client_info structure with the new description
+             * and tell the module so it can communicate the new
+             * screen layout to the backend */
+            sync_dynamic_monitor_data(wm, &(description->description));
+            module->mod_set_param(module, "client_info",
+                                  (const char *) (wm->session->client_info));
+
             error = module->mod_server_version_message(module);
             if (error != 0)
             {
@@ -1813,7 +1820,6 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " xrdp_bitmap_resize failed %d", error);
                 return advance_error(error, mm);
             }
-            sync_dynamic_monitor_data(wm, &(description->description));
             advance_resize_state_machine(mm, WMRZ_EGFX_INITIALIZE);
             break;
         case WMRZ_EGFX_INITIALIZE:

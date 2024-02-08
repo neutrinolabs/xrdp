@@ -1153,15 +1153,6 @@ libxrdp_reset(struct xrdp_session *session,
             return 0;
         }
 
-        /* if same (and only one monitor on client) don't need to do anything */
-        if (client_info->display_sizes.session_width == width &&
-                client_info->display_sizes.session_height == height &&
-                client_info->bpp == bpp &&
-                (client_info->display_sizes.monitorCount == 0 || client_info->multimon == 0))
-        {
-            return 0;
-        }
-
         client_info->display_sizes.session_width = width;
         client_info->display_sizes.session_height = height;
         client_info->display_sizes.monitorCount = 0;
