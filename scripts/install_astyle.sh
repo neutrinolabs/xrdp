@@ -80,12 +80,8 @@ fi
     # Put everything in this directory
     FILESDIR=$INSTALL_ROOT/$ASTYLE_VER
 
-    git clone --sparse ${REPO_URL} "$workdir"
-    cd "$workdir"
-    git sparse-checkout set AStyle
-    git checkout tags/${ASTYLE_VER}
-
-    cd "AStyle"
+    git clone -b "${ASTYLE_VER}" --depth 1 ${REPO_URL} "$workdir"
+    cd "$workdir"/AStyle
 
     make_args="DESTDIR=$FILESDIR"
 
