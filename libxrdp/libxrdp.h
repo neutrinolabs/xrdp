@@ -437,6 +437,10 @@ int
 xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
                    int data_pdu_type);
 int
+xrdp_rdp_send_data_from_channel(struct xrdp_rdp *self, struct stream *s,
+                                int data_pdu_type, int channel_id,
+                                int compress);
+int
 xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
                        int data_pdu_type);
 int

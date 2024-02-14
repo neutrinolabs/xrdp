@@ -74,6 +74,7 @@
 
 /* Client Core Data: earlyCapabilityFlags (2.2.1.3.2) */
 #define RNS_UD_CS_WANT_32BPP_SESSION         0x0002
+#define RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU 0x0040
 #define RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL 0x0100
 
 /* Client Core Data: connectionType  (2.2.1.3.2) */
@@ -448,6 +449,7 @@
 #define RDP_DATA_PDU_LOGON             38
 #define RDP_DATA_PDU_FONT2             39
 #define RDP_DATA_PDU_DISCONNECT        47
+#define PDUTYPE2_MONITOR_LAYOUT_PDU    55
 
 /* TS_SECURITY_HEADER: flags (2.2.8.1.1.2.1) */
 /* TODO: to be renamed */
