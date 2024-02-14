@@ -48,6 +48,7 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
     struct stream *s;
     uint32_t i;
     struct display_size_description *description;
+    int rv = 0;
 
     make_stream(s);
     init_stream(s, 8192);
@@ -74,14 +75,13 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
 
     s_mark_end(s);
 
-    if (xrdp_rdp_send_data(self, s, 0x37) != 0)
-    {
-        free_stream(s);
-        return 1;
-    }
-
+    // [MS-RDPBCGR]
+    // - 2.2.12.1 - ...the pduSource field MUST be set to zero.
+    // - 3.3.5.12.1 - The contents of this PDU SHOULD NOT be compressed
+    rv = xrdp_rdp_send_data_from_channel(self, s,
+                                         PDUTYPE2_MONITOR_LAYOUT_PDU, 0, 0);
     free_stream(s);
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1337,8 +1337,11 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         return 1;
     }
 
-    /* send Monitor Layout PDU for dual monitor */
-    if (self->client_info.display_sizes.monitorCount > 0 &&
+    /* send Monitor Layout PDU for multi-monitor */
+    int early_cap_flags = self->client_info.mcs_early_capability_flags;
+
+    if ((early_cap_flags & RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU) != 0 &&
+            self->client_info.display_sizes.monitorCount > 0 &&
             self->client_info.multimon == 1)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending monitor layout pdu");
