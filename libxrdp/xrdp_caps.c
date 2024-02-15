@@ -120,6 +120,45 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
     return 0;
 }
 
+
+/*****************************************************************************/
+static int
+xrdp_caps_process_bitmap(struct xrdp_rdp *self, struct stream *s,
+                         int len)
+{
+    /* [MS-RDPBCGR] 2.2.7.1.2 */
+    int desktopResizeFlag;
+    if (len < 14 + 2)
+    {
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 16, remaining %d", len);
+        return 1;
+    }
+
+    in_uint8s(s, 14);
+    in_uint16_le(s, desktopResizeFlag);
+
+    /* Work out what kind of client resizing we can do from the server */
+    int early_cap_flags = self->client_info.mcs_early_capability_flags;
+    if (desktopResizeFlag == 0)
+    {
+        self->client_info.client_resize_mode = CRMODE_NONE;
+        LOG(LOG_LEVEL_INFO, "Client cannot be resized by xrdp");
+    }
+    else if ((early_cap_flags & RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU) == 0)
+    {
+        self->client_info.client_resize_mode = CRMODE_SINGLE_SCREEN;
+        LOG(LOG_LEVEL_INFO, "Client supports single-screen resizes by xrdp");
+    }
+    else
+    {
+        self->client_info.client_resize_mode = CRMODE_MULTI_SCREEN;
+        LOG(LOG_LEVEL_INFO, "Client supports multi-screen resizes by xrdp");
+    }
+
+    return 0;
+}
+
 /*****************************************************************************/
 /*
  * Process [MS-RDPBCGR] TS_ORDER_CAPABILITYSET (2.2.7.1.3) message.
@@ -760,7 +799,8 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 break;
             case CAPSTYPE_BITMAP:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
-                          "capabilitySetType = CAPSTYPE_BITMAP - Ignored");
+                          "capabilitySetType = CAPSTYPE_BITMAP");
+                xrdp_caps_process_bitmap(self, s, len);
                 break;
             case CAPSTYPE_ORDER:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
