@@ -28,8 +28,10 @@
 #include "string_calls.h"
 
 static int
-send_server_monitor_resize(
-    struct mod *mod, struct stream *s, int width, int height, int bpp);
+send_server_monitor_update(struct mod *v, struct stream *s,
+                           int width, int height,
+                           int num_monitors,
+                           const struct monitor_info *monitors);
 
 static int
 send_server_monitor_full_invalidate(
@@ -222,13 +224,6 @@ lib_mod_connect(struct mod *mod)
     if (error == 0)
     {
         error = send_server_version_message(mod, s);
-    }
-
-    if (error == 0)
-    {
-        /* send screen size message */
-        error = send_server_monitor_resize(
-                    mod, s, mod->width, mod->height, mod->bpp);
     }
 
     if (error == 0)
@@ -1466,33 +1461,30 @@ send_server_version_message(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
-send_server_monitor_resize(
-    struct mod *mod, struct stream *s, int width, int height, int bpp)
+send_server_monitor_update(struct mod *mod, struct stream *s,
+                           int width, int height,
+                           int num_monitors,
+                           const struct monitor_info *monitors)
 {
-    /* send screen size message */
+    /* send monitor update message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 103);
-    out_uint32_le(s, 300);
+    out_uint32_le(s, 302);
     out_uint32_le(s, width);
     out_uint32_le(s, height);
-    /*
-        TODO: The bpp here is only necessary for initial creation. We should
-        modify XUP to require this only on server initialization, but not on
-        resize. Microsoft's RDP protocol does not support changing
-        the bpp on resize.
-    */
-    out_uint32_le(s, bpp);
+    out_uint32_le(s, num_monitors);
     out_uint32_le(s, 0);
+    out_uint8a(s, monitors, sizeof(monitors[0]) * num_monitors);
     s_mark_end(s);
     int len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
     int rv = lib_send_copy(mod, s);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_resize:"
-              " sent resize message with following properties to"
-              " xorgxrdp backend width=%d, height=%d, bpp=%d, return value=%d",
-              width, height, bpp, rv);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "send_server_monitor_update:"
+              " sent monitor updsate message with following properties to"
+              " xorgxrdp backend width=%d, height=%d, num=%d, return value=%d",
+              width, height, num_monitors, rv);
     return rv;
 }
 
@@ -1542,12 +1534,16 @@ lib_send_server_version_message(struct mod *mod)
 /******************************************************************************/
 /* return error */
 static int
-lib_send_server_monitor_resize(struct mod *mod, int width, int height)
+lib_send_server_monitor_resize(struct mod *mod, int width, int height,
+                               int num_monitors,
+                               const struct monitor_info *monitors,
+                               int *in_progress)
 {
-    /* send screen size message */
     struct stream *s;
     make_stream(s);
-    int rv = send_server_monitor_resize(mod, s, width, height, mod->bpp);
+    int rv = send_server_monitor_update(mod, s, width, height,
+                                        num_monitors, monitors);
+    *in_progress = (rv == 0);
     free_stream(s);
     return rv;
 }
@@ -1802,7 +1798,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                     LOG(LOG_LEVEL_INFO, "Received memory_allocation_complete"
                         " command. width: %d, height: %d",
                         width, height);
-                    rv = mod->server_reset(mod, width, height, 0);
+                    rv = mod->server_monitor_resize_done(mod);
                     break;
             }
             s->p = phold + len;
@@ -1897,6 +1893,10 @@ lib_mod_check_wait_objs(struct mod *mod)
         if (mod->trans != 0)
         {
             rv = trans_check_wait_objs(mod->trans);
+            if (rv != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Xorg server closed connection");
+            }
         }
     }
 
