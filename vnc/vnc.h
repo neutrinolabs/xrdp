@@ -47,7 +47,7 @@ struct vnc_screen_layout
     int total_width;
     int total_height;
     unsigned int count;
-    /* For comparison, screens are sorted in increasing order of ID */
+    /* For comparison, screens are sorted in x, y, width, height) order */
     struct vnc_screen s[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS];
 };
 
