@@ -27,6 +27,7 @@
 #include "os_calls.h"
 #include "defines.h"
 #include "guid.h"
+#include "ms-rdpbcgr.h"
 
 #define CURRENT_MOD_VER 4
 
@@ -47,7 +48,7 @@ struct vnc_screen_layout
     int total_height;
     unsigned int count;
     /* For comparison, screens are sorted in increasing order of ID */
-    struct vnc_screen *s;
+    struct vnc_screen s[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS];
 };
 
 /**
@@ -60,10 +61,20 @@ enum vnc_resize_status
     VRS_DONE
 };
 
+enum vnc_resize_support_status
+{
+    VRSS_NOT_SUPPORTED,
+    VRSS_SUPPORTED,
+    VRSS_UNKNOWN
+};
+
 struct source_info;
 
 /* Defined in vnc_clip.c */
 struct vnc_clipboard_data;
+
+/* Defined in xrdp_client_info.h */
+struct monitor_info;
 
 struct vnc
 {
@@ -85,7 +96,10 @@ struct vnc
     int (*mod_suppress_output)(struct vnc *v, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct vnc *v,
-                                     int width, int height);
+                                     int width, int height,
+                                     int num_monitors,
+                                     const struct monitor_info *monitors,
+                                     int *in_progress);
     int (*mod_server_monitor_full_invalidate)(struct vnc *v,
             int width, int height);
     int (*mod_server_version_message)(struct vnc *v);
@@ -123,7 +137,10 @@ struct vnc
                             int box_left, int box_top,
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
-    int (*server_reset)(struct vnc *v, int width, int height, int bpp);
+    int (*client_monitor_resize)(struct vnc *v, int width, int height,
+                                 int num_monitors,
+                                 const struct monitor_info *monitors);
+    int (*server_monitor_resize_done)(struct vnc *v);
     int (*server_get_channel_count)(struct vnc *v);
     int (*server_query_channel)(struct vnc *v, int index,
                                 char *channel_name,
@@ -134,7 +151,7 @@ struct vnc
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct vnc *v);
     int (*server_chansrv_in_use)(struct vnc *v);
-    tintptr server_dumby[100 - 27]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 28]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -142,8 +159,6 @@ struct vnc
     tintptr painter;
     struct source_info *si;
     /* mod data */
-    int server_width;
-    int server_height;
     int server_bpp;
     char mod_name[256];
     int mod_mouse_state;
@@ -164,8 +179,11 @@ struct vnc
     int suppress_output;
     unsigned int enabled_encodings_mask;
     /* Resizeable support */
+    int multimon_configured;
     struct vnc_screen_layout client_layout;
+    struct vnc_screen_layout server_layout;
     enum vnc_resize_status resize_status;
+    enum vnc_resize_support_status resize_supported;
 };
 
 /*

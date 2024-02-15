@@ -88,7 +88,10 @@ struct mod
     int (*mod_suppress_output)(struct mod *mod, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct mod *mod,
-                                     int width, int height);
+                                     int width, int height,
+                                     int num_monitors,
+                                     const struct monitor_info *monitors,
+                                     int *in_progress);
     int (*mod_server_monitor_full_invalidate)(struct mod *mod,
             int width, int height);
     int (*mod_server_version_message)(struct mod *mod);
@@ -126,7 +129,10 @@ struct mod
                             int box_left, int box_top,
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
-    int (*server_reset)(struct mod *v, int width, int height, int bpp);
+    int (*client_monitor_resize)(struct mod *v, int width, int height,
+                                 int num_monitors,
+                                 const struct monitor_info *monitors);
+    int (*server_monitor_resize_done)(struct mod *v);
     int (*server_get_channel_count)(struct mod *v);
     int (*server_query_channel)(struct mod *v, int index,
                                 char *channel_name,
@@ -191,7 +197,7 @@ struct mod
                               int flags, int frame_id);
     int (*server_session_info)(struct mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 46]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 47]; /* align, 100 minus the number of server
                                        functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
