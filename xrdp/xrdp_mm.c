@@ -396,7 +396,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_draw_line = server_draw_line;
             self->mod->server_add_char = server_add_char;
             self->mod->server_draw_text = server_draw_text;
-            self->mod->server_reset = server_reset;
+            self->mod->client_monitor_resize = client_monitor_resize;
+            self->mod->server_monitor_resize_done = server_monitor_resize_done;
             self->mod->server_get_channel_count = server_get_channel_count;
             self->mod->server_query_channel = server_query_channel;
             self->mod->server_get_channel_id = server_get_channel_id;
@@ -1635,6 +1636,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
     struct xrdp_rdp *rdp;
     struct xrdp_sec *sec;
     struct xrdp_channel *chan;
+    int in_progress;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "process_display_control_monitor_layout_data:");
 
@@ -1731,7 +1733,10 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             break;
         case WMRZ_SERVER_MONITOR_RESIZE:
             error = module->mod_server_monitor_resize(
-                        module, desc_width, desc_height);
+                        module, desc_width, desc_height,
+                        description->description.monitorCount,
+                        description->description.minfo,
+                        &in_progress);
             if (error != 0)
             {
                 LOG_DEVEL(LOG_LEVEL_INFO,
@@ -1739,37 +1744,27 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " mod_server_monitor_resize failed %d", error);
                 return advance_error(error, mm);
             }
-            advance_resize_state_machine(
-                mm, WMRZ_SERVER_VERSION_MESSAGE_START);
-            break;
-        case WMRZ_SERVER_VERSION_MESSAGE_START:
-            /* Update the client_info structure with the new description
-             * and tell the module so it can communicate the new
-             * screen layout to the backend */
-            sync_dynamic_monitor_data(wm, &(description->description));
-            module->mod_set_param(module, "client_info",
-                                  (const char *) (wm->session->client_info));
-
-            error = module->mod_server_version_message(module);
-            if (error != 0)
+            else if (in_progress)
             {
-                LOG_DEVEL(LOG_LEVEL_INFO,
-                          "process_display_control_monitor_layout_data:"
-                          " mod_server_version_message failed %d", error);
-                return advance_error(error, mm);
+                // Call is proceeding asynchronously
+                advance_resize_state_machine(
+                    mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING);
             }
-            advance_resize_state_machine(
-                mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING);
+            else
+            {
+                // Call is done
+                advance_resize_state_machine(
+                    mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED);
+            }
             break;
-        // Not processed here. Processed in server_reset
+        // Not processed here. Processed in client_monitor_resize
         // case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING:
         case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED:
             advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESET);
             break;
         case WMRZ_XRDP_CORE_RESET:
-            // TODO: Unify this logic with server_reset
-            error = libxrdp_reset(
-                        wm->session, desc_width, desc_height, wm->screen->bpp);
+            sync_dynamic_monitor_data(wm, &(description->description));
+            error = libxrdp_reset(wm->session);
             if (error != 0)
             {
                 LOG_DEVEL(LOG_LEVEL_INFO,
@@ -4439,16 +4434,69 @@ server_draw_text(struct xrdp_mod *mod, int font,
 }
 
 /*****************************************************************************/
+int
+client_monitor_resize(struct xrdp_mod *mod, int width, int height,
+                      int num_monitors, const struct monitor_info *monitors)
+{
+    int error = 0;
+    struct xrdp_wm *wm;
+    struct display_size_description *display_size_data;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "client_monitor_resize:");
+    wm = (struct xrdp_wm *)(mod->wm);
+    if (wm == 0 || wm->mm == 0 || wm->client_info == 0)
+    {
+        return 1;
+    }
+
+    if (wm->client_info->client_resize_mode == CRMODE_NONE)
+    {
+        LOG(LOG_LEVEL_WARNING, "Server is not allowed to resize this client");
+        return 1;
+    }
+
+    if (wm->client_info->client_resize_mode == CRMODE_SINGLE_SCREEN &&
+            num_monitors > 1)
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "Server cannot resize this client with multiple monitors");
+        return 1;
+    }
+
+    display_size_data = g_new0(struct display_size_description, 1);
+    if (display_size_data == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "client_monitor_resize: Out of memory");
+        return 1;
+    }
+    error = libxrdp_init_display_size_description(num_monitors,
+            monitors,
+            display_size_data);
+    if (error)
+    {
+        LOG(LOG_LEVEL_ERROR, "client_monitor_resize:"
+            " libxrdp_init_display_size_description"
+            " failed with error %d.", error);
+        free(display_size_data);
+        return error;
+    }
+    list_add_item(wm->mm->resize_queue, (tintptr)display_size_data);
+    g_set_wait_obj(wm->mm->resize_ready);
+
+    return 0;
+}
+
+/*****************************************************************************/
 
 /* Note : if this is called on a multimon setup, the client is resized
  * to a single monitor */
 int
-server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
+server_monitor_resize_done(struct xrdp_mod *mod)
 {
     struct xrdp_wm *wm;
     struct xrdp_mm *mm;
 
-    LOG(LOG_LEVEL_TRACE, "server_reset:");
+    LOG(LOG_LEVEL_TRACE, "server_monitor_resize_done:");
 
     wm = (struct xrdp_wm *)(mod->wm);
     if (wm == 0)
@@ -4456,78 +4504,25 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
         return 1;
     }
     mm = wm->mm;
+    if (mm == 0)
+    {
+        return 1;
+    }
 
     if (wm->client_info == 0)
     {
         return 1;
     }
 
-    /* older client can't resize */
-    if (wm->client_info->build <= 419)
+    if (mm->resize_data != NULL
+            && mm->resize_data->state
+            == WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING)
     {
-        return 0;
+        LOG(LOG_LEVEL_INFO,
+            "server_monitor_resize_done: Advancing server monitor resized.");
+        advance_resize_state_machine(
+            mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED);
     }
-
-    // bpp of zero is impossible.
-    // This is a signal from xup that
-    // It is finished resizing.
-    if (bpp == 0)
-    {
-        if (mm == 0)
-        {
-            return 1;
-        }
-        if (!xrdp_wm_can_resize(wm))
-        {
-            return 1;
-        }
-        if (mm->resize_data == NULL)
-        {
-            mm->mod->mod_server_monitor_full_invalidate(mm->mod, width, height);
-            return 0;
-        }
-        if (mm->resize_data != NULL
-                && mm->resize_data->state
-                == WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING)
-        {
-            LOG(LOG_LEVEL_INFO,
-                "server_reset: Advancing server monitor resized.");
-            advance_resize_state_machine(
-                mm, WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED);
-        }
-        else if (mm->resize_data != NULL
-                 && mm->resize_data->description.session_height == 0
-                 && mm->resize_data->description.session_width == 0)
-        {
-            mm->mod->mod_server_monitor_full_invalidate(mm->mod, width, height);
-        }
-        return 0;
-    }
-
-    /* if same (and only one monitor on client) don't need to do anything */
-    if (wm->client_info->display_sizes.session_width == (uint32_t)width &&
-            wm->client_info->display_sizes.session_height == (uint32_t)height &&
-            wm->client_info->bpp == bpp &&
-            (wm->client_info->display_sizes.monitorCount == 0 ||
-             wm->client_info->multimon == 0))
-    {
-        return 0;
-    }
-
-    /* reset lib, client_info gets updated in libxrdp_reset */
-    if (libxrdp_reset(wm->session, width, height, bpp) != 0)
-    {
-        return 1;
-    }
-
-    /* reset cache */
-    xrdp_cache_reset(wm->cache, wm->client_info);
-    /* resize the main window */
-    xrdp_bitmap_resize(wm->screen, wm->client_info->display_sizes.session_width,
-                       wm->client_info->display_sizes.session_height);
-    /* load some stuff */
-    xrdp_wm_load_static_colors_plus(wm, 0);
-    xrdp_wm_load_static_pointers(wm);
     return 0;
 }
 
