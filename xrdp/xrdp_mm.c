@@ -1699,6 +1699,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             if (error == 0 && module != 0)
             {
                 xrdp_egfx_shutdown_close_connection(wm->mm->egfx);
+                mm->egfx_up = 0;
             }
             advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSING);
             break;
@@ -1727,7 +1728,6 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             {
                 xrdp_egfx_shutdown_delete(wm->mm->egfx);
                 mm->egfx = NULL;
-                mm->egfx_up = 0;
             }
             advance_resize_state_machine(mm, WMRZ_SERVER_MONITOR_RESIZE);
             break;
