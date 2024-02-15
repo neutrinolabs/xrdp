@@ -64,7 +64,10 @@ struct xrdp_mod
     int (*mod_suppress_output)(struct xrdp_mod *v, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct xrdp_mod *v,
-                                     int width, int height);
+                                     int width, int height,
+                                     int num_monitors,
+                                     const struct monitor_info *monitors,
+                                     int *in_progress);
     int (*mod_server_monitor_full_invalidate)(struct xrdp_mod *v,
             int width, int height);
     int (*mod_server_version_message)(struct xrdp_mod *v);
@@ -106,7 +109,10 @@ struct xrdp_mod
                             int box_left, int box_top,
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
-    int (*server_reset)(struct xrdp_mod *v, int width, int height, int bpp);
+    int (*client_monitor_resize)(struct xrdp_mod *v, int width, int height,
+                                 int num_monitors,
+                                 const struct monitor_info *monitors);
+    int (*server_monitor_resize_done)(struct xrdp_mod *v);
     int (*server_get_channel_count)(struct xrdp_mod *v);
     int (*server_query_channel)(struct xrdp_mod *v, int index,
                                 char *channel_name,
@@ -185,7 +191,7 @@ struct xrdp_mod
     int (*server_egfx_cmd)(struct xrdp_mod *v,
                            char *cmd, int cmd_bytes,
                            char *data, int data_bytes);
-    tintptr server_dumby[100 - 49]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 50]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */
