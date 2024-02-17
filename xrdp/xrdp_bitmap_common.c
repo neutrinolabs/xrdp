@@ -301,8 +301,6 @@ xrdp_bitmap_resize(struct xrdp_bitmap *self, int width, int height)
         return 1;
     }
 
-    self->width = width;
-    self->height = height;
     Bpp = 4;
 
     switch (self->bpp)
@@ -318,8 +316,28 @@ xrdp_bitmap_resize(struct xrdp_bitmap *self, int width, int height)
             break;
     }
 
-    g_free(self->data);
-    self->data = (char *)g_malloc(width * height * Bpp, 0);
+    /* To prevent valgrind errors (particularly on a screen resize),
+       clear extra memory */
+    unsigned long old_size = self->width * self->height * Bpp;
+    unsigned long new_size = width * height * Bpp;
+
+    char *new_data = (char *)realloc(self->data, new_size);
+    if (new_data == NULL)
+    {
+        return 1;
+    }
+
+    self->width = width;
+    self->height = height;
+    if (new_data != self->data)
+    {
+        self->data = new_data;
+        memset(self->data, 0, new_size);
+    }
+    else if (new_size > old_size)
+    {
+        memset(self->data + old_size, 0, new_size - old_size);
+    }
     self->line_size = width * Bpp;
     return 0;
 }
