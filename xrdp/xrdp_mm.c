@@ -1095,25 +1095,32 @@ cleanup:
 
 /******************************************************************************/
 static int
-xrdp_mm_egfx_invalidate_all(struct xrdp_mm *self)
+xrdp_mm_egfx_invalidate_wm_screen(struct xrdp_mm *self)
 {
-    struct xrdp_rect xr_rect;
-    struct xrdp_bitmap *screen;
-    int error;
+    int error = 0;
 
-    LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_invalidate_all:");
+    LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_invalidate_wm_screen:");
 
-    screen = self->wm->screen;
-
-    xr_rect.left = 0;
-    xr_rect.top = 0;
-    xr_rect.right = screen->width;
-    xr_rect.bottom = screen->height;
-    if (self->wm->screen_dirty_region == NULL)
+    // Only invalidate the WM screen if the module is using the WM screen,
+    // or we haven't loaded the module yet.
+    //
+    // Otherwise we may send client updates which conflict with the
+    // updates sent directly from the module via the encoder.
+    if (self->mod_uses_wm_screen_for_gfx || self->mod_handle == 0)
     {
-        self->wm->screen_dirty_region = xrdp_region_create(self->wm);
+        struct xrdp_bitmap *screen = self->wm->screen;
+        struct xrdp_rect xr_rect;
+
+        xr_rect.left = 0;
+        xr_rect.top = 0;
+        xr_rect.right = screen->width;
+        xr_rect.bottom = screen->height;
+        if (self->wm->screen_dirty_region == NULL)
+        {
+            self->wm->screen_dirty_region = xrdp_region_create(self->wm);
+        }
+        error = xrdp_region_add_rect(self->wm->screen_dirty_region, &xr_rect);
     }
-    error = xrdp_region_add_rect(self->wm->screen_dirty_region, &xr_rect);
     return error;
 }
 
@@ -1370,7 +1377,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         self->egfx_up = 1;
         xrdp_mm_egfx_create_surfaces(self);
         self->encoder = xrdp_encoder_create(self);
-        xrdp_mm_egfx_invalidate_all(self);
+        xrdp_mm_egfx_invalidate_wm_screen(self);
 
         if (self->resize_data != NULL
                 && self->resize_data->state == WMRZ_EGFX_INITALIZING)
@@ -1846,20 +1853,13 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                 // Ack all frames to speed up resize.
                 module->mod_frame_ack(module, 0, INT_MAX);
             }
-            // Restart module output
+            // Restart module output after invalidating
+            // the screen. This causes an automatic redraw.
+            xrdp_bitmap_invalidate(wm->screen, 0);
             rdp = (struct xrdp_rdp *) (wm->session->rdp);
             xrdp_rdp_suppress_output(rdp,
                                      0, XSO_REASON_DYNAMIC_RESIZE,
                                      0, 0, desc_width, desc_height);
-            /* redraw */
-            error = xrdp_bitmap_invalidate(wm->screen, 0);
-            if (error != 0)
-            {
-                LOG_DEVEL(LOG_LEVEL_INFO,
-                          "process_display_control_monitor_layout_data:"
-                          " xrdp_bitmap_invalidate failed %d", error);
-                return advance_error(error, mm);
-            }
             advance_resize_state_machine(mm, WMRZ_COMPLETE);
             break;
         default:
@@ -3533,6 +3533,39 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
         g_free(enc_done);
     }
     return 0;
+}
+
+/*****************************************************************************/
+void
+xrdp_mm_efgx_add_dirty_region_to_planar_list(struct xrdp_mm *self,
+        struct xrdp_region *dirty_region)
+{
+    int jndex = 0;
+    struct xrdp_rect rect;
+
+    int error = xrdp_region_get_rect(dirty_region, jndex, &rect);
+    if (error == 0)
+    {
+        if (self->wm->screen_dirty_region == NULL)
+        {
+            self->wm->screen_dirty_region = xrdp_region_create(self->wm);
+        }
+
+        do
+        {
+            xrdp_region_add_rect(self->wm->screen_dirty_region, &rect);
+            jndex++;
+            error = xrdp_region_get_rect(dirty_region, jndex, &rect);
+        }
+        while (error == 0);
+
+        if (self->mod_handle != 0)
+        {
+            // Module has been writing to WM screen using GFX
+            self->mod_uses_wm_screen_for_gfx = 1;
+        }
+    }
+
 }
 
 /*****************************************************************************/
