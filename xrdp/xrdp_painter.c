@@ -95,18 +95,8 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
 
     if (self->session->client_info->gfx)
     {
-        if (self->wm->screen_dirty_region == NULL)
-        {
-            self->wm->screen_dirty_region = xrdp_region_create(self->wm);
-        }
-        jndex = 0;
-        error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
-        while (error == 0)
-        {
-            xrdp_region_add_rect(self->wm->screen_dirty_region, &rect);
-            jndex++;
-            error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
-        }
+        xrdp_mm_efgx_add_dirty_region_to_planar_list(self->wm->mm,
+                self->dirty_region);
     }
     else
     {
