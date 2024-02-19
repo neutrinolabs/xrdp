@@ -53,3 +53,4 @@ xrdp/xrdp
 xrdp/xrdp.ini
 xrdp_configure_options.h
 xrdpapi/xrdp-xrdpapi-simple
+.vscode/*
