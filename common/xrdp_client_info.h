@@ -67,6 +67,13 @@ struct display_size_description
     unsigned int session_height;
 };
 
+enum client_resize_mode
+{
+    CRMODE_NONE,
+    CRMODE_SINGLE_SCREEN,
+    CRMODE_MULTI_SCREEN
+};
+
 /**
  * Information about the xrdp client
  *
@@ -218,6 +225,9 @@ struct xrdp_client_info
 
     int large_pointer_support_flags;
     int gfx;
+
+    // Can we resize the desktop by using a Deactivation-Reactivation Sequence?
+    enum client_resize_mode client_resize_mode;
 };
 
 enum xrdp_encoder_flags

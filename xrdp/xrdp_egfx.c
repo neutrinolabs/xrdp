@@ -1121,6 +1121,10 @@ xrdp_egfx_shutdown_close_connection(struct xrdp_egfx *egfx)
         return error;
     }
 
+    // Ignore any messages we haven't processed yet
+    egfx->caps_advertise = NULL;
+    egfx->frame_ack = NULL;
+
     return error;
 }
 

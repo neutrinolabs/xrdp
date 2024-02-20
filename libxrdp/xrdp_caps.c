@@ -48,6 +48,7 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
     struct stream *s;
     uint32_t i;
     struct display_size_description *description;
+    int rv = 0;
 
     make_stream(s);
     init_stream(s, 8192);
@@ -74,14 +75,13 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
 
     s_mark_end(s);
 
-    if (xrdp_rdp_send_data(self, s, 0x37) != 0)
-    {
-        free_stream(s);
-        return 1;
-    }
-
+    // [MS-RDPBCGR]
+    // - 2.2.12.1 - ...the pduSource field MUST be set to zero.
+    // - 3.3.5.12.1 - The contents of this PDU SHOULD NOT be compressed
+    rv = xrdp_rdp_send_data_from_channel(self, s,
+                                         PDUTYPE2_MONITOR_LAYOUT_PDU, 0, 0);
     free_stream(s);
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -117,6 +117,45 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
         /* server supports fast path output and client does not, turn it off */
         self->client_info.use_fast_path &= ~1;
     }
+    return 0;
+}
+
+
+/*****************************************************************************/
+static int
+xrdp_caps_process_bitmap(struct xrdp_rdp *self, struct stream *s,
+                         int len)
+{
+    /* [MS-RDPBCGR] 2.2.7.1.2 */
+    int desktopResizeFlag;
+    if (len < 14 + 2)
+    {
+        LOG(LOG_LEVEL_ERROR, "Not enough bytes in the stream: "
+            "len 16, remaining %d", len);
+        return 1;
+    }
+
+    in_uint8s(s, 14);
+    in_uint16_le(s, desktopResizeFlag);
+
+    /* Work out what kind of client resizing we can do from the server */
+    int early_cap_flags = self->client_info.mcs_early_capability_flags;
+    if (desktopResizeFlag == 0)
+    {
+        self->client_info.client_resize_mode = CRMODE_NONE;
+        LOG(LOG_LEVEL_INFO, "Client cannot be resized by xrdp");
+    }
+    else if ((early_cap_flags & RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU) == 0)
+    {
+        self->client_info.client_resize_mode = CRMODE_SINGLE_SCREEN;
+        LOG(LOG_LEVEL_INFO, "Client supports single-screen resizes by xrdp");
+    }
+    else
+    {
+        self->client_info.client_resize_mode = CRMODE_MULTI_SCREEN;
+        LOG(LOG_LEVEL_INFO, "Client supports multi-screen resizes by xrdp");
+    }
+
     return 0;
 }
 
@@ -766,7 +805,8 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 break;
             case CAPSTYPE_BITMAP:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
-                          "capabilitySetType = CAPSTYPE_BITMAP - Ignored");
+                          "capabilitySetType = CAPSTYPE_BITMAP");
+                xrdp_caps_process_bitmap(self, s, len);
                 break;
             case CAPSTYPE_ORDER:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
@@ -1337,8 +1377,11 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         return 1;
     }
 
-    /* send Monitor Layout PDU for dual monitor */
-    if (self->client_info.display_sizes.monitorCount > 0 &&
+    /* send Monitor Layout PDU for multi-monitor */
+    int early_cap_flags = self->client_info.mcs_early_capability_flags;
+
+    if ((early_cap_flags & RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU) != 0 &&
+            self->client_info.display_sizes.monitorCount > 0 &&
             self->client_info.multimon == 1)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending monitor layout pdu");

@@ -502,6 +502,9 @@ int
 xrdp_mm_check_wait_objs(struct xrdp_mm *self);
 int
 xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id);
+void
+xrdp_mm_efgx_add_dirty_region_to_planar_list(struct xrdp_mm *self,
+        struct xrdp_region *dirty_region);
 int
 xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
                                 struct xrdp_bitmap *bitmap,
@@ -591,7 +594,10 @@ server_draw_text(struct xrdp_mod *mod, int font,
                  int box_right, int box_bottom,
                  int x, int y, char *data, int data_len);
 int
-server_reset(struct xrdp_mod *mod, int width, int height, int bpp);
+client_monitor_resize(struct xrdp_mod *mod, int width, int height,
+                      int num_monitors, const struct monitor_info *monitors);
+int
+server_monitor_resize_done(struct xrdp_mod *mod);
 int
 is_channel_allowed(struct xrdp_wm *wm, int channel_id);
 int
