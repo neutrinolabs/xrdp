@@ -64,7 +64,10 @@ struct xrdp_mod
     int (*mod_suppress_output)(struct xrdp_mod *v, int suppress,
                                int left, int top, int right, int bottom);
     int (*mod_server_monitor_resize)(struct xrdp_mod *v,
-                                     int width, int height);
+                                     int width, int height,
+                                     int num_monitors,
+                                     const struct monitor_info *monitors,
+                                     int *in_progress);
     int (*mod_server_monitor_full_invalidate)(struct xrdp_mod *v,
             int width, int height);
     int (*mod_server_version_message)(struct xrdp_mod *v);
@@ -106,7 +109,10 @@ struct xrdp_mod
                             int box_left, int box_top,
                             int box_right, int box_bottom,
                             int x, int y, char *data, int data_len);
-    int (*server_reset)(struct xrdp_mod *v, int width, int height, int bpp);
+    int (*client_monitor_resize)(struct xrdp_mod *v, int width, int height,
+                                 int num_monitors,
+                                 const struct monitor_info *monitors);
+    int (*server_monitor_resize_done)(struct xrdp_mod *v);
     int (*server_get_channel_count)(struct xrdp_mod *v);
     int (*server_query_channel)(struct xrdp_mod *v, int index,
                                 char *channel_name,
@@ -185,7 +191,7 @@ struct xrdp_mod
     int (*server_egfx_cmd)(struct xrdp_mod *v,
                            char *cmd, int cmd_bytes,
                            char *data, int data_bytes);
-    tintptr server_dumby[100 - 49]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 50]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */
@@ -347,7 +353,6 @@ enum display_resize_state
     WMRZ_EGFX_CONN_CLOSED,
     WRMZ_EGFX_DELETE,
     WMRZ_SERVER_MONITOR_RESIZE,
-    WMRZ_SERVER_VERSION_MESSAGE_START,
     WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING,
     WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED,
     WMRZ_XRDP_CORE_RESET,
@@ -370,8 +375,6 @@ enum display_resize_state
      (status) == WMRZ_EGFX_CONN_CLOSED ? "WMRZ_EGFX_CONN_CLOSED" : \
      (status) == WRMZ_EGFX_DELETE ? "WMRZ_EGFX_DELETE" : \
      (status) == WMRZ_SERVER_MONITOR_RESIZE ? "WMRZ_SERVER_MONITOR_RESIZE" : \
-     (status) == WMRZ_SERVER_VERSION_MESSAGE_START ? \
-     "WMRZ_SERVER_VERSION_MESSAGE_START" : \
      (status) == WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING ? \
      "WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING" : \
      (status) == WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED ? \
@@ -436,6 +439,7 @@ struct xrdp_mm
     int egfx_up;
     enum xrdp_egfx_flags egfx_flags;
     int gfx_delay_autologin;
+    int mod_uses_wm_screen_for_gfx;
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
     struct list *resize_queue;

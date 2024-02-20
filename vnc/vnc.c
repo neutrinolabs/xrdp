@@ -149,17 +149,13 @@ log_screen_layout(const enum logLevels lvl, const char *source,
  * @param a First structure
  * @param b Second structure
  *
- * @return Suitable for sorting structures with ID as the primary key
+ * @return Suitable for sorting structures on (x, y, width, height)
  */
 static int cmp_vnc_screen(const struct vnc_screen *a,
                           const struct vnc_screen *b)
 {
     int result = 0;
-    if (a->id != b->id)
-    {
-        result = a->id - b->id;
-    }
-    else if (a->x != b->x)
+    if (a->x != b->x)
     {
         result = a->x - b->x;
     }
@@ -211,9 +207,7 @@ static int vnc_screen_layouts_equal(const struct vnc_screen_layout *a,
  * @return != 0 for error
  *
  * @pre The next octet read from v->trans is the number of screens
- * @pre layout is not already allocated
  *
- * @post if call is successful, layout->s must be freed after use.
  * @post Returned structure is in increasing ID order
  * @post layout->total_width is untouched
  * @post layout->total_height is untouched
@@ -225,10 +219,8 @@ read_extended_desktop_size_rect(struct vnc *v,
     struct stream *s;
     int error;
     unsigned int count;
-    struct vnc_screen *screens;
 
     layout->count = 0;
-    layout->s = NULL;
 
     make_stream(s);
     init_stream(s, 8192);
@@ -239,45 +231,40 @@ read_extended_desktop_size_rect(struct vnc *v,
     {
         /* Get the number of screens */
         in_uint8(s, count);
-        in_uint8s(s, 3);
-
-        error = trans_force_read_s(v->trans, s, 16 * count);
-        if (error == 0)
+        if (count <= 0 || count > CLIENT_MONITOR_DATA_MAXIMUM_MONITORS)
         {
-            screens = g_new(struct vnc_screen, count);
-            if (screens == NULL)
-            {
-                LOG(LOG_LEVEL_ERROR,
-                    "VNC : Can't alloc for %d screens", count);
-                error = 1;
-            }
-            else
+            LOG(LOG_LEVEL_ERROR,
+                "Bad monitor count %d in ExtendedDesktopSize rectangle",
+                count);
+            error = 1;
+        }
+        else
+        {
+            in_uint8s(s, 3);
+
+            error = trans_force_read_s(v->trans, s, 16 * count);
+            if (error == 0)
             {
                 unsigned int i;
                 for (i = 0 ; i < count ; ++i)
                 {
-                    in_uint32_be(s, screens[i].id);
-                    in_uint16_be(s, screens[i].x);
-                    in_uint16_be(s, screens[i].y);
-                    in_uint16_be(s, screens[i].width);
-                    in_uint16_be(s, screens[i].height);
-                    in_uint32_be(s, screens[i].flags);
+                    in_uint32_be(s, layout->s[i].id);
+                    in_uint16_be(s, layout->s[i].x);
+                    in_uint16_be(s, layout->s[i].y);
+                    in_uint16_be(s, layout->s[i].width);
+                    in_uint16_be(s, layout->s[i].height);
+                    in_uint32_be(s, layout->s[i].flags);
                 }
 
-                /* sort monitors in increasing ID order */
-                qsort(screens, count, sizeof(screens[0]),
+                /* sort monitors in increasing (x,y) order */
+                qsort(layout->s, count, sizeof(layout->s[0]),
                       (int (*)(const void *, const void *))cmp_vnc_screen);
+                layout->count = count;
             }
         }
     }
 
     free_stream(s);
-
-    if (error == 0)
-    {
-        layout->count = count;
-        layout->s = screens;
-    }
 
     return error;
 }
@@ -326,88 +313,76 @@ send_set_desktop_size(struct vnc *v, const struct vnc_screen_layout *layout)
 }
 
 /**************************************************************************//**
- * Sets up a single-screen vnc_screen_layout structure
- *
- * @param layout Structure to set up
- * @param width New client width
- * @param height New client height
- *
- * @pre layout->count must be valid
- * @pre layout->s must be valid
+ * Initialises a vnc_screen_layout as a single screen
+ * @param[in] width Screen Width
+ * @param[in] height Screen Height
+ * @param[out] layout Layout to initialise
  */
 static void
-set_single_screen_layout(struct vnc_screen_layout *layout,
-                         int width, int height)
+init_single_screen_layout(int width, int height,
+                          struct vnc_screen_layout *layout)
 {
-    int id = 0;
-    int flags = 0;
-
     layout->total_width = width;
     layout->total_height = height;
-
-    if (layout->count == 0)
-    {
-        /* No previous layout */
-        layout->s = g_new(struct vnc_screen, 1);
-    }
-    else
-    {
-        /* Keep the ID and flags from the previous first screen */
-        id = layout->s[0].id;
-        flags = layout->s[0].flags;
-
-        if (layout->count > 1)
-        {
-            g_free(layout->s);
-            layout->s = g_new(struct vnc_screen, 1);
-        }
-    }
     layout->count = 1;
-    layout->s[0].id = id;
+    layout->s[0].id = 0;
     layout->s[0].x = 0;
     layout->s[0].y = 0;
     layout->s[0].width = width;
     layout->s[0].height = height;
-    layout->s[0].flags = flags;
+    layout->s[0].flags = 0;
 }
 
 /**************************************************************************//**
- * Resize the client as a single screen
+ * Resize the client to match the server_layout
  *
  * @param v VNC object
  * @param update_in_progress True if there's a painter update in progress
- * @param width New client width
- * @param height New client height
  * @return != 0 for error
  *
- * The new client layout is recorded in v->client_layout. If the client was
- * multi-screen before this call, it won't be afterwards.
+ * The new client layout is recorded in v->client_layout.
  */
 static int
-resize_client(struct vnc *v, int update_in_progress, int width, int height)
+resize_client_to_server(struct vnc *v, int update_in_progress)
 {
     int error = 0;
+    unsigned int i;
+    const struct vnc_screen_layout *sl = &v->server_layout;
+    struct monitor_info client_mons[CLIENT_MONITOR_DATA_MAXIMUM_MONITORS] = {0};
 
-    if (v->client_layout.count != 1 ||
-            v->client_layout.total_width != width ||
-            v->client_layout.total_height != height)
+    if (sl->count <= 0 ||
+            sl->count > CLIENT_MONITOR_DATA_MAXIMUM_MONITORS)
     {
-        if (update_in_progress)
-        {
-            error = v->server_end_update(v);
-        }
+        LOG(LOG_LEVEL_ERROR, "%s: Programming error. Bad monitors %d",
+            __func__, sl->count);
+        return 1;
+    }
 
+    // Convert the server monitors into client monitors
+    for (i = 0; i < sl->count; ++i)
+    {
+        client_mons[i].left = sl->s[i].x;
+        client_mons[i].top = sl->s[i].y;
+        client_mons[i].right = sl->s[i].x + sl->s[i].width - 1;
+        client_mons[i].bottom = sl->s[i].y + sl->s[i].height - 1;
+    }
+
+    if (update_in_progress && v->server_end_update(v) != 0)
+    {
+        error = 1;
+    }
+    else
+    {
+        error = v->client_monitor_resize(v, sl->total_width, sl->total_height,
+                                         sl->count, client_mons);
         if (error == 0)
         {
-            error = v->server_reset(v, width, height, v->server_bpp);
-            if (error == 0)
-            {
-                set_single_screen_layout(&v->client_layout, width, height);
-                if (update_in_progress)
-                {
-                    error = v->server_begin_update(v);
-                }
-            }
+            v->client_layout = *sl;
+        }
+
+        if (update_in_progress && v->server_begin_update(v) != 0)
+        {
+            error = 1;
         }
     }
 
@@ -416,50 +391,53 @@ resize_client(struct vnc *v, int update_in_progress, int width, int height)
 
 
 /**************************************************************************//**
- * Resize the attached client from a layout
+ * Resize the server to the client layout
  *
  * @param v VNC object
- * @param update_in_progress True if there's a painter update in progress
- * @param layout Desired layout from server
  * @return != 0 for error
  *
- * This has some limitations. We have no way to move multiple screens about
- * on a connected client, and so we are not able to change the client unless
- * we're changing to a single screen layout.
+ * The new client layout is recorded in v->client_layout.
  */
 static int
-resize_client_from_layout(struct vnc *v,
-                          int update_in_progress,
-                          const struct vnc_screen_layout *layout)
+resize_server_to_client_layout(struct vnc *v)
 {
     int error = 0;
 
-    if (!vnc_screen_layouts_equal(&v->client_layout, layout))
+    if (v->resize_supported != VRSS_SUPPORTED)
+    {
+        LOG(LOG_LEVEL_ERROR, "%s: Asked to resize server, but not possible",
+            __func__);
+        error = 1;
+    }
+    else if (vnc_screen_layouts_equal(&v->server_layout, &v->client_layout))
+    {
+        LOG(LOG_LEVEL_DEBUG, "Server layout is the same "
+            "as the client layout");
+        v->resize_status = VRS_DONE;
+    }
+    else
     {
         /*
-         * we don't have the capability to resize to anything other
-         * than a single screen.
+         * If we've only got one screen, and the other side has
+         * only got one screen, we will preserve their screen ID
+         * and any flags.  This may prevent us sending an unwanted
+         * SetDesktopSize message if the screen dimensions are
+         * a match. We can't do this with more than one screen,
+         * as we have no way to map different IDs
          */
-        if (layout->count != 1)
+        if (v->server_layout.count == 1 && v->client_layout.count == 1)
         {
-            LOG(LOG_LEVEL_ERROR,
-                "VNC Resize to %d screen(s) from %d screen(s) "
-                "not implemented",
-                v->client_layout.count, layout->count);
+            LOG(LOG_LEVEL_DEBUG, "VNC "
+                "setting screen id to %d from server",
+                v->server_layout.s[0].id);
 
-            /* Dump some useful info, in case we get here when we don't
-             * need to */
-            log_screen_layout(LOG_LEVEL_ERROR, "OldLayout", &v->client_layout);
-            log_screen_layout(LOG_LEVEL_ERROR, "NewLayout", layout);
-            error = 1;
+            v->client_layout.s[0].id = v->server_layout.s[0].id;
+            v->client_layout.s[0].flags = v->server_layout.s[0].flags;
         }
-        else
-        {
-            error = resize_client(v,
-                                  update_in_progress,
-                                  layout->total_width,
-                                  layout->total_height);
-        }
+
+        LOG(LOG_LEVEL_DEBUG, "Changing server layout");
+        error = send_set_desktop_size(v, &v->client_layout);
+        v->resize_status = VRS_WAITING_FOR_RESIZE_CONFIRM;
     }
 
     return error;
@@ -927,7 +905,6 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
                 "x=%d, y=%d geom=%dx%d",
                 x, y, cx, cy);
             error = read_extended_desktop_size_rect(v, &layout);
-            g_free(layout.s);
         }
         break;
 
@@ -944,7 +921,7 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
  * Parses an entire framebuffer update message from the wire, and returns the
  * first matching ExtendedDesktopSize encoding if found.
  *
- * Caller can check for a match by examining match_layout.s after the call
+ * Caller can check for a match by examining match_layout.count after the call
  *
  * @param v VNC object
  * @param match Function to call to check for a match
@@ -952,8 +929,6 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
  * @param [out] match_y Matching y parameter for an encoding (if needed)
  * @param [out] match_layout Returned layout for the encoding
  * @return != 0 for error
- *
- * @post After a successful call, match_layout.s must be free'd
  */
 static int
 find_matching_extended_rect(struct vnc *v,
@@ -971,8 +946,7 @@ find_matching_extended_rect(struct vnc *v,
     int cx;
     int cy;
     encoding_type encoding;
-
-    match_layout->s = NULL;
+    int found = 0;
 
     make_stream(s);
     init_stream(s, 8192);
@@ -1002,14 +976,14 @@ find_matching_extended_rect(struct vnc *v,
                 in_uint32_be(s, encoding);
 
                 if (encoding == RFB_ENC_EXTENDED_DESKTOP_SIZE &&
-                        match_layout->s == NULL &&
+                        !found &&
                         match(x, y, cx, cy))
                 {
                     LOG(LOG_LEVEL_DEBUG,
                         "VNC matched ExtendedDesktopSize rectangle "
                         "x=%d, y=%d geom=%dx%d",
                         x, y, cx, cy);
-
+                    found = 1;
                     error = read_extended_desktop_size_rect(v, match_layout);
                     if (match_x)
                     {
@@ -1065,25 +1039,12 @@ send_update_request_for_resize_status(struct vnc *v)
     switch (v->resize_status)
     {
         case VRS_WAITING_FOR_FIRST_UPDATE:
+        case VRS_WAITING_FOR_RESIZE_CONFIRM:
             /*
              * Ask for an immediate, minimal update.
              */
             out_uint8(s, RFB_C2S_FRAMEBUFFER_UPDATE_REQUEST);
             out_uint8(s, 0); /* incremental == 0 : Full update */
-            out_uint16_be(s, 0);
-            out_uint16_be(s, 0);
-            out_uint16_be(s, 1);
-            out_uint16_be(s, 1);
-            s_mark_end(s);
-            error = lib_send_copy(v, s);
-            break;
-
-        case VRS_WAITING_FOR_RESIZE_CONFIRM:
-            /*
-             * Ask for a deferred minimal update.
-             */
-            out_uint8(s, RFB_C2S_FRAMEBUFFER_UPDATE_REQUEST);
-            out_uint8(s, 1); /* incremental == 1 : Changes only */
             out_uint16_be(s, 0);
             out_uint16_be(s, 0);
             out_uint16_be(s, 1);
@@ -1102,8 +1063,8 @@ send_update_request_for_resize_status(struct vnc *v)
                 out_uint8(s, 0); /* incremental == 0 : Full update */
                 out_uint16_be(s, 0);
                 out_uint16_be(s, 0);
-                out_uint16_be(s, v->server_width);
-                out_uint16_be(s, v->server_height);
+                out_uint16_be(s, v->server_layout.total_width);
+                out_uint16_be(s, v->server_layout.total_height);
                 s_mark_end(s);
                 error = lib_send_copy(v, s);
             }
@@ -1159,12 +1120,15 @@ lib_framebuffer_first_update(struct vnc *v)
                                         &layout);
     if (error == 0)
     {
-        if (layout.s != NULL)
+        if (layout.count > 0)
         {
             LOG(LOG_LEVEL_DEBUG, "VNC server supports resizing");
+            v->resize_supported = VRSS_SUPPORTED;
+            v->server_layout = layout;
 
             /* Force the client geometry over to the server */
-            log_screen_layout(LOG_LEVEL_INFO, "OldLayout", &layout);
+            log_screen_layout(LOG_LEVEL_INFO, "ClientLayout", &v->client_layout);
+            log_screen_layout(LOG_LEVEL_INFO, "OldServerLayout", &layout);
 
             /*
              * If we've only got one screen, and the other side has
@@ -1184,32 +1148,19 @@ lib_framebuffer_first_update(struct vnc *v)
                 v->client_layout.s[0].flags = layout.s[0].flags;
             }
 
-            if (vnc_screen_layouts_equal(&layout, &v->client_layout))
-            {
-                LOG(LOG_LEVEL_DEBUG, "Server layout is the same "
-                    "as the client layout");
-                v->resize_status = VRS_DONE;
-            }
-            else
-            {
-                LOG(LOG_LEVEL_DEBUG, "Server layout differs from "
-                    "the client layout. Changing server layout");
-                error = send_set_desktop_size(v, &v->client_layout);
-                v->resize_status = VRS_WAITING_FOR_RESIZE_CONFIRM;
-            }
+            resize_server_to_client_layout(v);
         }
         else
         {
             LOG(LOG_LEVEL_DEBUG, "VNC server does not support resizing");
+            v->resize_supported = VRSS_NOT_SUPPORTED;
 
             /* Force client to same size as server */
             LOG(LOG_LEVEL_DEBUG, "Resizing client to server %dx%d",
-                v->server_width, v->server_height);
-            error = resize_client(v, 0, v->server_width, v->server_height);
+                v->server_layout.total_width, v->server_layout.total_height);
+            error = resize_client_to_server(v, 0);
             v->resize_status = VRS_DONE;
         }
-
-        g_free(layout.s);
     }
 
     if (error == 0)
@@ -1224,7 +1175,7 @@ lib_framebuffer_first_update(struct vnc *v)
  * Looks for a resize confirm in a framebuffer update request
  *
  * If the server supports resizes from us, this is used to find the
- * reply to our initial resize request. See The RFB community wiki for details.
+ * reply to our resize request. See The RFB community wiki for details.
  *
  * @param v VNC object
  * @return != 0 for error
@@ -1243,18 +1194,17 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
                                         &layout);
     if (error == 0)
     {
-        if (layout.s != NULL)
+        if (layout.count > 0)
         {
             if (response_code == 0)
             {
                 LOG(LOG_LEVEL_DEBUG, "VNC server successfully resized");
                 log_screen_layout(LOG_LEVEL_INFO, "NewLayout", &layout);
+                v->server_layout = layout;
                 // If this resize was requested by the client mid-session
                 // (dynamic resize), we need to tell xrdp_mm that
                 // it's OK to continue with the resize state machine.
-                // We do this by sending a reset with bpp == 0
-                error = v->server_reset(v, v->server_width,
-                                        v->server_height, 0);
+                error = v->server_monitor_resize_done(v);
             }
             else
             {
@@ -1263,14 +1213,11 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
                     response_code,
                     rfb_get_eds_status_msg(response_code));
                 /* Force client to same size as server */
-                LOG(LOG_LEVEL_WARNING, "Resizing client to server %dx%d",
-                    v->server_width, v->server_height);
-                error = resize_client(v, 0, v->server_width, v->server_height);
+                LOG(LOG_LEVEL_WARNING, "Resizing client to server");
+                error = resize_client_to_server(v, 0);
             }
             v->resize_status = VRS_DONE;
         }
-
-        g_free(layout.s);
     }
 
     if (error == 0)
@@ -1415,9 +1362,8 @@ lib_framebuffer_update(struct vnc *v)
             else if (encoding == RFB_ENC_DESKTOP_SIZE)
             {
                 /* Server end has resized */
-                v->server_width = cx;
-                v->server_height = cy;
-                error = resize_client(v, 1, cx, cy);
+                init_single_screen_layout(cx, cy, &v->server_layout);
+                error = resize_client_to_server(v, 1);
             }
             else if (encoding == RFB_ENC_EXTENDED_DESKTOP_SIZE)
             {
@@ -1427,11 +1373,14 @@ lib_framebuffer_update(struct vnc *v)
                 /* If this is a reply to a request from us, x == 1 */
                 if (error == 0 && x != 1)
                 {
-                    v->server_width = layout.total_width;
-                    v->server_height = layout.total_height;
-                    error = resize_client_from_layout(v, 1, &layout);
+                    if (!vnc_screen_layouts_equal(&v->server_layout, &layout))
+                    {
+                        v->server_layout = layout;
+                        log_screen_layout(LOG_LEVEL_INFO, "NewServerLayout",
+                                          &v->server_layout);
+                        error = resize_client_to_server(v, 1);
+                    }
                 }
-                g_free(layout.s);
             }
             else
             {
@@ -1456,8 +1405,8 @@ lib_framebuffer_update(struct vnc *v)
             out_uint8(s, 1); /* incremental == 1 : Changes only */
             out_uint16_be(s, 0);
             out_uint16_be(s, 0);
-            out_uint16_be(s, v->server_width);
-            out_uint16_be(s, v->server_height);
+            out_uint16_be(s, v->server_layout.total_width);
+            out_uint16_be(s, v->server_layout.total_height);
             s_mark_end(s);
             error = lib_send_copy(v, s);
         }
@@ -1831,8 +1780,11 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
-        in_uint16_be(s, v->server_width);
-        in_uint16_be(s, v->server_height);
+        int width;
+        int height;
+        in_uint16_be(s, width);
+        in_uint16_be(s, height);
+        init_single_screen_layout(width, height, &v->server_layout);
 
         init_stream(pixel_format, 8192);
         v->server_msg(v, "VNC receiving pixel format", 0);
@@ -2000,6 +1952,7 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
+        v->resize_supported = VRSS_UNKNOWN;
         v->resize_status = VRS_WAITING_FOR_FIRST_UPDATE;
         error = send_update_request_for_resize_status(v);
     }
@@ -2061,33 +2014,40 @@ lib_mod_end(struct vnc *v)
 /**************************************************************************//**
  * Initialises the client layout from the Windows monitor definition.
  *
- * @param [out] layout Our layout
- * @param [in] client_info WM info
+ * @param v VNC module
+ * @param [in] width session width
+ * @param [in] height session height
+ * @param [in] num_monitors (can be 0, meaning one monitor)
+ * @param [in] monitors Monitor definitions for num_monitors > 0
+ * @param [in] multimon_configured Whether multimon is configured
  */
 static void
-init_client_layout(struct vnc_screen_layout *layout,
-                   const struct xrdp_client_info *client_info)
+init_client_layout(struct vnc *v,
+                   int width, int height,
+                   int num_monitors,
+                   const struct monitor_info *monitors)
 {
-    uint32_t i;
-
-    layout->total_width = client_info->display_sizes.session_width;
-    layout->total_height = client_info->display_sizes.session_height;
-
-    layout->count = client_info->display_sizes.monitorCount;
-    layout->s = g_new(struct vnc_screen, layout->count);
-
-    for (i = 0 ; i < client_info->display_sizes.monitorCount ; ++i)
+    struct vnc_screen_layout *layout = &v->client_layout;
+    if (!v->multimon_configured || num_monitors < 1)
     {
-        /* Use minfo_wm, as this is normalised for a top-left of (0,0)
-         * as required by RFC6143 */
-        layout->s[i].id = i;
-        layout->s[i].x = client_info->display_sizes.minfo_wm[i].left;
-        layout->s[i].y = client_info->display_sizes.minfo_wm[i].top;
-        layout->s[i].width =  client_info->display_sizes.minfo_wm[i].right -
-                              client_info->display_sizes.minfo_wm[i].left + 1;
-        layout->s[i].height = client_info->display_sizes.minfo_wm[i].bottom -
-                              client_info->display_sizes.minfo_wm[i].top + 1;
-        layout->s[i].flags = 0;
+        init_single_screen_layout(width, height, layout);
+    }
+    else
+    {
+        layout->total_width = width;
+        layout->total_height = height;
+        layout->count = num_monitors;
+
+        unsigned int i;
+        for (i = 0 ; i < layout->count; ++i)
+        {
+            layout->s[i].id = i;
+            layout->s[i].x = monitors[i].left;
+            layout->s[i].y = monitors[i].top;
+            layout->s[i].width = monitors[i].right - monitors[i].left + 1;
+            layout->s[i].height = monitors[i].bottom - monitors[i].top + 1;
+            layout->s[i].flags = 0;
+        }
     }
 }
 
@@ -2132,19 +2092,16 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
         const struct xrdp_client_info *client_info =
             (const struct xrdp_client_info *) value;
 
-        g_free(v->client_layout.s);
+        v->multimon_configured = client_info->multimon;
 
-        /* Save monitor information from the client */
-        if (!client_info->multimon || client_info->display_sizes.monitorCount < 1)
-        {
-            set_single_screen_layout(&v->client_layout,
-                                     client_info->display_sizes.session_width,
-                                     client_info->display_sizes.session_height);
-        }
-        else
-        {
-            init_client_layout(&v->client_layout, client_info);
-        }
+        /* Save monitor information from the client
+         * Use minfo_wm, as this is normalised for a top-left of (0,0)
+         * as required by RFC6143 */
+        init_client_layout(v,
+                           client_info->display_sizes.session_width,
+                           client_info->display_sizes.session_height,
+                           client_info->display_sizes.monitorCount,
+                           client_info->display_sizes.minfo_wm);
         log_screen_layout(LOG_LEVEL_DEBUG, "client_info", &v->client_layout);
     }
 
@@ -2185,6 +2142,10 @@ lib_mod_check_wait_objs(struct vnc *v)
         if (v->trans != 0)
         {
             rv = trans_check_wait_objs(v->trans);
+            if (rv != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "VNC server closed connection");
+            }
         }
     }
     return rv;
@@ -2217,8 +2178,8 @@ lib_mod_suppress_output(struct vnc *v, int suppress,
         out_uint8(s, 0); /* incremental == 0 : Full contents */
         out_uint16_be(s, 0);
         out_uint16_be(s, 0);
-        out_uint16_be(s, v->server_width);
-        out_uint16_be(s, v->server_height);
+        out_uint16_be(s, v->server_layout.total_width);
+        out_uint16_be(s, v->server_layout.total_height);
         s_mark_end(s);
         error = lib_send_copy(v, s);
         free_stream(s);
@@ -2237,12 +2198,29 @@ lib_mod_server_version_message(struct vnc *v)
 /******************************************************************************/
 /* return error */
 int
-lib_mod_server_monitor_resize(struct vnc *v, int width, int height)
+lib_mod_server_monitor_resize(struct vnc *v, int width, int height,
+                              int num_monitors,
+                              const struct monitor_info *monitors,
+                              int *in_progress)
 {
-    int error = 0;
-    set_single_screen_layout(&v->client_layout, width, height);
-    v->resize_status = VRS_WAITING_FOR_FIRST_UPDATE;
-    error = send_update_request_for_resize_status(v);
+    int error;
+    *in_progress = 0;
+    init_client_layout(v, width, height, num_monitors, monitors);
+
+    if ((error = resize_server_to_client_layout(v)) == 0)
+    {
+        // If we're waiting for a confirmation, send an update request.
+        // According to the spec this should not be needed, but
+        // it works around a buggy VNC server not sending an
+        // ExtendedDesktopSize rectangle if the desktop change is
+        // small (eg. same dimensions, but 2 monitors -> 1 monitor)
+        if (v->resize_status == VRS_WAITING_FOR_RESIZE_CONFIRM &&
+                (error = send_update_request_for_resize_status(v)) == 0)
+        {
+            *in_progress = 1;
+        }
+    }
+
     return error;
 }
 
@@ -2298,7 +2276,6 @@ mod_exit(tintptr handle)
         return 0;
     }
     trans_delete(v->trans);
-    g_free(v->client_layout.s);
     vnc_clip_exit(v);
     g_free(v);
     return 0;

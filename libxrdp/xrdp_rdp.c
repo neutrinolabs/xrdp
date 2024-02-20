@@ -585,11 +585,13 @@ xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type)
 }
 
 /*****************************************************************************/
-/* Send a [MS-RDPBCGR] Data PDU with for the given pduType2 with the headers
+/* Send a [MS-RDPBCGR] Data PDU for the given pduType2 from
+ * the specified source with the headers
     added and data compressed */
 int
-xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
-                   int data_pdu_type)
+xrdp_rdp_send_data_from_channel(struct xrdp_rdp *self, struct stream *s,
+                                int data_pdu_type, int channel_id,
+                                int compress)
 {
     int len;
     int ctype;
@@ -614,7 +616,8 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     clen = len;
     tocomplen = pdulen - 18;
 
-    if (self->client_info.rdp_compression && self->session->up_and_running)
+    if (compress && self->client_info.rdp_compression &&
+            self->session->up_and_running)
     {
         mppc_enc = self->mppc_enc;
         if (compress_rdp(mppc_enc, (tui8 *)(s->p + 18), tocomplen))
@@ -643,7 +646,8 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         else
         {
             LOG_DEVEL(LOG_LEVEL_TRACE,
-                      "xrdp_rdp_send_data: compress_rdp failed, sending "
+                      "xrdp_rdp_send_data_from_channel: "
+                      "compress_rdp failed, sending "
                       "uncompressed data. type %d, flags %d",
                       mppc_enc->protocol_type, mppc_enc->flags);
         }
@@ -652,11 +656,11 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     /* TS_SHARECONTROLHEADER */
     out_uint16_le(s, pdulen);            /* totalLength */
     out_uint16_le(s, pdutype);           /* pduType */
-    out_uint16_le(s, self->mcs_channel); /* pduSource */
+    out_uint16_le(s, channel_id);        /* pduSource */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
               "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
               "pduSource %d", pdulen, PDUTYPE_TO_STR(pdutype & 0xf),
-              pdutype & 0xf, ((pdutype & 0xfff0) >> 4), self->mcs_channel);
+              pdutype & 0xf, ((pdutype & 0xfff0) >> 4), channel_id);
 
     /* TS_SHAREDATAHEADER */
     out_uint32_le(s, self->share_id);
@@ -673,11 +677,24 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
 
     if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send_data: xrdp_sec_send failed");
+        LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send_data_from_channel: "
+            "xrdp_sec_send failed");
         return 1;
     }
 
     return 0;
+}
+
+
+/*****************************************************************************/
+/* Send a [MS-RDPBCGR] Data PDU on the MCS channel for the given pduType2
+ * with the headers added and data compressed */
+int
+xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
+                   int data_pdu_type)
+{
+    return xrdp_rdp_send_data_from_channel(self, s, data_pdu_type,
+                                           self->mcs_channel, 1);
 }
 
 /*****************************************************************************/
