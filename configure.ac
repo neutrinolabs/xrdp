@@ -6,6 +6,7 @@ AC_DEFINE([VERSION_YEAR], 2024, [Copyright year])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
+AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC
 AC_PROG_CXX
 AC_C_CONST
@@ -182,6 +183,11 @@ AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
               [Use rdpsnd audio in (default: no)]),
               [], [enable_rdpsndaudin=no])
 AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
+
+AC_ARG_ENABLE(utmp, AS_HELP_STRING([--enable-utmp],
+              [Update utmp (default: no)]),
+              [], [enable_utmp=no])
+AM_CONDITIONAL(XRDP_UTMP, [test x$enable_utmp = xyes])
 
 AC_ARG_WITH(imlib2, AS_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use for non-BMP backgrounds (ARG=yes/no/<abs-path>)]),,)
 
@@ -515,6 +521,15 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
+if test "x$enable_utmp" = "xyes"
+then
+    AC_CHECK_HEADERS(utmp.h utmpx.h)
+
+    # Test for non-standard extensions in struct utmpx
+    AXRDP_CHECK_UTMPX_MEMBER_EXISTS([ut_host], [HAVE_UTMPX_UT_HOST])
+    AXRDP_CHECK_UTMPX_MEMBER_EXISTS([ut_exit], [HAVE_UTMPX_UT_EXIT])
+fi
+
 CFLAGS="$save_CFLAGS"
 
 # perform unit tests if libcheck and libmocka found
@@ -632,6 +647,12 @@ echo "  ipv6only                $enable_ipv6only"
 echo "  vsock                   $enable_vsock"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
+echo "  utmp support            $enable_utmp"
+if test x$enable_utmp = xyes; then
+    echo "    utmpx.ut_host         $ac_cv_utmpx_has_ut_host"
+    echo "    utmpx.ut_exit         $ac_cv_utmpx_has_ut_exit"
+fi
+
 echo
 echo "  with imlib2             $use_imlib2"
 echo "  with freetype2          $use_freetype2"

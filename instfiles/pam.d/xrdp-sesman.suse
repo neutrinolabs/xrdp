@@ -1,5 +1,11 @@
 #%PAM-1.0
 auth        include     common-auth
 account     include     common-account
+
+# Set the loginuid process attribute.
+session    required     pam_loginuid.so
+# Update lastlog database
+session    optional     pam_lastlog2.so silent
+
 session     include     common-session
 password    include     common-password

@@ -35,7 +35,7 @@
 #include "xrdp_constants.h"
 
 struct login_info;
-struct exit_status;
+struct proc_exit_status;
 
 /**
  * Information used to start a session
@@ -89,7 +89,7 @@ session_start(struct login_info *login_info,
 void
 session_process_child_exit(struct session_data *sd,
                            int pid,
-                           const struct exit_status *e);
+                           const struct proc_exit_status *e);
 
 /**
  * Returns a count of active processes in the session

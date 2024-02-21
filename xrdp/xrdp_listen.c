@@ -856,12 +856,12 @@ xrdp_listen_conn_in(struct trans *self, struct trans *new_self)
 static void
 process_pending_sigchld_events(void)
 {
-    struct exit_status e;
+    struct proc_exit_status e;
     int pid;
 
     while ((pid = g_waitchild(&e)) > 0)
     {
-        if (e.reason == E_XR_SIGNAL)
+        if (e.reason == E_PXR_SIGNAL)
         {
             char sigstr[MAXSTRSIGLEN];
             LOG(LOG_LEVEL_ERROR,

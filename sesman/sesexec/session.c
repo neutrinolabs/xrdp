@@ -47,6 +47,7 @@
 #include "login_info.h"
 #include "os_calls.h"
 #include "sesexec.h"
+#include "sessionrecord.h"
 #include "string_calls.h"
 #include "xauth.h"
 #include "xwait.h"
@@ -656,6 +657,7 @@ session_start_wrapped(struct login_info *login_info,
             }
             else
             {
+                utmp_login(window_manager_pid, s->display, login_info);
                 LOG(LOG_LEVEL_INFO,
                     "Starting the xrdp channel server for display :%d",
                     s->display);
@@ -807,11 +809,11 @@ cleanup_sockets(int uid, int display)
 
 /******************************************************************************/
 static void
-exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
+exit_status_to_str(const struct proc_exit_status *e, char buff[], int bufflen)
 {
     switch (e->reason)
     {
-        case E_XR_STATUS_CODE:
+        case E_PXR_STATUS_CODE:
             if (e->val == 0)
             {
                 g_snprintf(buff, bufflen, "exit code zero");
@@ -822,7 +824,7 @@ exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
             }
             break;
 
-        case E_XR_SIGNAL:
+        case E_PXR_SIGNAL:
         {
             char sigstr[MAXSTRSIGLEN];
             g_snprintf(buff, bufflen, "signal %s",
@@ -840,7 +842,7 @@ exit_status_to_str(const struct exit_status *e, char buff[], int bufflen)
 void
 session_process_child_exit(struct session_data *sd,
                            int pid,
-                           const struct exit_status *e)
+                           const struct proc_exit_status *e)
 {
     if (pid == sd->x_server)
     {
@@ -860,7 +862,7 @@ session_process_child_exit(struct session_data *sd,
     {
         int wm_wait_time = g_time1() - sd->start_time;
 
-        if (e->reason == E_XR_STATUS_CODE && e->val == 0)
+        if (e->reason == E_PXR_STATUS_CODE && e->val == 0)
         {
             LOG(LOG_LEVEL_INFO,
                 "Window manager (pid %d, display %d) "
@@ -886,6 +888,7 @@ session_process_child_exit(struct session_data *sd,
                 sd->win_mgr, sd->params.display, wm_wait_time);
         }
 
+        utmp_logout(sd->win_mgr, sd->params.display, e);
         sd->win_mgr = -1;
 
         if (sd->x_server > 0)
