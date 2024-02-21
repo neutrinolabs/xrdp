@@ -567,8 +567,9 @@ print_version(void)
 {
     g_writeln("xrdp-sesman %s", PACKAGE_VERSION);
     g_writeln("  The xrdp session manager");
-    g_writeln("  Copyright (C) 2004-2020 Jay Sorg, "
-              "Neutrino Labs, and all contributors.");
+    g_writeln("  Copyright (C) 2004-%d Jay Sorg, "
+              "Neutrino Labs, and all contributors.",
+              VERSION_YEAR);
     g_writeln("  See https://github.com/neutrinolabs/xrdp for more information.");
     g_writeln("%s", "");
 
