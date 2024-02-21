@@ -132,7 +132,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: "Install Dependencies"
         # See https://github.com/actions/runner-images/issues/7192
         run: |
@@ -173,9 +173,9 @@ jobs:
         id: os
         run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache cppcheck
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: cache-cppcheck
         with:
@@ -202,9 +202,9 @@ jobs:
         id: os
         run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Cache astyle
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           cache-name: cache-astyle
         with:
