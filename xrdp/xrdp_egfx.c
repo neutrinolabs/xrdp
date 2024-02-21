@@ -769,7 +769,7 @@ xrdp_egfx_process_frame_ack(struct xrdp_egfx *egfx, struct stream *s)
     in_uint32_le(s, queueDepth);
     in_uint32_le(s, intframeId);
     in_uint32_le(s, totalFramesDecoded);
-    LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process_frame_ack: queueDepth %d"
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process_frame_ack: queueDepth %d"
         " intframeId %d totalFramesDecoded %d",
         queueDepth, intframeId, totalFramesDecoded);
     if (egfx->frame_ack != NULL)
@@ -869,7 +869,7 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
         in_uint16_le(s, flags);
         in_uint32_le(s, pduLength);
         s->end = holdp + pduLength;
-        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process: cmdId 0x%x flags %d"
+        LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process: cmdId 0x%x flags %d"
             " pduLength %d", cmdId, flags, pduLength);
         if (pduLength < 8)
         {
