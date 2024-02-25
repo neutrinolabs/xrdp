@@ -183,6 +183,9 @@ int
 xrdp_wm_can_resize(struct xrdp_wm *self);
 void
 xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status);
+void
+xrdp_wm_paint_text_list(struct xrdp_painter *painter, struct list *text_list,
+                        struct xrdp_bitmap *wnd, int text_color, int x, int y);
 
 /* xrdp_process.c */
 struct xrdp_process *

@@ -88,6 +88,8 @@ xrdp_wm_delete(struct xrdp_wm *self)
     xrdp_bitmap_delete(self->screen);
     /* free the log */
     list_delete(self->log);
+    /* free the acceptable use policy */
+    list_delete(self->acceptable_use_policy_lines);
     /* free default font */
     xrdp_font_delete(self->default_font);
     g_delete_wait_obj(self->login_state_event);
@@ -636,7 +638,8 @@ xrdp_wm_init(struct xrdp_wm *self)
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
-    if (self->session->client_info->rdp_autologin)
+    if (self->session->client_info->rdp_autologin
+            && !self->xrdp_config->cfg_globals.always_show_login_window)
     {
         /*
          * NOTE: this should eventually be accessed from self->xrdp_config
@@ -2109,6 +2112,28 @@ xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status)
     }
 }
 
+void
+xrdp_wm_paint_text_list(struct xrdp_painter *painter, struct list *text_list,
+                        struct xrdp_bitmap *wnd, int text_color, int x, int y)
+{
+    unsigned int row_height;
+    char *text;
+
+    if (painter == 0)
+    {
+        return;
+    }
+    row_height = xrdp_painter_font_body_height(painter);
+    painter->fg_color = text_color;
+
+    for (int index = 0; index < text_list->count; ++index)
+    {
+        text = (char *)list_get_item(text_list, index);
+        xrdp_painter_draw_text(painter, wnd, 10,
+                               (index  + 2) * row_height, text);
+    }
+}
+
 /*****************************************************************************/
 /* this is the log windows notify function */
 static int
@@ -2116,11 +2141,8 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
                        struct xrdp_bitmap *sender,
                        int msg, long param1, long param2)
 {
-    struct xrdp_painter *painter;
     struct xrdp_wm *wm;
     struct xrdp_rect rect;
-    int index;
-    char *text;
 
     if (wnd == 0)
     {
@@ -2159,20 +2181,8 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
     }
     else if (msg == WM_PAINT) /* 3 */
     {
-        painter = (struct xrdp_painter *)param1;
-
-        if (painter != 0)
-        {
-            unsigned int row_height = xrdp_painter_font_body_height(painter);
-            painter->fg_color = wnd->wm->black;
-
-            for (index = 0; index < wnd->wm->log->count; index++)
-            {
-                text = (char *)list_get_item(wnd->wm->log, index);
-                xrdp_painter_draw_text(painter, wnd, 10,
-                                       (index  + 2) * row_height, text);
-            }
-        }
+        xrdp_wm_paint_text_list((struct xrdp_painter *)param1, wnd->wm->log,
+                                wnd, wnd->wm->black, 10, 0);
     }
 
     return 0;
