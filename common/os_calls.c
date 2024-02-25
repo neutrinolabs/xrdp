@@ -381,6 +381,7 @@ g_tcp_socket(void)
     {
         switch (errno)
         {
+            case EPROTONOSUPPORT: /* if IPv6 is supported, but don't have an IPv6 address */
             case EAFNOSUPPORT: /* if IPv6 not supported, retry IPv4 */
                 LOG(LOG_LEVEL_INFO, "IPv6 not supported, falling back to IPv4");
                 rv = (int)socket(AF_INET, SOCK_STREAM, 0);
