@@ -162,7 +162,8 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
     int index;
     int port_override;
     int fork_override;
-    char *val;
+    const char *name;
+    const char *val;
     struct list *names;
     struct list *values;
     struct xrdp_startup_params *startup_params;
@@ -181,56 +182,67 @@ xrdp_listen_get_startup_params(struct xrdp_listen *self)
         {
             for (index = 0; index < names->count; index++)
             {
-                val = (char *)list_get_item(names, index);
-                if (val != 0)
+                name = (const char *)list_get_item(names, index);
+                val = (const char *)list_get_item(values, index);
+                if (name == 0 || val == 0)
                 {
-                    if (g_strcasecmp(val, "port") == 0)
-                    {
-                        if (port_override == 0)
-                        {
-                            val = (char *) list_get_item(values, index);
-                            g_strncpy(startup_params->port, val,
-                                      sizeof(startup_params->port) - 1);
-                        }
-                    }
-                    if (g_strcasecmp(val, "fork") == 0)
-                    {
-                        if (fork_override == 0)
-                        {
-                            val = (char *) list_get_item(values, index);
-                            startup_params->fork = g_text2bool(val);
-                        }
-                    }
+                    continue;
+                }
 
-                    if (g_strcasecmp(val, "tcp_nodelay") == 0)
+                if (g_strcasecmp(name, "port") == 0)
+                {
+                    if (port_override == 0)
                     {
-                        val = (char *)list_get_item(values, index);
-                        startup_params->tcp_nodelay = g_text2bool(val);
+                        g_strncpy(startup_params->port, val,
+                                  sizeof(startup_params->port) - 1);
                     }
+                }
 
-                    if (g_strcasecmp(val, "tcp_keepalive") == 0)
+                else if (g_strcasecmp(name, "fork") == 0)
+                {
+                    if (fork_override == 0)
                     {
-                        val = (char *)list_get_item(values, index);
-                        startup_params->tcp_keepalive = g_text2bool(val);
+                        startup_params->fork = g_text2bool(val);
                     }
+                }
 
-                    if (g_strcasecmp(val, "tcp_send_buffer_bytes") == 0)
-                    {
-                        val = (char *)list_get_item(values, index);
-                        startup_params->tcp_send_buffer_bytes = g_atoi(val);
-                    }
+                else if (g_strcasecmp(name, "tcp_nodelay") == 0)
+                {
+                    startup_params->tcp_nodelay = g_text2bool(val);
+                }
 
-                    if (g_strcasecmp(val, "tcp_recv_buffer_bytes") == 0)
-                    {
-                        val = (char *)list_get_item(values, index);
-                        startup_params->tcp_recv_buffer_bytes = g_atoi(val);
-                    }
+                else if (g_strcasecmp(name, "tcp_keepalive") == 0)
+                {
+                    startup_params->tcp_keepalive = g_text2bool(val);
+                }
 
-                    if (g_strcasecmp(val, "use_vsock") == 0)
-                    {
-                        val = (char *)list_get_item(values, index);
-                        startup_params->use_vsock = g_text2bool(val);
-                    }
+                else if (g_strcasecmp(name, "tcp_send_buffer_bytes") == 0)
+                {
+                    startup_params->tcp_send_buffer_bytes = g_atoi(val);
+                }
+
+                else if (g_strcasecmp(name, "tcp_recv_buffer_bytes") == 0)
+                {
+                    startup_params->tcp_recv_buffer_bytes = g_atoi(val);
+                }
+
+                else if (g_strcasecmp(name, "use_vsock") == 0)
+                {
+                    startup_params->use_vsock = g_text2bool(val);
+                }
+
+                else if (g_strcasecmp(name, "runtime_user") == 0)
+                {
+                    g_snprintf(startup_params->runtime_user,
+                               sizeof(startup_params->runtime_user),
+                               "%s", val);
+                }
+
+                else if (g_strcasecmp(name, "runtime_group") == 0)
+                {
+                    g_snprintf(startup_params->runtime_group,
+                               sizeof(startup_params->runtime_group),
+                               "%s", val);
                 }
             }
         }

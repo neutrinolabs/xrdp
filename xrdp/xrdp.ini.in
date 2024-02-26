@@ -27,6 +27,15 @@ port=3389
 ; prefer use vsock://<cid>:<port> above
 use_vsock=false
 
+; Unprivileged User name and group to run the xrdp daemon.
+; It is HIGHLY RECOMMENDED you set these values.
+; A suitable user and group can be added with a command like this (Linux):-
+;     useradd xrdp -d / -c 'xrdp daemon' -s /usr/sbin/nologin
+; Be aware that runtime_group here, and SessionSockdirGroup in sesman.ini
+; MUST be the same if you want to run sessions.
+#runtime_user=xrdp
+#runtime_group=xrdp
+
 ; regulate if the listening socket use socket option tcp_nodelay
 ; no buffering will be performed in the TCP stack
 tcp_nodelay=true

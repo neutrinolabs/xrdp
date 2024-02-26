@@ -750,6 +750,10 @@ struct xrdp_startup_params
     int tcp_nodelay;
     int tcp_keepalive;
     int use_vsock;
+    // These should be local users/groups, and so we shouldn't need
+    // a lot of storage for them.
+    char runtime_user[64];
+    char runtime_group[64];
 };
 
 /*

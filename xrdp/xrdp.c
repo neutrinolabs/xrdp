@@ -428,8 +428,6 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-
-
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
         LOG(LOG_LEVEL_ALWAYS, "It looks like xrdp is already running.");
