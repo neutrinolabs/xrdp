@@ -55,7 +55,7 @@ xrdp_listen_create_pro_done(struct xrdp_listen *self)
 
 /*****************************************************************************/
 struct xrdp_listen *
-xrdp_listen_create(void)
+xrdp_listen_create(struct xrdp_startup_params *startup_params)
 {
     struct xrdp_listen *self;
 
@@ -64,6 +64,7 @@ xrdp_listen_create(void)
     self->trans_list = list_create();
     self->process_list = list_create();
     self->fork_list = list_create();
+    self->startup_params = startup_params;
 
     if (g_process_sem == 0)
     {
@@ -153,107 +154,6 @@ xrdp_process_run(void *in_val)
     LOG_DEVEL(LOG_LEVEL_TRACE, "process done");
     return 0;
 }
-
-/*****************************************************************************/
-static int
-xrdp_listen_get_startup_params(struct xrdp_listen *self)
-{
-    int fd;
-    int index;
-    int port_override;
-    int fork_override;
-    const char *name;
-    const char *val;
-    struct list *names;
-    struct list *values;
-    struct xrdp_startup_params *startup_params;
-
-    startup_params = self->startup_params;
-    port_override = startup_params->port[0] != 0;
-    fork_override = startup_params->fork;
-    fd = g_file_open_ro(startup_params->xrdp_ini);
-    if (fd != -1)
-    {
-        names = list_create();
-        names->auto_free = 1;
-        values = list_create();
-        values->auto_free = 1;
-        if (file_read_section(fd, "globals", names, values) == 0)
-        {
-            for (index = 0; index < names->count; index++)
-            {
-                name = (const char *)list_get_item(names, index);
-                val = (const char *)list_get_item(values, index);
-                if (name == 0 || val == 0)
-                {
-                    continue;
-                }
-
-                if (g_strcasecmp(name, "port") == 0)
-                {
-                    if (port_override == 0)
-                    {
-                        g_strncpy(startup_params->port, val,
-                                  sizeof(startup_params->port) - 1);
-                    }
-                }
-
-                else if (g_strcasecmp(name, "fork") == 0)
-                {
-                    if (fork_override == 0)
-                    {
-                        startup_params->fork = g_text2bool(val);
-                    }
-                }
-
-                else if (g_strcasecmp(name, "tcp_nodelay") == 0)
-                {
-                    startup_params->tcp_nodelay = g_text2bool(val);
-                }
-
-                else if (g_strcasecmp(name, "tcp_keepalive") == 0)
-                {
-                    startup_params->tcp_keepalive = g_text2bool(val);
-                }
-
-                else if (g_strcasecmp(name, "tcp_send_buffer_bytes") == 0)
-                {
-                    startup_params->tcp_send_buffer_bytes = g_atoi(val);
-                }
-
-                else if (g_strcasecmp(name, "tcp_recv_buffer_bytes") == 0)
-                {
-                    startup_params->tcp_recv_buffer_bytes = g_atoi(val);
-                }
-
-                else if (g_strcasecmp(name, "use_vsock") == 0)
-                {
-                    startup_params->use_vsock = g_text2bool(val);
-                }
-
-                else if (g_strcasecmp(name, "runtime_user") == 0)
-                {
-                    g_snprintf(startup_params->runtime_user,
-                               sizeof(startup_params->runtime_user),
-                               "%s", val);
-                }
-
-                else if (g_strcasecmp(name, "runtime_group") == 0)
-                {
-                    g_snprintf(startup_params->runtime_group,
-                               sizeof(startup_params->runtime_group),
-                               "%s", val);
-                }
-            }
-        }
-
-        list_delete(names);
-        list_delete(values);
-        g_file_close(fd);
-    }
-    return 0;
-}
-
 /*****************************************************************************/
 static int
 xrdp_listen_stop_all_listen(struct xrdp_listen *self)
@@ -663,8 +563,10 @@ xrdp_listen_pp(struct xrdp_listen *self, int *index,
 }
 
 /*****************************************************************************/
-static int
-xrdp_listen_process_startup_params(struct xrdp_listen *self)
+/* returns 0 if xrdp is listening correctly
+   returns 1 if xrdp is not listening correctly */
+int
+xrdp_listen_init(struct xrdp_listen *self)
 {
     int mode; /* TRANS_MODE_TCP*, TRANS_MODE_UNIX, TRANS_MODE_VSOCK */
     int error;
@@ -898,18 +800,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     struct trans *ltrans;
 
     self->status = 1;
-    if (xrdp_listen_get_startup_params(self) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "xrdp_listen_main_loop: xrdp_listen_get_port failed");
-        self->status = -1;
-        return 1;
-    }
-    if (xrdp_listen_process_startup_params(self) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "xrdp_listen_main_loop: xrdp_listen_get_port failed");
-        self->status = -1;
-        return 1;
-    }
+
     term_obj = g_get_term(); /*Global termination event */
     sigchld_obj = g_get_sigchld();
     sync_obj = g_get_sync_event();
@@ -1047,29 +938,5 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     }
 
     self->status = -1;
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns 0 if xrdp can listen
-   returns 1 if xrdp cannot listen */
-int
-xrdp_listen_test(struct xrdp_startup_params *startup_params)
-{
-    struct xrdp_listen *xrdp_listen;
-
-    xrdp_listen = xrdp_listen_create();
-    xrdp_listen->startup_params = startup_params;
-    if (xrdp_listen_get_startup_params(xrdp_listen) != 0)
-    {
-        xrdp_listen_delete(xrdp_listen);
-        return 1;
-    }
-    if (xrdp_listen_process_startup_params(xrdp_listen) != 0)
-    {
-        xrdp_listen_delete(xrdp_listen);
-        return 1;
-    }
-    xrdp_listen_delete(xrdp_listen);
     return 0;
 }
