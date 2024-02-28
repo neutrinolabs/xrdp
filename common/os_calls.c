@@ -3168,6 +3168,48 @@ g_setgid(int pid)
 }
 
 /*****************************************************************************/
+/* Used by daemonizing code */
+/* returns error, zero is success, non zero is error */
+int
+g_drop_privileges(const char *user, const char *group)
+{
+    int rv = 1;
+    int uid;
+    int gid;
+    if (g_getuser_info_by_name(user, &uid, NULL, NULL, NULL, NULL) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to get UID for user '%s' [%s]", user,
+            g_get_strerror());
+    }
+    else if (g_getgroup_info(group, &gid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to get GID for group '%s' [%s]", group,
+            g_get_strerror());
+    }
+    else if (initgroups(user, gid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to init groups for '%s' [%s]", user,
+            g_get_strerror());
+    }
+    else if (g_setgid(gid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to set group to '%s' [%s]", group,
+            g_get_strerror());
+    }
+    else if (g_setuid(uid) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to set user to '%s' [%s]", user,
+            g_get_strerror());
+    }
+    else
+    {
+        rv = 0;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 /* returns error, zero is success, non zero is error */
 /* does not work in win32 */
 int
