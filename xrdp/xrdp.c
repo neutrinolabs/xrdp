@@ -424,7 +424,6 @@ main(int argc, char **argv)
     enum logReturns error;
     struct xrdp_startup_params startup_params = {0};
     int pid;
-    int fd;
     int daemon;
     char text[256];
     const char *pid_file = XRDP_PID_PATH "/xrdp.pid";
@@ -491,7 +490,7 @@ main(int argc, char **argv)
     {
         g_writeln("stopping xrdp");
         /* read the xrdp.pid file */
-        fd = -1;
+        int fd = -1;
 
         if (g_file_exist(pid_file)) /* xrdp.pid */
         {
@@ -570,14 +569,13 @@ main(int argc, char **argv)
 
     if (daemon)
     {
-
         /* make sure containing directory exists */
         g_create_path(pid_file);
 
         /* make sure we can write to pid file */
-        fd = g_file_open_rw(pid_file); /* xrdp.pid */
+        int pid_fd = g_file_open_rw(pid_file); /* xrdp.pid */
 
-        if (fd == -1)
+        if (pid_fd == -1)
         {
             LOG(LOG_LEVEL_ALWAYS,
                 "running in daemon mode with no access to pid files, quitting");
@@ -586,21 +584,6 @@ main(int argc, char **argv)
             g_exit(1);
         }
 
-        if (g_file_write(fd, "0", 1) == -1)
-        {
-            LOG(LOG_LEVEL_ALWAYS,
-                "running in daemon mode with no access to pid files, quitting");
-            log_end();
-            g_deinit();
-            g_exit(1);
-        }
-
-        g_file_close(fd);
-        g_file_delete(pid_file);
-    }
-
-    if (daemon)
-    {
         /* Before daemonising, check we can listen.
          * If we can't listen, exit with failure status */
         struct xrdp_listen *xrdp_listen;
@@ -618,6 +601,7 @@ main(int argc, char **argv)
                or systemd cannot detect xrdp daemon couldn't start properly */
             g_exit(1);
         }
+
         /* start of daemonizing code */
         pid = g_fork();
 
@@ -638,21 +622,10 @@ main(int argc, char **argv)
         }
 
         g_sleep(1000);
-        /* write the pid to file */
-        pid = g_getpid();
-        fd = g_file_open_rw(pid_file); /* xrdp.pid */
-
-        if (fd == -1)
-        {
-            LOG(LOG_LEVEL_WARNING, "Can't open %s for writing [%s]",
-                pid_file, g_get_strerror());
-        }
-        else
-        {
-            g_sprintf(text, "%d", pid);
-            g_file_write(fd, text, g_strlen(text));
-            g_file_close(fd);
-        }
+        /* write our pid to file */
+        g_sprintf(text, "%d", g_getpid());
+        g_file_write(pid_fd, text, g_strlen(text));
+        g_file_close(pid_fd);
 
         g_sleep(1000);
         g_file_close(0);
@@ -736,8 +709,7 @@ main(int argc, char **argv)
     g_delete_wait_obj(g_get_sync_event());
     g_set_sync_event(0);
 
-    /* only main process should delete pid file */
-    if (daemon && (pid == g_getpid()))
+    if (daemon)
     {
         /* delete the xrdp.pid file */
         g_file_delete(pid_file);
