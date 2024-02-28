@@ -417,6 +417,38 @@ xrdp_sanity_check(void)
 }
 
 /*****************************************************************************/
+static int
+check_drop_privileges(struct xrdp_startup_params *startup_params)
+{
+    int rv = 1;
+    const char *user = startup_params->runtime_user;
+    const char *group = startup_params->runtime_group;
+
+    if (user[0] == '\0' && group[0] == '\0')
+    {
+        // Allow this for now
+        LOG(LOG_LEVEL_ALWAYS,
+            "You are running xrdp as root. This is not safe.");
+        rv = 0;
+    }
+    else if (user[0] == '\0' || group[0] == '\0')
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Both a runtime_user and a runtime_group MUST be specified");
+    }
+    else
+    {
+        rv = g_drop_privileges(user, group);
+        if (rv == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Switched user:group to %s:%s", user, group);
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 int
 main(int argc, char **argv)
 {
@@ -548,7 +580,7 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-    if (!read_xrdp_ini_startup_params(&startup_params))
+    if (read_xrdp_ini_startup_params(&startup_params) != 0)
     {
         log_end();
         g_deinit();
@@ -653,7 +685,7 @@ main(int argc, char **argv)
         LOG(LOG_LEVEL_ALWAYS, "Failed to start xrdp daemon, "
             "possibly address already in use.");
     }
-    else
+    else if (check_drop_privileges(&startup_params) == 0)
     {
         g_set_threadid(tc_get_threadid());
         g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */

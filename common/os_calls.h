@@ -338,6 +338,7 @@ void     g_signal_pipe(void (*func)(int));
 void     g_signal_usr1(void (*func)(int));
 int      g_fork(void);
 int      g_setgid(int pid);
+int      g_drop_privileges(const char *user, const char *group);
 int      g_initgroups(const char *user);
 int      g_getuid(void);
 int      g_getgid(void);
