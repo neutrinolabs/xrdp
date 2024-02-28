@@ -449,6 +449,83 @@ check_drop_privileges(struct xrdp_startup_params *startup_params)
 }
 
 /*****************************************************************************/
+static int
+read_pid_file(const char *pid_file)
+{
+    int pid = -1;
+    int fd = g_file_open_ro(pid_file); /* xrdp.pid */
+    if (fd >= 0)
+    {
+        char text[32];
+        g_memset(text, 0, sizeof(text));
+        g_file_read(fd, text, sizeof(text) - 1);
+        pid = g_atoi(text);
+        g_file_close(fd);
+    }
+
+    return pid;
+}
+
+/*****************************************************************************/
+/**
+ * Kills an active xrdp daemon
+ *
+ * It is assumed that logging is not active
+ *
+ * @param pid_file PID file
+ * @return 0 for success
+ */
+static int
+kill_daemon(const char *pid_file)
+{
+    int status = 1;
+    int pid;
+    if (g_getuid() != 0)
+    {
+        g_writeln("Must be root");
+    }
+    else if ((pid = read_pid_file(pid_file)) > 0)
+    {
+        if (!g_pid_is_active(pid))
+        {
+            g_writeln("Daemon not active");
+            status = 0;
+        }
+        else
+        {
+            g_writeln("stopping process id %d", pid);
+            int i;
+            g_sigterm(pid);
+            g_sleep(100);
+            i = 5 * 1000 / 500;
+            while (i > 0 && g_pid_is_active(pid))
+            {
+                g_sleep(500);
+                --i;
+            }
+
+            if (g_pid_is_active(pid))
+            {
+                g_writeln("Can't stop process");
+            }
+            else
+            {
+                status = 0;
+            }
+        }
+
+        if (status == 0)
+        {
+            /* delete the xrdp.pid file, as xrdp can't do this
+             * if it's running without privilege */
+            g_file_delete(pid_file);
+        }
+    }
+
+    return status;
+}
+
+/*****************************************************************************/
 int
 main(int argc, char **argv)
 {
@@ -520,36 +597,9 @@ main(int argc, char **argv)
 
     if (startup_params.kill)
     {
-        g_writeln("stopping xrdp");
-        /* read the xrdp.pid file */
-        int fd = -1;
-
-        if (g_file_exist(pid_file)) /* xrdp.pid */
-        {
-            fd = g_file_open_ro(pid_file); /* xrdp.pid */
-        }
-
-        if (fd == -1)
-        {
-            g_writeln("cannot open %s, maybe xrdp is not running", pid_file);
-        }
-        else
-        {
-            g_memset(text, 0, 32);
-            g_file_read(fd, text, 31);
-            pid = g_atoi(text);
-            g_writeln("stopping process id %d", pid);
-
-            if (pid > 0)
-            {
-                g_sigterm(pid);
-            }
-
-            g_file_close(fd);
-        }
-
+        int status = kill_daemon(pid_file);
         g_deinit();
-        g_exit(0);
+        g_exit(status);
     }
 
     /* starting logging subsystem */
@@ -587,9 +637,10 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-    if (g_file_exist(pid_file)) /* xrdp.pid */
+    if ((pid = read_pid_file(pid_file)) > 0 && g_pid_is_active(pid))
     {
-        LOG(LOG_LEVEL_ALWAYS, "It looks like xrdp is already running.");
+        LOG(LOG_LEVEL_ALWAYS,
+            "It looks like xrdp (pid=%d) is already running.", pid);
         LOG(LOG_LEVEL_ALWAYS, "If not, delete %s and try again.", pid_file);
         log_end();
         g_deinit();
@@ -743,7 +794,8 @@ main(int argc, char **argv)
 
     if (daemon)
     {
-        /* delete the xrdp.pid file */
+        /* Try to delete the PID file, although if we've dropped
+         * privileges this won't be successful */
         g_file_delete(pid_file);
     }
 
