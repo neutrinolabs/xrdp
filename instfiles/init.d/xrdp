@@ -116,7 +116,7 @@ case "$1" in
         log_progress_msg $NAME
         if pidofproc -p  $PIDDIR/$NAME.pid $DAEMON  > /dev/null; then
             start-stop-daemon --stop --quiet --oknodo --pidfile $PIDDIR/$NAME.pid \
-	    --exec $DAEMON
+	    --remove-pidfile --exec $DAEMON
             value=$?
             [ $value -gt 0 ] && exitval=$value
         else

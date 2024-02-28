@@ -372,6 +372,12 @@ int      g_exit(int exit_code);
 int      g_getpid(void);
 int      g_sigterm(int pid);
 int      g_sighup(int pid);
+/*
+ * Is a particular PID active?
+ * @param pid PID to check
+ * Returns boolean
+ */
+int      g_pid_is_active(int pid);
 int      g_getuser_info_by_name(const char *username, int *uid, int *gid,
                                 char **shell, char **dir, char **gecos);
 int      g_getuser_info_by_uid(int uid, char **username, int *gid,
