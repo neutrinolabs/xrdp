@@ -127,8 +127,20 @@ User name and group to run the xrdp daemon under.
 
 After xrdp starts, it sets its UID and GID to values derived from these
 settings, so that it's running without system privilege.
+
 The \fBruntime_group\fP MUST be set to the same value as
 \fBSessionSockdirGroup\fP in \fBsesman.ini\fP if you want to run sessions.
+
+A suitable user and group can be added with a command like this (Linux):-
+
+useradd xrdp -d / -c 'xrdp daemon' -s /usr/sbin/nologin
+
+In order to establish secure connections, the xrdp daemon needs permission
+to access sensitive cryptographic files. After changing either or both
+of these values, check that xrdp has access to required files by running
+this script:-
+
+@xrdpdatadir@/xrdp-chkpriv
 
 .TP
 \fBenable_token_login\fP=\fI[true|false]\fP
