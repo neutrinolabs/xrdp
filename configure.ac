@@ -646,6 +646,7 @@ AC_CONFIG_FILES([
   tools/Makefile
   tools/devel/Makefile
   tools/devel/tcp_proxy/Makefile
+  tools/chkpriv/Makefile
   vnc/Makefile
   xrdpapi/Makefile
   xrdp/Makefile

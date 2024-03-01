@@ -1,0 +1,205 @@
+#!/bin/sh
+#
+# xrdp: A Remote Desktop Protocol server.
+#
+# Copyright (C) Jay Sorg and contributors 2004-2024
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Program to check permissions for xrdp when running in a non-privileged
+# mode
+
+# Change these if they do not match your installation
+CONF_DIR=/etc/xrdp
+XRDP_INI="$CONF_DIR"/xrdp.ini
+SESMAN_INI="$CONF_DIR"/sesman.ini
+RSAKEYS_INI="$CONF_DIR"/rsakeys.ini
+DROPPRIV=@pkglibexecdir@/xrdp-droppriv
+
+# -----------------------------------------------------------------------------
+# G E T   I N I   V A L U E
+#
+# Gets a value from an ini file.
+#
+# Params [ini_file] [key]
+# -----------------------------------------------------------------------------
+GetIniValue()
+{
+    # Look for a line matching 'key=' with optional whitespace
+    # either side of the key. When we find one, strip everything
+    # up to and including the first '=', print it, and quit
+    #
+    # This doesn't take sections into account
+    sed -n -e '/^ *'"$2"' *=/{
+        s/^[^=]*=//p
+        q
+    }' "$1"
+}
+
+# -----------------------------------------------------------------------------
+# M A I N
+# -----------------------------------------------------------------------------
+
+if [ "$(id -u)" != 0 ]; then
+    echo "** Must run this script as root" >&2
+    exit 1
+fi
+
+OS=$(uname)
+case "$OS" in
+    FreeBSD | Linux) ;;
+    *) echo "Unsupported operating system $OS" >&2
+       exit 1
+esac
+
+errors=0
+
+runtime_user=$(GetIniValue "$XRDP_INI" runtime_user)
+runtime_group=$(GetIniValue "$XRDP_INI" runtime_group)
+certificate=$(GetIniValue "$XRDP_INI" certificate)
+key_file=$(GetIniValue "$XRDP_INI" key_file)
+SessionSockdirGroup=$(GetIniValue "$SESMAN_INI" SessionSockdirGroup)
+
+case "$certificate" in
+    '') certificate="$CONF_DIR"/cert.pem ;;
+    /*) ;;
+    *) certificate="$CONF_DIR"/"$certificate"
+esac
+
+case "$key_file" in
+    '') key_file="$CONF_DIR"/key.pem ;;
+    /*) ;;
+    *) key_file="$CONF_DIR"/"$key_file"
+esac
+
+echo "Settings"
+echo " - [xrdp.ini]   runtime_user        : $runtime_user"
+echo " - [xrdp.ini]   runtime_group       : $runtime_group"
+echo " - [xrdp.ini]   certificate         : $certificate"
+echo " - [xrdp.ini]   key_file            : $key_file"
+echo " - [sesman.ini] SessionSockdirGroup : $SessionSockdirGroup"
+echo
+
+# Basic checks on runtime user/group
+if [ -z "$runtime_user" ] && [ -z "$runtime_group" ]; then
+    echo "-Info- This system is not configured to run xrdp without privilege"
+    exit 0
+fi
+
+if [ -z "$runtime_user" ] || [ -z "$runtime_group" ]; then
+    echo "-Error- Both 'runtime_user' and 'runtime_group' must be set"
+    errors=$(( errors + 1 ))
+    exit 1
+fi
+
+if getent passwd "$runtime_user" >/dev/null ; then
+    echo "-Info- runtime_user '$runtime_user' appears to exist"
+else
+    echo "-Error- runtime_user '$runtime_user' does not exist"
+    errors=$(( errors + 1 ))
+fi
+
+GID=
+if getent group "$runtime_group" >/dev/null ; then
+    echo "-Info- runtime_group '$runtime_group' appears to exist"
+    GID=$(getent group xrdp | cut -d: -f3)
+else
+    echo "-Error- runtime_group '$runtime_group' does not exist"
+    errors=$(( errors + 1 ))
+fi
+
+# Groups agree between sesman and xrdp?
+if [ "$runtime_user" = "$SessionSockdirGroup" ]; then
+    echo "-Info- xrdp.ini and sesman.ini agree on group ownbership"
+else
+    echo "-Error- xrdp.ini and sesman.ini do not agree on group ownbership"
+    errors=$(( errors + 1 ))
+fi
+
+# Check we can access rsakeys.ini
+#
+# This is our file, so we can be completely prescriptive about
+# the permissions
+if [ -e $RSAKEYS_INI ]; then
+    # Only check if we have a GID
+    if [ -n "$GID" ]; then
+        # Get the permissions, UID and GID in $1..$3
+        case "$OS" in
+            FreeBSD)
+                # shellcheck disable=SC2046
+                set -- $(stat -f "%Lp %u %g" $RSAKEYS_INI)
+                ;;
+            *)
+                # shellcheck disable=SC2046
+                set -- $(stat -c "%a %u %g" $RSAKEYS_INI)
+        esac
+        if [ "$1/$2/$3" = "640/0/$GID" ]; then
+            echo "-Info- $RSAKEYS_INI has correct permissions"
+        else
+            if [ "$1" != 640 ]; then
+                echo "-Error- $RSAKEYS_INI should have permissions  -rw-r-----"
+                errors=$(( errors + 1 ))
+            fi
+            if [ "$2" != 0 ]; then
+                echo "-Error- $RSAKEYS_INI should be owned by root"
+                errors=$(( errors + 1 ))
+            fi
+            if [ "$3" != "$GID" ]; then
+                echo "-Error- $RSAKEYS_INI should be in the $runtime_group group"
+                errors=$(( errors + 1 ))
+            fi
+        fi
+    fi
+else
+    echo "-Error- $RSAKEYS_INI does not exist"
+    errors=$(( errors + 1 ))
+fi
+
+# Are cert and key readable by the user?
+#
+# These aren't necessarily our files, so we can't be prescriptive about
+# privileges.  On Debian for example, we might be using the 'ssl-cert'
+# group to obtain access to /etc/ssl/private/ssl-cert-snakeoil.key
+if ! [ -e $certificate ]; then
+    echo "-Error- $certificate does not exist"
+    errors=$(( errors + 1 ))
+elif $DROPPRIV "$runtime_user" "$runtime_group" sh -c '[ -r '"$certificate"' ]'
+then
+    echo "-Info- $certificate is readable by $runtime_user:$runtime_group"
+else
+    echo "-Error- $certificate is not readable by $runtime_user:$runtime_group"
+    errors=$(( errors + 1 ))
+fi
+
+if ! [ -e $key_file ]; then
+    echo "-Error- $key_file does not exist"
+    errors=$(( errors + 1 ))
+elif $DROPPRIV "$runtime_user" "$runtime_group" sh -c '[ -r '"$key_file"' ]'
+    sh -c '[ -r '"$key_file"' ]'
+then
+    echo "-Info- $key_file is readable by $runtime_user:$runtime_group"
+else
+    echo "-Error- $key_file is not readable by $runtime_user:$runtime_group"
+    errors=$(( errors + 1 ))
+fi
+
+echo
+if [ $errors -eq 0 ]; then
+    echo "-Summary- Permissions appear to be correct to run xrdp unprivileged"
+    status=0
+else
+    echo "-Summary- $errors error(s) found. Please correct these and try again"
+    status=1
+fi
+
+exit $status
