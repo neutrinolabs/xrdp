@@ -86,6 +86,40 @@ xrdp_enc_data_done_destructor(void *item, void *closure)
 }
 
 /*****************************************************************************/
+static unsigned int
+get_largest_monitor_pixels(struct xrdp_mm *mm)
+{
+    unsigned int max_pixels;
+
+    struct xrdp_client_info *client_info = mm->wm->client_info;
+    struct display_size_description *display_sizes;
+    display_sizes = &client_info->display_sizes;
+
+    if (display_sizes->monitorCount < 1)
+    {
+        max_pixels = display_sizes->session_width *
+                     display_sizes->session_height;
+    }
+    else
+    {
+        max_pixels = 0;
+        struct monitor_info *minfo = display_sizes->minfo;
+        unsigned int i;
+        for (i = 0 ; i < display_sizes->monitorCount; ++i)
+        {
+            unsigned int pixels = (minfo[i].right + 1) - minfo[i].left;
+            pixels *= (minfo[i].bottom + 1) - minfo[i].top;
+            if (pixels > max_pixels)
+            {
+                max_pixels = pixels;
+            }
+        }
+    }
+
+    return max_pixels;
+}
+
+/*****************************************************************************/
 struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm)
 {
@@ -189,9 +223,12 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     self->xrdp_encoder_term = g_create_wait_obj(buf);
     if (client_info->gfx)
     {
-        // Magic numbers... Why?
+        // Assume compressor needs to cope with largest monitor with
+        // ineffective compression
         self->frames_in_flight = 2;
-        self->max_compressed_bytes = 3145728;
+        self->max_compressed_bytes = get_largest_monitor_pixels(mm) * 4;
+        LOG_DEVEL(LOG_LEVEL_INFO, "Using %d max_compressed_bytes for encoder",
+                  self->max_compressed_bytes);
     }
     else
     {
