@@ -392,8 +392,11 @@ xrdp_egfx_send_frame_start(struct xrdp_egfx *egfx, int frame_id, int timestamp)
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_frame_start:");
     s = xrdp_egfx_frame_start(egfx->bulk, frame_id, timestamp);
     error = xrdp_egfx_send_s(egfx, s);
-    LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_send_frame_start: xrdp_egfx_send_s "
-        "error %d", error);
+    if (error != 0)
+    {
+        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_send_frame_start: xrdp_egfx_send_s "
+            "error %d", error);
+    }
     free_stream(s);
     return error;
 }
@@ -434,8 +437,11 @@ xrdp_egfx_send_frame_end(struct xrdp_egfx *egfx, int frame_id)
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_frame_end:");
     s = xrdp_egfx_frame_end(egfx->bulk, frame_id);
     error = xrdp_egfx_send_s(egfx, s);
-    LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_send_frame_end: xrdp_egfx_send_s "
-        "error %d", error);
+    if (error != 0)
+    {
+        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_send_frame_end: xrdp_egfx_send_s "
+            "error %d", error);
+    }
     free_stream(s);
     return error;
 }
@@ -769,7 +775,7 @@ xrdp_egfx_process_frame_ack(struct xrdp_egfx *egfx, struct stream *s)
     in_uint32_le(s, queueDepth);
     in_uint32_le(s, intframeId);
     in_uint32_le(s, totalFramesDecoded);
-    LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process_frame_ack: queueDepth %d"
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process_frame_ack: queueDepth %d"
         " intframeId %d totalFramesDecoded %d",
         queueDepth, intframeId, totalFramesDecoded);
     if (egfx->frame_ack != NULL)
@@ -869,7 +875,7 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
         in_uint16_le(s, flags);
         in_uint32_le(s, pduLength);
         s->end = holdp + pduLength;
-        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process: cmdId 0x%x flags %d"
+        LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process: cmdId 0x%x flags %d"
             " pduLength %d", cmdId, flags, pduLength);
         if (pduLength < 8)
         {
