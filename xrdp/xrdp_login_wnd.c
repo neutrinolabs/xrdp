@@ -1312,8 +1312,6 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     LOG(LOG_LEVEL_DEBUG, "tcp_keepalive:           %d", globals->tcp_keepalive);
     LOG(LOG_LEVEL_DEBUG, "tcp_send_buffer_bytes:   %d", globals->tcp_send_buffer_bytes);
     LOG(LOG_LEVEL_DEBUG, "tcp_recv_buffer_bytes:   %d", globals->tcp_recv_buffer_bytes);
-    LOG(LOG_LEVEL_DEBUG, "new_cursors:             %d", globals->new_cursors);
-    LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
 
     LOG(LOG_LEVEL_DEBUG, "grey:                    %d", globals->grey);
     LOG(LOG_LEVEL_DEBUG, "black:                   %d", globals->black);
