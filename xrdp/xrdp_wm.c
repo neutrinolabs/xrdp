@@ -30,6 +30,54 @@
 #include "string_calls.h"
 
 /*****************************************************************************/
+static void
+xrdp_wm_load_channel_config(struct xrdp_wm *self)
+{
+    struct list *names = list_create();
+    names->auto_free = 1;
+    struct list *values = list_create();
+    values->auto_free = 1;
+
+    if (file_by_name_read_section(self->session->xrdp_ini,
+                                  "Channels", names, values) == 0)
+    {
+        int chan_id;
+        int chan_count = libxrdp_get_channel_count(self->session);
+        const char *disabled_str = NULL;
+
+        for (chan_id = 0 ; chan_id < chan_count ; ++chan_id)
+        {
+            char chan_name[16];
+            if (libxrdp_query_channel(self->session, chan_id, chan_name,
+                                      NULL) == 0)
+            {
+                int disabled = 1; /* Channels disabled if not found */
+                int index;
+
+                for (index = 0; index < names->count; index++)
+                {
+                    const char *q = (const char *)list_get_item(names, index);
+                    const char *r = (const char *)list_get_item(values, index);
+                    if (g_strcasecmp(q, chan_name) == 0)
+                    {
+                        disabled = !g_text2bool(r);
+                        break;
+                    }
+                }
+                disabled_str = (disabled) ? "disabled" : "enabled";
+                LOG(LOG_LEVEL_DEBUG, "xrdp_wm_load_channel_config: "
+                    "channel %s channel id %d is %s",
+                    chan_name, chan_id, disabled_str);
+
+                libxrdp_disable_channel(self->session, chan_id, disabled);
+            }
+        }
+    }
+    list_delete(names);
+    list_delete(values);
+}
+
+/*****************************************************************************/
 struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
                struct xrdp_client_info *client_info)
@@ -68,6 +116,23 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     /* to store configuration from xrdp.ini */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
+
+    /* Load the channel config so libxrdp can check whether
+       drdynvc is enabled or not */
+    xrdp_wm_load_channel_config(self);
+
+    // Start drdynvc if available.
+    if (libxrdp_drdynvc_start(self->session) == 0)
+    {
+        // drdynvc is started. callback() will
+        // be notified when capabilities are received.
+    }
+    else if (self->client_info->gfx)
+    {
+        LOG(LOG_LEVEL_WARNING, "Disabling GFX as '"
+            DRDYNVC_SVC_CHANNEL_NAME "' isn't available");
+        self->client_info->gfx = 0;
+    }
 
     return self;
 }
@@ -564,9 +629,7 @@ xrdp_wm_init(struct xrdp_wm *self)
 {
     int fd;
     int index;
-    struct list *names;
-    struct list *values;
-    char *q;
+    const char *q;
     const char *r;
     char param[256];
     char default_section_name[256];
@@ -590,48 +653,6 @@ xrdp_wm_init(struct xrdp_wm *self)
     /* Scale the login screen values */
     xrdp_login_wnd_scale_config_values(self);
 
-    /* global channels allow */
-    names = list_create();
-    names->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-    if (file_by_name_read_section(self->session->xrdp_ini,
-                                  "Channels", names, values) == 0)
-    {
-        int chan_id;
-        int chan_count = libxrdp_get_channel_count(self->session);
-        const char *disabled_str = NULL;
-
-        for (chan_id = 0 ; chan_id < chan_count ; ++chan_id)
-        {
-            char chan_name[16];
-            if (libxrdp_query_channel(self->session, chan_id, chan_name,
-                                      NULL) == 0)
-            {
-                int disabled = 1; /* Channels disabled if not found */
-
-                for (index = 0; index < names->count; index++)
-                {
-                    q = (char *) list_get_item(names, index);
-                    if (g_strcasecmp(q, chan_name) == 0)
-                    {
-                        r = (const char *) list_get_item(values, index);
-                        disabled = !g_text2bool(r);
-                        break;
-                    }
-                }
-                disabled_str = (disabled) ? "disabled" : "enabled";
-                LOG(LOG_LEVEL_DEBUG, "xrdp_wm_init: "
-                    "channel %s channel id %d is %s",
-                    chan_name, chan_id, disabled_str);
-
-                libxrdp_disable_channel(self->session, chan_id, disabled);
-            }
-        }
-    }
-    list_delete(names);
-    list_delete(values);
-
     xrdp_wm_load_static_colors_plus(self, autorun_name);
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
@@ -645,9 +666,9 @@ xrdp_wm_init(struct xrdp_wm *self)
         fd = g_file_open_ro(self->session->xrdp_ini);
         if (fd != -1)
         {
-            names = list_create();
+            struct list *names = list_create();
             names->auto_free = 1;
-            values = list_create();
+            struct list *values = list_create();
             values->auto_free = 1;
 
             /* pick up the first section name except for 'globals', 'Logging', 'channels'
@@ -656,7 +677,7 @@ xrdp_wm_init(struct xrdp_wm *self)
             default_section_name[0] = '\0';
             for (index = 0; index < names->count; index++)
             {
-                q = (char *)list_get_item(names, index);
+                q = (const char *)list_get_item(names, index);
                 if ((g_strncasecmp("globals", q, 8) != 0) &&
                         (g_strncasecmp("Logging", q, 8) != 0) &&
                         (g_strncasecmp("LoggingPerLogger", q, 17) != 0) &&
@@ -714,8 +735,8 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 for (index = 0; index < names->count; index++)
                 {
-                    q = (char *)list_get_item(names, index);
-                    r = (char *)list_get_item(values, index);
+                    q = (const char *)list_get_item(names, index);
+                    r = (const char *)list_get_item(values, index);
 
                     if (g_strncasecmp("password", q, 255) == 0)
                     {
@@ -2031,7 +2052,6 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
                                     LOWORD(param3), HIWORD(param3));
         case 0x555a:
             // "yeah, up_and_running"
-            libxrdp_drdynvc_start(wm->session);
             xrdp_mm_up_and_running(wm->mm);
             break;
     }

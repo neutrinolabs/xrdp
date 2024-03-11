@@ -782,7 +782,19 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
                 }
             }
         }
-        if (dci != NULL)
+        if (dci == NULL)
+        {
+            LOG(LOG_LEVEL_WARNING, "Static channel '%s' not found.",
+                DRDYNVC_SVC_CHANNEL_NAME);
+            rv = -1;
+        }
+        else if (dci->disabled)
+        {
+            LOG(LOG_LEVEL_WARNING, "Static channel '%s' is disabled.",
+                DRDYNVC_SVC_CHANNEL_NAME);
+            rv = -1;
+        }
+        else
         {
             self->drdynvc_channel_id = (dci->chanid - MCS_GLOBAL_CHANNEL) - 1;
             LOG_DEVEL(LOG_LEVEL_DEBUG, DRDYNVC_SVC_CHANNEL_NAME
@@ -790,13 +802,11 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
                       self->drdynvc_channel_id);
             xrdp_channel_drdynvc_send_capability_request(self);
         }
-        else
-        {
-            LOG(LOG_LEVEL_WARNING,
-                "Static channel '%s' not found. "
-                "Channel not initialized", DRDYNVC_SVC_CHANNEL_NAME);
-            rv = -1;
-        }
+    }
+
+    if (rv != 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "Dynamic channels will not be available");
     }
     return rv;
 }
