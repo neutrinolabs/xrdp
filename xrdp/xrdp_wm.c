@@ -2031,6 +2031,7 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
                                     LOWORD(param3), HIWORD(param3));
         case 0x555a:
             // "yeah, up_and_running"
+            libxrdp_drdynvc_start(wm->session);
             xrdp_mm_up_and_running(wm->mm);
             break;
     }

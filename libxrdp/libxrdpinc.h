@@ -241,6 +241,8 @@ int
 libxrdp_disable_channel(struct xrdp_session *session, int channel_id,
                         int is_disabled);
 int
+libxrdp_drdynvc_start(struct xrdp_session *session);
+int
 libxrdp_drdynvc_open(struct xrdp_session *session, const char *name,
                      int flags, struct xrdp_drdynvc_procs *procs,
                      int *chan_id);
