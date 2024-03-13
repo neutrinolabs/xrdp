@@ -55,7 +55,6 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *ip, const char *port);
 static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
 
-
 /*****************************************************************************/
 struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner)

@@ -32,6 +32,13 @@
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
 
+/* Code values used in 'xrdp_mm->code=' settings */
+#define XVNC_SESSION_CODE 0
+#define XORG_SESSION_CODE 20
+
+/* To check whether touch events has been implemented on session type 'mm' */
+#define XRDP_MM_IMPLEMENTS_TOUCH(mm) ((mm)->code != XVNC_SESSION_CODE)
+
 struct source_info;
 
 /* lib */
