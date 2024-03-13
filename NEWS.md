@@ -1,3 +1,19 @@
+# Release notes for xrdp v0.9.25.1 (2024/03/13)
+
+This release fixes a bug that occurred in v0.9.25 where scrolling did not work in the Xvnc backend.
+
+Thanks to @bsmojver reporting the issue and testing!
+
+## General announcements
+_This is the last v0.9.x version which is released regularly. v0.9.x will be maintained for a while but less actively. New releases will happen only when severe security vulnerabilities or critical bugs are found._
+
+We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Bug fixes
+*  Mouse wheel scrolling in Xvnc session no longer works in 0.9.25 (#2993 #2994)
+
+-----------------------
+
 # Release notes for xrdp v0.9.25 (2024/03/11)
 * Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
 
