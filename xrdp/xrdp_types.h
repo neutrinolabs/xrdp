@@ -34,7 +34,6 @@
 
 /* Code values used in 'xrdp_mm->code=' settings */
 #define XVNC_SESSION_CODE 0
-#define XRDP_SESSION_CODE 10
 #define XORG_SESSION_CODE 20
 
 /* To check whether touch events has been implemented on session type 'mm' */
