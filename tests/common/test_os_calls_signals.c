@@ -108,6 +108,9 @@ START_TEST(test_g_signal_child_stop_1)
     pid = g_fork();
     if (pid == 0)
     {
+        // Before raising the signal, change directory to a non-writeable
+        // one to avoid generating a corefile.
+        g_set_current_dir("/");
         raise(SIGSEGV);
     }
     ck_assert_int_ne(pid, 0);
