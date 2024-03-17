@@ -1408,6 +1408,23 @@ libxrdp_disable_channel(struct xrdp_session *session, int channel_id,
 
 /*****************************************************************************/
 int
+libxrdp_drdynvc_start(struct xrdp_session *session)
+{
+    struct xrdp_rdp *rdp;
+    struct xrdp_sec *sec;
+    struct xrdp_channel *chan;
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_drdynvc_start:");
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    sec = rdp->sec_layer;
+    chan = sec->chan_layer;
+    return xrdp_channel_drdynvc_start(chan);
+}
+
+
+/*****************************************************************************/
+int
 libxrdp_drdynvc_open(struct xrdp_session *session, const char *name,
                      int flags, struct xrdp_drdynvc_procs *procs,
                      int *chan_id)
