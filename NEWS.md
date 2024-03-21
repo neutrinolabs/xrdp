@@ -1,3 +1,47 @@
+# Release notes for xrdp v0.9.25.1 (2024/03/13)
+
+This release fixes a bug that occurred in v0.9.25 where scrolling did not work in the Xvnc backend.
+
+Thanks to @bsmojver reporting the issue and testing!
+
+## General announcements
+_This is the last v0.9.x version which is released regularly. v0.9.x will be maintained for a while but less actively. New releases will happen only when severe security vulnerabilities or critical bugs are found._
+
+We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Bug fixes
+*  Mouse wheel scrolling in Xvnc session no longer works in 0.9.25 (#2993 #2994)
+
+-----------------------
+
+# Release notes for xrdp v0.9.25 (2024/03/11)
+* Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
+
+## General announcements
+
+_This is the last v0.9.x version which is released regularly. v0.9.x will be maintained for a while but less actively. New releases will happen only when severe security vulnerabilities or critical bugs are found._
+
+We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Security fixes
+No new security fixes in this release.
+
+## Bug fixes
+* Backport touchpad inertial scrolling (#2364  #2424 #2948).
+
+## New features
+* If the client announces support for the Image RemoteFX codec it is logged (back-port of #2946)
+
+## Internal changes
+* FreeBSD CI version bumped to 13.2 from 12.4 (#2897)
+* Some test timeouts have been increased for slow CI machines (#2903)
+
+## Known issues
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.24 (2023/12/30)
 * Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
 
