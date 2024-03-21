@@ -205,7 +205,6 @@ drdynvc=true
 cliprdr=true
 rail=true
 xrdpvr=true
-tcutils=true
 
 ; for debugging xrdp, in section xrdp1, change port=-1 to this:
 #port=/tmp/.xrdp/xrdp_display_10

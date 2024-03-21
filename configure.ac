@@ -2,6 +2,7 @@
 
 AC_PREREQ(2.65)
 AC_INIT([xrdp], [0.9.25.1], [xrdp-devel@googlegroups.com])
+AC_DEFINE([VERSION_YEAR], 2024, [Copyright year])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
