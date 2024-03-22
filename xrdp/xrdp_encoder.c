@@ -206,7 +206,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         {
             int fif = g_atoix(env_var);
             if (fif >= MIN_XRDP_GFX_FRAMES_IN_FLIGHT &&
-                fif <= MAX_XRDP_GFX_FRAMES_IN_FLIGHT)
+                    fif <= MAX_XRDP_GFX_FRAMES_IN_FLIGHT)
             {
                 self->frames_in_flight = fif;
                 LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: "
@@ -225,7 +225,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         {
             int mcb = g_atoix(env_var);
             if (mcb >= MIN_XRDP_GFX_MAX_COMPRESSED_BYTES &&
-                mcb <= MAX_XRDP_GFX_MAX_COMPRESSED_BYTES)
+                    mcb <= MAX_XRDP_GFX_MAX_COMPRESSED_BYTES)
             {
                 self->max_compressed_bytes = mcb;
                 LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: "
