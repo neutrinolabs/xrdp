@@ -164,6 +164,10 @@ AC_ARG_ENABLE(mp3lame, AS_HELP_STRING([--enable-mp3lame],
               [Build lame mp3(audio codec) (default: no)]),
               [], [enable_mp3lame=no])
 AM_CONDITIONAL(XRDP_MP3LAME, [test x$enable_mp3lame = xyes])
+AC_ARG_ENABLE(ibus, AS_HELP_STRING([--enable-ibus],
+              [Allow unicode input via IBus) (default: no)]),
+              [], [enable_ibus=no])
+AM_CONDITIONAL(XRDP_IBUS, [test x$enable_ibus = xyes])
 AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [Use pixman library (default: no)]),
               [], [enable_pixman=no])
@@ -471,6 +475,13 @@ then
     [AC_MSG_ERROR([please install libmp3lame-dev or lamemp3-devel])])
 fi
 
+# checking for ibus includes
+if test "x$enable_ibus" = "xyes"
+then
+  PKG_CHECK_MODULES([IBUS], [ibus-1.0 >= 1.5], [],
+    [AC_MSG_ERROR([please install libibus-1.0-dev or ibus-devel])])
+fi
+
 AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(PIXMAN, pixman-1 >= 0.1.0)] )
 
 # checking for TurboJPEG
@@ -645,6 +656,7 @@ echo "  fuse                    $enable_fuse"
 echo "  ipv6                    $enable_ipv6"
 echo "  ipv6only                $enable_ipv6only"
 echo "  vsock                   $enable_vsock"
+echo "  ibus                    $enable_ibus"
 echo "  auth mechanism          $auth_mech"
 echo "  rdpsndaudin             $enable_rdpsndaudin"
 echo "  utmp support            $enable_utmp"

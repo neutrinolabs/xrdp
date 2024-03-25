@@ -1678,6 +1678,18 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 static int
 xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
 {
+#ifdef XRDP_IBUS
+    // Test code for ibus Unicode forwarding
+    if (self->mm->chan_trans != NULL &&
+            self->mm->chan_trans->status == TRANS_STATUS_UP)
+    {
+        xrdp_mm_send_unicode_to_chansrv(self->mm,
+                                        (device_flags & KBD_FLAG_UP) == 0,
+                                        unicode);
+        return 0;
+    }
+#endif
+
     int index;
 
     for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
