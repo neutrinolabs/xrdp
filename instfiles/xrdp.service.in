@@ -10,9 +10,7 @@ EnvironmentFile=-@sysconfdir@/sysconfig/xrdp
 EnvironmentFile=-@sysconfdir@/default/xrdp
 ExecStart=@sbindir@/xrdp $XRDP_OPTIONS --nodaemon
 SystemCallArchitectures=native
-SystemCallFilter=@basic-io @file-system @io-event @ipc @network-io @process
-SystemCallFilter=@signal @system-service ioctl madvise sysinfo uname
-SystemCallErrorNumber=EPERM
+SystemCallFilter=@system-service
 
 [Install]
 WantedBy=multi-user.target
