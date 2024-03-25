@@ -38,6 +38,10 @@ AM_CPPFLAGS += -I$(top_srcdir)/libpainter/include
 XRDP_EXTRA_LIBS += $(top_builddir)/libpainter/src/.libs/libpainter.a
 endif
 
+if XRDP_IBUS
+AM_CPPFLAGS += -DXRDP_IBUS
+endif
+
 sbin_PROGRAMS = \
   xrdp
 

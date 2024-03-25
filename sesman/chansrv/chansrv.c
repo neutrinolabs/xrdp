@@ -824,6 +824,31 @@ chansrv_drdynvc_send_data(int chan_id, const char *data, int data_bytes)
 }
 
 /*****************************************************************************/
+#ifdef XRDP_IBUS
+static int
+process_message_unicode_key_press(struct stream *s)
+{
+    int rv = 0;
+    int key_down;
+    char32_t unicode_char;
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_unicode_keypress:");
+    if (!s_check_rem(s, 8))
+    {
+        rv = 1;
+    }
+    else
+    {
+        in_uint32_le(s, key_down);
+        in_uint32_le(s, unicode_char);
+        LOG(LOG_LEVEL_INFO, "Unicode char 0x%08x received down=%d",
+            unicode_char, key_down);
+    }
+    return rv;
+}
+#endif // XRDP_IBUS
+
+/*****************************************************************************/
 /* returns error */
 static int
 process_message(void)
@@ -875,6 +900,11 @@ process_message(void)
             case 19: /* drdynvc data */
                 rv = process_message_drdynvc_data(s);
                 break;
+#ifdef XRDP_IBUS
+            case 21: /* Unicode key press */
+                rv = process_message_unicode_key_press(s);
+                break;
+#endif
             default:
                 LOG_DEVEL(LOG_LEVEL_ERROR, "process_message: unknown msg %d", id);
                 break;

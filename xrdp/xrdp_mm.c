@@ -2103,6 +2103,26 @@ xrdp_mm_up_and_running(struct xrdp_mm *self)
     return 0;
 }
 
+/******************************************************************************/
+int
+xrdp_mm_send_unicode_to_chansrv(struct xrdp_mm *self,
+                                int key_down,
+                                char32_t unicode)
+{
+    struct stream *s = trans_get_out_s(self->chan_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 4 + 4 + 4);
+    out_uint32_le(s, 21); /* msg id */
+    out_uint32_le(s, key_down);
+    out_uint32_le(s, unicode);
+    s_mark_end(s);
+    return trans_write_copy(self->chan_trans);
+}
+
 /*****************************************************************************/
 /* open response from client going to channel server */
 static int
