@@ -547,6 +547,9 @@ struct xrdp_wm
     int caps_lock;
     int scroll_lock;
     int num_lock;
+    /* Unicode input */
+    int last_high_surrogate_key_up;
+    int last_high_surrogate_key_down;
     /* client info */
     struct xrdp_client_info *client_info;
     /* session log */

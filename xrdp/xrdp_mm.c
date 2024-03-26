@@ -2115,8 +2115,9 @@ xrdp_mm_send_unicode_to_chansrv(struct xrdp_mm *self,
         return 1;
     }
     out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 4 + 4 + 4);
+    out_uint32_le(s, 24); /* size */
     out_uint32_le(s, 21); /* msg id */
+    out_uint32_le(s, 16); /* size */
     out_uint32_le(s, key_down);
     out_uint32_le(s, unicode);
     s_mark_end(s);
