@@ -194,13 +194,14 @@ xrdp_process_main_loop(struct xrdp_process *self);
 
 /* xrdp_listen.c */
 struct xrdp_listen *
-xrdp_listen_create(void);
+xrdp_listen_create(struct xrdp_startup_params *startup_params);
+int
+xrdp_listen_init(struct xrdp_listen *self);
 void
 xrdp_listen_delete(struct xrdp_listen *self);
 int
 xrdp_listen_main_loop(struct xrdp_listen *self);
-int
-xrdp_listen_test(struct xrdp_startup_params *startup_params);
+
 
 /* xrdp_region.c */
 struct xrdp_region *

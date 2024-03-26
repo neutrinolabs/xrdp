@@ -338,6 +338,7 @@ void     g_signal_pipe(void (*func)(int));
 void     g_signal_usr1(void (*func)(int));
 int      g_fork(void);
 int      g_setgid(int pid);
+int      g_drop_privileges(const char *user, const char *group);
 int      g_initgroups(const char *user);
 int      g_getuid(void);
 int      g_getgid(void);
@@ -371,6 +372,12 @@ int      g_exit(int exit_code);
 int      g_getpid(void);
 int      g_sigterm(int pid);
 int      g_sighup(int pid);
+/*
+ * Is a particular PID active?
+ * @param pid PID to check
+ * Returns boolean
+ */
+int      g_pid_is_active(int pid);
 int      g_getuser_info_by_name(const char *username, int *uid, int *gid,
                                 char **shell, char **dir, char **gecos);
 int      g_getuser_info_by_uid(int uid, char **username, int *gid,

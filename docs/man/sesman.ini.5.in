@@ -315,7 +315,8 @@ transitions between confinement domains.
 .TP
 \fBSessionSockdirGroup\fR=\fIgroup\fR
 Sets the group owner of the directories containing session sockets. This
-is normally the GID of the xrdp process so xrdp can connect to user sessions.
+MUST be the same as runtime_group in xrdp.ini, or xrdp will not
+be able to connect to any sessions.
 
 .SH "X11 SERVER"
 Following parameters can be used in the \fB[Xvnc]\fR and

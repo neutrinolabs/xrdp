@@ -241,6 +241,127 @@ xrdp_process_params(int argc, char **argv,
 }
 
 /*****************************************************************************/
+/**
+ *
+ * @brief  Read additional startup parameters from xrdp.ini
+ *
+ * @param  [in,out] startup parameters from the command line
+ * @return 0 on success
+ *
+ */
+static int
+read_xrdp_ini_startup_params(struct xrdp_startup_params *startup_params)
+{
+    int rv = 0;
+    int fd;
+    int index;
+    int port_override;
+    int fork_override;
+    const char *name;
+    const char *val;
+    struct list *names;
+    struct list *values;
+
+    port_override = startup_params->port[0] != 0;
+    fork_override = startup_params->fork;
+    names = list_create();
+    names->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+
+    fd = g_file_open_ro(startup_params->xrdp_ini);
+    if (fd < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't open %s [%s]", startup_params->xrdp_ini,
+            g_get_strerror());
+        rv = 1;
+    }
+    else if (file_read_section(fd, "globals", names, values) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't read [Globals] from %s",
+            startup_params->xrdp_ini);
+        rv = 1;
+    }
+    else
+    {
+        for (index = 0; index < names->count; index++)
+        {
+            name = (const char *)list_get_item(names, index);
+            val = (const char *)list_get_item(values, index);
+            if (name == 0 || val == 0)
+            {
+                continue;
+            }
+
+            if (g_strcasecmp(name, "port") == 0)
+            {
+                if (port_override == 0)
+                {
+                    g_strncpy(startup_params->port, val,
+                              sizeof(startup_params->port) - 1);
+                }
+            }
+
+            else if (g_strcasecmp(name, "fork") == 0)
+            {
+                if (fork_override == 0)
+                {
+                    startup_params->fork = g_text2bool(val);
+                }
+            }
+
+            else if (g_strcasecmp(name, "tcp_nodelay") == 0)
+            {
+                startup_params->tcp_nodelay = g_text2bool(val);
+            }
+
+            else if (g_strcasecmp(name, "tcp_keepalive") == 0)
+            {
+                startup_params->tcp_keepalive = g_text2bool(val);
+            }
+
+            else if (g_strcasecmp(name, "tcp_send_buffer_bytes") == 0)
+            {
+                startup_params->tcp_send_buffer_bytes = g_atoi(val);
+            }
+
+            else if (g_strcasecmp(name, "tcp_recv_buffer_bytes") == 0)
+            {
+                startup_params->tcp_recv_buffer_bytes = g_atoi(val);
+            }
+
+            else if (g_strcasecmp(name, "use_vsock") == 0)
+            {
+                startup_params->use_vsock = g_text2bool(val);
+            }
+
+            else if (g_strcasecmp(name, "runtime_user") == 0)
+            {
+                g_snprintf(startup_params->runtime_user,
+                           sizeof(startup_params->runtime_user),
+                           "%s", val);
+            }
+
+            else if (g_strcasecmp(name, "runtime_group") == 0)
+            {
+                g_snprintf(startup_params->runtime_group,
+                           sizeof(startup_params->runtime_group),
+                           "%s", val);
+            }
+        }
+    }
+
+    list_delete(names);
+    list_delete(values);
+    if (fd >= 0)
+    {
+        g_file_close(fd);
+    }
+    return rv;
+}
+
+
+/*****************************************************************************/
 /* Basic sanity checks before any forking */
 static int
 xrdp_sanity_check(void)
@@ -296,14 +417,122 @@ xrdp_sanity_check(void)
 }
 
 /*****************************************************************************/
+static int
+check_drop_privileges(struct xrdp_startup_params *startup_params)
+{
+    int rv = 1;
+    const char *user = startup_params->runtime_user;
+    const char *group = startup_params->runtime_group;
+
+    if (user[0] == '\0' && group[0] == '\0')
+    {
+        // Allow this for now
+        LOG(LOG_LEVEL_ALWAYS,
+            "You are running xrdp as root. This is not safe.");
+        rv = 0;
+    }
+    else if (user[0] == '\0' || group[0] == '\0')
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Both a runtime_user and a runtime_group MUST be specified");
+    }
+    else
+    {
+        rv = g_drop_privileges(user, group);
+        if (rv == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Switched user:group to %s:%s", user, group);
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+static int
+read_pid_file(const char *pid_file)
+{
+    int pid = -1;
+    int fd = g_file_open_ro(pid_file); /* xrdp.pid */
+    if (fd >= 0)
+    {
+        char text[32];
+        g_memset(text, 0, sizeof(text));
+        g_file_read(fd, text, sizeof(text) - 1);
+        pid = g_atoi(text);
+        g_file_close(fd);
+    }
+
+    return pid;
+}
+
+/*****************************************************************************/
+/**
+ * Kills an active xrdp daemon
+ *
+ * It is assumed that logging is not active
+ *
+ * @param pid_file PID file
+ * @return 0 for success
+ */
+static int
+kill_daemon(const char *pid_file)
+{
+    int status = 1;
+    int pid;
+    if (g_getuid() != 0)
+    {
+        g_writeln("Must be root");
+    }
+    else if ((pid = read_pid_file(pid_file)) > 0)
+    {
+        if (!g_pid_is_active(pid))
+        {
+            g_writeln("Daemon not active");
+            status = 0;
+        }
+        else
+        {
+            g_writeln("stopping process id %d", pid);
+            int i;
+            g_sigterm(pid);
+            g_sleep(100);
+            i = 5 * 1000 / 500;
+            while (i > 0 && g_pid_is_active(pid))
+            {
+                g_sleep(500);
+                --i;
+            }
+
+            if (g_pid_is_active(pid))
+            {
+                g_writeln("Can't stop process");
+            }
+            else
+            {
+                status = 0;
+            }
+        }
+
+        if (status == 0)
+        {
+            /* delete the xrdp.pid file, as xrdp can't do this
+             * if it's running without privilege */
+            g_file_delete(pid_file);
+        }
+    }
+
+    return status;
+}
+
+/*****************************************************************************/
 int
 main(int argc, char **argv)
 {
-    int exit_status = 0;
+    int exit_status = 1;
     enum logReturns error;
     struct xrdp_startup_params startup_params = {0};
     int pid;
-    int fd;
     int daemon;
     char text[256];
     const char *pid_file = XRDP_PID_PATH "/xrdp.pid";
@@ -368,36 +597,9 @@ main(int argc, char **argv)
 
     if (startup_params.kill)
     {
-        g_writeln("stopping xrdp");
-        /* read the xrdp.pid file */
-        fd = -1;
-
-        if (g_file_exist(pid_file)) /* xrdp.pid */
-        {
-            fd = g_file_open_ro(pid_file); /* xrdp.pid */
-        }
-
-        if (fd == -1)
-        {
-            g_writeln("cannot open %s, maybe xrdp is not running", pid_file);
-        }
-        else
-        {
-            g_memset(text, 0, 32);
-            g_file_read(fd, text, 31);
-            pid = g_atoi(text);
-            g_writeln("stopping process id %d", pid);
-
-            if (pid > 0)
-            {
-                g_sigterm(pid);
-            }
-
-            g_file_close(fd);
-        }
-
+        int status = kill_daemon(pid_file);
         g_deinit();
-        g_exit(0);
+        g_exit(status);
     }
 
     /* starting logging subsystem */
@@ -428,11 +630,17 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-
-
-    if (g_file_exist(pid_file)) /* xrdp.pid */
+    if (read_xrdp_ini_startup_params(&startup_params) != 0)
     {
-        LOG(LOG_LEVEL_ALWAYS, "It looks like xrdp is already running.");
+        log_end();
+        g_deinit();
+        g_exit(1);
+    }
+
+    if ((pid = read_pid_file(pid_file)) > 0 && g_pid_is_active(pid))
+    {
+        LOG(LOG_LEVEL_ALWAYS,
+            "It looks like xrdp (pid=%d) is already running.", pid);
         LOG(LOG_LEVEL_ALWAYS, "If not, delete %s and try again.", pid_file);
         log_end();
         g_deinit();
@@ -444,14 +652,13 @@ main(int argc, char **argv)
 
     if (daemon)
     {
-
         /* make sure containing directory exists */
         g_create_path(pid_file);
 
         /* make sure we can write to pid file */
-        fd = g_file_open_rw(pid_file); /* xrdp.pid */
+        int pid_fd = g_file_open_rw(pid_file); /* xrdp.pid */
 
-        if (fd == -1)
+        if (pid_fd == -1)
         {
             LOG(LOG_LEVEL_ALWAYS,
                 "running in daemon mode with no access to pid files, quitting");
@@ -460,23 +667,14 @@ main(int argc, char **argv)
             g_exit(1);
         }
 
-        if (g_file_write(fd, "0", 1) == -1)
-        {
-            LOG(LOG_LEVEL_ALWAYS,
-                "running in daemon mode with no access to pid files, quitting");
-            log_end();
-            g_deinit();
-            g_exit(1);
-        }
+        /* Before daemonising, check we can listen.
+         * If we can't listen, exit with failure status */
+        struct xrdp_listen *xrdp_listen;
+        xrdp_listen = xrdp_listen_create(&startup_params);
+        int status = xrdp_listen_init(xrdp_listen);
+        xrdp_listen_delete(xrdp_listen);
 
-        g_file_close(fd);
-        g_file_delete(pid_file);
-    }
-
-    if (daemon)
-    {
-        /* if can't listen, exit with failure status */
-        if (xrdp_listen_test(&startup_params) != 0)
+        if (status != 0)
         {
             LOG(LOG_LEVEL_ALWAYS, "Failed to start xrdp daemon, "
                 "possibly address already in use.");
@@ -486,6 +684,7 @@ main(int argc, char **argv)
                or systemd cannot detect xrdp daemon couldn't start properly */
             g_exit(1);
         }
+
         /* start of daemonizing code */
         pid = g_fork();
 
@@ -506,21 +705,10 @@ main(int argc, char **argv)
         }
 
         g_sleep(1000);
-        /* write the pid to file */
-        pid = g_getpid();
-        fd = g_file_open_rw(pid_file); /* xrdp.pid */
-
-        if (fd == -1)
-        {
-            LOG(LOG_LEVEL_WARNING, "Can't open %s for writing [%s]",
-                pid_file, g_get_strerror());
-        }
-        else
-        {
-            g_sprintf(text, "%d", pid);
-            g_file_write(fd, text, g_strlen(text));
-            g_file_close(fd);
-        }
+        /* write our pid to file */
+        g_sprintf(text, "%d", g_getpid());
+        g_file_write(pid_fd, text, g_strlen(text));
+        g_file_close(pid_fd);
 
         g_sleep(1000);
         g_file_close(0);
@@ -542,43 +730,51 @@ main(int argc, char **argv)
         /* end of daemonizing code */
     }
 
-    g_set_threadid(tc_get_threadid());
-    g_listen = xrdp_listen_create();
-    g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
-    g_signal_pipe(xrdp_sig_no_op);          /* SIGPIPE */
-    g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
-    g_signal_child_stop(xrdp_child);        /* SIGCHLD */
-    g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
-    g_set_sync_mutex(tc_mutex_create());
-    g_set_sync1_mutex(tc_mutex_create());
-    pid = g_getpid();
-    LOG(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
-    g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
-    g_set_term_event(g_create_wait_obj(text));
-
-    if (g_get_term() == 0)
+    g_listen = xrdp_listen_create(&startup_params);
+    if (xrdp_listen_init(g_listen) != 0)
     {
-        LOG(LOG_LEVEL_WARNING, "error creating g_term_event");
+        LOG(LOG_LEVEL_ALWAYS, "Failed to start xrdp daemon, "
+            "possibly address already in use.");
+    }
+    else if (check_drop_privileges(&startup_params) == 0)
+    {
+        g_set_threadid(tc_get_threadid());
+        g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
+        g_signal_pipe(xrdp_sig_no_op);          /* SIGPIPE */
+        g_signal_terminate(xrdp_shutdown);      /* SIGTERM */
+        g_signal_child_stop(xrdp_child);        /* SIGCHLD */
+        g_signal_hang_up(xrdp_sig_no_op);       /* SIGHUP */
+        g_set_sync_mutex(tc_mutex_create());
+        g_set_sync1_mutex(tc_mutex_create());
+        pid = g_getpid();
+        LOG(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
+        g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
+        g_set_term_event(g_create_wait_obj(text));
+
+        if (g_get_term() == 0)
+        {
+            LOG(LOG_LEVEL_WARNING, "error creating g_term_event");
+        }
+
+        g_snprintf(text, 255, "xrdp_%8.8x_main_sigchld", pid);
+        g_set_sigchld_event(g_create_wait_obj(text));
+
+        if (g_get_sigchld() == 0)
+        {
+            LOG(LOG_LEVEL_WARNING, "error creating g_sigchld_event");
+        }
+
+        g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
+        g_set_sync_event(g_create_wait_obj(text));
+
+        if (g_get_sync_event() == 0)
+        {
+            LOG(LOG_LEVEL_WARNING, "error creating g_sync_event");
+        }
+
+        exit_status = xrdp_listen_main_loop(g_listen);
     }
 
-    g_snprintf(text, 255, "xrdp_%8.8x_main_sigchld", pid);
-    g_set_sigchld_event(g_create_wait_obj(text));
-
-    if (g_get_sigchld() == 0)
-    {
-        LOG(LOG_LEVEL_WARNING, "error creating g_sigchld_event");
-    }
-
-    g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
-    g_set_sync_event(g_create_wait_obj(text));
-
-    if (g_get_sync_event() == 0)
-    {
-        LOG(LOG_LEVEL_WARNING, "error creating g_sync_event");
-    }
-
-    g_listen->startup_params = &startup_params;
-    exit_status = xrdp_listen_main_loop(g_listen);
     xrdp_listen_delete(g_listen);
 
     tc_mutex_delete(g_get_sync_mutex());
@@ -596,10 +792,10 @@ main(int argc, char **argv)
     g_delete_wait_obj(g_get_sync_event());
     g_set_sync_event(0);
 
-    /* only main process should delete pid file */
-    if (daemon && (pid == g_getpid()))
+    if (daemon)
     {
-        /* delete the xrdp.pid file */
+        /* Try to delete the PID file, although if we've dropped
+         * privileges this won't be successful */
         g_file_delete(pid_file);
     }
 
