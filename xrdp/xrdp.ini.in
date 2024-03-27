@@ -35,7 +35,10 @@ tcp_nodelay=true
 ; if the network connection disappear without close messages the connection will be closed
 tcp_keepalive=true
 
-; set tcp send/recv buffer (for experts)
+; set tcp send/recv buffer
+; These parameters are largely historic. On systems with dynamic TCP
+; buffer sizes, setting them manually will either impact performance or
+; waste memory
 #tcp_send_buffer_bytes=32768
 #tcp_recv_buffer_bytes=32768
 

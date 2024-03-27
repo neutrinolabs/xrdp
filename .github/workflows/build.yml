@@ -213,6 +213,6 @@ jobs:
       - run: sudo scripts/install_astyle_dependencies_with_apt.sh
       - run: scripts/install_astyle.sh $ASTYLE_REPO $ASTYLE_VER
       - name: Format code with astyle
-        run: scripts/run_astyle.sh
+        run: scripts/run_astyle.sh -v $ASTYLE_VER
       - name: Check code formatting
         run: git diff --exit-code

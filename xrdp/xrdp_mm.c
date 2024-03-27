@@ -3477,7 +3477,7 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                 y = enc_done->y;
                 cx = enc_done->cx;
                 cy = enc_done->cy;
-                if (!enc_done->continuation)
+                if (client_ack && !enc_done->continuation)
                 {
                     libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
                                                        enc_done->frame_id);
@@ -3489,7 +3489,7 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                                               x, y, x + cx, y + cy,
                                               32, self->encoder->codec_id,
                                               cx, cy);
-                if (enc_done->last)
+                if (client_ack && enc_done->last)
                 {
                     libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
                                                        enc_done->frame_id);

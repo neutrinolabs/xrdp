@@ -177,7 +177,9 @@ If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in th
 \fBtcp_send_buffer_bytes\fP=\fIbuffer_size\fP
 .TP
 \fBtcp_recv_buffer_bytes\fP=\fIbuffer_size\fP
-Specify send/recv buffer sizes in bytes.  The default value depends on operating system.
+Specify send/recv buffer sizes in bytes.  The default value depends on
+the operating system. It is recommended not to set these on systems with
+dynamic TCP buffer sizing
 
 .TP
 \fBtls_ciphers\fP=\fIcipher_suite\fP
