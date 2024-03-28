@@ -129,6 +129,14 @@ get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
         rv = &(keymap->keys_noshift[index]);
     }
 
+    if (ext) {
+        LOG(LOG_LEVEL_ERROR, "Debug1: %d, %d -> %d", device_flags, scan_code, index);
+
+        if (rv != 0) {
+            LOG(LOG_LEVEL_ERROR, "Debug2: %d, %d", rv->sym, rv->chr);
+        }
+    }
+
     return rv;
 }
 
