@@ -137,7 +137,7 @@ int main(int argc, char **argv)
         fprintf(outf, "[%s]\n", sections[idx]);
         e.state = states[idx];
 
-        for (i = 8; i < 137; i++) /* Keycodes */
+        for (i = 8; i < 256; i++) /* Keycodes */
         {
             if (is_evdev)
             {
@@ -148,6 +148,10 @@ int main(int argc, char **argv)
                 e.keycode = i;
             }
             nbytes = XLookupString(&e, text, 255, &ks, NULL);
+            if (ks == NoSymbol)
+            {
+                continue;
+            }
             text[nbytes] = 0;
             char_count = mbstowcs(wtext, text, 255);
             unicode = 0;

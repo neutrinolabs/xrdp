@@ -1,10 +1,28 @@
 #!/bin/sh
 
-if ! command -v setxkbmap >/dev/null
-then
-  echo "error, setxkbmap not found"
-  exit 1
+# Run the keymap extraction in a clean X session
+if [ "$1" != _IN_XVFB_SESSION_ ]; then
+    # All commands available?
+    ok=1
+    for cmd in setxkbmap xvfb-run xauth; do
+        if ! command -v $cmd >/dev/null
+        then
+          echo "Error. $cmd not found" >&2
+          ok=
+        fi
+    done
+    if [ -z "$ok" ]; then
+        exit 1
+    fi
+
+    xvfb-run --auto-servernum --server-args="-noreset" $0 _IN_XVFB_SESSION_
+    exit $?
 fi
+
+OLD_SETTINGS=$(setxkbmap -query -verbose 4 | sed "s/^\([a-z]\+\):\s*\(.*\)$/-\1 \2/;s/^-options/-option \"\" -option/;s/,/ -option /g" | xargs -d \\n)
+
+# Use evdev rules for these mappings
+setxkbmap -rules evdev
 
 # English - US 'en-us' 0x00000409
 setxkbmap -model pc104 -layout us
@@ -15,7 +33,6 @@ setxkbmap -model pc104 -layout dvorak
 ./xrdp-genkeymap ../instfiles/km-00010409.ini
 
 # English - US 'dvp' 0x19360409
-OLD_SETTINGS=$(setxkbmap -query -verbose 4 | sed "s/^\([a-z]\+\):\s*\(.*\)$/-\1 \2/;s/^-options/-option \"\" -option/;s/,/ -option /g" | xargs -d \\n)
 setxkbmap -rules xfree86 -model pc105 -layout us -variant dvp -option "" -option compose:102 -option caps:shift -option numpad:sg -option numpad:shift3 -option keypad:hex -option keypad:atm -option kpdl:semi -option lv3:ralt_alt
 ./xrdp-genkeymap ../instfiles/km-19360409.ini
 setxkbmap ${OLD_SETTINGS}
@@ -52,5 +69,5 @@ setxkbmap -model pc104 -layout se
 setxkbmap -model pc104 -layout pt
 ./xrdp-genkeymap ../instfiles/km-00000816.ini
 
-# set back to en-us
-setxkbmap -model pc104 -layout us
+# set back to entry settings
+setxkbmap ${OLD_SETTINGS}
