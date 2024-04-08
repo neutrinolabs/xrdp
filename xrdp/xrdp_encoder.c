@@ -773,7 +773,7 @@ gfx_wiretosurface2(struct xrdp_encoder *self,
         {
             break;
         }
-        LOG_DEVEL(LOG_LEVEL_ERROR, "gfx_wiretosurface2: "
+        LOG_DEVEL(LOG_LEVEL_INFO, "gfx_wiretosurface2: "
                   "tiles_compressed %d total_tiles %d tiles_written %d",
                   tiles_compressed, total_tiles,
                   tiles_written);
