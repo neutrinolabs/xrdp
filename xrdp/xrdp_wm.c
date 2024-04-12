@@ -1574,7 +1574,9 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
     int msg;
     struct xrdp_key_info *ki;
 
-    /*g_printf("count %d\n", self->key_down_list->count);*/
+    LOG_DEVEL(LOG_LEVEL_DEBUG,
+              "xrdp_wm_key: RDP scancode:0x%04x, flags: 0x%04x",
+              scan_code, device_flags);
     scan_code = scan_code % 128;
 
     if (self->popup_wnd != 0)
