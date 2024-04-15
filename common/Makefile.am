@@ -59,6 +59,8 @@ libcommon_la_SOURCES = \
   parse.c \
   parse.h \
   rail.h \
+  scancode.c \
+  scancode.h \
   ssl_calls.c \
   ssl_calls.h \
   string_calls.c \
