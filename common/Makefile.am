@@ -29,6 +29,10 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\"
 
+# Work out which X11 keycodes to use in scancode.c
+# Currently, only evdev scancodes are though to be needed.
+AM_CPPFLAGS += "-DUSE_EVDEV_KEYCODES"
+
 # -no-suppress is an automake-specific flag which is needed
 # to prevent us missing compiler errors in some circumstances
 # (see https://github.com/neutrinolabs/xrdp/pull/1843 )
@@ -59,6 +63,8 @@ libcommon_la_SOURCES = \
   parse.c \
   parse.h \
   rail.h \
+  scancode.c \
+  scancode.h \
   ssl_calls.c \
   ssl_calls.h \
   string_calls.c \
