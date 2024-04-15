@@ -15,7 +15,7 @@ if [ "$1" != _IN_XVFB_SESSION_ ]; then
         exit 1
     fi
 
-    xvfb-run --auto-servernum $0 _IN_XVFB_SESSION_
+    xvfb-run --auto-servernum --server-args="-noreset" $0 _IN_XVFB_SESSION_
     exit $?
 fi
 

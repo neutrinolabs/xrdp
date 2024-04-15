@@ -43,112 +43,143 @@
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 #include <locale.h>
+#include <unistd.h>
 
-extern int xfree86_to_evdev[137 - 8 + 1];
+#include "scancode.h"
+#include "xrdp_constants.h"
+
+// cppcheck doesn't always set this macro to something in double-quotes
+#if defined(__cppcheck__)
+#undef PACKAGE_VERSION
+#endif
+
+#if !defined(PACKAGE_VERSION)
+#define PACKAGE_VERSION "???"
+#endif
+
+#define NUM_STATES 9
+#define STATE_NUMLOCK 8
+
+// Scancodes affected by numlock
+#define IS_KEYPAD_SCANCODE(s) \
+    ((s) >= XR_RDP_SCAN_MIN_NUMLOCK && (s) <= XR_RDP_SCAN_MAX_NUMLOCK)
+
+#define MAX_COMMENTS 10
+
+static void
+usage(const char *argv0, int status)
+{
+    fprintf(stderr, "Usage: %s [-c comment] [-c comment...] out_filename\n",
+            argv0);
+    fprintf(stderr, "Example: %s -c \"en-US pc104 keyboard\""
+            " /etc/xrdp/km-00000409.ini\n", argv0);
+    exit(status);
+}
 
 int main(int argc, char **argv)
 {
-    const char *programname;
+    int opt;
     char text[256];
     char *displayname = NULL;
     char *outfname;
-    const char *sections[8] =
+    const char *sections[NUM_STATES] =
     {
         "noshift", "shift", "altgr", "shiftaltgr",
-        "capslock", "capslockaltgr", "shiftcapslock", "shiftcapslockaltgr"
+        "capslock", "capslockaltgr", "shiftcapslock", "shiftcapslockaltgr",
+        "numlock"
     };
-    int states[8] = {0, 1, 0x80, 0x81, 2, 0x82, 3, 0x83};
-    int i;
+    int states[NUM_STATES] = {0, 1, 0x80, 0x81, 2, 0x82, 3, 0x83, 0x10};
     int idx;
     int char_count;
     int nbytes = 0;
     int unicode;
     Display *dpy;
     KeySym ks;
+    const char *ksstr;
     FILE *outf;
-    XKeyPressedEvent e;
+    XKeyPressedEvent e = {0};
     wchar_t wtext[256];
-    XkbDescPtr kbdesc;
-    char *symatom;
-    int is_evdev;
+    const char *comment[MAX_COMMENTS] = {0};
+    int comment_count = 0;
 
     setlocale(LC_CTYPE, "");
-    programname = argv[0];
 
-    if (argc != 2)
+    while ((opt = getopt(argc, argv, "c:")) != -1)
     {
-        fprintf(stderr, "Usage: %s out_filename\n", programname);
-        fprintf(stderr, "Example: %s /etc/xrdp/km-00000409.ini\n", programname);
-        return 1;
+        switch (opt)
+        {
+            case 'c':
+                if (comment_count < MAX_COMMENTS)
+                {
+                    comment[comment_count++] = optarg;
+                }
+                break;
+            default: /* '?' */
+                usage(argv[0], 1);
+        }
     }
 
-    outfname = argv[1];
+    if ((optind + 1) != argc)
+    {
+        usage(argv[0], 1);
+    }
+
+    outfname = argv[optind];
     dpy = XOpenDisplay(displayname);
 
     if (!dpy)
     {
         fprintf(stderr, "%s:  unable to open display '%s'\n",
-                programname, XDisplayName(displayname));
+                argv[0], XDisplayName(displayname));
         return 1;
     }
-
-    /* check whether evdev is used */
-    kbdesc = XkbAllocKeyboard();
-    if (!kbdesc)
-    {
-        fprintf(stderr, "%s:  unable to allocate keyboard desc\n",
-                programname);
-        XCloseDisplay(dpy);
-        return 1;
-    }
-
-    if (XkbGetNames(dpy, XkbKeycodesNameMask, kbdesc) != Success)
-    {
-        fprintf(stderr, "%s:  unable to obtain keycode name for keyboard\n",
-                programname);
-        XkbFreeKeyboard(kbdesc, 0, True);
-        XCloseDisplay(dpy);
-        return 1;
-    }
-
-    symatom = XGetAtomName(dpy, kbdesc->names->keycodes);
-    is_evdev = !strncmp(symatom, "evdev", 5);
-    XFree(symatom);
-    XkbFreeKeyboard(kbdesc, 0, True);
 
     outf = fopen(outfname, "w");
 
     if (outf == NULL)
     {
-        fprintf(stderr, "%s:  unable to create file '%s'\n", programname, outfname);
+        fprintf(stderr, "%s:  unable to create file '%s'\n", argv[0], outfname);
         XCloseDisplay(dpy);
         return 1;
     }
 
-    memset(&e, 0, sizeof(e));
+    fprintf(outf, "# Created by %s version " PACKAGE_VERSION "\n", argv[0]);
+    for (idx = 0; idx < comment_count; ++idx)
+    {
+        fprintf(outf, "# %s\n", comment[idx]);
+    }
+    fprintf(outf, "[General]\nversion=2\n");
+
     e.type = KeyPress;
     e.serial = 16;
     e.send_event = True;
     e.display = dpy;
     e.same_screen = True;
 
-    for (idx = 0; idx < 8; idx++) /* Sections and states */
+    for (idx = 0; idx < NUM_STATES; idx++) /* Sections and states */
     {
-        fprintf(outf, "[%s]\n", sections[idx]);
+        unsigned short scancode;
+        unsigned int iter;
+        fprintf(outf, "\n[%s]\n", sections[idx]);
         e.state = states[idx];
 
-        for (i = 8; i < 256; i++) /* Keycodes */
+        iter = 0;
+        while ((scancode = scancode_get_next(&iter)) != 0)
         {
-            if (is_evdev)
+            // Numlock state table can be very small
+            if (idx == STATE_NUMLOCK && !IS_KEYPAD_SCANCODE(scancode))
             {
-                e.keycode = xfree86_to_evdev[i - 8];
+                continue;
             }
-            else
-            {
-                e.keycode = i;
-            }
+
+            e.keycode = scancode_to_keycode(scancode);
             nbytes = XLookupString(&e, text, 255, &ks, NULL);
             if (ks == NoSymbol)
+            {
+                continue;
+            }
+            ksstr = XKeysymToString(ks);
+            if (ksstr == NULL)
             {
                 continue;
             }
@@ -161,12 +192,16 @@ int main(int argc, char **argv)
                 unicode = wtext[0];
             }
 
-            fprintf(outf, "Key%d=%d:%d\n", i, (int) ks, unicode);
-        }
-
-        if (idx != 7)
-        {
-            fprintf(outf, "\n");
+            if (scancode > 0xff)
+            {
+                fputs("E0_", outf);
+            }
+            fprintf(outf, "%02X=\"%d", (scancode & 0xff), (int)ks);
+            if (unicode != 0)
+            {
+                fprintf(outf, ":U+%04X", unicode);
+            }
+            fprintf(outf, "\"  # %s\n", ksstr);
         }
     }
 
