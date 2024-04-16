@@ -40,6 +40,7 @@
 #include "chansrv_config.h"
 #include "xrdp_sockets.h"
 #include "audin.h"
+#include "input.h"
 
 #include "ms-rdpbcgr.h"
 
@@ -823,14 +824,14 @@ chansrv_drdynvc_send_data(int chan_id, const char *data, int data_bytes)
     return 0;
 }
 
-/*****************************************************************************/
 #ifdef XRDP_IBUS
+/*****************************************************************************/
 static int
-process_message_unicode_key_press(struct stream *s)
+process_message_unicode_data(struct stream *s)
 {
     int rv = 0;
     int key_down;
-    char32_t unicode_char;
+    uint32_t unicode;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_unicode_keypress:");
     if (!s_check_rem(s, 8))
@@ -840,11 +841,31 @@ process_message_unicode_key_press(struct stream *s)
     else
     {
         in_uint32_le(s, key_down);
-        in_uint32_le(s, unicode_char);
-        LOG(LOG_LEVEL_INFO, "Unicode char 0x%08x received down=%d",
-            unicode_char, key_down);
+        in_uint32_le(s, unicode);
+
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_unicode_keypress: received unicode %i", unicode);
+
+        if (key_down)
+        {
+            xrdp_input_send_unicode(unicode);
+        }
     }
+
     return rv;
+}
+
+/*****************************************************************************/
+static int
+process_message_unicode_setup(struct stream *s)
+{
+    return xrdp_input_unicode_init();
+}
+
+/*****************************************************************************/
+static int
+process_message_unicode_shutdown(struct stream *s)
+{
+    return xrdp_input_unicode_destory();
 }
 #endif // XRDP_IBUS
 
@@ -901,8 +922,14 @@ process_message(void)
                 rv = process_message_drdynvc_data(s);
                 break;
 #ifdef XRDP_IBUS
-            case 21: /* Unicode key press */
-                rv = process_message_unicode_key_press(s);
+            case 21: /* unicode setup */
+                rv = process_message_unicode_setup(s);
+                break;
+            case 23: /* unicode key event */
+                rv = process_message_unicode_data(s);
+                break;
+            case 25: /* unicode shut down */
+                rv = process_message_unicode_shutdown(s);
                 break;
 #endif
             default:
