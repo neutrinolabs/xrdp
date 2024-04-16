@@ -10,9 +10,7 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/sesman/libsesman \
-  -I$(top_srcdir)/common \
-  $(IBUS_CFLAGS) \
-  $(GLIB2_CFLAGS)
+  -I$(top_srcdir)/common
 
 CHANSRV_EXTRA_LIBS =
 
@@ -41,8 +39,8 @@ AM_CPPFLAGS += -DXRDP_RDPSNDAUDIN
 endif
 
 if XRDP_IBUS
-AM_CPPFLAGS += -DXRDP_IBUS $(IBUS_CFLAGS)
-CHANSRV_EXTRA_LIBS += $(IBUS_LIBS)
+AM_CPPFLAGS += -DXRDP_IBUS $(IBUS_CFLAGS) $(GLIB2_CFLAGS)
+CHANSRV_EXTRA_LIBS += $(IBUS_LIBS) $(GLIB2_LIBS)
 endif
 
 AM_CFLAGS = $(X_CFLAGS)
@@ -93,6 +91,4 @@ xrdp_chansrv_LDADD = \
   $(top_builddir)/sesman/libsesman/libsesman.la \
   $(top_builddir)/libipm/libipm.la \
   $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
-  $(GLIB2_LIBS) \
-  $(IBUS_LIBS) \
   $(CHANSRV_EXTRA_LIBS)
