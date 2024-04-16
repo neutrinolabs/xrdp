@@ -1677,7 +1677,7 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 
 /*****************************************************************************/
 static int
-xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int unicode)
+xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
 {
     int index;
     
