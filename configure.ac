@@ -481,6 +481,10 @@ if test "x$enable_ibus" = "xyes"
 then
   PKG_CHECK_MODULES([IBUS], [ibus-1.0 >= 1.5], [],
     [AC_MSG_ERROR([please install libibus-1.0-dev or ibus-devel])])
+
+  # ibus uses dbus which depends on glib
+  PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.56], [],
+    [AC_MSG_ERROR([please install libglib2.0-dev or glib2.0-devel])])
 fi
 
 AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(PIXMAN, pixman-1 >= 0.1.0)] )

@@ -486,7 +486,7 @@ xrdp_mm_up_and_running(struct xrdp_mm *self);
 int
 xrdp_mm_send_unicode_to_chansrv(struct xrdp_mm *self,
                                 int key_down,
-                                char32_t unicode);
+                                uint32_t unicode);
 struct xrdp_mm *
 xrdp_mm_create(struct xrdp_wm *owner);
 void

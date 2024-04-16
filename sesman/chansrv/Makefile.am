@@ -10,7 +10,9 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/sesman/libsesman \
-  -I$(top_srcdir)/common
+  -I$(top_srcdir)/common \
+  $(IBUS_CFLAGS) \
+  $(GLIB2_CFLAGS)
 
 CHANSRV_EXTRA_LIBS =
 
@@ -78,6 +80,8 @@ xrdp_chansrv_SOURCES = \
   sound.h \
   xcommon.c \
   xcommon.h \
+  input_ibus.c \
+  input.h \
   audin.c \
   audin.h
 
@@ -89,4 +93,6 @@ xrdp_chansrv_LDADD = \
   $(top_builddir)/sesman/libsesman/libsesman.la \
   $(top_builddir)/libipm/libipm.la \
   $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
+  $(GLIB2_LIBS) \
+  $(IBUS_LIBS) \
   $(CHANSRV_EXTRA_LIBS)

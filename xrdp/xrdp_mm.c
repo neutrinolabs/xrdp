@@ -42,6 +42,8 @@ static int
 xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port);
 static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
+static int
+xrdp_mm_send_unicode_shutdown(struct xrdp_mm *self, struct trans *trans);
 
 /*****************************************************************************/
 struct xrdp_mm *
@@ -145,6 +147,9 @@ xrdp_mm_delete(struct xrdp_mm *self)
     {
         return;
     }
+
+    /* shutdown input method */
+    xrdp_mm_send_unicode_shutdown(self, self->chan_trans);
 
     /* free any module stuff */
     xrdp_mm_module_cleanup(self);
@@ -655,6 +660,45 @@ xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct stream *s)
     }
 
     return rv;
+}
+
+
+/*****************************************************************************/
+static int
+xrdp_mm_send_unicode_shutdown(struct xrdp_mm *self, struct trans *trans)
+{
+    struct stream *s = trans_get_out_s(self->chan_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 8); /* size */
+    out_uint32_le(s, 25); /* msg id */
+    out_uint32_le(s, 8); /* size */
+    s_mark_end(s);
+    
+    return trans_write_copy(self->chan_trans);
+}
+
+/*****************************************************************************/
+static int
+xrdp_mm_send_unicode_setup(struct xrdp_mm *self, struct trans *trans)
+{
+    struct stream *s = trans_get_out_s(self->chan_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 8); /* size */
+    out_uint32_le(s, 21); /* msg id */
+    out_uint32_le(s, 8); /* size */
+    s_mark_end(s);
+    
+    return trans_write_copy(self->chan_trans);
 }
 
 /*****************************************************************************/
@@ -2107,7 +2151,7 @@ xrdp_mm_up_and_running(struct xrdp_mm *self)
 int
 xrdp_mm_send_unicode_to_chansrv(struct xrdp_mm *self,
                                 int key_down,
-                                char32_t unicode)
+                                uint32_t unicode)
 {
     struct stream *s = trans_get_out_s(self->chan_trans, 8192);
     if (s == NULL)
@@ -2989,6 +3033,23 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port)
     {
         LOG(LOG_LEVEL_DEBUG, "xrdp_mm_chansrv_connect: chansrv "
             "connect successful");
+    }
+
+    
+    /* if client supports unicode input, initialize the input method */
+    if (1)
+    {
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_chansrv_connect: chansrv "
+            "client support unicode input, init the input method");
+
+        if (xrdp_mm_send_unicode_setup(self, self->chan_trans) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_mm_chansrv_connect: error in "
+            "xrdp_mm_send_unicode_setup");
+
+            /* disable unicode input */
+            // self->wm->client_info->unicode_input = 0;
+        }
     }
 
     return 0;
