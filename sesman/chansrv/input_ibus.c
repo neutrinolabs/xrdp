@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#ifdef XRDP_IBUS
+
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -246,3 +248,5 @@ xrdp_input_unicode_init()
 
     return 1;
 }
+
+#endif
