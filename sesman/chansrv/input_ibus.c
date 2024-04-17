@@ -31,7 +31,7 @@
 static IBusBus *bus;
 static IBusEngine *g_engine;
 /* This is the engine name enabled before unicode engine enabled */
-static const gchar *ori_name;
+static const gchar *last_input_name;
 static int id = 0;
 
 int
@@ -40,7 +40,7 @@ xrdp_input_enable()
     IBusEngineDesc *desc;
     const gchar *name;
 
-    if (ori_name)
+    if (last_input_name)
     {
         /* already enabled */
         return 0;
@@ -60,7 +60,7 @@ xrdp_input_enable()
     }
 
     /* remember user's input method, will switch back when disconnect */
-    ori_name = name;
+    last_input_name = name;
 
     if (!ibus_bus_set_global_engine(bus, "XrdpIme"))
     {
@@ -68,13 +68,13 @@ xrdp_input_enable()
         return 1;
     }
 
-    LOG(LOG_LEVEL_INFO, "xrdp_ibus_init: input method switched sucessfully, old input name: %s", ori_name);
+    LOG(LOG_LEVEL_INFO, "xrdp_ibus_init: input method switched sucessfully, old input name: %s", last_input_name);
 
     return 0;
 }
 
 int
-xrdp_input_send_unicode(uint32_t unicode)
+xrdp_input_send_unicode(char32_t unicode)
 {
     LOG(LOG_LEVEL_DEBUG, "xrdp_input_send_unicode: received unicode input %i", unicode);
 
@@ -194,16 +194,16 @@ int
 xrdp_input_unicode_destory()
 {
     LOG(LOG_LEVEL_DEBUG, "xrdp_input_unicode_destory: ibus input is under destory");
-    if (ori_name)
+    if (last_input_name)
     {
-        LOG(LOG_LEVEL_INFO, "xrdp_input_unicode_destory: ibus engine rolling back to origin: %s", ori_name);
-        ibus_bus_set_global_engine(bus, ori_name);
+        LOG(LOG_LEVEL_INFO, "xrdp_input_unicode_destory: ibus engine rolling back to origin: %s", last_input_name);
+        ibus_bus_set_global_engine(bus, last_input_name);
     }
 
     g_object_unref(g_engine);
     g_object_unref(bus);
 
-    ori_name = NULL;
+    last_input_name = NULL;
     bus = NULL;
     g_engine = NULL;
 
