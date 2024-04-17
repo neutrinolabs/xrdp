@@ -21,6 +21,10 @@
 #include <config_ac.h>
 #endif
 
+#ifdef XRDP_IBUS
+#include "input.h"
+#endif
+
 #include "arch.h"
 #include "os_calls.h"
 #include "string_calls.h"
@@ -40,7 +44,6 @@
 #include "chansrv_config.h"
 #include "xrdp_sockets.h"
 #include "audin.h"
-#include "input.h"
 
 #include "ms-rdpbcgr.h"
 

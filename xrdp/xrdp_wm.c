@@ -1801,7 +1801,7 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
 
 #ifdef XRDP_IBUS
     if (self->mm->chan_trans != NULL &&
-        self->mm->chan_trans->status == TRANS_STATUS_UP)
+            self->mm->chan_trans->status == TRANS_STATUS_UP)
     {
         xrdp_mm_send_unicode_to_chansrv(self->mm,
                                         !(device_flags & KBD_FLAG_UP), c32);
