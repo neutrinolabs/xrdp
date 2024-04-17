@@ -42,11 +42,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_load.o \
     $(top_builddir)/xrdp/xrdp_bitmap_common.o \
     $(top_builddir)/xrdp/funcs.o \
-    $(top_builddir)/common/libcommon.la \
-    $(top_builddir)/libipm/libipm.la \
     $(top_builddir)/libxrdp/libxrdp.la \
-    $(top_builddir)/libpainter/src/libpainter.la \
-    $(top_builddir)/librfxcodec/src/librfxencode.la \
     $(top_builddir)/xrdp/lang.o \
     $(top_builddir)/xrdp/xrdp_mm.o \
     $(top_builddir)/xrdp/xrdp_wm.o \
@@ -61,6 +57,11 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_process.o \
     $(top_builddir)/xrdp/xrdp_login_wnd.o \
     $(top_builddir)/xrdp/xrdp_main_utils.o \
+    $(top_builddir)/libpainter/src/libpainter.la \
+    $(top_builddir)/librfxcodec/src/librfxencode.la \
+    $(top_builddir)/libipm/libipm.la \
+    $(top_builddir)/common/libcommon.la \
+    $(top_builddir)/third_party/tomlc99/libtoml.la \
     $(PIXMAN_LIBS) \
     $(IMLIB2_LIBS) \
     @CHECK_LIBS@ \

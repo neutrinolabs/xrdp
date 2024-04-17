@@ -452,6 +452,15 @@ struct xrdp_key_info
     char32_t chr;
 };
 
+/**
+ * Keyboard description
+ *
+ * Each section maps an RDP scancode to a KeySym and a Unicode
+ * character.
+ */
+#define INDEX_FROM_SCANCODE(scancode,extended) \
+    (((scancode) & 0x7f) | ((extended) ? 0x80 : 0))
+
 struct xrdp_keymap
 {
     struct xrdp_key_info keys_noshift[256];
@@ -462,6 +471,9 @@ struct xrdp_keymap
     struct xrdp_key_info keys_capslockaltgr[256];
     struct xrdp_key_info keys_shiftcapslock[256];
     struct xrdp_key_info keys_shiftcapslockaltgr[256];
+    // NumLock is restricted to a much smaller set of keys
+    struct xrdp_key_info keys_numlock[XR_RDP_SCAN_MAX_NUMLOCK -
+                                          XR_RDP_SCAN_MIN_NUMLOCK + 1];
 };
 
 /* the window manager */
