@@ -30,7 +30,7 @@
 
 static IBusBus *bus;
 static IBusEngine *g_engine;
-// This is the engine name enabled before unicode engine enabled
+/* This is the engine name enabled before unicode engine enabled */
 static const gchar *ori_name;
 static int id = 0;
 
@@ -42,10 +42,10 @@ xrdp_input_enable()
 
     if (ori_name)
     {
-        // already enabled
+        /* already enabled */
         return 0;
     }
-    
+
     if (!bus)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_ibus_init: input method switched failed, ibus not connected");
@@ -58,8 +58,8 @@ xrdp_input_enable()
     {
         return 0;
     }
-    
-    // remember user's input method, will switch back when disconnect
+
+    /* remember user's input method, will switch back when disconnect */
     ori_name = name;
 
     if (!ibus_bus_set_global_engine(bus, "XrdpIme"))
@@ -69,7 +69,7 @@ xrdp_input_enable()
     }
 
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_init: input method switched sucessfully, old input name: %s", ori_name);
-    
+
     return 0;
 }
 
@@ -89,20 +89,20 @@ xrdp_input_send_unicode(uint32_t unicode)
     return 0;
 }
 
-void 
+void
 xrdp_input_ibus_engine_enable(IBusEngine *engine)
 {
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_engine_enable: IM enabled");
     g_engine = engine;
 }
 
-void 
+void
 xrdp_input_ibus_engine_disable(IBusEngine *engine)
 {
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_engine_disable: IM disabled");
 }
 
-void 
+void
 xrdp_input_ibus_disconnect(IBusEngine *engine)
 {
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_engine_disable: IM disabled");
@@ -115,14 +115,14 @@ gboolean engine_process_key_event_cb(IBusEngine *engine,
                                      guint keycode,
                                      guint state)
 {
-    // Pass the keyboard event to system
+    /* Pass the keyboard event to system */
     return FALSE;
 }
 
 IBusEngine *
 xrdp_input_ibus_create_engine(IBusFactory *factory,
-                        gchar *engine_name,
-                        gpointer user_data)
+                              gchar *engine_name,
+                              gpointer user_data)
 {
     IBusEngine *engine;
     gchar *path = g_strdup_printf("/org/freedesktop/IBus/Engine/%i", 1);
@@ -160,23 +160,23 @@ xrdp_input_main_loop()
 
     ibus_factory_add_engine(factory, "XrdpIme", IBUS_TYPE_ENGINE);
 
-    component = ibus_component_new("org.freedesktop.IBus.XrdpIme", // name
-                                       "Xrdp input method", // description
-                                       "1.1", // version
-                                       "MIT", // license
-                                       "seflerZ", // author
-                                       "fake_page", // homepage
-                                       "/exec/fake_path", // cmd
-                                       "xrdpime"); // text domain
+    component = ibus_component_new("org.freedesktop.IBus.XrdpIme", /* name */
+                                   "Xrdp input method",            /* description */
+                                   "1.1",                          /* version */
+                                   "MIT",                          /* license */
+                                   "seflerZ",                      /* author */
+                                   "default",                      /* homepage */
+                                   "default",                      /* cmd */
+                                   "xrdpime");                     /* text domain */
 
     desc = ibus_engine_desc_new("XrdpIme",
-                                       "unicode input method for xrdp",
-                                       "unicode input method for xrdp",
-                                       "unicode",
-                                       "MIT",
-                                       "seflerZ",
-                                       "fake_icon.png",
-                                       "default"); // layout
+                                "unicode input method for xrdp",
+                                "unicode input method for xrdp",
+                                "unicode",
+                                "MIT",
+                                "seflerZ",
+                                "default",  /* icon */
+                                "default"); /* layout */
 
     ibus_component_add_engine(component, desc);
     ibus_bus_register_component(bus, component);
@@ -213,16 +213,15 @@ xrdp_input_unicode_destory()
 int
 xrdp_input_unicode_init()
 {
-    int retry = 10;
-
     if (bus)
     {
-        // Already initialized, just re-enable it
+        /* Already initialized, just re-enable it */
         xrdp_input_enable();
         return 0;
     }
 
-    sleep(5);
+    /* Wait becasue ibus daemon may not be ready in first login. Do we have a flag to avoid busy waiting? */
+    sleep(3);
 
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_init: Initializing the iBus engine");
     ibus_init();
@@ -239,20 +238,9 @@ xrdp_input_unicode_init()
 
     tc_thread_create(xrdp_input_main_loop, NULL);
 
-    // session may not be ready, repeat until input method enabled
-    while (retry--)
+    if (!ibus_bus_get_global_engine(bus))
     {
-        if (ibus_bus_get_global_engine(bus))
-        {
-            break;
-        }
-
-        sleep(1);
-    }
-
-    if (retry == 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "xrdp_ibus_init: failed to connect to ibus");
+        LOG(LOG_LEVEL_ERROR, "xrdp_ibus_init: failed to get origin global engine");
         return 1;
     }
 
