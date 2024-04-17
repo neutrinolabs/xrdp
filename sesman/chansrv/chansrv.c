@@ -834,7 +834,7 @@ process_message_unicode_data(struct stream *s)
 {
     int rv = 0;
     int key_down;
-    uint32_t unicode;
+    char32_t unicode;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_unicode_keypress:");
     if (!s_check_rem(s, 8))
@@ -870,7 +870,7 @@ process_message_unicode_shutdown(struct stream *s)
 {
     return xrdp_input_unicode_destory();
 }
-#endif // XRDP_IBUS
+#endif
 
 /*****************************************************************************/
 /* returns error */
