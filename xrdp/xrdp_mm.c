@@ -2159,7 +2159,7 @@ int xrdp_mm_send_unicode_to_chansrv(struct xrdp_mm *self,
     }
     out_uint32_le(s, 0); /* version */
     out_uint32_le(s, 24); /* size */
-    out_uint32_le(s, 21); /* msg id */
+    out_uint32_le(s, 23); /* msg id */
     out_uint32_le(s, 16); /* size */
     out_uint32_le(s, key_down);
     out_uint32_le(s, unicode);
@@ -3034,17 +3034,16 @@ xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port)
             "connect successful");
     }
 
-    
     /* if client supports unicode input, initialize the input method */
     if (1)
     {
         LOG(LOG_LEVEL_INFO, "xrdp_mm_chansrv_connect: chansrv "
-            "client support unicode input, init the input method");
+                            "client support unicode input, init the input method");
 
         if (xrdp_mm_send_unicode_setup(self, self->chan_trans) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "xrdp_mm_chansrv_connect: error in "
-            "xrdp_mm_send_unicode_setup");
+                                 "xrdp_mm_send_unicode_setup");
 
             /* disable unicode input */
             // self->wm->client_info->unicode_input = 0;
