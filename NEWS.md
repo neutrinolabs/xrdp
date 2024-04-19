@@ -5,7 +5,7 @@ This section notes changes since the [v0.10 branch](#branch-v010) was created.
 ## General announcements
 The biggest news of this release is that [Graphic Pipeline Extension](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegfx/da5c75f9-cd99-450c-98c4-014a496942b0) also called GFX in short has been supported. xrdp v0.10 with GFX achieves more frame rates and less bandwidth compared to v0.9. There is a significant performance improvement especially if the client is Windows 11's mstsc.exe or Microsoft Remote Desktop for Mac. GFX H.264/AVC 444 mode and hardware-accelerated encoding are not supported in this version yet.
 
-GFX implementation in xrdp is sponsored by an enterprise sponsor. We very much appreciate the sponsorship. It helped us to accelerate xrdp development and land GFX earlier!
+GFX implementation in xrdp is sponsored by an enterprise sponsor. @CyberTrust is also one of the sponsors. We very much appreciate the sponsorship. It helped us to accelerate xrdp development and land GFX earlier! 
 
 Please consider sponsoring or making a donation to the project if you like xrdp. We accept financial contributions via [Open Collective](https://opencollective.com/xrdp-project). Direct donations to each developer via GitHub Sponsors are also welcomed.
 
@@ -26,13 +26,17 @@ This section describes the most user-visible new or changed features in xrdp sin
 None
 
 ## New features
-* If the client announces support for the RemoteFX codec it is logged (back-port of #2946)
+* If the client announces support for the Image RemoteFX codec it is logged (back-port of #2946)
 
 ## Bug fixes
 * Fix some monitor hotplug issues (#2951)
 * GFX: Fix disconnect on resize of busy windows (#2962 #2957)
 * Fall back to IPv4 if IPv6 capable but don't have an IPv6 address set (#2967 #2957)
 * Remove tcutils channel from xrdp.ini (#2970 #2957)
+* Don't generate a corefile when generating SIGSEGV during unit testing (#2987)
+* If the drdynvc static channel isn't available, disable GFX gracefully (#3003)
+* A buffer misconfiguration which affects performance on high bandwidth, high latency links has been addressed (cherry-pick of #2910)
+* A permissions fix for the socketdir update in #2731 has been issued (cherry-pick of #3011)
 
 ## Internal changes
 * Adjust log level not too verbose (#2954 #2972 #2957)
@@ -40,6 +44,9 @@ None
 * Bump copyright year and make easier to bump (#2956 #2957)
 * Remove duplicate DEBUG output (#2976 #2977)
 * Add script to make release tarball (#2983)
+* Syscall filter for xrdp updated (cherry-pick of #3017)
+* GFX memory usage for large screens is greatly improved (cherry-pick of #3013)
+* librfxcodec SSE2 performance improvements (#3032)
 
 ## Known issues
 * On-the-fly resolution change with the Microsoft Store version of Remote Desktop client sometimes crashes on connect (#1869)
