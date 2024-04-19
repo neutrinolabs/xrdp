@@ -20,7 +20,7 @@ body:
       description: Copy & paste the result of `xrdp --version`. DO NOT remove `~~~` but paste the result between two `~~~`.
       value: |
         ~~~
-        PASTE HERE
+        Paste the result between `~~~`.  Please DO NOT remove `~~~`!
         ~~~
   - type: input
     attributes:
