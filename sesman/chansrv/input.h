@@ -16,8 +16,6 @@
  * limitations under the License.
  *
  */
-#ifdef XRDP_IBUS
-
 #if !defined(INPUT_H)
 #define INPUT_H
 
@@ -32,7 +30,5 @@ xrdp_input_unicode_init();
 
 int
 xrdp_input_unicode_destory();
-
-#endif
 
 #endif
