@@ -104,7 +104,6 @@ list_dump_items(struct list *self);
  *
  * @param str String to split.
  * @param character Character used as the delimiter between strings.
- * @param start_index Index to start on the source list (zero based)
  *
  * @result 0 if a memory allocation failure occurred.
  *

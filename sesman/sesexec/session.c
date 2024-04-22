@@ -57,7 +57,7 @@ struct session_data
 {
     pid_t x_server; ///< PID of X server
     pid_t win_mgr; ///< PID of window manager
-    pid_t chansrv; //< PID of chansrv
+    pid_t chansrv; ///< PID of chansrv
     time_t start_time;
     struct session_parameters params;
     // Flexible array member used to store strings in params and ip_addr;
@@ -150,10 +150,8 @@ session_data_free(struct session_data *session_data)
 /******************************************************************************/
 /**
  * Creates a string consisting of all parameters that is hosted in the param list
- * @param self
- * @param outstr, allocate this buffer before you use this function
+ * @param outstr allocate this buffer before you use this function
  * @param len the allocated len for outstr
- * @return
  */
 char *
 dumpItemsToString(struct list *self, char *outstr, int len)

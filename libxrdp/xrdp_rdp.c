@@ -1634,7 +1634,6 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 /*****************************************************************************/
 /** Send a [MS-RDPBCGR] TS_SAVE_SESSION_INFO_PDU_DATA message.
  *
- * @param self
  * @param data the data to send to the client in the
  *      TS_SAVE_SESSION_INFO_PDU_DATA message. The first 4 bytes of the data
  *      buffer MUST by the infoType value as specified in MS-RDPBCGR 2.2.10.1.1

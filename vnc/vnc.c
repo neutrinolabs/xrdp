@@ -821,7 +821,7 @@ get_bytes_per_pixel(int bpp)
 /**************************************************************************//**
  * Skips the specified number of bytes from the transport
  *
- * @param transport Transport to read
+ * @param trans Transport to read
  * @param bytes Bytes to skip
  * @return != 0 for error
  */
@@ -2019,7 +2019,6 @@ lib_mod_end(struct vnc *v)
  * @param [in] height session height
  * @param [in] num_monitors (can be 0, meaning one monitor)
  * @param [in] monitors Monitor definitions for num_monitors > 0
- * @param [in] multimon_configured Whether multimon is configured
  */
 static void
 init_client_layout(struct vnc *v,

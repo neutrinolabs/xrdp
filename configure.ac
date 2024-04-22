@@ -206,6 +206,7 @@ AX_GCC_FUNC_ATTRIBUTE([format])
 AX_TYPE_SOCKLEN_T
 AX_CFLAGS_WARN_ALL
 AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
+AX_APPEND_COMPILE_FLAGS([-Wdocumentation -Wdocumentation-unknown-command], ,[-Werror])
 
 AM_COND_IF([LINUX],
   [AX_APPEND_COMPILE_FLAGS([-Werror])]) # bsd has warnings that have not been fixed yet
@@ -318,7 +319,7 @@ case "$with_freetype2" in
         fi
 
         if test -f $with_freetype2/include/freetype2/ft2build.h; then
-            FREETYPE2_CFLAGS="-I $with_freetype2/include/freetype2"
+            FREETYPE2_CFLAGS="-isystem $with_freetype2/include/freetype2"
         else
             AC_MSG_RESULT([no])
             AC_MSG_ERROR([Can't find $with_freetype2/include/freetype2/ft2build.h])
