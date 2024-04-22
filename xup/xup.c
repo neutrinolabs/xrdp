@@ -26,6 +26,7 @@
 #include "log.h"
 #include "trans.h"
 #include "string_calls.h"
+#include "scancode.h"
 
 static int
 send_server_monitor_update(struct mod *v, struct stream *s,
@@ -306,6 +307,11 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
                 mod->shift_state = msg == 15;
             }
         }
+
+        /* xup doesn't need the Unicode character mapping in param1. Send
+         * the X11 scancode instead, so xorgxrdp doesn't have to do this
+         * work again */
+        param1 = scancode_to_keycode(param3);
     }
 
     init_stream(s, 8192);
