@@ -40,6 +40,7 @@
 #include "xrdp_egfx.h"
 #include "libxrdp.h"
 #include "xrdp_channel.h"
+#include "xrdp_mm.h"
 #include <limits.h>
 
 #define MAX_PART_SIZE 0xFFFF
@@ -927,10 +928,6 @@ xrdp_egfx_open_response(intptr_t id, int chan_id, int creation_status)
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_open_response:");
     return 0;
 }
-
-int
-advance_resize_state_machine(struct xrdp_mm *mm,
-                             enum display_resize_state new_state);
 
 /******************************************************************************/
 /* from client */

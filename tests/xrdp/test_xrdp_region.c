@@ -61,6 +61,8 @@ static pixman_box16_t test_box =
     0, 0, 100, 100
 };
 
+// cmocka requires this to be externally linkable
+extern pixman_box16_t *__wrap_pixman_region_extents(pixman_region16_t *region);
 pixman_box16_t *__wrap_pixman_region_extents(pixman_region16_t *region)
 {
     check_expected_ptr(region);
@@ -107,6 +109,8 @@ static void test_xrdp_region_get_bounds__happy_path(void **state)
     g_free(rect);
 }
 
+// cmocka requires this to be externally linkable
+extern pixman_bool_t __wrap_pixman_region_not_empty(pixman_region16_t *region);
 pixman_bool_t __wrap_pixman_region_not_empty(pixman_region16_t *region)
 {
     check_expected_ptr(region);

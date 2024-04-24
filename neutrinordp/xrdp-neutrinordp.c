@@ -2041,7 +2041,7 @@ lfreerdp_pre_connect(freerdp *instance)
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                    WINDOW_STATE_ORDER *window_state)
 {
@@ -2122,7 +2122,7 @@ lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_WindowUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                    WINDOW_STATE_ORDER *window_state)
 {
@@ -2131,7 +2131,7 @@ lrail_WindowUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_WindowDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;
@@ -2142,7 +2142,7 @@ lrail_WindowDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_WindowIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                  WINDOW_ICON_ORDER *window_icon)
 {
@@ -2168,7 +2168,7 @@ lrail_WindowIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_WindowCachedIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                        WINDOW_CACHED_ICON_ORDER *window_cached_icon)
 {
@@ -2183,7 +2183,7 @@ lrail_WindowCachedIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_NotifyIconCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                        NOTIFY_ICON_STATE_ORDER *notify_icon_state)
 {
@@ -2240,7 +2240,7 @@ lrail_NotifyIconCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_NotifyIconUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                        NOTIFY_ICON_STATE_ORDER *notify_icon_state)
 {
@@ -2249,7 +2249,7 @@ lrail_NotifyIconUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_NotifyIconDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;
@@ -2261,7 +2261,7 @@ lrail_NotifyIconDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_MonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                        MONITORED_DESKTOP_ORDER *monitored_desktop)
 {
@@ -2293,7 +2293,7 @@ lrail_MonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 }
 
 /*****************************************************************************/
-void
+static void
 lrail_NonMonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;

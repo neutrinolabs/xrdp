@@ -191,10 +191,11 @@ devredir_deinit(void)
 
 /*****************************************************************************/
 
+#ifdef USE_DEVEL_LOGGING
 /*
  * Convert a COMPLETION_TYPE to a string
  */
-const char *completion_type_to_str(enum COMPLETION_TYPE cid)
+static const char *completion_type_to_str(enum COMPLETION_TYPE cid)
 {
     return
         (cid == CID_CREATE_DIR_REQ)     ?  "CID_CREATE_DIR_REQ" :
@@ -213,6 +214,7 @@ const char *completion_type_to_str(enum COMPLETION_TYPE cid)
         (cid == CID_SETATTR)            ?  "CID_SETATTR" :
         /* default */                      "<unknown>";
 };
+#endif
 
 /*****************************************************************************/
 
