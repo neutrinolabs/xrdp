@@ -23,7 +23,7 @@
 #include "parse.h"
 
 int
-xrdp_input_send_unicode(uint32_t unicode);
+xrdp_input_send_unicode(char32_t unicode);
 
 int
 xrdp_input_unicode_init();
