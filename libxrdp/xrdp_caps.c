@@ -422,6 +422,20 @@ xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
     {
         self->client_info.use_fast_path &= ~2;
     }
+
+    // We always advertise Unicode support, so if the client supports it too,
+    // we can use it
+    if ((inputFlags & INPUT_FLAG_UNICODE) != 0)
+    {
+        self->client_info.unicode_input_support = UIS_SUPPORTED;
+        LOG(LOG_LEVEL_INFO, "Client supports Unicode input");
+    }
+    else
+    {
+        self->client_info.unicode_input_support = UIS_UNSUPPORTED;
+        LOG(LOG_LEVEL_INFO, "Client does not support Unicode input");
+    }
+
     return 0;
 }
 
