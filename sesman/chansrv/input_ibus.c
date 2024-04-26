@@ -140,7 +140,7 @@ xrdp_input_ibus_create_engine(IBusFactory *factory,
 
 /*****************************************************************************/
 THREAD_RV THREAD_CC
-xrdp_input_main_loop()
+xrdp_input_main_loop(void *in_val)
 {
     IBusFactory *factory;
     IBusComponent *component;
