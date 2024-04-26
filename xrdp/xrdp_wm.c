@@ -1722,6 +1722,7 @@ get_unicode_character(struct xrdp_wm *self, int device_flags, char16_t c16)
 static int
 xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
 {
+    int index;
     char32_t c32 = get_unicode_character(self, device_flags, c16);
 
     if (c32 == 0)
@@ -1729,8 +1730,19 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
         return 0;
     }
 
-    int index;
+    // Send the character to chansrv if it's capable of doing something
+    // with it
+    if (self->mm->chan_trans != NULL &&
+            self->client_info->unicode_input_support == UIS_ACTIVE &&
+            self->mm->chan_trans->status == TRANS_STATUS_UP)
+    {
+        xrdp_mm_send_unicode_to_chansrv(self->mm,
+                                        !(device_flags & KBD_FLAG_UP), c32);
+        return 0;
+    }
 
+    // Fallback - see if we can find the character in the existing keymap,
+    // and if so, generate a normal key event.
     for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
         if (c32 == self->keymap.keys_noshift[index].chr)
@@ -1798,16 +1810,6 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
             return 0;
         }
     }
-
-#ifdef XRDP_IBUS
-    if (self->mm->chan_trans != NULL &&
-            self->mm->chan_trans->status == TRANS_STATUS_UP)
-    {
-        xrdp_mm_send_unicode_to_chansrv(self->mm,
-                                        !(device_flags & KBD_FLAG_UP), c32);
-        return 0;
-    }
-#endif
 
     return 0;
 }

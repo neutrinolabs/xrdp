@@ -38,11 +38,6 @@ if XRDP_RDPSNDAUDIN
 AM_CPPFLAGS += -DXRDP_RDPSNDAUDIN
 endif
 
-if XRDP_IBUS
-AM_CPPFLAGS += -DXRDP_IBUS $(IBUS_CFLAGS) $(GLIB2_CFLAGS)
-CHANSRV_EXTRA_LIBS += $(IBUS_LIBS) $(GLIB2_LIBS)
-endif
-
 AM_CFLAGS = $(X_CFLAGS)
 
 sbin_PROGRAMS = \
@@ -78,10 +73,17 @@ xrdp_chansrv_SOURCES = \
   sound.h \
   xcommon.c \
   xcommon.h \
-  input_ibus.c \
   input.h \
   audin.c \
   audin.h
+
+if XRDP_IBUS
+AM_CPPFLAGS += -DXRDP_IBUS $(IBUS_CFLAGS) $(GLIB2_CFLAGS)
+CHANSRV_EXTRA_LIBS += $(IBUS_LIBS) $(GLIB2_LIBS)
+xrdp_chansrv_SOURCES += \
+  input_ibus.c
+endif
+
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)
