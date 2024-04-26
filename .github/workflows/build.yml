@@ -111,14 +111,14 @@ jobs:
       CONF_FLAGS_amd64_min: "--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
                   --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
                   --disable-pixman --disable-utmp"
-      CONF_FLAGS_amd64_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
-                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
-                  --enable-pixman --enable-utmp
+      CONF_FLAGS_amd64_max: "--enable-ibus --enable-ipv6 --enable-jpeg --enable-fuse
+                  --enable-mp3lame --enable-fdkaac --enable-opus --enable-rfxcodec
+                  --enable-painter --enable-pixman --enable-utmp
                   --with-imlib2 --with-freetype2 --enable-tests"
-      CONF_FLAGS_i386_max: "--enable-ipv6 --enable-jpeg --enable-mp3lame
-                  --enable-opus --enable-rfxcodec --enable-painter
-                  --disable-pixman --with-imlib2 --with-freetype2
-                  --host=i686-linux --enable-tests"
+      CONF_FLAGS_i386_max: "--enable-ibus --enable-ipv6 --enable-jpeg
+                  --enable-mp3lame --enable-opus --enable-rfxcodec
+                  --enable-painter --disable-pixman --with-imlib2
+                  --with-freetype2 --host=i686-linux --enable-tests"
 
       PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
       CFLAGS_i386: "-m32"
