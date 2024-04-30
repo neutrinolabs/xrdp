@@ -2491,9 +2491,15 @@ xrdp_mm_trans_process_unicode_ack(struct xrdp_mm *self,
             LOG(LOG_LEVEL_INFO, "Chansrv does not support Unicode input");
             break;
 
-        default:
+        case 2:
             LOG(LOG_LEVEL_INFO,
                 "Chansrv reported an error starting the Unicode input method");
+            break;
+
+        default:
+            LOG(LOG_LEVEL_INFO,
+                "Chansrv reported an unknown status %d"
+                " starting the Unicode input method", status);
             break;
     }
 
