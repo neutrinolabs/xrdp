@@ -721,6 +721,26 @@ chansrv_drdynvc_open(const char *name, int flags,
     return error;
 }
 
+
+/*****************************************************************************/
+/* tell xrdp we can do Unicode input */
+static int
+chansrv_advertise_unicode_input(int status)
+{
+    struct stream *s = trans_get_out_s(g_con_trans, 8192);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 8 + 4);
+    out_uint32_le(s, 20); /* msg id */
+    out_uint32_le(s, 8 + 4);
+    out_uint32_le(s, status);
+    s_mark_end(s);
+    return trans_write_copy(g_con_trans);
+}
+
 /*****************************************************************************/
 /* close call from chansrv */
 int
@@ -861,7 +881,18 @@ process_message_unicode_data(struct stream *s)
 static int
 process_message_unicode_setup(struct stream *s)
 {
-    return xrdp_input_unicode_init();
+    int rv = xrdp_input_unicode_init();
+    if (rv == 0)
+    {
+        // Tell xrdp we can support Unicode input
+        rv = chansrv_advertise_unicode_input(0);
+    }
+    else
+    {
+        // Tell xrdp there's a problem starting the framework
+        chansrv_advertise_unicode_input(2);
+    }
+    return rv;
 }
 
 /*****************************************************************************/
@@ -924,17 +955,25 @@ process_message(void)
             case 19: /* drdynvc data */
                 rv = process_message_drdynvc_data(s);
                 break;
-#ifdef XRDP_IBUS
             case 21: /* unicode setup */
+#ifdef XRDP_IBUS
                 rv = process_message_unicode_setup(s);
+#else
+                // We don't support this.
+                rv = chansrv_advertise_unicode_input(1);
+#endif
                 break;
             case 23: /* unicode key event */
+#ifdef XRDP_IBUS
                 rv = process_message_unicode_data(s);
+#endif
                 break;
             case 25: /* unicode shut down */
+#ifdef XRDP_IBUS
                 rv = process_message_unicode_shutdown(s);
-                break;
 #endif
+                break;
+
             default:
                 LOG_DEVEL(LOG_LEVEL_ERROR, "process_message: unknown msg %d", id);
                 break;

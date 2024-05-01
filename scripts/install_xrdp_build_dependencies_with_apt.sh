@@ -93,6 +93,7 @@ in
                     libjpeg-dev \
                     libmp3lame-dev \
                     libfdk-aac-dev \
+                    libibus-1.0-dev \
                     libimlib2-dev \
                     libopus-dev \
                     libpixman-1-dev"
@@ -118,6 +119,7 @@ in
             $LIBFREETYPE_DEV:i386 \
             libgl1-mesa-dev:i386 \
             libglu1-mesa-dev:i386 \
+            libibus-1.0-dev:i386 \
             libjpeg-dev:i386 \
             libimlib2-dev:i386 \
             libmp3lame-dev:i386 \
