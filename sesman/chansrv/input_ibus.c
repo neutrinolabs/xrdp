@@ -243,5 +243,5 @@ xrdp_input_unicode_init()
         return 1;
     }
 
-    return 1;
+    return 0;
 }
