@@ -26,9 +26,9 @@ int
 xrdp_input_send_unicode(char32_t unicode);
 
 int
-xrdp_input_unicode_init();
+xrdp_input_unicode_init(void);
 
 int
-xrdp_input_unicode_destory();
+xrdp_input_unicode_destroy(void);
 
 #endif

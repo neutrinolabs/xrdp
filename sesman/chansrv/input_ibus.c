@@ -33,8 +33,8 @@ static IBusEngine *g_engine;
 static const gchar *last_input_name;
 static int id = 0;
 
-int
-xrdp_input_enable()
+static int
+xrdp_input_enable(void)
 {
     IBusEngineDesc *desc;
     const gchar *name;
@@ -88,20 +88,20 @@ xrdp_input_send_unicode(char32_t unicode)
     return 0;
 }
 
-void
+static void
 xrdp_input_ibus_engine_enable(IBusEngine *engine)
 {
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_engine_enable: IM enabled");
     g_engine = engine;
 }
 
-void
+static void
 xrdp_input_ibus_engine_disable(IBusEngine *engine)
 {
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_engine_disable: IM disabled");
 }
 
-void
+static void
 xrdp_input_ibus_disconnect(IBusEngine *engine)
 {
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_engine_disable: IM disabled");
@@ -109,16 +109,17 @@ xrdp_input_ibus_disconnect(IBusEngine *engine)
     g_object_unref(bus);
 }
 
-gboolean engine_process_key_event_cb(IBusEngine *engine,
-                                     guint keyval,
-                                     guint keycode,
-                                     guint state)
+static gboolean
+engine_process_key_event_cb(IBusEngine *engine,
+                            guint keyval,
+                            guint keycode,
+                            guint state)
 {
     /* Pass the keyboard event to system */
     return FALSE;
 }
 
-IBusEngine *
+static IBusEngine *
 xrdp_input_ibus_create_engine(IBusFactory *factory,
                               gchar *engine_name,
                               gpointer user_data)
@@ -139,7 +140,7 @@ xrdp_input_ibus_create_engine(IBusFactory *factory,
 }
 
 /*****************************************************************************/
-THREAD_RV THREAD_CC
+static THREAD_RV THREAD_CC
 xrdp_input_main_loop(void *in_val)
 {
     IBusFactory *factory;
@@ -190,7 +191,7 @@ xrdp_input_main_loop(void *in_val)
 }
 
 int
-xrdp_input_unicode_destory()
+xrdp_input_unicode_destroy(void)
 {
     LOG(LOG_LEVEL_DEBUG, "xrdp_input_unicode_destory: ibus input is under destory");
     if (last_input_name)
@@ -210,7 +211,7 @@ xrdp_input_unicode_destory()
 }
 
 int
-xrdp_input_unicode_init()
+xrdp_input_unicode_init(void)
 {
     if (bus)
     {
