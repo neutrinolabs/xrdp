@@ -899,7 +899,7 @@ process_message_unicode_setup(struct stream *s)
 static int
 process_message_unicode_shutdown(struct stream *s)
 {
-    return xrdp_input_unicode_destory();
+    return xrdp_input_unicode_destroy();
 }
 #endif
 
