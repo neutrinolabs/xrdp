@@ -111,7 +111,7 @@ START_TEST(test_g_signal_child_stop_1)
         // Before raising the signal, change directory to a non-writeable
         // one to avoid generating a corefile.
         g_set_current_dir("/");
-        raise(SIGSEGV);
+        raise(SIGUSR2);
     }
     ck_assert_int_ne(pid, 0);
     g_obj_wait(&g_wobj1, 1, NULL, 0, 2000);
@@ -120,7 +120,7 @@ START_TEST(test_g_signal_child_stop_1)
     e = g_waitpid_status(pid);
 
     ck_assert_int_eq(e.reason, E_PXR_SIGNAL);
-    ck_assert_int_eq(e.val, SIGSEGV);
+    ck_assert_int_eq(e.val, SIGUSR2);
 
     // Clean up
     g_signal_child_stop(NULL);

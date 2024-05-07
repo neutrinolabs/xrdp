@@ -345,7 +345,14 @@ int
 split_string_append_fragment(const char **start, const char *end,
                              struct list *list)
 {
-    const unsigned int len = end - *start;
+    unsigned int len = end - *start;
+    // Check for an unexpected terminator in the string
+    const char *term = (const char *)memchr(*start, '\0', len);
+    if (term != NULL)
+    {
+        end = term;
+        len = end - *start;
+    }
     char *copy = (char *)malloc(len + 1);
     if (copy == NULL)
     {
