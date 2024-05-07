@@ -54,6 +54,7 @@ START_TEST(test_xrdp_egfx_send_create_surface__happy_path)
     in_uint8(s, descriptor);
     ck_assert_int_eq(0xE0, descriptor);
 
+    free_stream(s);
     g_free(bulk);
 }
 END_TEST
