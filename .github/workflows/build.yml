@@ -60,6 +60,16 @@ jobs:
             unittests: true
             DISTCHECK: true
 
+          - CC: clang
+            feature_set: max
+            arch: amd64
+            os: ubuntu-latest
+            unittests: true
+            DISTCHECK: false
+            name_extra: and AddressSanitized
+            CFLAGS: "-fsanitize=address -ggdb"
+            LDFLAGS: "-fsanitize=address"
+
           # Maximal debug 64-bit arch builds
           # Check we can also do a static build without
           # installing .a files
@@ -80,6 +90,8 @@ jobs:
             unittests: true
             DISTCHECK: false
             name_extra: for 32-bit arch (legacy OS)
+            CFLAGS: "-m32"
+            LDFLAGS: "-m32"
 
           - CC: g++
             feature_set: max
@@ -88,6 +100,8 @@ jobs:
             unittests: false
             DISTCHECK: false
             name_extra: for 32-bit arch (legacy OS)
+            CFLAGS: "-m32"
+            LDFLAGS: "-m32"
 
           - CC: clang
             feature_set: max
@@ -96,11 +110,15 @@ jobs:
             unittests: true
             DISTCHECK: false
             name_extra: for 32-bit arch (legacy OS)
+            CFLAGS: "-m32"
+            LDFLAGS: "-m32"
 
     name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
     runs-on: ${{ matrix.os }}
     env:
       CC: ${{ matrix.CC }}
+      CFLAGS: ${{ matrix.CFLAGS }}
+      LDFLAGS: ${{ matrix.LDFLAGS }}
 
       # HACK (2020-11-16): github actions doesn't support YAML anchors/aliases to
       # avoid repeating long config values. So instead the config values are defined
@@ -121,8 +139,6 @@ jobs:
                   --host=i686-linux --enable-tests"
 
       PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
-      CFLAGS_i386: "-m32"
-      LDFLAGS_i386: "-m32"
     steps:
       - name: "Define feature and arch dependent environment variables"
         # Note: any "variable=value" written to the $GITHUB_ENV file will be
@@ -131,8 +147,6 @@ jobs:
         run: |
           echo "CONF_FLAGS=$CONF_FLAGS_${{ matrix.arch }}_${{ matrix.feature_set }} ${{ matrix.CONF_FLAGS_EXTRA }}" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
-          echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
-          echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: "Install Dependencies"
         # See https://github.com/actions/runner-images/issues/7192
@@ -147,7 +161,7 @@ jobs:
         run: make -j $(nproc)
       - name: unittests
         if: ${{ matrix.unittests }}
-        run: make check -j $(nproc)
+        run: make check -j $(nproc) || (cat tests/*/test-suite.log && exit 1)
       - name: distcheck
         id: dist_check
         if: ${{ matrix.DISTCHECK }}
