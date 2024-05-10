@@ -1,4 +1,4 @@
-# Release notes for xrdp v0.10.0 (2024/03/dd)
+# Release notes for xrdp v0.10.0 (2024/05/10)
 
 This section notes changes since the [v0.10 branch](#branch-v010) was created. 
 
@@ -52,8 +52,11 @@ None
 * On-the-fly resolution change with the Microsoft Store version of Remote Desktop client sometimes crashes on connect (#1869)
 * xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
 
+## Changes for users
+* If moving from v0.9.x, read the '[User changes](#user-changes)' for the v0.10 branch below.
+
 ## Changes for packagers or developers
-* If moving from v0.9.x, read the '[Significant changes for packagers or developers section](#significant-changes-for-packagers-or-developers)' for the v0.10 branch below.
+* If moving from v0.9.x, read the '[User changes](#user-changes)'  and '[Significant changes for packagers or developers section](#significant-changes-for-packagers-or-developers)' sections for the v0.10 branch below.
 
 -----------------------
 
@@ -63,7 +66,7 @@ This branch was forked from development on 2024-02-08 in preparation for testing
 
 The changes in this section are relative to version v0.9.19 of xrdp.
 
-## General announcements
+## User changes
 * The [x11rdp](/neutrinolabs/x11rdp) X server is no longer supported. Users will need to move to xorgxrdp (#2489)
 * Running xrdp and xrdp-sesman on separate hosts is no longer supported.
 * There are some changes to `xrdp.ini` and `sesman.ini` which break backwards compatibility. In particular:-
@@ -206,7 +209,8 @@ Other security fixes:-
 * The libscp.so shared library is replaced with libipm.so
 * A new shared library libsesman.so contains shared code for sesman and related executables (#2601)
 * The default setting for `--with-socketdir` is now `/var/run/xrdp` rather than `/tmp/.xrdp`. The new setting works for installations where `/tmp` is polyinstantiated ( see #1482 for more details)
-* The layout of the socketdir has changed to remove the use of the sticky bit and allow the sesman socket to be stored in it. UNIX socket files used by users are now stored in a per-UID directory (#2731)
+* The permissions of the socketdir have changed from 1777 to 755 (owned by root). Within this directory are the sesman socket and user-specific directories. The user-specific directories store the session sockets used by each user (#2731).  
+   It is recommended not to use the same `--with-socketdir` setting for v0.9.x and v0.10.x packages as the differing permissions can cause problems on package downgrades. See #3066 for an example of where this can be a problem.
 * Passing `--disable-static` to `configure` prevents unused static libraries being installed by `make install`.
 * The `simple.c` example xrdpapi program has been updated to work with logging changes, and is now built as part of the CI (#2276)
 * If the `xrdp-mkfv1` utility is to be built, the switch `--with-freetype2` must be passed to `./configure`.
