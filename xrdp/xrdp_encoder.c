@@ -34,6 +34,10 @@
 #include "rfxcodec_encode.h"
 #endif
 
+#ifdef XRDP_X264
+#include "xrdp_encoder_x264.h"
+#endif
+
 #define DEFAULT_XRDP_GFX_FRAMES_IN_FLIGHT 2
 /* limits used for validate env var XRDP_GFX_FRAMES_IN_FLIGHT */
 #define MIN_XRDP_GFX_FRAMES_IN_FLIGHT 1
