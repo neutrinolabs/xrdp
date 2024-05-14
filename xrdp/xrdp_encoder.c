@@ -856,12 +856,12 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
             }
         }
         error = xrdp_encoder_x264_encode(
-                self->codec_handle_h264_gfx[mon_index], 0,
-                left, top,
-                width, height, twidth, theight,  0,
-                enc_gfx_cmd->data,
-                crects, num_rects_c,
-                s->p, &bitmap_data_length, NULL);
+                    self->codec_handle_h264_gfx[mon_index], 0,
+                    left, top,
+                    width, height, twidth, theight,  0,
+                    enc_gfx_cmd->data,
+                    crects, num_rects_c,
+                    s->p, &bitmap_data_length, NULL);
         if (error == 0)
         {
             xstream_seek(s, bitmap_data_length);
