@@ -2561,7 +2561,7 @@ xrdp_mm_chan_process_msg(struct xrdp_mm *self, struct trans *trans,
                 break;
             case 20:
                 rv = xrdp_mm_trans_process_unicode_ack(self, s);
-
+				break;
             default:
                 LOG(LOG_LEVEL_ERROR, "xrdp_mm_chan_process_msg: unknown id %d", id);
                 break;
