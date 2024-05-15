@@ -74,6 +74,16 @@ enum client_resize_mode
     CRMODE_MULTI_SCREEN
 };
 
+enum xrdp_capture_code
+{
+    CC_SIMPLE       = 0,
+    CC_SUF_A16      = 1,
+    CC_SUF_RFX      = 2,
+    CC_SUF_A2       = 3,
+    CC_GFX_PRO      = 4,
+    CC_GFX_A2       = 5
+};
+
 /**
  * Information about the xrdp client
  *
@@ -170,7 +180,7 @@ struct xrdp_client_info
     int mcs_early_capability_flags;
 
     int max_fastpath_frag_bytes;
-    int capture_code;
+    int old_capture_code;
     int capture_format;
 
     char certificate[1024];
@@ -228,6 +238,9 @@ struct xrdp_client_info
 
     // Can we resize the desktop by using a Deactivation-Reactivation Sequence?
     enum client_resize_mode client_resize_mode;
+
+    int pad1; /* unused; unicode_input_state */
+    enum xrdp_capture_code capture_code;
 };
 
 enum xrdp_encoder_flags
@@ -247,6 +260,6 @@ enum xrdp_encoder_flags
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
 /* also used for changes to all the xrdp installed headers */
-#define CLIENT_INFO_CURRENT_VERSION 20230425
+#define CLIENT_INFO_CURRENT_VERSION 20240514
 
 #endif
