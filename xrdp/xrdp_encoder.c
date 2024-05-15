@@ -141,7 +141,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->codec_id = client_info->jpeg_codec_id;
         self->in_codec_mode = 1;
         self->codec_quality = client_info->jpeg_prop[0];
-        client_info->capture_code = 0;
+        client_info->capture_code = CC_SIMPLE;
         client_info->capture_format = XRDP_a8b8g8r8;
         self->process_enc = process_enc_jpg;
     }
@@ -151,7 +151,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         LOG(LOG_LEVEL_INFO,
             "xrdp_encoder_create: starting h264 codec session gfx");
         self->in_codec_mode = 1;
-        client_info->capture_code = 5;
+        client_info->capture_code = CC_GFX_A2;
         client_info->capture_format = XRDP_nv12_709fr;
         self->gfx = 1;
     }
@@ -160,7 +160,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting h264 codec session");
         self->codec_id = client_info->h264_codec_id;
         self->in_codec_mode = 1;
-        client_info->capture_code = 3;
+        client_info->capture_code = CC_SUF_A2;
         client_info->capture_format = XRDP_nv12;
         self->process_enc = process_enc_h264;
     }
@@ -171,7 +171,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         LOG(LOG_LEVEL_INFO,
             "xrdp_encoder_create: starting gfx rfx pro codec session");
         self->in_codec_mode = 1;
-        client_info->capture_code = 4;
+        client_info->capture_code = CC_GFX_PRO;
         self->gfx = 1;
         self->quants = (const char *) g_rfx_quantization_values;
         self->num_quants = 2;
@@ -184,7 +184,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: starting rfx codec session");
         self->codec_id = client_info->rfx_codec_id;
         self->in_codec_mode = 1;
-        client_info->capture_code = 2;
+        client_info->capture_code = CC_SUF_RFX;
         self->process_enc = process_enc_rfx;
         self->codec_handle_rfx = rfxcodec_encode_create(mm->wm->screen->width,
                                  mm->wm->screen->height,
