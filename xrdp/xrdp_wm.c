@@ -28,6 +28,7 @@
 #include "ms-rdpbcgr.h"
 #include "log.h"
 #include "string_calls.h"
+#include "unicode_defines.h"
 
 /*****************************************************************************/
 static void
@@ -1675,14 +1676,65 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 }
 
 /*****************************************************************************/
+/**
+ * Takes a stream of UTF-16 characters and  maps then to Unicode characters
+ */
+static char32_t
+get_unicode_character(struct xrdp_wm *self, int device_flags, char16_t c16)
+{
+    char32_t c32 = 0;
+    int *high_ptr;
+
+    if (device_flags & KBD_FLAG_UP)
+    {
+        high_ptr = &self->last_high_surrogate_key_up;
+    }
+    else
+    {
+        high_ptr = &self->last_high_surrogate_key_down;
+    }
+
+    if (IS_HIGH_SURROGATE(c16))
+    {
+        // Record high surrogate for next time
+        *high_ptr = c16;
+    }
+    else if (IS_LOW_SURROGATE(c16))
+    {
+        // If last character was a high surrogate, we can use it
+        if (*high_ptr != 0)
+        {
+            c32 = C32_FROM_SURROGATE_PAIR(c16, *high_ptr);
+            *high_ptr = 0;
+        }
+    }
+    else
+    {
+        // Character maps straight across
+        c32 = c16;
+        *high_ptr = 0;
+    }
+
+    return c32;
+}
+
+/*****************************************************************************/
 static int
-xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
+xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
 {
     int index;
+    char32_t c32 = get_unicode_character(self, device_flags, c16);
 
+    if (c32 == 0)
+    {
+        return 0;
+    }
+
+    // See if we can find the character in the existing keymap,
+    // and if so, generate normal key event(s) for it
     for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
-        if (unicode == self->keymap.keys_noshift[index].chr)
+        if (c32 == self->keymap.keys_noshift[index].chr)
         {
             xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
             return 0;
@@ -1691,7 +1743,7 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
 
     for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
-        if (unicode == self->keymap.keys_shift[index].chr)
+        if (c32 == self->keymap.keys_shift[index].chr)
         {
             if (device_flags & KBD_FLAG_UP)
             {
@@ -1709,7 +1761,7 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
 
     for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
-        if (unicode == self->keymap.keys_altgr[index].chr)
+        if (c32 == self->keymap.keys_altgr[index].chr)
         {
             if (device_flags & KBD_FLAG_UP)
             {
@@ -1729,7 +1781,7 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
 
     for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
-        if (unicode == self->keymap.keys_shiftaltgr[index].chr)
+        if (c32 == self->keymap.keys_shiftaltgr[index].chr)
         {
             if (device_flags & KBD_FLAG_UP)
             {
@@ -1746,6 +1798,17 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t unicode)
             }
             return 0;
         }
+    }
+
+    // Send the character to chansrv if it's capable of doing something
+    // with it
+    if (self->mm->chan_trans != NULL &&
+            self->client_info->unicode_input_support == UIS_ACTIVE &&
+            self->mm->chan_trans->status == TRANS_STATUS_UP)
+    {
+        xrdp_mm_send_unicode_to_chansrv(self->mm,
+                                        !(device_flags & KBD_FLAG_UP), c32);
+        return 0;
     }
 
     return 0;

@@ -73,8 +73,17 @@ xrdp_chansrv_SOURCES = \
   sound.h \
   xcommon.c \
   xcommon.h \
+  input.h \
   audin.c \
   audin.h
+
+if XRDP_IBUS
+AM_CPPFLAGS += -DXRDP_IBUS $(IBUS_CFLAGS) $(GLIB2_CFLAGS)
+CHANSRV_EXTRA_LIBS += $(IBUS_LIBS) $(GLIB2_LIBS)
+xrdp_chansrv_SOURCES += \
+  input_ibus.c
+endif
+
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)

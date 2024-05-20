@@ -75,6 +75,15 @@ enum client_resize_mode
 };
 
 /**
+ * Type describing Unicode input state
+ */
+enum unicode_input_state
+{
+    UIS_UNSUPPORTED = 0, ///< Client does not support Unicode
+    UIS_SUPPORTED,       ///< Client supports Unicode, but it's not active
+    UIS_ACTIVE           ///< Unicode input is active
+};
+/**
  * Information about the xrdp client
  *
  * @note This structure is shared with xorgxrdp. If you change anything
@@ -228,6 +237,8 @@ struct xrdp_client_info
 
     // Can we resize the desktop by using a Deactivation-Reactivation Sequence?
     enum client_resize_mode client_resize_mode;
+
+    enum unicode_input_state unicode_input_support;
 };
 
 enum xrdp_encoder_flags

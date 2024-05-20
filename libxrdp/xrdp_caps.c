@@ -422,6 +422,27 @@ xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
     {
         self->client_info.use_fast_path &= ~2;
     }
+
+    // We always advertise Unicode support, so if the client supports it too,
+    // we can use it.
+    //
+    // If Unicode support is already active, the CAPSTYPE_INPUT
+    // PDU has been received as part of a Deactivation-Reactivation sequence.
+    // In this case, ignore the flag.
+    if (self->client_info.unicode_input_support != UIS_ACTIVE)
+    {
+        if ((inputFlags & INPUT_FLAG_UNICODE) != 0)
+        {
+            self->client_info.unicode_input_support = UIS_SUPPORTED;
+            LOG(LOG_LEVEL_INFO, "Client supports Unicode input");
+        }
+        else
+        {
+            self->client_info.unicode_input_support = UIS_UNSUPPORTED;
+            LOG(LOG_LEVEL_INFO, "Client does not support Unicode input");
+        }
+    }
+
     return 0;
 }
 
