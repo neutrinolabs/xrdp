@@ -2,7 +2,7 @@
 Description=xrdp daemon
 Documentation=man:xrdp(8) man:xrdp.ini(5)
 Requires=xrdp-sesman.service
-After=network.target xrdp-sesman.service
+After=network-online.target xrdp-sesman.service
 
 [Service]
 Type=forking
