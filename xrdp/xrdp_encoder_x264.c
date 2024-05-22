@@ -53,15 +53,8 @@ struct x264_global
 void *
 xrdp_encoder_x264_create(void)
 {
-    struct x264_global *xg;
-
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_encoder_x264_create:");
-    xg = g_new0(struct x264_global, 1);
-    if (xg == NULL)
-    {
-        return NULL;
-    }
-    return xg;
+    return g_new0(struct x264_global, 1);
 }
 
 /*****************************************************************************/
