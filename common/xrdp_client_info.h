@@ -180,7 +180,7 @@ struct xrdp_client_info
     int mcs_early_capability_flags;
 
     int max_fastpath_frag_bytes;
-    int old_capture_code;
+    int pad0; /* unused */
     int capture_format;
 
     char certificate[1024];
