@@ -220,8 +220,21 @@ xrdp_input_unicode_init(void)
         return 0;
     }
 
-    /* Wait becasue ibus daemon may not be ready in first login. Do we have a flag to avoid busy waiting? */
-    sleep(3);
+    /* Wait because the ibus daemon may not be ready on first login */
+    const char *addr = ibus_get_address();
+    unsigned int cnt = 0;
+    while (!addr && cnt < 10)
+    {
+        usleep(500 * 1000); // half a second
+        addr = ibus_get_address();
+        ++cnt;
+    }
+    if (!addr)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_ibus_init: Timed out waiting for iBus daemon");
+        return 1;
+    }
 
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_init: Initializing the iBus engine");
     ibus_init();
