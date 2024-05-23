@@ -537,6 +537,13 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
+# checking for XKB
+AC_CHECK_HEADER([X11/extensions/XKBrules.h], [],
+  [AC_MSG_ERROR([please install libxkbfile-dev or libxkbfile-devel])],
+  [#include <X11/Xlib.h>
+#include <X11/XKBlib.h>
+#include <stdio.h>])
+
 if test "x$enable_utmp" = "xyes"
 then
     AC_CHECK_HEADERS(utmp.h utmpx.h)
