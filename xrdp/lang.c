@@ -230,12 +230,14 @@ is_valid_unicode_char(const char *val, char32_t *chr)
 }
 
 /*****************************************************************************/
+/**
+ * keymap must be cleared before calling this function
+ */
 static int
 km_read_section(toml_table_t *tfile, const char *section_name,
                 struct xrdp_key_info *keymap)
 {
     toml_table_t *section = toml_table_in(tfile, section_name);
-    g_memset(keymap, '\0', sizeof(*keymap));
 
     if (section == NULL)
     {
@@ -363,10 +365,13 @@ km_load_file(const char *filename, struct xrdp_keymap *keymap)
     }
     else
     {
-        fclose(fp);
         LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
+        fclose(fp);
 
-        /* read the keymaps */
+        /* Clear the whole keymap */
+        memset(keymap, 0, sizeof(*keymap));
+
+        /* read the keymap sections */
         km_read_section(tfile, "noshift", keymap->keys_noshift);
         km_read_section(tfile, "shift", keymap->keys_shift);
         km_read_section(tfile, "altgr", keymap->keys_altgr);
@@ -382,6 +387,11 @@ km_load_file(const char *filename, struct xrdp_keymap *keymap)
          * area and copy it over */
         struct xrdp_key_info keys_numlock[256];
         int i;
+        for (i = XR_RDP_SCAN_MIN_NUMLOCK; i <= XR_RDP_SCAN_MAX_NUMLOCK; ++i)
+        {
+            keys_numlock[i].sym = 0;
+            keys_numlock[i].chr = 0;
+        }
         km_read_section(tfile, "numlock", keys_numlock);
         for (i = XR_RDP_SCAN_MIN_NUMLOCK; i <= XR_RDP_SCAN_MAX_NUMLOCK; ++i)
         {
