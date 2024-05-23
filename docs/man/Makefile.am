@@ -8,6 +8,7 @@ man_MANS = \
   xrdp-dis.1 \
   sesman.ini.5 \
   xrdp.ini.5 \
+  xrdp-km.toml.5 \
   xrdp.8 \
   xrdp-chansrv.8 \
   xrdp-genkeymap.8 \
