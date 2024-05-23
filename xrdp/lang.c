@@ -23,47 +23,19 @@
 #include <config_ac.h>
 #endif
 
+#include <ctype.h>
+
 #include "xrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
 #include "string_calls.h"
+#include "toml.h"
 
-/* map for rdp to x11 scancodes
-   code1 is regular scancode, code2 is extended scancode */
-struct codepair
-{
-    tui8 code1;
-    tui8 code2;
-};
-static struct codepair g_map[] =
-{
-    { 0, 0 }, { 9, 0 }, { 10, 0 }, { 11, 0 }, { 12, 0 }, /* 0 - 4 */
-    { 13, 0 }, { 14, 0 }, { 15, 0 }, { 16, 0 }, { 17, 0 }, /* 5 - 9 */
-    { 18, 0 }, { 19, 0 }, { 20, 0 }, { 21, 0 }, { 22, 0 }, /* 10 - 14 */
-    { 23, 0 }, { 24, 173 }, { 25, 0 }, { 26, 0 }, { 27, 0 }, /* 15 - 19 */
-    { 28, 0 }, { 29, 0 }, { 30, 0 }, { 31, 0 }, { 32, 0 }, /* 20 - 24 */
-    { 33, 171 }, { 34, 0 }, { 35, 0 }, { 36, 108 }, { 37, 109 }, /* 25 - 29 */
-    { 38, 0 }, { 39, 0 }, { 40, 121 }, { 41, 0 }, { 42, 172 }, /* 30 - 34 */
-    { 43, 0 }, { 44, 174 }, { 45, 0 }, { 46, 0 }, { 47, 0 }, /* 35 - 39 */
-    { 48, 0 }, { 49, 0 }, { 50, 0 }, { 51, 0 }, { 52, 0 }, /* 40 - 44 */
-    { 53, 0 }, { 54, 122 }, { 55, 0 }, { 56, 123 }, { 57, 0 }, /* 45 - 49 */
-    { 58, 180 }, { 59, 0 }, { 60, 0 }, { 61, 112 }, { 62, 0 }, /* 50 - 54 */
-    { 63, 111 }, { 64, 113 }, { 65, 0 }, { 66, 0 }, { 67, 0 }, /* 55 - 59 */
-    { 68, 0 }, { 69, 0 }, { 70, 0 }, { 71, 0 }, { 72, 0 }, /* 60 - 64 */
-    { 73, 0 }, { 74, 0 }, { 75, 0 }, { 76, 0 }, { 77, 0 }, /* 65 - 69 */
-    { 78, 0 }, { 79, 97 }, { 80, 98 }, { 81, 99 }, { 82, 0 }, /* 70 - 74 */
-    { 83, 100 }, { 84, 0 }, { 85, 102 }, { 86, 0 }, { 87, 103 }, /* 75 - 79 */
-    { 88, 104 }, { 89, 105 }, { 90, 106 }, { 91, 107 }, { 92, 0 }, /* 80 - 84 */
-    { 93, 0 }, { 94, 0 }, { 95, 0 }, { 96, 0 }, { 97, 0 }, /* 85 - 89 */
-    { 98, 0 }, { 0, 115 }, { 0, 116 }, { 0, 117 }, { 102, 0 }, /* 90 - 94 */
-    { 103, 0 }, { 104, 0 }, { 105, 0 }, { 106, 0 }, { 107, 0 }, /* 95 - 99 */
-    { 108, 0 }, { 109, 225 }, { 110, 164 }, { 111, 181 }, { 112, 136 }, /* 100 - 104 */
-    { 113, 167 }, { 114, 166 }, { 115, 0 }, { 116, 163 }, { 117, 234 }, /* 105 - 109 */
-    { 118, 156 }, { 119, 157 }, { 120, 0 }, { 121, 0 }, { 122, 0 }, /* 110 - 114 */
-    { 123, 0 }, { 124, 0 }, { 125, 0 }, { 126, 0 }, { 127, 0 }, /* 115 - 119 */
-    { 128, 0 }, { 129, 0 }, { 130, 0 }, { 131, 0 }, { 132, 0 }, /* 120 - 124 */
-    { 133, 0 }, { 134, 0 }, { 135, 0 } /* 125 - 127 */
-};
+// Macro to return 0..15 for a valid isxdigit() character
+#define XDIGIT_TO_VAL(d) (\
+                          isdigit(d) ? (d) - '0' : \
+                          ((d) >= 'a' && (d) <= 'f') ? (d) - 'a' + 10 : \
+                          (d) - 'A' + 10)
 
 /*****************************************************************************/
 struct xrdp_key_info *
@@ -81,20 +53,12 @@ get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
     shift = keys[42] || keys[54];
     altgr = keys[56] & KBD_FLAG_EXT;  /* right alt */
     rv = 0;
-    scan_code = scan_code & 0x7f;
-    index = ext ? g_map[scan_code].code2 : g_map[scan_code].code1;
+    index = INDEX_FROM_SCANCODE(scan_code, ext);
 
-    /* keymap file is created with numlock off so we have to do this */
-    if ((index >= 79) && (index <= 91))
+    if (num_lock &&
+            index >= XR_RDP_SCAN_MIN_NUMLOCK && index <= XR_RDP_SCAN_MAX_NUMLOCK)
     {
-        if (num_lock)
-        {
-            rv = &(keymap->keys_shift[index]);
-        }
-        else
-        {
-            rv = &(keymap->keys_noshift[index]);
-        }
+        rv = &(keymap->keys_numlock[index - XR_RDP_SCAN_MIN_NUMLOCK]);
     }
     else if (shift && caps_lock && altgr)
     {
@@ -173,58 +137,169 @@ get_char_from_scan_code(int device_flags, int scan_code, int *keys,
 }
 
 /*****************************************************************************/
+/**
+ * Tests a table key to see if it's a valid scancode
+ *
+ * @param key Table key
+ * @param[out] scancode scancode index value (0..255) if 1 is returned
+ * @return Boolean != 0 if the key is valid
+ */
 static int
-km_read_section(int fd, const char *section_name, struct xrdp_key_info *keymap)
+is_valid_scancode(const char *key, int *scancode)
 {
-    struct list *names;
-    struct list *values;
-    int index;
-    int code;
-    int pos1;
-    char *name;
-    char *value;
-
-    names = list_create();
-    names->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-
-    g_memset(keymap, '\0', sizeof(*keymap));
-    if (file_read_section(fd, section_name, names, values) == 0)
+    int rv = 0;
+    int extended = 0;
+    if ((key[0] == 'E' || key[0] == 'e') && key[1] == '0' && key[2] == '_')
     {
-        for (index = names->count - 1; index >= 0; index--)
+        extended = 1;
+        key += 3;
+    }
+
+    if (isxdigit(key[0]) && isxdigit(key[1]) && key[2] == '\0')
+    {
+        rv = 1;
+        *scancode = XDIGIT_TO_VAL(key[0]) * 16 + XDIGIT_TO_VAL(key[1]);
+        *scancode = INDEX_FROM_SCANCODE(*scancode, extended);
+    }
+    return rv;
+}
+
+/*****************************************************************************/
+/**
+ * Tests a value to see if it's a valid KeySym (decimal number)
+ *
+ * @param val
+ * @param[out] keysym. Keysym value if 1 is returned
+ * @return Boolean != 0 if the string is valid
+ */
+static int
+is_valid_keysym(const char *val, int *sym)
+{
+    int rv = 0;
+    int s = 0;
+    if (*val != '\0')
+    {
+        while (isdigit(*val))
         {
-            name = (char *)list_get_item(names, index);
-            value = (char *)list_get_item(values, index);
-
-            if ((name != 0) && (value != 0))
-            {
-                if (g_strncasecmp(name, "key", 3) == 0)
-                {
-                    code = g_atoi(name + 3);
-                }
-                else
-                {
-                    code = g_atoi(name);
-                }
-
-                if ((code >= 0) && (code < 256))
-                {
-                    pos1 = g_pos(value, ":");
-
-                    if (pos1 >= 0)
-                    {
-                        keymap[code].chr = g_atoi(value + pos1 + 1);
-                    }
-
-                    keymap[code].sym = g_atoi(value);
-                }
-            }
+            s = s * 10 + (*val++ - '0');
+        }
+        if (*val == '\0')
+        {
+            *sym = s;
+            rv = 1;
         }
     }
 
-    list_delete(names);
-    list_delete(values);
+    return rv;
+}
+
+/*****************************************************************************/
+/**
+ * Tests a value to see if it's a valid unicode character (U+xxxx)
+ *
+ * @param val
+ * @param[out] chr value if 1 is returned
+ * @return Boolean != 0 if the string is valid
+ */
+static int
+is_valid_unicode_char(const char *val, char32_t *chr)
+{
+    int rv = 0;
+
+    if ((val[0] == 'U' || val[0] == 'u') &&
+            val[1] == '+' && isxdigit(val[2]))
+    {
+        val += 2;  // Skip 'U+'
+        const char *p = val;
+        char32_t c = 0;
+
+        while (isxdigit(*p))
+        {
+            c = c * 16 + XDIGIT_TO_VAL(*p);
+            ++p;
+        }
+
+        if (*p == '\0' && (p - val) >= 4 && (p - val) <= 6)
+        {
+            rv = 1;
+            *chr = c;
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+static int
+km_read_section(toml_table_t *tfile, const char *section_name,
+                struct xrdp_key_info *keymap)
+{
+    toml_table_t *section = toml_table_in(tfile, section_name);
+    g_memset(keymap, '\0', sizeof(*keymap));
+
+    if (section == NULL)
+    {
+        LOG(LOG_LEVEL_WARNING, "Section [%s] not found in keymap file",
+            section_name);
+    }
+    else
+    {
+        const char *key;
+        toml_datum_t  val;
+        int index;
+        int scancode; // index value 0..255
+        char *p;
+        const char *unicode_str;
+        for (index = 0 ; (key = toml_key_in(section, index)) != NULL; ++index)
+        {
+            if (!is_valid_scancode(key, &scancode))
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Can't parse value '%s' in [%s] in keymap file",
+                    key, section_name);
+                continue;
+            }
+            val = toml_string_in(section, key);
+            if (!val.ok)
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Can't read value for [%s]:%s in keymap file",
+                    section_name, key);
+                continue;
+            }
+
+            // Does the value contain a unicode character?
+            if ((p = strchr(val.u.s, ':')) != NULL)
+            {
+                unicode_str = (p + 1);
+                *p = '\0'; // val is a copy, writeable by us
+            }
+            else
+            {
+                unicode_str = NULL;
+            }
+
+            /* Parse both values and add them to the keymap, logging any
+             * errors */
+            if (!is_valid_keysym(val.u.s, &keymap[scancode].sym))
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Can't read KeySym for [%s]:%s in keymap file",
+                    section_name, key);
+            }
+
+            if (unicode_str != NULL &&
+                    !is_valid_unicode_char(unicode_str, &keymap[scancode].chr))
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Can't read unicode character for [%s]:%s in keymap file",
+                    section_name, key);
+            }
+
+            free(val.u.s);
+        }
+    }
+
     return 0;
 }
 
@@ -233,83 +308,88 @@ int
 get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 {
     int basic_key_layout = keylayout & 0x0000ffff;
-    char *filename;
-    struct xrdp_keymap *lkeymap;
+    char filename[256];
+    int layout_list[10];
+    int layout_count = 0;
+    int i;
 
-    filename = (char *)g_malloc(256, 0);
-
-    /* check if there is a keymap file e.g. km-e00100411.ini */
-    g_snprintf(filename, 255, "%s/km-%08x.ini", XRDP_CFG_PATH, keylayout);
-
-    /* if the file does not exist, use only lower 16 bits instead */
-    if (!g_file_exist(filename))
+    /* Work out a list of layouts to try to load */
+    layout_list[layout_count++] = keylayout; // Requested layout
+    if (basic_key_layout != keylayout)
     {
-        LOG(LOG_LEVEL_WARNING, "Cannot find keymap file %s", filename);
-        /* e.g. km-00000411.ini */
-        g_snprintf(filename, 255, "%s/km-%08x.ini", XRDP_CFG_PATH, basic_key_layout);
+        layout_list[layout_count++] = basic_key_layout; // First fallback
     }
+    layout_list[layout_count++] = 0x0409; // Last chance 'en-US'
 
-    /* finally, use 'en-us' */
-    if (!g_file_exist(filename))
+    /* search for a loadable layout in the list */
+    for (i = 0; i < layout_count; ++i)
     {
-        LOG(LOG_LEVEL_WARNING, "Cannot find keymap file %s", filename);
-        g_snprintf(filename, 255, "%s/km-00000409.ini", XRDP_CFG_PATH);
-    }
+        // Convert key layout to a filename
+        g_snprintf(filename, sizeof(filename),
+                   XRDP_CFG_PATH "/km-%08x.toml", layout_list[i]);
 
-    if (g_file_exist(filename))
-    {
-
-        lkeymap = (struct xrdp_keymap *)g_malloc(sizeof(struct xrdp_keymap), 0);
-        /* make a copy of the built-in keymap */
-        g_memcpy(lkeymap, keymap, sizeof(struct xrdp_keymap));
-
-        km_load_file(filename, keymap);
-
-        if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
+        if (km_load_file(filename, keymap) == 0)
         {
-            LOG(LOG_LEVEL_WARNING,
-                "local keymap file for 0x%08x found and doesn't match "
-                "built in keymap, using local keymap file", keylayout);
+            return 0;
         }
-
-        g_free(lkeymap);
-    }
-    else
-    {
-        LOG(LOG_LEVEL_WARNING, "File does not exist: %s", filename);
     }
 
-    g_free(filename);
+    /* No luck finding anything */
+    LOG(LOG_LEVEL_ERROR, "Cannot find a usable keymap file");
+
     return 0;
 }
 
 /*****************************************************************************/
-int km_load_file(const char *filename, struct xrdp_keymap *keymap)
+int
+km_load_file(const char *filename, struct xrdp_keymap *keymap)
 {
-    int fd;
+    FILE *fp;
+    toml_table_t *tfile;
+    char errbuf[200];
+    int rv = 0;
 
-    LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
-    fd = g_file_open_ro(filename);
-
-    if (fd != -1)
+    if ((fp = fopen(filename, "r")) == NULL)
     {
-        /* read the keymaps */
-        km_read_section(fd, "noshift", keymap->keys_noshift);
-        km_read_section(fd, "shift", keymap->keys_shift);
-        km_read_section(fd, "altgr", keymap->keys_altgr);
-        km_read_section(fd, "shiftaltgr", keymap->keys_shiftaltgr);
-        km_read_section(fd, "capslock", keymap->keys_capslock);
-        km_read_section(fd, "capslockaltgr", keymap->keys_capslockaltgr);
-        km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
-        km_read_section(fd, "shiftcapslockaltgr", keymap->keys_shiftcapslockaltgr);
-
-        g_file_close(fd);
+        LOG(LOG_LEVEL_ERROR, "Error loading keymap file %s (%s)",
+            filename, g_get_strerror());
+        rv = 1;
+    }
+    else if ((tfile = toml_parse_file(fp, errbuf, sizeof(errbuf))) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Error in keymap file %s - %s", filename, errbuf);
+        fclose(fp);
+        rv = 1;
     }
     else
     {
-        LOG(LOG_LEVEL_ERROR, "Error loading keymap file %s (%s)", filename, g_get_strerror());
-        return 1;
+        fclose(fp);
+        LOG(LOG_LEVEL_INFO, "Loading keymap file %s", filename);
+
+        /* read the keymaps */
+        km_read_section(tfile, "noshift", keymap->keys_noshift);
+        km_read_section(tfile, "shift", keymap->keys_shift);
+        km_read_section(tfile, "altgr", keymap->keys_altgr);
+        km_read_section(tfile, "shiftaltgr", keymap->keys_shiftaltgr);
+        km_read_section(tfile, "capslock", keymap->keys_capslock);
+        km_read_section(tfile, "capslockaltgr", keymap->keys_capslockaltgr);
+        km_read_section(tfile, "shiftcapslock", keymap->keys_shiftcapslock);
+        km_read_section(tfile, "shiftcapslockaltgr",
+                        keymap->keys_shiftcapslockaltgr);
+
+        /* The numlock map is much smaller and offset by
+         * XR_RDP_SCAN_MAX_NUMLOCK. Read the section into a temporary
+         * area and copy it over */
+        struct xrdp_key_info keys_numlock[256];
+        int i;
+        km_read_section(tfile, "numlock", keys_numlock);
+        for (i = XR_RDP_SCAN_MIN_NUMLOCK; i <= XR_RDP_SCAN_MAX_NUMLOCK; ++i)
+        {
+            keymap->keys_numlock[i - XR_RDP_SCAN_MIN_NUMLOCK] = keys_numlock[i];
+        }
+
+        toml_free(tfile);
     }
 
-    return 0;
+    return rv;
 }
