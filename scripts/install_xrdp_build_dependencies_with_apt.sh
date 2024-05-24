@@ -78,7 +78,8 @@ in
             libssl-dev \
             libx11-dev \
             libxrandr-dev \
-            libxfixes-dev"
+            libxfixes-dev \
+            libxkbfile-dev"
 
         case "$FEATURE_SET"
         in
@@ -129,6 +130,7 @@ in
             libx11-dev:i386 \
             libxext-dev:i386 \
             libxfixes-dev:i386 \
+            libxkbfile-dev:i386 \
             libxrandr-dev:i386 \
             libxrender-dev:i386 \
             libsubunit-dev:i386 \

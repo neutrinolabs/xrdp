@@ -1,43 +1,49 @@
-Creating a new keymap file.
----------------------------
+Keymap file description
+-----------------------
+
+The keymap files are used by the xrdp login screen, and also when
+sending keyboard input to a VNC server.
 
 The names of the files are of the format;
 
-km-xxxxxxxx.ini
+km-xxxxxxxx.toml
 
 where the xxxxxxxx is replaced by the hex number of the layout of interest.
 
-The files have 8 sections;
+The contents of the files are documented in xrdp-km.toml(5)
 
-[noshift], [shift], [altgr], [shiftaltgr], [capslock], [capslockaltgr],
-[shiftcapslock], [shiftcapslockaltgr]
+See also xrdp-genkeymap(8) which describes the utility used to
+generate these files.
 
-In each section there are multiple lines for each key.
+Creating a new file
+-------------------
 
-An example line looks like;
+To create a new file:-
+1) Start an X server
+2) Use the 'setxkbmap' command to get the keyboard configured
+   for the X server.
+3) Run the 'xrdp-genkeymap' command to extract the keyboard
+   mappings
 
-Key10=49:49
+   Example: ./xrdp-genkeymap ./km-00000409.toml
 
-In this line, 10 is the X11 scancode, the first 49 is the keysym value,
-the second 49 if the unicode value of the key.  This is the definition
-for the 'noshift' '1' key on a en-us keyboard.  In this case, the keysym
-and the unicode value are the same.
+4) Copy the generated file to /etc/xrdp/
 
-Here is an example where they are not;
+Using the X server of your current session may not be a good idea, as
+session and window managers can interfere with key bindings. A good option
+is to use an 'Xvfb' dummy X server to do this.
 
-This is the definition for the backspace key;
-Key22=65288:8
+Getting a file added to xrdp
+----------------------------
 
-And this is the star on the keypad;
-Key63=65450:42
+The file dump-keymaps.sh in this directory is used to auto-generate
+all keymap files. It runs on Linux currently, but will generate
+keymap files suitable for any xrdp platform.
 
-To create a new file run "xrdp-genkeymap <filename>"
-
-Example: ./xrdp-genkeymap /etc/xrdp/km-00000409.ini
-
-Note: You need to have enough rights to be able to write to the
-/etc/xrdp directory.
-
-Alternatively, create the keymap file in a directory of your choice, then
-copy or move it over to /etc/xrdp using sudo/su.
-
+1) Add a line towards the end of this file which causes your mapping to
+   be generated. Use the other lines in this file as a guide.
+2) Run the dump-keymaps.sh script to generate a new file in
+   instfiles/
+3) Add your mapping to the list in instfiless/Makefile.am
+4) Submit a pull request to the project containing the above three
+   changes.

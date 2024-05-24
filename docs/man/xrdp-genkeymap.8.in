@@ -9,48 +9,44 @@
 
 .SH "SYNTAX"
 .B xrdp\-genkeymap
-.I file
+.I [ options ] file
 
 .SH "DESCRIPTION"
-\fBxrdp\-genkeymap\fR extracts the key map used by the currently running X session to generated a mapping from Remote Desktop Protocol (RDP) key codes to X keysyms and Unicode code points.
+\fBxrdp\-genkeymap\fR extracts the current key map from the X server
+X session to generate a mapping from Remote Desktop Protocol (RDP)
+scan codes to X keysyms and Unicode code points.
+
+Before running this utility, make sure the keymap is correct, by issuing
+the correct \fIsetxkbmap\fP command(s).
 
 .SH OPTIONS
 .TP
-.I outfile
+.B -k 'keycode_set'
+Inform \fBxrdp\-genkeymap\fR of the keycode set in operation (evdev or
+base), so that the correct scan code to keycode mapping table is selected
+to generate the keymap.
+
+If you omit this option, the XKB extension is asked to provide the
+name of the keycode set.
+
+.TP
+.B -c 'comment'
+Adds a comment to the top of the generated file.
+
+This option may be repeated more than once to add multiple comments to
+the top of the file.
+.TP
+.B outfile
 The key map information is stored in the file named \fIoutfile\fP.
 
 .SH "FILES"
 .TP
-.I @sysconfdir@/xrdp/km-XXXXXXXX.ini
-Files containing the keyboard mapping for language \fIXXXXXXXX\fP, which is a 8 digit hexadecimal number identifying the country and language code.
-.RS 8
-.TP
-.B 00000405
-cs Czech
-.TP
-.B 00000407
-de German
-.TP
-.B 00000409
-en-us US English
-.TP
-.B 0000040c
-fr French
-.TP
-.B 00000410
-it Italian
-.TP
-.B 00000416
-br Portuguese (Brazil)
-.TP
-.B 00000419
-ru Russian
-.TP
-.B 0000041d
-se Swedish
-.TP
-.B 00000809
-en-uk UK English
+.I @sysconfdir@/xrdp/km-XXXXXXXX.toml
+Files containing the keyboard mapping for country and language \fIXXXXXXXX\fP.
+\fIXXXXXXXX\fP is a 8 digit hexadecimal number, representing the \fIinput
+locale identifier\fP.
+
+The input locale identifier is passed from the RDP client when it connects.
 .RE
 
 .SH "AUTHORS"
@@ -60,8 +56,15 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 
 .SH "SEE ALSO"
 .BR xrdp (8),
+.BR xrdp-km.toml (5),
 .BR setxkbmap (1),
 .BR unicode (7)
+
+.PP
+Input locale identifiers on the
+.UR https://go.microsoft.com/fwlink/?LinkId=202824
+Microsoft website
+.UE
 .PP
 Description of Keyboard Input mapping on the
 .UR https://github.com/FreeRDP/FreeRDP/wiki/Keyboard

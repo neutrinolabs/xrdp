@@ -1,0 +1,129 @@
+.\"
+.TH "xrdp-km.toml" "5" "@PACKAGE_VERSION@" "xrdp team" ""
+.SH "NAME"
+\fBxrdp-km.toml\fR \- \fBxrdp\fP key mapping file
+
+.SH "DESCRIPTION"
+Key mapping files are located at \fB@sysconfdir@/xrdp/km-XXXXXXXX.toml\fP
+where \fBXXXXXXXX\fP is the input locale identifier sent by the RDP client.
+
+The key mapping files are used to translate RDP scan codes into one of
+the following forms:-
+.TP
+.B X11 KeySyms
+These are used when \fBxrdp\fP connects to a VNC server.
+.TP
+.B Unicode characters
+These are used on the \fBxrdp\fP login screen.
+.RE
+.PP
+Each keymap file consists of several sections. Each section starts with
+the section name in square brackets, followed by a list of
+\fIparameter\fR=\fIvalue\fR lines.
+
+.SH "SECTIONS"
+The following sections are recognized:
+.TP
+\fB[Globals]\fR
+Global configuration
+
+.TP
+\fB[noshift]\fR
+Key mappings if no modifier keys (i.e. shift, alt gr, caps lock) are down.
+.TP
+\fB[shift]\fR
+Key mappings if the shift key is down.
+.TP
+\fB[altgr]\fR
+Key mappings if the alt gr key is down.
+.TP
+\fB[shiftaltgr]\fR
+Key mappings if the shift and alt gr keys are down.
+.TP
+\fB[capslock]\fR
+Key mappings if the caps lock key is down.
+.TP
+\fB[shiftcapslock]\fR
+Key mappings if the caps lock and shift keys are down.
+.TP
+\fB[shiftcapslockaltgr]\fR
+Key mappings if the shift, caps lock and alt gr keys are down.
+.TP
+\fB[numlock]\fR
+Key mappings if the numlock key is down.
+
+.LP
+All parameters and values are case
+insensitive, and are described in detail below. If any parameter is
+specified more than once, the last entry will be used. Options specified
+outside their proper section will be \fIignored\fR.
+
+.SH "GLOBALS Section"
+Following parameters can be used in the \fB[Globals]\fR section.
+
+.TP
+\fBVersion\fR=\fInumber\fR
+Version of the file format in use.
+Can be used to check for file format mis-matches when a file is loaded.
+.RE
+
+.SH "Keymap Sections"
+All other sections contain lines formatted in one of the following
+ways:-
+
+.TP
+<scancode>=<KeySym>
+.TP
+<scancode>=<KeySymNum>:<unicode-char>
+.RE
+
+Each line may also be followed by a comment (preceded by '#') which
+contains more information about the key, for example a KeySym string.
+
+.TP
+.B scancode
+A \fBscancode\fP is an RDP scancode received from the client. These
+correspond to Windows "Scan Code Set 1" scan codes, and can be displayed
+in Windows by using an appropriate utility.
+
+The \fBscancode\fP is in one of these two forms:-
+
+.RS 8
+.TP
+.B <hex-digit><hex-digit>
+Standard scancodes. For example, '1C' refers to the enter key.
+These are 'key down' scancodes, and so are always between 00 and 7F.
+.TP
+.B E0_<hex-digit><hex-digit>
+Extended scancodes. For example, 'E0_1C' refers to the enter key on the numeric keypad.
+.RE
+
+.TP
+.B KeySymNum
+A decimal number representing an X11 KeySym
+
+.TP
+.B unicode-char
+A string of the format \fBU+XXXX\fP \fBU+XXXXX\fP,, \fBU+XXXXX\fP,
+where \fBX\fP is a hexadecimal digit.
+.RE
+
+.SH "Limitations"
+This file format has the following limitations.
+.IP \(bu
+Not all combinations of shift keys are stored in the file. For example,
+at present there is no section for shift and numlock combined.
+.IP \(bu
+Modifier keys, other than the ones supported above, are not supported.
+
+.SH "SEE ALSO"
+.BR xrdp-genkeymap (8)
+
+.PP
+Scancode mappings for most keyboards at
+.UR https://kbdlayout.info
+.UE
+
+For more info on \fBxrdp\fR see
+.UR @xrdphomeurl@
+.UE
