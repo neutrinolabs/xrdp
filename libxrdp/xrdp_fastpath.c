@@ -423,8 +423,8 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                 break;
             case FASTPATH_INPUT_EVENT_MOUSEREL:
                 if (xrdp_fastpath_process_EVENT_MOUSEREL(self,
-                                                         eventFlags,
-                                                         s) != 0)
+                        eventFlags,
+                        s) != 0)
                 {
                     return 1;
                 }
