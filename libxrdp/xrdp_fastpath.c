@@ -123,7 +123,8 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
           RDP_INPUT_SYNCHRONIZE - 0
           RDP_INPUT_SCANCODE - 4
           RDP_INPUT_MOUSE - 0x8001
-          RDP_INPUT_MOUSEX - 0x8002 */
+          RDP_INPUT_MOUSEX - 0x8002
+          RDP_INPUT_MOUSEREL - 0x8003 */
         /* call to xrdp_wm.c : callback */
         self->session->callback(self->session->id, msg,
                                 param1, param2, param3, param4);
@@ -320,6 +321,39 @@ xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
 }
 
 /*****************************************************************************/
+/* FASTPATH_INPUT_EVENT_MOUSEREL */
+static int
+xrdp_fastpath_process_EVENT_MOUSEREL(struct xrdp_fastpath *self,
+                                     int eventFlags, struct stream *s)
+{
+    int pointerFlags;
+    int xDelta;
+    int yDelta;
+
+    /* eventFlags MUST be zeroed out */
+    if (eventFlags != 0)
+    {
+        return 1;
+    }
+
+    if (!s_check_rem_and_log(s, 2 + 2 + 2, "Parsing [MS-RDPBCGR] TS_FP_RELPOINTER_EVENT"))
+    {
+        return 1;
+    }
+    in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
+    in_int16_le(s, xDelta); /* xDelta (2 bytes) */
+    in_int16_le(s, yDelta); /* yDelta (2 bytes) */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_RELPOINTER_EVENT "
+              "eventHeader.eventFlags 0x00, eventHeader.eventCode (ignored), "
+              "pointerFlags 0x%4.4x, xDelta %d, yDelta %d", pointerFlags, xDelta, yDelta);
+
+    xrdp_fastpath_session_callback(self, RDP_INPUT_MOUSEREL,
+                                   xDelta, yDelta, pointerFlags, 0);
+
+    return 0;
+}
+
+/*****************************************************************************/
 /* FASTPATH_INPUT_EVENT */
 int
 xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
@@ -383,6 +417,14 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                 if (xrdp_fastpath_process_EVENT_UNICODE(self,
                                                         eventFlags,
                                                         s) != 0)
+                {
+                    return 1;
+                }
+                break;
+            case FASTPATH_INPUT_EVENT_MOUSEREL:
+                if (xrdp_fastpath_process_EVENT_MOUSEREL(self,
+                                                         eventFlags,
+                                                         s) != 0)
                 {
                     return 1;
                 }

@@ -2017,6 +2017,18 @@ xrdp_wm_process_input_mousex(struct xrdp_wm *self, int device_flags,
     return 0;
 }
 
+/*****************************************************************************/
+static int
+xrdp_wm_process_input_mouserel(struct xrdp_wm *self, int device_flags,
+                               int xDelta, int yDelta)
+{
+    LOG_DEVEL(LOG_LEVEL_TRACE, "mouserel event flags %4.4x xDelta %d yDelta %d", device_flags, xDelta, yDelta);
+
+    // TODO
+
+    return 0;
+}
+
 /******************************************************************************/
 /* param1 = MAKELONG(channel_id, flags)
    param2 = size
@@ -2090,6 +2102,9 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
             break;
         case RDP_INPUT_MOUSEX:
             rv = xrdp_wm_process_input_mousex(wm, param3, param1, param2);
+            break;
+        case RDP_INPUT_MOUSEREL:
+            rv = xrdp_wm_process_input_mouserel(wm, param3, param1, param2);
             break;
         case 0x4444: /* invalidate, this is not from RDP_DATA_PDU_INPUT */
             /* like the rest, it's from RDP_PDU_DATA with code 33 */

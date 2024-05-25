@@ -471,6 +471,7 @@
 #define RDP_INPUT_UNICODE              5
 #define RDP_INPUT_MOUSE                0x8001
 #define RDP_INPUT_MOUSEX               0x8002
+#define RDP_INPUT_MOUSEREL             0x8004
 
 /* Keyboard Event: keyboardFlags (2.2.8.1.1.3.1.1.1) */
 /* TODO: to be renamed */
@@ -512,6 +513,7 @@
 #define FASTPATH_INPUT_EVENT_MOUSEX         0x2
 #define FASTPATH_INPUT_EVENT_SYNC           0x3
 #define FASTPATH_INPUT_EVENT_UNICODE        0x4
+#define FASTPATH_INPUT_EVENT_MOUSEREL       0x5
 #define FASTPATH_INPUT_EVENT_QOE_TIMESTAMP  0x6
 
 /* Fast-Path Keyboard Event: eventHeader (2.2.8.1.2.2.1) */

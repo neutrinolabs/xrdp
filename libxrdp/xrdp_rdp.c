@@ -1046,6 +1046,11 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
                           "pointerFlags 0x%4.4x, xPos %d, yPos %d",
                           device_flags, param1, param2);
                 break;
+            case RDP_INPUT_MOUSEREL:
+                LOG_DEVEL(LOG_LEVEL_TRACE, "With field [MS-RDPBCGR] TS_INPUT_EVENT - TS_RELPOINTER_EVENT "
+                          "pointerFlags 0x%4.4x, xDelta %d, yDelta %d",
+                          device_flags, param1, param2);
+                break;
             default:
                 LOG_DEVEL(LOG_LEVEL_WARNING, "Received unknown [MS-RDPBCGR] TS_INPUT_EVENT "
                           "messageType 0x%4.4x", msg_type);
@@ -1058,7 +1063,8 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
                RDP_INPUT_SYNCHRONIZE - 0
                RDP_INPUT_SCANCODE - 4
                RDP_INPUT_MOUSE - 0x8001
-               RDP_INPUT_MOUSEX - 0x8002 */
+               RDP_INPUT_MOUSEX - 0x8002
+               RDP_INPUT_MOUSEREL - 0x8004 */
             /* call to xrdp_wm.c : callback */
             self->session->callback(self->session->id, msg_type, param1, param2,
                                     device_flags, time);
