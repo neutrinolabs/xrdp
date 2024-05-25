@@ -341,8 +341,8 @@ xrdp_fastpath_process_EVENT_MOUSEREL(struct xrdp_fastpath *self,
         return 1;
     }
     in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
-    in_int16_le(s, xDelta); /* xDelta (2 bytes) */
-    in_int16_le(s, yDelta); /* yDelta (2 bytes) */
+    in_sint16_le(s, xDelta); /* xDelta (2 bytes) */
+    in_sint16_le(s, yDelta); /* yDelta (2 bytes) */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_FP_RELPOINTER_EVENT "
               "eventHeader.eventFlags 0x00, eventHeader.eventCode (ignored), "
               "pointerFlags 0x%4.4x, xDelta %d, yDelta %d", pointerFlags, xDelta, yDelta);
