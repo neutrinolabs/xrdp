@@ -124,7 +124,7 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
           RDP_INPUT_SCANCODE - 4
           RDP_INPUT_MOUSE - 0x8001
           RDP_INPUT_MOUSEX - 0x8002
-          RDP_INPUT_MOUSEREL - 0x8003 */
+          RDP_INPUT_MOUSEREL - 0x8004 */
         /* call to xrdp_wm.c : callback */
         self->session->callback(self->session->id, msg,
                                 param1, param2, param3, param4);
