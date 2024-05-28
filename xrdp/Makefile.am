@@ -18,11 +18,19 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/third_party/tomlc99
 
 XRDP_EXTRA_LIBS =
+XRDP_EXTRA_SOURCES =
 
 if XRDP_RFXCODEC
 AM_CPPFLAGS += -DXRDP_RFXCODEC
 AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
 XRDP_EXTRA_LIBS += $(top_builddir)/librfxcodec/src/.libs/librfxencode.a
+endif
+
+if XRDP_X264
+AM_CPPFLAGS += -DXRDP_X264
+AM_CPPFLAGS += $(XRDP_X264_CFLAGS)
+XRDP_EXTRA_LIBS += $(XRDP_X264_LIBS)
+XRDP_EXTRA_SOURCES += xrdp_encoder_x264.c xrdp_encoder_x264.h
 endif
 
 if XRDP_PIXMAN
@@ -63,7 +71,8 @@ xrdp_SOURCES = \
   xrdp_egfx.c \
   xrdp_egfx.h \
   xrdp_wm.c \
-  xrdp_main_utils.c
+  xrdp_main_utils.c \
+  $(XRDP_EXTRA_SOURCES)
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
