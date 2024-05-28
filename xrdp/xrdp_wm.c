@@ -1248,8 +1248,6 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 int
 xrdp_wm_mouse_relative_move(struct xrdp_wm *self, int xDelta, int yDelta)
 {
-    struct xrdp_bitmap *b;
-
     if (self == 0)
     {
         return 0;
@@ -2021,7 +2019,7 @@ static int
 xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
                             int x, int y)
 {
-    return xrdp_wm_process_input_mouse_common(self, device_flags, TRUE, x, y);
+    return xrdp_wm_process_input_mouse_common(self, device_flags, 1, x, y);
 }
 
 /*****************************************************************************/
@@ -2059,7 +2057,7 @@ static int
 xrdp_wm_process_input_mouserel(struct xrdp_wm *self, int device_flags,
                                int xDelta, int yDelta)
 {
-    return xrdp_wm_process_input_mouse_common(self, device_flags, FALSE, x, y);
+    return xrdp_wm_process_input_mouse_common(self, device_flags, 0, xDelta, yDelta);
 }
 
 /******************************************************************************/
