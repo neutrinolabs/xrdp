@@ -155,8 +155,6 @@ xrdp_input_main_loop(void *in_val)
     factory = ibus_factory_new(ibus_bus_get_connection(bus));
     g_object_ref_sink(factory);
     g_signal_connect(factory, "create-engine", G_CALLBACK(xrdp_input_ibus_create_engine), NULL);
-    g_signal_connect(factory, "enable", G_CALLBACK(xrdp_input_ibus_engine_enable), NULL);
-    g_signal_connect(factory, "disable", G_CALLBACK(xrdp_input_ibus_engine_disable), NULL);
 
     ibus_factory_add_engine(factory, "XrdpIme", IBUS_TYPE_ENGINE);
 
