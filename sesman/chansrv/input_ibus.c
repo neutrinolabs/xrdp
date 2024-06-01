@@ -155,8 +155,6 @@ xrdp_input_main_loop(void *in_val)
     factory = ibus_factory_new(ibus_bus_get_connection(bus));
     g_object_ref_sink(factory);
     g_signal_connect(factory, "create-engine", G_CALLBACK(xrdp_input_ibus_create_engine), NULL);
-    g_signal_connect(factory, "enable", G_CALLBACK(xrdp_input_ibus_engine_enable), NULL);
-    g_signal_connect(factory, "disable", G_CALLBACK(xrdp_input_ibus_engine_disable), NULL);
 
     ibus_factory_add_engine(factory, "XrdpIme", IBUS_TYPE_ENGINE);
 
@@ -220,8 +218,21 @@ xrdp_input_unicode_init(void)
         return 0;
     }
 
-    /* Wait becasue ibus daemon may not be ready in first login. Do we have a flag to avoid busy waiting? */
-    sleep(3);
+    /* Wait because the ibus daemon may not be ready on first login */
+    const char *addr = ibus_get_address();
+    unsigned int cnt = 0;
+    while (!addr && cnt < 10)
+    {
+        usleep(500 * 1000); // half a second
+        addr = ibus_get_address();
+        ++cnt;
+    }
+    if (!addr)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_ibus_init: Timed out waiting for iBus daemon");
+        return 1;
+    }
 
     LOG(LOG_LEVEL_INFO, "xrdp_ibus_init: Initializing the iBus engine");
     ibus_init();
