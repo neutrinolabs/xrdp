@@ -24,7 +24,8 @@ struct xrdp_encoder
     int max_compressed_bytes;
     tbus xrdp_encoder_event_to_proc;
     tbus xrdp_encoder_event_processed;
-    tbus xrdp_encoder_term;
+    tbus xrdp_encoder_term_request;
+    tbus xrdp_encoder_term_done;
     struct fifo *fifo_to_proc;
     struct fifo *fifo_processed;
     tbus mutex;
