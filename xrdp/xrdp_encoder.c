@@ -204,7 +204,8 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     g_snprintf(buf, 1024, "xrdp_%8.8x_encoder_event_processed", pid);
     self->xrdp_encoder_event_processed = g_create_wait_obj(buf);
     g_snprintf(buf, 1024, "xrdp_%8.8x_encoder_term", pid);
-    self->xrdp_encoder_term = g_create_wait_obj(buf);
+    self->xrdp_encoder_term_request = g_create_wait_obj(buf);
+    self->xrdp_encoder_term_done = g_create_wait_obj(buf);
     if (client_info->gfx)
     {
         const char *env_var = g_getenv("XRDP_GFX_FRAMES_IN_FLIGHT");
@@ -280,8 +281,12 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
         return;
     }
     /* tell worker thread to shut down */
-    g_set_wait_obj(self->xrdp_encoder_term);
-    g_sleep(1000);
+    g_set_wait_obj(self->xrdp_encoder_term_request);
+    g_obj_wait(&self->xrdp_encoder_term_done, 1, NULL, 0, 5000);
+    if (!g_is_wait_obj_set(self->xrdp_encoder_term_done))
+    {
+        LOG(LOG_LEVEL_WARNING, "Encoder failed to shut down cleanly");
+    }
 
 #ifdef XRDP_RFXCODEC
     for (index = 0; index < 16; index++)
@@ -314,7 +319,8 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     /* destroy wait objects used for signalling */
     g_delete_wait_obj(self->xrdp_encoder_event_to_proc);
     g_delete_wait_obj(self->xrdp_encoder_event_processed);
-    g_delete_wait_obj(self->xrdp_encoder_term);
+    g_delete_wait_obj(self->xrdp_encoder_term_request);
+    g_delete_wait_obj(self->xrdp_encoder_term_done);
 
     /* cleanup fifos */
     fifo_delete(self->fifo_to_proc, NULL);
@@ -1127,7 +1133,7 @@ proc_enc_msg(void *arg)
     event_to_proc = self->xrdp_encoder_event_to_proc;
 
     term_obj = g_get_term();
-    lterm_obj = self->xrdp_encoder_term;
+    lterm_obj = self->xrdp_encoder_term_request;
 
     cont = 1;
     while (cont)
@@ -1178,6 +1184,7 @@ proc_enc_msg(void *arg)
         }
 
     } /* end while (cont) */
+    g_set_wait_obj(self->xrdp_encoder_term_done);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "proc_enc_msg: thread exit");
     return 0;
 }
