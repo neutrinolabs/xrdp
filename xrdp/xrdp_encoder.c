@@ -88,8 +88,15 @@ static void
 xrdp_enc_data_destructor(void *item, void *closure)
 {
     XRDP_ENC_DATA *enc = (XRDP_ENC_DATA *)item;
-    g_free(enc->u.sc.drects);
-    g_free(enc->u.sc.crects);
+    if (ENC_IS_BIT_SET(enc->flags, ENC_FLAGS_GFX_BIT))
+    {
+        g_free(enc->u.gfx.cmd);
+    }
+    else
+    {
+        g_free(enc->u.sc.drects);
+        g_free(enc->u.sc.crects);
+    }
     g_free(enc);
 }
 
