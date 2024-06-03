@@ -1631,3 +1631,78 @@ PREFIX (_extents) (region_type_t *region)
     return (&region->extents);
 }
 
+#ifdef USE_DEVEL_LOGGING
+/*
+ * Clip a list of scanlines to a region.  The caller has allocated the
+ * space.  FSorted is non-zero if the scanline origins are in ascending order.
+ *
+ * returns the number of new, clipped scanlines.
+ *
+ * NB: For xrdp this function is only used if we are running devel logging
+ */
+
+PIXMAN_EXPORT pixman_bool_t
+PREFIX (_selfcheck) (region_type_t *reg)
+{
+    int i, numRects;
+
+    if ((reg->extents.x1 > reg->extents.x2) ||
+            (reg->extents.y1 > reg->extents.y2))
+    {
+        return FALSE;
+    }
+
+    numRects = PIXREGION_NUMRECTS (reg);
+    if (!numRects)
+    {
+        return ((reg->extents.x1 == reg->extents.x2) &&
+                (reg->extents.y1 == reg->extents.y2) &&
+                (reg->data->size || (reg->data == pixman_region_empty_data)));
+    }
+    else if (numRects == 1)
+    {
+        return (!reg->data);
+    }
+    else
+    {
+        box_type_t *pbox_p, *pbox_n;
+        box_type_t box;
+
+        pbox_p = PIXREGION_RECTS (reg);
+        box = *pbox_p;
+        box.y2 = pbox_p[numRects - 1].y2;
+        pbox_n = pbox_p + 1;
+
+        for (i = numRects; --i > 0; pbox_p++, pbox_n++)
+        {
+            if ((pbox_n->x1 >= pbox_n->x2) ||
+                    (pbox_n->y1 >= pbox_n->y2))
+            {
+                return FALSE;
+            }
+
+            if (pbox_n->x1 < box.x1)
+            {
+                box.x1 = pbox_n->x1;
+            }
+
+            if (pbox_n->x2 > box.x2)
+            {
+                box.x2 = pbox_n->x2;
+            }
+
+            if ((pbox_n->y1 < pbox_p->y1) ||
+                    ((pbox_n->y1 == pbox_p->y1) &&
+                     ((pbox_n->x1 < pbox_p->x2) || (pbox_n->y2 != pbox_p->y2))))
+            {
+                return FALSE;
+            }
+        }
+
+        return ((box.x1 == reg->extents.x1) &&
+                (box.x2 == reg->extents.x2) &&
+                (box.y1 == reg->extents.y1) &&
+                (box.y2 == reg->extents.y2));
+    }
+}
+#endif // USE_DEVEL_LOGGING
