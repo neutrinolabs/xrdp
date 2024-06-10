@@ -1370,7 +1370,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         error = xrdp_egfx_send_reset_graphics(self->egfx,
                                               screen->width, screen->height,
                                               self->wm->client_info->display_sizes.monitorCount,
-                                              self->wm->client_info->display_sizes.minfo_wm);
+                                              self->wm->client_info->display_sizes.minfo);
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_reset_graphics "
             "error %d monitorCount %d",
             error, self->wm->client_info->display_sizes.monitorCount);
