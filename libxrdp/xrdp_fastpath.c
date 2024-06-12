@@ -184,6 +184,11 @@ xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self,
         flags |= KBD_FLAG_EXT;
     }
 
+    if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED1))
+    {
+        flags |= KBD_FLAG_EXT1;
+    }
+
     xrdp_fastpath_session_callback(self, RDP_INPUT_SCANCODE,
                                    code, 0, flags, 0);
 
