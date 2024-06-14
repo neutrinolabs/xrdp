@@ -327,8 +327,47 @@ const struct map_settings global_settings[] =
 const struct map_settings *settings = &global_settings[SI_EVDEV];
 
 /*****************************************************************************/
+int
+scancode_to_index(unsigned short scancode)
+{
+    if (scancode <= 0x7f)
+    {
+        return scancode;
+    }
+    if (scancode <= 0xff)
+    {
+        // 0x80 - 0xff : Invalid code
+        return -1;
+    }
+    if (scancode <= 0x17f)
+    {
+        // 01x100 - 0x17f : Move bit 9 to bit 8
+        return (scancode & 0x7f) | 0x80;
+    }
+
+    return -1;
+}
+
+/*****************************************************************************/
 unsigned short
-scancode_to_keycode(unsigned short scancode)
+scancode_from_index(int index)
+{
+    index &= 0xff;
+    unsigned short result;
+    if (index < 0x80)
+    {
+        result = index;
+    }
+    else
+    {
+        result = (index & 0x7f) | 0x100;
+    }
+    return result;
+}
+
+/*****************************************************************************/
+unsigned short
+scancode_to_x11_keycode(unsigned short scancode)
 {
     unsigned int min = 0;
     unsigned int max = settings->size;
@@ -417,5 +456,14 @@ scancode_set_keycode_set(const char *kk_set)
 const char *
 scancode_get_keycode_set(void)
 {
+    return settings->name;
+}
+
+/*****************************************************************************/
+const char *
+scancode_get_xkb_rules(void)
+{
+    // Currently supported keycods map directly to the same name for
+    // the rules which use them.
     return settings->name;
 }

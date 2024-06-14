@@ -39,58 +39,64 @@
 
 /*****************************************************************************/
 struct xrdp_key_info *
-get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
+get_key_info_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                             int caps_lock, int num_lock, int scroll_lock,
                             struct xrdp_keymap *keymap)
 {
     struct xrdp_key_info *rv;
     int shift;
+    int altgr_scancode;
     int altgr;
-    int ext;
     int index;
 
-    ext = device_flags & KBD_FLAG_EXT;  /* 0x0100 */
     shift = keys[42] || keys[54];
-    altgr = keys[56] & KBD_FLAG_EXT;  /* right alt */
+    altgr_scancode = SCANCODE_FROM_KBD_EVENT(56, KBD_FLAG_EXT);
+    altgr = keys[scancode_to_index(altgr_scancode)];  /* right alt */
     rv = 0;
-    index = INDEX_FROM_SCANCODE(scan_code, ext);
 
-    if (num_lock &&
-            index >= XR_RDP_SCAN_MIN_NUMLOCK && index <= XR_RDP_SCAN_MAX_NUMLOCK)
+    index = scancode_to_index(SCANCODE_FROM_KBD_EVENT(key_code, keyboard_flags));
+    if (index >= 0)
     {
-        rv = &(keymap->keys_numlock[index - XR_RDP_SCAN_MIN_NUMLOCK]);
-    }
-    else if (shift && caps_lock && altgr)
-    {
-        rv = &(keymap->keys_shiftcapslockaltgr[index]);
-    }
-    else if (shift && caps_lock)
-    {
-        rv = &(keymap->keys_shiftcapslock[index]);
-    }
-    else if (shift && altgr)
-    {
-        rv = &(keymap->keys_shiftaltgr[index]);
-    }
-    else if (shift)
-    {
-        rv = &(keymap->keys_shift[index]);
-    }
-    else if (caps_lock && altgr)
-    {
-        rv = &(keymap->keys_capslockaltgr[index]);
-    }
-    else if (caps_lock)
-    {
-        rv = &(keymap->keys_capslock[index]);
-    }
-    else if (altgr)
-    {
-        rv = &(keymap->keys_altgr[index]);
-    }
-    else
-    {
-        rv = &(keymap->keys_noshift[index]);
+        // scancode_to_index() guarantees to map numlock scancodes
+        // to the same index values.
+        if (num_lock &&
+                index >= XR_RDP_SCAN_MIN_NUMLOCK &&
+                index <= XR_RDP_SCAN_MAX_NUMLOCK)
+        {
+            rv = &(keymap->keys_numlock[index - XR_RDP_SCAN_MIN_NUMLOCK]);
+        }
+        else if (shift && caps_lock && altgr)
+        {
+            rv = &(keymap->keys_shiftcapslockaltgr[index]);
+        }
+        else if (shift && caps_lock)
+        {
+            rv = &(keymap->keys_shiftcapslock[index]);
+        }
+        else if (shift && altgr)
+        {
+            rv = &(keymap->keys_shiftaltgr[index]);
+        }
+        else if (shift)
+        {
+            rv = &(keymap->keys_shift[index]);
+        }
+        else if (caps_lock && altgr)
+        {
+            rv = &(keymap->keys_capslockaltgr[index]);
+        }
+        else if (caps_lock)
+        {
+            rv = &(keymap->keys_capslock[index]);
+        }
+        else if (altgr)
+        {
+            rv = &(keymap->keys_altgr[index]);
+        }
+        else
+        {
+            rv = &(keymap->keys_noshift[index]);
+        }
     }
 
     return rv;
@@ -98,13 +104,13 @@ get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
 
 /*****************************************************************************/
 int
-get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
+get_keysym_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                           int caps_lock, int num_lock, int scroll_lock,
                           struct xrdp_keymap *keymap)
 {
     struct xrdp_key_info *ki;
 
-    ki = get_key_info_from_scan_code(device_flags, scan_code, keys,
+    ki = get_key_info_from_kbd_event(keyboard_flags, key_code, keys,
                                      caps_lock, num_lock, scroll_lock,
                                      keymap);
 
@@ -118,13 +124,13 @@ get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
 
 /*****************************************************************************/
 char32_t
-get_char_from_scan_code(int device_flags, int scan_code, int *keys,
+get_char_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         struct xrdp_keymap *keymap)
 {
     struct xrdp_key_info *ki;
 
-    ki = get_key_info_from_scan_code(device_flags, scan_code, keys,
+    ki = get_key_info_from_kbd_event(keyboard_flags, key_code, keys,
                                      caps_lock, num_lock, scroll_lock,
                                      keymap);
 
@@ -138,28 +144,29 @@ get_char_from_scan_code(int device_flags, int scan_code, int *keys,
 
 /*****************************************************************************/
 /**
- * Tests a table key to see if it's a valid scancode
+ * Converts a table key to a scancode index value
  *
  * @param key Table key
- * @param[out] scancode scancode index value (0..255) if 1 is returned
- * @return Boolean != 0 if the key is valid
+ * @return index >= 0, or < 0 for an invalid key
  */
 static int
-is_valid_scancode(const char *key, int *scancode)
+key_to_scancode_index(const char *key)
 {
-    int rv = 0;
-    int extended = 0;
-    if ((key[0] == 'E' || key[0] == 'e') && key[1] == '0' && key[2] == '_')
+    int rv = -1;
+    int keyboard_flags = 0;
+    if ((key[0] == 'E' || key[0] == 'e') && key[2] == '_')
     {
-        extended = 1;
-        key += 3;
+        if (key[1] == '0')
+        {
+            keyboard_flags |= KBD_FLAG_EXT;
+            key += 3;
+        }
     }
 
     if (isxdigit(key[0]) && isxdigit(key[1]) && key[2] == '\0')
     {
-        rv = 1;
-        *scancode = XDIGIT_TO_VAL(key[0]) * 16 + XDIGIT_TO_VAL(key[1]);
-        *scancode = INDEX_FROM_SCANCODE(*scancode, extended);
+        int code = XDIGIT_TO_VAL(key[0]) * 16 + XDIGIT_TO_VAL(key[1]);
+        rv = scancode_to_index(SCANCODE_FROM_KBD_EVENT(code, keyboard_flags));
     }
     return rv;
 }
@@ -248,13 +255,14 @@ km_read_section(toml_table_t *tfile, const char *section_name,
     {
         const char *key;
         toml_datum_t  val;
-        int index;
-        int scancode; // index value 0..255
+        int i;
         char *p;
         const char *unicode_str;
-        for (index = 0 ; (key = toml_key_in(section, index)) != NULL; ++index)
+        for (i = 0 ; (key = toml_key_in(section, i)) != NULL; ++i)
         {
-            if (!is_valid_scancode(key, &scancode))
+            // Get a scancode index from the key if possible
+            int sindex = key_to_scancode_index(key);
+            if (sindex < 0)
             {
                 LOG(LOG_LEVEL_WARNING,
                     "Can't parse value '%s' in [%s] in keymap file",
@@ -283,7 +291,7 @@ km_read_section(toml_table_t *tfile, const char *section_name,
 
             /* Parse both values and add them to the keymap, logging any
              * errors */
-            if (!is_valid_keysym(val.u.s, &keymap[scancode].sym))
+            if (!is_valid_keysym(val.u.s, &keymap[sindex].sym))
             {
                 LOG(LOG_LEVEL_WARNING,
                     "Can't read KeySym for [%s]:%s in keymap file",
@@ -291,7 +299,7 @@ km_read_section(toml_table_t *tfile, const char *section_name,
             }
 
             if (unicode_str != NULL &&
-                    !is_valid_unicode_char(unicode_str, &keymap[scancode].chr))
+                    !is_valid_unicode_char(unicode_str, &keymap[sindex].chr))
             {
                 LOG(LOG_LEVEL_WARNING,
                     "Can't read unicode character for [%s]:%s in keymap file",
@@ -385,7 +393,7 @@ km_load_file(const char *filename, struct xrdp_keymap *keymap)
         /* The numlock map is much smaller and offset by
          * XR_RDP_SCAN_MAX_NUMLOCK. Read the section into a temporary
          * area and copy it over */
-        struct xrdp_key_info keys_numlock[256];
+        struct xrdp_key_info keys_numlock[SCANCODE_MAX_INDEX + 1];
         int i;
         for (i = XR_RDP_SCAN_MIN_NUMLOCK; i <= XR_RDP_SCAN_MAX_NUMLOCK; ++i)
         {

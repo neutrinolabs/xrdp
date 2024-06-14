@@ -147,8 +147,14 @@ int
 xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param);
 int
 xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down);
+/**
+ * Handle a TS_KEYBOARD_EVENT ([MS-RDPBCGR] 2.2.8.1.1.3.1.1.1)
+ *
+ * @param device_flags keyboardFlags value from PDU
+ * @param key_code keyCode value from PDU
+ */
 int
-xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code);
+xrdp_wm_key(struct xrdp_wm *self, int keyboard_flags, int key_code);
 int
 xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags);
 int
@@ -424,15 +430,15 @@ set_string(char **in_str, const char *in);
 
 /* in lang.c */
 struct xrdp_key_info *
-get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
+get_key_info_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                             int caps_lock, int num_lock, int scroll_lock,
                             struct xrdp_keymap *keymap);
 int
-get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
+get_keysym_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                           int caps_lock, int num_lock, int scroll_lock,
                           struct xrdp_keymap *keymap);
 char32_t
-get_char_from_scan_code(int device_flags, int scan_code, int *keys,
+get_char_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         struct xrdp_keymap *keymap);
 int

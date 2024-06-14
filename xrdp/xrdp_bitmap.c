@@ -1226,7 +1226,7 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             }
             else
             {
-                char32_t c = get_char_from_scan_code
+                char32_t c = get_char_from_kbd_event
                              (param2, scan_code, self->wm->keys, self->wm->caps_lock,
                               self->wm->num_lock, self->wm->scroll_lock,
                               &(self->wm->keymap));

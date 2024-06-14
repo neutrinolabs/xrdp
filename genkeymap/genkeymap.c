@@ -279,7 +279,7 @@ output_file_section(FILE *outf,
             continue;
         }
 
-        e.keycode = scancode_to_keycode(scancode);
+        e.keycode = scancode_to_x11_keycode(scancode);
         nbytes = XLookupString(&e, text, 255, &ks, NULL);
         if (ks == NoSymbol)
         {

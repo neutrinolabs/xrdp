@@ -63,9 +63,6 @@
 #define XRDP_MAX_BITMAP_CACHE_IDX 2000
 #define XRDP_BITMAP_CACHE_ENTRIES 2048
 
-#define XR_MIN_KEY_CODE 8
-#define XR_MAX_KEY_CODE 256
-
 /*
  * Constants come from ITU-T Recommendations
  */

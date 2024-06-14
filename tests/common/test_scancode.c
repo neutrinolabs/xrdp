@@ -31,7 +31,7 @@ START_TEST(test_scancode__evdev_all_values_returned)
     iter = 0;
     while ((scancode = scancode_get_next(&iter)) != 0)
     {
-        unsigned short keycode = scancode_to_keycode(scancode);
+        unsigned short keycode = scancode_to_x11_keycode(scancode);
         ck_assert_int_ne(keycode, 0);
     }
 }
@@ -57,7 +57,7 @@ START_TEST(test_scancode__evdev_bad_values_mapped_to_0)
     {
         if (!valid[scancode])
         {
-            ck_assert_int_eq(scancode_to_keycode(scancode), 0);
+            ck_assert_int_eq(scancode_to_x11_keycode(scancode), 0);
         }
     }
 }
@@ -74,7 +74,7 @@ START_TEST(test_scancode__base_all_values_returned)
     iter = 0;
     while ((scancode = scancode_get_next(&iter)) != 0)
     {
-        unsigned short keycode = scancode_to_keycode(scancode);
+        unsigned short keycode = scancode_to_x11_keycode(scancode);
         ck_assert_int_ne(keycode, 0);
     }
 }
@@ -100,7 +100,7 @@ START_TEST(test_scancode__base_bad_values_mapped_to_0)
     {
         if (!valid[scancode])
         {
-            ck_assert_int_eq(scancode_to_keycode(scancode), 0);
+            ck_assert_int_eq(scancode_to_x11_keycode(scancode), 0);
         }
     }
 }

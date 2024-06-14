@@ -28,6 +28,7 @@
 #include "xrdp_constants.h"
 #include "fifo.h"
 #include "guid.h"
+#include "scancode.h"
 #include "xrdp_client_info.h"
 
 #define MAX_NR_CHANNELS 16
@@ -452,25 +453,17 @@ struct xrdp_key_info
     char32_t chr;
 };
 
-/**
- * Keyboard description
- *
- * Each section maps an RDP scancode to a KeySym and a Unicode
- * character.
- */
-#define INDEX_FROM_SCANCODE(scancode,extended) \
-    (((scancode) & 0x7f) | ((extended) ? 0x80 : 0))
-
 struct xrdp_keymap
 {
-    struct xrdp_key_info keys_noshift[256];
-    struct xrdp_key_info keys_shift[256];
-    struct xrdp_key_info keys_altgr[256];
-    struct xrdp_key_info keys_shiftaltgr[256];
-    struct xrdp_key_info keys_capslock[256];
-    struct xrdp_key_info keys_capslockaltgr[256];
-    struct xrdp_key_info keys_shiftcapslock[256];
-    struct xrdp_key_info keys_shiftcapslockaltgr[256];
+    // These arrays are indexed by a return from scancode_to_index()
+    struct xrdp_key_info keys_noshift[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_shift[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_altgr[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_shiftaltgr[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_capslock[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_capslockaltgr[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_shiftcapslock[SCANCODE_MAX_INDEX + 1];
+    struct xrdp_key_info keys_shiftcapslockaltgr[SCANCODE_MAX_INDEX + 1];
     // NumLock is restricted to a much smaller set of keys
     struct xrdp_key_info keys_numlock[XR_RDP_SCAN_MAX_NUMLOCK -
                                           XR_RDP_SCAN_MIN_NUMLOCK + 1];
@@ -554,11 +547,12 @@ struct xrdp_wm
     int current_pointer;
     int mouse_x;
     int mouse_y;
-    /* keyboard info */
-    int keys[256]; /* key states 0 up 1 down*/
+    /* keyboard info (indexed by a return from scancode_to_index()) */
+    int keys[SCANCODE_MAX_INDEX + 1]; /* key states 0 up 1 down*/
     int caps_lock;
     int scroll_lock;
     int num_lock;
+
     /* Unicode input */
     int last_high_surrogate_key_up;
     int last_high_surrogate_key_down;
