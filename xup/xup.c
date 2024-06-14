@@ -311,7 +311,15 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
         /* xup doesn't need the Unicode character mapping in param1. Send
          * the X11 scancode instead, so xorgxrdp doesn't have to do this
          * work again */
-        param1 = scancode_to_keycode(param3);
+        if ((param4 & KBD_FLAG_EXT) != 0)
+        {
+            // Extended key - set bit 9 of the scancode for the lookup
+            param1 = scancode_to_keycode(param3 | 0x100);
+        }
+        else
+        {
+            param1 = scancode_to_keycode(param3);
+        }
     }
 
     init_stream(s, 8192);

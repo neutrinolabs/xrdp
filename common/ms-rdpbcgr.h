@@ -476,6 +476,7 @@
 /* TODO: to be renamed */
 #define KBD_FLAG_RIGHT                 0x0001
 #define KBD_FLAG_EXT                   0x0100 /* KBDFLAGS_EXTENDED */
+#define KBD_FLAG_EXT1                  0x0200 /* KBDFLAGS_EXTENDED1 */
 #define KBD_FLAG_QUIET                 0x1000
 #define KBD_FLAG_DOWN                  0x4000
 #define KBD_FLAG_UP                    0x8000
