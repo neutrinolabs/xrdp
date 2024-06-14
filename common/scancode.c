@@ -137,6 +137,7 @@ static const struct scancode_to_keycode
     { 0x079, 100 }, //   -                    HENK
     { 0x07b, 102 }, //   VK_OEM_PA1           MUHE
     { 0x07d, 132 }, //   -                    AE13
+    { 0x07e, 129 }, //   VK_ABNT_C2           KPPT (Brazil ABNT2)
     { 0x110, 173 }, //   VK_MEDIA_PREV_TRACK  I173 (KEY_PREVIOUSSONG)
     { 0x119, 171 }, //   VK_MEDIA_NEXT_TRACK  I171 (KEY_NEXTSONG)
     { 0x11c, 104 }, //   VK_RETURN            KPEN
@@ -271,6 +272,7 @@ static const struct scancode_to_keycode
     { 0x079, 129 }, //   -                    XFER
     { 0x07b, 131 }, //   VK_OEM_PA1           NFER
     { 0x07d, 133 }, //   -                    AE13
+    { 0x07e, 134 }, //   VK_ABNT_C2           KPPT (Brazil ABNT2)
     { 0x11c, 108 }, //   VK_RETURN            KPEN
     { 0x11d, 109 }, //   VK_RCONTROL          RCTL
     { 0x120, 141 }, //   VK_VOLUME_MUTE       MUTE
