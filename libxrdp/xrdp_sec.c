@@ -2146,6 +2146,12 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
             LOG(LOG_LEVEL_WARNING,
                 "client requested gfx protocol with insufficient color depth");
         }
+        else if (client_info->max_bpp > 0 && client_info->max_bpp < 32)
+        {
+            LOG(LOG_LEVEL_WARNING, "Client requested gfx protocol "
+                "but the server configuration is limited to %d bpp.",
+                client_info->max_bpp);
+        }
         else
         {
             LOG(LOG_LEVEL_INFO, "client supports gfx protocol");
