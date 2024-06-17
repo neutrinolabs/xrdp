@@ -209,9 +209,12 @@ x_server_running_check_ports(int display)
 /******************************************************************************/
 /* Helper function for get_sorted_display_list():qsort() */
 static int
-icmp(const void *i1, const void *i2)
+icmp(const void *v1, const void *v2)
 {
-    return *(const unsigned int *)i2 - *(const unsigned int *)i1;
+    // Pointers point to unsigned ints
+    unsigned int i1 = *(unsigned int *)v1;
+    unsigned int i2 = *(unsigned int *)v2;
+    return (i1 < i2) ? -1 : (i1 > i2) ? 1 : 0;
 }
 
 /******************************************************************************/
