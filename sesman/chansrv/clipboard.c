@@ -181,22 +181,8 @@ x-special/gnome-copied-files
 #include "ms-rdpeclip.h"
 #include "xrdp_constants.h"
 
-static char g_bmp_image_header[] =
-{
-    /*
-     * Bitmap file header
-     * https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
-     *
-     * NOTE: All of the integer values are stored in little-endian format
-     */
-    0x42, 0x4d,                 /* signature */
-    0x00, 0x00, 0x00, 0x00,     /* file size, to be filled later */
-    0x00, 0x00,                 /* reserved 1 */
-    0x00, 0x00,                 /* reserved 2 */
-    0x36, 0x00, 0x00, 0x00      /* offset to pixel array (14 + 40 bytes) */
-};
-
-#define BMPFILEHEADER_LEN sizeof(g_bmp_image_header)
+#define BMPFILEHEADER_LEN       14
+#define BMPINFOHEADER_LEN       40
 
 extern int g_cliprdr_chan_id;   /* in chansrv.c */
 
@@ -1143,8 +1129,7 @@ clipboard_process_data_response_for_image(struct stream *s,
 {
     XSelectionRequestEvent *lxev;
     int len;
-    char bmp_file_header[BMPFILEHEADER_LEN] = { 0 };
-    uint32_t bmp_size; /* file size stored in bmp file header */
+    struct stream *bmp_hs;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_image: "
               "CLIPRDR_DATA_RESPONSE_FOR_IMAGE");
@@ -1169,20 +1154,30 @@ clipboard_process_data_response_for_image(struct stream *s,
     g_clip_c2s.total_bytes = len + BMPFILEHEADER_LEN;
     g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
 
-    /* assemble bmp header */
-    g_memcpy(bmp_file_header, g_bmp_image_header, BMPFILEHEADER_LEN);
-    bmp_size = (uint32_t) g_clip_c2s.total_bytes;
-#if defined(L_ENDIAN)
-    for (int i = 2, j = 0; i < 6; i++, j += 8)
-#else
-    for (int i = 5, j = 0; i >= 2; i--, j += 8)
-#endif
+    /*
+     * Assemble bitmap file header
+     * https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
+     */
+    make_stream(bmp_hs);
+    if (bmp_hs == 0)
     {
-        bmp_file_header[i] = ((bmp_size >> j) & 0xff);
+        g_free(g_clip_c2s.data);
+        g_clip_c2s.total_bytes = 0;
+        return 0;
     }
+    init_stream(bmp_hs, BMPFILEHEADER_LEN);
+    out_uint8(bmp_hs, 'B');
+    out_uint8(bmp_hs, 'M');
+    out_uint32_le(bmp_hs, g_clip_c2s.total_bytes);
+    out_uint16_le(bmp_hs, 0);
+    out_uint16_le(bmp_hs, 0);
+    out_uint32_le(bmp_hs, BMPFILEHEADER_LEN + BMPINFOHEADER_LEN);
 
-    g_memcpy(g_clip_c2s.data, bmp_file_header, BMPFILEHEADER_LEN);
+    /* Copy header and data to output stream */
+    g_memcpy(g_clip_c2s.data, bmp_hs->data, BMPFILEHEADER_LEN);
     in_uint8a(s, g_clip_c2s.data + BMPFILEHEADER_LEN, len);
+
+    free_stream(bmp_hs);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_image: calling "
               "clipboard_provide_selection_c2s");
     clipboard_provide_selection_c2s(lxev, lxev->target);
