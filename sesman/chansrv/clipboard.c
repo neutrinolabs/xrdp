@@ -181,14 +181,8 @@ x-special/gnome-copied-files
 #include "ms-rdpeclip.h"
 #include "xrdp_constants.h"
 
-static char g_bmp_image_header[] =
-{
-    /* this is known to work */
-    //0x42, 0x4d, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-
-    /* THIS IS BEING SENT BY WIN2008 */
-    0x42, 0x4d, 0x16, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00
-};
+#define BMPFILEHEADER_LEN       14
+#define BMPINFOHEADER_LEN       40
 
 extern int g_cliprdr_chan_id;   /* in chansrv.c */
 
@@ -1186,6 +1180,7 @@ clipboard_process_data_response_for_image(struct stream *s,
 {
     XSelectionRequestEvent *lxev;
     int len;
+    struct stream *bmp_hs;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_image: "
               "CLIPRDR_DATA_RESPONSE_FOR_IMAGE");
@@ -1199,20 +1194,45 @@ clipboard_process_data_response_for_image(struct stream *s,
     {
         return 0;
     }
+
     g_free(g_clip_c2s.data);
-    g_clip_c2s.data = (char *) g_malloc(len + 14, 0);
+    g_clip_c2s.data = (char *) g_malloc(len + BMPFILEHEADER_LEN, 0);
     if (g_clip_c2s.data == 0)
     {
         g_clip_c2s.total_bytes = 0;
         return 0;
     }
-    g_clip_c2s.total_bytes = len;
+    g_clip_c2s.total_bytes = len + BMPFILEHEADER_LEN;
     g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
-    g_memcpy(g_clip_c2s.data, g_bmp_image_header, 14);
-    in_uint8a(s, g_clip_c2s.data + 14, len);
+
+    /*
+     * Assemble bitmap file header
+     * https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
+     */
+    make_stream(bmp_hs);
+    if (bmp_hs == 0)
+    {
+        g_free(g_clip_c2s.data);
+        g_clip_c2s.total_bytes = 0;
+        return 0;
+    }
+    init_stream(bmp_hs, BMPFILEHEADER_LEN);
+    out_uint8(bmp_hs, 'B');
+    out_uint8(bmp_hs, 'M');
+    out_uint32_le(bmp_hs, g_clip_c2s.total_bytes);
+    out_uint16_le(bmp_hs, 0);
+    out_uint16_le(bmp_hs, 0);
+    out_uint32_le(bmp_hs, BMPFILEHEADER_LEN + BMPINFOHEADER_LEN);
+
+    /* Copy header and data to output stream */
+    g_memcpy(g_clip_c2s.data, bmp_hs->data, BMPFILEHEADER_LEN);
+    in_uint8a(s, g_clip_c2s.data + BMPFILEHEADER_LEN, len);
+
+    free_stream(bmp_hs);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_image: calling "
               "clipboard_provide_selection_c2s");
     clipboard_provide_selection_c2s(lxev, lxev->target);
+
     return 0;
 }
 
