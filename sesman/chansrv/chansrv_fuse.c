@@ -536,10 +536,25 @@ xfuse_init(void)
         return -1;
     }
 
-    g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
+    g_snprintf(g_fuse_clipboard_path, sizeof(g_fuse_clipboard_path),
+               "%s/.clipboard", g_fuse_root_path);
+
+    /* if FUSE mount point does not exist, create it */
+    if (!g_directory_exist(g_fuse_root_path))
+    {
+        (void)g_create_path(g_fuse_root_path);
+        if (!g_create_dir(g_fuse_root_path))
+        {
+            LOG(LOG_LEVEL_ERROR, "mkdir %s failed (%s)",
+                g_fuse_root_path, g_get_strerror());
+            return -1;
+        }
+    }
 
     /* Get the characteristics of the parent directory of the FUSE mount
      * point. Used by xfuse_path_in_xfuse_fs() */
+    g_fuse_root_parent_dev = -1;
+    g_fuse_root_parent_ino = -1;
     p = (char *)g_strrchr(g_fuse_root_path, '/');
     if (p != NULL)
     {
@@ -550,11 +565,6 @@ xfuse_init(void)
         g_fuse_root_parent_ino = g_file_get_inode_num(g_fuse_root_path);
         *p = '/';
     }
-    else
-    {
-        g_fuse_root_parent_dev = -1;
-        g_fuse_root_parent_ino = -1;
-    }
 
     if (g_fuse_root_parent_dev == -1 || g_fuse_root_parent_ino == -1)
     {
@@ -562,18 +572,6 @@ xfuse_init(void)
             "Unable to obtain characteristics of directory containing %s",
             g_fuse_root_path);
         return -1;
-    }
-
-    /* if FUSE mount point does not exist, create it */
-    if (!g_directory_exist(g_fuse_root_path))
-    {
-        (void)g_create_path(g_fuse_root_path);
-        if (!g_create_dir(g_fuse_root_path))
-        {
-            LOG(LOG_LEVEL_ERROR, "mkdir %s failed. If %s is already mounted, you must "
-                "first unmount it", g_fuse_root_path, g_fuse_root_path);
-            return -1;
-        }
     }
 
     /* setup xrdp file system */
@@ -902,14 +900,16 @@ static int xfuse_init_lib(struct fuse_args *args)
 {
     if (fuse_parse_cmdline(args, &g_mount_point, 0, 0) < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "fuse_parse_cmdline() failed");
+        LOG(LOG_LEVEL_ERROR, "fuse_parse_cmdline() failed");
         fuse_opt_free_args(args);
         return -1;
     }
 
     if ((g_ch = fuse_mount(g_mount_point, args)) == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "fuse_mount() failed");
+        LOG(LOG_LEVEL_ERROR, "FUSE mount on %s failed."
+            " If %s is already mounted, you must first unmount it",
+            g_mount_point, g_mount_point);
         fuse_opt_free_args(args);
         return -1;
     }
@@ -917,7 +917,7 @@ static int xfuse_init_lib(struct fuse_args *args)
     g_se = fuse_lowlevel_new(args, &g_xfuse_ops, sizeof(g_xfuse_ops), 0);
     if (g_se == 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "fuse_lowlevel_new() failed");
+        LOG(LOG_LEVEL_ERROR, "fuse_lowlevel_new() failed");
         fuse_unmount(g_mount_point, g_ch);
         g_ch = 0;
         fuse_opt_free_args(args);
