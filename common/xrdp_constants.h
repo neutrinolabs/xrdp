@@ -285,12 +285,6 @@
 
 #define FASTPATH_MAX_PACKET_SIZE    0x3fff
 
-#define XR_RDP_SCAN_LSHIFT 42
-#define XR_RDP_SCAN_ALT    56
-// scancodes affected by numlock
-#define XR_RDP_SCAN_MIN_NUMLOCK 71  // KP7
-#define XR_RDP_SCAN_MAX_NUMLOCK 83  // KPDL
-
 // Since we're not guaranteed to have pixman, copy these directives.
 #define XRDP_PIXMAN_TYPE_ARGB   2
 #define XRDP_PIXMAN_TYPE_ABGR   3

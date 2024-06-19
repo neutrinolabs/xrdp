@@ -1606,15 +1606,15 @@ xrdp_wm_key(struct xrdp_wm *self, int keyboard_flags, int key_code)
         self->keys[sindex] = 1;
         msg = WM_KEYDOWN;
 
-        switch (key_code)
+        switch (scancode)
         {
-            case 58:
+            case SCANCODE_CAPS_KEY:
                 self->caps_lock = !self->caps_lock;
                 break; /* caps lock */
-            case 69:
+            case SCANCODE_NUMLOCK_KEY:
                 self->num_lock = !self->num_lock;
                 break; /* num lock */
-            case 70:
+            case SCANCODE_SCROLL_KEY:
                 self->scroll_lock = !self->scroll_lock;
                 break; /* scroll lock */
         }
@@ -1733,7 +1733,7 @@ get_unicode_character(struct xrdp_wm *self, int device_flags, char16_t c16)
  * Takes a scancode index and fakes a keyboard event to represent it
  * @param self module pointer
  * @param device_flags default flags to pass in for the keyboard event.
- * @param scancode index
+ * @param index scancode index
  *
  * Some of the device_flags are overridden by the scancode derived from the
  * scancode index
@@ -1742,7 +1742,7 @@ static void
 fake_kbd_event_from_scancode_index(struct xrdp_wm *self, int device_flags,
                                    int index)
 {
-    int scancode = scancode_from_index(index);
+    unsigned short scancode = scancode_from_index(index);
     int key_code = SCANCODE_TO_KBD_EVENT_KEY_CODE(scancode);
 
     device_flags &= ~(KBDFLAGS_EXTENDED | KBDFLAGS_EXTENDED1);
@@ -1781,11 +1781,13 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
             if (device_flags & KBDFLAGS_RELEASE)
             {
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
-                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_LSHIFT_KEY);
             }
             else
             {
-                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_LSHIFT_KEY);
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
             }
             return 0;
@@ -1799,11 +1801,13 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
             if (device_flags & KBDFLAGS_RELEASE)
             {
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
-                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_ALT);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_RALT_KEY);
             }
             else
             {
-                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_ALT);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_RALT_KEY);
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
             }
             return 0;
@@ -1817,14 +1821,17 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
             if (device_flags & KBDFLAGS_RELEASE)
             {
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
-                xrdp_wm_key(self, device_flags | KBDFLAGS_EXTENDED, XR_RDP_SCAN_ALT);
-                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_RALT_KEY);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_LSHIFT_KEY);
             }
             else
             {
-                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
-                xrdp_wm_key(self, device_flags | KBDFLAGS_EXTENDED,
-                            XR_RDP_SCAN_ALT);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_LSHIFT_KEY);
+                fake_kbd_event_from_scancode_index(self, device_flags,
+                                                   SCANCODE_INDEX_RALT_KEY);
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
             }
             return 0;

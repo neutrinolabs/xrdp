@@ -45,13 +45,11 @@ get_key_info_from_kbd_event(int keyboard_flags, int key_code, int *keys,
 {
     struct xrdp_key_info *rv;
     int shift;
-    int altgr_scancode;
     int altgr;
     int index;
 
-    shift = keys[42] || keys[54];
-    altgr_scancode = SCANCODE_FROM_KBD_EVENT(56, KBDFLAGS_EXTENDED);
-    altgr = keys[scancode_to_index(altgr_scancode)];  /* right alt */
+    shift = keys[SCANCODE_INDEX_LSHIFT_KEY] || keys[SCANCODE_INDEX_RSHIFT_KEY];
+    altgr = keys[SCANCODE_INDEX_RALT_KEY];  /* right alt */
     rv = 0;
 
     index = scancode_to_index(SCANCODE_FROM_KBD_EVENT(key_code, keyboard_flags));
@@ -60,10 +58,10 @@ get_key_info_from_kbd_event(int keyboard_flags, int key_code, int *keys,
         // scancode_to_index() guarantees to map numlock scancodes
         // to the same index values.
         if (num_lock &&
-                index >= XR_RDP_SCAN_MIN_NUMLOCK &&
-                index <= XR_RDP_SCAN_MAX_NUMLOCK)
+                index >= SCANCODE_MIN_NUMLOCK &&
+                index <= SCANCODE_MAX_NUMLOCK)
         {
-            rv = &(keymap->keys_numlock[index - XR_RDP_SCAN_MIN_NUMLOCK]);
+            rv = &(keymap->keys_numlock[index - SCANCODE_MIN_NUMLOCK]);
         }
         else if (shift && caps_lock && altgr)
         {
@@ -391,19 +389,19 @@ km_load_file(const char *filename, struct xrdp_keymap *keymap)
                         keymap->keys_shiftcapslockaltgr);
 
         /* The numlock map is much smaller and offset by
-         * XR_RDP_SCAN_MAX_NUMLOCK. Read the section into a temporary
+         * SCANCODE_MIX_NUMLOCK. Read the section into a temporary
          * area and copy it over */
         struct xrdp_key_info keys_numlock[SCANCODE_MAX_INDEX + 1];
         int i;
-        for (i = XR_RDP_SCAN_MIN_NUMLOCK; i <= XR_RDP_SCAN_MAX_NUMLOCK; ++i)
+        for (i = SCANCODE_MIN_NUMLOCK; i <= SCANCODE_MAX_NUMLOCK; ++i)
         {
             keys_numlock[i].sym = 0;
             keys_numlock[i].chr = 0;
         }
         km_read_section(tfile, "numlock", keys_numlock);
-        for (i = XR_RDP_SCAN_MIN_NUMLOCK; i <= XR_RDP_SCAN_MAX_NUMLOCK; ++i)
+        for (i = SCANCODE_MIN_NUMLOCK; i <= SCANCODE_MAX_NUMLOCK; ++i)
         {
-            keymap->keys_numlock[i - XR_RDP_SCAN_MIN_NUMLOCK] = keys_numlock[i];
+            keymap->keys_numlock[i - SCANCODE_MIN_NUMLOCK] = keys_numlock[i];
         }
 
         toml_free(tfile);

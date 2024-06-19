@@ -64,7 +64,7 @@
 
 // Scancodes affected by numlock
 #define IS_KEYPAD_SCANCODE(s) \
-    ((s) >= XR_RDP_SCAN_MIN_NUMLOCK && (s) <= XR_RDP_SCAN_MAX_NUMLOCK)
+    ((s) >= SCANCODE_MIN_NUMLOCK && (s) <= SCANCODE_MAX_NUMLOCK)
 
 #define MAX_COMMENTS 10
 
