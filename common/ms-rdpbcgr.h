@@ -480,13 +480,10 @@
 #define RDP_INPUT_MOUSEX               0x8002
 
 /* Keyboard Event: keyboardFlags (2.2.8.1.1.3.1.1.1) */
-/* TODO: to be renamed */
-#define KBD_FLAG_RIGHT                 0x0001
-#define KBD_FLAG_EXT                   0x0100 /* KBDFLAGS_EXTENDED */
-#define KBD_FLAG_EXT1                  0x0200 /* KBDFLAGS_EXTENDED1 */
-#define KBD_FLAG_QUIET                 0x1000
-#define KBD_FLAG_DOWN                  0x4000
-#define KBD_FLAG_UP                    0x8000
+#define KBDFLAGS_EXTENDED              0x0100
+#define KBDFLAGS_EXTENDED1             0x0200
+#define KBDFLAGS_DOWN                  0x4000
+#define KBDFLAGS_RELEASE               0x8000
 
 /* Mouse Event: pointerFlags (2.2.8.1.1.3.1.1.3) */
 #define PTRFLAGS_HWHEEL                0x0400
@@ -505,10 +502,9 @@
 #define PTRXFLAGS_BUTTON2              0x0002
 
 /* Synchronize Event: toggleFlags (2.2.8.1.1.3.1.1.5) */
-/* TODO: to be renamed */
-#define KBD_FLAG_SCROLL                0x0001 /* TS_SYNC_SCROLL_LOCK */
-#define KBD_FLAG_NUMLOCK               0x0002
-#define KBD_FLAG_CAPITAL               0x0004
+#define TS_SYNC_SCROLL_LOCK            0x0001
+#define TS_SYNC_NUM_LOCK               0x0002
+#define TS_SYNC_CAPS_LOCK              0x0004
 #define TS_SYNC_KANA_LOCK              0x0008
 
 /* Client Fast-Path Input Event PDU 2.2.8.1.2 */

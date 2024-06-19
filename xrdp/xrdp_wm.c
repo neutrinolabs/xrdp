@@ -1578,7 +1578,7 @@ xrdp_wm_key(struct xrdp_wm *self, int keyboard_flags, int key_code)
               "xrdp_wm_key: RDP key_code:0x%04x, keyboard_flags: 0x%04x",
               key_code, keyboard_flags);
     int scancode = SCANCODE_FROM_KBD_EVENT(key_code, keyboard_flags);
-    int keyup = ((keyboard_flags & KBD_FLAG_UP) != 0);
+    int keyup = ((keyboard_flags & KBDFLAGS_RELEASE) != 0);
 
     int sindex = scancode_to_index(scancode);
     if (sindex < 0)
@@ -1695,7 +1695,7 @@ get_unicode_character(struct xrdp_wm *self, int device_flags, char16_t c16)
     char32_t c32 = 0;
     int *high_ptr;
 
-    if (device_flags & KBD_FLAG_UP)
+    if (device_flags & KBDFLAGS_RELEASE)
     {
         high_ptr = &self->last_high_surrogate_key_up;
     }
@@ -1745,7 +1745,7 @@ fake_kbd_event_from_scancode_index(struct xrdp_wm *self, int device_flags,
     int scancode = scancode_from_index(index);
     int key_code = SCANCODE_TO_KBD_EVENT_KEY_CODE(scancode);
 
-    device_flags &= ~(KBD_FLAG_EXT | KBD_FLAG_EXT1);
+    device_flags &= ~(KBDFLAGS_EXTENDED | KBDFLAGS_EXTENDED1);
     device_flags |= SCANCODE_TO_KBD_EVENT_KBD_FLAGS(scancode);
 
     xrdp_wm_key(self, device_flags, key_code);
@@ -1778,14 +1778,14 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
     {
         if (c32 == self->keymap.keys_shift[index].chr)
         {
-            if (device_flags & KBD_FLAG_UP)
+            if (device_flags & KBDFLAGS_RELEASE)
             {
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
-                xrdp_wm_key(self, KBD_FLAG_UP, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
             }
             else
             {
-                xrdp_wm_key(self, KBD_FLAG_DOWN, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
             }
             return 0;
@@ -1796,16 +1796,14 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
     {
         if (c32 == self->keymap.keys_altgr[index].chr)
         {
-            if (device_flags & KBD_FLAG_UP)
+            if (device_flags & KBDFLAGS_RELEASE)
             {
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
-                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT,
-                            XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_ALT);
             }
             else
             {
-                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT,
-                            XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_ALT);
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
             }
             return 0;
@@ -1816,16 +1814,16 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
     {
         if (c32 == self->keymap.keys_shiftaltgr[index].chr)
         {
-            if (device_flags & KBD_FLAG_UP)
+            if (device_flags & KBDFLAGS_RELEASE)
             {
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
-                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT, XR_RDP_SCAN_ALT);
-                xrdp_wm_key(self, KBD_FLAG_UP, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, device_flags | KBDFLAGS_EXTENDED, XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
             }
             else
             {
-                xrdp_wm_key(self, KBD_FLAG_DOWN, XR_RDP_SCAN_LSHIFT);
-                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT,
+                xrdp_wm_key(self, device_flags, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, device_flags | KBDFLAGS_EXTENDED,
                             XR_RDP_SCAN_ALT);
                 fake_kbd_event_from_scancode_index(self, device_flags, index);
             }
@@ -1840,7 +1838,7 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
             self->mm->chan_trans->status == TRANS_STATUS_UP)
     {
         xrdp_mm_send_unicode_to_chansrv(self->mm,
-                                        !(device_flags & KBD_FLAG_UP), c32);
+                                        !(device_flags & KBDFLAGS_RELEASE), c32);
         return 0;
     }
 

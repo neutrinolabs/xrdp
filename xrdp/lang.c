@@ -50,7 +50,7 @@ get_key_info_from_kbd_event(int keyboard_flags, int key_code, int *keys,
     int index;
 
     shift = keys[42] || keys[54];
-    altgr_scancode = SCANCODE_FROM_KBD_EVENT(56, KBD_FLAG_EXT);
+    altgr_scancode = SCANCODE_FROM_KBD_EVENT(56, KBDFLAGS_EXTENDED);
     altgr = keys[scancode_to_index(altgr_scancode)];  /* right alt */
     rv = 0;
 
@@ -158,7 +158,7 @@ key_to_scancode_index(const char *key)
     {
         if (key[1] == '0')
         {
-            keyboard_flags |= KBD_FLAG_EXT;
+            keyboard_flags |= KBDFLAGS_EXTENDED;
             key += 3;
         }
     }
