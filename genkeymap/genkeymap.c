@@ -299,7 +299,11 @@ output_file_section(FILE *outf,
             unicode = wtext[0];
         }
 
-        if (scancode > 0xff)
+        if (scancode > 0x1ff)
+        {
+            fputs("E1_", outf);
+        }
+        else if (scancode > 0xff)
         {
             fputs("E0_", outf);
         }

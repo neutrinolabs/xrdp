@@ -159,6 +159,11 @@ key_to_scancode_index(const char *key)
             keyboard_flags |= KBDFLAGS_EXTENDED;
             key += 3;
         }
+        else if (key[1] == '1')
+        {
+            keyboard_flags |= KBDFLAGS_EXTENDED1;
+            key += 3;
+        }
     }
 
     if (isxdigit(key[0]) && isxdigit(key[1]) && key[2] == '\0')

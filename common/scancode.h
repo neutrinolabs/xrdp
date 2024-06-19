@@ -75,6 +75,7 @@ enum
     SCANCODE_BACKSPACE_KEY = 0x0e,
     SCANCODE_ENTER_KEY = 0x1c,
     SCANCODE_TAB_KEY = 0x0f,
+    SCANCODE_PAUSE_KEY = 0x21d,
 
     SCANCODE_KP_ENTER_KEY = 0x11c,
     SCANCODE_KP_DEL_KEY = 0x53,
@@ -99,6 +100,8 @@ enum
     SCANCODE_INDEX_LSHIFT_KEY = SCANCODE_LSHIFT_KEY,
     SCANCODE_INDEX_RSHIFT_KEY = SCANCODE_RSHIFT_KEY,
     SCANCODE_INDEX_RALT_KEY = (SCANCODE_RALT_KEY & 0x7f) | 0x80,
+    SCANCODE_INDEX_PAUSE_KEY = 0xf8,
+    // 0xf9 - 0xff reserved for future extended1 mappings
 
     /**
      * Keys affected by numlock
@@ -116,7 +119,7 @@ enum
 // Convert key_code and flags values received from a TS_KEYBOARD_EVENT
 // into a value suitable for use by this module
 #define SCANCODE_FROM_KBD_EVENT(key_code,keyboard_flags) \
-    (((key_code) & 0x7f) | ((keyboard_flags) & 0x100))
+    (((key_code) & 0x7f) | ((keyboard_flags) & 0x300))
 
 // Convert a scancode used by this module back into a
 // TS_KEYBOARD_EVENT keyCode value
@@ -124,15 +127,17 @@ enum
 
 // Convert a scancode used by this module back into a
 // TS_KEYBOARD_EVENT keyboardFlags value
-#define SCANCODE_TO_KBD_EVENT_KBD_FLAGS(scancode) ((scancode) & 0x100)
+#define SCANCODE_TO_KBD_EVENT_KBD_FLAGS(scancode) ((scancode) & 0x300)
 
 /**
  * Convert a scancode to an index
- * @param scancode scancode in the range 0x00 - 0x1ff
+ * @param scancode scancode in the range 0x00 - 0x2ff
  * @return index in the range 0..SCANCODE_MAX_INDEX (inclusive) or -1
  *
- * This function converts a 9-bit scancode into an 8-bit array index,
+ * This function converts a 10-bit scancode into an 8-bit array index,
  * independent of the currently loaded keymap
+ *
+ * This is possible as the scancodes from 0x80 - 0x2ff are sparsely allocated.
  *
  * For scancodes in the range 0x00 - 0x7f, the index is identical to the
  * scancode. This includes scancodes for all the keys affected by
@@ -157,7 +162,8 @@ scancode_from_index(int index);
  * Looks up an RDP scancode and converts to an x11 keycode
  *
  * @param scancode Scancode. Extended scancodes have bit 9 set
- *                 (i.e. are in 0x100 - 0x1ff).
+ *                 (i.e. are in 0x100 - 0x1ff). Extended1 scancodes
+ *                 (currently just the pause key) are in the range 0x200-0x2ff
  *  @return keycode, or 0 for no keycode
  */
 unsigned short

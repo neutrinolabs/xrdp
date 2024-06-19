@@ -167,7 +167,8 @@ static const struct scancode_to_keycode
     { 0x165, 225 }, //   VK_BROWSER_SEARCH    I225 (KEY_SEARCH)
     { 0x166, 164 }, //   VK_BROWSER_FAVORITES I164 (KEY_BOOKMARKS)
     { 0x16b, 165 }, //   VK_LAUNCH_APP1       I165 (KEY_COMPUTER)
-    { 0x16c, 163 }  //   VK_LAUNCH_MAIL       I163 (KEY_MAIL)
+    { 0x16c, 163 }, //   VK_LAUNCH_MAIL       I163 (KEY_MAIL)
+    { 0x21d, 127 }  //   VK_PAUSE             PAUS (KEY_PAUSE)
 };
 
 // Sources:-
@@ -291,7 +292,8 @@ static const struct scancode_to_keycode
     { 0x153, 107 }, //   VK_DELETE            DELE
     { 0x15b, 115 }, //   VK_LWIN              LWIN
     { 0x15c, 116 }, //   VK_RWIN              RWIN
-    { 0x15d, 117 }  //   VK_APPS              COMP
+    { 0x15d, 117 }, //   VK_APPS              COMP
+    { 0x21d, 110 }  //   VK_PAUSE             PAUS (KEY_PAUSE)
 };
 
 struct map_settings
@@ -339,12 +341,23 @@ scancode_to_index(unsigned short scancode)
         // 0x80 - 0xff : Invalid code
         return -1;
     }
-    if (scancode <= 0x17f)
+    if (scancode <= 0x177)
     {
-        // 01x100 - 0x17f : Move bit 9 to bit 8
+        // 01x100 - 0x177 : Move bit 9 to bit 8
         return (scancode & 0x7f) | 0x80;
     }
 
+    if (scancode == SCANCODE_PAUSE_KEY)
+    {
+        return SCANCODE_INDEX_PAUSE_KEY;
+    }
+
+    // This leaves the following which are all rejected
+    // 0x178 - 0x17f (currently unused). These would map to indexes 0xf8
+    //               to 0xff which we are reserving for extended1 keys.
+    // 0x180 - 0x1ff Illegal format
+    // >0x200        Anything not mentioned explicitly above (e.g.
+    //               SCANCODE_PAUSE_KEY)
     return -1;
 }
 
@@ -354,7 +367,11 @@ scancode_from_index(int index)
 {
     index &= 0xff;
     unsigned short result;
-    if (index < 0x80)
+    if (index == SCANCODE_INDEX_PAUSE_KEY)
+    {
+        result = SCANCODE_PAUSE_KEY;
+    }
+    else if (index < 0x80)
     {
         result = index;
     }

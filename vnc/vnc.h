@@ -170,6 +170,7 @@ struct vnc
     char port[256];
     int sck_closed;
     int shift_state; /* 0 up, 1 down */
+    int ignore_next_numlock; /* Used in pause key processing */
     int keylayout;
     int clip_chanid;
     struct vnc_clipboard_data *vc;

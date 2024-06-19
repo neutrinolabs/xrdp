@@ -8,7 +8,7 @@
 #include "test_common.h"
 
 // Max supported scancode value
-#define MAX_SUPPORTED_SCANCODE 0x1ff
+#define MAX_SUPPORTED_SCANCODE 0x2ff
 
 // Checks conversions to-and-from scancode indexes
 START_TEST(test_scancode__scancode_to_index)
@@ -27,17 +27,34 @@ START_TEST(test_scancode__scancode_to_index)
         ck_assert_int_eq(scancode_to_index(i), -1);
     }
 
-    // 0x100 - 0x17f map to 0x80 - 0xff
-    for (i = 0x100; i <= 0x17f; ++i)
+    // 0x100 - 0x177 map to 0x80 - 0xf7
+    for (i = 0x100; i <= 0x177; ++i)
     {
         ck_assert_int_eq(scancode_to_index(i), i - 0x80);
         ck_assert_int_eq(scancode_from_index(i - 0x80), i);
     }
 
-    // Scancodes from 0x180 - MAX_SUPPORTED_SCANCODE are not supported
-    for (i = 0x180; i <= MAX_SUPPORTED_SCANCODE; ++i)
+    // Scancodes from 0x178 - 0x1ff are not supported
+    for (i = 0x178; i <= 0x1ff; ++i)
     {
         ck_assert_int_eq(scancode_to_index(i), -1);
+    }
+
+    // In the range 0x200 up, only SCANCODE_PAUSE_KEY is
+    // supported
+    ck_assert_int_ge(SCANCODE_PAUSE_KEY, 0x200);
+    ck_assert_int_le(SCANCODE_PAUSE_KEY, MAX_SUPPORTED_SCANCODE);
+    for (i = 0x200; i <= MAX_SUPPORTED_SCANCODE; ++i)
+    {
+        if (i == SCANCODE_PAUSE_KEY)
+        {
+            ck_assert_int_eq(scancode_to_index(i), SCANCODE_INDEX_PAUSE_KEY);
+            ck_assert_int_eq(scancode_from_index(SCANCODE_INDEX_PAUSE_KEY), i);
+        }
+        else
+        {
+            ck_assert_int_eq(scancode_to_index(i), -1);
+        }
     }
 }
 
