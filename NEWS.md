@@ -1,3 +1,35 @@
+# Release notes for xrdp v0.9.26 (2024/06/20)
+
+## General announcements
+
+_xrdp v0.9.x is approaching the end-of-life. It will be maintained for a while but less actively. New releases will happen only when severe security vulnerabilities or critical bugs are found._
+
+We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Security fixes
+No new security fixes in this release.
+
+## Bug fixes
+* Fall back to IPv4 if IPv6 capable but don't have an IPv6 address set (#2958, back-port of #2967)
+* Remove tcutils channel from xrdp.ini (#2958, back-port of #2970)
+* Remove duplicate DEBUG output (#2958, back-port of #2976)
+* Fix drive redirection regression caused by #2032 (#3087, back-port of #3082)
+* A regression bug when pasting image to LibreOffice has been fixed [Sponsored by Krämer Pferdesport GmbH & Co KG] (#3124, back-port of #3120)
+
+## New features
+No new features in this release.
+
+## Internal changes
+* Bump copyright year and make easier to bump (#2958, back-port of #2956)
+* Migrate github actions to Node 20 (#2958, back-port of #2955)
+* FreeBSD CI bumped to 13.3 (#3087, back-port of #3104)
+
+## Known issues
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.25.1 (2024/03/13)
 
 This release fixes a bug that occurred in v0.9.25 where scrolling did not work in the Xvnc backend.
@@ -5,6 +37,7 @@ This release fixes a bug that occurred in v0.9.25 where scrolling did not work i
 Thanks to @bsmojver reporting the issue and testing!
 
 ## General announcements
+
 _This is the last v0.9.x version which is released regularly. v0.9.x will be maintained for a while but less actively. New releases will happen only when severe security vulnerabilities or critical bugs are found._
 
 We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
@@ -46,6 +79,7 @@ No new security fixes in this release.
 * Running xrdp and xrdp-sesman on separate hosts is still supported by this release, but is now deprecated. This is not secure. A future v1.0 release will replace the TCP socket used between these processes with a Unix Domain Socket, and then cross-host running will not be possible.
 
 ## General announcements
+
 We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!
 
 Direct donations to each developer via GitHub Sponsors are also welcomed.
