@@ -20,6 +20,7 @@ include_HEADERS = \
   xrdp_client_info.h \
   xrdp_constants.h \
   xrdp_rail.h \
+  xrdp_scancode_defs.h \
   xrdp_sockets.h
 
 AM_CPPFLAGS = \

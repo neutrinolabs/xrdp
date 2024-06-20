@@ -58,44 +58,17 @@
 #if !defined(SCANCODE_H)
 #define SCANCODE_H
 
+#include "xrdp_scancode_defs.h"
+
 enum
 {
     /**
-     * Scancodes for keys used in the code
+     * Scancodes for keys used in the code are defined in the global
+     * file xrdp_scancode_defs.h
      */
-    SCANCODE_LSHIFT_KEY = 0x2a,
-    SCANCODE_RSHIFT_KEY = 0x36,
-    SCANCODE_CAPS_KEY = 0x3a,
-    SCANCODE_NUMLOCK_KEY = 0x45,
-    SCANCODE_SCROLL_KEY = 0x46, // Scroll lock
-    SCANCODE_LALT_KEY = 0x38,
-    SCANCODE_RALT_KEY = 0x138,
 
-    SCANCODE_ESC_KEY = 0x01,
-    SCANCODE_BACKSPACE_KEY = 0x0e,
-    SCANCODE_ENTER_KEY = 0x1c,
-    SCANCODE_TAB_KEY = 0x0f,
-    SCANCODE_PAUSE_KEY = 0x21d,
-
-    SCANCODE_KP_ENTER_KEY = 0x11c,
-    SCANCODE_KP_DEL_KEY = 0x53,
-    SCANCODE_KP_1_KEY = 0x4f,
-    SCANCODE_KP_2_KEY = 0x50,
-    SCANCODE_KP_4_KEY = 0x4b,
-    SCANCODE_KP_6_KEY = 0x4d,
-    SCANCODE_KP_7_KEY = 0x47,
-    SCANCODE_KP_8_KEY = 0x48,
-
-    SCANCODE_LEFT_ARROW_KEY = 0x14b,
-    SCANCODE_RIGHT_ARROW_KEY = 0x14d,
-    SCANCODE_UP_ARROW_KEY = 0x148,
-    SCANCODE_DOWN_ARROW_KEY = 0x150,
-
-    SCANCODE_HOME_KEY = 0x147,
-    SCANCODE_DEL_KEY = 0x153,
-    SCANCODE_END_KEY = 0x14f,
     /**
-     * Scancode indexes for some of the above
+     * Scancode indexes for some of the keys in xrdp_scancode_defs.h
      */
     SCANCODE_INDEX_LSHIFT_KEY = SCANCODE_LSHIFT_KEY,
     SCANCODE_INDEX_RSHIFT_KEY = SCANCODE_RSHIFT_KEY,
@@ -104,30 +77,10 @@ enum
     // 0xf9 - 0xff reserved for future extended1 mappings
 
     /**
-     * Keys affected by numlock
-     * (this is not the whole keypad)
-     */
-    SCANCODE_MIN_NUMLOCK = SCANCODE_KP_7_KEY,
-    SCANCODE_MAX_NUMLOCK = SCANCODE_KP_DEL_KEY,
-
-    /**
      * Maximum value returned by scancode_to_index()
      */
     SCANCODE_MAX_INDEX = 255
 };
-
-// Convert key_code and flags values received from a TS_KEYBOARD_EVENT
-// into a value suitable for use by this module
-#define SCANCODE_FROM_KBD_EVENT(key_code,keyboard_flags) \
-    (((key_code) & 0x7f) | ((keyboard_flags) & 0x300))
-
-// Convert a scancode used by this module back into a
-// TS_KEYBOARD_EVENT keyCode value
-#define SCANCODE_TO_KBD_EVENT_KEY_CODE(scancode) ((scancode) & 0x7f)
-
-// Convert a scancode used by this module back into a
-// TS_KEYBOARD_EVENT keyboardFlags value
-#define SCANCODE_TO_KBD_EVENT_KBD_FLAGS(scancode) ((scancode) & 0x300)
 
 /**
  * Convert a scancode to an index
