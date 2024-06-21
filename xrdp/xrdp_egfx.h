@@ -222,6 +222,10 @@ xrdp_egfx_send_wire_to_surface2(struct xrdp_egfx *egfx, int surface_id,
                                 int codec_id, int codec_context_id,
                                 int pixel_format,
                                 void *bitmap_data, int bitmap_data_length);
+/*
+ * NB: mi below must be such that the (top,left) co-ordinate of
+ * the primary monitor is (0.0)
+ */
 struct stream *
 xrdp_egfx_reset_graphics(struct xrdp_egfx_bulk *bulk, int width, int height,
                          int monitor_count, struct monitor_info *mi);
