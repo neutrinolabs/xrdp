@@ -175,7 +175,21 @@ lib_mod_connect(struct mod *mod)
     // be set.
     //
     // Load the XKB layout
+    if (mod->keycode_set[0] != '\0')
+    {
+        if (scancode_set_keycode_set(mod->keycode_set) == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Loaded '%s' keycode set", mod->keycode_set);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING, "Unable to load '%s' keycode set",
+                mod->keycode_set);
+        }
+    }
     mod->server_init_xkb_layout(mod, &(mod->client_info));
+    LOG(LOG_LEVEL_INFO, "XKB rules '%s' will be used by the module",
+        mod->client_info.xkb_rules);
 
     make_stream(s);
     g_sprintf(con_port, "%s", mod->port);
@@ -1868,6 +1882,10 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
     else if (g_strcasecmp(name, "port") == 0)
     {
         g_strncpy(mod->port, value, 255);
+    }
+    else if (g_strcasecmp(name, "keycode_set") == 0)
+    {
+        g_snprintf(mod->keycode_set, sizeof(mod->keycode_set), "%s", value);
     }
     else if (g_strcasecmp(name, "client_info") == 0)
     {

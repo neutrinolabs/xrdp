@@ -653,4 +653,14 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
         LOG(LOG_LEVEL_ERROR, "xrdp_init_xkb_layout: error opening %s",
             keyboard_cfg_file);
     }
+
+    // Initialise the rules and a few keycodes for xorgxrdp
+    snprintf(client_info->xkb_rules, sizeof(client_info->xkb_rules),
+             "%s", scancode_get_xkb_rules());
+    client_info->x11_keycode_caps_lock =
+        scancode_to_x11_keycode(SCANCODE_CAPS_KEY);
+    client_info->x11_keycode_num_lock =
+        scancode_to_x11_keycode(SCANCODE_NUMLOCK_KEY);
+    client_info->x11_keycode_scroll_lock =
+        scancode_to_x11_keycode(SCANCODE_SCROLL_KEY);
 }

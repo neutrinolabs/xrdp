@@ -248,6 +248,7 @@ username=ask
 password=ask
 port=-1
 code=20
+#keycode_set=evdev
 
 [Xvnc]
 name=Xvnc

@@ -201,6 +201,7 @@ struct mod
     int screen_shmem_id_mapped; /* boolean */
     char *screen_shmem_pixels;
     struct trans *trans;
+    char keycode_set[32];
 };
 
 #endif // XUP_H
