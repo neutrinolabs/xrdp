@@ -171,6 +171,12 @@ lib_mod_connect(struct mod *mod)
         return 1;
     }
 
+    // This is a good place to finalise any parameters that need to
+    // be set.
+    //
+    // Load the XKB layout
+    mod->server_init_xkb_layout(mod, &(mod->client_info));
+
     make_stream(s);
     g_sprintf(con_port, "%s", mod->port);
 

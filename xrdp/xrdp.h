@@ -447,6 +447,19 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap);
 int
 km_load_file(const char *filename, struct xrdp_keymap *keymap);
 
+/**
+ * initialise the XKB layout
+ *
+ * Not all backends need to use XKB for keyboard mapping. This
+ * call is used by those modules that do need an XKB mapping.
+ *
+ * Other modules and the login screen use  other routines in
+ * lang.c to interpret incoming RDP scancodes
+ * @param client_info Client info struct to initialise
+ */
+void
+xrdp_init_xkb_layout(struct xrdp_client_info *client_info);
+
 /* xrdp_login_wnd.c */
 /**
  * Gets the DPI of the login (primary) monitor
@@ -528,6 +541,9 @@ int
 server_bell_trigger(struct xrdp_mod *mod);
 int
 server_chansrv_in_use(struct xrdp_mod *mod);
+void
+server_init_xkb_layout(struct xrdp_mod *mod,
+                       struct xrdp_client_info *client_info);
 int
 server_fill_rect(struct xrdp_mod *mod, int x, int y, int cx, int cy);
 int

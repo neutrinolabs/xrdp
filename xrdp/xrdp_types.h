@@ -124,6 +124,8 @@ struct xrdp_mod
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct xrdp_mod *v);
     int (*server_chansrv_in_use)(struct xrdp_mod *v);
+    void (*server_init_xkb_layout)(struct xrdp_mod *v,
+                                   struct xrdp_client_info *client_info);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct xrdp_mod *v, int rdpindex,
                                     int width, int height);
@@ -192,7 +194,7 @@ struct xrdp_mod
     int (*server_egfx_cmd)(struct xrdp_mod *v,
                            char *cmd, int cmd_bytes,
                            char *data, int data_bytes);
-    tintptr server_dumby[100 - 50]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 51]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */
