@@ -1673,13 +1673,18 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
         self->caps_lock = 1;
     }
 
-    if (self->mm->mod != 0)
+    if (self->mm->mod != 0 && self->mm->mod->mod_event != 0)
     {
-        if (self->mm->mod->mod_event != 0)
-        {
-            self->mm->mod->mod_event(self->mm->mod, WM_KEYBRD_SYNC, key_flags,
-                                     device_flags, key_flags, device_flags);
-        }
+        self->mm->mod->mod_event(self->mm->mod, WM_KEYBRD_SYNC, key_flags,
+                                 device_flags, key_flags, device_flags);
+    }
+    else
+    {
+        // Save the event for when the module is loaded
+        self->mm->last_sync_saved = 1;
+        self->mm->last_sync_key_flags = key_flags;
+        self->mm->last_sync_device_flags = device_flags;
+
     }
 
     return 0;

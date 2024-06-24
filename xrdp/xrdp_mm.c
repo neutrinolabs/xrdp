@@ -526,6 +526,18 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         if (self->mod->mod_connect(self->mod) == 0)
         {
             rv = 0; /* connect success */
+
+            // If we've received a recent TS_SYNC_EVENT, pass it on to
+            // the module so (e.g.) NumLock starts in the right state.
+            if (self->last_sync_saved)
+            {
+                int key_flags = self->last_sync_key_flags;
+                int device_flags = self->last_sync_device_flags;
+                self->last_sync_saved = 0;
+                self->mod->mod_event(self->mod, WM_KEYBRD_SYNC, key_flags,
+                                     device_flags, key_flags, device_flags);
+
+            }
         }
         else
         {

@@ -447,6 +447,10 @@ struct xrdp_mm
     struct display_control_monitor_layout_data *resize_data;
     struct list *resize_queue;
     tbus resize_ready;
+    /* Last sync event if a module isn't loaded */
+    int last_sync_saved;
+    int last_sync_key_flags;
+    int last_sync_device_flags;
 };
 
 struct xrdp_key_info
