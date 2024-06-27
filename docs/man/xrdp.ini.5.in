@@ -133,9 +133,12 @@ by \fBseparator\fP.
 
 .TP
 \fBrequire_credentials\fP=\fI[true|false]\fP
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
-password initial connection phase. In other words, xrdp doesn't allow clients to show login
-screen if set to true. If not specified, defaults to \fBfalse\fP.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients
+to include username and password initial connection phase. In other
+words, xrdp doesn't allow clients to show login screen if set to true.
+It follows that an incorrect password will cause the login to immediately
+fail without displaying the login screen.  If not specified, defaults
+to \fBfalse\fP.
 
 .TP
 \fBsecurity_layer\fP=\fI[tls|rdp|negotiate]\fP
