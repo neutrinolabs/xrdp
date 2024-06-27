@@ -85,7 +85,8 @@ max_bpp=32
 new_cursors=true
 ; fastpath - can be 'input', 'output', 'both', 'none'
 use_fastpath=both
-; when true, userid/password *must* be passed on cmd line
+; when true, userid/password *must* be passed on cmd line. If the password
+; is incorrect, the login will fail
 #require_credentials=true
 ; when true, the userid will be used to try to authenticate
 #enable_token_login=true
