@@ -120,9 +120,9 @@ fi
 
 # Groups agree between sesman and xrdp?
 if [ "$runtime_user" = "$SessionSockdirGroup" ]; then
-    echo "-Info- xrdp.ini and sesman.ini agree on group ownbership"
+    echo "-Info- xrdp.ini and sesman.ini agree on group ownership"
 else
-    echo "-Error- xrdp.ini and sesman.ini do not agree on group ownbership"
+    echo "-Error- xrdp.ini and sesman.ini do not agree on group ownership"
     errors=$(( errors + 1 ))
 fi
 
@@ -165,33 +165,27 @@ else
     errors=$(( errors + 1 ))
 fi
 
-# Are cert and key readable by the user?
+# Are cert and key readable (but NOT writeable) by the user?
 #
-# These aren't necessarily our files, so we can't be prescriptive about
+# These aren't necessarily our files, so we can't be too prescriptive about
 # privileges.  On Debian for example, we might be using the 'ssl-cert'
 # group to obtain access to /etc/ssl/private/ssl-cert-snakeoil.key
-if ! [ -e $certificate ]; then
-    echo "-Error- $certificate does not exist"
-    errors=$(( errors + 1 ))
-elif $DROPPRIV "$runtime_user" "$runtime_group" sh -c '[ -r '"$certificate"' ]'
-then
-    echo "-Info- $certificate is readable by $runtime_user:$runtime_group"
-else
-    echo "-Error- $certificate is not readable by $runtime_user:$runtime_group"
-    errors=$(( errors + 1 ))
-fi
-
-if ! [ -e $key_file ]; then
-    echo "-Error- $key_file does not exist"
-    errors=$(( errors + 1 ))
-elif $DROPPRIV "$runtime_user" "$runtime_group" sh -c '[ -r '"$key_file"' ]'
-    sh -c '[ -r '"$key_file"' ]'
-then
-    echo "-Info- $key_file is readable by $runtime_user:$runtime_group"
-else
-    echo "-Error- $key_file is not readable by $runtime_user:$runtime_group"
-    errors=$(( errors + 1 ))
-fi
+for file in "$certificate" "$key_file"; do
+    if ! [ -e $file ]; then
+        echo "-Error- $file does not exist"
+        errors=$(( errors + 1 ))
+    elif ! $DROPPRIV "$runtime_user" "$runtime_group" sh -c '[ -r '"$file"' ]'
+    then
+        echo "-Error- $file is not readable by $runtime_user:$runtime_group"
+        errors=$(( errors + 1 ))
+    elif $DROPPRIV "$runtime_user" "$runtime_group" sh -c '[ -w '"$file"' ]'
+    then
+        echo "-Error- $file is writeable by $runtime_user:$runtime_group"
+        errors=$(( errors + 1 ))
+    else
+        echo "-Info- $file is read-only for $runtime_user:$runtime_group"
+    fi
+done
 
 echo
 if [ $errors -eq 0 ]; then
