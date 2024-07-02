@@ -45,170 +45,6 @@ static tui8 g_pad_92[48] =
 
 
 /*****************************************************************************/
-/* Licensing request v2 PDU
- *
- * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
- * [MS-RDPELE] SERVER_LICENSE_REQUEST with PREAMBLE_VERSION_2_0
- */
-/* some compilers need unsigned char to avoid warnings */
-static tui8 g_lic1[322] =
-{
-    /* [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
-     * flags (2) = 0x0080 (SEC_LICENSE_PKT)
-     * flagsHi (2) = unused (arbitrary data)
-     * [MS-RDPBCGR] LICENSE_PREAMBLE
-     * bMsgType (1) = 0x01 (LICENSE_REQUEST)
-     * flags (1) = 0x02 (PREAMBLE_VERSION_2_0)
-     * wMsgSize (2) = 318 (excludes the 4 bytes TS_SECURITY_HEADER Basic)
-     */
-    0x80, 0x00, 0x3e, 0x01, 0x01, 0x02, 0x3e, 0x01,
-    /* [MS-RDPELE] SERVER_LICENSE_REQUEST
-     * ServerRandom (32) = <see hex below>
-     */
-    0x7b, 0x3c, 0x31, 0xa6, 0xae, 0xe8, 0x74, 0xf6,
-    0xb4, 0xa5, 0x03, 0x90, 0xe7, 0xc2, 0xc7, 0x39,
-    0xba, 0x53, 0x1c, 0x30, 0x54, 0x6e, 0x90, 0x05,
-    0xd0, 0x05, 0xce, 0x44, 0x18, 0x91, 0x83, 0x81,
-    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - ProductInfo
-     * [MS-RDPELE] PRODUCT_INFO
-     * dwVersion (4) = 0x00040000
-     * cbCompanyName (4) = 0x0000002c (44)
-     */
-    0x00, 0x00, 0x04, 0x00, 0x2c, 0x00, 0x00, 0x00,
-    /*
-     * pbCompanyName (44) = UTF-16("Microsoft Corporation")
-     * cbProductId (4) = 0x00000008 (8)
-     */
-    0x4d, 0x00, 0x69, 0x00, 0x63, 0x00, 0x72, 0x00,
-    0x6f, 0x00, 0x73, 0x00, 0x6f, 0x00, 0x66, 0x00,
-    0x74, 0x00, 0x20, 0x00, 0x43, 0x00, 0x6f, 0x00,
-    0x72, 0x00, 0x70, 0x00, 0x6f, 0x00, 0x72, 0x00,
-    0x61, 0x00, 0x74, 0x00, 0x69, 0x00, 0x6f, 0x00,
-    0x6e, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
-    /*
-     * pbProductId (8) = UTF-16("236")
-     */
-    0x32, 0x00, 0x33, 0x00, 0x36, 0x00, 0x00, 0x00,
-    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - KeyExchangeList
-     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
-     * wBlobType (2) = 0x000d (BB_KEY_EXCHG_ALG_BLOB)
-     * wBlobLen (2) = 0x0004 (4)
-     * blobData (4) = 0x00000001 (KEY_EXCHANGE_ALG_RSA)
-     */
-    0x0d, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00,
-    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - ServerCertificate
-     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
-     * wBlobType (2) = BB_CERTIFICATE_BLOB (0x0003)
-     * wBlobLen (2) = 0x00b8 (184)
-     * blobData = <SERVER_CERTIFICATE>
-     *
-     * [MS-RDPBCGR] SERVER_CERTIFICATE
-     * dwVersion (31 bits) = 0x00000001 (CERT_CHAIN_VERSION_1)
-     * t (1 bit) = 0 (temporary certificate)
-     */
-    0x03, 0x00, 0xb8, 0x00, 0x01, 0x00, 0x00, 0x00,
-    /*
-     * certData = <PROPRIETARYSERVERCERTIFICATE>
-     *
-     * [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE
-     * dwSigAlgId (4) = 0x00000001 (SIGNATURE_ALG_RSA)
-     * dwKeyAlgId (4) = 0x00000001 (KEY_EXCHANGE_ALG_RSA)
-     * wPublicKeyBlobType (2) = 0x0006 (BB_RSA_KEY_BLOB)
-     * wPublicKeyBlobLen (2) = 0x005c (92)
-     * PublicKeyBlob = <RSA_PUBLIC_KEY>
-     *
-     * [MS-RDPBCGR] RSA_PUBLIC_KEY
-     * magic (4) = 0x31415352
-     * keylen (4) = 0x00000048 (72)
-     * bitlen (4) = 0x00000200 (512)
-     * datalen (4) = 0x0000003f (63)
-     * pubExp (4) = 0x00010001 (65537)
-     */
-    0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-    0x06, 0x00, 0x5c, 0x00, 0x52, 0x53, 0x41, 0x31,
-    0x48, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
-    0x3f, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-    /*
-     * modulus (72) = <see hex below>
-     */
-    0x01, 0xc7, 0xc9, 0xf7, 0x8e, 0x5a, 0x38, 0xe4,
-    0x29, 0xc3, 0x00, 0x95, 0x2d, 0xdd, 0x4c, 0x3e,
-    0x50, 0x45, 0x0b, 0x0d, 0x9e, 0x2a, 0x5d, 0x18,
-    0x63, 0x64, 0xc4, 0x2c, 0xf7, 0x8f, 0x29, 0xd5,
-    0x3f, 0xc5, 0x35, 0x22, 0x34, 0xff, 0xad, 0x3a,
-    0xe6, 0xe3, 0x95, 0x06, 0xae, 0x55, 0x82, 0xe3,
-    0xc8, 0xc7, 0xb4, 0xa8, 0x47, 0xc8, 0x50, 0x71,
-    0x74, 0x29, 0x53, 0x89, 0x6d, 0x9c, 0xed, 0x70,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    /* [MS-RDPELE] SERVER_LICENSE_REQUEST - ServerCertificate
-     * [MS-RDPBCGR] LICENSE_BINARY_BLOB - blobData
-     * [MS-RDPBCGR] SERVER_CERTIFICATE - certData
-     * [MS-RDPBCGR] PROPRIETARYSERVERCERTIFICATE
-     * wSignatureBlobType (2) = 0x0008 (BB_RSA_SIGNATURE_BLOB)
-     * wSignatureBlobLen (2) = 0x0048 (72)
-     * SignatureBlob (72) = <see hex below, calculated using [MS-RDPBCGR] 5.3.3.1.2>
-     */
-    0x08, 0x00, 0x48, 0x00, 0xa8, 0xf4, 0x31, 0xb9,
-    0xab, 0x4b, 0xe6, 0xb4, 0xf4, 0x39, 0x89, 0xd6,
-    0xb1, 0xda, 0xf6, 0x1e, 0xec, 0xb1, 0xf0, 0x54,
-    0x3b, 0x5e, 0x3e, 0x6a, 0x71, 0xb4, 0xf7, 0x75,
-    0xc8, 0x16, 0x2f, 0x24, 0x00, 0xde, 0xe9, 0x82,
-    0x99, 0x5f, 0x33, 0x0b, 0xa9, 0xa6, 0x94, 0xaf,
-    0xcb, 0x11, 0xc3, 0xf2, 0xdb, 0x09, 0x42, 0x68,
-    0x29, 0x56, 0x58, 0x01, 0x56, 0xdb, 0x59, 0x03,
-    0x69, 0xdb, 0x7d, 0x37, 0x00, 0x00, 0x00, 0x00,
-    /* <last 4 bytes of SignatureBlob>
-     *
-     * [MS-RDPELE] SERVER_LICENSE_REQUEST - ScopeList
-     * [MS-RDPELE] SCOPE_LIST
-     * ScopeCount (4) = 0x00000001 (1)
-     * ScopeArray = <LICENSE_BINARY_BLOB>
-     *
-     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
-     * wBlobType (2) = 0x000e (BB_SCOPE_BLOB)
-     * wBlobLen (2) = 0x000e (14)
-     * blobData (14) = ISO-8859-1("microsoft.com")
-     */
-    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-    0x0e, 0x00, 0x0e, 0x00, 0x6d, 0x69, 0x63, 0x72,
-    0x6f, 0x73, 0x6f, 0x66, 0x74, 0x2e, 0x63, 0x6f,
-    0x6d, 0x00
-};
-
-/*****************************************************************************/
-/* Licensing success response v2 PDU
- *
- * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
- * [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
- */
-/* some compilers need unsigned char to avoid warnings */
-static tui8 g_lic2[20] =
-{
-    /* [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
-     * flags (2) = 0x0080 (SEC_LICENSE_PKT)
-     * flagsHi (2) = unused (arbitrary data)
-     * [MS-RDPBCGR] LICENSE_PREAMBLE
-     * bMsgType (1) = 0xff (ERROR_ALERT)
-     * flags (1) = 0x02 (PREAMBLE_VERSION_2_0)
-     * wMsgSize (2) = 0x10 (16, excludes the 4 bytes TS_SECURITY_HEADER Basic)
-     */
-    0x80, 0x00, 0x10, 0x00, 0xff, 0x02, 0x10, 0x00,
-    /*
-     * [MS-RDPBCGR] LICENSE_ERROR_MESSAGE
-     * dwErrorCode (4) = 0x00000007 (STATUS_VALID_CLIENT)
-     * dwStateTransition (4) = 0x00000002 (ST_NO_TRANSITION)
-     * bbErrorInfo = <LICENSE_BINARY_BLOB>
-     */
-    0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-    /*
-     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
-     * wBlobType (2) = 0x1428 <ignored by client> (should be 0x0004 BB_ERROR_BLOB)
-     * wBlobLen (2) = 0x0000 (0)
-     */
-    0x28, 0x14, 0x00, 0x00
-};
-
-/*****************************************************************************/
 /* Licensing success response v3 PDU
  *
  * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
@@ -238,10 +74,10 @@ static tui8 g_lic3[20] =
     0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
     /*
      * [MS-RDPBCGR] LICENSE_BINARY_BLOB
-     * wBlobType (2) = 0x99f3 <ignored by client> (should be 0x0004 BB_ERROR_BLOB)
+     * wBlobType (2) = 0x0004 (BB_ERROR_BLOB)
      * wBlobLen (2) = 0x0000 (0)
      */
-    0xf3, 0x99, 0x00, 0x00
+    0x04, 0x00, 0x00, 0x00
 };
 
 static const tui8 g_fips_reverse_table[256] =
@@ -1160,39 +996,6 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* returns error */
-static int
-xrdp_sec_send_lic_initial(struct xrdp_sec *self)
-{
-    struct stream *s;
-
-
-    make_stream(s);
-    init_stream(s, 8192);
-
-    if (xrdp_mcs_init(self->mcs_layer, s) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "xrdp_sec_send_lic_initial: xrdp_mcs_init failed");
-        free_stream(s);
-        return 1;
-    }
-
-    out_uint8a(s, g_lic1, sizeof(g_lic1));
-    s_mark_end(s);
-
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPELE] SERVER_LICENSE_REQUEST");
-    if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPELE] SERVER_LICENSE_REQUEST failed");
-        free_stream(s);
-        return 1;
-    }
-
-    free_stream(s);
-    return 0;
-}
-
-/*****************************************************************************/
 /*
  * Send a [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
  * See also: [MS-RDPELE] 1.3.3 Licensing PDU Flows
@@ -1209,38 +1012,6 @@ xrdp_sec_send_lic_response(struct xrdp_sec *self)
     if (xrdp_mcs_init(self->mcs_layer, s) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_sec_send_lic_response: xrdp_mcs_init failed");
-        free_stream(s);
-        return 1;
-    }
-
-    out_uint8a(s, g_lic2, sizeof(g_lic2));
-    s_mark_end(s);
-
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT");
-    if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT failed");
-        free_stream(s);
-        return 1;
-    }
-
-    free_stream(s);
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-static int
-xrdp_sec_send_media_lic_response(struct xrdp_sec *self)
-{
-    struct stream *s;
-
-    make_stream(s);
-    init_stream(s, 8192);
-
-    if (xrdp_mcs_init(self->mcs_layer, s) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "xrdp_sec_send_media_lic_response: xrdp_mcs_init failed");
         free_stream(s);
         return 1;
     }
@@ -1667,31 +1438,6 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             return 1;
         }
 
-        if (self->rdp_layer->client_info.is_mce)
-        {
-            if (xrdp_sec_send_media_lic_response(self) != 0)
-            {
-                LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_send_media_lic_response failed");
-                return 1;
-            }
-
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: out 'send demand active'");
-            return -1; /* special error that means send demand active */
-        }
-
-        if (xrdp_sec_send_lic_initial(self) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_send_lic_initial failed");
-            return 1;
-        }
-
-        *chan = 1; /* just set a non existing channel and exit */
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_sec_recv: out channel 1 (non-existing channel)");
-        return 0;
-    }
-
-    if (flags & SEC_LICENCE_NEG) /* 0x80 SEC_LICENSE_PKT */
-    {
         if (xrdp_sec_send_lic_response(self) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "xrdp_sec_recv: xrdp_sec_send_lic_response failed");
