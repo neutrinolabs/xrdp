@@ -43,43 +43,6 @@ static tui8 g_pad_92[48] =
     92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92
 };
 
-
-/*****************************************************************************/
-/* Licensing success response v3 PDU
- *
- * [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
- * [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
- *
- * used for Media Center Edition
- */
-/* some compilers need unsigned char to avoid warnings */
-static tui8 g_lic3[20] =
-{
-    /* S */
-    /* [MS-RDPBCGR] TS_SECURITY_HEADER - Basic
-     * flags (2) = 0x0280 (SEC_LICENSE_PKT | SEC_LICENSE_ENCRYPT_CS)
-     * flagsHi (2) = unused (arbitrary data)
-     * [MS-RDPBCGR] LICENSE_PREAMBLE
-     * bMsgType (1) = 0xff (ERROR_ALERT)
-     * flags (1) = 0x03 (PREAMBLE_VERSION_3_0)
-     * wMsgSize (2) = 0x0010 (16, excludes the 4 bytes TS_SECURITY_HEADER Basic)
-     */
-    0x80, 0x02, 0x10, 0x00, 0xff, 0x03, 0x10, 0x00,
-    /*
-     * [MS-RDPBCGR] LICENSE_ERROR_MESSAGE
-     * dwErrorCode (4) = 0x00000007 (STATUS_VALID_CLIENT)
-     * dwStateTransition (4) = 0x00000002 (ST_NO_TRANSITION)
-     * bbErrorInfo = <LICENSE_BINARY_BLOB>
-     */
-    0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-    /*
-     * [MS-RDPBCGR] LICENSE_BINARY_BLOB
-     * wBlobType (2) = 0x0004 (BB_ERROR_BLOB)
-     * wBlobLen (2) = 0x0000 (0)
-     */
-    0x04, 0x00, 0x00, 0x00
-};
-
 static const tui8 g_fips_reverse_table[256] =
 {
     0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
@@ -1010,8 +973,8 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
 /*****************************************************************************/
 /*
- * Send a [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT
- * See also: [MS-RDPELE] 1.3.3 Licensing PDU Flows
+ * Send a [MS-RDPBCGR] Server License Error PDU (2.2.1.12) with
+ * STATUS_VALID_CLIENT
  */
 /* returns error */
 static int
@@ -1029,13 +992,34 @@ xrdp_sec_send_lic_response(struct xrdp_sec *self)
         return 1;
     }
 
-    out_uint8a(s, g_lic3, sizeof(g_lic3));
+    /* [MS-RDPBCGR] TS_SECURITY_HEADER */
+    /* A careful reading of [MS-RDPBCGR] 2.2.1.12 shows that a securityHeader
+     * MUST be included, and provided the flag fields of the header does
+     * not contain SEC_ENCRYPT, it is always possible to send a basic
+     * security header */
+    out_uint16_le(s, SEC_LICENSE_PKT | SEC_LICENSE_ENCRYPT_CS); /* flags */
+    out_uint16_le(s, 0); /* flagsHi */
+
+    /* [MS-RDPBCGR] LICENSE_VALID_CLIENT_DATA */
+    /* preamble (LICENSE_PREAMBLE) */
+    out_uint8(s, ERROR_ALERT);
+    out_uint8(s, PREAMBLE_VERSION_3_0);
+    out_uint16_le(s, 16); /* Message size, including pre-amble */
+
+    /* validClientMessage */
+    /* From [MS-RDPBCGR] 2.2.12.1, dwStateTransition must be ST_NO_TRANSITION,
+     * and the bbErrorInfo field must contain an empty blob of type
+     * BB_ERROR_BLOB */
+    out_uint32_le(s, STATUS_VALID_CLIENT); /* dwErrorCode */
+    out_uint32_le(s, ST_NO_TRANSITION); /* dwStateTransition */
+    out_uint16_le(s, BB_ERROR_BLOB);    /* wBlobType */
+    out_uint16_le(s, 0);                /* wBlobLen */
     s_mark_end(s);
 
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] Server License Error PDU with STATUS_VALID_CLIENT");
     if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
     {
-        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPELE] LICENSE_ERROR_MESSAGE with STATUS_VALID_CLIENT failed");
+        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPBCGR] Server License Error PDU with STATUS_VALID_CLIENT failed");
         free_stream(s);
         return 1;
     }
@@ -1404,7 +1388,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         }
     }
 
-    if (flags & SEC_CLIENT_RANDOM) /* 0x01 TS_SECURITY_PACKET */
+    if (flags & SEC_EXCHANGE_PKT) /* 0x01 TS_SECURITY_PACKET */
     {
         if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPBCGR] TS_SECURITY_PACKET"))
         {
@@ -1443,7 +1427,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         return 0;
     }
 
-    if (flags & SEC_LOGON_INFO) /* 0x40 SEC_INFO_PKT */
+    if (flags & SEC_INFO_PKT)
     {
         if (xrdp_sec_process_logon_info(self, s) != 0)
         {
