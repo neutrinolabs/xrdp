@@ -45,10 +45,10 @@ RestrictInboundClipboard=none
 ; Leave this unset unless you need to disable it.
 #XorgNoNewPrivileges=true
 ; Specify the group which is to have read access to the directory where
-; local sockets for the session are created. This is normally the GID
-; which the xrdp process runs as.
-; Default is 'root'
-#SessionSockdirGroup=root
+; local sockets for the session are created.
+; This MUST be the same as runtime_group in xrdp.ini, or xrdp will not
+; be able to connect to your sessions.
+#SessionSockdirGroup=xrdp
 
 
 [Sessions]
