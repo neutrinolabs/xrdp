@@ -1,9 +1,3 @@
-if USE_FREETYPE2
-  MKFV1_MAN = xrdp-mkfv1.8
-else
-  MKFV1_MAN =
-endif
-
 man_MANS = \
   xrdp-dis.1 \
   sesman.ini.5 \
@@ -16,10 +10,13 @@ man_MANS = \
   xrdp-sesadmin.8 \
   xrdp-sesman.8 \
   xrdp-sesrun.8 \
-  xrdp-dumpfv1.8 \
-  $(MKFV1_MAN)
+  xrdp-dumpfv1.8
 
-EXTRA_DIST = $(man_MANS:=.in)
+EXTRA_DIST = xrdp-mkfv1.8.in $(man_MANS:=.in)
+
+if USE_FREETYPE2
+  man_MANS += xrdp-mkfv1.8
+endif
 
 SUBST_VARS = sed \
    -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
