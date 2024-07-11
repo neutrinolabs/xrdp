@@ -117,14 +117,15 @@ The default port for RDP is \fB3389\fP.
 Multiple address:port instances must be separated by spaces or commas. Check the .ini file for examples.
 Specifying interfaces requires said interfaces to be UP before xrdp starts.
 
-\fBdomain_user_separator\fP=\fI[true|false]\fP
+.TP
+\fBenable_token_login\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will scan the user name provided by the
 client for the ASCII field separator character (0x1F). It will then copy over what is after the
 separator as the password supplied by the user and treats it as autologon. If not specified,
 defaults to \fBfalse\fP.
 
 .TP
-\domain_user_separator\fP=\separator\fP
+\fBdomain_user_separator\fP=\fIseparator\fP
 If specified the domain name supplied by the client is appended to the username separated
 by \fBseparator\fP.
 
