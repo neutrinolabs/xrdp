@@ -2687,6 +2687,14 @@ xrdp_mm_process_login_response(struct xrdp_mm *self)
                                 self->wm->pamerrortxt);
             }
 
+            if (self->wm->client_info->require_credentials)
+            {
+                /* Credentials had to be specified, but were invalid */
+                g_set_wait_obj(self->wm->pro_layer->self_term_event);
+                LOG(LOG_LEVEL_ERROR, "require_credentials is set, "
+                    "but the user could not be logged in");
+            }
+
             if (server_closed)
             {
                 if (login_result == E_SCP_LOGIN_NOT_AUTHENTICATED)
