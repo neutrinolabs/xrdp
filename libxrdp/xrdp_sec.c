@@ -1012,6 +1012,25 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
+    // If we require credentials, don't continue if they're not provided
+    if (self->rdp_layer->client_info.require_credentials)
+    {
+        if ((flags & RDP_LOGON_AUTO) == 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Server is configured to require that the "
+                "client enable auto logon with credentials, but the client did "
+                "not request auto logon.");
+            return 1;
+        }
+        if (len_user == 0 || len_password == 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Server is configured to require that the "
+                "client enable auto logon with credentials, but the client did "
+                "not supply both a username and password.");
+            return 1;
+        }
+    }
+
     if (flags & RDP_LOGON_AUTO)
     {
         if (unicode_utf16_in(s, len_password, self->rdp_layer->client_info.password, sizeof(self->rdp_layer->client_info.password) - 1) != 0)
@@ -1033,18 +1052,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     else
     {
+        // Skip the password
         if (!s_check_rem_and_log(s, len_password + 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET Password"))
         {
             return 1;
         }
         in_uint8s(s, len_password + 2);
-        if (self->rdp_layer->client_info.require_credentials)
-        {
-            LOG(LOG_LEVEL_ERROR, "Server is configured to require that the "
-                "client enable auto logon with credentials, but the client did "
-                "not request auto logon.");
-            return 1; /* credentials on cmd line is mandatory */
-        }
     }
     if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
             && self->rdp_layer->client_info.domain[0] != '\0')

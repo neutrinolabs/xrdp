@@ -117,8 +117,7 @@ The default port for RDP is \fB3389\fP.
 Multiple address:port instances must be separated by spaces or commas. Check the .ini file for examples.
 Specifying interfaces requires said interfaces to be UP before xrdp starts.
 
-.TP
-\fBrequire_credentials\fP=\fI[true|false]\fP
+\fBdomain_user_separator\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will scan the user name provided by the
 client for the ASCII field separator character (0x1F). It will then copy over what is after the
 separator as the password supplied by the user and treats it as autologon. If not specified,
@@ -130,10 +129,13 @@ If specified the domain name supplied by the client is appended to the username 
 by \fBseparator\fP.
 
 .TP
-\enable_token_login\fP=\fI[true|false]\fP
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
-password initial connection phase. In other words, xrdp doesn't allow clients to show login
-screen if set to true. If not specified, defaults to \fBfalse\fP.
+\fBrequire_credentials\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients
+to include username and password initial connection phase. In other
+words, xrdp doesn't allow clients to show login screen if set to true.
+It follows that an incorrect password will cause the login to immediately
+fail without displaying the login screen.  If not specified, defaults
+to \fBfalse\fP.
 
 .TP
 \fBsecurity_layer\fP=\fI[tls|rdp|negotiate]\fP

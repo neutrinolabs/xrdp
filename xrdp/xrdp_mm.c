@@ -1883,6 +1883,14 @@ xrdp_mm_scp_process_msg(struct xrdp_mm *self,
         {
             /* Authentication failure */
             cleanup_sesman_connection(self);
+            if (self->wm->client_info->require_credentials)
+            {
+                /* Credentials had to be specified, but were invalid */
+                g_set_wait_obj(self->wm->pro_layer->self_term_event);
+                LOG(LOG_LEVEL_ERROR, "require_credentials is set, "
+                    "but the user could not be logged in");
+            }
+
             xrdp_wm_mod_connect_done(self->wm, 1);
         }
         else
