@@ -17,7 +17,8 @@ xrdp_droppriv_LDADD = \
   $(top_builddir)/common/libcommon.la
 
 SUBST_VARS = sed \
-   -e 's|@pkglibexecdir[@]|$(pkglibexecdir)|g'
+   -e 's|@pkglibexecdir[@]|$(pkglibexecdir)|g' \
+   -e 's|@sysconfdir[@]|$(sysconfdir)|g'
 
 subst_verbose = $(subst_verbose_@AM_V@)
 subst_verbose_ = $(subst_verbose_@AM_DEFAULT_V@)
