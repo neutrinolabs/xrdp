@@ -14,7 +14,8 @@ AM_CPPFLAGS = \
 xrdp_droppriv_SOURCES = xrdp-droppriv.c
 
 xrdp_droppriv_LDADD = \
-  $(top_builddir)/common/libcommon.la
+  $(top_builddir)/common/libcommon.la \
+  $(DLOPEN_LIBS)
 
 SUBST_VARS = sed \
    -e 's|@pkglibexecdir[@]|$(pkglibexecdir)|g' \
