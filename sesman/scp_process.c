@@ -102,6 +102,14 @@ process_sys_login_request(struct pre_session_item *psi)
         }
         else
         {
+            /*
+             * Copy the IP address of the requesting user, anticipating a
+             * successful login. We need this so we can search for a session
+             * with a matching IP address if required.
+             */
+            g_snprintf(psi->start_ip_addr, sizeof(psi->start_ip_addr),
+                       "%s", ip_addr);
+
             /* Create a sesexec process to handle the login
              *
              * We won't check for the user being valid here, as this might
