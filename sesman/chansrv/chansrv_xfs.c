@@ -264,6 +264,8 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
     struct xfs_fs *xfs = g_new0(struct xfs_fs, 1);
     XFS_INODE_ALL *xino1 = NULL;
     XFS_INODE_ALL *xino2 = NULL;
+    char *xino1_name = NULL;
+    char *xino2_name = NULL;
 
     if (xfs != NULL)
     {
@@ -279,10 +281,14 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
         if (!grow_xfs(xfs, INODE_TABLE_ALLOCATION_INITIAL) ||
                 xfs->inode_table == NULL ||
                 (xino1 = g_new0(XFS_INODE_ALL, 1)) == NULL ||
-                (xino2 = g_new0(XFS_INODE_ALL, 1)) == NULL)
+                (xino2 = g_new0(XFS_INODE_ALL, 1)) == NULL ||
+                (xino1_name = strdup(".")) == NULL ||
+                (xino2_name = strdup(".delete-pending")) == NULL)
         {
             free(xino1);
             free(xino2);
+            free(xino1_name);
+            free(xino2_name);
             xfs_delete_xfs_fs(xfs);
             xfs = NULL;
         }
@@ -306,7 +312,7 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
             xino1->pub.atime = time(0);
             xino1->pub.mtime = xino1->pub.atime;
             xino1->pub.ctime = xino1->pub.atime;
-            strcpy(xino1->pub.name, ".");
+            xino1->pub.name = xino1_name;
             xino1->pub.generation = xfs->generation;
             xino1->pub.is_redirected = 0;
             xino1->pub.device_id = 0;
@@ -328,7 +334,7 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
             xino2->pub.atime = time(0);
             xino2->pub.mtime = xino2->pub.atime;
             xino2->pub.ctime = xino2->pub.atime;
-            strcpy(xino2->pub.name, ".delete-pending");
+            xino2->pub.name = xino2_name;
             xino2->pub.generation = xfs->generation;
             xino2->pub.is_redirected = 0;
             xino2->pub.device_id = 0;
@@ -350,6 +356,17 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
 }
 
 /*  ------------------------------------------------------------------------ */
+static void
+xfs_free_inode(XFS_INODE_ALL *xino)
+{
+    if (xino != NULL)
+    {
+        free(xino->pub.name);
+        free(xino);
+    }
+}
+
+/*  ------------------------------------------------------------------------ */
 void
 xfs_delete_xfs_fs(struct xfs_fs *xfs)
 {
@@ -363,7 +380,7 @@ xfs_delete_xfs_fs(struct xfs_fs *xfs)
         size_t i;
         for (i = 0 ; i < xfs->inode_count; ++i)
         {
-            free(xfs->inode_table[i]);
+            xfs_free_inode(xfs->inode_table[i]);
         }
     }
     free(xfs->inode_table);
@@ -407,9 +424,14 @@ xfs_add_entry(struct xfs_fs *xfs, fuse_ino_t parent_inum,
         if (xfs->free_count > 0 ||
                 grow_xfs(xfs, INODE_TABLE_ALLOCATION_GRANULARITY))
         {
-            XFS_INODE_ALL *xino =  NULL;
-
-            if ((xino = g_new0(XFS_INODE_ALL, 1)) != NULL)
+            XFS_INODE_ALL *xino = g_new0(XFS_INODE_ALL, 1);
+            char *cpyname = strdup(name);
+            if (xino == NULL || cpyname == NULL)
+            {
+                free(xino);
+                free(cpyname);
+            }
+            else
             {
                 fuse_ino_t inum = xfs->free_list[--xfs->free_count];
                 if (xfs->inode_table[inum] != NULL)
@@ -433,7 +455,7 @@ xfs_add_entry(struct xfs_fs *xfs, fuse_ino_t parent_inum,
                 xino->pub.atime = time(0);
                 xino->pub.mtime = xino->pub.atime;
                 xino->pub.ctime = xino->pub.atime;
-                strcpy(xino->pub.name, name);
+                xino->pub.name = cpyname;
                 xino->pub.generation = xfs->generation;
                 xino->pub.is_redirected = parent->pub.is_redirected;
                 xino->pub.device_id = parent->pub.device_id;
@@ -498,7 +520,7 @@ xfs_remove_entry(struct xfs_fs *xfs, fuse_ino_t inum)
              * so that the caller can distinguish re-uses of the same inum.
              */
             ++xfs->generation;
-            free(xino);
+            xfs_free_inode(xino);
         }
     }
 }
@@ -844,8 +866,15 @@ xfs_move_entry(struct xfs_fs *xfs, fuse_ino_t inum,
     XFS_INODE_ALL *xino;
     XFS_INODE_ALL *parent;
     XFS_INODE *dest;
+    char *cpyname;
 
-    if (xfs_check_move_entry(xfs, inum, new_parent_inum, name))
+    /* Copy the new name. We'll either end up freeing it, or we'll
+     * use it to replace something else (which gets freed instead) */
+    if ((cpyname  = strdup(name)) == NULL)
+    {
+        result = ENOMEM;
+    }
+    else if (xfs_check_move_entry(xfs, inum, new_parent_inum, name))
     {
         xino = xfs->inode_table[inum];
         parent = xfs->inode_table[new_parent_inum];
@@ -862,19 +891,31 @@ xfs_move_entry(struct xfs_fs *xfs, fuse_ino_t inum,
 
             unlink_inode_from_parent(xino);
             link_inode_into_directory_node(parent, xino);
-            strcpy(xino->pub.name, name);
+
+            /* Swap the copy name and the inode name so we end up with the
+             * right name, and the old one gets freed */
+            char *t = xino->pub.name;
+            xino->pub.name = cpyname;
+            cpyname = t;
         }
         else if (strcmp(xino->pub.name, name) != 0)
         {
             /* Same directory, but name has changed */
             if ((dest = xfs_lookup_in_dir(xfs, new_parent_inum, name)) != NULL)
             {
+                /* Name collision - remove destination entry */
                 xfs_remove_entry(xfs, dest->inum);
             }
-            strcpy(xino->pub.name, name);
+
+            /* Swap the copy name and the inode name so we end up with the
+             * right name, and the old one gets freed */
+            char *t = xino->pub.name;
+            xino->pub.name = cpyname;
+            cpyname = t;
         }
         result = 0;
     }
+    free (cpyname);
 
     return result;
 }
