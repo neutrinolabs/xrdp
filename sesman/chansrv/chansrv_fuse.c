@@ -202,7 +202,7 @@ struct state_lookup
 {
     fuse_req_t        req;        /* Original FUSE request from lookup  */
     fuse_ino_t        pinum;      /* inum of parent directory           */
-    char              name[XFS_MAXFILENAMELEN];
+    char              name[XFS_MAXFILENAMELEN + 1];
     /* Name to look up                    */
     fuse_ino_t        existing_inum;
     /* inum of an existing entry          */
@@ -241,7 +241,7 @@ struct state_create
     fuse_req_t        req;        /* Original FUSE request from lookup  */
     struct fuse_file_info fi;     /* File info struct passed to open    */
     fuse_ino_t        pinum;      /* inum of parent directory           */
-    char              name[XFS_MAXFILENAMELEN];
+    char              name[XFS_MAXFILENAMELEN + 1];
     /* Name of file in parent directory   */
     mode_t            mode;       /* Mode of file to create             */
 };
@@ -280,7 +280,7 @@ struct state_rename
     fuse_req_t        req;        /* Original FUSE request from lookup  */
     fuse_ino_t        pinum;      /* inum of parent of file             */
     fuse_ino_t        new_pinum;  /* inum of new parent of file         */
-    char              name[XFS_MAXFILENAMELEN];
+    char              name[XFS_MAXFILENAMELEN + 1];
     /* New name of file in new parent dir */
 };
 
