@@ -53,6 +53,7 @@
 #include "log.h"
 #include "chansrv.h"
 #include "chansrv_fuse.h"
+#include "chansrv_xfs.h"
 #include "devredir.h"
 #include "smartcard.h"
 #include "ms-rdpefs.h"
@@ -1249,7 +1250,13 @@ devredir_proc_query_dir_response(IRP *irp,
                 return -1;
             }
 
+            // Size the filename buffer so it's big enough for
+            // storing the file in our filesystem if we need to.
+#ifdef XFS_MAXFILENAMELEN
+            char  filename[XFS_MAXFILENAMELEN + 1];
+#else
             char  filename[256];
+#endif
             tui64 LastAccessTime;
             tui64 LastWriteTime;
             tui64 EndOfFile;
