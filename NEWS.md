@@ -1,3 +1,45 @@
+# Release notes for xrdp v0.10.1 (2024/07/31)
+
+## General announcements
+
+A clipboard bugfix included in this release is sponsored by Krämer Pferdesport GmbH & Co KG. We very much appreciate the sponsorship.
+
+Please consider sponsoring or making a donation to the project if you like xrdp. We accept financial contributions via [Open Collective](https://opencollective.com/xrdp-project). Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Security fixes
+* Unauthenticated RDP security scan finding / partial auth bypass (no CVE). Thanks to @txtdawg for reporting this.
+
+## New features
+* GFX-RFX lossy compression levels are now selectable depending on connection type on the client (#3183, backport of #2973)
+
+## Bug fixes
+* A regression in the code for creating the chansrv FUSE directory has been fixed (#3088, backport of #3082)
+* Fix a systemd dependency ("network-online.target") (#3088, backport of #3086)
+* A problem in session list processing which could result in incorrect display assignments has been fixed (#3088, backport of #3103)
+* A problem in GFX resizing which could lead to a SEGV in xrdp has been fixed (#3088, backport of #3107)
+* A problem with the US Dvorak keyboard layout has been resolved (#3088, backport of #3112)
+* A regression bug when pasting image to LibreOffice has been fixed [Sponsored by Krämer Pferdesport GmbH & Co KG] (#3102 #3120)
+* Fix a regression when the server tries to negotiate GFX when max_bpp is not high enough (#3118 #3122)
+* Fix a GFX multi-monitor screen placing issue on minimise/maximize (#3075 #3127)
+* Fix an issue some files are not included properly in release tarball (#3149 #3150)
+* Using 'I' in the session selection policy now works correctly (#3167 #3171)
+* A potential name buffer overflow in the redirector has been fixed [no security implications] (#3175)
+* Screens wider than 4096 pixels should now be supported (#3083)
+* An unnecessary licensing exchange during connection setup has been removed. This was causing problems for FIPS-compliant clients (#3132  backport of #3143)
+
+## Internal changes
+* FreeBSD CI bumped to 13.3 (#3088, backport of #3104)
+
+## Changes for users
+* None since v0.10.0.
+* If moving from v0.9.x, read the v0.10.0 release note.
+
+## Changes for packagers or developers
+* None since v0.10.0.
+* If moving from v0.9.x, read the v0.10.0 release note.
+
+-----------------------
+
 # Release notes for xrdp v0.10.0 (2024/05/10)
 
 This section notes changes since the [v0.10 branch](#branch-v010) was created. 
@@ -20,7 +62,6 @@ This section describes the most user-visible new or changed features in xrdp sin
    * Native platform tools are now provided to manipulate .fv1 format font files.
 * The format of the date and time in the log file has been changed to ISO 8601 with milliseconds (#2386 #2541)
 * xrdp-sesman now supports a `--reload` switch to allow for the configuration to be changed when sessions are active (#2416)
-
 
 ## Security fixes
 None
