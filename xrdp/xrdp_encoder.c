@@ -48,11 +48,30 @@
 #define OUT_DATA_BYTES_DEFAULT_SIZE (16 * 1024 * 1024)
 
 #ifdef XRDP_RFXCODEC
-/* LH3 LL3, HH3 HL3, HL2 LH2, LH1 HH2, HH1 HL1 todo check this */
-static const unsigned char g_rfx_quantization_values[] =
+/*
+ * LH3 LL3, HH3 HL3, HL2 LH2, LH1 HH2, HH1 HL1
+ * https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdprfx/3e9c8af4-7539-4c9d-95de-14b1558b902c
+ */
+
+/* standard quality */
+static const unsigned char g_rfx_quantization_values_std[] =
 {
     0x66, 0x66, 0x77, 0x87, 0x98,
     0x76, 0x77, 0x88, 0x98, 0x99
+};
+
+/* low quality */
+static const unsigned char g_rfx_quantization_values_lq[] =
+{
+    0x66, 0x66, 0x77, 0x87, 0x98,
+    0xAA, 0xAA, 0xAA, 0xAA, 0xAA /* TODO: tentative value */
+};
+
+/* ultra low quality */
+static const unsigned char g_rfx_quantization_values_ulq[] =
+{
+    0x66, 0x66, 0x77, 0x87, 0x98,
+    0xBB, 0xBB, 0xBB, 0xBB, 0xBB /* TODO: tentative value */
 };
 #endif
 
@@ -155,11 +174,28 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         client_info->capture_code = 4;
         self->process_enc = process_enc_egfx;
         self->gfx = 1;
-        self->quants = (const char *) g_rfx_quantization_values;
         self->num_quants = 2;
         self->quant_idx_y = 0;
         self->quant_idx_u = 1;
         self->quant_idx_v = 1;
+
+        switch (client_info->mcs_connection_type)
+        {
+            case CONNECTION_TYPE_MODEM:
+            case CONNECTION_TYPE_BROADBAND_LOW:
+            case CONNECTION_TYPE_SATELLITE:
+                self->quants = (const char *) g_rfx_quantization_values_ulq;
+                break;
+            case CONNECTION_TYPE_BROADBAND_HIGH:
+            case CONNECTION_TYPE_WAN:
+                self->quants = (const char *) g_rfx_quantization_values_lq;
+                break;
+            case CONNECTION_TYPE_LAN:
+            case CONNECTION_TYPE_AUTODETECT: /* not implemented yet */
+            default:
+                self->quants = (const char *) g_rfx_quantization_values_std;
+
+        }
     }
     else if (client_info->rfx_codec_id != 0)
     {

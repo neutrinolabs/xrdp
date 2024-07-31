@@ -58,6 +58,10 @@
 #define SEC_TAG_CLI_4          0xc004 /* CS_CLUSTER? */
 #define SEC_TAG_CLI_MONITOR    0xc005 /* CS_MONITOR */
 #define SEC_TAG_CLI_MONITOR_EX 0xc008 /* CS_MONITOR_EX */
+#define SEC_TAG_SRV_INFO       0x0c01 /* SC_CORE */
+#define SEC_TAG_SRV_CRYPT      0x0c02 /* SC_SECURITY */
+#define SEC_TAG_SRV_CHANNELS   0x0c03 /* SC_NET? */
+
 
 /* Client Core Data: colorDepth, postBeta2ColorDepth (2.2.1.3.2) */
 #define RNS_UD_COLOR_4BPP      0xCA00
@@ -159,9 +163,16 @@
 #define RDP5_NO_CURSOR_SHADOW          0x20
 #define RDP5_NO_CURSORSETTINGS         0x40 /* disables cursor blinking */
 
+/* LICENSE_PREAMBLE (2.2.1.12.1.1) */
+#define ERROR_ALERT                    0xff
+#define PREAMBLE_VERSION_3_0           0x03
+
 /* LICENSE_BINARY_BLOB (2.2.1.12.1.2) */
-#define LICENCE_TAG_USER               0x000f /* BB_CLIENT_USER_NAME_BLOB */
-#define LICENCE_TAG_HOST               0x0010 /* BB_CLIENT_MACHINE_NAME_BLOB */
+#define BB_ERROR_BLOB                  0x0004
+
+/* LICENSE_ERROR_MESSAGE (2.2.1.12.1.3) */
+#define STATUS_VALID_CLIENT            0x00000007
+#define ST_NO_TRANSITION               0x00000002
 
 /* Maps to generalCapabilitySet in T.128 page 138 */
 
@@ -452,15 +463,11 @@
 #define PDUTYPE2_MONITOR_LAYOUT_PDU    55
 
 /* TS_SECURITY_HEADER: flags (2.2.8.1.1.2.1) */
-/* TODO: to be renamed */
-#define SEC_CLIENT_RANDOM              0x0001 /* SEC_EXCHANGE_PKT? */
+#define SEC_EXCHANGE_PKT               0x0001
 #define SEC_ENCRYPT                    0x0008
-#define SEC_LOGON_INFO                 0x0040 /* SEC_INFO_PKT */
-#define SEC_LICENCE_NEG                0x0080 /* SEC_LICENSE_PKT */
-
-#define SEC_TAG_SRV_INFO               0x0c01 /* SC_CORE */
-#define SEC_TAG_SRV_CRYPT              0x0c02 /* SC_SECURITY */
-#define SEC_TAG_SRV_CHANNELS           0x0c03 /* SC_NET? */
+#define SEC_INFO_PKT                   0x0040
+#define SEC_LICENSE_PKT                0x0080
+#define SEC_LICENSE_ENCRYPT_CS         0x0280
 
 /* Slow-Path Input Event: messageType (2.2.8.1.1.3.1.1) */
 /* TODO: to be renamed */
