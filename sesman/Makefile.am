@@ -27,6 +27,7 @@ xrdp_sesman_SOURCES = \
   scp_process.h \
   sesman.c \
   sesman.h \
+  sesman.ini.in \
   sesexec_control.c \
   sesexec_control.h \
   session_list.c \
@@ -52,7 +53,7 @@ SUFFIXES = .in
 .in:
 	$(subst_verbose)$(SUBST_VARS) $< > $@
 
-dist_sesmansysconf_DATA = \
+nodist_sesmansysconf_DATA = \
   sesman.ini
 
 dist_sesmansysconf_SCRIPTS = \
@@ -64,3 +65,5 @@ SUBDIRS = \
   sesexec \
   tools \
   chansrv
+
+CLEANFILES = $(nodist_sesmansysconf_DATA)
