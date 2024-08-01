@@ -53,6 +53,7 @@ xrdp_SOURCES = \
   lang.c \
   xrdp.c \
   xrdp.h \
+  xrdp.ini.in \
   xrdp_bitmap.c \
   xrdp_bitmap_load.c \
   xrdp_bitmap_common.c \
@@ -102,8 +103,10 @@ SUFFIXES = .in
 	$(subst_verbose)$(SUBST_VARS) $< > $@
 
 dist_xrdpsysconf_DATA = \
-  xrdp.ini \
   xrdp_keyboard.ini
+
+nodist_xrdpsysconf_DATA = \
+  xrdp.ini
 
 xrdppkgdatadir=$(datadir)/xrdp
 
@@ -119,3 +122,5 @@ dist_xrdppkgdata_DATA = \
   sans-18.fv1 \
   cursor0.cur \
   cursor1.cur
+
+CLEANFILES = $(nodist_xrdpsysconf_DATA)
