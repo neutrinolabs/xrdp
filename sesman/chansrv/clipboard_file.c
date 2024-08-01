@@ -285,37 +285,38 @@ clipboard_get_file(const char *file, int bytes)
 }
 
 /*****************************************************************************/
+/*
+ * Calls clipboard_get_file() for each filename in a list.
+ *
+ * List items are separated by line terminators. Blank items are ignored */
 static int
 clipboard_get_files(const char *files, int bytes)
 {
-    int index;
-    int file_index;
-    char file[512];
+    const char *start = files;
+    const char *end = files + bytes;
+    const char *p;
 
-    file_index = 0;
-    for (index = 0; index < bytes; index++)
+    for (p = start ; p < end ; ++p)
     {
-        if (files[index] == '\n' || files[index] == '\r')
+        if (*p == '\n' || *p == '\r')
         {
-            if (file_index > 0)
+            /* Skip zero-length files (which might be caused by
+             * multiple line terminators */
+            if (p > start)
             {
-                if (clipboard_get_file(file, file_index) == 0)
-                {
-                }
-                file_index = 0;
+                /* Get file. Errors are logged */
+                (void)clipboard_get_file(start, p - start);
             }
-        }
-        else
-        {
-            file[file_index] = files[index];
-            file_index++;
+
+            /* Move the start of filename pointer to either 'end', or
+             * the next character which will either be a filename or
+             * another terminator */
+            start = p + 1;
         }
     }
-    if (file_index > 0)
+    if (end > start)
     {
-        if (clipboard_get_file(file, file_index) == 0)
-        {
-        }
+        (void)clipboard_get_file(start, end - start);
     }
     if (g_files_list->count < 1)
     {
