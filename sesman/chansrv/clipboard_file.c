@@ -538,10 +538,12 @@ clipboard_send_file_data(int streamId, int lindex,
     make_stream(s);
     init_stream(s, cbRequested + 64);
     size = g_file_read(fd, s->data + 12, cbRequested);
-    if (size < 1)
+    // If we're at end-of-file, 0 is a valid response
+    if (size < 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_file_data: read error, want %d got %d",
-                  cbRequested, size);
+        LOG_DEVEL(LOG_LEVEL_ERROR,
+                  "clipboard_send_file_data: read error, want %d got [%s]",
+                  cbRequested, g_get_strerror());
         free_stream(s);
         g_file_close(fd);
         clipboard_send_filecontents_response_fail(streamId);
