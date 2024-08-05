@@ -11,6 +11,68 @@ on:
 
 jobs:
   build_and_test:
+    # The 'matrix' is defined below. Github actions like 'runs-on:' to
+    # be the first line unger the job name.
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
+    env:
+      CC: ${{ matrix.CC }}
+      CFLAGS: ${{ matrix.CFLAGS }}
+      LDFLAGS: ${{ matrix.LDFLAGS }}
+
+      # HACK (2020-11-16): github actions doesn't support YAML anchors/aliases to
+      # avoid repeating long config values. So instead the config values are defined
+      # as environment variables using a naming convention with fields that come from
+      # the job config. These environment variables are then referenced as regular
+      # environment variables via the naming convention in the "define env" step to
+      # define the standard environment variable used in the rest of the steps.
+      CONF_FLAGS_amd64_min: "--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
+                  --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
+                  --disable-pixman --disable-utmp"
+      CONF_FLAGS_amd64_max: "--enable-ibus --enable-ipv6 --enable-jpeg --enable-fuse
+                  --enable-mp3lame --enable-fdkaac --enable-opus --enable-rfxcodec
+                  --enable-painter --enable-pixman --enable-utmp
+                  --with-imlib2 --with-freetype2 --enable-tests"
+      CONF_FLAGS_i386_max: "--enable-ibus --enable-ipv6 --enable-jpeg
+                  --enable-mp3lame --enable-opus --enable-rfxcodec
+                  --enable-painter --disable-pixman --with-imlib2
+                  --with-freetype2 --host=i686-linux --enable-tests"
+
+      PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
+    steps:
+      - name: "Define feature and arch dependent environment variables"
+        # Note: any "variable=value" written to the $GITHUB_ENV file will be
+        # defined as an environment variable for all future steps in this job
+        # See: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
+        run: |
+          echo "CONF_FLAGS=$CONF_FLAGS_${{ matrix.arch }}_${{ matrix.feature_set }} ${{ matrix.CONF_FLAGS_EXTRA }}" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
+      - name: "Checkout"
+        uses: actions/checkout@v4
+      - name: "Install Dependencies"
+        # See https://github.com/actions/runner-images/issues/7192
+        run: |
+          echo RESET grub-efi/install_devices | sudo debconf-communicate grub-pc
+          sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
+      - name: Bootstrap
+        run: ./bootstrap
+      - name: configure
+        run: ./configure $CONF_FLAGS
+      - name: make
+        run: make -j $(nproc)
+      - name: unittests
+        if: ${{ matrix.unittests }}
+        run: make check -j $(nproc) || (cat tests/*/test-suite.log && exit 1)
+      - name: distcheck
+        id: dist_check
+        if: ${{ matrix.DISTCHECK }}
+        run: make distcheck -j $(nproc)
+      - name: "Artifact: test-suite.log distcheck"
+        uses: actions/upload-artifact@v3
+        if: always() && steps.dist_check.outcome == 'failure'
+        with:
+          name: test-suite-distcheck-${{ matrix.cc }}-${{ matrix.feature_set }}
+          path: ${{ github.workspace }}/xrdp-*/_build/sub/tests/xrdp/test-suite.log
     strategy:
       fail-fast: false
       matrix:
@@ -113,69 +175,10 @@ jobs:
             CFLAGS: "-m32"
             LDFLAGS: "-m32"
 
-    name: ${{ matrix.feature_set }} features with ${{ matrix.CC }} ${{ matrix.name_extra }}
-    runs-on: ${{ matrix.os }}
-    env:
-      CC: ${{ matrix.CC }}
-      CFLAGS: ${{ matrix.CFLAGS }}
-      LDFLAGS: ${{ matrix.LDFLAGS }}
-
-      # HACK (2020-11-16): github actions doesn't support YAML anchors/aliases to
-      # avoid repeating long config values. So instead the config values are defined
-      # as environment variables using a naming convention with fields that come from
-      # the job config. These environment variables are then referenced as regular
-      # environment variables via the naming convention in the "define env" step to
-      # define the standard environment variable used in the rest of the steps.
-      CONF_FLAGS_amd64_min: "--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
-                  --disable-fdkaac --disable-opus --disable-rfxcodec --disable-painter
-                  --disable-pixman --disable-utmp"
-      CONF_FLAGS_amd64_max: "--enable-ibus --enable-ipv6 --enable-jpeg --enable-fuse
-                  --enable-mp3lame --enable-fdkaac --enable-opus --enable-rfxcodec
-                  --enable-painter --enable-pixman --enable-utmp
-                  --with-imlib2 --with-freetype2 --enable-tests"
-      CONF_FLAGS_i386_max: "--enable-ibus --enable-ipv6 --enable-jpeg
-                  --enable-mp3lame --enable-opus --enable-rfxcodec
-                  --enable-painter --disable-pixman --with-imlib2
-                  --with-freetype2 --host=i686-linux --enable-tests"
-
-      PKG_CONFIG_PATH_i386: "/usr/lib/i386-linux-gnu/pkgconfig"
-    steps:
-      - name: "Define feature and arch dependent environment variables"
-        # Note: any "variable=value" written to the $GITHUB_ENV file will be
-        # defined as an environment variable for all future steps in this job
-        # See: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
-        run: |
-          echo "CONF_FLAGS=$CONF_FLAGS_${{ matrix.arch }}_${{ matrix.feature_set }} ${{ matrix.CONF_FLAGS_EXTRA }}" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
-      - name: "Install Dependencies"
-        # See https://github.com/actions/runner-images/issues/7192
-        run: |
-          echo RESET grub-efi/install_devices | sudo debconf-communicate grub-pc
-          sudo scripts/install_xrdp_build_dependencies_with_apt.sh ${{ matrix.feature_set }} ${{ matrix.arch }} --allow-downgrades --allow-remove-essential --allow-change-held-packages
-      - name: Bootstrap
-        run: ./bootstrap
-      - name: configure
-        run: ./configure $CONF_FLAGS
-      - name: make
-        run: make -j $(nproc)
-      - name: unittests
-        if: ${{ matrix.unittests }}
-        run: make check -j $(nproc) || (cat tests/*/test-suite.log && exit 1)
-      - name: distcheck
-        id: dist_check
-        if: ${{ matrix.DISTCHECK }}
-        run: make distcheck -j $(nproc)
-      - name: "Artifact: test-suite.log distcheck"
-        uses: actions/upload-artifact@v3
-        if: always() && steps.dist_check.outcome == 'failure'
-        with:
-          name: test-suite-distcheck-${{ matrix.cc }}-${{ matrix.feature_set }}
-          path: ${{ github.workspace }}/xrdp-*/_build/sub/tests/xrdp/test-suite.log
 
   cppcheck:
-    name: cppcheck
     runs-on: ubuntu-latest
+    name: cppcheck
     env:
       CC: gcc
       # This is required to use a version of cppcheck other than that
@@ -188,7 +191,8 @@ jobs:
         id: os
         run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v4
+      - name: "Checkout"
+        uses: actions/checkout@v4
       - name: Cache cppcheck
         uses: actions/cache@v4
         env:
@@ -203,8 +207,8 @@ jobs:
       - run: scripts/run_cppcheck.sh -v $CPPCHECK_VER
 
   code_formatting_check:
-    name: code formatting check
     runs-on: ubuntu-latest
+    name: code formatting check
     env:
       CC: gcc
       # This is required to use a version of astyle other than that
@@ -217,7 +221,8 @@ jobs:
         id: os
         run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v4
+      - name: "Checkout"
+        uses: actions/checkout@v4
       - name: Cache astyle
         uses: actions/cache@v4
         env:
