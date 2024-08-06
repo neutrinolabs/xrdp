@@ -21,6 +21,17 @@
 #ifndef XUP_H
 #define XUP_H
 
+/**
+ * Enum for the states used to process a
+ * capabilities message from the Xorg module
+ */
+enum caps_processing_status
+{
+    E_CAPS_NOT_PROCESSED, ///< Capabilities mesage from module not processed
+    E_CAPS_OK,            ///< Capabilities are OK
+    E_CAPS_NOT_OK         ///< Capabilities are not OK
+};
+
 /* include other h files */
 #include "arch.h"
 #include "parse.h"
@@ -202,6 +213,7 @@ struct mod
     char *screen_shmem_pixels;
     struct trans *trans;
     char keycode_set[32];
+    enum caps_processing_status caps_processing_status;
 };
 
 #endif // XUP_H
