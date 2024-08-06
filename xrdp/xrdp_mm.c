@@ -131,10 +131,15 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
     self->mod = 0;
     self->mod_handle = 0;
 
-    if (self->wm->hide_log_window)
+    if (self->wm && self->wm->hide_log_window)
     {
-        /* make sure autologin is off */
-        self->wm->session->client_info->rdp_autologin = 0;
+        /* make sure autologin is off.
+         * Check pointers are valid in case we're ending the process */
+        if (self->wm->session != NULL &&
+                self->wm->session->client_info != NULL)
+        {
+            self->wm->session->client_info->rdp_autologin = 0;
+        }
         xrdp_wm_set_login_state(self->wm, WMLS_RESET); /* reset session */
     }
 
