@@ -384,6 +384,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_end_update = server_end_update;
             self->mod->server_bell_trigger = server_bell_trigger;
             self->mod->server_chansrv_in_use = server_chansrv_in_use;
+            self->mod->server_init_xkb_layout = server_init_xkb_layout;
             self->mod->server_fill_rect = server_fill_rect;
             self->mod->server_screen_blt = server_screen_blt;
             self->mod->server_paint_rect = server_paint_rect;
@@ -525,6 +526,18 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         if (self->mod->mod_connect(self->mod) == 0)
         {
             rv = 0; /* connect success */
+
+            // If we've received a recent TS_SYNC_EVENT, pass it on to
+            // the module so (e.g.) NumLock starts in the right state.
+            if (self->last_sync_saved)
+            {
+                int key_flags = self->last_sync_key_flags;
+                int device_flags = self->last_sync_device_flags;
+                self->last_sync_saved = 0;
+                self->mod->mod_event(self->mod, WM_KEYBRD_SYNC, key_flags,
+                                     device_flags, key_flags, device_flags);
+
+            }
         }
         else
         {
@@ -3984,6 +3997,15 @@ server_chansrv_in_use(struct xrdp_mod *mod)
 
     wm = (struct xrdp_wm *)(mod->wm);
     return wm->mm->use_chansrv;
+}
+
+/*****************************************************************************/
+/* Init the XKB layout */
+void
+server_init_xkb_layout(struct xrdp_mod *mod,
+                       struct xrdp_client_info *client_info)
+{
+    xrdp_init_xkb_layout(client_info);
 }
 
 

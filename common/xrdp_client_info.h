@@ -200,6 +200,11 @@ struct xrdp_client_info
     char layout[16];
     char variant[16];
     char options[256];
+    char xkb_rules[32];
+    // A few x11 keycodes are needed by the xup module
+    int x11_keycode_caps_lock;
+    int x11_keycode_num_lock;
+    int x11_keycode_scroll_lock;
 
     /* ==================================================================== */
     /* Private to xrdp below this line */
@@ -269,6 +274,6 @@ enum xrdp_encoder_flags
 
 /* yyyymmdd of last incompatible change to xrdp_client_info */
 /* also used for changes to all the xrdp installed headers */
-#define CLIENT_INFO_CURRENT_VERSION 20240514
+#define CLIENT_INFO_CURRENT_VERSION 20240805
 
 #endif

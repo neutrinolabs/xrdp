@@ -30,6 +30,8 @@
 #include <config_ac.h>
 #endif
 
+#include <X11/keysym.h>
+
 #include "vnc.h"
 #include "vnc_clip.h"
 #include "rfb.h"
@@ -444,12 +446,89 @@ resize_server_to_client_layout(struct vnc *v)
 }
 
 /*****************************************************************************/
+/**
+ * Process keysym messages
+ * @param v Module
+ * @param keysym Keysym of keypress
+ * @param keydown boolean - is key down?
+ * @return != 0 for error
+ */
+static int
+process_keysym_msg(struct vnc *v, int keysym, int keydown)
+{
+    struct stream *s = NULL;
+    int error = 0;
+
+    if (keysym > 0)
+    {
+        make_stream(s);
+
+        /* Break key processing [MS-RDPBCGR] 2.2.8.1.1.3.1.1.1 */
+        if (v->ignore_next_numlock)
+        {
+            v->ignore_next_numlock = 0;
+            if (keysym == XK_Num_Lock)
+            {
+                goto end_keysym_msg;
+            }
+        }
+
+        if (keysym == XK_ISO_Level3_Shift)  /* altgr */
+        {
+            if (v->shift_state)
+            {
+                /* fix for mstsc sending left control down with altgr */
+                init_stream(s, 64);
+                out_uint8(s, RFB_C2S_KEY_EVENT);
+                out_uint8(s, 0); /* down flag */
+                out_uint8s(s, 2);
+                out_uint32_be(s, XK_Control_L); /* left control */
+                s_mark_end(s);
+                error = lib_send_copy(v, s);
+                if (error != 0)
+                {
+                    goto end_keysym_msg;
+                }
+            }
+        }
+
+        init_stream(s, 64);
+        out_uint8(s, RFB_C2S_KEY_EVENT);
+        out_uint8(s, keydown ? 1 : 0);
+        out_uint8s(s, 2);
+        out_uint32_be(s, keysym);
+        s_mark_end(s);
+        error = lib_send_copy(v, s);
+
+        switch (keysym)
+        {
+            case XK_Control_L: /* left control */
+                v->shift_state = keydown;
+                break;
+
+            case XK_Pause:
+                // [MS-RDPBCGR] 2.2.8.1.1.3.1.1.1 - A pause key scancode
+                // (up or down) is always immediately followed by a
+                // numlock key which we should ignore
+                v->ignore_next_numlock = 1;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+end_keysym_msg:
+    free_stream(s);
+    return error;
+}
+
+/*****************************************************************************/
 static int
 lib_mod_event(struct vnc *v, int msg, long param1, long param2,
               long param3, long param4)
 {
     struct stream *s;
-    int key;
     int error;
     int x;
     int y;
@@ -492,38 +571,7 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     }
     else if ((msg >= 15) && (msg <= 16)) /* key events */
     {
-        key = param2;
-
-        if (key > 0)
-        {
-            if (key == 65027) /* altgr */
-            {
-                if (v->shift_state)
-                {
-                    /* fix for mstsc sending left control down with altgr */
-                    init_stream(s, 8192);
-                    out_uint8(s, RFB_C2S_KEY_EVENT);
-                    out_uint8(s, 0); /* down flag */
-                    out_uint8s(s, 2);
-                    out_uint32_be(s, 65507); /* left control */
-                    s_mark_end(s);
-                    lib_send_copy(v, s);
-                }
-            }
-
-            init_stream(s, 8192);
-            out_uint8(s, RFB_C2S_KEY_EVENT);
-            out_uint8(s, msg == 15); /* down flag */
-            out_uint8s(s, 2);
-            out_uint32_be(s, key);
-            s_mark_end(s);
-            error = lib_send_copy(v, s);
-
-            if (key == 65507) /* left control */
-            {
-                v->shift_state = msg == 15;
-            }
-        }
+        error = process_keysym_msg(v, param2, (msg == 15));
     }
     /* mouse events
      *
@@ -613,7 +661,6 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
             error = lib_send_copy(v, s);
         }
     }
-
     free_stream(s);
     return error;
 }

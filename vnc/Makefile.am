@@ -5,6 +5,8 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
+AM_CFLAGS = $(X_CFLAGS)
+
 module_LTLIBRARIES = \
   libvnc.la
 

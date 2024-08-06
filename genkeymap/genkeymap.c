@@ -64,7 +64,7 @@
 
 // Scancodes affected by numlock
 #define IS_KEYPAD_SCANCODE(s) \
-    ((s) >= XR_RDP_SCAN_MIN_NUMLOCK && (s) <= XR_RDP_SCAN_MAX_NUMLOCK)
+    ((s) >= SCANCODE_MIN_NUMLOCK && (s) <= SCANCODE_MAX_NUMLOCK)
 
 #define MAX_COMMENTS 10
 
@@ -279,7 +279,7 @@ output_file_section(FILE *outf,
             continue;
         }
 
-        e.keycode = scancode_to_keycode(scancode);
+        e.keycode = scancode_to_x11_keycode(scancode);
         nbytes = XLookupString(&e, text, 255, &ks, NULL);
         if (ks == NoSymbol)
         {
@@ -299,7 +299,11 @@ output_file_section(FILE *outf,
             unicode = wtext[0];
         }
 
-        if (scancode > 0xff)
+        if (scancode > 0x1ff)
+        {
+            fputs("E1_", outf);
+        }
+        else if (scancode > 0xff)
         {
             fputs("E0_", outf);
         }

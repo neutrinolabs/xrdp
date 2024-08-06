@@ -97,6 +97,7 @@ version=2
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -128,6 +129,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [shift]
 01="65307:U+001B"  # Escape
@@ -219,6 +221,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -250,6 +253,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [altgr]
 01="65307:U+001B"  # Escape
@@ -338,6 +342,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -369,6 +374,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [shiftaltgr]
 01="65307:U+001B"  # Escape
@@ -449,6 +455,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -480,6 +487,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [capslock]
 01="65307:U+001B"  # Escape
@@ -571,6 +579,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -602,6 +611,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [capslockaltgr]
 01="65307:U+001B"  # Escape
@@ -684,6 +694,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -715,6 +726,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [shiftcapslock]
 01="65307:U+001B"  # Escape
@@ -806,6 +818,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -837,6 +850,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [shiftcapslockaltgr]
 01="65307:U+001B"  # Escape
@@ -923,6 +937,7 @@ E0_6C="269025049"  # XF86Mail
 70="65319"  # Hiragana_Katakana
 79="65315"  # Henkan_Mode
 7B="65314"  # Muhenkan
+7E="65454:U+002E"  # KP_Decimal
 E0_10="269025046"  # XF86AudioPrev
 E0_19="269025047"  # XF86AudioNext
 E0_1C="65421:U+000D"  # KP_Enter
@@ -954,6 +969,7 @@ E0_65="269025051"  # XF86Search
 E0_66="269025072"  # XF86Favorites
 E0_6B="269025075"  # XF86MyComputer
 E0_6C="269025049"  # XF86Mail
+E1_1D="65299"  # Pause
 
 [numlock]
 47="65457:U+0031"  # KP_1

@@ -137,6 +137,7 @@ static const struct scancode_to_keycode
     { 0x079, 100 }, //   -                    HENK
     { 0x07b, 102 }, //   VK_OEM_PA1           MUHE
     { 0x07d, 132 }, //   -                    AE13
+    { 0x07e, 129 }, //   VK_ABNT_C2           KPPT (Brazil ABNT2)
     { 0x110, 173 }, //   VK_MEDIA_PREV_TRACK  I173 (KEY_PREVIOUSSONG)
     { 0x119, 171 }, //   VK_MEDIA_NEXT_TRACK  I171 (KEY_NEXTSONG)
     { 0x11c, 104 }, //   VK_RETURN            KPEN
@@ -167,7 +168,8 @@ static const struct scancode_to_keycode
     { 0x165, 225 }, //   VK_BROWSER_SEARCH    I225 (KEY_SEARCH)
     { 0x166, 164 }, //   VK_BROWSER_FAVORITES I164 (KEY_BOOKMARKS)
     { 0x16b, 165 }, //   VK_LAUNCH_APP1       I165 (KEY_COMPUTER)
-    { 0x16c, 163 }  //   VK_LAUNCH_MAIL       I163 (KEY_MAIL)
+    { 0x16c, 163 }, //   VK_LAUNCH_MAIL       I163 (KEY_MAIL)
+    { 0x21d, 127 }  //   VK_PAUSE             PAUS (KEY_PAUSE)
 };
 
 // Sources:-
@@ -271,6 +273,7 @@ static const struct scancode_to_keycode
     { 0x079, 129 }, //   -                    XFER
     { 0x07b, 131 }, //   VK_OEM_PA1           NFER
     { 0x07d, 133 }, //   -                    AE13
+    { 0x07e, 134 }, //   VK_ABNT_C2           KPPT (Brazil ABNT2)
     { 0x11c, 108 }, //   VK_RETURN            KPEN
     { 0x11d, 109 }, //   VK_RCONTROL          RCTL
     { 0x120, 141 }, //   VK_VOLUME_MUTE       MUTE
@@ -291,7 +294,8 @@ static const struct scancode_to_keycode
     { 0x153, 107 }, //   VK_DELETE            DELE
     { 0x15b, 115 }, //   VK_LWIN              LWIN
     { 0x15c, 116 }, //   VK_RWIN              RWIN
-    { 0x15d, 117 }  //   VK_APPS              COMP
+    { 0x15d, 117 }, //   VK_APPS              COMP
+    { 0x21d, 110 }  //   VK_PAUSE             PAUS (KEY_PAUSE)
 };
 
 struct map_settings
@@ -327,8 +331,62 @@ const struct map_settings global_settings[] =
 const struct map_settings *settings = &global_settings[SI_EVDEV];
 
 /*****************************************************************************/
+int
+scancode_to_index(unsigned short scancode)
+{
+    if (scancode <= 0x7f)
+    {
+        return scancode;
+    }
+    if (scancode <= 0xff)
+    {
+        // 0x80 - 0xff : Invalid code
+        return -1;
+    }
+    if (scancode <= 0x177)
+    {
+        // 01x100 - 0x177 : Move bit 9 to bit 8
+        return (scancode & 0x7f) | 0x80;
+    }
+
+    if (scancode == SCANCODE_PAUSE_KEY)
+    {
+        return SCANCODE_INDEX_PAUSE_KEY;
+    }
+
+    // This leaves the following which are all rejected
+    // 0x178 - 0x17f (currently unused). These would map to indexes 0xf8
+    //               to 0xff which we are reserving for extended1 keys.
+    // 0x180 - 0x1ff Illegal format
+    // >0x200        Anything not mentioned explicitly above (e.g.
+    //               SCANCODE_PAUSE_KEY)
+    return -1;
+}
+
+/*****************************************************************************/
 unsigned short
-scancode_to_keycode(unsigned short scancode)
+scancode_from_index(int index)
+{
+    index &= 0xff;
+    unsigned short result;
+    if (index == SCANCODE_INDEX_PAUSE_KEY)
+    {
+        result = SCANCODE_PAUSE_KEY;
+    }
+    else if (index < 0x80)
+    {
+        result = index;
+    }
+    else
+    {
+        result = (index & 0x7f) | 0x100;
+    }
+    return result;
+}
+
+/*****************************************************************************/
+unsigned short
+scancode_to_x11_keycode(unsigned short scancode)
 {
     unsigned int min = 0;
     unsigned int max = settings->size;
@@ -417,5 +475,14 @@ scancode_set_keycode_set(const char *kk_set)
 const char *
 scancode_get_keycode_set(void)
 {
+    return settings->name;
+}
+
+/*****************************************************************************/
+const char *
+scancode_get_xkb_rules(void)
+{
+    // Currently supported keycods map directly to the same name for
+    // the rules which use them.
     return settings->name;
 }

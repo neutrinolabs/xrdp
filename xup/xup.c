@@ -171,6 +171,26 @@ lib_mod_connect(struct mod *mod)
         return 1;
     }
 
+    // This is a good place to finalise any parameters that need to
+    // be set.
+    //
+    // Load the XKB layout
+    if (mod->keycode_set[0] != '\0')
+    {
+        if (scancode_set_keycode_set(mod->keycode_set) == 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Loaded '%s' keycode set", mod->keycode_set);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING, "Unable to load '%s' keycode set",
+                mod->keycode_set);
+        }
+    }
+    mod->server_init_xkb_layout(mod, &(mod->client_info));
+    LOG(LOG_LEVEL_INFO, "XKB rules '%s' will be used by the module",
+        mod->client_info.xkb_rules);
+
     make_stream(s);
     g_sprintf(con_port, "%s", mod->port);
 
@@ -266,6 +286,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
     int len;
     int key;
     int rv;
+    int scancode;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_event");
     make_stream(s);
@@ -311,15 +332,8 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
         /* xup doesn't need the Unicode character mapping in param1. Send
          * the X11 scancode instead, so xorgxrdp doesn't have to do this
          * work again */
-        if ((param4 & KBD_FLAG_EXT) != 0)
-        {
-            // Extended key - set bit 9 of the scancode for the lookup
-            param1 = scancode_to_keycode(param3 | 0x100);
-        }
-        else
-        {
-            param1 = scancode_to_keycode(param3);
-        }
+        scancode = SCANCODE_FROM_KBD_EVENT(param3, param4);
+        param1 = scancode_to_x11_keycode(scancode);
     }
 
     init_stream(s, 8192);
@@ -1868,6 +1882,10 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
     else if (g_strcasecmp(name, "port") == 0)
     {
         g_strncpy(mod->port, value, 255);
+    }
+    else if (g_strcasecmp(name, "keycode_set") == 0)
+    {
+        g_snprintf(mod->keycode_set, sizeof(mod->keycode_set), "%s", value);
     }
     else if (g_strcasecmp(name, "client_info") == 0)
     {

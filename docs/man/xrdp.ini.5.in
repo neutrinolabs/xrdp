@@ -390,6 +390,11 @@ use of \fBxrdp\-chansrv\fR facilities in the VNC session.
 The first form of this setting is recommended, replacing \fIn\fR with the
 X11 display number of the session.
 
+.TP
+\fBkeycode_set\fR=\fI<string>\fR
+[Xorg only] Asks for the specified keycode set to be used by the X server.
+Normally "evdev" or "base". The default should be correct for your system.
+
 .SH "EXAMPLES"
 This is an example \fBxrdp.ini\fR:
 
