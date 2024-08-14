@@ -2,7 +2,7 @@
 set -eufx
 
 # these are the packages necessary to run ./configure so config_ac.h is generated
-PACKAGES="libpam0g-dev libxfixes-dev libxrandr-dev nasm"
+PACKAGES="libpam0g-dev libxfixes-dev libxrandr-dev libxkbfile-dev nasm"
 
 usage()
 {
