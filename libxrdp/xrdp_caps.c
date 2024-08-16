@@ -510,7 +510,7 @@ xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
     in_uint16_le(s, i32);
     self->client_info.offscreen_cache_entries = i32;
     LOG(LOG_LEVEL_INFO, "xrdp_process_offscreen_bmpcache: support level %d "
-        "cache size %d MB cache entries %d",
+        "cache size %d bytes cache entries %d",
         self->client_info.offscreen_support_level,
         self->client_info.offscreen_cache_size,
         self->client_info.offscreen_cache_entries);
