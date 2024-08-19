@@ -32,6 +32,7 @@
 #include "arch.h"
 #include "os_calls.h"
 #include "xrdp_encoder_x264.h"
+#include "xrdp_tconfig.h"
 
 #define X264_MAX_ENCODERS 16
 
@@ -47,6 +48,7 @@ struct x264_encoder
 struct x264_global
 {
     struct x264_encoder encoders[X264_MAX_ENCODERS];
+    struct xrdp_tconfig_gfx_x264_param x264_param[NUM_CONNECTION_TYPES];
 };
 
 /*****************************************************************************/
@@ -54,7 +56,17 @@ void *
 xrdp_encoder_x264_create(void)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_encoder_x264_create:");
-    return g_new0(struct x264_global, 1);
+
+    struct x264_global *xg;
+    struct xrdp_tconfig_gfx gfxconfig;
+    xg = g_new0(struct x264_global, 1);
+    tconfig_load_gfx(GFX_CONF, &gfxconfig);
+
+    memcpy(&xg->x264_param, &gfxconfig.x264_param,
+           sizeof(struct xrdp_tconfig_gfx_x264_param) * NUM_CONNECTION_TYPES);
+
+    return xg;
+
 }
 
 /*****************************************************************************/
@@ -128,20 +140,19 @@ xrdp_encoder_x264_encode(void *handle, int session, int left, int top,
         }
         if ((width > 0) && (height > 0))
         {
-            //x264_param_default_preset(&(xe->x264_params), "superfast", "zerolatency");
-            x264_param_default_preset(&(xe->x264_params), "ultrafast", "zerolatency");
+            x264_param_default_preset(&(xe->x264_params),
+                                      xg->x264_param[ct].preset,
+                                      xg->x264_param[ct].tune);
             xe->x264_params.i_threads = 1;
             xe->x264_params.i_width = (width + 15) & ~15;
             xe->x264_params.i_height = (height + 15) & ~15;
-            xe->x264_params.i_fps_num = 24;
-            xe->x264_params.i_fps_den = 1;
-            //xe->x264_params.b_cabac = 1;
-            //xe->x264_params.i_bframe = 0;
-            //xe->x264_params.rc.i_rc_method = X264_RC_CQP;
-            //xe->x264_params.rc.i_qp_constant = 23;
-            //x264_param_apply_profile(&(xe->x264_params), "high");
-            x264_param_apply_profile(&(xe->x264_params), "main");
-            //x264_param_apply_profile(&(xe->x264_params), "baseline");
+            xe->x264_params.i_fps_num = xg->x264_param[ct].fps_num;
+            xe->x264_params.i_fps_den = xg->x264_param[ct].fps_den;
+            xe->x264_params.rc.i_rc_method = X264_RC_CRF;
+            xe->x264_params.rc.i_vbv_max_bitrate = xg->x264_param[ct].vbv_max_bitrate;
+            xe->x264_params.rc.i_vbv_buffer_size = xg->x264_param[ct].vbv_buffer_size;
+            x264_param_apply_profile(&(xe->x264_params),
+                                     xg->x264_param[ct].profile);
             xe->x264_enc_han = x264_encoder_open(&(xe->x264_params));
             LOG(LOG_LEVEL_INFO, "xrdp_encoder_x264_encode: "
                 "x264_encoder_open rv %p for width %d height %d",
