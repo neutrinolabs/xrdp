@@ -73,6 +73,8 @@ xrdp_SOURCES = \
   xrdp_egfx.h \
   xrdp_wm.c \
   xrdp_main_utils.c \
+  xrdp_tconfig.c \
+  xrdp_tconfig.h \
   $(XRDP_EXTRA_SOURCES)
 
 xrdp_LDADD = \
@@ -103,6 +105,7 @@ SUFFIXES = .in
 	$(subst_verbose)$(SUBST_VARS) $< > $@
 
 dist_xrdpsysconf_DATA = \
+  gfx.toml \
   xrdp_keyboard.ini
 
 nodist_xrdpsysconf_DATA = \
