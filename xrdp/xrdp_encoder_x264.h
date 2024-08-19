@@ -32,7 +32,8 @@ xrdp_encoder_x264_encode(void *handle, int session, int left, int top,
                          int width, int height, int twidth, int theight,
                          int format, const char *data,
                          short *crects, int num_crects,
-                         char *cdata, int *cdata_bytes, int *flags_ptr);
+                         char *cdata, int *cdata_bytes, int connection_type,
+                         int *flags_ptr);
 
 #endif
 
