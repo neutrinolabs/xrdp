@@ -101,7 +101,8 @@ xrdp_encoder_x264_encode(void *handle, int session, int left, int top,
                          int width, int height, int twidth, int theight,
                          int format, const char *data,
                          short *crects, int num_crects,
-                         char *cdata, int *cdata_bytes, int *flags_ptr)
+                         char *cdata, int *cdata_bytes, int connection_type,
+                         int *flags_ptr)
 {
     struct x264_global *xg;
     struct x264_encoder *xe;
@@ -117,6 +118,7 @@ xrdp_encoder_x264_encode(void *handle, int session, int left, int top,
     int y;
     int cx;
     int cy;
+    int ct; /* connection_type */
 
     x264_picture_t pic_in;
     x264_picture_t pic_out;
@@ -125,6 +127,14 @@ xrdp_encoder_x264_encode(void *handle, int session, int left, int top,
     flags = 0;
     xg = (struct x264_global *) handle;
     xe = &(xg->encoders[session % X264_MAX_ENCODERS]);
+
+    /* validate connection type */
+    ct = connection_type;
+    if (ct > CONNECTION_TYPE_LAN || ct < CONNECTION_TYPE_MODEM)
+    {
+        ct = CONNECTION_TYPE_LAN;
+    }
+
     if ((xe->x264_enc_han == NULL) ||
             (xe->width != width) || (xe->height != height))
     {
