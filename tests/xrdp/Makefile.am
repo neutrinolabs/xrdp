@@ -1,5 +1,6 @@
 AM_CPPFLAGS = \
   -DXRDP_TOP_SRCDIR=\"$(top_srcdir)\" \
+  -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \
@@ -31,6 +32,7 @@ test_xrdp_SOURCES = \
     test_xrdp_egfx.c \
     test_xrdp_keymap.c \
     test_xrdp_region.c \
+    test_tconfig.c \
     test_bitmap_load.c
 
 test_xrdp_CFLAGS = \
@@ -59,6 +61,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_encoder.o \
     $(top_builddir)/xrdp/xrdp_process.o \
     $(top_builddir)/xrdp/xrdp_login_wnd.o \
+    $(top_builddir)/xrdp/xrdp_tconfig.o \
     $(top_builddir)/xrdp/xrdp_main_utils.o \
     $(top_builddir)/libpainter/src/libpainter.la \
     $(top_builddir)/librfxcodec/src/librfxencode.la \
@@ -69,3 +72,10 @@ test_xrdp_LDADD = \
     $(IMLIB2_LIBS) \
     @CHECK_LIBS@ \
     @CMOCKA_LIBS@
+
+if XRDP_X264
+AM_CPPFLAGS += -DXRDP_X264 $(XRDP_X264_CFLAGS)
+test_xrdp_LDADD += \
+    $(top_builddir)/xrdp/xrdp_encoder_x264.o \
+    $(XRDP_X264_LIBS)
+endif
