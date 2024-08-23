@@ -42,8 +42,15 @@ struct xrdp_tconfig_gfx_x264_param
     int fps_den;
 };
 
+struct xrdp_tconfig_gfx_codec_order
+{
+    int h264_idx;
+    int rfx_idx;
+};
+
 struct xrdp_tconfig_gfx
 {
+    struct xrdp_tconfig_gfx_codec_order codec;
     /* store x264 parameters for each connection type */
     struct xrdp_tconfig_gfx_x264_param x264_param[NUM_CONNECTION_TYPES];
 };

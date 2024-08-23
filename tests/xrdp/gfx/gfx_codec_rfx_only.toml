@@ -1,0 +1,18 @@
+[codec]
+order = [ "RFX" ]
+
+[x264.default]
+preset = "ultrafast"
+tune = "zerolatency"
+profile = "main"     # profile is forced to baseline if preset == ultrafast
+vbv_max_bitrate = 0
+vbv_buffer_size = 0
+fps_num = 24
+fps_den = 1
+
+[x264.lan]
+[x264.wan]
+[x264.broadband_high]
+[x264.satellite]
+[x264.broadband_low]
+[x264.modem]
