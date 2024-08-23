@@ -759,6 +759,9 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     short *crects;
     struct xrdp_enc_gfx_cmd *enc_gfx_cmd = &(enc->u.gfx);
     int mon_index;
+    int connection_type;
+
+    connection_type = self->mm->wm->client_info->mcs_connection_type;
 
     s = &ls;
     g_memset(s, 0, sizeof(struct stream));
@@ -912,7 +915,8 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
                     width, height, twidth, theight, 0,
                     enc_gfx_cmd->data,
                     crects, num_rects_c,
-                    s->p, &bitmap_data_length, NULL);
+                    s->p, &bitmap_data_length,
+                    connection_type, NULL);
         if (error == 0)
         {
             xstream_seek(s, bitmap_data_length);
