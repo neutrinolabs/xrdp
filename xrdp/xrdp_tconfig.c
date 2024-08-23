@@ -193,7 +193,7 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
               "x264 param fps_den is not set for connection type [%s], "
               "adopting the default value [0]",
               rdpbcgr_connection_type_names[connection_type]);
-        param[connection_type].fps_num = X264_DEFAULT_FPS_DEN;
+        param[connection_type].fps_den = X264_DEFAULT_FPS_DEN;
     }
 
     return 0;
