@@ -52,16 +52,18 @@ static int
 tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
                          struct xrdp_tconfig_gfx_x264_param *param)
 {
+    TCLOG(LOG_LEVEL_TRACE, "[x264]");
+
     if (connection_type > NUM_CONNECTION_TYPES)
     {
-        TCLOG(LOG_LEVEL_ERROR, "Invalid connection type is given");
+        TCLOG(LOG_LEVEL_ERROR, "[x264] Invalid connection type is given");
         return 1;
     }
 
     toml_table_t *x264 = toml_table_in(tfile, "x264");
     if (!x264)
     {
-        TCLOG(LOG_LEVEL_WARNING, "x264 params are not defined");
+        TCLOG(LOG_LEVEL_WARNING, "[x264] x264 params are not defined");
         return 1;
     }
 
@@ -88,8 +90,8 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param preset is not set for connection type [%s], "
-              "adopting the default value \"" X264_DEFAULT_PRESET "\"",
+              "[x264.%s] preset is not set, adopting the default value \""
+              X264_DEFAULT_PRESET "\"",
               rdpbcgr_connection_type_names[connection_type]);
         g_strncpy(param[connection_type].preset,
                   X264_DEFAULT_PRESET,
@@ -108,8 +110,8 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param tune is not set for connection type [%s], "
-              "adopting the default value \"" X264_DEFAULT_TUNE "\"",
+              "[x264.%s] tune is not set, adopting the default value \""
+              X264_DEFAULT_TUNE"\"",
               rdpbcgr_connection_type_names[connection_type]);
         g_strncpy(param[connection_type].tune,
                   X264_DEFAULT_TUNE,
@@ -128,8 +130,8 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param profile is not set for connection type [%s], "
-              "adopting the default value \"" X264_DEFAULT_PROFILE "\"",
+              "[x264.%s] profile is not set, adopting the default value \""
+              X264_DEFAULT_PROFILE"\"",
               rdpbcgr_connection_type_names[connection_type]);
         g_strncpy(param[connection_type].profile,
                   X264_DEFAULT_PROFILE,
@@ -145,8 +147,7 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param vbv_max_bit_rate is not set for connection type [%s], "
-              "adopting the default value [0]",
+              "[x264.%s] vbv_max_bitrate is not set, adopting the default value [0]",
               rdpbcgr_connection_type_names[connection_type]);
         param[connection_type].vbv_max_bitrate = 0;
     }
@@ -160,8 +161,7 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param vbv_buffer_size is not set for connection type [%s], "
-              "adopting the default value [0]",
+              "[x264.%s] vbv_buffer_size is not set, adopting the default value [0]",
               rdpbcgr_connection_type_names[connection_type]);
         param[connection_type].vbv_buffer_size = 0;
     }
@@ -175,9 +175,9 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param fps_num is not set for connection type [%s], "
-              "adopting the default value [0]",
-              rdpbcgr_connection_type_names[connection_type]);
+              "[x264.%s] fps_num is not set, adopting the default value [%d]",
+              rdpbcgr_connection_type_names[connection_type],
+              X264_DEFAULT_FPS_NUM);
         param[connection_type].fps_num = X264_DEFAULT_FPS_NUM;
     }
 
@@ -190,10 +190,10 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     else if (connection_type == 0)
     {
         TCLOG(LOG_LEVEL_WARNING,
-              "x264 param fps_den is not set for connection type [%s], "
-              "adopting the default value [0]",
-              rdpbcgr_connection_type_names[connection_type]);
-        param[connection_type].fps_num = X264_DEFAULT_FPS_DEN;
+              "[x264.%s] fps_den is not set, adopting the default value [%d]",
+              rdpbcgr_connection_type_names[connection_type],
+              X264_DEFAULT_FPS_DEN);
+        param[connection_type].fps_den = X264_DEFAULT_FPS_DEN;
     }
 
     return 0;
