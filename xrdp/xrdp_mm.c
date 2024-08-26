@@ -1345,19 +1345,31 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                 break;
         }
     }
+#if defined(XRDP_H264)
+    struct xrdp_tconfig_gfx_codec_order co = self->wm->gfx_config->codec;
+    bool_t use_h264 = (best_h264_index >= 0 && (best_pro_index < 0 || (co.h264_idx >= 0 && co.h264_idx < co.rfx_idx)));
+
+    if (use_h264)
+    {
+        best_index = best_h264_index;
+        self->egfx_flags = XRDP_EGFX_H264;
+    }
+    else if (best_pro_index >= 0)
+    {
+        best_index = best_pro_index;
+        self->egfx_flags = XRDP_EGFX_RFX_PRO;
+    }
+#else
     if (best_pro_index >= 0)
     {
         best_index = best_pro_index;
         self->egfx_flags = XRDP_EGFX_RFX_PRO;
     }
-    /* prefer h264, todo use setting in xrdp.ini for this */
     if (best_h264_index >= 0)
     {
-#if defined(XRDP_H264)
-        best_index = best_h264_index;
-        self->egfx_flags = XRDP_EGFX_H264;
-#endif
     }
+#endif
+
     if (best_index >= 0)
     {
         LOG(LOG_LEVEL_INFO, "  replying version 0x%8.8x flags 0x%8.8x",

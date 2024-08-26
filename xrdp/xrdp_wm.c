@@ -114,8 +114,9 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
 
-    /* to store configuration from xrdp.ini */
+    /* to store configuration from xrdp.ini, gfx.toml */
     self->xrdp_config = g_new0(struct xrdp_config, 1);
+    self->gfx_config = g_new0(struct xrdp_tconfig_gfx, 1);
 
     /* Load the channel config so libxrdp can check whether
        drdynvc is enabled or not */
@@ -160,6 +161,11 @@ xrdp_wm_delete(struct xrdp_wm *self)
     if (self->xrdp_config)
     {
         g_free(self->xrdp_config);
+    }
+
+    if (self->gfx_config)
+    {
+        g_free(self->gfx_config);
     }
 
     /* free self */
@@ -641,6 +647,8 @@ xrdp_wm_init(struct xrdp_wm *self)
 
     load_xrdp_config(self->xrdp_config, self->session->xrdp_ini,
                      self->screen->bpp);
+
+    tconfig_load_gfx(XRDP_CFG_PATH "/gfx.toml", self->gfx_config);
 
     /* Remove a font loaded on the previous config */
     xrdp_font_delete(self->default_font);
