@@ -38,6 +38,14 @@
 #include "xrdp_client_info.h"
 #include "log.h"
 
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_NVENC)
+#if !defined(XRDP_H264)
+#define XRDP_H264 1
+#endif
+#else
+#undef XRDP_H264
+#endif
+
 /* xrdp.c */
 long
 g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
