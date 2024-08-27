@@ -132,7 +132,7 @@ jobs:
       CONF_FLAGS_amd64_max: "--enable-ibus --enable-ipv6 --enable-jpeg --enable-fuse
                   --enable-mp3lame --enable-fdkaac --enable-opus --enable-rfxcodec
                   --enable-painter --enable-pixman --enable-utmp
-                  --with-imlib2 --with-freetype2 --enable-tests"
+                  --with-imlib2 --with-freetype2 --enable-tests --with-x264"
       CONF_FLAGS_i386_max: "--enable-ibus --enable-ipv6 --enable-jpeg
                   --enable-mp3lame --enable-opus --enable-rfxcodec
                   --enable-painter --disable-pixman --with-imlib2
