@@ -39,37 +39,37 @@ START_TEST(test_tconfig_gfx_codec_order)
 
     /* H264 earlier */
     tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_codec_h264_preferred.toml", &gfxconfig);
-    ck_assert_int_gt(gfxconfig.codec.h264_idx, -1);
-    ck_assert_int_gt(gfxconfig.codec.rfx_idx, -1);
-    ck_assert_int_lt(gfxconfig.codec.h264_idx, gfxconfig.codec.rfx_idx);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 2);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_H264);
+    ck_assert_int_eq(gfxconfig.codec.codecs[1], XTC_RFX);
 
     /* H264 only */
     tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_codec_h264_only.toml", &gfxconfig);
-    ck_assert_int_gt(gfxconfig.codec.h264_idx, -1);
-    ck_assert_int_eq(gfxconfig.codec.rfx_idx, -1);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 1);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_H264);
 
     /* RFX earlier */
     tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_codec_rfx_preferred.toml", &gfxconfig);
-    ck_assert_int_gt(gfxconfig.codec.h264_idx, -1);
-    ck_assert_int_gt(gfxconfig.codec.rfx_idx, -1);
-    ck_assert_int_lt(gfxconfig.codec.rfx_idx, gfxconfig.codec.h264_idx);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 2);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_RFX);
+    ck_assert_int_eq(gfxconfig.codec.codecs[1], XTC_H264);
 
     /* RFX appears twice like: RFX, H264, RFX */
     tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_codec_rfx_preferred_odd.toml", &gfxconfig);
-    ck_assert_int_gt(gfxconfig.codec.h264_idx, -1);
-    ck_assert_int_gt(gfxconfig.codec.rfx_idx, -1);
-    ck_assert_int_lt(gfxconfig.codec.rfx_idx, gfxconfig.codec.h264_idx);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 2);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_RFX);
+    ck_assert_int_eq(gfxconfig.codec.codecs[1], XTC_H264);
 
     /* RFX only */
     tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_codec_rfx_only.toml", &gfxconfig);
-    ck_assert_int_eq(gfxconfig.codec.h264_idx, -1);
-    ck_assert_int_gt(gfxconfig.codec.rfx_idx, -1);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 1);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_RFX);
 
     /* H264 is preferred if order undefined */
     tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_codec_order_undefined.toml", &gfxconfig);
-    ck_assert_int_gt(gfxconfig.codec.h264_idx, -1);
-    ck_assert_int_gt(gfxconfig.codec.rfx_idx, -1);
-    ck_assert_int_lt(gfxconfig.codec.h264_idx, gfxconfig.codec.rfx_idx);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 2);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_H264);
+    ck_assert_int_eq(gfxconfig.codec.codecs[1], XTC_RFX);
 }
 END_TEST
 

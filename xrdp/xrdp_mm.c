@@ -1270,7 +1270,6 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     struct xrdp_mm *self;
     struct xrdp_bitmap *screen;
     int index;
-    int best_index;
     int best_h264_index;
     int best_pro_index;
     int error;
@@ -1298,7 +1297,6 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     }
     /* sort by version */
     g_qsort(ver_flags, caps_count, sizeof(struct ver_flags_t), cmpverfunc);
-    best_index = -1;
     best_h264_index = -1;
     best_pro_index = -1;
     for (index = 0; index < caps_count; index++)
@@ -1345,30 +1343,33 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                 break;
         }
     }
-#if defined(XRDP_H264)
-    struct xrdp_tconfig_gfx_codec_order co = self->wm->gfx_config->codec;
-    bool_t use_h264 = (best_h264_index >= 0 && (best_pro_index < 0 || (co.h264_idx >= 0 && co.h264_idx < co.rfx_idx)));
 
-    if (use_h264)
+    int best_index = -1;
+    struct xrdp_tconfig_gfx_codec_order *co = &self->wm->gfx_config->codec;
+    char cobuff[64];
+
+    LOG(LOG_LEVEL_INFO, "Codec search order is %s",
+        tconfig_codec_order_to_str(co, cobuff, sizeof(cobuff)));
+    for (index = 0 ; index < (unsigned int)co->codec_count ; ++index)
     {
-        best_index = best_h264_index;
-        self->egfx_flags = XRDP_EGFX_H264;
-    }
-    else if (best_pro_index >= 0)
-    {
-        best_index = best_pro_index;
-        self->egfx_flags = XRDP_EGFX_RFX_PRO;
-    }
-#else
-    if (best_pro_index >= 0)
-    {
-        best_index = best_pro_index;
-        self->egfx_flags = XRDP_EGFX_RFX_PRO;
-    }
-    if (best_h264_index >= 0)
-    {
-    }
+#if defined(XRDP_H264)
+        if (co->codecs[index] == XTC_H264 && best_h264_index >= 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Matched H264 mode");
+            best_index = best_h264_index;
+            self->egfx_flags = XRDP_EGFX_H264;
+            break;
+        }
 #endif
+
+        if (co->codecs[index] == XTC_RFX && best_pro_index >= 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Matched RFX mode");
+            best_index = best_pro_index;
+            self->egfx_flags = XRDP_EGFX_RFX_PRO;
+            break;
+        }
+    }
 
     if (best_index >= 0)
     {

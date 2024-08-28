@@ -42,10 +42,17 @@ struct xrdp_tconfig_gfx_x264_param
     int fps_den;
 };
 
+enum xrdp_tconfig_codecs
+{
+    XTC_H264,
+    XTC_RFX
+};
+
 struct xrdp_tconfig_gfx_codec_order
 {
-    int h264_idx;
-    int rfx_idx;
+
+    enum xrdp_tconfig_codecs codecs[2];
+    unsigned int codec_count;
 };
 
 struct xrdp_tconfig_gfx
@@ -67,6 +74,20 @@ static const char *const rdpbcgr_connection_type_names[] =
     "autodetect",
     0
 };
+
+/**
+ * Provide a string representation of a codec order
+ *
+ * @param codec_order Codec order struct
+ * @param buff Buffer for result
+ * @param bufflen Length of above
+ * @return Convenience copy of buff
+ */
+const char *
+tconfig_codec_order_to_str(
+    const struct xrdp_tconfig_gfx_codec_order *codec_order,
+    char *buff,
+    unsigned int bufflen);
 
 int tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config);
 
