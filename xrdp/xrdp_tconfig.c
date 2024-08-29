@@ -48,6 +48,54 @@
 #define X264_DEFAULT_FPS_NUM 24
 #define X264_DEFAULT_FPS_DEN 1
 
+const char *
+tconfig_codec_order_to_str(
+    const struct xrdp_tconfig_gfx_codec_order *codec_order,
+    char *buff,
+    unsigned int bufflen)
+{
+    if (bufflen < (8 * codec_order->codec_count))
+    {
+        snprintf(buff, bufflen, "???");
+    }
+    else
+    {
+        unsigned int p = 0;
+        int i;
+        for (i = 0 ; i < codec_order->codec_count; ++i)
+        {
+            if (p > 0)
+            {
+                buff[p++] = ',';
+            }
+
+            switch (codec_order->codecs[i])
+            {
+                case XTC_H264:
+                    buff[p++] = 'H';
+                    buff[p++] = '2';
+                    buff[p++] = '6';
+                    buff[p++] = '4';
+                    break;
+
+                case XTC_RFX:
+                    buff[p++] = 'R';
+                    buff[p++] = 'F';
+                    buff[p++] = 'X';
+                    break;
+
+                default:
+                    buff[p++] = '?';
+                    buff[p++] = '?';
+                    buff[p++] = '?';
+            }
+        }
+        buff[p++] = '\0';
+    }
+
+    return buff;
+}
+
 static int
 tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
                          struct xrdp_tconfig_gfx_x264_param *param)
@@ -199,12 +247,132 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     return 0;
 }
 
+static int tconfig_load_gfx_order(toml_table_t *tfile, struct xrdp_tconfig_gfx *config)
+{
+    char buff[64];
+
+    /*
+     * This config loader is not responsible to check if xrdp is built with
+     * H264/RFX support. Just loads configurations as-is.
+     */
+
+    TCLOG(LOG_LEVEL_TRACE, "[codec]");
+
+    int h264_found = 0;
+    int rfx_found = 0;
+
+    config->codec.codec_count = 0;
+
+    toml_table_t *codec;
+    toml_array_t *order;
+
+    if ((codec = toml_table_in(tfile, "codec")) != NULL &&
+            (order = toml_array_in(codec, "order")) != NULL)
+    {
+        for (int i = 0; ; i++)
+        {
+            toml_datum_t datum = toml_string_at(order, i);
+
+            if (datum.ok)
+            {
+                if (h264_found == 0 &&
+                        (g_strcasecmp(datum.u.s, "h264") == 0 ||
+                         g_strcasecmp(datum.u.s, "h.264") == 0))
+                {
+                    h264_found = 1;
+                    config->codec.codecs[config->codec.codec_count] = XTC_H264;
+                    ++config->codec.codec_count;
+                }
+                if (rfx_found == 0 &&
+                        g_strcasecmp(datum.u.s, "rfx") == 0)
+                {
+                    rfx_found = 1;
+                    config->codec.codecs[config->codec.codec_count] = XTC_RFX;
+                    ++config->codec.codec_count;
+                }
+                free(datum.u.s);
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    if (h264_found == 0 && rfx_found == 0)
+    {
+        /* prefer H264 if no priority found */
+        config->codec.codecs[0] = XTC_H264;
+        config->codec.codecs[1] = XTC_RFX;
+        config->codec.codec_count = 2;
+
+        TCLOG(LOG_LEVEL_WARNING, "[codec] could not get GFX codec order, "
+              "using default order %s",
+              tconfig_codec_order_to_str(&config->codec, buff, sizeof(buff)));
+
+        return 1;
+    }
+
+    TCLOG(LOG_LEVEL_DEBUG, "[codec] %s",
+          tconfig_codec_order_to_str(&config->codec, buff, sizeof(buff)));
+    return 0;
+}
+
+/**
+ * Determines whether a codec is enabled
+ * @param co Ordered codec list
+ * @param code Code of codec to look for
+ * @return boolean
+ */
+static int
+codec_enabled(const struct xrdp_tconfig_gfx_codec_order *co,
+              enum xrdp_tconfig_codecs code)
+{
+    for (unsigned short i = 0; i < co->codec_count; ++i)
+    {
+        if (co->codecs[i] == code)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Disables a Codec by removing it from the codec list
+ * @param co Ordered codec list
+ * @param code Code of codec to remove from list
+ *
+ * The order of the passed-in codec list is preserved.
+ */
+static void
+disable_codec(struct xrdp_tconfig_gfx_codec_order *co,
+              enum xrdp_tconfig_codecs code)
+{
+    unsigned short j = 0;
+    for (unsigned short i = 0; i < co->codec_count; ++i)
+    {
+        if (co->codecs[i] != code)
+        {
+            co->codecs[j++] = co->codecs[i];
+        }
+    }
+    co->codec_count = j;
+}
+
 int
 tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
 {
     FILE *fp;
     char errbuf[200];
     toml_table_t *tfile;
+    int rv = 0;
+
+    /* Default to just RFX support. in case we can't load anything */
+    config->codec.codec_count = 1;
+    config->codec.codecs[0] = XTC_RFX;
+    memset(config->x264_param, 0, sizeof(config->x264_param));
 
     if ((fp = fopen(filename, "r")) == NULL)
     {
@@ -212,33 +380,45 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
               filename, g_get_strerror());
         return 1;
     }
-    else if ((tfile = toml_parse_file(fp, errbuf, sizeof(errbuf))) == NULL)
+
+    if ((tfile = toml_parse_file(fp, errbuf, sizeof(errbuf))) == NULL)
     {
         TCLOG(LOG_LEVEL_ERROR, "Error in GFX config file %s - %s", filename, errbuf);
         fclose(fp);
         return 1;
     }
-    else
+
+    TCLOG(LOG_LEVEL_INFO, "Loading GFX config file %s", filename);
+    fclose(fp);
+
+    /* Load GFX codec order */
+    tconfig_load_gfx_order(tfile, config);
+
+    /* H.264 configuration */
+    if (codec_enabled(&config->codec, XTC_H264))
     {
-        TCLOG(LOG_LEVEL_INFO, "Loading GFX config file %s", filename);
-        fclose(fp);
-
-        memset(config, 0, sizeof(struct xrdp_tconfig_gfx));
-
-        /* First of all, read the default params and override later */
-        tconfig_load_gfx_x264_ct(tfile, 0, config->x264_param);
-
-        for (int ct = CONNECTION_TYPE_MODEM; ct < NUM_CONNECTION_TYPES; ct++)
+        /* First of all, read the default params */
+        if (tconfig_load_gfx_x264_ct(tfile, 0, config->x264_param) != 0)
         {
-            memcpy(&config->x264_param[ct], &config->x264_param[0],
-                   sizeof(struct xrdp_tconfig_gfx_x264_param));
-
-            tconfig_load_gfx_x264_ct(tfile, ct, config->x264_param);
+            /* We can't read the H.264 defaults. Disable H.264 */
+            LOG(LOG_LEVEL_WARNING, "H.264 support will be disabled");
+            disable_codec(&config->codec, XTC_H264);
+            rv = 1;
         }
-
-        toml_free(tfile);
-
-        return 0;
+        else
+        {
+            /* Copy default params to other connection types, and
+             * then override them */
+            for (int ct = CONNECTION_TYPE_MODEM; ct < NUM_CONNECTION_TYPES;
+                    ct++)
+            {
+                config->x264_param[ct] = config->x264_param[0];
+                tconfig_load_gfx_x264_ct(tfile, ct, config->x264_param);
+            }
+        }
     }
+    toml_free(tfile);
+
+    return rv;
 }
 

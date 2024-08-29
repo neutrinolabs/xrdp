@@ -1362,13 +1362,16 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     struct xrdp_mm *self;
     struct xrdp_bitmap *screen;
     int index;
-    int best_index;
     int best_h264_index;
     int best_pro_index;
     int error;
     int version;
     int flags;
     struct ver_flags_t *ver_flags;
+
+#if !defined(XRDP_H264)
+    UNUSED_VAR(best_h264_index);
+#endif
 
     LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise:");
     self = (struct xrdp_mm *) user;
@@ -1390,7 +1393,6 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     }
     /* sort by version */
     g_qsort(ver_flags, caps_count, sizeof(struct ver_flags_t), cmpverfunc);
-    best_index = -1;
     best_h264_index = -1;
     best_pro_index = -1;
     for (index = 0; index < caps_count; index++)
@@ -1437,19 +1439,34 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                 break;
         }
     }
-    if (best_pro_index >= 0)
+
+    int best_index = -1;
+    struct xrdp_tconfig_gfx_codec_order *co = &self->wm->gfx_config->codec;
+    char cobuff[64];
+
+    LOG(LOG_LEVEL_INFO, "Codec search order is %s",
+        tconfig_codec_order_to_str(co, cobuff, sizeof(cobuff)));
+    for (index = 0 ; index < co->codec_count ; ++index)
     {
-        best_index = best_pro_index;
-        self->egfx_flags = XRDP_EGFX_RFX_PRO;
-    }
-    /* prefer h264, todo use setting in xrdp.ini for this */
-    if (best_h264_index >= 0)
-    {
-#if defined(XRDP_X264) || defined(XRDP_NVENC)
-        best_index = best_h264_index;
-        self->egfx_flags = XRDP_EGFX_H264;
+#if defined(XRDP_H264)
+        if (co->codecs[index] == XTC_H264 && best_h264_index >= 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Matched H264 mode");
+            best_index = best_h264_index;
+            self->egfx_flags = XRDP_EGFX_H264;
+            break;
+        }
 #endif
+
+        if (co->codecs[index] == XTC_RFX && best_pro_index >= 0)
+        {
+            LOG(LOG_LEVEL_INFO, "Matched RFX mode");
+            best_index = best_pro_index;
+            self->egfx_flags = XRDP_EGFX_RFX_PRO;
+            break;
+        }
     }
+
     if (best_index >= 0)
     {
         LOG(LOG_LEVEL_INFO, "  replying version 0x%8.8x flags 0x%8.8x",

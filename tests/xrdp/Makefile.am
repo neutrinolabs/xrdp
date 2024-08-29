@@ -1,6 +1,5 @@
 AM_CPPFLAGS = \
   -DXRDP_TOP_SRCDIR=\"$(top_srcdir)\" \
-  -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \
@@ -21,7 +20,14 @@ EXTRA_DIST = \
   test_not4_8bit.bmp \
   test_not4_24bit.bmp \
   test1.jpg \
-  test_alpha_blend.png
+  test_alpha_blend.png \
+  gfx/gfx.toml\
+  gfx/gfx_codec_order_undefined.toml \
+  gfx/gfx_codec_h264_preferred.toml \
+  gfx/gfx_codec_h264_only.toml \
+  gfx/gfx_codec_rfx_preferred.toml \
+  gfx/gfx_codec_rfx_preferred_odd.toml \
+  gfx/gfx_codec_rfx_only.toml
 
 TESTS = test_xrdp
 check_PROGRAMS = test_xrdp

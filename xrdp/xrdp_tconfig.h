@@ -42,8 +42,21 @@ struct xrdp_tconfig_gfx_x264_param
     int fps_den;
 };
 
+enum xrdp_tconfig_codecs
+{
+    XTC_H264,
+    XTC_RFX
+};
+
+struct xrdp_tconfig_gfx_codec_order
+{
+    enum xrdp_tconfig_codecs codecs[2];
+    unsigned short codec_count;
+};
+
 struct xrdp_tconfig_gfx
 {
+    struct xrdp_tconfig_gfx_codec_order codec;
     /* store x264 parameters for each connection type */
     struct xrdp_tconfig_gfx_x264_param x264_param[NUM_CONNECTION_TYPES];
 };
@@ -61,6 +74,31 @@ static const char *const rdpbcgr_connection_type_names[] =
     0
 };
 
-int tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config);
+/**
+ * Provide a string representation of a codec order
+ *
+ * @param codec_order Codec order struct
+ * @param buff Buffer for result
+ * @param bufflen Length of above
+ * @return Convenience copy of buff
+ */
+const char *
+tconfig_codec_order_to_str(
+    const struct xrdp_tconfig_gfx_codec_order *codec_order,
+    char *buff,
+    unsigned int bufflen);
+
+/**
+ * Loads the GFX config from the specified file
+ *
+ * @param filename Name of file to load
+ * @param config Struct to receive result
+ * @return 0 for success
+ *
+ * In the event of failure, an error is logged. A minimal
+ * useable configuration is always returned
+ */
+int
+tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config);
 
 #endif
