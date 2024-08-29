@@ -1277,6 +1277,10 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     int flags;
     struct ver_flags_t *ver_flags;
 
+#if !defined(XRDP_H264)
+    UNUSED_VAR(best_h264_index);
+#endif
+
     LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise:");
     self = (struct xrdp_mm *) user;
     screen = self->wm->screen;
@@ -1350,7 +1354,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
 
     LOG(LOG_LEVEL_INFO, "Codec search order is %s",
         tconfig_codec_order_to_str(co, cobuff, sizeof(cobuff)));
-    for (index = 0 ; index < (unsigned int)co->codec_count ; ++index)
+    for (index = 0 ; index < co->codec_count ; ++index)
     {
 #if defined(XRDP_H264)
         if (co->codecs[index] == XTC_H264 && best_h264_index >= 0)

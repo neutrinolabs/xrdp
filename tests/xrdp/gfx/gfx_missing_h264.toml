@@ -1,0 +1,9 @@
+[codec]
+order = [ "H.264", "RFX" ]
+
+[x264.lan]
+[x264.wan]
+[x264.broadband_high]
+[x264.satellite]
+[x264.broadband_low]
+[x264.modem]

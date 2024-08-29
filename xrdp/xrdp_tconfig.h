@@ -50,9 +50,8 @@ enum xrdp_tconfig_codecs
 
 struct xrdp_tconfig_gfx_codec_order
 {
-
     enum xrdp_tconfig_codecs codecs[2];
-    unsigned int codec_count;
+    unsigned short codec_count;
 };
 
 struct xrdp_tconfig_gfx
@@ -89,6 +88,17 @@ tconfig_codec_order_to_str(
     char *buff,
     unsigned int bufflen);
 
-int tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config);
+/**
+ * Loads the GFX config from the specified file
+ *
+ * @param filename Name of file to load
+ * @param config Struct to receive result
+ * @return 0 for success
+ *
+ * In the event of failure, an error is logged. A minimal
+ * useable configuration is always returned
+ */
+int
+tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config);
 
 #endif

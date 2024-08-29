@@ -73,6 +73,28 @@ START_TEST(test_tconfig_gfx_codec_order)
 }
 END_TEST
 
+START_TEST(test_tconfig_gfx_missing_file)
+{
+    struct xrdp_tconfig_gfx gfxconfig;
+
+    /* Check RFX config is returned if the file doesn't exist */
+    tconfig_load_gfx(GFXCONF_STUBDIR "/no_such_file.toml", &gfxconfig);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 1);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_RFX);
+}
+END_TEST
+
+START_TEST(test_tconfig_gfx_missing_h264)
+{
+    struct xrdp_tconfig_gfx gfxconfig;
+
+    /* Check RFX config only is returned if H.264 parameters are missing */
+    tconfig_load_gfx(GFXCONF_STUBDIR "/gfx_missing_h264.toml", &gfxconfig);
+    ck_assert_int_eq(gfxconfig.codec.codec_count, 1);
+    ck_assert_int_eq(gfxconfig.codec.codecs[0], XTC_RFX);
+}
+END_TEST
+
 /******************************************************************************/
 Suite *
 make_suite_tconfig_load_gfx(void)
@@ -86,6 +108,8 @@ make_suite_tconfig_load_gfx(void)
     tcase_add_test(tc_tconfig_load_gfx, test_tconfig_gfx_always_success);
     tcase_add_test(tc_tconfig_load_gfx, test_tconfig_gfx_x264_load_basic);
     tcase_add_test(tc_tconfig_load_gfx, test_tconfig_gfx_codec_order);
+    tcase_add_test(tc_tconfig_load_gfx, test_tconfig_gfx_missing_file);
+    tcase_add_test(tc_tconfig_load_gfx, test_tconfig_gfx_missing_h264);
 
     suite_add_tcase(s, tc_tconfig_load_gfx);
 
