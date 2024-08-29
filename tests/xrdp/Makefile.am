@@ -1,4 +1,5 @@
 AM_CPPFLAGS = \
+  -DXRDP_TOP_SRCDIR=\"$(top_srcdir)\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \
@@ -18,7 +19,14 @@ EXTRA_DIST = \
   test_not4_8bit.bmp \
   test_not4_24bit.bmp \
   test1.jpg \
-  test_alpha_blend.png
+  test_alpha_blend.png \
+  gfx/gfx.toml\
+  gfx/gfx_codec_order_undefined.toml \
+  gfx/gfx_codec_h264_preferred.toml \
+  gfx/gfx_codec_h264_only.toml \
+  gfx/gfx_codec_rfx_preferred.toml \
+  gfx/gfx_codec_rfx_preferred_odd.toml \
+  gfx/gfx_codec_rfx_only.toml
 
 TESTS = test_xrdp
 check_PROGRAMS = test_xrdp
@@ -28,6 +36,7 @@ test_xrdp_SOURCES = \
     test_xrdp_main.c \
     test_xrdp_egfx.c \
     test_xrdp_region.c \
+    test_tconfig.c \
     test_bitmap_load.c
 
 test_xrdp_CFLAGS = \
@@ -47,6 +56,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/libxrdp/libxrdp.la \
     $(top_builddir)/libpainter/src/libpainter.la \
     $(top_builddir)/librfxcodec/src/librfxencode.la \
+    $(top_builddir)/third_party/tomlc99/libtoml.la \
     $(top_builddir)/xrdp/lang.o \
     $(top_builddir)/xrdp/xrdp_mm.o \
     $(top_builddir)/xrdp/xrdp_wm.o \
@@ -60,8 +70,16 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_encoder.o \
     $(top_builddir)/xrdp/xrdp_process.o \
     $(top_builddir)/xrdp/xrdp_login_wnd.o \
+    $(top_builddir)/xrdp/xrdp_tconfig.o \
     $(top_builddir)/xrdp/xrdp_main_utils.o \
     $(PIXMAN_LIBS) \
     $(IMLIB2_LIBS) \
     @CHECK_LIBS@ \
     @CMOCKA_LIBS@
+
+if XRDP_X264
+AM_CPPFLAGS += -DXRDP_X264 $(XRDP_X264_CFLAGS)
+test_xrdp_LDADD += \
+    $(top_builddir)/xrdp/xrdp_encoder_x264.o \
+    $(XRDP_X264_LIBS)
+endif

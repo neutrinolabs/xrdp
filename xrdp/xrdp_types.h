@@ -29,6 +29,7 @@
 #include "fifo.h"
 #include "guid.h"
 #include "xrdp_client_info.h"
+#include "xrdp_tconfig.h"
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
@@ -566,6 +567,8 @@ struct xrdp_wm
 
     /* configuration derived from xrdp.ini */
     struct xrdp_config *xrdp_config;
+    /* configuration derived from gfx.toml */
+    struct xrdp_tconfig_gfx *gfx_config;
 
     struct xrdp_region *screen_dirty_region;
     int last_screen_draw_time;
