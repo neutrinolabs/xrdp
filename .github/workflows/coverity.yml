@@ -1,0 +1,50 @@
+name: Coverity
+
+on:
+  schedule:
+  - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: scan
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'neutrinolabs' }}
+    env:
+      CC: gcc
+      CONF_FLAGS_amd64_max: "--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                  --enable-fdkaac --enable-opus --enable-rfxcodec --enable-painter
+                  --enable-pixman --enable-utmp
+                  --with-imlib2 --with-freetype2 --enable-tests"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Coverity build tool
+        run: |
+          wget -c -N https://scan.coverity.com/download/linux64 --post-data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=neutrinolabs/xrdp" -O coverity_tool.tar.gz
+          mkdir coverity_tool
+          tar xzf coverity_tool.tar.gz --strip 1 -C coverity_tool
+
+      - name: "Install Dependencies"
+        run: |
+          echo RESET grub-efi/install_devices | sudo debconf-communicate grub-pc
+          sudo scripts/install_xrdp_build_dependencies_with_apt.sh max amd64 --allow-downgrades --allow-remove-essential --allow-change-held-packages
+      - name: Bootstrap
+        run: ./bootstrap
+      - name: configure
+        run: ./configure $CONF_FLAGS_amd64_max
+      - name: make
+        run: |
+          export PATH=`pwd`/coverity_tool/bin:$PATH
+          cov-build --dir cov-int make -j $(nproc)
+
+      - name: Submit build result to Coverity Scan
+        run: |
+          tar czvf cov.tar.gz cov-int
+          curl --form token=${{ secrets.COVERITY_SCAN_TOKEN }} \
+            --form email=meta@vmeta.jp \
+            --form file=@cov.tar.gz \
+            --form version="Commit $GITHUB_SHA" \
+            --form description="Build submitted via CI" \
+            https://scan.coverity.com/builds?project=neutrinolabs/xrdp
+
