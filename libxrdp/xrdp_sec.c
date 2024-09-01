@@ -598,10 +598,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
     }
-    else if (self->rdp_layer->client_info.enable_token_login
-             && len_user > 0
-             && len_password == 0
-             && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
+    if (self->rdp_layer->client_info.enable_token_login
+            && len_user > 0
+            && len_password == 0
+            && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
     {
         LOG(LOG_LEVEL_DEBUG, "Client supplied a Logon token. Overwriting password with logon token.");
         g_strncpy(self->rdp_layer->client_info.password, sep + 1,
@@ -609,7 +609,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         self->rdp_layer->client_info.username[sep - self->rdp_layer->client_info.username] = '\0';
         self->rdp_layer->client_info.rdp_autologin = 1;
     }
-    else
+    else if (!(flags & RDP_LOGON_AUTO))
     {
         // Skip the password
         if (!s_check_rem_and_log(s, len_password + 2, "Parsing [MS-RDPBCGR] TS_INFO_PACKET Password"))
