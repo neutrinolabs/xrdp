@@ -130,12 +130,7 @@ fi
             # CFGDIR is needed for cppcheck before 1.86
             make_args="$make_args CFGDIR=$FILESDIR"
             ;;
-        2.8 | 2.9 | 2.1*)
-            # Cppcheck 2.8 removed the dependency on z3
-            # Cppcheck 2.8 added optional support for utilizing Boost
-            make_args="$make_args CPPFLAGS=-DHAVE_BOOST"
-            ;;
-        2.*)
+        2.0 | 2.1 | 2.2 | 2.3 | 2.4 | 2.4.1 | 2.5 | 2.6 | 2.7)
             make_args="$make_args USE_Z3=yes"
             # Check that the Z3 development files appear to be installed
             # before trying to create z3_version.h. Otherwise we may
@@ -146,6 +141,14 @@ fi
             if [ ! -f /usr/include/z3_version.h ]; then
                 create_z3_version_h
             fi
+            ;;
+        2.8 | 2.9 | 2.10 | 2.11* | 2.12.* | 2.13.* | 2.14.* )
+            # Cppcheck 2.8 removed the dependency on z3
+            # Cppcheck 2.8 added optional support for utilizing Boost
+            make_args="$make_args CPPFLAGS=-DHAVE_BOOST"
+            ;;
+        2.*)
+            # Cppcheck 2.15 doesn't seem to define FILESDIR if CPPFLAGS is set
             ;;
     esac
 
