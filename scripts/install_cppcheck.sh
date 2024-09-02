@@ -28,11 +28,11 @@ usage()
 call_make()
 {
     # Disable set -e, if active
-    set_entry_opts=`set +o`
+    set_entry_opts=$(set +o)
     set +e
 
     status=1
-    log=`mktemp /tmp/cppcheck-log.XXXXXXXXXX`
+    log=$(mktemp /tmp/cppcheck-log.XXXXXXXXXX)
     if [ -n "$log" ]; then
         make "$@" >"$log" 2>&1
         status=$?
@@ -58,13 +58,15 @@ call_make()
 # ----------------------------------------------------------------------------
 create_z3_version_h()
 {
-    set -- `z3 --version`
-    if [ $# != 3 -o "$1/$2" != Z3/version ]; then
+    # shellcheck disable=SC2046
+    set -- $(z3 --version)
+    if [ $# != 3 ] || [ "$1/$2" != Z3/version ]; then
         echo "** Unexpected output from z3 command '$*'" >&2
         false
     else
-        z3ver=$3 ; # e.g. 4.4.3
-        set -- `echo $z3ver | tr '.' ' '`
+        z3ver="$3" ; # e.g. 4.4.3
+        # shellcheck disable=SC2046
+        set -- $(echo "$z3ver" | tr '.' ' ')
         if [ $# != 3 ]; then
             echo "** Unable to determine Z3 version from '$z3ver'" >&2
             false
@@ -104,7 +106,7 @@ if [ -x "$exe" ]; then
     exit 0
 fi
 
-workdir=`mktemp -d /tmp/cppcheck.XXXXXXXXXX`
+workdir=$(mktemp -d /tmp/cppcheck.XXXXXXXXXX)
 if [ -z "$workdir" ]; then
     echo "** Unable to create temporary working directory" 2>&1
     exit 1
@@ -154,18 +156,19 @@ fi
 
     # Use all available CPUs
     if [ -f /proc/cpuinfo ]; then
-        cpus=`grep ^processor /proc/cpuinfo | wc -l`
+        cpus=$(grep -c ^processor /proc/cpuinfo)
         if [ -n "$cpus" ]; then
             make_args="$make_args -j $cpus"
         fi
     fi
 
     echo "Making cppcheck..."
-    # CFGDIR is needed for cppcheck before 1.86
+    # shellcheck disable=SC2086
     call_make $make_args
 
     echo "Installing cppcheck..."
     mkdir -p "$FILESDIR"
+    # shellcheck disable=SC2086
     call_make install $make_args
 )
 status=$?
