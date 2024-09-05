@@ -105,6 +105,9 @@ IdleTimeLimit=0
 ;      I        Sessions are separated by IP address
 ;
 ;   The options U and B are always active, and cannot be de-selected.
+;
+;   The "" in the text above are for readability. Do not include them in
+;   the string
 Policy=Default
 
 [Logging]
