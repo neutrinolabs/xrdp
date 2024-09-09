@@ -1248,10 +1248,6 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
                 LOG(LOG_LEVEL_DEBUG, "VNC server successfully resized");
                 log_screen_layout(LOG_LEVEL_INFO, "NewLayout", &layout);
                 v->server_layout = layout;
-                // If this resize was requested by the client mid-session
-                // (dynamic resize), we need to tell xrdp_mm that
-                // it's OK to continue with the resize state machine.
-                error = v->server_monitor_resize_done(v);
             }
             else
             {
@@ -1259,9 +1255,22 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
                     "VNC server resize failed - error code %d [%s]",
                     response_code,
                     rfb_get_eds_status_msg(response_code));
-                /* Force client to same size as server */
+                // This is awkward. The client has asked for a specific size
+                // which we can't support.
+                //
+                // Currently we handle this by queueing a resize to our
+                // supported size, and continuing with the resize state
+                // machine in xrdp_mm.c
                 LOG(LOG_LEVEL_WARNING, "Resizing client to server");
                 error = resize_client_to_server(v, 0);
+            }
+
+            if (error == 0)
+            {
+                // If this resize was requested by the client mid-session
+                // (dynamic resize), we need to tell xrdp_mm that
+                // it's OK to continue with the resize state machine.
+                error = v->server_monitor_resize_done(v);
             }
             v->resize_status = VRS_DONE;
         }
