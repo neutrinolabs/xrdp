@@ -4,6 +4,7 @@
 AM_CPPFLAGS = \
   -DXRDP_PAMCONF_PATH=\"${pamconfdir}\" \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
+  -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/libipm \
   -I$(top_srcdir)/common
 #  -DXRDP_SBIN_PATH=\"${sbindir}\" \
