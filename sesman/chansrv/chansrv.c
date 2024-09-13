@@ -41,6 +41,9 @@
 #include "xrdp_sockets.h"
 #include "audin.h"
 
+#include "scp.h"
+#include "scp_sync.h"
+
 #include "ms-rdpbcgr.h"
 
 #define MAX_PATH 260
@@ -1665,6 +1668,54 @@ run_exec(void)
 }
 
 /*****************************************************************************/
+/**
+ * Make sure XRDP_SOCKET_PATH exists
+ *
+ * We can't do anything without XRDP_SOCKET_PATH existing.
+ *
+ * Normally this is done by sesman before chansrv starts. If we're running
+ * standalone however (i.e. with x11vnc) this won't be done. We don't have the
+ * privilege to create the directory, so we have to ask sesman to do it
+ * for us.
+ */
+static int
+chansrv_create_xrdp_socket_path(void)
+{
+    char xrdp_socket_path[XRDP_SOCKETS_MAXPATH];
+    int rv = 1;
+
+    /* Use our UID to qualify XRDP_SOCKET_PATH */
+    g_snprintf(xrdp_socket_path, sizeof(xrdp_socket_path),
+               XRDP_SOCKET_PATH, g_getuid());
+
+    if (g_directory_exist(xrdp_socket_path))
+    {
+        rv = 0;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_INFO, "%s doesn't exist - asking sesman to create it",
+            xrdp_socket_path);
+
+        struct trans *t = NULL;
+
+        if (!(t = scp_connect(g_cfg->listen_port, "xrdp-chansrv", g_is_term)))
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't connect to sesman");
+        }
+        else if (scp_sync_uds_login_request(t) == 0 &&
+                 scp_sync_create_sockdir_request(t) == 0)
+        {
+            rv = 0;
+            (void)scp_send_close_connection_request(t);
+        }
+        trans_delete(t);
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 int
 main(int argc, char **argv)
 {
@@ -1756,6 +1807,13 @@ main(int argc, char **argv)
     }
 
     LOG_DEVEL(LOG_LEVEL_INFO, "main: app started pid %d(0x%8.8x)", pid, pid);
+
+    if (chansrv_create_xrdp_socket_path() != 0)
+    {
+        main_cleanup();
+        return 1;
+    }
+
     /*  set up signal handler  */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
