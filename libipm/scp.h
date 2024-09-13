@@ -411,7 +411,7 @@ scp_get_create_session_response(struct trans *trans,
                                 struct guid *guid);
 
 /**
- * Send an E_LIST_SESSIONS_REQUEST (SCP client)
+ * Send an E_SCP_LIST_SESSIONS_REQUEST (SCP client)
  *
  * @param trans SCP transport
  * @return != 0 for error
@@ -422,7 +422,7 @@ int
 scp_send_list_sessions_request(struct trans *trans);
 
 /**
- * Send an E_LIST_SESSIONS_RESPONSE (SCP server)
+ * Send an E_SCP_LIST_SESSIONS_RESPONSE (SCP server)
  *
  * @param trans SCP transport
  * @param status Status of request
@@ -436,7 +436,7 @@ scp_send_list_sessions_response(
     const struct scp_session_info *info);
 
 /**
- * Parse an incoming E_LIST_SESSIONS_RESPONSE (SCP client)
+ * Parse an incoming E_SCP_LIST_SESSIONS_RESPONSE (SCP client)
  *
  * @param trans SCP transport
  * @param[out] status Status of request
