@@ -166,3 +166,45 @@ scp_sync_list_sessions_request(struct trans *t)
 
     return sessions;
 }
+
+/*****************************************************************************/
+int
+scp_sync_create_sockdir_request(struct trans *t)
+{
+    int rv = scp_send_create_sockdir_request(t);
+    if (rv == 0)
+    {
+        rv = scp_sync_wait_specific(t, E_SCP_CREATE_SOCKDIR_RESPONSE);
+        if (rv == 0)
+        {
+            enum scp_create_sockdir_status status;
+            rv = scp_get_create_sockdir_response(t, &status);
+            if (rv == 0)
+            {
+                switch (status)
+                {
+                    case E_SCP_CS_OK:
+                        break;
+
+                    case E_SCP_CS_NOT_LOGGED_IN:
+                        LOG(LOG_LEVEL_ERROR, "sesman reported not-logged-in");
+                        rv = 1;
+                        break;
+
+                    case E_SCP_CS_OTHER_ERROR:
+                        LOG(LOG_LEVEL_ERROR,
+                            "sesman reported fail on create directory");
+                        rv = 1;
+                        break;
+                }
+            }
+            scp_msg_in_reset(t); // Done with this message
+            if (!rv)
+            {
+                (void)scp_send_close_connection_request(t);
+            }
+        }
+
+    }
+    return rv;
+}

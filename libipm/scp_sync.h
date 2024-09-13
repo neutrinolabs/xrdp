@@ -86,4 +86,16 @@ scp_sync_uds_login_request(struct trans *t);
 struct list *
 scp_sync_list_sessions_request(struct trans *t);
 
+/**
+ * Send sockdir creation request to sesman and wait for answer
+ *
+ * @param t SCP transport
+ * @return 0 for successful response from sesman
+ *
+ * If non-zero is returned, the scp_connection has been closed (if
+ * appropriate) and simply remains to be deleted.
+ */
+int
+scp_sync_create_sockdir_request(struct trans *t);
+
 #endif /* SCP_SYNC_H */
