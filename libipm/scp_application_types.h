@@ -136,5 +136,23 @@ enum scp_list_sessions_status
     E_SCP_LS_NO_MEMORY
 };
 
+/**
+ * Status of a create sockdir message
+ */
+enum scp_create_sockdir_status
+{
+    E_SCP_CS_OK = 0,
+
+    /**
+     * Client hasn't logged in yet
+     */
+    E_SCP_CS_NOT_LOGGED_IN = 100,
+
+    /**
+     * sesman failed to create the directory
+     */
+    E_SCP_CS_OTHER_ERROR
+};
+
 
 #endif /* SCP_APPLICATION_TYPES_H */

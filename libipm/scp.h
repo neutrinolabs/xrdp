@@ -59,6 +59,9 @@ enum scp_msg_code
     E_SCP_LIST_SESSIONS_REQUEST,
     E_SCP_LIST_SESSIONS_RESPONSE,
 
+    E_SCP_CREATE_SOCKDIR_REQUEST,
+    E_SCP_CREATE_SOCKDIR_RESPONSE,
+
     E_SCP_CLOSE_CONNECTION_REQUEST
     // No E_SCP_CLOSE_CONNECTION_RESPONSE
 };
@@ -455,6 +458,43 @@ scp_get_list_sessions_response(
     struct trans *trans,
     enum scp_list_sessions_status *status,
     struct scp_session_info **info);
+
+/**
+ * Send an E_SCP_CREATE_SOCKDIR_REQUEST (SCP client)
+ *
+ * @param trans SCP transport
+ * @return != 0 for error
+ *
+ * In some configurations, chansrv is not started by sesman. In this
+ * instance, it may be necessary for the unprivileged sesman process to
+ * ask sesman to create the sockets dir so sesman can populate it.
+ *
+ * Server replies with E_SCP_CREATE_SOCKDIR_RESPONSE
+ */
+int
+scp_send_create_sockdir_request(struct trans *trans);
+
+/**
+ * Send an E_SCP_CREATE_SOCKDIR_RESPONSE (SCP server)
+ *
+ * @param trans SCP transport
+ * @param status Status of request
+ * @return != 0 for error
+ */
+int
+scp_send_create_sockdir_response(struct trans *trans,
+                                 enum scp_create_sockdir_status status);
+
+/**
+ * Parse an incoming E_SCP_CREATE_SOCKDIR_RESPONSE (SCP client)
+ *
+ * @param trans SCP transport
+ * @param[out] status Status of request
+ * @return != 0 for error
+ */
+int
+scp_get_create_sockdir_response(struct trans *trans,
+                                enum scp_create_sockdir_status *status);
 
 /**
  * Send an E_CLOSE_CONNECTION_REQUEST (SCP client)
