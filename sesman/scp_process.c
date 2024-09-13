@@ -579,6 +579,32 @@ process_list_sessions_request(struct pre_session_item *psi)
 /******************************************************************************/
 
 static int
+process_create_sockdir_request(struct pre_session_item *psi)
+{
+    enum scp_create_sockdir_status status = E_SCP_CS_OTHER_ERROR;
+
+    if (psi->login_state == E_PS_LOGIN_NOT_LOGGED_IN)
+    {
+        status = E_SCP_CS_NOT_LOGGED_IN;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_INFO,
+            "Received request from %s to create sockdir for user %s",
+            psi->peername, psi->username);
+
+        if (create_xrdp_socket_path(psi->uid) == 0)
+        {
+            status = E_SCP_CS_OK;
+        }
+    }
+
+    return scp_send_create_sockdir_response(psi->client_trans, status);
+}
+
+/******************************************************************************/
+
+static int
 process_close_connection_request(struct pre_session_item *psi)
 {
     int rv = 0;
@@ -623,6 +649,10 @@ scp_process(struct pre_session_item *psi)
 
         case E_SCP_LIST_SESSIONS_REQUEST:
             rv = process_list_sessions_request(psi);
+            break;
+
+        case E_SCP_CREATE_SOCKDIR_REQUEST:
+            rv = process_create_sockdir_request(psi);
             break;
 
         case E_SCP_CLOSE_CONNECTION_REQUEST:
