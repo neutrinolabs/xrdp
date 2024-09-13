@@ -17,14 +17,10 @@ noinst_PROGRAMS = \
   xrdp-xcon
 
 xrdp_sesrun_SOURCES = \
-  sesrun.c \
-  tools_common.h \
-  tools_common.c
+  sesrun.c
 
 xrdp_sesadmin_SOURCES = \
-  sesadmin.c \
-  tools_common.h \
-  tools_common.c
+  sesadmin.c
 
 xrdp_dis_SOURCES = \
   dis.c
