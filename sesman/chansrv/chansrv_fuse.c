@@ -2200,6 +2200,10 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
             fip->fi = *fi;
             fip->inum = ino;
 
+            if (g_cfg->fuse_direct_io) {
+                fip->fi.direct_io = 1;
+            }
+
             /* we want path minus 'root node of the share' */
             cptr = filename_on_device(full_path);
 

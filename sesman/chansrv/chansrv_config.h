@@ -26,6 +26,9 @@ struct config_chansrv
     /** Whether the FUSE mount is enabled or not */
     int enable_fuse_mount;
 
+    /** Whether to use direct I/O to FUSE filesystems */
+    int fuse_direct_io;
+
     /** RestrictOutboundClipboard setting from sesman.ini */
     int restrict_outbound_clipboard;
     /** RestrictInboundClipboard setting from sesman.ini */
