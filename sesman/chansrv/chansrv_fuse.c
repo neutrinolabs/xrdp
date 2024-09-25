@@ -2200,7 +2200,8 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
             fip->fi = *fi;
             fip->inum = ino;
 
-            if (g_cfg->fuse_direct_io) {
+            if (g_cfg->fuse_direct_io)
+            {
                 fip->fi.direct_io = 1;
             }
 
