@@ -40,6 +40,7 @@
 #define DEFAULT_RESTRICT_INBOUND_CLIPBOARD  0
 #define DEFAULT_ENABLE_FUSE_MOUNT           1
 #define DEFAULT_FUSE_MOUNT_NAME             "xrdp-client"
+#define DEFAULT_FUSE_DIRECT_IO              0
 #define DEFAULT_FILE_UMASK                  077
 #define DEFAULT_USE_NAUTILUS3_FLIST_FORMAT  0
 #define DEFAULT_NUM_SILENT_FRAMES_AAC       4
@@ -163,6 +164,10 @@ read_config_chansrv(log_func_t logmsg,
                 break;
             }
         }
+        else if (g_strcasecmp(name, "FuseDirectIO") == 0)
+        {
+            cfg->fuse_direct_io = g_text2bool(value);
+        }
         else if (g_strcasecmp(name, "FileUmask") == 0)
         {
             cfg->file_umask = strtol(value, NULL, 0);
@@ -212,6 +217,7 @@ new_config(void)
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
         cfg->restrict_inbound_clipboard = DEFAULT_RESTRICT_INBOUND_CLIPBOARD;
         cfg->fuse_mount_name = fuse_mount_name;
+        cfg->fuse_direct_io = DEFAULT_FUSE_DIRECT_IO;
         cfg->file_umask = DEFAULT_FILE_UMASK;
         cfg->use_nautilus3_flist_format = DEFAULT_USE_NAUTILUS3_FLIST_FORMAT;
         cfg->num_silent_frames_aac = DEFAULT_NUM_SILENT_FRAMES_AAC;
@@ -300,6 +306,8 @@ config_dump(struct config_chansrv *config)
     g_writeln("    EnableFuseMount            %s",
               g_bool2text(config->enable_fuse_mount));
     g_writeln("    FuseMountName:             %s", config->fuse_mount_name);
+    g_writeln("    FuseDirectIO:              %s",
+              g_bool2text(config->fuse_direct_io));
     g_writeln("    FileMask:                  0%o", config->file_umask);
     g_writeln("    Nautilus 3 Flist Format:   %s",
               g_bool2text(config->use_nautilus3_flist_format));
