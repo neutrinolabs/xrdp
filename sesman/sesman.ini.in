@@ -173,6 +173,10 @@ FuseMountName=thinclient_drives
 FileUmask=077
 ; Can be used to disable FUSE functionality - see sesman.ini(5)
 #EnableFuseMount=false
+; Can be used to enable direct I/O to FUSE open file calls. This is useful
+; when open file handles need to immediately see changes made on the client
+; side. There is a performance hit, so use with caution.
+#FuseDirectIO=true
 ; Uncomment this line only if you are using GNOME 3 versions 3.29.92
 ; and up, and you wish to cut-paste files between Nautilus and Windows. Do
 ; not use this setting for GNOME 4, or other file managers
