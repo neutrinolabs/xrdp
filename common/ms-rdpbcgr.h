@@ -136,6 +136,9 @@
 #define XR_CHANNEL_OPTION_SHOW_PROTOCOL 0x00200000
 #define REMOTE_CONTROL_PERSISTENT       0x00100000
 
+/* Server earlyCapabilityFlags (2.2.1.4.2) */
+#define RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED 0x00000008
+
 /* Server Proprietary Certificate (2.2.1.4.3.1.1) */
 /* TODO: to be renamed */
 #define SEC_TAG_PUBKEY                 0x0006 /* BB_RSA_KEY_BLOB */
