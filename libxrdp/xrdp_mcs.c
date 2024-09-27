@@ -794,6 +794,40 @@ xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
               max_channels, max_users, max_tokens, max_pdu_size);
     return 0;
 }
+
+/*****************************************************************************/
+/*
+ * Output a TS_UD_SC_CORE struct ([MS-RDPBCGR] 2.2.1.4.2)
+ */
+static void
+out_server_core_data(struct xrdp_sec *self, struct stream *s)
+{
+    unsigned int version = 0x00080004;
+    unsigned int client_requested_protocols = 0;
+    unsigned int early_capability_flags = RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED;
+
+    if (self->mcs_layer->iso_layer->rdpNegData)
+    {
+        client_requested_protocols =
+            self->mcs_layer->iso_layer->requestedProtocol;
+    }
+
+    /* [MS-RDPBCGR] TS_UD_HEADER */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
+              "type 0x%4.4x, length %d", SEC_TAG_SRV_INFO, 16);
+    out_uint16_le(s, SEC_TAG_SRV_INFO); /* type */
+    out_uint16_le(s, 16); /* length */
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
+              "version 0x%8.8x clientRequestedProtocols 0x%8.8x "
+              "earlyCapabilityFlags 0x%8.8x",
+              version, client_requested_protocols,
+              early_capability_flags);
+    out_uint32_le(s, version);
+    out_uint32_le(s, client_requested_protocols);
+    out_uint32_le(s, early_capability_flags);
+}
+
 /*****************************************************************************/
 /* Write an [ITU-T T.124] ConnectData (ALIGNED variant of BASIC-PER) message
  * with ConnectGCCPDU, ConferenceCreateResponse,
@@ -872,36 +906,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8s(s, 2);
     ud_ptr = s->p; /* User Data */
 
-    /* [MS-RDPBCGR] TS_UD_HEADER */
-    out_uint16_le(s, SEC_TAG_SRV_INFO); /* type */
-    if (self->mcs_layer->iso_layer->rdpNegData)
-    {
-        out_uint16_le(s, 12); /* length */
-    }
-    else
-    {
-        out_uint16_le(s, 8); /* length */
-    }
-    /* [MS-RDPBCGR] TS_UD_SC_CORE */
-    out_uint8(s, 4); /* version (0x00080004 = rdp5, 0x00080001 = rdp4) */
-    out_uint8(s, 0);
-    out_uint8(s, 8);
-    out_uint8(s, 0); /* version (last byte) */
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
-              "type 0x%4.4x, length %d",
-              SEC_TAG_SRV_INFO,
-              self->mcs_layer->iso_layer->rdpNegData ? 12 : 8);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
-              "<Required fields> version 0x%8.8x", 0x00080004);
-    if (self->mcs_layer->iso_layer->rdpNegData)
-    {
-        /* RequestedProtocol */
-        out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol); /* clientRequestedProtocols */
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
-                  "<Optional fields> clientRequestedProtocols 0x%8.8x",
-                  self->mcs_layer->iso_layer->requestedProtocol);
-    }
-
+    out_server_core_data(self, s);
 
     /* [MS-RDPBCGR] TS_UD_HEADER */
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS); /* type */
