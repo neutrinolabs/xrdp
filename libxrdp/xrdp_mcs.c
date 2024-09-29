@@ -1129,11 +1129,20 @@ handle_channel_join_requests(struct xrdp_mcs *self,
                              struct stream *s, int *appid)
 {
     int rv = 0;
-    /*
-     * Expect a channel join request PDU for each of the static virtual
-     * channels, plus the user channel (self->chanid) and the I/O channel
-     * (MCS_GLOBAL_CHANNEL) */
-    unsigned int expected_join_count = self->channel_list->count + 2;
+    unsigned int expected_join_count = 0;
+    if ((self->sec_layer->rdp_layer->client_info.mcs_early_capability_flags &
+            RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN) == 0)
+    {
+        /*
+         * The client has indicated it does not support skipping channel
+         * join request/confirm PDUs.
+         *
+         * Expect a channel join request PDU for each of the static
+         * virtual channels, plus the user channel (self->chanid) and
+         * the I/O channel (MCS_GLOBAL_CHANNEL) */
+        expected_join_count = self->channel_list->count + 2;
+    }
+
     unsigned int actual_join_count = 0;
 
     while (*appid == MCS_CJRQ)
