@@ -325,15 +325,14 @@ extern struct config_chansrv *g_cfg; /* in chansrv.c */
 static struct list *g_req_list = 0;
 static struct xfs_fs *g_xfs;                 /* an inst of xrdp file system */
 static ino_t g_clipboard_inum;               /* inode of clipboard dir      */
-static char *g_mount_point = 0;              /* our FUSE mount point        */
 static struct fuse_lowlevel_ops g_xfuse_ops; /* setup FUSE callbacks        */
 static int g_xfuse_inited = 0;               /* true when FUSE is inited    */
-static struct fuse_chan *g_ch = 0;
 static struct fuse_session *g_se = 0;
-static char *g_buffer = 0;
-static int g_fd = 0;
-static tintptr g_bufsize = 0;
-
+// For the below, see the source for the fuse_session_loop() function
+static struct fuse_buf g_buffer =
+{
+    .mem = NULL
+};
 
 /* forward declarations for internal access */
 static int xfuse_init_xrdp_fs(void);
@@ -362,7 +361,8 @@ static void xfuse_cb_unlink(fuse_req_t req, fuse_ino_t parent,
 
 static void xfuse_cb_rename(fuse_req_t req,
                             fuse_ino_t old_parent, const char *old_name,
-                            fuse_ino_t new_parent, const char *new_name);
+                            fuse_ino_t new_parent, const char *new_name,
+                            unsigned int flags);
 
 /* Whether to create a dir of file depends on whether S_IFDIR is set in the
    mode field */
@@ -496,9 +496,9 @@ xfuse_init(void)
         return 1;
     }
 
-    if (g_ch != 0)
+    if (g_se != 0)
     {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "g_ch is not zero");
+        LOG_DEVEL(LOG_LEVEL_ERROR, "g_se is not zero");
         return -1;
     }
 
@@ -604,15 +604,18 @@ xfuse_init(void)
     g_xfuse_ops.releasedir  = xfuse_cb_releasedir;
 
     fuse_opt_add_arg(&args, "xrdp-chansrv");
-    fuse_opt_add_arg(&args, g_fuse_root_path);
+    fuse_opt_add_arg(&args, "-o");
+    fuse_opt_add_arg(&args, "fsname=xrdp-chansrv");
     //fuse_opt_add_arg(&args, "-s"); /* single threaded mode */
     //fuse_opt_add_arg(&args, "-d"); /* debug mode           */
 
     if (xfuse_init_lib(&args))
     {
+        fuse_opt_free_args(&args);
         xfuse_deinit();
         return -1;
     }
+    fuse_opt_free_args(&args);
 
     g_xfuse_inited = 1;
     return 0;
@@ -627,30 +630,18 @@ xfuse_init(void)
 int
 xfuse_deinit(void)
 {
-    if (g_ch != 0)
+    if (g_se != NULL)
     {
-        fuse_session_remove_chan(g_ch);
-        fuse_unmount(g_mount_point, g_ch);
-        g_ch = 0;
-    }
-
-    if (g_se != 0)
-    {
+        fuse_session_unmount(g_se);
         fuse_session_destroy(g_se);
-        g_se = 0;
+        g_se = NULL;
     }
 
-    if (g_buffer != 0)
-    {
-        g_free(g_buffer);
-        g_buffer = 0;
-    }
+    free(g_buffer.mem);
+    g_buffer.mem = NULL;
 
-    if (g_req_list != 0)
-    {
-        list_delete(g_req_list);
-        g_req_list = 0;
-    }
+    list_delete(g_req_list);
+    g_req_list = 0;
 
     xfuse_deinit_xrdp_fs();
 
@@ -665,35 +656,28 @@ xfuse_deinit(void)
  *****************************************************************************/
 int xfuse_check_wait_objs(void)
 {
-    struct fuse_chan *tmpch;
-    int               rval;
-
-    if (g_ch == 0)
+    if (g_se != NULL)
     {
-        return 0;
-    }
-
-    if (g_sck_can_recv(g_fd, 0))
-    {
-        tmpch = g_ch;
-
-        rval = fuse_chan_recv(&tmpch, g_buffer, g_bufsize);
-        if (rval == -EINTR)
+        if (g_sck_can_recv(fuse_session_fd(g_se), 0))
         {
-            return -1;
-        }
+            int rval = fuse_session_receive_buf(g_se, &g_buffer);
+            if (rval == -EINTR)
+            {
+                return -1;
+            }
 
-        if (rval == -ENODEV)
-        {
-            return -1;
-        }
+            if (rval == -ENODEV)
+            {
+                return -1;
+            }
 
-        if (rval <= 0)
-        {
-            return -1;
-        }
+            if (rval <= 0)
+            {
+                return -1;
+            }
 
-        fuse_session_process(g_se, g_buffer, rval, tmpch);
+            fuse_session_process_buf(g_se, &g_buffer);
+        }
     }
 
     return 0;
@@ -707,17 +691,11 @@ int xfuse_check_wait_objs(void)
 
 int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
-    int lcount;
-
-    if (g_ch == 0)
+    if (g_se != NULL)
     {
-        return 0;
+        objs[*count] = fuse_session_fd(g_se);
+        ++(*count);
     }
-
-    lcount = *count;
-    objs[lcount] = g_fd;
-    lcount++;
-    *count = lcount;
 
     return 0;
 }
@@ -894,6 +872,48 @@ int xfuse_file_contents_size(int stream_id, int file_size)
 **                                                                          **
 *****************************************************************************/
 
+/*****************************************************************************/
+/**
+ * FUSE logging function
+ *
+ * Used to get errors from FUSE for the log file
+ * @param fuse_log_level Logging level understood by FUSE
+ * @param fmt Logging format string
+ * @param ap Arguments for above
+ */
+static void
+xfuse_log_func(enum fuse_log_level fuse_log_level, const char *fmt, va_list ap)
+{
+    char msg[512];
+    enum logLevels level;
+    switch (fuse_log_level)
+    {
+        case FUSE_LOG_ERR:
+            level = LOG_LEVEL_ERROR;
+            break;
+
+        case FUSE_LOG_WARNING:
+            level = LOG_LEVEL_WARNING;
+            break;
+
+        case FUSE_LOG_NOTICE:
+        case FUSE_LOG_INFO:
+            level = LOG_LEVEL_INFO;
+            break;
+
+        case FUSE_LOG_DEBUG:
+            level = LOG_LEVEL_DEBUG;
+            break;
+
+        default:
+            level = LOG_LEVEL_ALWAYS;
+            break;
+    }
+
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    LOG(level, "%s", msg);
+}
+
 /**
  * Initialize FUSE library
  *
@@ -902,43 +922,30 @@ int xfuse_file_contents_size(int stream_id, int file_size)
 
 static int xfuse_init_lib(struct fuse_args *args)
 {
-    if (fuse_parse_cmdline(args, &g_mount_point, 0, 0) < 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "fuse_parse_cmdline() failed");
-        fuse_opt_free_args(args);
-        return -1;
-    }
+    int rv = -1;
+    fuse_set_log_func(xfuse_log_func);
 
-    if ((g_ch = fuse_mount(g_mount_point, args)) == 0)
+    g_se = fuse_session_new(args, &g_xfuse_ops, sizeof(g_xfuse_ops), 0);
+    if (g_se == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "fuse_session_new() failed");
+    }
+    else if (fuse_session_mount(g_se, g_fuse_root_path) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "FUSE mount on %s failed."
             " If %s is already mounted, you must first unmount it",
-            g_mount_point, g_mount_point);
-        fuse_opt_free_args(args);
-        return -1;
+            g_fuse_root_path, g_fuse_root_path);
+        fuse_session_destroy(g_se);
+        g_se = NULL;
     }
-
-    g_se = fuse_lowlevel_new(args, &g_xfuse_ops, sizeof(g_xfuse_ops), 0);
-    if (g_se == 0)
+    else
     {
-        LOG(LOG_LEVEL_ERROR, "fuse_lowlevel_new() failed");
-        fuse_unmount(g_mount_point, g_ch);
-        g_ch = 0;
-        fuse_opt_free_args(args);
-        return -1;
+        g_req_list = list_create();
+        g_req_list->auto_free = 1;
+        rv = 0;
     }
 
-    fuse_opt_free_args(args);
-    fuse_session_add_chan(g_se, g_ch);
-    g_bufsize = fuse_chan_bufsize(g_ch);
-
-    g_buffer = g_new0(char, g_bufsize);
-    g_fd = fuse_chan_fd(g_ch);
-
-    g_req_list = list_create();
-    g_req_list->auto_free = 1;
-
-    return 0;
+    return rv;
 }
 
 /**
@@ -1934,7 +1941,8 @@ static void xfuse_cb_unlink(fuse_req_t req, fuse_ino_t parent,
 
 static void xfuse_cb_rename(fuse_req_t req,
                             fuse_ino_t old_parent, const char *old_name,
-                            fuse_ino_t new_parent, const char *new_name)
+                            fuse_ino_t new_parent, const char *new_name,
+                            unsigned int flags)
 {
     XFS_INODE *old_xinode;
     XFS_INODE *new_parent_xinode;
@@ -1942,8 +1950,13 @@ static void xfuse_cb_rename(fuse_req_t req,
     LOG_DEVEL(LOG_LEVEL_DEBUG, "entered: old_parent=%ld old_name=%s new_parent=%ld new_name=%s",
               old_parent, old_name, new_parent, new_name);
 
-    if (strlen(old_name) > XFS_MAXFILENAMELEN ||
-            strlen(new_name) > XFS_MAXFILENAMELEN)
+    // renameat2() flags (in stdio.h) are not supported
+    if (flags != 0)
+    {
+        fuse_reply_err(req, EINVAL);
+    }
+    else if (strlen(old_name) > XFS_MAXFILENAMELEN ||
+             strlen(new_name) > XFS_MAXFILENAMELEN)
     {
         fuse_reply_err(req, ENAMETOOLONG);
     }
