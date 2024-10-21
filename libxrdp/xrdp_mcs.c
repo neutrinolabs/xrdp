@@ -29,8 +29,8 @@
 
 /* Forward references */
 static int
-handle_non_tls_client_channel_join_requests(struct xrdp_mcs *self,
-        struct stream *s, int *appid);
+handle_channel_join_requests(struct xrdp_mcs *self,
+                             struct stream *s, int *appid);
 
 /*****************************************************************************/
 struct xrdp_mcs *
@@ -178,7 +178,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
     if (self->expecting_channel_join_requests)
     {
-        if (handle_non_tls_client_channel_join_requests(self, s, &appid) != 0)
+        if (handle_channel_join_requests(self, s, &appid) != 0)
         {
             return 1;
         }
@@ -703,85 +703,6 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
 }
 
 /*****************************************************************************/
-/* Processes a [ITU-T T.25] DomainMCSPDU with type ChannelJoinRequest
- *
- * Note: a parsing example can be found in [MS-RDPBCGR] 4.1.8.1.1
- *
- * returns error */
-static int
-xrdp_mcs_recv_cjrq(struct xrdp_mcs *self, int *channel_id)
-{
-    int opcode;
-    struct stream *s;
-    int initiator;
-
-    s = libxrdp_force_read(self->iso_layer->trans);
-    if (s == 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.25] ChannelJoinRequest failed");
-        return 1;
-    }
-
-    if (xrdp_iso_recv(self->iso_layer, s) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.25] ChannelJoinRequest failed");
-        return 1;
-    }
-
-    if (!s_check_rem_and_log(s, 1, "Parsing [ITU-T T.125] DomainMCSPDU"))
-    {
-        return 1;
-    }
-
-    in_uint8(s, opcode);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] DomainMCSPDU "
-              "choice index %d (ChannelJoinRequest)", (opcode >> 2));
-
-    if ((opcode >> 2) != MCS_CJRQ)
-    {
-        LOG(LOG_LEVEL_ERROR, "Parsed [ITU-T T.125] DomainMCSPDU choice index "
-            "expected %d, received %d", MCS_CJRQ, (opcode >> 2));
-        return 1;
-    }
-
-    if (!s_check_rem_and_log(s, 4, "Parsing [ITU-T T.125] ChannelJoinRequest"))
-    {
-        return 1;
-    }
-
-    in_uint16_be(s, initiator);
-    in_uint16_be(s, *channel_id);
-
-    /*
-     * [MS-RDPBCGR] 2.2.1.8 says that the mcsAUrq field is 5 bytes (which have
-     * already been read into the opcode and other fields), so the nonStandard
-     * field should never be present.
-     */
-    if (opcode & 2)
-    {
-        if (!s_check_rem_and_log(s, 2, "Parsing [ITU-T T.125] ChannelJoinRequest nonStandard"))
-        {
-            return 1;
-        }
-        in_uint8s(s, 2);  /* NonStandardParameter.key
-                             NonStandardParameter.data */
-    }
-
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Received [ITU-T T.125] ChannelJoinRequest "
-              "initiator %d, channelId %d, "
-              "nonStandard (%s)",
-              initiator, *channel_id,
-              (opcode & 2) ? "present" : "not present");
-
-    if (!s_check_end_and_log(s, "MCS protocol error [ITU-T T.125] ChannelJoinRequest"))
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
 /* Write the identifier and length of a [ITU-T X.690] BER (Basic Encoding Rules)
  * structure header.
  * returns error */
@@ -873,6 +794,40 @@ xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
               max_channels, max_users, max_tokens, max_pdu_size);
     return 0;
 }
+
+/*****************************************************************************/
+/*
+ * Output a TS_UD_SC_CORE struct ([MS-RDPBCGR] 2.2.1.4.2)
+ */
+static void
+out_server_core_data(struct xrdp_sec *self, struct stream *s)
+{
+    unsigned int version = 0x00080004;
+    unsigned int client_requested_protocols = 0;
+    unsigned int early_capability_flags = RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED;
+
+    if (self->mcs_layer->iso_layer->rdpNegData)
+    {
+        client_requested_protocols =
+            self->mcs_layer->iso_layer->requestedProtocol;
+    }
+
+    /* [MS-RDPBCGR] TS_UD_HEADER */
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
+              "type 0x%4.4x, length %d", SEC_TAG_SRV_INFO, 16);
+    out_uint16_le(s, SEC_TAG_SRV_INFO); /* type */
+    out_uint16_le(s, 16); /* length */
+
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
+              "version 0x%8.8x clientRequestedProtocols 0x%8.8x "
+              "earlyCapabilityFlags 0x%8.8x",
+              version, client_requested_protocols,
+              early_capability_flags);
+    out_uint32_le(s, version);
+    out_uint32_le(s, client_requested_protocols);
+    out_uint32_le(s, early_capability_flags);
+}
+
 /*****************************************************************************/
 /* Write an [ITU-T T.124] ConnectData (ALIGNED variant of BASIC-PER) message
  * with ConnectGCCPDU, ConferenceCreateResponse,
@@ -951,36 +906,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8s(s, 2);
     ud_ptr = s->p; /* User Data */
 
-    /* [MS-RDPBCGR] TS_UD_HEADER */
-    out_uint16_le(s, SEC_TAG_SRV_INFO); /* type */
-    if (self->mcs_layer->iso_layer->rdpNegData)
-    {
-        out_uint16_le(s, 12); /* length */
-    }
-    else
-    {
-        out_uint16_le(s, 8); /* length */
-    }
-    /* [MS-RDPBCGR] TS_UD_SC_CORE */
-    out_uint8(s, 4); /* version (0x00080004 = rdp5, 0x00080001 = rdp4) */
-    out_uint8(s, 0);
-    out_uint8(s, 8);
-    out_uint8(s, 0); /* version (last byte) */
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct header [MS-RDPBCGR] TS_UD_HEADER "
-              "type 0x%4.4x, length %d",
-              SEC_TAG_SRV_INFO,
-              self->mcs_layer->iso_layer->rdpNegData ? 12 : 8);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
-              "<Required fields> version 0x%8.8x", 0x00080004);
-    if (self->mcs_layer->iso_layer->rdpNegData)
-    {
-        /* RequestedProtocol */
-        out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol); /* clientRequestedProtocols */
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Adding struct [MS-RDPBCGR] TS_UD_SC_CORE "
-                  "<Optional fields> clientRequestedProtocols 0x%8.8x",
-                  self->mcs_layer->iso_layer->requestedProtocol);
-    }
-
+    out_server_core_data(self, s);
 
     /* [MS-RDPBCGR] TS_UD_HEADER */
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS); /* type */
@@ -1172,15 +1098,12 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 }
 
 /*****************************************************************************/
-/* Handle all client channel join requests for a non-TLS connection
+/* Handle all client channel join requests
  *
  * @param self MCS structure
  * @param s Input stream
  * @param[in,out] appid Type of the MCS PDU whose header has just been read.
  * @return 0 for success
- *
- * For non-TLS connections, the channel join MCS PDUs are followed by
- * another MCS PDU. This not the case for TLS connections.
  *
  * Called when an MCS PDU header has been read, but the PDU has not
  * been processed.
@@ -1190,19 +1113,38 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
  * the type of the next PDU is passed back to the caller for the caller
  * to process.
  *
- * In order to cater for older clients which may not conform exactly to
- * the specification, we simply take all the join requests which come in,
- * and respond to them.
+ * We simply take all the join requests which come in,
+ * and respond to them. We do this for a number of reasons:-
  *
- * See :-
- * - https://github.com/neutrinolabs/xrdp/issues/2166
- * - [MS-RDPBCGR] 3.2.5.3.8 and 3.2.5.3.8
+ * 1) Older clients may not issue exactly the documented number of
+ *    channel join requests. See
+ *    https://github.com/neutrinolabs/xrdp/issues/2166
+ * 2) If we set RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED in our early capabilities
+ *    flags, and the client sets RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN, the
+ *    client can still send channel join requests and be compliant with the
+ *    spec. See [MS-RDPCCGR] 3.2.5.3.8.
  */
 static int
-handle_non_tls_client_channel_join_requests(struct xrdp_mcs *self,
-        struct stream *s, int *appid)
+handle_channel_join_requests(struct xrdp_mcs *self,
+                             struct stream *s, int *appid)
 {
     int rv = 0;
+    unsigned int expected_join_count = 0;
+    if ((self->sec_layer->rdp_layer->client_info.mcs_early_capability_flags &
+            RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN) == 0)
+    {
+        /*
+         * The client has indicated it does not support skipping channel
+         * join request/confirm PDUs.
+         *
+         * Expect a channel join request PDU for each of the static
+         * virtual channels, plus the user channel (self->chanid) and
+         * the I/O channel (MCS_GLOBAL_CHANNEL) */
+        expected_join_count = self->channel_list->count + 2;
+    }
+
+    unsigned int actual_join_count = 0;
+
     while (*appid == MCS_CJRQ)
     {
         int userid;
@@ -1220,6 +1162,7 @@ handle_non_tls_client_channel_join_requests(struct xrdp_mcs *self,
         LOG_DEVEL(LOG_LEVEL_TRACE,
                   "Received [ITU-T T.125] ChannelJoinRequest "
                   "initiator 0x%4.4x, channelId 0x%4.4x", userid, chanid);
+        ++actual_join_count;
 
         if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
         {
@@ -1242,53 +1185,11 @@ handle_non_tls_client_channel_join_requests(struct xrdp_mcs *self,
         }
     }
 
-    return rv;
-}
-
-/*****************************************************************************/
-/* Handle all client channel join requests for a TLS connection
- *
- * @param self MCS structure
- * @return 0 for success
- *
- * When were are about to negotiate a TLS connection, it is important that
- * we agree on the exact number of client join request / client join confirm
- * PDUs, so that we get the TLS 'client hello' message exactly when
- * expected.
- *
- * See [MS-RDPBCGR] 3.2.5.3.8 and 3.2.5.3.8
- */
-static int
-handle_tls_client_channel_join_requests(struct xrdp_mcs *self)
-{
-    int index;
-    int rv = 0;
-
-    static const char *tag = "[MCS Connection Sequence (TLS)]";
-    /*
-     * Expect a channel join request PDU for each of the static virtual
-     * channels, plus the user channel (self->chanid) and the I/O channel
-     * (MCS_GLOBAL_CHANNEL) */
-    for (index = 0; index < self->channel_list->count + 2; index++)
+    if (rv == 0 && expected_join_count != actual_join_count)
     {
-        int channel_id;
-        LOG(LOG_LEVEL_DEBUG, "%s receive channel join request", tag);
-        if (xrdp_mcs_recv_cjrq(self, &channel_id) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "%s receive channel join request failed", tag);
-            rv = 1;
-            break;
-        }
-
-        LOG(LOG_LEVEL_DEBUG, "%s send channel join confirm", tag);
-        if (xrdp_mcs_send_cjcf(self, self->userid, channel_id) != 0)
-        {
-            LOG(LOG_LEVEL_ERROR, "%s send channel join confirm failed", tag);
-            rv = 1;
-            break;
-        }
+        LOG(LOG_LEVEL_WARNING, "Expected %u channel join PDUs but got %u",
+            expected_join_count, actual_join_count);
     }
-
     return rv;
 }
 
@@ -1350,24 +1251,9 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
-    if (self->iso_layer->selectedProtocol > PROTOCOL_RDP)
-    {
-        /* TLS connection. Client and server have to agree on MCS channel
-         * join messages, and these have to be processed before the TLS
-         * client hello */
-        if (handle_tls_client_channel_join_requests(self) != 0)
-        {
-            return 1;
-        }
-
-        LOG(LOG_LEVEL_DEBUG, "[MCS Connection Sequence (TLS)] completed");
-    }
-    else
-    {
-        /* Non-TLS connection - channel joins handled in MCS PDU
-         * processing loop */
-        self->expecting_channel_join_requests = 1;
-    }
+    /* Tell the MCS PDU processing loop that (zere or more ) channel
+       join requests are expected at this point */
+    self->expecting_channel_join_requests = 1;
 
     return 0;
 }

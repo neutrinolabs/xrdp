@@ -80,6 +80,7 @@
 #define RNS_UD_CS_WANT_32BPP_SESSION         0x0002
 #define RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU 0x0040
 #define RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL 0x0100
+#define RNS_UD_CS_SUPPORT_SKIP_CHANNELJOIN   0x0800
 
 /* Client Core Data: connectionType  (2.2.1.3.2) */
 #define CONNECTION_TYPE_MODEM          0x01
@@ -135,6 +136,9 @@
 #define XR_CHANNEL_OPTION_COMPRESS      0x00400000
 #define XR_CHANNEL_OPTION_SHOW_PROTOCOL 0x00200000
 #define REMOTE_CONTROL_PERSISTENT       0x00100000
+
+/* Server earlyCapabilityFlags (2.2.1.4.2) */
+#define RNS_UD_SC_SKIP_CHANNELJOIN_SUPPORTED 0x00000008
 
 /* Server Proprietary Certificate (2.2.1.4.3.1.1) */
 /* TODO: to be renamed */
