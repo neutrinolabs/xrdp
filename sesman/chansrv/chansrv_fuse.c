@@ -169,6 +169,15 @@ int xfuse_path_in_xfuse_fs(const char *path)
 #include "list.h"
 #include "file.h"
 
+/* Check for FUSE features we may wish to use
+ *
+ * Note that FUSE_VERSION might be more useful for some features than
+ * FUSE_USE_VERSION
+ */
+#if FUSE_VERSION >= FUSE_MAKE_VERSION(3,7)
+#define FUSE_SET_LOG_FUNC_AVAILABLE
+#endif
+
 #ifndef EREMOTEIO
 #define EREMOTEIO EIO
 #endif
@@ -881,6 +890,7 @@ int xfuse_file_contents_size(int stream_id, int file_size)
  * @param fmt Logging format string
  * @param ap Arguments for above
  */
+#ifdef FUSE_SET_LOG_FUNC_AVAILABLE
 static void
 xfuse_log_func(enum fuse_log_level fuse_log_level, const char *fmt, va_list ap)
 {
@@ -913,17 +923,20 @@ xfuse_log_func(enum fuse_log_level fuse_log_level, const char *fmt, va_list ap)
     vsnprintf(msg, sizeof(msg), fmt, ap);
     LOG(level, "%s", msg);
 }
+#endif //FUSE_SET_LOG_FUNC_AVAILABLE
 
 /**
  * Initialize FUSE library
  *
  * @return 0 on success, -1 on failure
  *****************************************************************************/
-
 static int xfuse_init_lib(struct fuse_args *args)
 {
     int rv = -1;
+
+#ifdef FUSE_SET_LOG_FUNC_AVAILABLE
     fuse_set_log_func(xfuse_log_func);
+#endif
 
     g_se = fuse_session_new(args, &g_xfuse_ops, sizeof(g_xfuse_ops), 0);
     if (g_se == NULL)
