@@ -8,6 +8,7 @@ body:
       value: |
         Before submitting a bug, read the [FAQ](https://github.com/neutrinolabs/xrdp/wiki/Tips-and-FAQ).
         **In particular, on systemd-based systems. make sure you are not logged in on the console as the same user you are trying to use for xrdp**
+        Please do not include links to images or videos on external websites. These are not guaranteed to always be available, and could be used to compromise web browsers.
   - type: input
     attributes:
       label: xrdp version
