@@ -650,6 +650,46 @@ scp_get_list_sessions_response(
 /*****************************************************************************/
 
 int
+scp_send_create_sockdir_request(struct trans *trans)
+{
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_CREATE_SOCKDIR_REQUEST,
+               NULL);
+}
+
+
+/*****************************************************************************/
+
+int
+scp_send_create_sockdir_response(struct trans *trans,
+                                 enum scp_create_sockdir_status status)
+{
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_CREATE_SOCKDIR_RESPONSE,
+               "i", status);
+}
+
+/*****************************************************************************/
+
+int
+scp_get_create_sockdir_response(struct trans *trans,
+                                enum scp_create_sockdir_status *status)
+{
+    int32_t i_status = 0;
+    int rv = libipm_msg_in_parse(trans, "i", &i_status);
+    if (rv == 0)
+    {
+        *status = (enum scp_create_sockdir_status)i_status;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+
+int
 scp_send_close_connection_request(struct trans *trans)
 {
     return libipm_msg_out_simple_send(

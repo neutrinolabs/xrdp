@@ -3010,28 +3010,60 @@ static int
 parse_chansrvport(const char *value, char *dest, int dest_size, int uid)
 {
     int rv = 0;
+    int dnum = 0;
 
     if (g_strncmp(value, "DISPLAY(", 8) == 0)
     {
         const char *p = value + 8;
         const char *end = p;
 
-        /* Check next chars are digits followed by ')' */
+        /* Check next chars are digits */
         while (isdigit(*end))
         {
             ++end;
         }
 
-        if (end == p || *end != ')')
+        if (end == p)
         {
-            LOG(LOG_LEVEL_WARNING, "Ignoring invalid chansrvport string '%s'",
+            LOG(LOG_LEVEL_WARNING,
+                "Ignoring chansrvport string with bad display number '%s'",
                 value);
-            rv = -1;
+            return -1;
         }
-        else
+
+        dnum = g_atoi(p);
+
+        if (*end == ',')
         {
-            g_snprintf(dest, dest_size, XRDP_CHANSRV_STR, uid, g_atoi(p));
+            /* User has specified a UID override
+             * Check next chars are digits */
+            p = end + 1;
+            end = p;
+
+            while (isdigit(*end))
+            {
+                ++end;
+            }
+
+            if (end == p)
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Ignoring chansrvport string with bad uid '%s'",
+                    value);
+                return -1;
+            }
+            uid = g_atoi(p);
         }
+
+        if (*end != ')')
+        {
+            LOG(LOG_LEVEL_WARNING,
+                "Ignoring badly-terminated chansrvport string '%s'",
+                value);
+            return -1;
+        }
+
+        g_snprintf(dest, dest_size, XRDP_CHANSRV_STR, uid, dnum);
     }
     else
     {
@@ -3310,13 +3342,14 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
             case MMCS_SESSION_LOGIN:
             {
                 // Finished with the gateway login
+                // Leave the UID set in case we need it for the chansrvport
+                // string
                 if (self->use_gw_login)
                 {
                     xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                                     "access control check was successful");
                     // No reply needed for this one
                     status = scp_send_logout_request(self->sesman_trans);
-                    self->uid = -1;
                 }
 
                 if (status == 0 && self->use_sesman)
@@ -3390,12 +3423,12 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                 {
                     char portbuff[XRDP_SOCKETS_MAXPATH];
 
-                    xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                                    "Connecting to chansrv");
                     if (self->use_sesman)
                     {
                         g_snprintf(portbuff, sizeof(portbuff),
                                    XRDP_CHANSRV_STR, self->uid, self->display);
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                        "Connecting to chansrv");
                     }
                     else
                     {
@@ -3404,6 +3437,9 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                         parse_chansrvport(cp, portbuff, sizeof(portbuff),
                                           self->uid);
 
+                        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                                        "Connecting to chansrv on %s",
+                                        portbuff);
                     }
                     xrdp_mm_update_allowed_channels(self);
                     xrdp_mm_chansrv_connect(self, portbuff);

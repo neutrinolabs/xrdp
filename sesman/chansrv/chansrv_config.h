@@ -23,6 +23,9 @@
 
 struct config_chansrv
 {
+    /** sesman listening port */
+    char *listen_port;
+
     /** Whether the FUSE mount is enabled or not */
     int enable_fuse_mount;
 

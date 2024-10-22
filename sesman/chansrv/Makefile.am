@@ -10,7 +10,8 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/sesman/libsesman \
-  -I$(top_srcdir)/common
+  -I$(top_srcdir)/common \
+  -I$(top_srcdir)/libipm
 
 CHANSRV_EXTRA_LIBS =
 
