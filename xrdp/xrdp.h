@@ -152,6 +152,8 @@ xrdp_wm_get_vis_region(struct xrdp_wm *self, struct xrdp_bitmap *bitmap,
 int
 xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y);
 int
+xrdp_wm_mouse_relative_move(struct xrdp_wm *self, int xDelta, int yDelta);
+int
 xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param);
 int
 xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down);

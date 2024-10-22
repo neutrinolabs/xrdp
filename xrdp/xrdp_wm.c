@@ -1253,6 +1253,26 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 }
 
 /*****************************************************************************/
+int
+xrdp_wm_mouse_relative_move(struct xrdp_wm *self, int xDelta, int yDelta)
+{
+    if (self == 0)
+    {
+        return 0;
+    }
+
+    if (self->mm->mod != 0) /* if screen is mod controlled */
+    {
+        if (self->mm->mod->mod_event != 0)
+        {
+            self->mm->mod->mod_event(self->mm->mod, WM_MOUSERELMOVE, xDelta, yDelta, 0, 0);
+        }
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
 static int
 xrdp_wm_clear_popup(struct xrdp_wm *self)
 {
@@ -1900,14 +1920,21 @@ xrdp_wm_pu(struct xrdp_wm *self, struct xrdp_bitmap *control)
 
 /*****************************************************************************/
 static int
-xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
-                            int x, int y)
+xrdp_wm_process_input_mouse_common(struct xrdp_wm *self, int device_flags,
+                                   int absolute, int x, int y)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "mouse event flags %4.4x x %d y %d", device_flags, x, y);
 
     if (device_flags & PTRFLAGS_MOVE)
     {
-        xrdp_wm_mouse_move(self, x, y);
+        if (absolute)
+        {
+            xrdp_wm_mouse_move(self, x, y);
+        }
+        else
+        {
+            xrdp_wm_mouse_relative_move(self, x, y);
+        }
     }
 
     if (device_flags & PTRFLAGS_BUTTON1)
@@ -2038,6 +2065,14 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 
 /*****************************************************************************/
 static int
+xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
+                            int x, int y)
+{
+    return xrdp_wm_process_input_mouse_common(self, device_flags, 1, x, y);
+}
+
+/*****************************************************************************/
+static int
 xrdp_wm_process_input_mousex(struct xrdp_wm *self, int device_flags,
                              int x, int y)
 {
@@ -2064,6 +2099,14 @@ xrdp_wm_process_input_mousex(struct xrdp_wm *self, int device_flags,
         }
     }
     return 0;
+}
+
+/*****************************************************************************/
+static int
+xrdp_wm_process_input_mouserel(struct xrdp_wm *self, int device_flags,
+                               int xDelta, int yDelta)
+{
+    return xrdp_wm_process_input_mouse_common(self, device_flags, 0, xDelta, yDelta);
 }
 
 /******************************************************************************/
@@ -2139,6 +2182,9 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
             break;
         case RDP_INPUT_MOUSEX:
             rv = xrdp_wm_process_input_mousex(wm, param3, param1, param2);
+            break;
+        case RDP_INPUT_MOUSEREL:
+            rv = xrdp_wm_process_input_mouserel(wm, param3, param1, param2);
             break;
         case 0x4444: /* invalidate, this is not from RDP_DATA_PDU_INPUT */
             /* like the rest, it's from RDP_PDU_DATA with code 33 */
