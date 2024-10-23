@@ -90,7 +90,7 @@ in
                 PACKAGES="$PACKAGES \
                     $PACKAGES_AMD64_MIN \
                     $LIBFREETYPE_DEV \
-                    libfuse-dev \
+                    libfuse3-dev \
                     libjpeg-dev \
                     libmp3lame-dev \
                     libfdk-aac-dev \
