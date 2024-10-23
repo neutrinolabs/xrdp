@@ -440,8 +440,8 @@ fi
 # checking for fuse
 if test "x$enable_fuse" = "xyes"
 then
-  PKG_CHECK_MODULES([FUSE], [fuse >= 2.6], [],
-    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])])
+  PKG_CHECK_MODULES([FUSE], [fuse3 >= 3.1.0], [],
+    [AC_MSG_ERROR([please install libfuse3-dev or fuse3-devel])])
 fi
 
 # checking for fdk aac
