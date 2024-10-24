@@ -74,6 +74,61 @@ log_to_stdout(const enum logLevels lvl, const char *msg, ...)
 }
 
 /***************************************************************************//**
+ * Reads the config values we need from the [Globals] section
+ *
+ * @param logmsg Function to use to log messages
+ * @param names List of definitions in the section
+ * @params values List of corresponding values for the names
+ * @params cfg Pointer to structure we're filling in
+ *
+ * @return 0 for success
+ */
+static int
+read_config_globals(log_func_t logmsg,
+                    struct list *names, struct list *values,
+                    struct config_chansrv *cfg)
+{
+    int error = 0;
+    int index;
+
+    for (index = 0; index < names->count; ++index)
+    {
+        const char *name = (const char *)list_get_item(names, index);
+        const char *value = (const char *)list_get_item(values, index);
+
+        char unrecognised[256];
+        if (g_strcasecmp(name, "ListenPort") == 0)
+        {
+            char *listen_port = strdup(value);
+            if (listen_port == NULL)
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Can't allocate config memory for ListenPort");
+            }
+            else
+            {
+                g_free(cfg->listen_port);
+                cfg->listen_port = listen_port;
+            }
+        }
+        if (g_strcasecmp(name, "RestrictInboundClipboard") == 0)
+        {
+            cfg->restrict_inbound_clipboard =
+                sesman_clip_restrict_string_to_bitmask(
+                    value, unrecognised, sizeof(unrecognised));
+            if (unrecognised[0] != '\0')
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Unrecognised tokens parsing 'RestrictInboundClipboard' %s",
+                    unrecognised);
+            }
+        }
+    }
+
+    return error;
+}
+
+/***************************************************************************//**
  * Reads the config values we need from the [Security] section
  *
  * @param logmsg Function to use to log messages
@@ -213,6 +268,7 @@ new_config(void)
     }
     else
     {
+        cfg->listen_port = NULL;
         cfg->enable_fuse_mount = DEFAULT_ENABLE_FUSE_MOUNT;
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
         cfg->restrict_inbound_clipboard = DEFAULT_RESTRICT_INBOUND_CLIPBOARD;
@@ -258,6 +314,11 @@ config_read(int use_logger, const char *sesman_ini)
             names->auto_free = 1;
             values->auto_free = 1;
 
+            if (!error && file_read_section(fd, "Globals", names, values) == 0)
+            {
+                error = read_config_globals(logmsg, names, values, cfg);
+            }
+
             if (!error && file_read_section(fd, "Security", names, values) == 0)
             {
                 error = read_config_security(logmsg, names, values, cfg);
@@ -288,9 +349,12 @@ config_read(int use_logger, const char *sesman_ini)
 void
 config_dump(struct config_chansrv *config)
 {
-    g_writeln("Global configuration:");
-
     char buf[256];
+
+    g_writeln("Global configuration:");
+    g_writeln("    xrdp-sesman ListenPort:    %s",
+              (config->listen_port) ? config->listen_port : "<default>");
+
     g_writeln("\nSecurity configuration:");
     sesman_clip_restrict_mask_to_string(
         config->restrict_outbound_clipboard,
@@ -319,6 +383,7 @@ config_free(struct config_chansrv *cc)
 {
     if (cc != NULL)
     {
+        g_free(cc->listen_port);
         g_free(cc->fuse_mount_name);
         g_free(cc);
     }

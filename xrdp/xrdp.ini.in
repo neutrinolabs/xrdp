@@ -255,10 +255,6 @@ port=-1
 ; Disable requested encodings to support buggy VNC servers
 ; (1 = ExtendedDesktopSize)
 #disabled_encodings_mask=0
-; Use this to connect to a chansrv instance created outside of sesman
-; (e.g. as part of an x11vnc console session). Replace '0' with the
-; display number of the session
-#chansrvport=DISPLAY(0)
 
 ; Generic VNC Proxy
 ; Tailor this to specific hosts and VNC instances by specifying an ip
@@ -273,6 +269,15 @@ password=ask
 #pamusername=asksame
 #pampassword=asksame
 #delay_ms=2000
+; Use one of these to connect to a chansrv instance created outside of sesman
+; (e.g. as part of an x11vnc console session). Replace 'n' with the
+; display number of the session, and (if applicable) 'u' with the numeric
+; UID of the session.
+;
+; If 'username' or 'pamusername' is set, you probably don't need to use
+; the two parameter variant with 'u'.
+#chansrvport=DISPLAY(n)
+#chansrvport=DISPLAY(n,u)
 
 ; Generic RDP proxy using NeutrinoRDP
 ; Tailor this to specific hosts by specifying an ip and port and setting

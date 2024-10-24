@@ -26,10 +26,13 @@
 #include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
-#include "tools_common.h"
+
+#include "scp.h"
+#include "scp_sync.h"
 
 #include <stdio.h>
 #include <unistd.h>
+
 
 char cmnd[257];
 char port[257];
@@ -89,25 +92,8 @@ int main(int argc, char **argv)
     }
     else
     {
-        enum scp_login_status  login_result;
-
         /* Log in as the current user */
-        if ((rv = scp_send_uds_login_request(t)) == 0 &&
-                (rv = wait_for_sesman_reply(t, E_SCP_LOGIN_RESPONSE)) == 0)
-        {
-            rv = scp_get_login_response(t, &login_result, NULL, NULL);
-            if (rv == 0)
-            {
-                if (login_result != E_SCP_LOGIN_OK)
-                {
-                    char msg[256];
-                    scp_login_status_to_str(login_result, msg, sizeof(msg));
-                    g_printf("Login failed; %s\n", msg);
-                    rv = 1;
-                }
-            }
-            scp_msg_in_reset(t); // Done with this message
-        }
+        rv = scp_sync_uds_login_request(t);
     }
 
     if (rv == 0)
@@ -169,48 +155,9 @@ print_session(const struct scp_session_info *s)
 static int
 cmndList(struct trans *t)
 {
-    struct list *sessions = list_create();
-    int end_of_list = 0;
-
-    enum scp_list_sessions_status status;
-    struct scp_session_info *p;
-
-    int rv = scp_send_list_sessions_request(t);
-
-    sessions->auto_free = 1;
-
-    while (rv == 0 && !end_of_list)
-    {
-        rv = wait_for_sesman_reply(t, E_SCP_LIST_SESSIONS_RESPONSE);
-        if (rv != 0)
-        {
-            break;
-        }
-
-        rv = scp_get_list_sessions_response(t, &status, &p);
-        if (rv != 0)
-        {
-            break;
-        }
-
-        switch (status)
-        {
-            case E_SCP_LS_SESSION_INFO:
-                list_add_item(sessions, (tintptr)p);
-                break;
-
-            case E_SCP_LS_END_OF_LIST:
-                end_of_list = 1;
-                break;
-
-            default:
-                printf("Unexpected return code %d\n", status);
-                rv = 1;
-        }
-        scp_msg_in_reset(t);
-    }
-
-    if (rv == 0)
+    int rv = 1;
+    struct list *sessions = scp_sync_list_sessions_request(t);
+    if (sessions != NULL)
     {
         if (sessions->count == 0)
         {
@@ -224,9 +171,10 @@ cmndList(struct trans *t)
                 print_session((struct scp_session_info *)sessions->items[i]);
             }
         }
+        (void)scp_send_close_connection_request(t);
+        list_delete(sessions);
     }
 
-    list_delete(sessions);
     return rv;
 }
 

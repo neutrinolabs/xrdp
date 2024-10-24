@@ -31,6 +31,8 @@
 #include "list.h"
 #include "log.h"
 
+#include "xrdp_sockets.h"
+
 enum SESMAN_CFG_SESS_POLICY_BITS
 {
     /* If these two are set, they override everything else */
@@ -182,7 +184,7 @@ struct config_sesman
      * @var listen_port
      * @brief Listening port
      */
-    char listen_port[256];
+    char listen_port[XRDP_SOCKETS_MAXPATH];
     /**
      * @var enable_user_wm
      * @brief Flag that enables user specific wm
