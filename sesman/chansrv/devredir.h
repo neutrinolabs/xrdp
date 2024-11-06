@@ -53,6 +53,7 @@ struct state_read;
 struct state_write;
 struct state_remove;
 struct state_close;
+struct state_statfs;
 
 /* called from FUSE module */
 
@@ -94,5 +95,8 @@ int devredir_file_rename(
 int
 devredir_rmdir_or_file(struct state_remove *fusep, tui32 device_id,
                        const char *path);
+
+int
+devredir_statfs(struct state_statfs *fusep, tui32 device_id, const char *path);
 
 #endif

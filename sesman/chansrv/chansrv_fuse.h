@@ -72,6 +72,8 @@ struct state_write;
 struct state_remove;
 struct state_rename;
 struct state_close;
+struct statvfs; // OS structure defined in <sys/statvfs.h>
+struct state_statfs;
 
 
 /* functions that are invoked from devredir */
@@ -113,6 +115,10 @@ void xfuse_devredir_cb_rename_file(struct state_rename *fip,
                                    enum NTSTATUS IoStatus);
 
 void xfuse_devredir_cb_file_close(struct state_close *fip);
+
+void xfuse_devredir_cb_statfs(struct state_statfs *fip,
+                              const struct statvfs *fss,
+                              enum NTSTATUS IoStatus);
 
 /*
  * Returns true if a filesystem path lies in the FUSE filesystem
