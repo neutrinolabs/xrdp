@@ -20,7 +20,13 @@
 #ifndef _CHANSRV_XFS
 #define _CHANSRV_XFS
 
-/* Skip this include if there's no FUSE */
+/* Maximum length of filename supported (in bytes).
+ * This is a sensible limit to a filename length. It is not used by
+ * this module to allocate long-lived storage, so it can be increased
+ * if necessary */
+#define XFS_MAXFILENAMELEN 1023
+
+/* Skip the rest of this include if there's no FUSE */
 #ifdef XRDP_FUSE
 
 #include <stddef.h>
@@ -28,12 +34,6 @@
 #include <time.h>
 
 #include "arch.h"
-
-/* Maximum length of filename supported (in bytes).
- * This is a sensible limit to a filename length. It is not used by
- * this module to allocate long-lived storage, so it can be increased
- * if necessary */
-#define XFS_MAXFILENAMELEN 1023
 
 /*
  * Incomplete types for the public interface

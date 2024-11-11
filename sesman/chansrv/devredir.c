@@ -1271,11 +1271,7 @@ devredir_proc_query_dir_response(IRP *irp,
 
             // Size the filename buffer so it's big enough for
             // storing the file in our filesystem if we need to.
-#ifdef XFS_MAXFILENAMELEN
             char  filename[XFS_MAXFILENAMELEN + 1];
-#else
-            char  filename[256];
-#endif
             tui64 LastAccessTime;
             tui64 LastWriteTime;
             tui64 EndOfFile;
@@ -2439,6 +2435,14 @@ devredir_proc_cid_statfs_resp(IRP *irp,
                 fss.f_blocks = TotalAllocationUnits;
                 fss.f_bfree = ActualAvailableAllocationUnits;
                 fss.f_bavail = CallerAvailableAllocationUnits;
+                // Following values do not seem to be needed by
+                // any applications. btrfs also returns 0 for these
+                //fss.f_files = ???;
+                //fss.f_ffree = ???;
+                //fss.f_favail = fss.f_ffree;
+                // Chromium 130 needs this set, or the user can't save
+                // to our filesystem
+                fss.f_namemax = XFS_MAXFILENAMELEN;
             }
         }
     }
