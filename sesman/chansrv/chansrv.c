@@ -1595,20 +1595,32 @@ get_log_path(char *path, int bytes)
     int rv;
 
     rv = 1;
-    log_path = g_getenv("CHANSRV_LOG_PATH");
-    if (log_path == 0)
+    if (g_cfg->log_file_path != NULL && g_cfg->log_file_path[0] != '\0')
     {
-        log_path = g_getenv("XDG_DATA_HOME");
-        if (log_path != 0)
+        char uidstr[64];
+        char username[64];
+        const struct info_string_tag map[] =
         {
-            g_snprintf(path, bytes, "%s%s", log_path, "/xrdp");
-            if (g_directory_exist(path) || (g_mkdir(path) == 0))
-            {
-                rv = 0;
-            }
+            {'u', uidstr},
+            {'U', username},
+            INFO_STRING_END_OF_LIST
+        };
+
+        int uid = g_getuid();
+        g_snprintf(uidstr, sizeof(uidstr), "%d", uid);
+        if (g_getlogin(username, sizeof(username)) != 0)
+        {
+            /* Fall back to UID */
+            g_strncpy(username, uidstr, sizeof(username) - 1);
+        }
+
+        (void)g_format_info_string(path, bytes, g_cfg->log_file_path, map);
+        if (g_directory_exist(path) || (g_mkdir(path) == 0))
+        {
+            rv = 0;
         }
     }
-    else
+    else if ((log_path = g_getenv("CHANSRV_LOG_PATH")) != 0)
     {
         g_snprintf(path, bytes, "%s", log_path);
         if (g_directory_exist(path) || (g_mkdir(path) == 0))
@@ -1616,6 +1628,16 @@ get_log_path(char *path, int bytes)
             rv = 0;
         }
     }
+    else if ((log_path = g_getenv("XDG_DATA_HOME")) != 0)
+    {
+        g_snprintf(path, bytes, "%s%s", log_path, "/xrdp");
+        if (g_directory_exist(path) || (g_mkdir(path) == 0))
+        {
+            rv = 0;
+        }
+    }
+
+    // Always fall back to the home directory
     if (rv != 0)
     {
         log_path = g_getenv("HOME");
@@ -1731,14 +1753,6 @@ main(int argc, char **argv)
     g_init("xrdp-chansrv"); /* os_calls */
     g_memset(g_drdynvcs, 0, sizeof(g_drdynvcs));
 
-    log_path[255] = 0;
-    if (get_log_path(log_path, 255) != 0)
-    {
-        g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
-        main_cleanup();
-        return 1;
-    }
-
     display_text = g_getenv("DISPLAY");
     if (display_text == NULL)
     {
@@ -1764,6 +1778,13 @@ main(int argc, char **argv)
         return 1;
     }
     config_dump(g_cfg);
+
+    if (get_log_path(log_path, sizeof(log_path)) != 0)
+    {
+        g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
+        main_cleanup();
+        return 1;
+    }
 
     pid = g_getpid();
 

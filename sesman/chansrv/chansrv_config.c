@@ -46,6 +46,7 @@
 #define DEFAULT_NUM_SILENT_FRAMES_AAC       4
 #define DEFAULT_NUM_SILENT_FRAMES_MP3       2
 #define DEFAULT_MSEC_DO_NOT_SEND            1000
+#define DEFAULT_LOG_FILE_PATH               ""
 /**
  * Type used for passing a logging function about
  */
@@ -243,6 +244,17 @@ read_config_chansrv(log_func_t logmsg,
         {
             cfg->msec_do_not_send = strtoul(value, NULL, 0);
         }
+        else if (g_strcasecmp(name, "LogFilePath") == 0)
+        {
+            g_free(cfg->log_file_path);
+            cfg->log_file_path = g_strdup(value);
+            if (cfg->log_file_path == NULL)
+            {
+                logmsg(LOG_LEVEL_ERROR, "Can't alloc LogFilePath");
+                error = 1;
+                break;
+            }
+        }
     }
 
     return error;
@@ -259,9 +271,11 @@ new_config(void)
     /* Do all the allocations at the beginning, then check them together */
     struct config_chansrv *cfg = g_new0(struct config_chansrv, 1);
     char *fuse_mount_name = g_strdup(DEFAULT_FUSE_MOUNT_NAME);
-    if (cfg == NULL || fuse_mount_name == NULL)
+    char *log_file_path = g_strdup(DEFAULT_LOG_FILE_PATH);
+    if (cfg == NULL || fuse_mount_name == NULL || log_file_path == NULL)
     {
         /* At least one memory allocation failed */
+        g_free(log_file_path);
         g_free(fuse_mount_name);
         g_free(cfg);
         cfg = NULL;
@@ -279,6 +293,7 @@ new_config(void)
         cfg->num_silent_frames_aac = DEFAULT_NUM_SILENT_FRAMES_AAC;
         cfg->num_silent_frames_mp3 = DEFAULT_NUM_SILENT_FRAMES_MP3;
         cfg->msec_do_not_send = DEFAULT_MSEC_DO_NOT_SEND;
+        cfg->log_file_path = log_file_path;
     }
 
     return cfg;
@@ -375,6 +390,8 @@ config_dump(struct config_chansrv *config)
     g_writeln("    FileMask:                  0%o", config->file_umask);
     g_writeln("    Nautilus 3 Flist Format:   %s",
               g_bool2text(config->use_nautilus3_flist_format));
+    g_writeln("    LogFilePath            :   %s",
+              (config->log_file_path) ? config->log_file_path : "<default>");
 }
 
 /******************************************************************************/
@@ -385,6 +402,7 @@ config_free(struct config_chansrv *cc)
     {
         g_free(cc->listen_port);
         g_free(cc->fuse_mount_name);
+        g_free(cc->log_file_path);
         g_free(cc);
     }
 }

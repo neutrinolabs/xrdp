@@ -191,6 +191,11 @@ FileUmask=077
 #SoundNumSilentFramesAAC=4
 #SoundNumSilentFramesMP3=2
 #SoundMsecDoNotSend=1000
+; Log file path
+; Set this to move the log file away from its default location. You may want
+; to do this for (e.g.) NFS-mounted home directories
+; See sesman.ini(5) for the format of this parameter
+#LogFilePath=/run/user/%u/xrdp
 
 [ChansrvLogging]
 ; Note: one log file is created per display and the LogFile config value

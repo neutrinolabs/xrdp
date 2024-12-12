@@ -409,6 +409,28 @@ Sets the duration(msec). Sound data is not send to client during \fInumber\fR
 millisecond(s) after close message is sent, when AAC/MP3 is selected.
 If set to 0, all the data is sent. If not specified, defaults to \fI1000\fR.
 
+.TP
+\fBLogFilePath\fR=\fIstring\fR
+Directory for storing the chansrv log file
+Created if it doesn't exist.
+If first character is not a '/', this is relative to $HOME.
+.P
+.RS
+The following substitutions are made in this string:-
+    %U - Username
+    %u - Numeric UID
+    %% - Percent character
+.P
+This is most useful if you are using NFS-mounted home directories, and
+wish to move the chansrv log file to the local disk.
+
+If this isn't specified, the log file is stored in one of the following
+locations :-
+    -   $CHANSRV_LOG_PATH
+    -   $XDG_DATA_HOME/xrdp
+    -   $HOME/.local/share/xrdp
+.RE
+
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as
 environment variables in the user's session.

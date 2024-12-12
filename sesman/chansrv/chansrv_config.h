@@ -50,6 +50,9 @@ struct config_chansrv
     unsigned int num_silent_frames_mp3;
     /** Do net send sound data afer SNDC_CLOSE is sent. unit is millisecond, setting from sesman.ini */
     unsigned int msec_do_not_send;
+
+    /** LogFilePath from sesman.ini */
+    char *log_file_path;
 };
 
 
