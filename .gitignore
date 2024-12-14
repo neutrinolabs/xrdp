@@ -54,6 +54,8 @@ tests/libxrdp/test_libxrdp
 tests/memtest/memtest
 tests/xrdp/test_xrdp
 tools/devel/tcp_proxy/tcp_proxy
+tools/chkpriv/xrdp-chkpriv
+tools/chkpriv/xrdp-droppriv
 *.trs
 waitforx/waitforx
 xrdp/xrdp

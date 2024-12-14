@@ -1,3 +1,4 @@
 
 SUBDIRS = \
+  chkpriv \
   devel

@@ -48,6 +48,7 @@ command="%%PREFIX%%/sbin/xrdp"
 allstart_cmd="xrdp_allstart"
 allstop_cmd="xrdp_allstop"
 allrestart_cmd="xrdp_allrestart"
+stop_postcmd="xrdp_poststop"
 
 xrdp_allstart()
 {
@@ -79,4 +80,10 @@ xrdp_allrestart()
     run_rc_command "restart"
 }
 
+xrdp_poststop()
+{
+    # If running with dropped privileges, xrdp can't delete its own
+    # PID file
+    rm -f %%LOCALSTATEDIR%%/run/xrdp.pid
+}
 run_rc_command "$1"
