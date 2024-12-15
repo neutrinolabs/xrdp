@@ -127,6 +127,11 @@ void xfuse_devredir_cb_rename_file(struct state_rename *fip,
 void xfuse_devredir_cb_file_close(struct state_close *fip)
 {}
 
+void xfuse_devredir_cb_statfs(struct state_statfs *fip,
+                              const struct statvfs *fss,
+                              enum NTSTATUS IoStatus)
+{}
+
 int xfuse_path_in_xfuse_fs(const char *path)
 {
     return 0;
@@ -294,6 +299,15 @@ struct state_close
     fuse_ino_t        inum;       /* inum of file to open               */
 };
 
+/*
+ * Record type used to maintain state when running a statfs
+ */
+struct state_statfs
+{
+    fuse_req_t        req;        /* Original FUSE request from statfs  */
+};
+
+
 struct xfuse_handle
 {
     tui32 DeviceId;
@@ -399,6 +413,8 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
 
 static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
                                 struct fuse_file_info *fi);
+
+static void xfuse_cb_statfs(fuse_req_t req, fuse_ino_t ino);
 
 /* miscellaneous functions */
 static void xfs_inode_to_fuse_entry_param(const XFS_INODE *xinode,
@@ -602,6 +618,7 @@ xfuse_init(void)
     g_xfuse_ops.setattr     = xfuse_cb_setattr;
     g_xfuse_ops.opendir     = xfuse_cb_opendir;
     g_xfuse_ops.releasedir  = xfuse_cb_releasedir;
+    g_xfuse_ops.statfs      = xfuse_cb_statfs;
 
     fuse_opt_add_arg(&args, "xrdp-chansrv");
     fuse_opt_add_arg(&args, g_fuse_root_path);
@@ -1546,6 +1563,26 @@ void xfuse_devredir_cb_file_close(struct state_close *fip)
 {
     fuse_reply_err(fip->req, 0);
     xfs_decrement_file_open_count(g_xfs, fip->inum);
+
+    free(fip);
+}
+
+void xfuse_devredir_cb_statfs(struct state_statfs *fip,
+                              const struct statvfs *fss,
+                              enum NTSTATUS IoStatus)
+{
+    int status;
+    if (IoStatus != STATUS_SUCCESS)
+    {
+        status =
+            (IoStatus == STATUS_ACCESS_DENIED) ? EACCES :
+            /* default */                        EIO ;
+        fuse_reply_err(fip->req, status);
+    }
+    else
+    {
+        fuse_reply_statfs(fip->req, fss);
+    }
 
     free(fip);
 }
@@ -2658,6 +2695,59 @@ static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
     xhandle->dir_handle = NULL;
     xfuse_handle_delete(xhandle);
     fuse_reply_err(req, 0);
+}
+
+/*****************************************************************************/
+static void xfuse_cb_statfs(fuse_req_t req, fuse_ino_t ino)
+{
+    XFS_INODE        *xinode;
+
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "entered: ino=%ld", ino);
+
+    if (!(xinode = xfs_get(g_xfs, ino)))
+    {
+        LOG_DEVEL(LOG_LEVEL_ERROR, "inode %ld is not valid", ino);
+        fuse_reply_err(req, ENOENT);
+    }
+    else if (!xinode->is_redirected)
+    {
+        /* specified file is a local resource */
+        struct statvfs vfs_stats = {0};
+        fuse_reply_statfs(req, &vfs_stats);
+    }
+    else
+    {
+        /* specified file resides on redirected share */
+
+        struct state_statfs *fip = g_new0(struct state_statfs, 1);
+        char *full_path = xfs_get_full_path(g_xfs, ino);
+        if (full_path == NULL || fip == NULL)
+        {
+            LOG_DEVEL(LOG_LEVEL_ERROR, "system out of memory");
+            fuse_reply_err(req, ENOMEM);
+            free(full_path);
+            free(fip);
+        }
+        else
+        {
+            const char      *cptr;
+            fip->req = req;
+
+            /* get devredir to statfs the filesystem for the file
+             *
+             * If this call succeeds, further request processing happens in
+             * xfuse_devredir_cb_statfs()
+             */
+            cptr = filename_on_device(full_path);
+            if (devredir_statfs(fip, xinode->device_id, cptr))
+            {
+                LOG_DEVEL(LOG_LEVEL_ERROR, "failed to send devredir_statfs() cmd");
+                fuse_reply_err(req, EREMOTEIO);
+                free(fip);
+            }
+            free(full_path);
+        }
+    }
 }
 
 /******************************************************************************

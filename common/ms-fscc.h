@@ -30,7 +30,7 @@
 /*
  * File information classes (section 2.4)
  */
-enum FS_INFORMATION_CLASS
+enum FILE_INFORMATION_CLASS
 {
     FileAllocationInformation    = 19,  /* Set */
     FileBasicInformation         = 4,  /* Query, Set */
@@ -51,6 +51,26 @@ enum FS_INFORMATION_CLASS
 #define FILE_BASIC_INFORMATION_SIZE 36
 #define FILE_STD_INFORMATION_SIZE 22
 #define FILE_END_OF_FILE_INFORMATION_SIZE 8
+
+/*
+ * File System information classes (section 2.5)
+ */
+enum FILE_SYSTEM_INFORMATION_CLASS
+{
+    FileFsVolumeInformation = 1,
+    FileFsSizeInformation = 3,
+    FileFsDeviceInformation = 4,
+    FileFsAttributeInformation = 5,
+    FileFsFullSizeInformation = 7
+};
+
+/*
+ * Size of structs above without trailing RESERVED fields (MS-RDPEFS
+ * 2.2.3.3.6)
+ */
+#define FILE_FS_SIZE_INFORMATION_SIZE 24
+#define FILE_FS_DEVICE_INFORMATION_SIZE 8
+#define FILE_FS_FULL_SIZE_INFORMATION_SIZE 32
 
 /* Windows file attributes (section 2.6) */
 #define W_FILE_ATTRIBUTE_DIRECTORY      0x00000010
