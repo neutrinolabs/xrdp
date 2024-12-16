@@ -51,7 +51,7 @@ struct config_chansrv
     /** Do net send sound data afer SNDC_CLOSE is sent. unit is millisecond, setting from sesman.ini */
     unsigned int msec_do_not_send;
 
-    /** LogFilePath from sesman.ini */
+    /** LogFilePath from sesman.ini ([ChansrvLogging]) */
     char *log_file_path;
 };
 

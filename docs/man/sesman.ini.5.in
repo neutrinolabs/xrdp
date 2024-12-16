@@ -98,7 +98,33 @@ stdout. Use for debugging only\fR
 
 It is ignored in the [ChansrvLogging] section
 since the channel server creates one log file per display and instead uses the
-following log file naming convention \fIxrdp-chansrv.${DISPLAY}.log\fR
+following log file naming convention \fIxrdp-chansrv.${DISPLAY}.log\fR. For
+details of the chansrv log file location, see \fBLogFilePath\fR.
+
+.TP
+\fBLogFilePath\fR=\fIstring\fR
+Directory for storing the chansrv log file. This setting only applies to
+chansrv. The sesman log file is always created in \fI@localstatedir@/log\fR.
+
+Created if it doesn't exist.
+If first character is not a '/', this is relative to $HOME, where
+chansrv is normally started.
+
+.RS
+The following substitutions are made in this string:-
+    %U - Username
+    %u - Numeric UID
+    %% - Percent character
+
+This is most useful if you are using NFS-mounted home directories, and
+wish to move the chansrv log file to the local disk.
+
+If this parameter isn't specified, the log file is stored in one of
+the following locations :-
+    -   $CHANSRV_LOG_PATH
+    -   $XDG_DATA_HOME/xrdp
+    -   $HOME/.local/share/xrdp
+.RE
 
 .TP
 \fBLogLevel\fR=\fIlevel\fR
@@ -408,28 +434,6 @@ If not specified, defaults to \fI2\fR.
 Sets the duration(msec). Sound data is not send to client during \fInumber\fR
 millisecond(s) after close message is sent, when AAC/MP3 is selected.
 If set to 0, all the data is sent. If not specified, defaults to \fI1000\fR.
-
-.TP
-\fBLogFilePath\fR=\fIstring\fR
-Directory for storing the chansrv log file
-Created if it doesn't exist.
-If first character is not a '/', this is relative to $HOME.
-.P
-.RS
-The following substitutions are made in this string:-
-    %U - Username
-    %u - Numeric UID
-    %% - Percent character
-.P
-This is most useful if you are using NFS-mounted home directories, and
-wish to move the chansrv log file to the local disk.
-
-If this isn't specified, the log file is stored in one of the following
-locations :-
-    -   $CHANSRV_LOG_PATH
-    -   $XDG_DATA_HOME/xrdp
-    -   $HOME/.local/share/xrdp
-.RE
 
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as

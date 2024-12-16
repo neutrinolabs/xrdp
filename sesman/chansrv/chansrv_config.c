@@ -244,7 +244,35 @@ read_config_chansrv(log_func_t logmsg,
         {
             cfg->msec_do_not_send = strtoul(value, NULL, 0);
         }
-        else if (g_strcasecmp(name, "LogFilePath") == 0)
+    }
+
+    return error;
+}
+
+/***************************************************************************//**
+ * Reads the config values we need from the [ChansrvLogging] section
+ *
+ * @param logmsg Function to use to log messages
+ * @param names List of definitions in the section
+ * @params values List of corresponding values for the names
+ * @params cfg Pointer to structure we're filling in
+ *
+ * @return 0 for success
+ */
+static int
+read_config_chansrv_logging(log_func_t logmsg,
+                            struct list *names, struct list *values,
+                            struct config_chansrv *cfg)
+{
+    int error = 0;
+    int index;
+
+    for (index = 0; index < names->count; ++index)
+    {
+        const char *name = (const char *)list_get_item(names, index);
+        const char *value = (const char *)list_get_item(values, index);
+
+        if (g_strcasecmp(name, "LogFilePath") == 0)
         {
             g_free(cfg->log_file_path);
             cfg->log_file_path = g_strdup(value);
@@ -344,6 +372,12 @@ config_read(int use_logger, const char *sesman_ini)
                 error = read_config_chansrv(logmsg, names, values, cfg);
             }
 
+            if (!error &&
+                    file_read_section(fd, "ChansrvLogging", names, values) == 0)
+            {
+                error = read_config_chansrv_logging(logmsg, names, values, cfg);
+            }
+
             list_delete(names);
             list_delete(values);
         }
@@ -391,7 +425,7 @@ config_dump(struct config_chansrv *config)
     g_writeln("    Nautilus 3 Flist Format:   %s",
               g_bool2text(config->use_nautilus3_flist_format));
     g_writeln("    LogFilePath            :   %s",
-              (config->log_file_path) ? config->log_file_path : "<default>");
+              (config->log_file_path[0]) ? config->log_file_path : "<default>");
 }
 
 /******************************************************************************/
