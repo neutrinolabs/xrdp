@@ -393,6 +393,18 @@ Either the first or second form of this setting is recommended. Replace
 required if \fBxrdp\fR is unable to determine the session uid from the
 other values in the connection block.
 
+.TP
+\fBh264_frame_interval\fR=\fI<integer>\fR
+[Xorg only] Specify frame capture interval for H.264 captures in milliseconds.
+
+.TP
+\fBrfx_frame_interval\fR=\fI<integer>\fR
+[Xorg only] Specify frame capture interval for RemoteFX captures in milliseconds.
+
+.TP
+\fBnormal_frame_interval\fR=\fI<integer>\fR
+[Xorg only] Specify frame capture interval for normal captures in milliseconds.
+
 .SH "EXAMPLES"
 This is an example \fBxrdp.ini\fR:
 
@@ -409,6 +421,9 @@ password=ask
 ip=127.0.0.1
 port=-1
 code=20
+h264_frame_interval=16
+rfx_frame_interval=32
+normal_frame_interval=40
 
 [vnc-any]
 name=vnc-any

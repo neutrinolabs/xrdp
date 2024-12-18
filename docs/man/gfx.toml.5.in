@@ -1,0 +1,182 @@
+.\"
+.TH "gfx.toml" "8" "@PACKAGE_VERSION@" "xrdp team" ""
+.SH "NAME"
+\fBgfx.toml\fR \- Configuration file for xrdp(8) graphics pipeline extension
+
+.SH "DESCRIPTION"
+
+This file configures the detailed settings of the Graphics Pipeline Extension
+for xrdp(8). The file format is TOML. See the link in the SEE ALSO section for
+TOML syntax.
+
+The file contains following sections:
+
+.TP
+\fB[codec]\fR \- configure preferred codec and encoders for \fBxrdp\fR(8).
+
+.TP
+\fB[x264]\fR \- parameters for x264 encoder.
+
+.TP
+\fB[OpenH264]\fR \- parameters for Cisco OpenH264 encoder.
+
+.LP
+All options and values are case-sensitive, with some exception, and are
+described in detail below.
+
+.SH "CODEC"
+\fB[codec]\fR section defines preferred codec order and encoder. The options
+to be specified in this section are the following:
+
+.TP
+\fBorder\fR = \fI<array>\fR
+Define the order in which codecs should be used, "H.264" and "RFX".
+Specify as an array of strings like \fB[ "H.264", "RFX ]\fR.
+Strings in the array are case-insensitive, while others are case-sensitive.
+
+.TP
+\fBh264_encoder\fR = \fI<string>\fR
+Specify a preferred H.264 encoder, \fB"x264"\fR or \fB"OpenH264"\fR.
+This parameter takes effect only when more than one encoder is
+enabled at compile time. If only one encoder is enabled, the encoder
+will be used regardless the value of this parameter. Defaults to \fB"x264"\fR
+if not specified or if an invlaid encoder is specified.  The encoder name is
+case-insensitive, while others are case-sensitive.
+
+.SH "X264"
+\fB[x264]\fR section defines encoding parameters that will be passed to
+x264 encoder. See \fBx264 --fullhelp\fR for the detailed explanations of the
+parameters. The options to be specified in this section are following:
+
+.TP
+\fBpreset\fR = \fI<string>\fR
+Select a preset encoding settings. Slower presets result in higher CPU usage
+but offer better screen image quality and require lower network bandwidth.
+Here are available presets:
+
+.B ultrafast, superfast, veryfast, faster, fast, medium, slow, slower,
+veryslow, placebo
+
+Presets slower than \fBmedium\fR may not suitable for use with xrdp.
+
+.TP
+\fBtune\fR = \fI<string>\fR
+Select a tune for source or situation. \fBzerolatency\fR is most appropriate
+for use with xrdp. Here are available options:
+
+.B film, grain, stillimage, psnr, ssim, fastdecode, zerolatency
+
+.TP
+\fBprofile\fR = \fI<string>\fR
+Select a profile.  Here are available options:
+
+.B main, baseline, high, high10, high422, high444
+
+.TP
+\fBvbv_max_bitrate\fR = \fI<integer>\fR
+Set the maximum fill rate for the VBV (Video Buffering Vefifier) buffer
+in kbps.
+
+.TP
+\fBvbv_buffer_size\fR = \fI<integer>\fR
+Set the size of the VBV buffer size in kilobits.
+
+.TP
+\fBfps_num\fR = \fI<integer>\fR
+Set the fps numerator. 
+
+.TP
+\fBfps_den\fR = \fI<integer>\fR
+Set the fps denominator.
+
+.SH "OPENH264"
+
+\fB[OpenH264]\fR section defines encoding parameters that will be passed to
+OpenH264 encoder. The options to be specified in this section are following:
+
+.TP
+\fBEnableFrameSkip\fR = \fI<boolean>\fR
+Allows the encoder to skip frames in order to keep the bitrate within the
+limits if it is about to exceed the maximum bitrate set by MaxBitrate.
+
+.TP
+\fBTargetBitrate\fR = \fI<integer>\fR
+Sets the target average bitrate (in bps) that the encoder will attempt to
+achieve throughout the encoding process.
+
+.TP
+\fBMaxBitrate\fR = \fI<integer>\fR
+Sets an upper limit of the bitrate in bps.
+.TP
+\fBMaxFrameRate\fR = \fI<float>\fR
+Sets the maximum frame rate that the encoder will process per second.
+
+.SH "CONNECTION TYPES"
+
+\fB[x264]\fR and \fB[OpenH264]\fR section are tables (also known as
+dictionaries) that have subtables with connection types in their keys.
+For exapmle, \fB[x264.lan]\fR, \fB[OpenH264.wan]\fR.
+
+You can configure different parameters such as bitrate for the encoder
+per connection type. Define the default parameter set first, this will be
+inherited to all connection types unless explicitly overridden in each
+connection type.
+
+List of available connection types are:
+
+.B lan, wan. broadband_high, satellite, broadband_low, modem, and default
+
+Currently, xrdp does not support connection type autodetection. If autodetect
+is selected on the client side, it will be treated as if LAN is selected.
+
+.SH "EXAMPLES"
+This is an example \fBgfx.toml\fR:
+
+.nf
+[codec]
+order = [ "H.264", "RFX" ]
+h264_encoder = "x264"
+
+[x264.default]
+preset = "ultrafast"
+tune = "zerolatency"
+profile = "main"     # profile is forced to baseline if preset == ultrafast
+vbv_max_bitrate = 0
+vbv_buffer_size = 0
+fps_num = 60
+fps_den = 1
+
+[x264.lan]
+# inherits default, everything is same with the default
+[x264.wan]
+# parameters that are not explicitly overridden inherit the default values
+preset = "veryfast"
+vbv_max_bitrate = 15_000
+vbv_buffer_size = 1_500
+.fi
+
+There are multiple ways to represent the data structure in TOML format. The
+following two representations are semantically equivalent but the latter is 
+discouraged due to concerns about complexity and readability.
+
+.nf
+[x264.default]
+preset = "ultrafast"
+tune = "zerolatency"
+.fi
+
+.nf
+x264 = { default = { preset = "ultrafast", tune="zerolatency" } }
+.fi
+
+.SH "SEE ALSO"
+
+For more information on \fBgfx.toml\fR configuration, see the wiki page.
+
+.UR https://github.com/neutrinolabs/xrdp/wiki/H.264-encoding
+.UE
+
+The syntax for TOML files can be found at the following page.
+
+.UR https://toml.io/en/v1.0.0
+.UE
