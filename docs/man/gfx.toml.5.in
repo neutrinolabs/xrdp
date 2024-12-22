@@ -38,10 +38,10 @@ Strings in the array are case-insensitive, while others are case-sensitive.
 \fBh264_encoder\fR = \fI<string>\fR
 Specify a preferred H.264 encoder, \fB"x264"\fR or \fB"OpenH264"\fR.
 This parameter takes effect only when more than one encoder is
-enabled at compile time. If only one encoder is enabled, the encoder
+enabled at compile time. If only one H.264 encoder is enabled, the encoder
 will be used regardless the value of this parameter. Defaults to \fB"x264"\fR
-if not specified or if an invlaid encoder is specified.  The encoder name is
-case-insensitive, while others are case-sensitive.
+if not specified or if an invalid encoder is specified. The encoder name is
+case-insensitive.
 
 .SH "X264"
 \fB[x264]\fR section defines encoding parameters that will be passed to
@@ -115,7 +115,7 @@ Sets the maximum frame rate that the encoder will process per second.
 
 \fB[x264]\fR and \fB[OpenH264]\fR section are tables (also known as
 dictionaries) that have subtables with connection types in their keys.
-For exapmle, \fB[x264.lan]\fR, \fB[OpenH264.wan]\fR.
+For example, \fB[x264.lan]\fR, \fB[OpenH264.wan]\fR.
 
 You can configure different parameters such as bitrate for the encoder
 per connection type. Define the default parameter set first, this will be
@@ -124,7 +124,7 @@ connection type.
 
 List of available connection types are:
 
-.B lan, wan. broadband_high, satellite, broadband_low, modem, and default
+.B lan, wan, broadband_high, satellite, broadband_low, modem, and default
 
 Currently, xrdp does not support connection type autodetection. If autodetect
 is selected on the client side, it will be treated as if LAN is selected.
