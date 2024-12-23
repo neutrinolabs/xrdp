@@ -23,7 +23,7 @@
 #include "config_ac.h"
 #endif
 
-#include "os_calls.c"
+#include "os_calls.h"
 #include "log.h"
 
 int main(int argc, char *argv[])
