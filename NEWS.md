@@ -1,3 +1,64 @@
+# Release notes for xrdp v0.10.2 (2024/12/24)
+
+## General announcements
+
+[Power Up Privacy](https://powerupprivacy.com/) and @CyberTrust sponsored H.264 encoding (mentioned later).  We greatly appreciate the sponsorship. 
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+## Highlights
+
+### H.264 encoding
+
+We’re very excited to announce that xrdp has supported H.264 encoding in graphics remoting since v0.10.2. xrdp with H.264 encoding reduces the amount of data transmitted over the network and provides a much smoother and more responsive experience compared to previous versions when using graphics-intensive applications.
+
+For details, see the [[H.264 encoding]] page on the wiki and also check the [[Known Issues|H.264 encoding#Known-Issues]] section.
+
+### Unprivileged xrdp daemon
+
+Since v0.10.2, xrdp officially supports running `xrdp` daemon as an unprivileged user. `xrdp-sesman` daemon still needs to be run as a privileged user because it handles user authentication and session management.
+
+Running `xrdp` daemon as an unprivileged user requires some adjustments, such as user/group and files/directory permissions. We have bundled a script named `xrdp-chkpriv` with xrdp to check if it is ready to run `xrdp` as an unprivileged user. The script is typically installed into `/usr/share/xrdp/xrdp-chkpriv`. See also the man page of `xrdp.ini` for more configuration information.
+
+## Security fixes
+None
+
+## New features
+* FUSE operations can now use direct I/O to bypass the block cache (#3260)
+* Supported clients can now skip channel join messages (#3282)
+* Frame capture interval (frame rate) can now be configured separately via xrdp for H.264 and RFX (neutrinolabs/xorgxrdp#347 #3317)
+* The statvfs system call is now supported on the FUSE filesystem (#3304)
+* A path can now be specified for the chansrv log file (#3344)
+* Add Czech keyboard (#3348 #3358)
+
+## Bug fixes
+* Redirector improvements. Removed some unnecessary limitations on filename lengths, and improved compatibility with FreeRDP (#3165 #3194). Special thanks to @tsz8899 for raising this and working with the team.
+* Fix misreported cache size (#3212)
+* Clarified Policy setting in sesman.ini (#3235)
+* Fixed a regression in support for non-resizeable VNC sessions (#3242)
+* A regression in chansrv functionality when used in standalone mode for VNC sessions has been fixed (#3283). This was introduced by the move to the v0.10.x sockets dir layout
+* Fix AltGr on Spanish keyboard (#3313)
+* The KDE Dolphin file manager can now save files to a mapped drive (#3300)
+* pam_limits.so is now included explicitly for Debian and derivatives (#3347)
+
+## Internal changes
+* CI version updates : cppcheck to v2.15.0 and astyle to 3.4.14 (#3232 #3309 #3314)
+* Remove xrdp_sec_in_mcs_data() function (#3273)
+
+## Changes for users
+
+* `xrdp.ini` has some new configuration parameters for H. 264 (#3317). When updating from v0.10.1 to v0.10.2, make sure to merge the new `xrdp.ini` with the old one.
+* If moving from v0.9.x, read the v0.10.0 release note.
+
+## Changes for packagers or developers
+
+* `xrdp.ini` and `sesman.ini` are now dynamically substituted during the build process (it was not working as intended before) (#3187 #3188)
+* Running xrdp daemon as an unprivileged user is now officially supported. It is optional but consider creating a user/group for `xrdp` daemon in the post-install script or an appropriate location.
+* The libfuse version required is now > 3.1.0 (#3284)
+* If moving from v0.9.x, read the v0.10.0 release note.
+
+-----------------------
+
 # Release notes for xrdp v0.10.1 (2024/07/31)
 
 ## General announcements
