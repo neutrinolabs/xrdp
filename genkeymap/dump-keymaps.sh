@@ -24,6 +24,10 @@ setxkbmap ${OLD_SETTINGS}
 setxkbmap -model pc105 -layout gb
 ./xrdp-genkeymap ../instfiles/km-00000809.ini
 
+# Czech 'cz' 0x00000405
+setxkbmap -model pc105 -layout cz
+./xrdp-genkeymap ../instfiles/km-00000405.ini
+
 # German 'de' 0x00000407
 setxkbmap -model pc104 -layout de
 ./xrdp-genkeymap ../instfiles/km-00000407.ini
