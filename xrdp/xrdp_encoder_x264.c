@@ -153,7 +153,7 @@ xrdp_encoder_x264_encode(void *handle, int session, int left, int top,
             x264_param_default_preset(&(xe->x264_params),
                                       xg->x264_param[ct].preset,
                                       xg->x264_param[ct].tune);
-            xe->x264_params.i_threads = 1;
+            xe->x264_params.i_threads = xg->x264_param[ct].threads;
             xe->x264_params.i_width = (width + 15) & ~15;
             xe->x264_params.i_height = (height + 15) & ~15;
             xe->x264_params.i_fps_num = xg->x264_param[ct].fps_num;
