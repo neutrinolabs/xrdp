@@ -2,7 +2,7 @@ EXTRA_DIST = \
   Doxyfile
 
 AM_CPPFLAGS = \
-  -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
+  -DXRDP_CFG_PATH=\"${sysconfdir}/${sysconfsubdir}\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_LIBEXEC_PATH=\"${libexecdir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
@@ -40,7 +40,7 @@ xrdp_sesman_LDADD = \
   $(top_builddir)/libipm/libipm.la \
   $(top_builddir)/common/libcommon.la
 
-sesmansysconfdir=$(sysconfdir)/xrdp
+sesmansysconfdir=$(sysconfdir)/$(sysconfsubdir)
 
 SUBST_VARS = sed \
    -e 's|@sesmansysconfdir[@]|$(sesmansysconfdir)|g'

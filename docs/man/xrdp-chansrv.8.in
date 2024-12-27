@@ -40,7 +40,7 @@ X11 display number. Must be specified.
 
 .SH FILES
 .TP
-.I @sysconfdir@/xrdp/sesman.ini
+.I @sysconfdir@/@sysconfsubdir@/sesman.ini
 Contains some settings for this program.
 .TP
 .I @socketdir@/xrdp_chansrv_socket_*

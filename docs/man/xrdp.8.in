@@ -57,7 +57,7 @@ to be used primarily for testing or for unusual configurations.
 .SH "FILES"
 @sbindir@/xrdp
 .br
-@sysconfdir@/xrdp/xrdp.ini
+@sysconfdir@/@sysconfsubdir@/xrdp.ini
 .br
 @localstatedir@/log/xrdp.log
 .br

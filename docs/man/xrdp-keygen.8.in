@@ -15,7 +15,7 @@ xrdp\-keygen \- xrdp RSA key generation utility
 
 .SH DESCRIPTION
 \fBxrdp\-keygen\fP generates the file
-.I @sysconfdir@/xrdp/rsakeys.ini
+.I @sysconfdir@/@sysconfsubdir@/rsakeys.ini
 which contains the RSA key pair used to perform authentication to
 remote clients. The public key is self-signed.
 
@@ -26,14 +26,14 @@ This program takes one of the following options:
 Generate a new key pair.
 The key data is stored in the file named \fIoutfile\fP.
 .br
-If \fBauto\fP is used as \fIoutfile\fP, the default file \fI@sysconfdir@/xrdp/rsakeys.ini\fP gets created if it does not yet exists.
+If \fBauto\fP is used as \fIoutfile\fP, the default file \fI@sysconfdir@/@sysconfsubdir@/rsakeys.ini\fP gets created if it does not yet exists.
 .TP
 .B test
 Generate a test key pair and print information to standard output.
 
 .SH FILES
 .TP
-.I @sysconfdir@/xrdp/rsakeys.ini
+.I @sysconfdir@/@sysconfsubdir@/rsakeys.ini
 RSA public and private key pair used to identify this XRDP server.
 
 .SH SEE ALSO

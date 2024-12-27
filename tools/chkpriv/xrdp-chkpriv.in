@@ -20,7 +20,7 @@
 # mode
 
 # Change these if they do not match your installation
-CONF_DIR=@sysconfdir@/xrdp
+CONF_DIR=@sysconfdir@/@sysconfsubdir@
 XRDP_INI="$CONF_DIR"/xrdp.ini
 SESMAN_INI="$CONF_DIR"/sesman.ini
 RSAKEYS_INI="$CONF_DIR"/rsakeys.ini

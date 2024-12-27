@@ -90,7 +90,7 @@ first. The \fBgnome\-terminal\fR utility probably won't work here.
 .br
 @bindir@/xrdp\-sesrun
 .br
-@sysconfdir@/xrdp/sesman.ini
+@sysconfdir@/@sysconfsubdir@/sesman.ini
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>
