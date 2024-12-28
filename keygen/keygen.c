@@ -463,7 +463,7 @@ key_gen(const char *path_and_file_name)
 static int
 key_gen_auto(void)
 {
-    return key_gen("/etc/xrdp/rsakeys.ini");
+    return key_gen(XRDP_CFG_PATH "/rsakeys.ini");
 }
 
 /*****************************************************************************/
