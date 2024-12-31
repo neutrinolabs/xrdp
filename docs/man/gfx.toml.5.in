@@ -94,8 +94,8 @@ Set the fps denominator.
 Specify how many CPU threads to use for H.264 encoding per screen (0 for
 auto). Carefully evaluate this value when configuring it to avoid exhausting
 the available threads. For example, if 3 users are connected simultaneously
-with dual screens, xrdp will use <threads> * 3 * 2 threads for H.264 encoding.
-Please also note that too many threads can hurt quality.
+with dual screens, xrdp may use up to <threads> * 3 * 2 threads for H.264
+encoding. Please also note that too many threads can hurt quality.
 
 .SH "OPENH264"
 
