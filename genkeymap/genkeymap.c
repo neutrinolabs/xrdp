@@ -78,7 +78,8 @@ int main(int argc, char **argv)
     if (argc != 2)
     {
         fprintf(stderr, "Usage: %s out_filename\n", programname);
-        fprintf(stderr, "Example: %s /etc/xrdp/km-00000409.ini\n", programname);
+        fprintf(stderr, "Example: %s ", programname);
+        fprintf(stderr, XRDP_CFG_PATH "/km-00000409.ini\n");
         return 1;
     }
 

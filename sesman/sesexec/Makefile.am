@@ -1,5 +1,5 @@
 AM_CPPFLAGS = \
-  -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
+  -DXRDP_CFG_PATH=\"${sysconfdir}/${sysconfsubdir}\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_LIBEXEC_PATH=\"${libexecdir}/xrdp\" \
   -DXRDP_SOCKET_ROOT_PATH=\"${socketdir}\" \

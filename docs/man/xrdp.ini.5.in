@@ -50,7 +50,7 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bu
 .TP
 \fBkey_file\fP=\fI/path/to/private_key\fP
 Set location of TLS certificate and private key. They must be written in PEM format.
-If not specified, defaults to \fB@sysconfdir@/xrdp/cert.pem\fP, \fB@sysconfdir@/xrdp/key.pem\fP.
+If not specified, defaults to \fB@sysconfdir@/@sysconfsubdir@/cert.pem\fP, \fB@sysconfdir@/@sysconfsubdir@/key.pem\fP.
 
 This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
 
@@ -435,7 +435,7 @@ password={base64}cGFzc3dvcmQhCg==
 .fi
 
 .SH "FILES"
-@sysconfdir@/xrdp/xrdp.ini
+@sysconfdir@/@sysconfsubdir@/xrdp.ini
 
 .SH "SEE ALSO"
 .BR xrdp (8),

@@ -2,6 +2,9 @@ EXTRA_DIST = \
   dump-keymaps.sh \
   readme.txt
 
+AM_CPPFLAGS = \
+  -DXRDP_CFG_PATH=\"${sysconfdir}/${sysconfsubdir}\"
+
 AM_CFLAGS = $(X_CFLAGS)
 
 bin_PROGRAMS = \

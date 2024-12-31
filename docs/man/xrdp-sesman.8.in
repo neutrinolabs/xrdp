@@ -50,7 +50,7 @@ to be used primarily for testing or for unusual configurations.
 .P
 .RS
 If you use this option, be aware that you will have to have a
-\fB@sysconfdir@/xrdp/sesman.ini\fR in place too, as a few elements of
+\fB@sysconfdir@/@sysconfsubdir@/sesman.ini\fR in place too, as a few elements of
 the system (notably \fBxrdp(8)\fR and \fBxrdp\-chansrv(8)\fR) will want
 to read it.
 .RE
@@ -64,7 +64,7 @@ not running \fBxrdp\-sesman\fR as a daemon.
 .br
 @bindir@/xrdp\-sesrun
 .br
-@sysconfdir@/xrdp/sesman.ini
+@sysconfdir@/sysconfsubdir@/sesman.ini
 .br
 @localstatedir@/log/xrdp\-sesman.log
 .br

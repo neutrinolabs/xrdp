@@ -573,6 +573,12 @@ AC_ARG_WITH([pamconfdir],
                   [], [with_pamconfdir="$sysconfdir/pam.d"])
 AC_SUBST([pamconfdir], [$with_pamconfdir])
 
+AC_ARG_WITH([sysconfsubdir],
+  [AS_HELP_STRING([--with-sysconfsubdir=DIR],
+                  [Use subdirectory for config files (default: xrdp)]))],
+                  [], [with_sysconfsubdir="xrdp"])
+AC_SUBST([sysconfsubdir], [$with_sysconfsubdir])
+
 PKG_INSTALLDIR
 
 AC_CHECK_HEADERS([sys/prctl.h uchar.h])
@@ -660,6 +666,7 @@ echo "  exec_prefix             $exec_prefix"
 echo "  libdir                  $libdir"
 echo "  bindir                  $bindir"
 echo "  sysconfdir              $sysconfdir"
+echo "  sysconfdir+subdir       $sysconfdir/$sysconfsubdir"
 echo "  pamconfdir              $pamconfdir"
 echo "  localstatedir           $localstatedir"
 echo "  runstatedir             $runstatedir"

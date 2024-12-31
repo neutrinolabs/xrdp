@@ -13,6 +13,7 @@ CLEANFILES= \
 SUBST_VARS = sed \
    -e 's|@sbindir[@]|$(sbindir)|g' \
    -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+   -e 's|@sysconfsubdir[@]|$(sysconfsubdir)|g' \
    -e 's|@localstatedir[@]|$(localstatedir)|g'
 
 subst_verbose = $(subst_verbose_@AM_V@)
@@ -26,7 +27,7 @@ SUFFIXES = .in
 #
 # files for all platforms
 #
-startscriptdir=$(sysconfdir)/xrdp
+startscriptdir=$(sysconfdir)/$(sysconfsubdir)
 
 dist_startscript_DATA = \
   km-00000405.ini \
