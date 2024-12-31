@@ -68,7 +68,7 @@ for use with xrdp. Here are available options:
 
 .TP
 \fBprofile\fR = \fI<string>\fR
-Select a profile.  Here are available options:
+Select a profile. Here are available options:
 
 .B main, baseline, high, high10, high422, high444
 
@@ -83,11 +83,19 @@ Set the size of the VBV buffer size in kilobits.
 
 .TP
 \fBfps_num\fR = \fI<integer>\fR
-Set the fps numerator. 
+Set the fps numerator.
 
 .TP
 \fBfps_den\fR = \fI<integer>\fR
 Set the fps denominator.
+
+.TP
+\fBthreads = \fI<integer>\fR
+Specify how many CPU threads to use for H.264 encoding per screen (0 for
+auto). Carefully evaluate this value when configuring it to avoid exhausting
+the available threads. For example, if 3 users are connected simultaneously
+with dual screens, xrdp may use up to <threads> * 3 * 2 threads for H.264
+encoding. Please also note that too many threads can hurt quality.
 
 .SH "OPENH264"
 

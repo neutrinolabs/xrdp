@@ -42,6 +42,7 @@ struct xrdp_tconfig_gfx_x264_param
     int vbv_buffer_size;
     int fps_num;
     int fps_den;
+    int threads;
 };
 
 struct xrdp_tconfig_gfx_openh264_param

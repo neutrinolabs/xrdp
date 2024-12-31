@@ -19,6 +19,7 @@ vbv_max_bitrate = 0
 vbv_buffer_size = 0
 fps_num = 60
 fps_den = 1
+threads = 1          # recommended: 1 or 2, see `man gfx.toml` for details
 
 [x264.lan]
 # inherits default

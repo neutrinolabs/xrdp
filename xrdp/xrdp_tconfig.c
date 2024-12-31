@@ -47,6 +47,7 @@
 #define X264_DEFAULT_PROFILE "main"
 #define X264_DEFAULT_FPS_NUM 24
 #define X264_DEFAULT_FPS_DEN 1
+#define X264_DEFAULT_THREADS 1 /* not to exhaust CPU threads for 1 user */
 
 const char *
 tconfig_codec_order_to_str(
@@ -332,6 +333,33 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
               rdpbcgr_connection_type_names[connection_type],
               X264_DEFAULT_FPS_DEN);
         param[connection_type].fps_den = X264_DEFAULT_FPS_DEN;
+    }
+
+    /* threads */
+    datum = toml_int_in(x264_ct, "threads");
+    if (datum.ok)
+    {
+        if (datum.u.i >= 0)
+        {
+            param[connection_type].threads = datum.u.i;
+        }
+        else
+        {
+            TCLOG(LOG_LEVEL_WARNING,
+                  "[x264.%s] an invalid value (< 0) is specified for threads, "
+                  "adopting the default value [%d]",
+                  rdpbcgr_connection_type_names[connection_type],
+                  X264_DEFAULT_THREADS);
+            param[connection_type].threads = X264_DEFAULT_THREADS;
+        }
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[x264.%s] threads is not set, adopting the default value [%d]",
+              rdpbcgr_connection_type_names[connection_type],
+              X264_DEFAULT_THREADS);
+        param[connection_type].threads = X264_DEFAULT_THREADS;
     }
 
     return 0;
