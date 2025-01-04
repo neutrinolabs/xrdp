@@ -827,12 +827,16 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
     {
         if (!s_check_rem(s, 8))
         {
+            g_free(versions);
+            g_free(flagss);
             return 1;
         }
         in_uint32_le(s, version);
         in_uint32_le(s, capsDataLength);
         if (!s_check_rem(s, capsDataLength))
         {
+            g_free(versions);
+            g_free(flagss);
             return 1;
         }
         holdp = s->p;
