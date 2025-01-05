@@ -39,6 +39,8 @@ struct config_chansrv
 
     /** * FuseMountName from sesman.ini */
     char *fuse_mount_name;
+    /** * FuseMountNameColonCharReplacement from sesman.ini */
+    char fuse_mount_name_colon_char_replacement;
     /** FileUmask from sesman.ini */
     mode_t file_umask;
 

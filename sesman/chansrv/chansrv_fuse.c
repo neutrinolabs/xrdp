@@ -191,6 +191,36 @@ int xfuse_path_in_xfuse_fs(const char *path)
 #define XFUSE_ENTRY_TIMEOUT     5.0
 
 
+extern struct config_chansrv *g_cfg; /* in chansrv.c */
+
+
+/* Local utility functions */
+
+static inline char *
+_fuse_mount_name_colon_char_replace(const char *dirname)
+{
+    char *newdirname = (char *) dirname;
+    if (g_cfg->fuse_mount_name_colon_char_replacement != ':')
+    {
+        newdirname = g_strdup(dirname);
+        if (newdirname == NULL)
+        {
+            LOG_DEVEL(LOG_LEVEL_ERROR,
+                      "Failed to duplicate fuse mount name string");
+            return (char *) dirname;
+        }
+        char *colonptr = g_strrchr(newdirname, ':');
+        if (colonptr != NULL)
+        {
+            *colonptr = g_cfg->fuse_mount_name_colon_char_replacement;
+        }
+    }
+    return newdirname;
+}
+
+/* End of Local utility functions*/
+
+
 /* Type of buffer used for fuse_add_direntry() calls */
 struct dirbuf1
 {
@@ -343,7 +373,6 @@ struct req_list_item
     int size;
 };
 
-extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 static struct list *g_req_list = 0;
 static struct xfs_fs *g_xfs;                 /* an inst of xrdp file system */
@@ -742,7 +771,13 @@ int xfuse_create_share(tui32 device_id, const char *dirname)
     if (dirname != NULL && strlen(dirname) > 0 &&
             xfuse_init_xrdp_fs() == 0)
     {
-        xinode = xfs_add_entry(g_xfs, FUSE_ROOT_ID, dirname, (0777 | S_IFDIR));
+        char *newdirname = _fuse_mount_name_colon_char_replace(dirname);
+        xinode = xfs_add_entry(g_xfs, FUSE_ROOT_ID, newdirname, (0777 | S_IFDIR));
+        //free only if _fuse_mount_name_colon_char_replace allocated new string
+        if (newdirname != dirname)
+        {
+            g_free(newdirname);
+        }
         if (xinode == NULL)
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xfs_add_entry() failed");

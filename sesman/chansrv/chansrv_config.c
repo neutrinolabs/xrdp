@@ -40,6 +40,7 @@
 #define DEFAULT_RESTRICT_INBOUND_CLIPBOARD  0
 #define DEFAULT_ENABLE_FUSE_MOUNT           1
 #define DEFAULT_FUSE_MOUNT_NAME             "xrdp-client"
+#define DEFAULT_FUSE_MOUNT_NAME_COLON_CHAR_REPLACEMENT ':'
 #define DEFAULT_FUSE_DIRECT_IO              0
 #define DEFAULT_FILE_UMASK                  077
 #define DEFAULT_USE_NAUTILUS3_FLIST_FORMAT  0
@@ -220,6 +221,25 @@ read_config_chansrv(log_func_t logmsg,
                 break;
             }
         }
+        else if (g_strcasecmp(name, "FuseMountNameColonCharReplacement") == 0)
+        {
+            size_t vallen = g_strlen(value);
+            if (vallen < 1)
+            {
+                cfg->fuse_mount_name_colon_char_replacement = '\0';
+            }
+            else
+            {
+                if (vallen > 1)
+                {
+                    logmsg(LOG_LEVEL_WARNING, "FuseMountNameColonCharReplacement "
+                           "must be 1 character length, now it is '%s'."
+                           "Only first char will be used!",
+                           value);
+                }
+                cfg->fuse_mount_name_colon_char_replacement = value[0];
+            }
+        }
         else if (g_strcasecmp(name, "FuseDirectIO") == 0)
         {
             cfg->fuse_direct_io = g_text2bool(value);
@@ -315,6 +335,7 @@ new_config(void)
         cfg->restrict_outbound_clipboard = DEFAULT_RESTRICT_OUTBOUND_CLIPBOARD;
         cfg->restrict_inbound_clipboard = DEFAULT_RESTRICT_INBOUND_CLIPBOARD;
         cfg->fuse_mount_name = fuse_mount_name;
+        cfg->fuse_mount_name_colon_char_replacement = DEFAULT_FUSE_MOUNT_NAME_COLON_CHAR_REPLACEMENT;
         cfg->fuse_direct_io = DEFAULT_FUSE_DIRECT_IO;
         cfg->file_umask = DEFAULT_FILE_UMASK;
         cfg->use_nautilus3_flist_format = DEFAULT_USE_NAUTILUS3_FLIST_FORMAT;
@@ -419,6 +440,7 @@ config_dump(struct config_chansrv *config)
     g_writeln("    EnableFuseMount            %s",
               g_bool2text(config->enable_fuse_mount));
     g_writeln("    FuseMountName:             %s", config->fuse_mount_name);
+    g_writeln("    FuseMountNameColonCharReplacement:             %c", config->fuse_mount_name_colon_char_replacement);
     g_writeln("    FuseDirectIO:              %s",
               g_bool2text(config->fuse_direct_io));
     g_writeln("    FileMask:                  0%o", config->file_umask);
