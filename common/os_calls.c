@@ -2344,6 +2344,7 @@ g_get_open_fds(int min, int max)
                         // Descriptor is open
                         if (!list_add_item(result, i))
                         {
+                            g_free(fds);
                             goto nomem;
                         }
                     }

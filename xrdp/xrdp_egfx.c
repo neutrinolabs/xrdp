@@ -799,6 +799,7 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
     char *holdp;
     int *versions;
     int *flagss;
+    int rv = 0;
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process_capsadvertise:");
     if (egfx->caps_advertise == NULL)
@@ -812,46 +813,46 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
     }
     caps_count = 0;
     versions = g_new(int, capsSetCount);
-    if (versions == NULL)
-    {
-        return 1;
-    }
     flagss = g_new(int, capsSetCount);
-    if (flagss == NULL)
+    if (versions == NULL || flagss == NULL)
     {
-        g_free(versions);
-        return 1;
+        rv = 1;
     }
-    for (index = 0; index < capsSetCount; index++)
+    else
     {
-        if (!s_check_rem(s, 8))
+        for (index = 0; index < capsSetCount; index++)
         {
-            return 1;
+            if (!s_check_rem(s, 8))
+            {
+                rv = 1;
+                break;
+            }
+            in_uint32_le(s, version);
+            in_uint32_le(s, capsDataLength);
+            if (!s_check_rem(s, capsDataLength))
+            {
+                rv = 1;
+                break;
+            }
+            holdp = s->p;
+            // This implicity excludes caps version 101.
+            if (capsDataLength == 4)
+            {
+                in_uint32_le(s, flags);
+                versions[caps_count] = version;
+                flagss[caps_count] = flags;
+                caps_count++;
+            }
+            s->p = holdp + capsDataLength;
         }
-        in_uint32_le(s, version);
-        in_uint32_le(s, capsDataLength);
-        if (!s_check_rem(s, capsDataLength))
-        {
-            return 1;
-        }
-        holdp = s->p;
-        // This implicity excludes caps version 101.
-        if (capsDataLength == 4)
-        {
-            in_uint32_le(s, flags);
-            versions[caps_count] = version;
-            flagss[caps_count] = flags;
-            caps_count++;
-        }
-        s->p = holdp + capsDataLength;
     }
-    if (caps_count > 0)
+    if (rv == 0 && caps_count > 0)
     {
         egfx->caps_advertise(egfx->user, caps_count, versions, flagss);
     }
     g_free(versions);
     g_free(flagss);
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
