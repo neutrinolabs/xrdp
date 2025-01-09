@@ -397,7 +397,7 @@ static int
 handle_cb_format_data_request(struct vnc *v, struct stream *s)
 {
     int format = 0;
-    struct stream *out_s;
+    struct stream *out_s = NULL;
     int i;
     struct vnc_clipboard_data *vc = v->vc;
     int rv = 0;
@@ -416,7 +416,6 @@ handle_cb_format_data_request(struct vnc *v, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_INFO, "RDP client requested data format=%s",
               cf2text(format, scratch, sizeof(scratch)));
 
-    make_stream(out_s);
 
     /* For all formats, we need to convert to Windows carriage control,
      * so we need to know how many '\n' characters become '\r\n' */
@@ -448,8 +447,11 @@ handle_cb_format_data_request(struct vnc *v, struct stream *s)
 
     /* Allocate the stream and check for failure as the string could be
      * essentially unlimited in length */
-    init_stream(out_s, alloclen);
-    if (out_s->data == NULL)
+    if ((make_stream(out_s)) != NULL)
+    {
+        init_stream(out_s, alloclen);
+    }
+    if (out_s == NULL || out_s->data == NULL)
     {
         LOG(LOG_LEVEL_ERROR,
             "Memory exhausted allocating %d bytes for clip data response",
@@ -512,8 +514,8 @@ handle_cb_format_data_request(struct vnc *v, struct stream *s)
 
         s_mark_end(out_s);
         send_stream_to_clip_channel(v, out_s);
-        free_stream(out_s);
     }
+    free_stream(out_s);
 
     return rv;
 }
