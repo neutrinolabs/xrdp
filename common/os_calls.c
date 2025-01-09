@@ -369,8 +369,6 @@ int
 g_tcp_socket(void)
 {
     int rv;
-    int option_value;
-    socklen_t option_len;
 
 #if defined(XRDP_ENABLE_IPV6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
@@ -398,7 +396,8 @@ g_tcp_socket(void)
         return -1;
     }
 #if defined(XRDP_ENABLE_IPV6)
-    option_len = sizeof(option_value);
+    int option_value;
+    socklen_t option_len = sizeof(option_value);
     if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&option_value,
                    &option_len) == 0)
     {
@@ -418,22 +417,6 @@ g_tcp_socket(void)
         }
     }
 #endif
-    option_len = sizeof(option_value);
-    if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                   &option_len) == 0)
-    {
-        if (option_value == 0)
-        {
-            option_value = 1;
-            option_len = sizeof(option_value);
-            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                           option_len) < 0)
-            {
-                LOG(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
-            }
-        }
-    }
-
     return rv;
 }
 
@@ -509,6 +492,23 @@ g_sck_get_recv_buffer_bytes(int sck, int *bytes)
     }
     *bytes = option_value;
     return 0;
+}
+
+/*****************************************************************************/
+int
+g_sck_set_reuseaddr(int sck)
+{
+    int rv;
+    int option_value = 1;
+    socklen_t option_len = sizeof(option_value);
+
+    rv = setsockopt(sck, SOL_SOCKET, SO_REUSEADDR,
+                    (char *) &option_value, option_len);
+    if (rv < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "g_sck_set_reuseaddr: %s", g_get_strerror());
+    }
+    return rv;
 }
 
 /*****************************************************************************/
@@ -4100,30 +4100,7 @@ g_tcp4_socket(void)
 #if defined(XRDP_ENABLE_IPV6ONLY)
     return -1;
 #else
-    int rv;
-    int option_value;
-    socklen_t option_len;
-
-    rv = socket(AF_INET, SOCK_STREAM, 0);
-    if (rv < 0)
-    {
-        return -1;
-    }
-    option_len = sizeof(option_value);
-    if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
-                   (char *) &option_value, &option_len) == 0)
-    {
-        if (option_value == 0)
-        {
-            option_value = 1;
-            option_len = sizeof(option_value);
-            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
-                           (char *) &option_value, option_len) < 0)
-            {
-            }
-        }
-    }
-    return rv;
+    return socket(AF_INET, SOCK_STREAM, 0);
 #endif
 }
 
@@ -4181,20 +4158,6 @@ g_tcp6_socket(void)
 #endif
             option_len = sizeof(option_value);
             if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY,
-                           (char *) &option_value, option_len) < 0)
-            {
-            }
-        }
-    }
-    option_len = sizeof(option_value);
-    if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
-                   (char *) &option_value, &option_len) == 0)
-    {
-        if (option_value == 0)
-        {
-            option_value = 1;
-            option_len = sizeof(option_value);
-            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR,
                            (char *) &option_value, option_len) < 0)
             {
             }

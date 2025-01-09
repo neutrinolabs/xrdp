@@ -149,6 +149,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
     else
     {
         g_tcp_set_non_blocking(lis_sck);
+        g_sck_set_reuseaddr(lis_sck);
         error = g_tcp_bind(lis_sck, local_port);
     }
 
