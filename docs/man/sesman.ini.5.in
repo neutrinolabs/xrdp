@@ -381,6 +381,15 @@ drive. To fix this, consult the docs for your chosen desktop.
 .RE
 
 .TP
+\fBFuseMountNameColonCharReplacement\fR=\fIstring\fR
+Character to replace colon in redirected drive mount point names.
+If not specified no colon will not be replaced.
+If empty then colon will be replaced by null character.
+If longer than one character, only first character used.
+Only last colon replaced.
+.RE
+
+.TP
 \fBFuseDirectIO\fR=\fI[false|true]\fR
 Defaults to \fIfalse\fR. Set to \fItrue\fR to disable page caching in
 FUSE when opening files on a redirected drive. Direct I/O can impact

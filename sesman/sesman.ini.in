@@ -168,6 +168,7 @@ param=96
 #FuseMountName=/run/user/%u/thinclient_drives
 #FuseMountName=/media/thinclient_drives/%U/thinclient_drives
 FuseMountName=thinclient_drives
+#FuseMountNameColonCharReplacement=
 ; this value allows only the user to access their own mapped drives.
 ; Make this more permissive (e.g. 022) if required.
 FileUmask=077
