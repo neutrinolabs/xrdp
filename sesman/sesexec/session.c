@@ -495,9 +495,6 @@ start_x_server(struct login_info *login_info,
                 unknown_session_type = 1;
         }
 
-        g_free(passwd_file);
-        passwd_file = NULL;
-
         if (xserver_params == NULL)
         {
             LOG(LOG_LEVEL_ERROR, "Out of memory allocating X server params");
@@ -520,6 +517,7 @@ start_x_server(struct login_info *login_info,
     }
 
     /* should not get here */
+    g_free(passwd_file);
     list_delete(xserver_params);
     LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
         "to start the X server on display %u, aborting connection",

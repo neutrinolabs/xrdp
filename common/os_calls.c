@@ -1805,7 +1805,7 @@ g_set_wait_obj(tintptr obj)
         return 0;
     }
     fd = obj >> 16;
-    to_write = 4;
+    to_write = sizeof(buf);
     written = 0;
     while (written < to_write)
     {
@@ -1823,12 +1823,13 @@ g_set_wait_obj(tintptr obj)
                 return 1;
             }
         }
-        else if (error > 0)
+        else if (error > 0 && error <= (int)sizeof(buf))
         {
             written += error;
         }
         else
         {
+            // Shouldn't get here.
             return 1;
         }
     }
@@ -2311,15 +2312,27 @@ g_file_set_cloexec(int fd, int status)
 struct list *
 g_get_open_fds(int min, int max)
 {
+    if (min < 0)
+    {
+        min = 0;
+    }
+
     struct list *result = list_create();
 
     if (result != NULL)
     {
         if (max < 0)
         {
-            max = sysconf(_SC_OPEN_MAX);
+            // sysconf() returns a long. Limit it to a sane value
+#define SANE_MAX 100000
+            long sc_max = sysconf(_SC_OPEN_MAX);
+            max = (sc_max < 0) ? 0 :
+                  (sc_max > (long)SANE_MAX) ? SANE_MAX :
+                  sc_max;
+#undef SANE_MAX
         }
 
+        // max and min are now both guaranteed to be >= 0
         if (max > min)
         {
             struct pollfd *fds = g_new0(struct pollfd, max - min);

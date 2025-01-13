@@ -444,6 +444,7 @@ g_atoix(const char *str)
         str += 2;
         base = 16;
     }
+    //coverity[OVERRUN:FALSE]
     return strtol(str, NULL, base);
 }
 
