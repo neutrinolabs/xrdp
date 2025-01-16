@@ -153,7 +153,7 @@ jobs:
         if: ${{ matrix.DISTCHECK }}
         run: make distcheck -j $(nproc)
       - name: "Artifact: test-suite.log distcheck"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always() && steps.dist_check.outcome == 'failure'
         with:
           name: test-suite-distcheck-${{ matrix.cc }}-${{ matrix.feature_set }}
