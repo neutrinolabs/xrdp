@@ -1,4 +1,3 @@
-#%PAM-1.0
 auth        include  system-remote-login
 -auth       optional pam_gnome_keyring.so
 -auth       optional pam_kwallet5.so
@@ -8,5 +7,8 @@ account     include  system-remote-login
 password    include  system-remote-login
 
 session     include  system-remote-login
+# For wtmp/lastlog support uncomment one of the following lines:-
+#session     optional    pam_lastlog.so quiet
+#session     optional    pam_lastlog2.so silent
 -session    optional pam_gnome_keyring.so auto_start
 -session    optional pam_kwallet5.so auto_start
