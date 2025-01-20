@@ -70,9 +70,9 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 
 .SH "SEE ALSO"
 .BR xrdp.ini (5),
-.BR sesman (8),
+.BR xrdp\-sesman (8),
 .BR sesman.ini (5),
-.BR sesrun (8)
+.BR xrdp\-sesrun (8)
 
 for more info on \fBxrdp\fR see
 .UR @xrdphomeurl@
