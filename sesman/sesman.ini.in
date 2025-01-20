@@ -192,6 +192,8 @@ FileUmask=077
 #SoundNumSilentFramesAAC=4
 #SoundNumSilentFramesMP3=2
 #SoundMsecDoNotSend=1000
+; Specific FUSE options - see sesman.ini(5)
+#FuseDirectIO=false
 
 [ChansrvLogging]
 ; Note: one log file is created per display and the LogFile config value
