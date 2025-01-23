@@ -142,7 +142,7 @@ wait_for_xserver(uid_t uid,
             }
             else
             {
-                struct exit_status e;
+                struct proc_exit_status e;
 
                 fd[0] = -1; // File descriptor closed by fclose()
                 log_waitforx_messages(dp);
@@ -150,11 +150,11 @@ wait_for_xserver(uid_t uid,
                 e = g_waitpid_status(pid);
                 switch (e.reason)
                 {
-                    case E_XR_STATUS_CODE:
+                    case E_PXR_STATUS_CODE:
                         rv = (enum xwait_status)e.val;
                         break;
 
-                    case E_XR_SIGNAL:
+                    case E_PXR_SIGNAL:
                     {
                         char sigstr[MAXSTRSIGLEN];
                         LOG(LOG_LEVEL_ERROR,

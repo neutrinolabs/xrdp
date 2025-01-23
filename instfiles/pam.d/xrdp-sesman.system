@@ -2,4 +2,8 @@
 auth        include     system-auth
 account     include     system-auth
 password    include     system-auth
+
+# For wtmp/lastlog support uncomment one of the following lines:-
+#session     optional    pam_lastlog.so quiet
+#session     optional    pam_lastlog2.so silent
 session     include     system-auth

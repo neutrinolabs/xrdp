@@ -9,6 +9,10 @@ AM_CPPFLAGS = \
 
 SESEXEC_EXTRA_LIBS =
 
+if XRDP_UTMP
+    AM_CPPFLAGS += -DUSE_UTMP
+endif
+
 pkglibexec_PROGRAMS = \
   xrdp-sesexec
 
@@ -25,6 +29,8 @@ xrdp_sesexec_SOURCES = \
   env.h \
   login_info.c \
   login_info.h \
+  sessionrecord.c \
+  sessionrecord.h \
   xauth.c \
   xauth.h \
   xwait.c \
