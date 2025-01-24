@@ -1191,7 +1191,7 @@ utf8_get_next_char(const char **utf8str_ref, unsigned int *len_ref)
     /*
      * Macro used to parse a continuation character
      * @param cp Character Pointer (incremented on success)
-     * @param end One character past end of input string
+     * @param end One character past end of input string, or NULL
      * @param value The value we're constructing
      * @param finish_label Where to go in the event of an error */
 #define PARSE_CONTINUATION_CHARACTER(cp, end, value, finish_label) \
@@ -1210,7 +1210,7 @@ utf8_get_next_char(const char **utf8str_ref, unsigned int *len_ref)
 
     /* Easier to work with unsigned chars and no indirection */
     const unsigned char *cp = (const unsigned char *)*utf8str_ref;
-    const unsigned char *end = (len_ref != NULL) ? cp + *len_ref : cp + 6;
+    const unsigned char *end = (len_ref != NULL) ? cp + *len_ref : NULL;
 
     if (cp == end)
     {
