@@ -1260,7 +1260,7 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
     //struct xrdp_bitmap* b;
 
     //b = 0;
-    if (self->popup_wnd != 0)
+    if (self->popup_wnd != NULL)
     {
         //b = self->popup_wnd->popped_from;
         i = list_index_of(self->screen->child_list, (long)self->popup_wnd);
@@ -1269,6 +1269,7 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
                  self->popup_wnd->width, self->popup_wnd->height);
         xrdp_bitmap_invalidate(self->screen, &rect);
         xrdp_bitmap_delete(self->popup_wnd);
+        self->popup_wnd = NULL;
     }
 
     //xrdp_wm_set_focused(self, b->parent);

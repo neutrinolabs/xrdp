@@ -135,7 +135,7 @@ libipm_msg_in_check_available(struct trans *trans, int *available)
 enum libipm_status
 libipm_msg_in_wait_available(struct trans *trans)
 {
-    tbus wobj[1];
+    tbus wobj[2]; // trans_get_wait_objs() can return at most 2 elements
     int ocnt = 0;
     enum libipm_status rv = E_LI_SUCCESS;
 

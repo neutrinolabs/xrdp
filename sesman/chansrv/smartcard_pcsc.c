@@ -731,6 +731,7 @@ scard_function_list_readers_return(void *user_data,
     struct trans *con;
     struct pcsc_list_readers *pcscListReaders;
     char *msz_readers = NULL;
+    int rv;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_function_list_readers_return:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  status 0x%8.8x", status);
@@ -787,37 +788,41 @@ scard_function_list_readers_return(void *user_data,
     out_s = trans_get_out_s(con, 8192);
     if (out_s == NULL)
     {
-        return 1;
+        rv = 1;
     }
-    s_push_layer(out_s, iso_hdr, 8);
-    out_uint32_le(out_s, llen);
-    out_uint32_le(out_s, readers);
+    else
     {
-        const char *p = msz_readers;
-        for (index = 0; index < readers; index++)
+        s_push_layer(out_s, iso_hdr, 8);
+        out_uint32_le(out_s, llen);
+        out_uint32_le(out_s, readers);
         {
-            unsigned int slen = strlen(p);
-            if (slen < 100)
+            const char *p = msz_readers;
+            for (index = 0; index < readers; index++)
             {
-                out_uint8a(out_s, p, slen);
-                out_uint8s(out_s, 100 - slen);
+                unsigned int slen = strlen(p);
+                if (slen < 100)
+                {
+                    out_uint8a(out_s, p, slen);
+                    out_uint8s(out_s, 100 - slen);
+                }
+                else
+                {
+                    out_uint8a(out_s, p, 99);
+                    out_uint8s(out_s, 1);
+                }
+                p += (slen + 1);
             }
-            else
-            {
-                out_uint8a(out_s, p, 99);
-                out_uint8s(out_s, 1);
-            }
-            p += (slen + 1);
         }
+        out_uint32_le(out_s, status); /* SCARD_S_SUCCESS status */
+        s_mark_end(out_s);
+        bytes = (int) (out_s->end - out_s->data);
+        s_pop_layer(out_s, iso_hdr);
+        out_uint32_le(out_s, bytes - 8);
+        out_uint32_le(out_s, 0x03); /* SCARD_LIST_READERS 0x03 */
+        rv = trans_force_write(con);
     }
     free(msz_readers);
-    out_uint32_le(out_s, status); /* SCARD_S_SUCCESS status */
-    s_mark_end(out_s);
-    bytes = (int) (out_s->end - out_s->data);
-    s_pop_layer(out_s, iso_hdr);
-    out_uint32_le(out_s, bytes - 8);
-    out_uint32_le(out_s, 0x03); /* SCARD_LIST_READERS 0x03 */
-    return trans_force_write(con);
+    return rv;
 }
 
 /*****************************************************************************/
