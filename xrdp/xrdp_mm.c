@@ -36,11 +36,35 @@
 #include "xrdp_channel.h"
 #include <limits.h>
 
+#if defined(XRDP_OPENH264)
+#include "xrdp_encoder_openh264.h"
+#endif
+
 /* Forward declarations */
 static int
 xrdp_mm_chansrv_connect(struct xrdp_mm *self, const char *port);
 static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
+
+/*****************************************************************************/
+static void
+init_libh264_loaded(struct xrdp_mm *self)
+{
+#if defined(XRDP_OPENH264)
+    // Note that if this fails, and x264 is also configured, x264
+    // will not be considered as a fallback.
+    self->libh264_loaded = xrdp_encoder_openh264_install_ok();
+    if (!self->libh264_loaded)
+    {
+        LOG(LOG_LEVEL_ERROR, "OpenH264 Codec is not installed correctly. "
+            "H.264 will not be used");
+    }
+#elif defined (XRDP_H264)
+    self->libh264_loaded = 1;
+#else
+    self->libh264_loaded = 0;
+#endif
+}
 
 /*****************************************************************************/
 struct xrdp_mm *
@@ -57,6 +81,8 @@ xrdp_mm_create(struct xrdp_wm *owner)
 
     self->uid = -1; /* Never good to default UIDs to 0 */
 
+    init_libh264_loaded(self);
+
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_create: bpp %d mcs_connection_type %d "
               "jpeg_codec_id %d v3_codec_id %d rfx_codec_id %d "
               "h264_codec_id %d",
@@ -68,7 +94,7 @@ xrdp_mm_create(struct xrdp_wm *owner)
               self->wm->client_info->h264_codec_id);
 
     if ((self->wm->client_info->gfx == 0) &&
-            ((self->wm->client_info->h264_codec_id != 0) ||
+            ((self->wm->client_info->h264_codec_id != 0 && self->libh264_loaded) ||
              (self->wm->client_info->jpeg_codec_id != 0) ||
              (self->wm->client_info->rfx_codec_id != 0)))
     {
