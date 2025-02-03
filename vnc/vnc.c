@@ -2094,7 +2094,7 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
     }
     else if (g_strcasecmp(name, "disabled_encodings_mask") == 0)
     {
-        v->enabled_encodings_mask = ~g_atoi(value);
+        v->enabled_encodings_mask = (unsigned int)~g_atoi(value);
     }
     else if (g_strcasecmp(name, "client_info") == 0)
     {
