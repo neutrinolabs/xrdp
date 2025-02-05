@@ -1575,7 +1575,10 @@ void xfuse_devredir_cb_rmdir_or_file(struct state_remove *fip,
     {
         case STATUS_SUCCESS:
         case STATUS_NO_SUCH_FILE:
-            xfs_remove_entry(g_xfs, xinode->inum); /* Remove local copy */
+            if (xinode != NULL)
+            {
+                xfs_remove_entry(g_xfs, xinode->inum); /* Remove local copy */
+            }
             fuse_reply_err(fip->req, 0);
             break;
 
