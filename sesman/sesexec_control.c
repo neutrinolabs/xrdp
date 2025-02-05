@@ -165,7 +165,11 @@ sesexec_start(struct pre_session_item *psi)
                  * in the environment */
                 char buff[64];
                 g_snprintf(buff, sizeof(buff), "%d", sck[1]);
-                g_setenv("EICP_FD", buff, 1);
+                if (g_setenv("EICP_FD", buff, 1) < 0)
+                {
+                    LOG(LOG_LEVEL_ERROR, "Can't set EICP_FD [%s]",
+                        g_get_strerror());
+                }
 
                 /* [Development] Log all file descriptors not marked cloexec
                  * other than stdin, stdout, stderr, and the EICP fd in sck[1].
