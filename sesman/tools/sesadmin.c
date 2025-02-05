@@ -135,7 +135,9 @@ print_session(const struct scp_session_info *s)
 {
     char *username;
     const char *uptr;
-    g_getuser_info_by_uid(s->uid, &username, NULL, NULL, NULL, NULL);
+    // Don't need to check error return explicitly - can check username
+    // against NULL
+    (void)g_getuser_info_by_uid(s->uid, &username, NULL, NULL, NULL, NULL);
     uptr = (username == NULL) ? "<unknown>" : username;
 
     printf("Session ID: %d\n", s->sid);
