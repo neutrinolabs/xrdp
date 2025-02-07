@@ -32,6 +32,10 @@ setxkbmap -model pc105 -layout cz
 setxkbmap -model pc104 -layout de
 ./xrdp-genkeymap ../instfiles/km-00000407.ini
 
+# Hungarian 'hu' 0x0000040e
+setxkbmap -model pc105 -layout hu
+./xrdp-genkeymap ../instfiles/km-0000040e.ini
+
 # Italian 'it' 0x00000410
 setxkbmap -model pc104 -layout it
 ./xrdp-genkeymap ../instfiles/km-00000410.ini
