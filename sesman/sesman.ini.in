@@ -147,6 +147,8 @@ param=Xorg
 ; Leave the rest parameters as-is unless you understand what will happen.
 param=-config
 param=xrdp/xorg.conf
+param=-configdir
+param=xrdp
 param=-noreset
 param=-nolisten
 param=tcp
