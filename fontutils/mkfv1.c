@@ -455,11 +455,11 @@ convert_mono_glyph(FT_GlyphSlot ft_glyph, unsigned int ucode,
                 }
             }
         }
-    }
 
-    if (pa->sans10_compatibility != S10_OFF)
-    {
-        implement_sans10_compatibility(g, ucode);
+        if (pa->sans10_compatibility != S10_OFF)
+        {
+            implement_sans10_compatibility(g, ucode);
+        }
     }
 
     return g;
