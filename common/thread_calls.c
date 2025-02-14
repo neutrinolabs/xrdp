@@ -33,6 +33,7 @@
 #include <semaphore.h>
 #endif
 #include "arch.h"
+#include "log.h"
 #include "thread_calls.h"
 #include "os_calls.h"
 
@@ -136,11 +137,17 @@ tc_mutex_lock(tbus mutex)
 {
 #if defined(_WIN32)
     WaitForSingleObject((HANDLE)mutex, INFINITE);
-    return 0;
 #else
-    pthread_mutex_lock((pthread_mutex_t *)mutex);
-    return 0;
+    if (mutex != 0)
+    {
+        pthread_mutex_lock((pthread_mutex_t *)mutex);
+    }
+    else
+    {
+        LOG(LOG_LEVEL_ERROR, "Attempt made to lock NULL mutex");
+    }
 #endif
+    return 0;
 }
 
 /*****************************************************************************/
