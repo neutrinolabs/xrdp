@@ -441,6 +441,10 @@ struct xrdp_mm
     enum xrdp_egfx_flags egfx_flags;
     int gfx_delay_autologin;
     int mod_uses_wm_screen_for_gfx;
+    /* Whether a working h.264 library is loaded.
+     * We check this at run-time, so that we can fall-back to GFX if
+     * the H.264 library is installed incorrectly */
+    int libh264_loaded;  /* != 0 => H.264 can be used */
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
     struct list *resize_queue;

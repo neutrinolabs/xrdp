@@ -36,4 +36,15 @@ xrdp_encoder_openh264_encode(void *handle, int session, int left, int top,
                              char *cdata, int *cdata_bytes,
                              int connection_type, int *flags_ptr);
 
+/**
+ * Test OpenH264 library is installed correctly
+ *
+ * It's possible on some distros to install the noopenh264 package
+ * (https://gitlab.com/freedesktop-sdk/noopenh264) for building. If this
+ * is installed at runtime, openh264 cannot be used.
+ * @return Boolean (!= 0 -> working)
+ */
+int
+xrdp_encoder_openh264_install_ok(void);
+
 #endif

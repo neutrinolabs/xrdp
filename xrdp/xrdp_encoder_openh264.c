@@ -323,3 +323,34 @@ xrdp_encoder_openh264_encode(void *handle, int session, int left, int top,
     }
     return 0;
 }
+
+/*****************************************************************************/
+int
+xrdp_encoder_openh264_install_ok(void)
+{
+    int rv;
+
+    // Declare something with maximal alignment we can take the address
+    // of to pass to WelsCreateSVCEncoder. This object is not directly
+    // accessed.
+    //
+    // Note we can't use the ISVCEncoder type directly, as in C++ this
+    // is an abstract class.
+    long double dummy;
+
+    ISVCEncoder *p = (ISVCEncoder *)&dummy;
+
+    // The real OpenH264 library will ALWAYS change the value of the
+    // passed-in pointer
+    // The noopenh264 library will NEVER change the value of the passed-in
+    // pointer
+    // For both libraries, the relevant source is in
+    // codec/encoder/plus/src/welsEncoderExt.cpp
+    WelsCreateSVCEncoder(&p);
+    rv = (p != (ISVCEncoder *)&dummy); // Did the passed-in value change
+    // If p is &dummy or NULL, this call does nothing, otherwise resources
+    // are deallocated.
+    WelsDestroySVCEncoder(p);
+
+    return rv;
+}
