@@ -1468,7 +1468,11 @@ xrdp_mm_update_module_frame_ack(struct xrdp_mm *self)
             LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_update_module_ack: "
                       "frame_id_server %d", encoder->frame_id_server);
             encoder->frame_id_server_sent = encoder->frame_id_server;
-            self->mod->mod_frame_ack(self->mod, 0, encoder->frame_id_server);
+            if (self->mod != NULL)
+            {
+                self->mod->mod_frame_ack(self->mod, 0,
+                                         encoder->frame_id_server);
+            }
         }
     }
     return 0;
@@ -3595,7 +3599,7 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                     self->encoder->frame_id_server = enc_done->frame_id;
                     xrdp_mm_update_module_frame_ack(self);
                 }
-                else
+                else if (self->mod != NULL)
                 {
                     self->mod->mod_frame_ack(self->mod, 0,
                                              enc_done->frame_id);
