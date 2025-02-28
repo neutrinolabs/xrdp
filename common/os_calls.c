@@ -1424,6 +1424,16 @@ g_sck_recv_fd_set(int sck, void *ptr, unsigned int len,
     if ((rv = recvmsg(sck, &msg, 0)) > 0)
     {
         struct cmsghdr *cmsg;
+
+        // Coverity: msg is 'tainted', so check msg.control and
+        // msg.msg_controllen are sane (i.e. recvmsg() hasn't done
+        // something odd)
+        msg.msg_control = control_un.control;
+        if (msg.msg_controllen > sizeof(control_un.control))
+        {
+            msg.msg_controllen = sizeof(control_un.control);
+        }
+
         if ((msg.msg_flags & MSG_CTRUNC) != 0)
         {
             LOG(LOG_LEVEL_WARNING, "Ancillary data on recvmsg() was truncated");
