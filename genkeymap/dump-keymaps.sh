@@ -84,6 +84,7 @@ kbgen 0412 "ko-KR"        "$os" -model pc105 -layout kr
 kbgen 0414 "nb-NO"        "$os" -model pc105 -layout no
 kbgen 0415 "pl-PL"        "$os" -model pc104 -layout pl
 kbgen 0416 "pt-BR"        "$os" -model pc105 -layout br
+kbgen 10416 "pt-BR"       "$os" -model pc105-inet -layout br -variant abnt2
 kbgen 0419 "ru-RU"        "$os" -model pc104 -layout ru
 kbgen 041d "sv-SE"        "$os" -model pc104 -layout se
 kbgen 0807 "de-CH"        "$os" -model pc105 -layout ch
