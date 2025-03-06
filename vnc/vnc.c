@@ -1612,6 +1612,9 @@ lib_mod_connect(struct vnc *v)
     int error;
     int i;
     int check_sec_result;
+    int socket_mode;
+
+    g_snprintf(con_port, sizeof(con_port), "%s", v->port);
 
     v->server_msg(v, "VNC started connecting", 0);
     check_sec_result = 1;
@@ -1631,17 +1634,26 @@ lib_mod_connect(struct vnc *v)
             return 1;
     }
 
-    if (g_strcmp(v->ip, "") == 0)
+    /* Assume a TCP-port based connection (i.e. not a UDS connection)
+     * if the port is not an absolute path */
+    if (con_port[0] == '/')
     {
-        v->server_msg(v, "VNC error - no ip set", 0);
-        return 1;
+        socket_mode = TRANS_MODE_UNIX;
+    }
+    else
+    {
+        socket_mode = TRANS_MODE_TCP;
+        if (g_strcmp(v->ip, "") == 0)
+        {
+            v->server_msg(v, "VNC error - no IP set for TCP connection", 0);
+            return 1;
+        }
     }
 
     make_stream(s);
-    g_sprintf(con_port, "%s", v->port);
     make_stream(pixel_format);
 
-    v->trans = trans_create(TRANS_MODE_TCP, 8 * 8192, 8192);
+    v->trans = trans_create(socket_mode, 8 * 8192, 8192);
     if (v->trans == 0)
     {
         v->server_msg(v, "VNC error: trans_create() failed", 0);
@@ -1658,7 +1670,14 @@ lib_mod_connect(struct vnc *v)
         g_sleep(v->delay_ms);
     }
 
-    g_sprintf(text, "VNC connecting to %s %s", v->ip, con_port);
+    if (socket_mode == TRANS_MODE_TCP)
+    {
+        g_sprintf(text, "VNC connecting to TCP %s %s", v->ip, con_port);
+    }
+    else
+    {
+        g_sprintf(text, "VNC connecting to local socket %s", con_port);
+    }
     v->server_msg(v, text, 0);
 
     v->trans->si = v->si;

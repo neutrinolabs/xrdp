@@ -260,6 +260,20 @@ username=ask
 password=ask
 ip=127.0.0.1
 port=-1
+; For Xvnc, the 'code' parameter can be used to switch the connection
+; protocol:-
+; 0 - Use a TCP connection (default)
+; 1 - Use a Unix Domain Sockets (UDS) connection.
+;     UDS connections are not supported by older VNC servers, but are
+;     supported by TigerVNC. If you select this option, comment out
+;     (or remove) the 'ip=' setting.
+;
+; UDS connections are recommended, if your X server supports them. They are
+; more secure, and untroubled by firewalls.
+;
+; On FIPS-based systems, UDS MUST be used, as the classic algorithm used for
+; VNC password files is no longer considered secure by FIPS
+#code=0
 #xserverbpp=24
 #delay_ms=2000
 ; Disable requested encodings to support buggy VNC servers

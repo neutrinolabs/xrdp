@@ -34,11 +34,13 @@
 enum scp_session_type
 {
     SCP_SESSION_TYPE_XVNC = 0,  ///< Session used Xvnc
+    SCP_SESSION_TYPE_XVNC_UDS,  ///< Session used Xvnc with UDS connection
     SCP_SESSION_TYPE_XORG  ///< Session used Xorg + xorgxrdp
 };
 
 #define SCP_SESSION_TYPE_TO_STR(t) \
     ((t) == SCP_SESSION_TYPE_XVNC ? "Xvnc" : \
+     (t) == SCP_SESSION_TYPE_XVNC_UDS ? "Xvnc-UDS" : \
      (t) == SCP_SESSION_TYPE_XORG ? "Xorg" : \
      "unknown" \
     )

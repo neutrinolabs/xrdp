@@ -271,6 +271,10 @@ xrdp_mm_create_session(struct xrdp_mm *self)
             type = SCP_SESSION_TYPE_XVNC;
             break;
 
+        case XVNC_UDS_SESSION_CODE:
+            type = SCP_SESSION_TYPE_XVNC_UDS;
+            break;
+
         case  XORG_SESSION_CODE:
             type = SCP_SESSION_TYPE_XORG;
             break;
@@ -496,7 +500,8 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             {
                 g_snprintf(text, sizeof(text), "%d", 5900 + self->display);
             }
-            else if (self->code == XORG_SESSION_CODE)
+            else if (self->code == XORG_SESSION_CODE ||
+                     self->code == XVNC_UDS_SESSION_CODE)
             {
                 g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
                            self->uid, self->display);
@@ -3109,11 +3114,11 @@ xrdp_mm_connect(struct xrdp_mm *self)
         self->use_sesman = 1;
         /* Connecting to a remote sesman is no longer supported. For purely
          * local session types, this setting could be removed.
-         * The 'ip' value is still used for Xvnc sessions, to find the TCP
-         * address that the X server is listening on */
+         * The 'ip' value is still used for non-UDS Xvnc sessions, to find
+         * the TCP address that the X server is listening on */
         if (xrdp_mm_get_value(self, "ip") != NULL)
         {
-            if (self->code == XORG_SESSION_CODE)
+            if (self->code != XVNC_SESSION_CODE)
             {
                 xrdp_wm_log_msg(self->wm,
                                 LOG_LEVEL_WARNING,

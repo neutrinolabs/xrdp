@@ -377,7 +377,8 @@ values supported for a particular release of \fBxrdp\fR(8) are documented in
 
 .TP
 \fBcode\fR=\fI<number>\fR|\fI0\fR
-Specifies the session type. The default, \fI0\fR, is Xvnc,
+Specifies the session type. The default, \fI0\fR, is Xvnc over TCP,
+\fI1\fR, is Xvnc over a UNIX domain socket,
 and \fI20\fR is Xorg with xorgxrdp modules.
 
 .TP

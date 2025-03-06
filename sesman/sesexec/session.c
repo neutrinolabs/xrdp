@@ -388,10 +388,21 @@ prepare_xorg_xserver_params(const struct session_parameters *s,
 }
 
 /******************************************************************************/
+/**
+ * Prepare a list of parameters for the Xvnc X server
+ * @param s Session parameters
+ * @params authfile XAUTHORITY file
+ * @params passwd_file VNC password file, or NULL
+ * @params port UDS port to connect to, or NULL
+ * @return parameters list
+ *
+ * One of passwd_file and port must be set
+ */
 static struct list *
 prepare_xvnc_xserver_params(const struct session_parameters *s,
                             const char *authfile,
-                            const char *passwd_file)
+                            const char *passwd_file,
+                            const char *port)
 {
     char screen[32] = {0}; /* display number */
     char geometry[32] = {0};
@@ -420,8 +431,34 @@ prepare_xvnc_xserver_params(const struct session_parameters *s,
                               "-auth", authfile,
                               "-geometry", geometry,
                               "-depth", depth,
-                              "-rfbauth", passwd_file,
                               NULL);
+
+        if (passwd_file != NULL)
+        {
+            /* RFB authorization */
+            list_add_strdup_multi(params,
+                                  "-rfbauth", passwd_file,
+                                  NULL);
+        }
+        else if (port != NULL)
+        {
+            /* UDS connection. Authorization is handled by standard socket
+             * permissions, so we do not need to authorize within the
+             * VNC protocol exchange as well */
+            char sock_mode[16];
+
+            /* Convert a standard permissions mask into decimal
+             * for the -rfbunixmode switch argument
+             */
+            g_snprintf(sock_mode, sizeof(sock_mode),
+                       "%d", 0660); /* rw-rw---- */
+
+            list_add_strdup_multi(params,
+                                  "-rfbunixpath", port,
+                                  "-rfbunixmode", sock_mode,
+                                  "-SecurityTypes", "None",
+                                  NULL);
+        }
 
         /* additional parameters from sesman.ini file */
         //config_read_xserver_params(SCP_SESSION_TYPE_XVNC,
@@ -482,13 +519,22 @@ start_x_server(struct login_info *login_info,
     {
         switch (s->type)
         {
+                char port[256];
+
             case SCP_SESSION_TYPE_XORG:
                 xserver_params = prepare_xorg_xserver_params(s, authfile);
                 break;
 
             case SCP_SESSION_TYPE_XVNC:
                 xserver_params = prepare_xvnc_xserver_params(s, authfile,
-                                 passwd_file);
+                                 passwd_file, NULL);
+                break;
+
+            case SCP_SESSION_TYPE_XVNC_UDS:
+                g_snprintf(port, sizeof(port), XRDP_X11RDP_STR,
+                           login_info->uid, s->display);
+                xserver_params = prepare_xvnc_xserver_params(s, authfile,
+                                 NULL, port);
                 break;
 
             default:
