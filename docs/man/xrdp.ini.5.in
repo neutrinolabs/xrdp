@@ -377,10 +377,10 @@ values supported for a particular release of \fBxrdp\fR(8) are documented in
 
 .TP
 \fBcode\fR=\fI<number>\fR|\fI0\fR
-Specifies the session type. The default, \fI0\fR, is Xvnc over TCP,
-\fI1\fR, is Xvnc over a UNIX domain socket,
+Specifies the session type. \fI0\fR is Xvnc over TCP,
+\fI1\fR is Xvnc over a UNIX domain socket,
 and \fI20\fR is Xorg with xorgxrdp modules.
-
+The default is \fI0\fR on non-FIPS systems, and \fI1\fR on FIPS systems.
 .TP
 \fBchansrvport\fR=\fBDISPLAY(\fR\fIn\fR\fB)\fR|\fBDISPLAY(\fR\fIn,u\fR\fB)\fR||\fI/path/to/domain-socket\fR
 Asks xrdp to connect to a manually started \fBxrdp-chansrv\fR instance.

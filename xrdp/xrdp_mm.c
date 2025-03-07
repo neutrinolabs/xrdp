@@ -3098,13 +3098,30 @@ xrdp_mm_user_session_connect(struct xrdp_mm *self)
 void
 xrdp_mm_connect(struct xrdp_mm *self)
 {
+    const char *p;
     const char *port = xrdp_mm_get_value(self, "port");
     const char *gw_username = xrdp_mm_get_value(self, "pamusername");
 
     /* make sure we start in correct state */
     cleanup_states(self);
 
-    self->code = xrdp_mm_get_value_int(self, "code", 0);
+    /*
+     * Standard VNC sessions cannot be supported in FIPS mode, so
+     * don't default to this session type */
+    if ((p = xrdp_mm_get_value(self, "code")) != NULL)
+    {
+        self->code = g_atoi(p);
+    }
+    else if (g_fips_mode_enabled())
+    {
+        LOG(LOG_LEVEL_INFO, "FIPS: defaulting to a VNC session over UDS");
+        self->code = XVNC_UDS_SESSION_CODE;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_INFO, "non-FIPS: defaulting to a VNC session over TCP");
+        self->code = XVNC_SESSION_CODE;
+    }
 
     /* Look at our module parameters to decide if we need to connect
      * to sesman or not */

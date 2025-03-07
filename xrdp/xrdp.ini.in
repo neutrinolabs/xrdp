@@ -259,11 +259,13 @@ lib=libvnc.@lib_extension@
 username=ask
 password=ask
 ip=127.0.0.1
+; port is -1 (sesman controlled), numeric (TCP connection) or an
+; absolute path (UDS connection).
 port=-1
-; For Xvnc, the 'code' parameter can be used to switch the connection
-; protocol:-
-; 0 - Use a TCP connection (default)
-; 1 - Use a Unix Domain Sockets (UDS) connection.
+; For sesman-controlled Xvnc, the 'code' parameter can be used to switch
+; the connection protocol:-
+; 0 - Use a TCP connection
+; 1 - Use a Unix Domain Sockets (UDS) connection
 ;     UDS connections are not supported by older VNC servers, but are
 ;     supported by TigerVNC. If you select this option, comment out
 ;     (or remove) the 'ip=' setting.
@@ -271,8 +273,10 @@ port=-1
 ; UDS connections are recommended, if your X server supports them. They are
 ; more secure, and untroubled by firewalls.
 ;
-; On FIPS-based systems, UDS MUST be used, as the classic algorithm used for
+; On FIPS-based systems, TCP CANNOT be used, as the classic algorithm used for
 ; VNC password files is no longer considered secure by FIPS
+;
+; The default value is 0 on non-FIPS systems, and 1 on FIPS-based systems.
 #code=0
 #xserverbpp=24
 #delay_ms=2000
