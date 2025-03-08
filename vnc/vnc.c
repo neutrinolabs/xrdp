@@ -1685,71 +1685,78 @@ lib_mod_connect(struct vnc *v)
 
     error = trans_connect(v->trans, v->ip, con_port, 3000);
 
+    if (error != 0)
+    {
+        g_snprintf(text, sizeof(text), "Error connecting to VNC server [%s]",
+                   g_get_strerror());
+        v->server_msg(v, text, 0);
+        free_stream(s);
+        free_stream(pixel_format);
+        return 1;
+    }
+
+    v->server_msg(v, "VNC tcp connected", 0);
+    /* protocol version */
+    init_stream(s, 8192);
+    error = trans_force_read_s(v->trans, s, 12);
     if (error == 0)
     {
-        v->server_msg(v, "VNC tcp connected", 0);
-        /* protocol version */
-        init_stream(s, 8192);
-        error = trans_force_read_s(v->trans, s, 12);
-        if (error == 0)
-        {
-            s->p = s->data;
-            out_uint8a(s, "RFB 003.003\n", 12);
-            s_mark_end(s);
-            error = trans_force_write_s(v->trans, s);
-        }
+        s->p = s->data;
+        out_uint8a(s, "RFB 003.003\n", 12);
+        s_mark_end(s);
+        error = trans_force_write_s(v->trans, s);
+    }
 
-        /* sec type */
-        if (error == 0)
+    /* sec type */
+    if (error == 0)
+    {
+        init_stream(s, 8192);
+        error = trans_force_read_s(v->trans, s, 4);
+    }
+
+    if (error == 0)
+    {
+        in_uint32_be(s, i);
+        g_sprintf(text, "VNC security level is %d (1 = none, 2 = standard)", i);
+        v->server_msg(v, text, 0);
+
+        if (i == 1) /* none */
+        {
+            check_sec_result = 0;
+        }
+        else if (i == 2) /* dec the password and the server random */
         {
             init_stream(s, 8192);
-            error = trans_force_read_s(v->trans, s, 4);
-        }
+            error = trans_force_read_s(v->trans, s, 16);
 
-        if (error == 0)
-        {
-            in_uint32_be(s, i);
-            g_sprintf(text, "VNC security level is %d (1 = none, 2 = standard)", i);
-            v->server_msg(v, text, 0);
-
-            if (i == 1) /* none */
-            {
-                check_sec_result = 0;
-            }
-            else if (i == 2) /* dec the password and the server random */
+            if (error == 0)
             {
                 init_stream(s, 8192);
-                error = trans_force_read_s(v->trans, s, 16);
-
-                if (error == 0)
+                if (guid_is_set(&v->guid))
                 {
-                    init_stream(s, 8192);
-                    if (guid_is_set(&v->guid))
-                    {
-                        char guid_str[GUID_STR_SIZE];
-                        guid_to_str(&v->guid, guid_str);
-                        rfbHashEncryptBytes(s->data, guid_str);
-                    }
-                    else
-                    {
-                        rfbEncryptBytes(s->data, v->password);
-                    }
-                    s->p += 16;
-                    s_mark_end(s);
-                    error = trans_force_write_s(v->trans, s);
-                    check_sec_result = 1; // not needed
+                    char guid_str[GUID_STR_SIZE];
+                    guid_to_str(&v->guid, guid_str);
+                    rfbHashEncryptBytes(s->data, guid_str);
                 }
+                else
+                {
+                    rfbEncryptBytes(s->data, v->password);
+                }
+                s->p += 16;
+                s_mark_end(s);
+                error = trans_force_write_s(v->trans, s);
+                check_sec_result = 1; // not needed
             }
-            else if (i == 0)
-            {
-                LOG(LOG_LEVEL_ERROR, "VNC Server will disconnect");
-                error = 1;
-            }
-            else
-            {
-                LOG(LOG_LEVEL_ERROR, "VNC unsupported security level %d", i);
-                error = 1;
-            }
+        }
+        else if (i == 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "VNC Server will disconnect");
+            error = 1;
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR, "VNC unsupported security level %d", i);
+            error = 1;
         }
     }
 

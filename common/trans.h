@@ -156,6 +156,9 @@ trans_write_copy_s(struct trans *self, struct stream *out_s);
  *
  * Multiple connection attempts may be made within the timeout period.
  *
+ * If the operation is not successful, errno will have been set by
+ * the last connection attempt.
+ *
  * If the operation is successful, 0 is returned and self->status will
  * be TRANS_STATUS_UP
  */
