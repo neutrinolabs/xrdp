@@ -4272,7 +4272,8 @@ g_fips_mode_enabled(void)
 
     if (fd >= 0)
     {
-        if (read(fd, buff, sizeof(buff)) > 0)
+        ssize_t res = read(fd, buff, sizeof(buff));
+        if (res > 0 && (size_t)res < sizeof(buff))
         {
             rv = (buff[0] != '0');
         }
