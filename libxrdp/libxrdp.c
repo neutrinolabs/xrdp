@@ -704,6 +704,25 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
 /*****************************************************************************/
 int EXPORT_CC
+libxrdp_send_pointer_system(struct xrdp_session *session, int pointer_type)
+{
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 8192);
+    xrdp_rdp_init_data((struct xrdp_rdp *)(session->rdp), s);
+    out_uint16_le(s, RDP_POINTER_SYSTEM);
+    out_uint16_le(s, 0); /* pad */
+    out_uint32_le(s, pointer_type);
+    s_mark_end(s);
+    xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                       RDP_DATA_PDU_POINTER);
+    free_stream(s);
+    return 0;
+}
+
+/*****************************************************************************/
+int EXPORT_CC
 libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                      char *data, char *mask, int x, int y, int bpp,
                      int width, int height)
