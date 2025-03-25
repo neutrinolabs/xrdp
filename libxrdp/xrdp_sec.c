@@ -364,6 +364,26 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                 break;
             }
         }
+        if (rdp_layout[0] == '\0' && (client_info->keylayout & ~0xffff) != 0)
+        {
+            // We failed to match the layout, but we may be able
+            // to match on the lower 16-bits
+            int alt_layout = client_info->keylayout & 0xffff;
+            for (index = 0; index < items->count; index++)
+            {
+                item = (char *)list_get_item(items, index);
+                value = (char *)list_get_item(values, index);
+                int rdp_layout_id = g_htoi(value);
+                if (rdp_layout_id == alt_layout)
+                {
+                    g_strncpy(rdp_layout, item, 255);
+                    LOG(LOG_LEVEL_INFO,
+                        "Failed to match layout %08X, but matched %04X to %s",
+                        client_info->keylayout, alt_layout, rdp_layout);
+                    break;
+                }
+            }
+        }
         list_clear(items);
         list_clear(values);
         file_read_section(fd, section_layouts_map, items, values);
