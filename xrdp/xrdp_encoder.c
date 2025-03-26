@@ -390,7 +390,7 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     }
     /* tell worker thread to shut down */
     g_set_wait_obj(self->xrdp_encoder_term_request);
-    g_obj_wait(&self->xrdp_encoder_term_done, 1, NULL, 0, 5000);
+    (void)g_obj_wait(&self->xrdp_encoder_term_done, 1, NULL, 0, 5000);
     if (!g_is_wait_obj_set(self->xrdp_encoder_term_done))
     {
         LOG(LOG_LEVEL_WARNING, "Encoder failed to shut down cleanly");

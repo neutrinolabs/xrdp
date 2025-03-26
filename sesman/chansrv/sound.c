@@ -1835,6 +1835,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
 
                 if (i < g_bytes_in_stream)
                 {
+                    //coverity[COPY_PASTE_ERROR:FALSE]
                     xstream_copyin(s, &g_stream_inp->data[g_stream_inp->size - g_bytes_in_stream], i);
                     bytes_read += i;
                     g_bytes_in_stream -= i;

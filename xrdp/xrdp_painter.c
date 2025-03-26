@@ -250,6 +250,7 @@ wm_painter_set_target(struct xrdp_painter *self)
 int
 xrdp_painter_begin_update(struct xrdp_painter *self)
 {
+    int rv;
     LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_painter_begin_update:");
     if (self == 0)
     {
@@ -263,9 +264,9 @@ xrdp_painter_begin_update(struct xrdp_painter *self)
         return 0;
     }
 
-    libxrdp_orders_init(self->session);
+    rv = libxrdp_orders_init(self->session);
     wm_painter_set_target(self);
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/

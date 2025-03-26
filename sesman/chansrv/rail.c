@@ -1362,7 +1362,7 @@ rail_create_window(Window window_id, Window owner_id)
     char *title_bytes = 0;
     int title_size = 0;
     XWindowAttributes attributes;
-    int style;
+    tui32 style;
     int ext_style;
     int num_window_rects = 1;
     int num_visibility_rects = 1;

@@ -283,7 +283,9 @@ xfs_create_xfs_fs(mode_t umask, uid_t uid, gid_t gid)
                 (xino1 = g_new0(XFS_INODE_ALL, 1)) == NULL ||
                 (xino2 = g_new0(XFS_INODE_ALL, 1)) == NULL ||
                 (xino1_name = strdup(".")) == NULL ||
-                (xino2_name = strdup(".delete-pending")) == NULL)
+                (xino2_name = strdup(".delete-pending")) == NULL ||
+                // This keeps Coverity happy (see below)
+                xfs->free_count < 3)
         {
             free(xino1);
             free(xino2);

@@ -43,8 +43,6 @@ int  g_loc_io_count = 0;  // bytes read from local port
 int  g_rem_io_count = 0;  // bytes read from remote port
 
 static int g_terminated = 0;
-static char g_buf[1024 * 32];
-
 
 typedef unsigned short tui16;
 
@@ -69,27 +67,90 @@ g_tcp_socket_ok(int sck)
 
 /*****************************************************************************/
 static int
+copy_sck_to_sck(int from_sck, int to_sck, int hexdump, int local)
+{
+    char buff[1024 * 32];
+    int rv = -1;
+
+    int count = g_tcp_recv(from_sck, buff, sizeof(buff), 0);
+    if (count > 0 && count <= (int)sizeof(buff))
+    {
+        rv = count; // Assume we'll return the amount of data copied
+        if (local)
+        {
+            g_loc_io_count += count;
+            if (hexdump)
+            {
+                LOG_HEXDUMP(LOG_LEVEL_INFO, "from local:", buff, count);
+            }
+        }
+        else
+        {
+            g_rem_io_count += count;
+            if (hexdump)
+            {
+                LOG_HEXDUMP(LOG_LEVEL_INFO, "from remote:", buff, count);
+            }
+        }
+
+
+        LOG(LOG_LEVEL_DEBUG, "local_io_count: %d\tremote_io_count: %d",
+            g_loc_io_count, g_rem_io_count);
+
+        const char *p = buff;
+        while ((count > 0) && (!g_terminated))
+        {
+            int error = g_tcp_send(to_sck, p, count, 0);
+
+            if (error > 0 && error <= count)
+            {
+                // We wrote some data
+                count -= error;
+                p += error;
+            }
+            else if ((error == -1) && g_tcp_last_error_would_block(to_sck))
+            {
+                if (g_tcp_can_send(to_sck, 1000))
+                {
+                    g_tcp_socket_ok(to_sck);
+                }
+            }
+            else
+            {
+                count = 0; // Terminate loop
+                rv = -1; // tell user
+            }
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+static int
 main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 {
-    int lis_sck;
-    int acc_sck;
-    int con_sck;
+    int lis_sck = -1;
+    int acc_sck = -1;
+    int con_sck = -1;
     int sel;
     int count;
-    int sent;
     int error;
     int i;
-    int acc_to_con;
-    int con_to_acc;
-
-    acc_to_con = 0;
-    con_to_acc = 0;
-    acc_sck = 0;
+    int acc_to_con = 0;
+    int con_to_acc = 0;
 
     /* create the listening socket and setup options */
     lis_sck = g_tcp_socket();
-    g_tcp_set_non_blocking(lis_sck);
-    error = g_tcp_bind(lis_sck, local_port);
+    if (lis_sck < 0)
+    {
+        error = 1;
+    }
+    else
+    {
+        g_tcp_set_non_blocking(lis_sck);
+        error = g_tcp_bind(lis_sck, local_port);
+    }
 
     if (error != 0)
     {
@@ -135,7 +196,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
         /* stop listening */
         g_tcp_close(lis_sck);
-        lis_sck = 0;
+        lis_sck = -1;
 
         if (error == 0)
         {
@@ -144,22 +205,26 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
     }
 
     /* connect outgoing socket */
-    con_sck = 0;
-
     if (error == 0)
     {
         con_sck = g_tcp_socket();
-        g_tcp_set_non_blocking(con_sck);
-        error = g_tcp_connect(con_sck, remote_ip, remote_port);
+        if (con_sck < 0)
+        {
+            error = 1;
+        }
+        else
+        {
+            g_tcp_set_non_blocking(con_sck);
+            error = g_tcp_connect(con_sck, remote_ip, remote_port);
+        }
 
         if ((error == -1) && g_tcp_last_error_would_block(con_sck))
         {
             error = 0;
             i = 0;
 
-            while (!(g_tcp_can_send(con_sck, 100) && g_tcp_socket_ok(con_sck))
-                    && (!g_terminated)
-                    && (i < 100))
+            while (!g_terminated && i < 100 &&
+                    !g_tcp_can_send(con_sck, 100))
             {
                 g_sleep(100);
                 i++;
@@ -170,8 +235,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
                 LOG(LOG_LEVEL_ERROR, "timeout connecting");
                 error = 1;
             }
-
-            if (g_terminated)
+            else if (!g_tcp_socket_ok(con_sck))
             {
                 error = 1;
             }
@@ -183,7 +247,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
         }
     }
 
-    while ((!g_terminated) && (error == 0))
+    while (!g_terminated)
     {
         sel = g_tcp_select(con_sck, acc_sck);
 
@@ -196,93 +260,37 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
         if (sel & 1)
         {
             // can read from con_sck w/o blocking
-            count = g_tcp_recv(con_sck, g_buf, 1024 * 16, 0);
-            error = count < 1;
-
-            if (error == 0)
+            count = copy_sck_to_sck(con_sck, acc_sck, hexdump, 1);
+            if (count < 0)
             {
-                g_loc_io_count += count;
-                con_to_acc += count;
-
-                if (hexdump)
-                {
-                    LOG_HEXDUMP(LOG_LEVEL_INFO, "from remove, the socket from connect", g_buf, count);
-                }
-
-                LOG(LOG_LEVEL_DEBUG, "local_io_count: %d\tremote_io_count: %d",
-                    g_loc_io_count, g_rem_io_count);
-                sent = 0;
-
-                while ((sent < count) && (error == 0) && (!g_terminated))
-                {
-                    i = g_tcp_send(acc_sck, g_buf + sent, count - sent, 0);
-
-                    if ((i == -1) && g_tcp_last_error_would_block(acc_sck))
-                    {
-                        if (g_tcp_can_send(acc_sck, 1000))
-                        {
-                            g_tcp_socket_ok(acc_sck);
-                        }
-                    }
-                    else if (i < 1)
-                    {
-                        error = 1;
-                    }
-                    else
-                    {
-                        sent += i;
-                    }
-                }
+                break;
             }
+            con_to_acc += count;
         }
-
         if (sel & 2)
         {
             // can read from acc_sck w/o blocking
-            count = g_tcp_recv(acc_sck, g_buf, 1024 * 16, 0);
-            error = count < 1;
-
-            if (error == 0)
+            count = copy_sck_to_sck(acc_sck, con_sck, hexdump, 0);
+            if (count < 0)
             {
-                g_rem_io_count += count;
-                acc_to_con += count;
-
-                if (hexdump)
-                {
-                    LOG_HEXDUMP(LOG_LEVEL_INFO, "from accepted, the socket from accept", g_buf, count);
-                }
-
-                LOG(LOG_LEVEL_DEBUG, "local_io_count: %d\tremote_io_count: %d",
-                    g_loc_io_count, g_rem_io_count);
-                sent = 0;
-
-                while ((sent < count) && (error == 0) && (!g_terminated))
-                {
-                    i = g_tcp_send(con_sck, g_buf + sent, count - sent, 0);
-
-                    if ((i == -1) && g_tcp_last_error_would_block(con_sck))
-                    {
-                        if (g_tcp_can_send(con_sck, 1000))
-                        {
-                            g_tcp_socket_ok(con_sck);
-                        }
-                    }
-                    else if (i < 1)
-                    {
-                        error = 1;
-                    }
-                    else
-                    {
-                        sent += i;
-                    }
-                }
-            }
+                break;
+            };
+            acc_to_con += count;
         }
     }
 
-    g_tcp_close(lis_sck);
-    g_tcp_close(con_sck);
-    g_tcp_close(acc_sck);
+    if (lis_sck >= 0)
+    {
+        g_tcp_close(lis_sck);
+    }
+    if (con_sck >= 0)
+    {
+        g_tcp_close(con_sck);
+    }
+    if (acc_sck >= 0)
+    {
+        g_tcp_close(acc_sck);
+    }
     LOG(LOG_LEVEL_INFO, "acc_to_con %d", acc_to_con);
     LOG(LOG_LEVEL_INFO, "con_to_acc %d", con_to_acc);
     return 0;

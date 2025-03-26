@@ -925,15 +925,20 @@ main(int argc, char **argv)
     LOG(LOG_LEVEL_INFO,
         "starting xrdp-sesman with pid %d", g_pid);
 
-    /* make sure the /tmp/.X11-unix directory exists */
-    if (!g_directory_exist("/tmp/.X11-unix"))
+    /* make sure the X11_UNIX_SOCKET_DIRECTORY exists */
+    if (!g_directory_exist(X11_UNIX_SOCKET_DIRECTORY))
     {
-        if (!g_create_dir("/tmp/.X11-unix"))
+        if (!g_create_dir(X11_UNIX_SOCKET_DIRECTORY))
         {
             LOG(LOG_LEVEL_ERROR,
-                "sesman.c: error creating dir /tmp/.X11-unix");
+                "sesman.c: error creating dir " X11_UNIX_SOCKET_DIRECTORY);
         }
-        g_chmod_hex("/tmp/.X11-unix", 0x1777);
+        if (g_chmod_hex(X11_UNIX_SOCKET_DIRECTORY, 0x1777) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "sesman.c: can't set permissions on "
+                X11_UNIX_SOCKET_DIRECTORY "[%s]", g_get_strerror());
+        }
     }
 
     if ((error = pre_session_list_init(MAX_PRE_SESSION_ITEMS)) == 0 &&
