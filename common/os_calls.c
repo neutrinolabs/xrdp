@@ -4260,6 +4260,30 @@ g_no_new_privs(void)
 #endif
 }
 
+
+/*****************************************************************************/
+int
+g_fips_mode_enabled(void)
+{
+    int rv = 0;
+#if defined (__linux)
+    char buff[16];
+    int fd = open("/proc/sys/crypto/fips_enabled", O_RDONLY);
+
+    if (fd >= 0)
+    {
+        ssize_t res = read(fd, buff, sizeof(buff));
+        if (res > 0 && (size_t)res < sizeof(buff))
+        {
+            rv = (buff[0] != '0');
+        }
+
+        close(fd);
+    }
+#endif
+    return rv;
+}
+
 /*****************************************************************************/
 void
 g_qsort(void *base, size_t nitems, size_t size,

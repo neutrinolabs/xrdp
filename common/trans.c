@@ -22,6 +22,8 @@
 #include <config_ac.h>
 #endif
 
+#include <errno.h>
+
 #include "os_calls.h"
 #include "string_calls.h"
 #include "trans.h"
@@ -750,6 +752,7 @@ trans_connect(struct trans *self, const char *server, const char *port,
     int start_time = g_time3();
     int error;
     int ms_before_next_connect;
+    int connect_errno = 0;
 
     /*
      * Function pointers which we use in the main loop to avoid
@@ -792,6 +795,7 @@ trans_connect(struct trans *self, const char *server, const char *port,
 
         if (self->sck < 0)
         {
+            connect_errno = errno;
             error = 1;
             break;
         }
@@ -800,6 +804,7 @@ trans_connect(struct trans *self, const char *server, const char *port,
         g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
         error = f_connect(self->sck, server, port);
+        connect_errno = errno;
         if (error == 0)
         {
             /* Connect was immediately successful */
@@ -851,6 +856,8 @@ trans_connect(struct trans *self, const char *server, const char *port,
             g_tcp_close(self->sck);
             self->sck = -1;
         }
+        /* Ensure errno is representative of the last connection attempt */
+        errno = connect_errno;
         self->status = TRANS_STATUS_DOWN;
     }
     else

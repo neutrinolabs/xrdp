@@ -53,6 +53,15 @@ env_check_password_file(const char *filename, const char *passwd)
     void *des;
     void *sha1;
 
+    /*
+     * If we're in FIPS mode, do not write the GUID to disk after it's
+     * been encrypted with an insecure algorithm.
+     */
+    if (g_fips_mode_enabled())
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't create VNC password file in FIPS mode");
+        return 1;
+    }
     /* create password hash from password */
     passwd_bytes = g_strlen(passwd);
     sha1 = ssl_sha1_info_create();

@@ -228,7 +228,8 @@ lib_mod_connect(struct mod *mod)
     }
     else
     {
-        mod->server_msg(mod, "connection problem, giving up", 0);
+        LOG(LOG_LEVEL_ERROR, "Error connecting to X server [%s]",
+            g_get_strerror());
         error = 1;
     }
 
@@ -254,8 +255,7 @@ lib_mod_connect(struct mod *mod)
     {
         trans_delete(mod->trans);
         mod->trans = 0;
-        mod->server_msg(mod, "some problem", 0);
-        return 1;
+        mod->server_msg(mod, "Error connecting to Xorg - check log", 0);
     }
     else
     {
@@ -268,7 +268,7 @@ lib_mod_connect(struct mod *mod)
     }
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_connect");
-    return 0;
+    return error;
 }
 
 /******************************************************************************/

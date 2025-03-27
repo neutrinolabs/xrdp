@@ -407,6 +407,14 @@ int      g_tcp4_bind_address(int sck, const char *port, const char *address);
 int      g_tcp6_socket(void);
 int      g_tcp6_bind_address(int sck, const char *port, const char *address);
 int      g_no_new_privs(void);
+/**
+ * Query whether FIPS mode is enabled
+ *
+ * In FIPS mode, some cryptographic algorithms are disabled
+ *
+ * @return 1 -> FIPS mode enabled, 0 -> FIPS mode disabled or unknown
+ */
+int      g_fips_mode_enabled(void);
 void
 g_qsort(void *base, size_t nitems, size_t size,
         int (*compar)(const void *, const void *));

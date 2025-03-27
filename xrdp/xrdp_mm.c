@@ -271,6 +271,10 @@ xrdp_mm_create_session(struct xrdp_mm *self)
             type = SCP_SESSION_TYPE_XVNC;
             break;
 
+        case XVNC_UDS_SESSION_CODE:
+            type = SCP_SESSION_TYPE_XVNC_UDS;
+            break;
+
         case  XORG_SESSION_CODE:
             type = SCP_SESSION_TYPE_XORG;
             break;
@@ -496,7 +500,8 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             {
                 g_snprintf(text, sizeof(text), "%d", 5900 + self->display);
             }
-            else if (self->code == XORG_SESSION_CODE)
+            else if (self->code == XORG_SESSION_CODE ||
+                     self->code == XVNC_UDS_SESSION_CODE)
             {
                 g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
                            self->uid, self->display);
@@ -3093,13 +3098,30 @@ xrdp_mm_user_session_connect(struct xrdp_mm *self)
 void
 xrdp_mm_connect(struct xrdp_mm *self)
 {
+    const char *p;
     const char *port = xrdp_mm_get_value(self, "port");
     const char *gw_username = xrdp_mm_get_value(self, "pamusername");
 
     /* make sure we start in correct state */
     cleanup_states(self);
 
-    self->code = xrdp_mm_get_value_int(self, "code", 0);
+    /*
+     * Standard VNC sessions cannot be supported in FIPS mode, so
+     * don't default to this session type */
+    if ((p = xrdp_mm_get_value(self, "code")) != NULL)
+    {
+        self->code = g_atoi(p);
+    }
+    else if (g_fips_mode_enabled())
+    {
+        LOG(LOG_LEVEL_INFO, "FIPS: defaulting to a VNC session over UDS");
+        self->code = XVNC_UDS_SESSION_CODE;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_INFO, "non-FIPS: defaulting to a VNC session over TCP");
+        self->code = XVNC_SESSION_CODE;
+    }
 
     /* Look at our module parameters to decide if we need to connect
      * to sesman or not */
@@ -3109,11 +3131,11 @@ xrdp_mm_connect(struct xrdp_mm *self)
         self->use_sesman = 1;
         /* Connecting to a remote sesman is no longer supported. For purely
          * local session types, this setting could be removed.
-         * The 'ip' value is still used for Xvnc sessions, to find the TCP
-         * address that the X server is listening on */
+         * The 'ip' value is still used for non-UDS Xvnc sessions, to find
+         * the TCP address that the X server is listening on */
         if (xrdp_mm_get_value(self, "ip") != NULL)
         {
-            if (self->code == XORG_SESSION_CODE)
+            if (self->code != XVNC_SESSION_CODE)
             {
                 xrdp_wm_log_msg(self->wm,
                                 LOG_LEVEL_WARNING,
