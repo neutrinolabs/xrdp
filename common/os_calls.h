@@ -71,6 +71,14 @@ int      g_sck_set_send_buffer_bytes(int sck, int bytes);
 int      g_sck_get_send_buffer_bytes(int sck, int *bytes);
 int      g_sck_set_recv_buffer_bytes(int sck, int bytes);
 int      g_sck_get_recv_buffer_bytes(int sck, int *bytes);
+/**
+ * Set SO_REUSEADDR for a socket
+ *
+ * Use before binding, if appropriate.
+ * @param sck Socket
+ * @return 0 for success
+ */
+int      g_sck_set_reuseaddr(int sck);
 int      g_sck_local_socket(void);
 int      g_sck_local_socketpair(int sck[2]);
 int      g_sck_vsock_socket(void);

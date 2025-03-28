@@ -892,6 +892,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
 
         g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
+        g_sck_set_reuseaddr(self->sck);
 
         if (g_tcp_bind_address(self->sck, port, address) == 0)
         {
@@ -961,6 +962,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
         }
         g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
+        g_sck_set_reuseaddr(self->sck);
         if (g_tcp4_bind_address(self->sck, port, address) == 0)
         {
             if (g_tcp_listen(self->sck) == 0)
@@ -980,6 +982,7 @@ trans_listen_address(struct trans *self, const char *port, const char *address)
         }
         g_file_set_cloexec(self->sck, 1);
         g_tcp_set_non_blocking(self->sck);
+        g_sck_set_reuseaddr(self->sck);
         if (g_tcp6_bind_address(self->sck, port, address) == 0)
         {
             if (g_tcp_listen(self->sck) == 0)
