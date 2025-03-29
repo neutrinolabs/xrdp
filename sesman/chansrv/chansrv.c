@@ -1835,7 +1835,13 @@ main(int argc, char **argv)
         return 1;
     }
 
-    /*  set up signal handler  */
+    /*  set up signal objects  */
+    g_snprintf(text, sizeof(text), "xrdp_chansrv_%8.8x_main_term", pid);
+    g_term_event = g_create_wait_obj(text);
+    g_snprintf(text, sizeof(text), "xrdp_chansrv_%8.8x_sigchld", pid);
+    g_sigchld_event = g_create_wait_obj(text);
+
+    /*  set up signal handlers */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */
@@ -1846,18 +1852,17 @@ main(int argc, char **argv)
     xcommon_set_x_server_fatal_handler(x_server_fatal_handler);
 
     LOG_DEVEL(LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text);
-
     LOG_DEVEL(LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num);
-    g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
-    g_term_event = g_create_wait_obj(text);
-    g_snprintf(text, 255, "xrdp_chansrv_%8.8x_sigchld", pid);
-    g_sigchld_event = g_create_wait_obj(text);
-    g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
-    g_thread_done_event = g_create_wait_obj(text);
-    g_snprintf(text, 255, "xrdp_chansrv_%8.8x_exec", pid);
+
+    /* Set up RAIL sync objects */
+    g_snprintf(text, sizeof(text), "xrdp_chansrv_%8.8x_exec", pid);
     g_exec_event = g_create_wait_obj(text);
     g_exec_mutex = tc_mutex_create();
     g_exec_sem = tc_sem_create(0);
+
+    /* Set up the channel thread */
+    g_snprintf(text, sizeof(text), "xrdp_chansrv_%8.8x_thread_done", pid);
+    g_thread_done_event = g_create_wait_obj(text);
     tc_thread_create(channel_thread_loop, 0);
 
     while (g_term_event > 0 && !g_is_wait_obj_set(g_term_event))
