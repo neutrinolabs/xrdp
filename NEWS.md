@@ -1,3 +1,45 @@
+# Release notes for xrdp v0.10.3 (2025/03/30)
+
+## General announcements
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+* Experimental support for utmp/wtmp file is provided in this release. If you use this, be aware that these files are only updated when an xrdp session is created or destroyed. Disconnections and reconnections to the same session are not tracked. In particular:-
+  * the FROM address for a client (as shown by the `w` command) reflects the IP address of the client at the time of creation, and not the address of the currently connected client.
+  * Sessions started by the `xrdp-sesrun` command do not have a FROM address.
+
+## Security fixes
+None
+
+## New features
+* The number of threads assigned to the x264 encoder can now be configured (#3366 #3367)
+* The colon in a share name passed from the client can be replaced with another character (#3389)
+* Experimental support for utmp/wtmp is backported from devel. Thanks to @mlewissmith for this contribution.
+* Add Hungarian keyboard (#3424 #3430)
+* Improved keyboard fallback logic for xorgxrdp results in better support for some keyboard variants (e.g. Brazil ABNT2) #3478
+* A new session type (Xvnc over Unix Domain Socket) has been added. Although intended primarily for Enterprise FIPS installations which use the Xvnc backend, this can be used with TigerVNC on any platform to improve security (#3453)
+
+## Bug fixes
+* Fix potential memory leaks (#3380 #3388)
+* Documentation fixes (#3403)
+* Various Coverity warnings have been addressed (#3411 #3423)
+* xrdp now copes with a mis-installed openh264 encoder (#3405 #3432)
+* Bug #2518 which affects FIPS-compliant Enterprise installations can be addressed by using the new 'Xvnc over UDS' session type (#3453)
+* FreeBSD: xrdp now avoids creating sessions with the same display number as forwarded X session over ssh (#3381 #3456)
+
+
+## Internal changes
+* FreeBSD CI bumped to 14.2 (#3427)
+
+## Changes for users
+None
+
+## Changes for packagers or developers
+* The config file subdirectory (`xrdp` part of `/etc/xrdp`) can now be configured (#3369)
+* Packagers using TigerVNC to provide the Xvnc backend may wish to configure the 'Xvnc over UDS' session type as a default by using a `code=1` line in xrdp.ini. Instructions are provided in the released xrdp.ini file.
+
+-----------------------
+
 # Release notes for xrdp v0.10.2 (2024/12/24)
 
 ## General announcements
