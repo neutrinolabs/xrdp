@@ -72,7 +72,7 @@ struct xrdp_session
     int check_for_app_input;
     void *rdp;
     void *orders;
-    struct xrdp_client_info *client_info;
+    struct xrdp_client_info_all *client_info;
     int up_and_running;
     int (*is_term)(void);
     int in_process_data; /* inc / dec libxrdp_process_data calls */

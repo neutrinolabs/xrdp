@@ -110,7 +110,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
     const char *configured_str = "";
 
     int rv = 0;
-    struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
+    struct xrdp_client_info_all *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
 
     /* Can we do TLS/SSL? (basic check) */
     int ssl_capable = g_file_readable(client_info->certificate) &&

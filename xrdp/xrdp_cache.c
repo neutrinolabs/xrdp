@@ -84,7 +84,7 @@ xrdp_cache_reset_crc(struct xrdp_cache *self)
 struct xrdp_cache *
 xrdp_cache_create(struct xrdp_wm *owner,
                   struct xrdp_session *session,
-                  struct xrdp_client_info *client_info)
+                  struct xrdp_client_info_all *client_info)
 {
     struct xrdp_cache *self;
 
@@ -178,7 +178,7 @@ xrdp_cache_delete(struct xrdp_cache *self)
 /*****************************************************************************/
 int
 xrdp_cache_reset(struct xrdp_cache *self,
-                 struct xrdp_client_info *client_info)
+                 struct xrdp_client_info_all *client_info)
 {
     struct xrdp_wm *wm;
     struct xrdp_session *session;

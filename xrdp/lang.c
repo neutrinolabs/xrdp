@@ -528,7 +528,7 @@ lookup_keylayout(int keylayout,
 }
 /*****************************************************************************/
 void
-xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
+xrdp_init_xkb_layout(struct xrdp_client_info_all *client_info)
 {
     int fd;
     int index = 0;
@@ -570,13 +570,14 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
     }
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
-    client_info->model[0] = '\0';
-    client_info->variant[0] = '\0';
-    strlcpy(client_info->layout, "us", sizeof(client_info->layout));
+    client_info->pub.model[0] = '\0';
+    client_info->pub.variant[0] = '\0';
+    strlcpy(client_info->pub.layout, "us", sizeof(client_info->pub.layout));
     if (client_info->keyboard_subtype == 3)
     {
         /* macintosh keyboard */
-        strlcpy(client_info->variant, "mac", sizeof(client_info->variant));
+        strlcpy(client_info->pub.variant, "mac",
+                sizeof(client_info->pub.variant));
     }
     else if (client_info->keyboard_subtype == 0)
     {
@@ -660,24 +661,24 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
                     {
                         if (section_found != -1 && section_found == index)
                         {
-                            strlcpy(client_info->model, value,
-                                    sizeof(client_info->model));
+                            strlcpy(client_info->pub.model, value,
+                                    sizeof(client_info->pub.model));
                         }
                     }
                     else if (g_strcasecmp(item, "variant") == 0)
                     {
                         if (section_found != -1 && section_found == index)
                         {
-                            strlcpy(client_info->variant, value,
-                                    sizeof(client_info->variant));
+                            strlcpy(client_info->pub.variant, value,
+                                    sizeof(client_info->pub.variant));
                         }
                     }
                     else if (g_strcasecmp(item, "options") == 0)
                     {
                         if (section_found != -1 && section_found == index)
                         {
-                            strlcpy(client_info->options, value,
-                                    sizeof(client_info->options));
+                            strlcpy(client_info->pub.options, value,
+                                    sizeof(client_info->pub.options));
                         }
                     }
                     else
@@ -760,8 +761,8 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
                 value = (const char *)list_get_item(values, index);
                 if (g_strcasecmp(item, rdp_layout) == 0)
                 {
-                    strlcpy(client_info->layout, value,
-                            sizeof(client_info->layout));
+                    strlcpy(client_info->pub.layout, value,
+                            sizeof(client_info->pub.layout));
                     break;
                 }
             }
@@ -771,8 +772,9 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
         list_delete(values);
 
         LOG(LOG_LEVEL_INFO, "xrdp_init_xkb_layout: model [%s] variant [%s] "
-            "layout [%s] options [%s]", client_info->model,
-            client_info->variant, client_info->layout, client_info->options);
+            "layout [%s] options [%s]", client_info->pub.model,
+            client_info->pub.variant, client_info->pub.layout,
+            client_info->pub.options);
         g_file_close(fd);
     }
     else
@@ -782,20 +784,20 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
     }
 
     // Initialise the rules and a few keycodes for xorgxrdp
-    strlcpy(client_info->xkb_rules, scancode_get_xkb_rules(),
-            sizeof(client_info->xkb_rules));
+    strlcpy(client_info->pub.xkb_rules, scancode_get_xkb_rules(),
+            sizeof(client_info->pub.xkb_rules));
     if (keylayout_supports_caps_lock(client_info->keylayout))
     {
-        client_info->x11_keycode_caps_lock =
+        client_info->pub.x11_keycode_caps_lock =
             scancode_to_x11_keycode(SCANCODE_CAPS_KEY);
     }
     else
     {
         LOG(LOG_LEVEL_INFO, "xrdp_init_xkb_layout: caps lock is not supported");
-        client_info->x11_keycode_caps_lock = 0;
+        client_info->pub.x11_keycode_caps_lock = 0;
     }
-    client_info->x11_keycode_num_lock =
+    client_info->pub.x11_keycode_num_lock =
         scancode_to_x11_keycode(SCANCODE_NUMLOCK_KEY);
-    client_info->x11_keycode_scroll_lock =
+    client_info->pub.x11_keycode_scroll_lock =
         scancode_to_x11_keycode(SCANCODE_SCROLL_KEY);
 }

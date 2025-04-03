@@ -1994,7 +1994,7 @@ lfreerdp_pre_connect(freerdp *instance)
 
     // Multi Monitor Settings
     const struct display_size_description *display_sizes =
-            &mod->client_info.display_sizes;
+            &mod->client_info.pub.display_sizes;
     instance->settings->num_monitors = display_sizes->monitorCount;
 
     for (index = 0; index < display_sizes->monitorCount; index++)

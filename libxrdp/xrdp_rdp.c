@@ -39,7 +39,8 @@
 
 /*****************************************************************************/
 static int
-xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
+xrdp_rdp_read_config(const char *xrdp_ini,
+                     struct xrdp_client_info_all *client_info)
 {
     int index = 0;
     struct list *items = (struct list *)NULL;
@@ -135,7 +136,7 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "new_cursors") == 0)
         {
-            client_info->pointer_flags = g_text2bool(value) == 0 ? 2 : 0;
+            client_info->pub.pointer_flags = g_text2bool(value) == 0 ? 2 : 0;
         }
         else if (g_strcasecmp(item, "require_credentials") == 0)
         {
@@ -389,8 +390,8 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     self->rfx_enc = rfx_context_new();
     rfx_context_set_cpu_opt(self->rfx_enc, xrdp_rdp_detect_cpu());
 #endif
-    self->client_info.size = sizeof(self->client_info);
-    self->client_info.version = CLIENT_INFO_CURRENT_VERSION;
+    self->client_info.pub.size = sizeof(self->client_info.pub);
+    self->client_info.pub.version = CLIENT_INFO_CURRENT_VERSION;
     LOG_DEVEL(LOG_LEVEL_TRACE, "out xrdp_rdp_create");
     return self;
 }
@@ -1314,8 +1315,8 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
          * sequence [MS-RDPBCGR] 1.3.1.3 */
         xrdp_rdp_suppress_output(self, 0, XSO_REASON_DEACTIVATE_REACTIVATE,
                                  0, 0,
-                                 self->client_info.display_sizes.session_width,
-                                 self->client_info.display_sizes.session_height);
+                                 self->client_info.pub.display_sizes.session_width,
+                                 self->client_info.pub.display_sizes.session_height);
 
         if (self->session->callback != 0)
         {

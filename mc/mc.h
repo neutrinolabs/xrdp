@@ -30,7 +30,7 @@
 #define CURRENT_MOD_VER 3
 
 struct source_info;
-struct xrdp_client_info;
+struct xrdp_client_info_all;
 
 /* Defined in xrdp_client_info.h */
 struct monitor_info;
@@ -100,7 +100,7 @@ struct mod
     int (*server_bell_trigger)(struct mod *v);
     int (*server_chansrv_in_use)(struct mod *v);
     void (*server_init_xkb_layout)(struct mod *v,
-                                   struct xrdp_client_info *client_info);
+                                   struct xrdp_client_info_all *client_info);
     tintptr server_dumby[100 - 29]; /* align, 100 minus the number of server
                                      functions above */
     /* common */

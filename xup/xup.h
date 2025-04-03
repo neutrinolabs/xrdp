@@ -38,14 +38,14 @@ enum caps_processing_status
 #include "os_calls.h"
 #include "defines.h"
 #include "log.h"
-#include "xrdp_client_info.h"
+#include "xrdp_client_info_all.h"
 #include "xrdp_constants.h"
 #include "xrdp_rail.h"
 
 #define CURRENT_MOD_VER 4
 
 struct source_info;
-struct xrdp_client_info;
+struct xrdp_client_info_all;
 
 struct mod
 {
@@ -124,7 +124,7 @@ struct mod
     int (*server_bell_trigger)(struct mod *v);
     int (*server_chansrv_in_use)(struct mod *v);
     void (*server_init_xkb_layout)(struct mod *v,
-                                   struct xrdp_client_info *client_info);
+                                   struct xrdp_client_info_all *client_info);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct mod *v, int rdpindex,
                                     int width, int height);
@@ -208,7 +208,7 @@ struct mod
     char ip[256];
     char port[256];
     int shift_state;
-    struct xrdp_client_info client_info;
+    struct xrdp_client_info_all client_info;
     int screen_shmem_id;
     int screen_shmem_id_mapped; /* boolean */
     char *screen_shmem_pixels;

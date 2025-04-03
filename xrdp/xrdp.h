@@ -35,7 +35,7 @@
 #include "ssl_calls.h"
 #include "thread_calls.h"
 #include "file.h"
-#include "xrdp_client_info.h"
+#include "xrdp_client_info_all.h"
 #include "log.h"
 
 #if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_NVENC)
@@ -88,12 +88,12 @@ g_process_waiting_function(void);
 /* xrdp_cache.c */
 struct xrdp_cache *
 xrdp_cache_create(struct xrdp_wm *owner, struct xrdp_session *session,
-                  struct xrdp_client_info *client_info);
+                  struct xrdp_client_info_all *client_info);
 void
 xrdp_cache_delete(struct xrdp_cache *self);
 int
 xrdp_cache_reset(struct xrdp_cache *self,
-                 struct xrdp_client_info *client_info);
+                 struct xrdp_client_info_all *client_info);
 int
 xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
                       int hints);
@@ -123,7 +123,7 @@ xrdp_cache_get_os_bitmap(struct xrdp_cache *self, int rdpindex);
 /* xrdp_wm.c */
 struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
-               struct xrdp_client_info *client_info);
+               struct xrdp_client_info_all *client_info);
 void
 xrdp_wm_delete(struct xrdp_wm *self);
 int
@@ -458,7 +458,7 @@ km_load_file(const char *filename, struct xrdp_keymap *keymap);
  * @param client_info Client info struct to initialise
  */
 void
-xrdp_init_xkb_layout(struct xrdp_client_info *client_info);
+xrdp_init_xkb_layout(struct xrdp_client_info_all *client_info);
 
 /* xrdp_login_wnd.c */
 /**
@@ -543,7 +543,7 @@ int
 server_chansrv_in_use(struct xrdp_mod *mod);
 void
 server_init_xkb_layout(struct xrdp_mod *mod,
-                       struct xrdp_client_info *client_info);
+                       struct xrdp_client_info_all *client_info);
 int
 server_fill_rect(struct xrdp_mod *mod, int x, int y, int cx, int cy);
 int

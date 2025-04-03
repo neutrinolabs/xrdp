@@ -291,7 +291,7 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     int color = 0;
     struct stream *s = (struct stream *)NULL;
 
-    if (session->client_info->bpp > 8)
+    if (session->client_info->pub.bpp > 8)
     {
         return 0;
     }
@@ -750,7 +750,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
         height = 32;
     }
     /* error check */
-    if ((session->client_info->pointer_flags & 1) == 0)
+    if ((session->client_info->pub.pointer_flags & 1) == 0)
     {
         if (bpp != 24)
         {
@@ -781,7 +781,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             return 1;
         }
 
-        if ((session->client_info->pointer_flags & 1) != 0)
+        if ((session->client_info->pub.pointer_flags & 1) != 0)
         {
             out_uint16_le(s, bpp); /* TS_FP_POINTERATTRIBUTE -> newPointerUpdateData.xorBpp */
         }
@@ -790,7 +790,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "libxrdp_send_pointer: slowpath");
         xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-        if ((session->client_info->pointer_flags & 1) == 0)
+        if ((session->client_info->pub.pointer_flags & 1) == 0)
         {
             out_uint16_le(s, RDP_POINTER_COLOR);
             out_uint16_le(s, 0); /* pad */
@@ -869,7 +869,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     s_mark_end(s);
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
     {
-        if ((session->client_info->pointer_flags & 1) == 0)
+        if ((session->client_info->pub.pointer_flags & 1) == 0)
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_COLORPOINTERATTRIBUTE "
                       "cachedPointerUpdateData = { cacheIndex %d, "
@@ -907,7 +907,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     }
     else
     {
-        if ((session->client_info->pointer_flags & 1) == 0)
+        if ((session->client_info->pub.pointer_flags & 1) == 0)
         {
             LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_COLORPOINTERATTRIBUTE "
                       "cacheIndex %d, "

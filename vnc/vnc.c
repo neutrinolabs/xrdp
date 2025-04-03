@@ -41,7 +41,7 @@
 #include "trans.h"
 #include "ssl_calls.h"
 #include "string_calls.h"
-#include "xrdp_client_info.h"
+#include "xrdp_client_info_all.h"
 
 /* elements in above list */
 #define EDS_STATUS_MSG_COUNT \
@@ -2484,8 +2484,8 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
     }
     else if (g_strcasecmp(name, "client_info") == 0)
     {
-        const struct xrdp_client_info *client_info =
-            (const struct xrdp_client_info *) value;
+        const struct xrdp_client_info_all *client_info =
+            (const struct xrdp_client_info_all *) value;
 
         v->multimon_configured = client_info->multimon;
 
@@ -2493,10 +2493,10 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
          * Use minfo_wm, as this is normalised for a top-left of (0,0)
          * as required by RFC6143 */
         init_client_layout(v,
-                           client_info->display_sizes.session_width,
-                           client_info->display_sizes.session_height,
-                           client_info->display_sizes.monitorCount,
-                           client_info->display_sizes.minfo_wm);
+                           client_info->pub.display_sizes.session_width,
+                           client_info->pub.display_sizes.session_height,
+                           client_info->pub.display_sizes.monitorCount,
+                           client_info->pub.display_sizes.minfo_wm);
         log_screen_layout(LOG_LEVEL_DEBUG, "client_info", &v->client_layout);
     }
 

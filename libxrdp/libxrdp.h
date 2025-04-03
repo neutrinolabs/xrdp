@@ -32,7 +32,7 @@
 #include "log.h"
 #include "file.h"
 #include "libxrdpinc.h"
-#include "xrdp_client_info.h"
+#include "xrdp_client_info_all.h"
 #include "log.h"
 
 
@@ -165,7 +165,7 @@ struct xrdp_rdp
     struct xrdp_sec *sec_layer;
     int share_id;
     int mcs_channel;
-    struct xrdp_client_info client_info;
+    struct xrdp_client_info_all client_info;
     struct xrdp_mppc_enc *mppc_enc;
     void *rfx_enc;
 };

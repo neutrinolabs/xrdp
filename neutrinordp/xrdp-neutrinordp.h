@@ -22,7 +22,7 @@
 
 #include "arch.h"
 #include "xrdp_constants.h"
-#include "xrdp_client_info.h"
+#include "xrdp_client_info_all.h"
 
 /* Incomplete type definitions, referenced below */
 struct rail_window_state_order;
@@ -144,7 +144,7 @@ struct mod
     int (*server_bell_trigger)(struct mod *v);
     int (*server_chansrv_in_use)(struct mod *v);
     void (*server_init_xkb_layout)(struct mod *v,
-                                   struct xrdp_client_info *client_info);
+                                   struct xrdp_client_info_all *client_info);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct mod *v, int rdpindex,
                                     int width, int height);
@@ -225,7 +225,7 @@ struct mod
     int bool_keyBoardSynced ; /* Numlock can be out of sync, we hold state here to resolve */
     int keyBoardLockInfo ; /* Holds initial numlock capslock state */
 
-    struct xrdp_client_info client_info;
+    struct xrdp_client_info_all client_info;
 
     struct rdp_freerdp *inst;
     struct bitmap_item bitmap_cache[4][4096];

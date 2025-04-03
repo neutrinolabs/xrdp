@@ -201,7 +201,8 @@ lib_send_client_info(struct mod *mod)
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 104);
-    g_memcpy(s->p, &(mod->client_info), sizeof(mod->client_info));
+    // Only send the public bit of the client info
+    g_memcpy(s->p, &(mod->client_info), sizeof(struct xrdp_client_info));
     s->p += sizeof(mod->client_info);
     s_mark_end(s);
     len = (int)(s->end - s->data);
@@ -255,19 +256,19 @@ lib_mod_connect(struct mod *mod)
     }
     mod->server_init_xkb_layout(mod, &(mod->client_info));
     LOG(LOG_LEVEL_INFO, "XKB rules '%s' will be used by the module",
-        mod->client_info.xkb_rules);
+        mod->client_info.pub.xkb_rules);
 
-    if (mod->client_info.h264_frame_interval <= 0)
+    if (mod->client_info.pub.h264_frame_interval <= 0)
     {
-        mod->client_info.h264_frame_interval = DEFAULT_H264_FRAME_INTERVAL;
+        mod->client_info.pub.h264_frame_interval = DEFAULT_H264_FRAME_INTERVAL;
     }
-    if (mod->client_info.rfx_frame_interval <= 0)
+    if (mod->client_info.pub.rfx_frame_interval <= 0)
     {
-        mod->client_info.rfx_frame_interval = DEFAULT_RFX_FRAME_INTERVAL;
+        mod->client_info.pub.rfx_frame_interval = DEFAULT_RFX_FRAME_INTERVAL;
     }
-    if (mod->client_info.normal_frame_interval <= 0)
+    if (mod->client_info.pub.normal_frame_interval <= 0)
     {
-        mod->client_info.normal_frame_interval = DEFAULT_NORMAL_FRAME_INTERVAL;
+        mod->client_info.pub.normal_frame_interval = DEFAULT_NORMAL_FRAME_INTERVAL;
     }
 
     make_stream(s);
@@ -1985,15 +1986,15 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
     }
     else if (g_strcasecmp(name, "h264_frame_interval") == 0)
     {
-        mod->client_info.h264_frame_interval = g_atoi(value);
+        mod->client_info.pub.h264_frame_interval = g_atoi(value);
     }
     else if (g_strcasecmp(name, "rfx_frame_interval") == 0)
     {
-        mod->client_info.rfx_frame_interval = g_atoi(value);
+        mod->client_info.pub.rfx_frame_interval = g_atoi(value);
     }
     else if (g_strcasecmp(name, "normal_frame_interval") == 0)
     {
-        mod->client_info.normal_frame_interval = g_atoi(value);
+        mod->client_info.pub.normal_frame_interval = g_atoi(value);
     }
     else if (g_strcasecmp(name, "client_info") == 0)
     {

@@ -29,7 +29,7 @@
 #include "fifo.h"
 #include "guid.h"
 #include "scancode.h"
-#include "xrdp_client_info.h"
+#include "xrdp_client_info_all.h"
 #include "xrdp_tconfig.h"
 
 #define MAX_NR_CHANNELS 16
@@ -129,7 +129,7 @@ struct xrdp_mod
     int (*server_bell_trigger)(struct xrdp_mod *v);
     int (*server_chansrv_in_use)(struct xrdp_mod *v);
     void (*server_init_xkb_layout)(struct xrdp_mod *v,
-                                   struct xrdp_client_info *client_info);
+                                   struct xrdp_client_info_all *client_info);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct xrdp_mod *v, int rdpindex,
                                     int width, int height);
@@ -575,7 +575,7 @@ struct xrdp_wm
     int last_high_surrogate_key_up;
     int last_high_surrogate_key_down;
     /* client info */
-    struct xrdp_client_info *client_info;
+    struct xrdp_client_info_all *client_info;
     /* session log */
     struct list *log;
     struct xrdp_bitmap *log_wnd;
