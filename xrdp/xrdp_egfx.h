@@ -228,9 +228,10 @@ xrdp_egfx_send_wire_to_surface2(struct xrdp_egfx *egfx, int surface_id,
  */
 struct stream *
 xrdp_egfx_reset_graphics(struct xrdp_egfx_bulk *bulk, int width, int height,
-                         int monitor_count, struct monitor_info *mi);
+                         int monitor_count, const struct monitor_info *mi);
 int
 xrdp_egfx_send_reset_graphics(struct xrdp_egfx *egfx, int width, int height,
-                              int monitor_count, struct monitor_info *mi);
+                              int monitor_count,
+                              const struct monitor_info *mi);
 
 #endif
