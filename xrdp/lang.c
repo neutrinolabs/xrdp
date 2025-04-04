@@ -688,8 +688,10 @@ scan_overrides_kbtype_tables(toml_table_t *kb_type,
                        layouts_table_str, layouts_table_str_len,
                        map_table_str, map_table_str_len,
                        client_info->xup.model, sizeof(client_info->xup.model),
-                       client_info->xup.variant, sizeof(client_info->xup.variant),
-                       client_info->xup.options, sizeof(client_info->xup.options));
+                       client_info->xup.variant,
+                       sizeof(client_info->xup.variant),
+                       client_info->xup.options,
+                       sizeof(client_info->xup.options));
     }
 }
 
@@ -797,7 +799,8 @@ read_toml_config(struct xrdp_client_info *client_info,
     // lookup the corresponding X11 layout in the map table, e.g. if we
     // matched 0xe0200411 to 'rdp_layout_jp, copy 'jp' for the client.
     if (!get_toml_string(map_table, layout_name,
-                         client_info->xup.layout, sizeof(client_info->xup.layout)))
+                         client_info->xup.layout,
+                         sizeof(client_info->xup.layout)))
     {
         LOG(LOG_LEVEL_ERROR, "Can't find layout name %s in map table %s",
             layout_name, map_table_str);

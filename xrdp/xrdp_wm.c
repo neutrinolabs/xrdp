@@ -101,8 +101,9 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     self = (struct xrdp_wm *)g_malloc(sizeof(struct xrdp_wm), 1);
     self->client_info = client_info;
-    self->screen = xrdp_bitmap_create(client_info->xup.display_sizes.session_width,
-                                      client_info->xup.display_sizes.session_height,
+    unsigned int session_width = client_info->xup.display_sizes.session_width;
+    unsigned int session_height = client_info->xup.display_sizes.session_height;
+    self->screen = xrdp_bitmap_create(session_width, session_height,
                                       client_info->xup.bpp,
                                       WND_TYPE_SCREEN, self);
     self->screen->wm = self;
@@ -2370,14 +2371,16 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         primary_y_offset = 0;
 
         /* multimon scenario, draw log window on primary monitor */
-        if (self->client_info->xup.display_sizes.monitorCount > 1)
+        const struct display_size_description *display_sizes =
+                &self->client_info->xup.display_sizes;
+        if (display_sizes->monitorCount > 1)
         {
-            for (index = 0; index < self->client_info->xup.display_sizes.monitorCount; index++)
+            for (index = 0; index < display_sizes->monitorCount; index++)
             {
-                if (self->client_info->xup.display_sizes.minfo_wm[index].is_primary)
+                if (display_sizes->minfo_wm[index].is_primary)
                 {
-                    primary_x_offset = self->client_info->xup.display_sizes.minfo_wm[index].left;
-                    primary_y_offset = self->client_info->xup.display_sizes.minfo_wm[index].top;
+                    primary_x_offset = display_sizes->minfo_wm[index].left;
+                    primary_y_offset = display_sizes->minfo_wm[index].top;
                     break;
                 }
             }

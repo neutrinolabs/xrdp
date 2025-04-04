@@ -1506,13 +1506,15 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                                            ver_flags[best_index].flags);
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_capsconfirm "
             "error %d best_index %d", error, best_index);
+        const struct display_size_description *display_sizes =
+                &self->wm->client_info->xup.display_sizes;
         error = xrdp_egfx_send_reset_graphics(self->egfx,
                                               screen->width, screen->height,
-                                              self->wm->client_info->xup.display_sizes.monitorCount,
-                                              self->wm->client_info->xup.display_sizes.minfo);
-        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_reset_graphics "
-            "error %d monitorCount %d",
-            error, self->wm->client_info->xup.display_sizes.monitorCount);
+                                              display_sizes->monitorCount,
+                                              display_sizes->minfo);
+        LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: "
+            "xrdp_egfx_send_reset_graphics error %d monitorCount %d",
+            error, display_sizes->monitorCount);
         self->egfx_up = 1;
         xrdp_mm_egfx_create_surfaces(self);
         self->encoder = xrdp_encoder_create(self);

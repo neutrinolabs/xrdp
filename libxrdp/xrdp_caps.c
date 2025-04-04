@@ -1034,8 +1034,10 @@ unsigned int calculate_multifragmentupdate_len(const struct xrdp_rdp *self)
 {
     unsigned int result = MAX_MULTIFRAGMENTUPDATE_SIZE;
 
-    unsigned int x_tiles = (self->client_info.xup.display_sizes.session_width + 63) / 64;
-    unsigned int y_tiles = (self->client_info.xup.display_sizes.session_height + 63) / 64;
+    unsigned int x_tiles =
+        (self->client_info.xup.display_sizes.session_width + 63) / 64;
+    unsigned int y_tiles =
+        (self->client_info.xup.display_sizes.session_height + 63) / 64;
 
     /* Check for overflow on calculation if bad parameters are supplied */
     if ((x_tiles * y_tiles  + 1) < (UINT_MAX / 16384))
@@ -1123,6 +1125,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
               "CAPSTYPE_GENERAL TODO");
 
     /* Output bitmap capability set */
+    unsigned int width = self->client_info.xup.display_sizes.session_width;
+    unsigned int height = self->client_info.xup.display_sizes.session_height;
     caps_count++;
     out_uint16_le(s, CAPSTYPE_BITMAP);
     out_uint16_le(s, CAPSTYPE_BITMAP_LEN);
@@ -1130,22 +1134,24 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 1); /* Receive 1 BPP */
     out_uint16_le(s, 1); /* Receive 4 BPP */
     out_uint16_le(s, 1); /* Receive 8 BPP */
-    out_uint16_le(s, self->client_info.xup.display_sizes.session_width); /* width */
-    out_uint16_le(s, self->client_info.xup.display_sizes.session_height); /* height */
+    out_uint16_le(s, width); /* width */
+    out_uint16_le(s, height); /* height */
     out_uint16_le(s, 0); /* Pad */
     out_uint16_le(s, 1); /* Allow resize */
     out_uint16_le(s, 1); /* bitmap compression */
     out_uint16_le(s, 0); /* unknown */
     out_uint16_le(s, 0); /* unknown */
     out_uint16_le(s, 0); /* pad */
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "xrdp_caps_send_demand_active: Server Capability "
               "CAPSTYPE_BITMAP TODO");
 
     /* Output font capability set */
     caps_count++;
     out_uint16_le(s, CAPSTYPE_FONT);
     out_uint16_le(s, CAPSTYPE_FONT_LEN);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: Server Capability "
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "xrdp_caps_send_demand_active: Server Capability "
               "CAPSTYPE_FONT");
 
     /* Output order capability set */

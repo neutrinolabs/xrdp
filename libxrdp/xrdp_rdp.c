@@ -1313,10 +1313,10 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
 
         /* This is also the end of an Deactivation-reactivation
          * sequence [MS-RDPBCGR] 1.3.1.3 */
+        int width = self->client_info.xup.display_sizes.session_width;
+        int height = self->client_info.xup.display_sizes.session_height;
         xrdp_rdp_suppress_output(self, 0, XSO_REASON_DEACTIVATE_REACTIVATE,
-                                 0, 0,
-                                 self->client_info.xup.display_sizes.session_width,
-                                 self->client_info.xup.display_sizes.session_height);
+                                 0, 0, width, height);
 
         if (self->session->callback != 0)
         {
