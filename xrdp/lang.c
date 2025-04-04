@@ -687,9 +687,9 @@ scan_overrides_kbtype_tables(toml_table_t *kb_type,
         read_param_set(subtable,
                        layouts_table_str, layouts_table_str_len,
                        map_table_str, map_table_str_len,
-                       client_info->model, sizeof(client_info->model),
-                       client_info->variant, sizeof(client_info->variant),
-                       client_info->options, sizeof(client_info->options));
+                       client_info->xup.model, sizeof(client_info->xup.model),
+                       client_info->xup.variant, sizeof(client_info->xup.variant),
+                       client_info->xup.options, sizeof(client_info->xup.options));
     }
 }
 
@@ -724,9 +724,9 @@ read_toml_config(struct xrdp_client_info *client_info,
     read_param_set(defaults,
                    layouts_table_str, sizeof(layouts_table_str),
                    map_table_str, sizeof(map_table_str),
-                   client_info->model, sizeof(client_info->model),
-                   client_info->variant, sizeof(client_info->variant),
-                   client_info->options, sizeof(client_info->options));
+                   client_info->xup.model, sizeof(client_info->xup.model),
+                   client_info->xup.variant, sizeof(client_info->xup.variant),
+                   client_info->xup.options, sizeof(client_info->xup.options));
 
     if (layouts_table_str[0] == '\0' || map_table_str[0] == '\0')
     {
@@ -797,7 +797,7 @@ read_toml_config(struct xrdp_client_info *client_info,
     // lookup the corresponding X11 layout in the map table, e.g. if we
     // matched 0xe0200411 to 'rdp_layout_jp, copy 'jp' for the client.
     if (!get_toml_string(map_table, layout_name,
-                         client_info->layout, sizeof(client_info->layout)))
+                         client_info->xup.layout, sizeof(client_info->xup.layout)))
     {
         LOG(LOG_LEVEL_ERROR, "Can't find layout name %s in map table %s",
             layout_name, map_table_str);
@@ -841,9 +841,9 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
     }
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
-    client_info->model[0] = '\0';
-    client_info->variant[0] = '\0';
-    strlcpy(client_info->layout, "us", sizeof(client_info->layout));
+    client_info->xup.model[0] = '\0';
+    client_info->xup.variant[0] = '\0';
+    strlcpy(client_info->xup.layout, "us", sizeof(client_info->xup.layout));
     if (client_info->keyboard_subtype == 0)
     {
         /* default - standard subtype */
@@ -875,27 +875,27 @@ xrdp_init_xkb_layout(struct xrdp_client_info *client_info)
             read_toml_config(client_info, keyboard_cfg_file, tfile);
             LOG(LOG_LEVEL_INFO, "xrdp_init_xkb_layout: model [%s] variant [%s] "
                 "layout [%s] options [%s]",
-                client_info->model, client_info->variant,
-                client_info->layout, client_info->options);
+                client_info->xup.model, client_info->xup.variant,
+                client_info->xup.layout, client_info->xup.options);
             toml_free(tfile);
         }
     }
 
     // Initialise the rules and a few keycodes for xorgxrdp
-    strlcpy(client_info->xkb_rules, scancode_get_xkb_rules(),
-            sizeof(client_info->xkb_rules));
+    strlcpy(client_info->xup.xkb_rules, scancode_get_xkb_rules(),
+            sizeof(client_info->xup.xkb_rules));
     if (keylayout_supports_caps_lock(client_info->keylayout))
     {
-        client_info->x11_keycode_caps_lock =
+        client_info->xup.x11_keycode_caps_lock =
             scancode_to_x11_keycode(SCANCODE_CAPS_KEY);
     }
     else
     {
         LOG(LOG_LEVEL_INFO, "xrdp_init_xkb_layout: caps lock is not supported");
-        client_info->x11_keycode_caps_lock = 0;
+        client_info->xup.x11_keycode_caps_lock = 0;
     }
-    client_info->x11_keycode_num_lock =
+    client_info->xup.x11_keycode_num_lock =
         scancode_to_x11_keycode(SCANCODE_NUMLOCK_KEY);
-    client_info->x11_keycode_scroll_lock =
+    client_info->xup.x11_keycode_scroll_lock =
         scancode_to_x11_keycode(SCANCODE_SCROLL_KEY);
 }

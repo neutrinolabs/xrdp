@@ -59,7 +59,7 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
         return 1;
     }
 
-    description = &self->client_info.display_sizes;
+    description = &self->client_info.xup.display_sizes;
 
     out_uint32_le(s, description->monitorCount); /* monitorCount (4 bytes) */
 
@@ -186,7 +186,7 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     in_uint8s(s, 2); /* Number of fonts */
     in_uint16_le(s, cap_flags); /* Capability flags */
     in_uint8a(s, order_caps, 32); /* Orders supported */
-    g_memcpy(self->client_info.orders, order_caps, 32);
+    g_memcpy(self->client_info.xup.orders, order_caps, 32);
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: terminalDescriptor (ignored as per protocol spec)");
     LOG_DEVEL(LOG_LEVEL_TRACE, "TS_ORDER_CAPABILITYSET: desktopSaveXGranularity (ignored as per protocol spec)");
@@ -230,7 +230,7 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
 
     if (cap_flags & 0x80) /* ORDER_FLAGS_EXTRA_SUPPORT */
     {
-        self->client_info.order_flags_ex = ex_flags;
+        self->client_info.xup.order_flags_ex = ex_flags;
         if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
         {
             LOG_DEVEL(LOG_LEVEL_INFO, "Client Capability: bitmap cache v3 supported");
@@ -315,7 +315,7 @@ xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
         return 1;
     }
     self->client_info.bitmap_cache_version |= 2;
-    Bpp = (self->client_info.bpp + 7) / 8;
+    Bpp = (self->client_info.xup.bpp + 7) / 8;
     in_uint16_le(s, i); /* cache flags */
     self->client_info.bitmap_cache_persist_enable = i;
     in_uint8s(s, 2); /* number of caches in set, 3 */
@@ -379,9 +379,9 @@ xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
         LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_pointer: error");
         return 1;
     }
-    no_new_cursor = self->client_info.pointer_flags & 2;
+    no_new_cursor = self->client_info.xup.pointer_flags & 2;
     in_uint16_le(s, colorPointerFlag);
-    self->client_info.pointer_flags = colorPointerFlag;
+    self->client_info.xup.pointer_flags = colorPointerFlag;
     in_uint16_le(s, i);
     i = MIN(i, 32);
     self->client_info.pointer_cache_entries = i;
@@ -402,7 +402,7 @@ xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
     {
         LOG(LOG_LEVEL_INFO, "xrdp_caps_process_pointer: new(color) cursor is "
             "disabled by config");
-        self->client_info.pointer_flags = 0;
+        self->client_info.xup.pointer_flags = 0;
     }
     return 0;
 }
@@ -504,16 +504,16 @@ xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
         return 1;
     }
     in_uint32_le(s, i32);
-    self->client_info.offscreen_support_level = i32;
+    self->client_info.xup.offscreen_support_level = i32;
     in_uint16_le(s, i32);
-    self->client_info.offscreen_cache_size = i32 * 1024;
+    self->client_info.xup.offscreen_cache_size = i32 * 1024;
     in_uint16_le(s, i32);
-    self->client_info.offscreen_cache_entries = i32;
+    self->client_info.xup.offscreen_cache_entries = i32;
     LOG(LOG_LEVEL_INFO, "xrdp_process_offscreen_bmpcache: support level %d "
         "cache size %d bytes cache entries %d",
-        self->client_info.offscreen_support_level,
-        self->client_info.offscreen_cache_size,
-        self->client_info.offscreen_cache_entries);
+        self->client_info.xup.offscreen_support_level,
+        self->client_info.xup.offscreen_cache_size,
+        self->client_info.xup.offscreen_cache_entries);
     return 0;
 }
 
@@ -704,7 +704,7 @@ xrdp_caps_process_largepointer(struct xrdp_rdp *self, struct stream *s,
     int largePointerSupportFlags;
 
     in_uint16_le(s, largePointerSupportFlags);
-    self->client_info.large_pointer_support_flags = largePointerSupportFlags;
+    self->client_info.xup.large_pointer_support_flags = largePointerSupportFlags;
     return 0;
 }
 
@@ -955,52 +955,52 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     }
 
     if (self->client_info.no_orders_supported &&
-            (self->client_info.offscreen_support_level != 0))
+            (self->client_info.xup.offscreen_support_level != 0))
     {
         LOG(LOG_LEVEL_WARNING, "Client Capability: not enough orders "
             "supported by client, client wants off screen bitmap but "
             "offscreen bitmaps disabled");
-        self->client_info.offscreen_support_level = 0;
-        self->client_info.offscreen_cache_size = 0;
-        self->client_info.offscreen_cache_entries = 0;
+        self->client_info.xup.offscreen_support_level = 0;
+        self->client_info.xup.offscreen_cache_size = 0;
+        self->client_info.xup.offscreen_cache_entries = 0;
     }
 
     if (self->client_info.use_fast_path)
     {
-        if ((self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_96x96) &&
+        if ((self->client_info.xup.large_pointer_support_flags & LARGE_POINTER_FLAG_96x96) &&
                 (self->client_info.max_fastpath_frag_bytes < 38055))
         {
             LOG(LOG_LEVEL_WARNING, "Client Capability: client requested "
                 "LARGE_POINTER_FLAG_96x96 but max_fastpath_frag_bytes(%d) is less then "
                 "the required size of 38055, 96x96 large cursor support disabled",
                 self->client_info.max_fastpath_frag_bytes);
-            self->client_info.large_pointer_support_flags &= ~LARGE_POINTER_FLAG_96x96;
+            self->client_info.xup.large_pointer_support_flags &= ~LARGE_POINTER_FLAG_96x96;
         }
-        if ((self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_384x384) &&
+        if ((self->client_info.xup.large_pointer_support_flags & LARGE_POINTER_FLAG_384x384) &&
                 (self->client_info.max_fastpath_frag_bytes < 608299))
         {
             LOG(LOG_LEVEL_WARNING, "Client Capability: client requested "
                 "LARGE_POINTER_FLAG_384x384 but max_fastpath_frag_bytes(%d) is less then "
                 "the required size of 608299, 384x384 large cursor support disabled",
                 self->client_info.max_fastpath_frag_bytes);
-            self->client_info.large_pointer_support_flags &= ~LARGE_POINTER_FLAG_384x384;
+            self->client_info.xup.large_pointer_support_flags &= ~LARGE_POINTER_FLAG_384x384;
         }
     }
     else
     {
-        if (self->client_info.large_pointer_support_flags != 0)
+        if (self->client_info.xup.large_pointer_support_flags != 0)
         {
             LOG(LOG_LEVEL_WARNING, "Client Capability: client requested "
                 "large pointers but use_fast_path is false, "
                 "all large cursor support disabled");
-            self->client_info.large_pointer_support_flags = 0;
+            self->client_info.xup.large_pointer_support_flags = 0;
         }
     }
-    if (self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_96x96)
+    if (self->client_info.xup.large_pointer_support_flags & LARGE_POINTER_FLAG_96x96)
     {
         LOG(LOG_LEVEL_INFO, "Client Capability: LARGE_POINTER_FLAG_96x96 supported");
     }
-    if (self->client_info.large_pointer_support_flags & LARGE_POINTER_FLAG_384x384)
+    if (self->client_info.xup.large_pointer_support_flags & LARGE_POINTER_FLAG_384x384)
     {
         LOG(LOG_LEVEL_INFO, "Client Capability: LARGE_POINTER_FLAG_384x384 supported");
     }
@@ -1034,8 +1034,8 @@ unsigned int calculate_multifragmentupdate_len(const struct xrdp_rdp *self)
 {
     unsigned int result = MAX_MULTIFRAGMENTUPDATE_SIZE;
 
-    unsigned int x_tiles = (self->client_info.display_sizes.session_width + 63) / 64;
-    unsigned int y_tiles = (self->client_info.display_sizes.session_height + 63) / 64;
+    unsigned int x_tiles = (self->client_info.xup.display_sizes.session_width + 63) / 64;
+    unsigned int y_tiles = (self->client_info.xup.display_sizes.session_height + 63) / 64;
 
     /* Check for overflow on calculation if bad parameters are supplied */
     if ((x_tiles * y_tiles  + 1) < (UINT_MAX / 16384))
@@ -1126,12 +1126,12 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     caps_count++;
     out_uint16_le(s, CAPSTYPE_BITMAP);
     out_uint16_le(s, CAPSTYPE_BITMAP_LEN);
-    out_uint16_le(s, self->client_info.bpp); /* Preferred BPP */
+    out_uint16_le(s, self->client_info.xup.bpp); /* Preferred BPP */
     out_uint16_le(s, 1); /* Receive 1 BPP */
     out_uint16_le(s, 1); /* Receive 4 BPP */
     out_uint16_le(s, 1); /* Receive 8 BPP */
-    out_uint16_le(s, self->client_info.display_sizes.session_width); /* width */
-    out_uint16_le(s, self->client_info.display_sizes.session_height); /* height */
+    out_uint16_le(s, self->client_info.xup.display_sizes.session_width); /* width */
+    out_uint16_le(s, self->client_info.xup.display_sizes.session_height); /* height */
     out_uint16_le(s, 0); /* Pad */
     out_uint16_le(s, 1); /* Allow resize */
     out_uint16_le(s, 1); /* bitmap compression */
@@ -1402,7 +1402,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     int early_cap_flags = self->client_info.mcs_early_capability_flags;
 
     if ((early_cap_flags & RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU) != 0 &&
-            self->client_info.display_sizes.monitorCount > 0 &&
+            self->client_info.xup.display_sizes.monitorCount > 0 &&
             self->client_info.multimon == 1)
     {
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_send_demand_active: sending monitor layout pdu");

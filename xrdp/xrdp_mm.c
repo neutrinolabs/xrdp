@@ -90,7 +90,7 @@ xrdp_mm_create(struct xrdp_wm *owner)
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_create: bpp %d mcs_connection_type %d "
               "jpeg_codec_id %d v3_codec_id %d rfx_codec_id %d "
               "h264_codec_id %d",
-              self->wm->client_info->bpp,
+              self->wm->client_info->xup.bpp,
               self->wm->client_info->mcs_connection_type,
               self->wm->client_info->jpeg_codec_id,
               self->wm->client_info->v3_codec_id,
@@ -1346,7 +1346,7 @@ xrdp_mm_egfx_create_surfaces(struct xrdp_mm *self)
     struct xrdp_bitmap *screen;
 
     screen = self->wm->screen;
-    count = self->wm->client_info->display_sizes.monitorCount;
+    count = self->wm->client_info->xup.display_sizes.monitorCount;
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_egfx_create_surfaces: "
               "monitor count %d", count);
     if (count < 1)
@@ -1368,7 +1368,7 @@ xrdp_mm_egfx_create_surfaces(struct xrdp_mm *self)
     for (index = 0; index < count; index++)
     {
         surface_id = index;
-        mi = self->wm->client_info->display_sizes.minfo_wm + index;
+        mi = self->wm->client_info->xup.display_sizes.minfo_wm + index;
         left = mi->left;
         top = mi->top;
         width = mi->right - mi->left + 1;
@@ -1508,11 +1508,11 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             "error %d best_index %d", error, best_index);
         error = xrdp_egfx_send_reset_graphics(self->egfx,
                                               screen->width, screen->height,
-                                              self->wm->client_info->display_sizes.monitorCount,
-                                              self->wm->client_info->display_sizes.minfo);
+                                              self->wm->client_info->xup.display_sizes.monitorCount,
+                                              self->wm->client_info->xup.display_sizes.minfo);
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_reset_graphics "
             "error %d monitorCount %d",
-            error, self->wm->client_info->display_sizes.monitorCount);
+            error, self->wm->client_info->xup.display_sizes.monitorCount);
         self->egfx_up = 1;
         xrdp_mm_egfx_create_surfaces(self);
         self->encoder = xrdp_encoder_create(self);
@@ -1662,7 +1662,7 @@ sync_dynamic_monitor_data(struct xrdp_wm *wm,
                           struct display_size_description *description)
 {
     struct display_size_description *display_sizes
-        = &(wm->client_info->display_sizes);
+        = &(wm->client_info->xup.display_sizes);
 
     display_sizes->monitorCount = description->monitorCount;
     display_sizes->session_width = description->session_width;
@@ -2055,7 +2055,7 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
         }
 
         const struct display_size_description *current_size
-                = &wm->client_info->display_sizes;
+                = &wm->client_info->xup.display_sizes;
 
         const int already_this_size = queue_head->session_width
                                       == current_size->session_width
@@ -3857,7 +3857,7 @@ xrdp_mm_draw_dirty(struct xrdp_mm *self)
     int rv = 0;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_draw_dirty:");
-    count = self->wm->client_info->display_sizes.monitorCount;
+    count = self->wm->client_info->xup.display_sizes.monitorCount;
     if (count < 1)
     {
         error = xrdp_region_get_bounds(self->wm->screen_dirty_region, &rect);
@@ -3890,7 +3890,7 @@ xrdp_mm_draw_dirty(struct xrdp_mm *self)
                 jndex++;
             }
             /* intercect monitor */
-            mi = self->wm->client_info->display_sizes.minfo_wm + index;
+            mi = self->wm->client_info->xup.display_sizes.minfo_wm + index;
             mon_rect.left = mi->left;
             mon_rect.top = mi->top;
             mon_rect.right = mi->right + 1;

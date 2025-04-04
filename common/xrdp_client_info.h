@@ -99,6 +99,51 @@ enum unicode_input_state
     UIS_SUPPORTED,       ///< Client supports Unicode, but it's not active
     UIS_ACTIVE           ///< Unicode input is active
 };
+
+/**
+ * Information about the xrdp client which is passed to xorgxrdp
+ *
+ * @note This structure is shared with xorgxrdp. If you change it,
+ *       you MUST bump the CLIENT_INFO_CURRENT_VERSION number so that
+ *       the mismatch can be detected.
+ */
+struct xorgxrdp_client_info
+{
+    int size; /* bytes for this structure */
+    int version; /* Should be CLIENT_INFO_CURRENT_VERSION */
+    int bpp;
+    int jpeg; /* non standard bitmap cache v2 cap */
+    int offscreen_support_level;
+    int offscreen_cache_size;
+    int offscreen_cache_entries;
+
+    char orders[32];
+    int order_flags_ex;
+    int pointer_flags; /* 0 color, 1 new, 2 no new */
+    int large_pointer_support_flags;
+
+    struct display_size_description display_sizes;
+
+    enum xrdp_capture_code capture_code;
+    int capture_format;
+
+    /* X11 keyboard layout - inferred from keyboard type/subtype */
+    char model[16];
+    char layout[16];
+    char variant[16];
+    char options[256];
+    char xkb_rules[32];
+    // A few x11 keycodes are needed by the xup module
+    int x11_keycode_caps_lock;
+    int x11_keycode_num_lock;
+    int x11_keycode_scroll_lock;
+
+    /* xorgxrdp: frame capture interval (milliseconds) */
+    int rfx_frame_interval;
+    int h264_frame_interval;
+    int normal_frame_interval;
+};
+
 /**
  * Information about the xrdp client
  *
@@ -109,9 +154,9 @@ enum unicode_input_state
  */
 struct xrdp_client_info
 {
-    int size; /* bytes for this structure */
-    int version; /* Should be CLIENT_INFO_CURRENT_VERSION */
-    int bpp;
+    /* Info shared with xorgxrdp */
+    struct xorgxrdp_client_info xup;
+
     /* bitmap cache info */
     int cache1_entries;
     int cache1_size;
@@ -147,12 +192,7 @@ struct xrdp_client_info
     int rdp5_performanceflags;
     int brush_cache_code; /* 0 = no cache 1 = 8x8 standard cache
                            2 = arbitrary dimensions */
-
     int max_bpp;
-    int jpeg; /* non standard bitmap cache v2 cap */
-    int offscreen_support_level;
-    int offscreen_cache_size;
-    int offscreen_cache_entries;
     int rfx;
 
     /* CAPSETTYPE_RAIL */
@@ -173,10 +213,7 @@ struct xrdp_client_info
     char jpeg_prop[64];
     int v3_codec_id;
     int rfx_min_pixel;
-    char orders[32];
-    int order_flags_ex;
     int use_bulk_comp;
-    int pointer_flags; /* 0 color, 1 new, 2 no new */
     int use_fast_path;
     int require_credentials; /* when true, credentials *must* be passed on cmd line */
 
@@ -184,7 +221,6 @@ struct xrdp_client_info
     int vmconnect; /* Used when used from inside Hyper-V */
 
     int multimon; /* 0 = deny , 1 = allow */
-    struct display_size_description display_sizes;
 
     int keyboard_type;
     int keyboard_subtype;
@@ -197,31 +233,9 @@ struct xrdp_client_info
     int mcs_early_capability_flags;
 
     int max_fastpath_frag_bytes;
-    int pad0; /* unused */
-    int capture_format;
 
     char certificate[1024];
     char key_file[1024];
-
-    /* X11 keyboard layout - inferred from keyboard type/subtype */
-    char model[16];
-    char layout[16];
-    char variant[16];
-    char options[256];
-    char xkb_rules[32];
-    // A few x11 keycodes are needed by the xup module
-    int x11_keycode_caps_lock;
-    int x11_keycode_num_lock;
-    int x11_keycode_scroll_lock;
-
-    /* xorgxrdp: frame capture interval (milliseconds) */
-    int rfx_frame_interval;
-    int h264_frame_interval;
-    int normal_frame_interval;
-
-    /* ==================================================================== */
-    /* Private to xrdp below this line */
-    /* ==================================================================== */
 
     /* codec */
     int h264_codec_id;
@@ -260,14 +274,12 @@ struct xrdp_client_info
     unsigned int session_physical_width; /* in mm */
     unsigned int session_physical_height; /* in mm */
 
-    int large_pointer_support_flags;
     int gfx;
 
     // Can we resize the desktop by using a Deactivation-Reactivation Sequence?
     enum client_resize_mode client_resize_mode;
 
     enum unicode_input_state unicode_input_support;
-    enum xrdp_capture_code capture_code;
 };
 
 enum xrdp_encoder_flags
@@ -285,8 +297,8 @@ enum xrdp_encoder_flags
 #define OUTPUT_SUPPRESSED_FOR_REASON(ci,reason) \
     (((ci)->suppress_output_mask & (unsigned int)reason) != 0)
 
-/* yyyymmdd of last incompatible change to xrdp_client_info */
+/* yyyymmdd of last change to xorgxrdp_client_info */
 /* also used for changes to all the xrdp installed headers */
-#define CLIENT_INFO_CURRENT_VERSION 20241118
+#define CLIENT_INFO_CURRENT_VERSION 20250404
 
 #endif

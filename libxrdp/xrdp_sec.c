@@ -1502,16 +1502,16 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
     in_uint32_le(s, version);
-    in_uint16_le(s, client_info->display_sizes.session_width);
-    in_uint16_le(s, client_info->display_sizes.session_height);
+    in_uint16_le(s, client_info->xup.display_sizes.session_width);
+    in_uint16_le(s, client_info->xup.display_sizes.session_height);
     in_uint16_le(s, colorDepth);
     switch (colorDepth)
     {
         case RNS_UD_COLOR_4BPP:
-            client_info->bpp = 4;
+            client_info->xup.bpp = 4;
             break;
         case RNS_UD_COLOR_8BPP:
-            client_info->bpp = 8;
+            client_info->xup.bpp = 8;
             break;
     }
     in_uint8s(s, 2); /* SASSequence */
@@ -1541,8 +1541,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               "keyboardSubType 0x%8.8x, keyboardFunctionKey (ignored), "
               "imeFileName (ignored)",
               version,
-              client_info->display_sizes.session_width,
-              client_info->display_sizes.session_height,
+              client_info->xup.display_sizes.session_width,
+              client_info->xup.display_sizes.session_height,
               (colorDepth == RNS_UD_COLOR_4BPP ? "RNS_UD_COLOR_4BPP" :
                colorDepth == RNS_UD_COLOR_8BPP ? "RNS_UD_COLOR_8BPP" :
                "unknown"),
@@ -1570,19 +1570,19 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     switch (postBeta2ColorDepth)
     {
         case RNS_UD_COLOR_4BPP:
-            client_info->bpp = 4;
+            client_info->xup.bpp = 4;
             break;
         case RNS_UD_COLOR_8BPP :
-            client_info->bpp = 8;
+            client_info->xup.bpp = 8;
             break;
         case RNS_UD_COLOR_16BPP_555:
-            client_info->bpp = 15;
+            client_info->xup.bpp = 15;
             break;
         case RNS_UD_COLOR_16BPP_565:
-            client_info->bpp = 16;
+            client_info->xup.bpp = 16;
             break;
         case RNS_UD_COLOR_24BPP:
-            client_info->bpp = 24;
+            client_info->xup.bpp = 24;
             break;
     }
     if (!s_check_rem(s, 2))
@@ -1614,7 +1614,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
               highColorDepth == 0x0010 ? "HIGH_COLOR_16BPP" :
               highColorDepth == 0x0018 ? "HIGH_COLOR_24BPP" :
               "unknown");
-    client_info->bpp = highColorDepth;
+    client_info->xup.bpp = highColorDepth;
 
     if (!s_check_rem(s, 2))
     {
@@ -1645,12 +1645,12 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec *self, struct stream *s)
     if ((earlyCapabilityFlags & RNS_UD_CS_WANT_32BPP_SESSION)
             && (supportedColorDepths & RNS_UD_32BPP_SUPPORT))
     {
-        client_info->bpp = 32;
+        client_info->xup.bpp = 32;
     }
 #ifdef XRDP_RFXCODEC
     if (earlyCapabilityFlags & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL)
     {
-        if (client_info->bpp < 32)
+        if (client_info->xup.bpp < 32)
         {
             LOG(LOG_LEVEL_WARNING,
                 "client requested gfx protocol with insufficient color depth");
@@ -1993,17 +1993,17 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     error = libxrdp_process_monitor_stream(s, description, 0);
     if (error == 0)
     {
-        client_info->display_sizes.monitorCount = description->monitorCount;
+        client_info->xup.display_sizes.monitorCount = description->monitorCount;
 
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:"
                   " Received [MS-RDPBCGR] TS_UD_CS_MONITOR"
                   " flags 0x%8.8x, monitorCount %d",
                   flags, description->monitorCount);
 
-        client_info->display_sizes.session_width = description->session_width;
-        client_info->display_sizes.session_height = description->session_height;
-        g_memcpy(client_info->display_sizes.minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
-        g_memcpy(client_info->display_sizes.minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        client_info->xup.display_sizes.session_width = description->session_width;
+        client_info->xup.display_sizes.session_height = description->session_height;
+        g_memcpy(client_info->xup.display_sizes.minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        g_memcpy(client_info->xup.display_sizes.minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
     }
 
     g_free(description);
@@ -2047,7 +2047,7 @@ xrdp_sec_process_mcs_data_monitors_ex(struct xrdp_sec *self, struct stream *s)
         return SEC_PROCESS_MONITORS_ERR;
     }
 
-    return libxrdp_process_monitor_ex_stream(s, &client_info->display_sizes);
+    return libxrdp_process_monitor_ex_stream(s, &client_info->xup.display_sizes);
 }
 
 /*****************************************************************************/
@@ -2157,15 +2157,15 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
 
     if (client_info->max_bpp > 0)
     {
-        if (client_info->bpp > client_info->max_bpp)
+        if (client_info->xup.bpp > client_info->max_bpp)
         {
             LOG(LOG_LEVEL_WARNING, "Client requested %d bpp color depth, "
                 "but the server configuration is limited to %d bpp. "
                 "Downgrading the color depth to %d bits-per-pixel.",
-                client_info->bpp,
+                client_info->xup.bpp,
                 client_info->max_bpp,
                 client_info->max_bpp);
-            client_info->bpp = client_info->max_bpp;
+            client_info->xup.bpp = client_info->max_bpp;
         }
     }
 

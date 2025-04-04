@@ -2493,10 +2493,10 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
          * Use minfo_wm, as this is normalised for a top-left of (0,0)
          * as required by RFC6143 */
         init_client_layout(v,
-                           client_info->display_sizes.session_width,
-                           client_info->display_sizes.session_height,
-                           client_info->display_sizes.monitorCount,
-                           client_info->display_sizes.minfo_wm);
+                           client_info->xup.display_sizes.session_width,
+                           client_info->xup.display_sizes.session_height,
+                           client_info->xup.display_sizes.monitorCount,
+                           client_info->xup.display_sizes.minfo_wm);
         log_screen_layout(LOG_LEVEL_DEBUG, "client_info", &v->client_layout);
     }
 

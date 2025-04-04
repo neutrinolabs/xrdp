@@ -674,7 +674,7 @@ xrdp_login_wnd_get_monitor_dpi(struct xrdp_wm *self)
 {
     unsigned int result = 0;
     const struct display_size_description *display_sizes =
-            &self->client_info->display_sizes;
+            &self->client_info->xup.display_sizes;
     unsigned int height_pixels = 0;
     unsigned int height_mm = 0;
 
@@ -797,16 +797,16 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     }
 
     /* multimon scenario, draw login window on primary monitor */
-    if (self->client_info->display_sizes.monitorCount > 1)
+    if (self->client_info->xup.display_sizes.monitorCount > 1)
     {
-        for (index = 0; index < self->client_info->display_sizes.monitorCount; index++)
+        for (index = 0; index < self->client_info->xup.display_sizes.monitorCount; index++)
         {
-            if (self->client_info->display_sizes.minfo_wm[index].is_primary)
+            if (self->client_info->xup.display_sizes.minfo_wm[index].is_primary)
             {
-                x = self->client_info->display_sizes.minfo_wm[index].left;
-                y = self->client_info->display_sizes.minfo_wm[index].top;
-                cx = self->client_info->display_sizes.minfo_wm[index].right;
-                cy = self->client_info->display_sizes.minfo_wm[index].bottom;
+                x = self->client_info->xup.display_sizes.minfo_wm[index].left;
+                y = self->client_info->xup.display_sizes.minfo_wm[index].top;
+                cx = self->client_info->xup.display_sizes.minfo_wm[index].right;
+                cy = self->client_info->xup.display_sizes.minfo_wm[index].bottom;
 
                 primary_width = cx - x;
                 primary_height = cy - y;
