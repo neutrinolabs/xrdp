@@ -1993,17 +1993,12 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     error = libxrdp_process_monitor_stream(s, description, 0);
     if (error == 0)
     {
-        client_info->xup.display_sizes.monitorCount = description->monitorCount;
-
         LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_sec_process_mcs_data_monitors:"
                   " Received [MS-RDPBCGR] TS_UD_CS_MONITOR"
                   " flags 0x%8.8x, monitorCount %d",
                   flags, description->monitorCount);
 
-        client_info->xup.display_sizes.session_width = description->session_width;
-        client_info->xup.display_sizes.session_height = description->session_height;
-        g_memcpy(client_info->xup.display_sizes.minfo, description->minfo, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
-        g_memcpy(client_info->xup.display_sizes.minfo_wm, description->minfo_wm, sizeof(struct monitor_info) * CLIENT_MONITOR_DATA_MAXIMUM_MONITORS);
+        client_info->xup.display_sizes = *description;
     }
 
     g_free(description);
