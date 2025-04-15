@@ -672,6 +672,13 @@ if test x$enable_utmp = xyes; then
     echo "    utmpx.ut_host         $ac_cv_utmpx_has_ut_host"
     echo "    utmpx.ut_exit         $ac_cv_utmpx_has_ut_exit"
 fi
+if test -n "$with_systemdsystemunitdir" \
+        -a "x$with_systemdsystemunitdir" != xno; then
+    echo "  systemd support         yes"
+    echo "    unit file directory   $with_systemdsystemunitdir"
+else
+    echo "  systemd support         no"
+fi
 
 echo
 echo "  with imlib2             $use_imlib2"

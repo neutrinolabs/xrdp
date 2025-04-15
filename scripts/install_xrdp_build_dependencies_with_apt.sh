@@ -70,6 +70,15 @@ case `lsb_release -si`/`lsb_release -sr` in
     *) LIBFREETYPE_DEV=libfreetype-dev
 esac
 
+# We need systemd-dev for Debian-based systems using systemd
+if command -v systemctl >/dev/null; then
+    # Check for systemd version >= 255
+    set -- $(systemctl --version)
+    if [ "$#" -gt 2 ] && [ "$1" = systemd ] && [ "$2" -ge 255 ]; then
+        PACKAGES="$PACKAGES systemd-dev"
+    fi
+fi
+
 case "$ARCH"
 in
     amd64)
