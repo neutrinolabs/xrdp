@@ -72,7 +72,11 @@ esac
 
 # We need systemd-dev for Debian-based systems using systemd
 if command -v systemctl >/dev/null; then
-    PACKAGES="$PACKAGES systemd-dev"
+    # Check for systemd version >= 255
+    set -- $(systemctl --version)
+    if [ "$#" -gt 2 ] && [ "$1" = systemd ] && [ "$2" -ge 255 ]; then
+        PACKAGES="$PACKAGES systemd-dev"
+    fi
 fi
 
 case "$ARCH"
