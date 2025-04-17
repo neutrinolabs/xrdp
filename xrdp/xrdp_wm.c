@@ -2059,6 +2059,7 @@ callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
             xrdp_mm_suppress_output(wm->mm, param1,
                                     LOWORD(param2), HIWORD(param2),
                                     LOWORD(param3), HIWORD(param3));
+            break;
         case 0x555a:
             // "yeah, up_and_running"
             xrdp_mm_up_and_running(wm->mm);
