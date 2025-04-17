@@ -144,33 +144,33 @@ env_set_user(int uid, char **passwd_file, int display,
 
         if (error == 0)
         {
-            g_setenv("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
+            g_setenv_log("PATH", "/sbin:/bin:/usr/bin:/usr/local/bin", 1);
         }
 #endif
         if (error == 0)
         {
-            g_setenv("SHELL", pw_shell, 1);
-            g_setenv("USER", pw_username, 1);
-            g_setenv("LOGNAME", pw_username, 1);
+            g_setenv_log("SHELL", pw_shell, 1);
+            g_setenv_log("USER", pw_username, 1);
+            g_setenv_log("LOGNAME", pw_username, 1);
             g_snprintf(text, sizeof(text), "%d", uid);
-            g_setenv("UID", text, 1);
-            g_setenv("HOME", pw_dir, 1);
+            g_setenv_log("UID", text, 1);
+            g_setenv_log("HOME", pw_dir, 1);
             g_set_current_dir(pw_dir);
             g_snprintf(text, sizeof(text), ":%d.0", display);
-            g_setenv("DISPLAY", text, 1);
+            g_setenv_log("DISPLAY", text, 1);
             // Use our PID as the XRDP_SESSION value
             g_snprintf(text, sizeof(text), "%d", g_pid);
-            g_setenv("XRDP_SESSION", text, 1);
+            g_setenv_log("XRDP_SESSION", text, 1);
             /* XRDP_SOCKET_PATH should be set here. It's used by
              * xorgxrdp and the pulseaudio plugin */
             g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
-            g_setenv("XRDP_SOCKET_PATH", text, 1);
+            g_setenv_log("XRDP_SOCKET_PATH", text, 1);
             /* pulse sink socket */
             g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR, display);
-            g_setenv("XRDP_PULSE_SINK_SOCKET", text, 1);
+            g_setenv_log("XRDP_PULSE_SINK_SOCKET", text, 1);
             /* pulse source socket */
             g_snprintf(text, sizeof(text), CHANSRV_PORT_IN_BASE_STR, display);
-            g_setenv("XRDP_PULSE_SOURCE_SOCKET", text, 1);
+            g_setenv_log("XRDP_PULSE_SOURCE_SOCKET", text, 1);
             if ((env_names != 0) && (env_values != 0) &&
                     (env_names->count == env_values->count))
             {
@@ -178,7 +178,7 @@ env_set_user(int uid, char **passwd_file, int display,
                 {
                     name = (char *) list_get_item(env_names, index),
                     value = (char *) list_get_item(env_values, index),
-                    g_setenv(name, value, 1);
+                    g_setenv_log(name, value, 1);
                 }
             }
             g_gethostname(hostname, 255);

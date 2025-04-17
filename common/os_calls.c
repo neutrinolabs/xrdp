@@ -3519,6 +3519,23 @@ g_setenv(const char *name, const char *value, int rewrite)
 #endif
 }
 
+
+/*****************************************************************************/
+/* does not work in win32 */
+void
+g_setenv_log(const char *name, const char *value, int rewrite)
+{
+#if defined(_WIN32)
+    return 0;
+#else
+    if (setenv(name, value, rewrite) != 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "Unable to set environment variable '%s' [%s]",
+            name, g_get_strerror());
+    }
+#endif
+}
+
 /*****************************************************************************/
 /* does not work in win32 */
 char *

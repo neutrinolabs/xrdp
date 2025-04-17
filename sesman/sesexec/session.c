@@ -357,19 +357,19 @@ prepare_xorg_xserver_params(const struct session_parameters *s,
 
         /* some args are passed via env vars */
         g_snprintf(text, sizeof(text), "%d", s->width);
-        g_setenv("XRDP_START_WIDTH", text, 1);
+        g_setenv_log("XRDP_START_WIDTH", text, 1);
 
         g_snprintf(text, sizeof(text), "%d", s->height);
-        g_setenv("XRDP_START_HEIGHT", text, 1);
+        g_setenv_log("XRDP_START_HEIGHT", text, 1);
 
         g_snprintf(text, sizeof(text), "%d", g_cfg->sess.max_idle_time);
-        g_setenv("XRDP_SESMAN_MAX_IDLE_TIME", text, 1);
+        g_setenv_log("XRDP_SESMAN_MAX_IDLE_TIME", text, 1);
 
         g_snprintf(text, sizeof(text), "%d", g_cfg->sess.max_disc_time);
-        g_setenv("XRDP_SESMAN_MAX_DISC_TIME", text, 1);
+        g_setenv_log("XRDP_SESMAN_MAX_DISC_TIME", text, 1);
 
         g_snprintf(text, sizeof(text), "%d", g_cfg->sess.kill_disconnected);
-        g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
+        g_setenv_log("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
         /* get path of Xorg from config */
         xserver = (const char *)list_get_item(g_cfg->xorg_params, 0);
