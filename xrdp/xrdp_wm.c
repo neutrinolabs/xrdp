@@ -47,11 +47,12 @@ xrdp_wm_load_channel_config(struct xrdp_wm *self)
 
         for (chan_id = 0 ; chan_id < chan_count ; ++chan_id)
         {
-            char chan_name[16];
+            char chan_name[CHANNEL_NAME_LEN + 1];
             if (libxrdp_query_channel(self->session, chan_id, chan_name,
                                       NULL) == 0)
             {
                 int disabled = 1; /* Channels disabled if not found */
+                int found = 0;
                 int index;
 
                 for (index = 0; index < names->count; index++)
@@ -60,9 +61,17 @@ xrdp_wm_load_channel_config(struct xrdp_wm *self)
                     const char *r = (const char *)list_get_item(values, index);
                     if (g_strcasecmp(q, chan_name) == 0)
                     {
+                        found = 1;
                         disabled = !g_text2bool(r);
                         break;
                     }
+                }
+                if (!found)
+                {
+                    LOG(LOG_LEVEL_WARNING,
+                        "Static channel '%s' from the client"
+                        " is not named in the [Channels] section",
+                        chan_name);
                 }
                 disabled_str = (disabled) ? "disabled" : "enabled";
                 LOG(LOG_LEVEL_DEBUG, "xrdp_wm_load_channel_config: "

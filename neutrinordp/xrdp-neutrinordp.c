@@ -1800,7 +1800,7 @@ lfreerdp_pre_connect(freerdp *instance)
     int num_chans;
     int target_chan;
     int ch_flags;
-    char ch_name[256];
+    char ch_name[CHANNEL_NAME_LEN + 1];
     const char *ch_names[MAX_FREERDP_CHANNELS];
     char *dst_ch_name;
 
