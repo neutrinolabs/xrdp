@@ -221,8 +221,8 @@ int toml_ucs_to_utf8(int64_t code, char buf[6]) {
      110xxxxx 10xxxxxx
   */
   if (code <= 0x000007FF) {
-    buf[0] = (unsigned char) (0xc0 | (code >> 6));
-    buf[1] = (unsigned char) (0x80 | (code & 0x3f));
+    buf[0] = (unsigned char)(0xc0 | (code >> 6));
+    buf[1] = (unsigned char)(0x80 | (code & 0x3f));
     return 2;
   }
 
@@ -230,9 +230,9 @@ int toml_ucs_to_utf8(int64_t code, char buf[6]) {
      1110xxxx 10xxxxxx 10xxxxxx
   */
   if (code <= 0x0000FFFF) {
-    buf[0] = (unsigned char) (0xe0 | (code >> 12));
-    buf[1] = (unsigned char) (0x80 | ((code >> 6) & 0x3f));
-    buf[2] = (unsigned char) (0x80 | (code & 0x3f));
+    buf[0] = (unsigned char)(0xe0 | (code >> 12));
+    buf[1] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | (code & 0x3f));
     return 3;
   }
 
@@ -240,10 +240,10 @@ int toml_ucs_to_utf8(int64_t code, char buf[6]) {
      11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
   */
   if (code <= 0x001FFFFF) {
-    buf[0] = (unsigned char) (0xf0 | (code >> 18));
-    buf[1] = (unsigned char) (0x80 | ((code >> 12) & 0x3f));
-    buf[2] = (unsigned char) (0x80 | ((code >> 6) & 0x3f));
-    buf[3] = (unsigned char) (0x80 | (code & 0x3f));
+    buf[0] = (unsigned char)(0xf0 | (code >> 18));
+    buf[1] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[3] = (unsigned char)(0x80 | (code & 0x3f));
     return 4;
   }
 
@@ -251,11 +251,11 @@ int toml_ucs_to_utf8(int64_t code, char buf[6]) {
      111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
   */
   if (code <= 0x03FFFFFF) {
-    buf[0] = (unsigned char) (0xf8 | (code >> 24));
-    buf[1] = (unsigned char) (0x80 | ((code >> 18) & 0x3f));
-    buf[2] = (unsigned char) (0x80 | ((code >> 12) & 0x3f));
-    buf[3] = (unsigned char) (0x80 | ((code >> 6) & 0x3f));
-    buf[4] = (unsigned char) (0x80 | (code & 0x3f));
+    buf[0] = (unsigned char)(0xf8 | (code >> 24));
+    buf[1] = (unsigned char)(0x80 | ((code >> 18) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
+    buf[3] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[4] = (unsigned char)(0x80 | (code & 0x3f));
     return 5;
   }
 
@@ -263,12 +263,12 @@ int toml_ucs_to_utf8(int64_t code, char buf[6]) {
      1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
   */
   if (code <= 0x7FFFFFFF) {
-    buf[0] = (unsigned char) (0xfc | (code >> 30));
-    buf[1] = (unsigned char) (0x80 | ((code >> 24) & 0x3f));
-    buf[2] = (unsigned char) (0x80 | ((code >> 18) & 0x3f));
-    buf[3] = (unsigned char) (0x80 | ((code >> 12) & 0x3f));
-    buf[4] = (unsigned char) (0x80 | ((code >> 6) & 0x3f));
-    buf[5] = (unsigned char) (0x80 | (code & 0x3f));
+    buf[0] = (unsigned char)(0xfc | (code >> 30));
+    buf[1] = (unsigned char)(0x80 | ((code >> 24) & 0x3f));
+    buf[2] = (unsigned char)(0x80 | ((code >> 18) & 0x3f));
+    buf[3] = (unsigned char)(0x80 | ((code >> 12) & 0x3f));
+    buf[4] = (unsigned char)(0x80 | ((code >> 6) & 0x3f));
+    buf[5] = (unsigned char)(0x80 | (code & 0x3f));
     return 6;
   }
 
@@ -412,8 +412,10 @@ static void *expand(void *p, int sz, int newsz) {
   if (!s)
     return 0;
 
-  memcpy(s, p, sz);
-  FREE(p);
+  if (p) {
+    memcpy(s, p, sz);
+    FREE(p);
+  }
   return s;
 }
 
@@ -423,8 +425,10 @@ static void **expand_ptrarr(void **p, int n) {
     return 0;
 
   s[n] = 0;
-  memcpy(s, p, n * sizeof(void *));
-  FREE(p);
+  if (p) {
+    memcpy(s, p, n * sizeof(void *));
+    FREE(p);
+  }
   return s;
 }
 
@@ -2212,6 +2216,7 @@ int toml_rtos(toml_raw_t src, char **ret) {
   if (!src)
     return -1;
 
+  // for strings, first char must be a s-quote or d-quote
   int qchar = src[0];
   int srclen = strlen(src);
   if (!(qchar == '\'' || qchar == '"')) {
@@ -2220,12 +2225,14 @@ int toml_rtos(toml_raw_t src, char **ret) {
 
   // triple quotes?
   if (qchar == src[1] && qchar == src[2]) {
-    multiline = 1;
-    sp = src + 3;
-    sq = src + srclen - 3;
-    /* last 3 chars in src must be qchar */
-    if (!(sp <= sq && sq[0] == qchar && sq[1] == qchar && sq[2] == qchar))
+    multiline = 1;         // triple-quote implies multiline
+    sp = src + 3;          // first char after quote
+    sq = src + srclen - 3; // first char of ending quote
+
+    if (!(sp <= sq && sq[0] == qchar && sq[1] == qchar && sq[2] == qchar)) {
+      // last 3 chars in src must be qchar
       return -1;
+    }
 
     /* skip new line immediate after qchar */
     if (sp[0] == '\n')
@@ -2234,13 +2241,18 @@ int toml_rtos(toml_raw_t src, char **ret) {
       sp += 2;
 
   } else {
-    sp = src + 1;
-    sq = src + srclen - 1;
-    /* last char in src must be qchar */
-    if (!(sp <= sq && *sq == qchar))
+    sp = src + 1;          // first char after quote
+    sq = src + srclen - 1; // ending quote
+    if (!(sp <= sq && *sq == qchar)) {
+      /* last char in src must be qchar */
       return -1;
+    }
   }
 
+  // at this point:
+  //     sp points to first valid char after quote.
+  //     sq points to one char beyond last valid char.
+  //     string len is (sq - sp).
   if (qchar == '\'') {
     *ret = norm_lit_str(sp, sq - sp, multiline, 0, 0);
   } else {
