@@ -367,7 +367,7 @@ process_message_channel_setup(struct stream *s)
     {
         ci = &(g_chan_items[g_num_chan_items]);
         g_memset(ci->name, 0, sizeof(ci->name));
-        in_uint8a(s, ci->name, 8);
+        in_uint8a(s, ci->name, CHANNEL_NAME_LEN + 1);
         in_uint16_le(s, ci->id);
         in_uint16_le(s, ci->flags);
         LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "

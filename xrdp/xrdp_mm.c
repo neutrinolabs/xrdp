@@ -608,9 +608,7 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
     int chan_flags;
     int size;
     struct stream *s;
-    char chan_name[256];
-
-    g_memset(chan_name, 0, sizeof(char) * 256);
+    char chan_name[CHANNEL_NAME_LEN + 1];
 
     s = trans_get_out_s(trans, 8192);
 
@@ -630,7 +628,7 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
         if (libxrdp_query_channel(self->wm->session, chan_id, chan_name,
                                   &chan_flags) == 0)
         {
-            out_uint8a(s, chan_name, 8);
+            out_uint8a(s, chan_name, CHANNEL_NAME_LEN + 1);
             out_uint16_le(s, chan_id);
             out_uint16_le(s, chan_flags);
             ++output_chan_count;

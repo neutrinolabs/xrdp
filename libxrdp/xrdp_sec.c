@@ -2186,31 +2186,19 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             g_free(channel_item);
             return 1;
         }
-        in_uint8a(s, channel_item->name, 8);
+
+        in_uint8a(s, channel_item->name, CHANNEL_NAME_LEN + 1);
+        // The channel name *should* be null-terminated. Add a back-stop
+        // terminator in case it isn't.
+        channel_item->name[CHANNEL_NAME_LEN] = '\0';
         in_uint32_le(s, channel_item->flags);
 
-        if (g_strlen(channel_item->name) > 0 && g_strlen(channel_item->name) < 8)
-        {
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] "
-                      "TS_UD_CS_NET.CHANNEL_DEF %d, name %s, options 0x%8.8x",
-                      index, channel_item->name, channel_item->flags);
-            channel_item->chanid = next_mcs_channel_id++;
-            list_add_item(self->mcs_layer->channel_list,
-                          (intptr_t) channel_item);
-            LOG(LOG_LEVEL_DEBUG,
-                "Adding channel: name %s, channel id %d, flags 0x%8.8x",
-                channel_item->name, channel_item->chanid, channel_item->flags);
-        }
-        else
-        {
-            LOG_DEVEL(LOG_LEVEL_WARNING, "Received [MS-RDPBCGR] "
-                      "TS_UD_CS_NET.CHANNEL_DEF %d, skipped because of "
-                      "malformed channel name.", index);
-            LOG_DEVEL_HEXDUMP(LOG_LEVEL_WARNING,
-                              "[MS-RDPBCGR] TS_UD_CS_NET.CHANNEL_DEF name",
-                              channel_item->name, 8);
-            g_free(channel_item);
-        }
+        channel_item->chanid = next_mcs_channel_id++;
+        list_add_item(self->mcs_layer->channel_list,
+                      (intptr_t) channel_item);
+        LOG(LOG_LEVEL_DEBUG,
+            "Adding channel: name %s, channel id %d, flags 0x%8.8x",
+            channel_item->name, channel_item->chanid, channel_item->flags);
     }
 
     /* Set the user channel as well */

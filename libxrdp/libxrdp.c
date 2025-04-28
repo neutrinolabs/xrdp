@@ -1278,7 +1278,7 @@ libxrdp_query_channel(struct xrdp_session *session, int channel_id,
 
     if (channel_name != 0)
     {
-        g_strncpy(channel_name, channel_item->name, 8);
+        g_strncpy(channel_name, channel_item->name, CHANNEL_NAME_LEN);
         LOG(LOG_LEVEL_DEBUG, "libxrdp_query_channel - Channel %d name %s",
             channel_id, channel_name);
     }

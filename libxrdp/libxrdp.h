@@ -50,7 +50,7 @@ struct xrdp_iso
 /* used in mcs */
 struct mcs_channel_item
 {
-    char name[16];
+    char name[CHANNEL_NAME_LEN + 1];
     int flags;
     int chanid;
     int disabled;
