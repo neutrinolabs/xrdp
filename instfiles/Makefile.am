@@ -46,6 +46,8 @@ dist_startscript_DATA = \
   km-00000416.ini \
   km-00000419.ini \
   km-0000041d.ini \
+  km-00000426.ini \
+  km-00010426.ini \
   km-00000807.ini \
   km-00000809.ini \
   km-0000080a.ini \
@@ -87,23 +89,23 @@ SUBDIRS += pam.d
 endif
 
 #
-# install-data-hook for each platform
+# install-data-hook
 # TODO: subst these directories as well as service files
 #
-if LINUX
-# must be tab below
+# must be tabs below
+# Note the section to soft-link keyboard files which share a definition
 install-data-hook:
+if LINUX
 	if [ -f $(DESTDIR)$(sysconfdir)/init.d/xrdp ]; then \
 		sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp; \
 	fi
 endif
-
 if FREEBSD
-# must be tab below
-install-data-hook:
 	sed -e 's|%%PREFIX%%|$(prefix)|g' \
 	    -e 's|%%LOCALSTATEDIR%%|$(localstatedir)|g' \
 		-i '' \
 		$(DESTDIR)$(sysconfdir)/rc.d/xrdp \
 		$(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
 endif
+	(cd $(DESTDIR)${startscriptdir} && \
+		$(LN_S) km-00010426.ini km-00020426.ini)
