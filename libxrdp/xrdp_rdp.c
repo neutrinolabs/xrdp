@@ -211,6 +211,10 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 client_info->security_layer = SECURITY_LAYER_NEGOTIATE;
             }
         }
+        else if (g_strcasecmp(item, "vmconnect") == 0)
+        {
+            client_info->vmconnect = g_text2bool(value);
+        }
         else if (g_strcasecmp(item, "certificate") == 0)
         {
             g_memset(client_info->certificate, 0, sizeof(char) * 1024);
