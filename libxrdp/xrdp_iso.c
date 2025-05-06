@@ -68,7 +68,7 @@ protocol_mask_to_str(int protocol, char *buff, int bufflen)
         /* String is empty */
         rlen = g_snprintf(buff, bufflen, "RDP");
     }
-    else if (rlen < bufflen)
+    else if (rlen > 0 && rlen < bufflen)
     {
         rlen += g_snprintf(buff + rlen, bufflen - rlen, "%cRDP", delim);
     }

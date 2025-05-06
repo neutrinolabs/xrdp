@@ -528,12 +528,12 @@ auth_set_env(struct auth_info *auth_info)
             for (pam_env = pam_envlist; *pam_env != NULL; ++pam_env)
             {
                 char *str = *pam_env;
-                int eq_pos = g_pos(str, "=");
+                char *eq_pos = strchr(str, '=');
 
-                if (eq_pos > 0)
+                if (eq_pos != NULL)
                 {
-                    str[eq_pos] = '\0';
-                    g_setenv(str, str + eq_pos + 1, 1);
+                    *eq_pos = '\0';
+                    g_setenv_log(str, eq_pos + 1, 1);
                 }
 
                 g_free(str);

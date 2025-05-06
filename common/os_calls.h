@@ -376,6 +376,17 @@ int      g_setpgid(int pid, int pgid);
 void     g_clearenv(void);
 int      g_setenv(const char *name, const char *value, int rewrite);
 char    *g_getenv(const char *name);
+/**
+ * Calls g_setenv(), logging failures
+ *
+ * @param name Name to set
+ * @param value String to set $name to
+ * @param rewrite Set to non-zero to allow rewriting of existing names
+ *
+ * Unlike g_setenv() this function returns no value. Use this function if the
+ * only reasonable thing to do on failure is to log it.
+ */
+void     g_setenv_log(const char *name, const char *value, int rewrite);
 int      g_exit(int exit_code);
 int      g_getpid(void);
 int      g_sigterm(int pid);
