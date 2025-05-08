@@ -193,26 +193,22 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
         {
             if (g_strcasecmp(value, "rdp") == 0)
             {
-                client_info->security_layer = PROTOCOL_RDP;
+                client_info->security_layer = SECURITY_LAYER_RDP;
             }
             else if (g_strcasecmp(value, "tls") == 0)
             {
-                client_info->security_layer = PROTOCOL_SSL;
-            }
-            else if (g_strcasecmp(value, "hybrid") == 0)
-            {
-                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID;
+                client_info->security_layer = SECURITY_LAYER_TLS;
             }
             else if (g_strcasecmp(value, "negotiate") == 0)
             {
-                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
+                client_info->security_layer = SECURITY_LAYER_NEGOTIATE;
             }
             else
             {
                 LOG(LOG_LEVEL_WARNING, "security_layer=%s is not "
                     "recognized, will use security_layer=negotiate",
                     value);
-                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
+                client_info->security_layer = SECURITY_LAYER_NEGOTIATE;
             }
         }
         else if (g_strcasecmp(item, "certificate") == 0)
