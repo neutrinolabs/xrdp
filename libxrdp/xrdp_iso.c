@@ -129,40 +129,25 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         protostr);
     security_type_mask &= self->requestedProtocol;
 
-    /* In VMConnect mode, we support everything. */
-    if (client_info->vmconnect && (self->requestedProtocol > PROTOCOL_RDP))
+    if (security_type_mask & PROTOCOL_HYBRID_EX)
     {
-        if (security_type_mask & PROTOCOL_HYBRID_EX)
-        {
-            LOG(LOG_LEVEL_INFO, "Selected HYBRID_EX security");
-            self->selectedProtocol = PROTOCOL_HYBRID_EX;
-            got_protocol = 1;
-        }
-        else if (security_type_mask & PROTOCOL_HYBRID)
-        {
-            LOG(LOG_LEVEL_INFO, "Selected HYBRID security");
-            self->selectedProtocol = PROTOCOL_HYBRID;
-            got_protocol = 1;
-        }
-        else if (security_type_mask & PROTOCOL_SSL)
-        {
-            LOG(LOG_LEVEL_INFO, "Selected TLS security");
-            self->selectedProtocol = PROTOCOL_SSL;
-            got_protocol = 1;
-        }
-        else
-        {
-            /* Impossible */
-            LOG(LOG_LEVEL_ERROR, "Impossible case.");
-            rv = 1;
-        }
+        /* Currently supported by VMConnect mode only */
+        LOG(LOG_LEVEL_INFO, "Selected HYBRID_EX security");
+        self->selectedProtocol = PROTOCOL_HYBRID_EX;
+        got_protocol = 1;
     }
-    /* Is there a match on SSL/TLS? */
+    else if (security_type_mask & PROTOCOL_HYBRID)
+    {
+        /* Currently supported by VMConnect mode only */
+        LOG(LOG_LEVEL_INFO, "Selected HYBRID security");
+        self->selectedProtocol = PROTOCOL_HYBRID;
+        got_protocol = 1;
+    }
     else if ((security_type_mask & PROTOCOL_SSL) != 0)
     {
-        /* Can we do TLS? (basic check) */
-        if (g_file_readable(client_info->certificate) &&
-                g_file_readable(client_info->key_file))
+        /* Can we do TLS? (basic check). VMConnect is exempt. */
+        if ((g_file_readable(client_info->certificate) &&
+                g_file_readable(client_info->key_file)) || client_info->vmconnect)
         {
             LOG(LOG_LEVEL_INFO, "Selected TLS security");
             self->selectedProtocol = PROTOCOL_SSL;

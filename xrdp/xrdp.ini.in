@@ -27,8 +27,8 @@ port=3389
 ; prefer use vsock://<cid>:<port> above
 use_vsock=false
 
-; if used inside a Hyper-V VM with vmconnect, turn this on to enable
-; wider protocol support.
+; if used inside a Hyper-V VM through vmconnect and bound on vsock,
+; turn this on to enable wider security protocol support.
 #vmconnect=true
 
 ; Unprivileged User name and group to run the xrdp daemon.
