@@ -72,6 +72,17 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
     self = (struct xrdp_iso *) g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
     self->trans = trans;
+
+    // See if we're running in vmconnect mode on this connection
+    struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
+    if (client_info->vmconnect && trans->mode != TRANS_MODE_VSOCK)
+    {
+        char desc[MAX_PEER_DESCSTRLEN];
+        g_sck_get_peer_description(trans->sck, desc, sizeof(desc));
+        LOG(LOG_LEVEL_INFO, "Disabling vmconnect mode for connection from %s",
+            desc);
+        client_info->vmconnect = 0;
+    }
     return self;
 }
 
