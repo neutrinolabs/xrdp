@@ -60,20 +60,7 @@ protocol_mask_to_str(int protocol, char *buff, int bufflen)
         BITMASK_STRING_END_OF_LIST
     };
 
-    int rlen = g_bitmask_to_str(protocol, bits, delim, buff, bufflen);
-
-    /* Append "RDP" */
-    if (rlen == 0)
-    {
-        /* String is empty */
-        rlen = g_snprintf(buff, bufflen, "RDP");
-    }
-    else if (rlen > 0 && rlen < bufflen)
-    {
-        rlen += g_snprintf(buff + rlen, bufflen - rlen, "%cRDP", delim);
-    }
-
-    return rlen;
+    return g_bitmask_to_str(protocol, bits, delim, buff, bufflen);
 }
 
 /*****************************************************************************/
@@ -85,6 +72,17 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
     self = (struct xrdp_iso *) g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
     self->trans = trans;
+
+    // See if we're running in vmconnect mode on this connection
+    struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
+    if (client_info->vmconnect && trans->mode != TRANS_MODE_VSOCK)
+    {
+        char desc[MAX_PEER_DESCSTRLEN];
+        g_sck_get_peer_description(trans->sck, desc, sizeof(desc));
+        LOG(LOG_LEVEL_INFO, "Disabling vmconnect mode for connection from %s",
+            desc);
+        client_info->vmconnect = 0;
+    }
     return self;
 }
 
@@ -105,95 +103,100 @@ xrdp_iso_delete(struct xrdp_iso *self)
 static int
 xrdp_iso_negotiate_security(struct xrdp_iso *self)
 {
-    char requested_str[64];
-    const char *selected_str = "";
-    const char *configured_str = "";
-
     int rv = 0;
     struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
+    char protostr[64];
+    int got_protocol = 0;
+    int security_type_mask;
 
-    /* Can we do TLS/SSL? (basic check) */
-    int ssl_capable = g_file_readable(client_info->certificate) &&
-                      g_file_readable(client_info->key_file);
+    /* Map the configuration from xrdp.ini to a mask of allowed
+     * security types ([MS-RDPBCGR] 2.2.1.2.1)
+     *
+     * There's some oddness around PROTOCOL_RDP. This value is 0,
+     * for compatibility reasons, and it's OK for the server to
+     * suggest RDP as the fallback protocol if nothing else is
+     * agreed on. Nowadays, classic RDP security should
+     * not be used, if at all avoidable */
 
-    /* Work out what's actually configured in xrdp.ini. The
-     * selection happens later, but we can do some error checking here */
-    switch (client_info->security_layer)
+    /* At present we only support SSL and RDP security */
+    if (client_info->security_layer == SECURITY_LAYER_RDP)
     {
-        case PROTOCOL_RDP:
-            configured_str = "RDP";
-            break;
-
-        case PROTOCOL_SSL:
-            /* We *must* use TLS. Check we can offer it, and it's requested */
-            if (ssl_capable)
-            {
-                configured_str = "SSL";
-                if ((self->requestedProtocol & PROTOCOL_SSL) == 0)
-                {
-                    LOG(LOG_LEVEL_ERROR, "Server requires TLS for security, "
-                        "but the client did not request TLS.");
-                    self->failureCode = SSL_REQUIRED_BY_SERVER;
-                    rv = 1; /* error */
-                }
-            }
-            else
-            {
-                configured_str = "";
-                LOG(LOG_LEVEL_ERROR, "Cannot accept TLS connections because "
-                    "certificate or private key file is not readable. "
-                    "certificate file: [%s], private key file: [%s]",
-                    client_info->certificate, client_info->key_file);
-                self->failureCode = SSL_CERT_NOT_ON_SERVER;
-                rv = 1; /* error */
-            }
-            break;
-        case PROTOCOL_HYBRID:
-        case PROTOCOL_HYBRID_EX:
-        default:
-            /* We don't yet support CredSSP */
-            if (ssl_capable)
-            {
-                configured_str = "SSL|RDP";
-            }
-            else
-            {
-                /*
-                 * Tell the user we can't offer TLS, but this isn't fatal */
-                configured_str = "RDP";
-                LOG(LOG_LEVEL_WARNING, "Cannot accept TLS connections because "
-                    "certificate or private key file is not readable. "
-                    "certificate file: [%s], private key file: [%s]",
-                    client_info->certificate, client_info->key_file);
-            }
-            break;
-    }
-
-    /* Currently the choice comes down to RDP or SSL */
-    if (rv != 0)
-    {
-        self->selectedProtocol = PROTOCOL_RDP;
-        selected_str = "";
-    }
-    else if (ssl_capable && (self->requestedProtocol &
-                             client_info->security_layer &
-                             PROTOCOL_SSL) != 0)
-    {
-        self->selectedProtocol = PROTOCOL_SSL;
-        selected_str = "SSL";
+        security_type_mask = PROTOCOL_RDP;
     }
     else
     {
-        self->selectedProtocol = PROTOCOL_RDP;
-        selected_str = "RDP";
+        security_type_mask = PROTOCOL_SSL;
+    }
+    /* But VMConnect mode supports everything. */
+    if (client_info->vmconnect)
+    {
+        security_type_mask |= PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
     }
 
-    protocol_mask_to_str(self->requestedProtocol,
-                         requested_str, sizeof(requested_str));
+    /* Logically 'and' this value with the mask requested by the client, and
+     * see what's left */
+    protocol_mask_to_str(self->requestedProtocol, protostr, sizeof(protostr));
+    LOG(LOG_LEVEL_INFO, "Client requested security types (RDP assumed) : %s",
+        protostr);
+    security_type_mask &= self->requestedProtocol;
 
-    LOG(LOG_LEVEL_INFO, "Security protocol: configured [%s], requested [%s],"
-        " selected [%s]",
-        configured_str, requested_str, selected_str);
+    if (security_type_mask & PROTOCOL_HYBRID_EX)
+    {
+        /* Currently supported by VMConnect mode only */
+        LOG(LOG_LEVEL_INFO, "Selected HYBRID_EX security");
+        self->selectedProtocol = PROTOCOL_HYBRID_EX;
+        got_protocol = 1;
+    }
+    else if (security_type_mask & PROTOCOL_HYBRID)
+    {
+        /* Currently supported by VMConnect mode only */
+        LOG(LOG_LEVEL_INFO, "Selected HYBRID security");
+        self->selectedProtocol = PROTOCOL_HYBRID;
+        got_protocol = 1;
+    }
+    else if ((security_type_mask & PROTOCOL_SSL) != 0)
+    {
+        /* Can we do TLS? (basic check). VMConnect is exempt. */
+        if ((g_file_readable(client_info->certificate) &&
+                g_file_readable(client_info->key_file)) || client_info->vmconnect)
+        {
+            LOG(LOG_LEVEL_INFO, "Selected TLS security");
+            self->selectedProtocol = PROTOCOL_SSL;
+            got_protocol = 1;
+        }
+        else
+        {
+            LOG(LOG_LEVEL_WARNING, "Cannot accept TLS connections because "
+                "certificate or private key file is not readable. "
+                "certificate file: [%s], private key file: [%s]",
+                client_info->certificate, client_info->key_file);
+
+            /* If we're configured to ONLY use TLS, this is a problem.
+             * If not, we can fall back to RDP */
+            if (client_info->security_layer == SECURITY_LAYER_TLS)
+            {
+                LOG(LOG_LEVEL_ERROR,
+                    "Server requires TLS (security_layer=tls)");
+                self->failureCode = SSL_CERT_NOT_ON_SERVER;
+                rv = 1;
+            }
+        }
+    }
+    else if (client_info->security_layer == SECURITY_LAYER_TLS)
+    {
+        /* We don't have a match on TLS, but we'll accept nothing less */
+        LOG(LOG_LEVEL_ERROR, "Server requires TLS (security_layer=tls)");
+        self->failureCode = SSL_REQUIRED_BY_SERVER;
+        rv = 1;
+    }
+
+    /* If we haven't got a match so far, and we haven't got a fail,
+     * try RDP */
+    if (!got_protocol && !rv)
+    {
+        self->selectedProtocol = PROTOCOL_RDP;
+        LOG(LOG_LEVEL_INFO, "Selected classic RDP security");
+    }
 
     return rv;
 }
@@ -216,10 +219,17 @@ xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
     /* The type field has already been read to determine that this function
        should be called */
     in_uint8(s, flags); /* flags */
-    if (flags != 0x0 && flags != 0x8 && flags != 0x1)
+    if ((flags & 0x0000000b) != flags)
     {
         LOG(LOG_LEVEL_ERROR,
             "Unsupported [MS-RDPBCGR] RDP_NEG_REQ flags: 0x%2.2x", flags);
+        return 1;
+    }
+
+    /* If both flags are set, it means 'OR', so fail only if only the one is set. */
+    if ((flags & REDIRECTED_AUTHENTICATION_MODE_REQUIRED) && !(flags & RESTRICTED_ADMIN_MODE_REQUIRED))
+    {
+        LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] RDP_NEG_REQ: RemoteGuard isn't supported !");
         return 1;
     }
 
@@ -385,8 +395,11 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
     char *holdp;
     char *len_ptr;
     char *len_indicator_ptr;
+    char flags;
     int len;
     int len_indicator;
+
+    struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
 
     make_stream(s);
     init_stream(s, 8192);
@@ -421,10 +434,17 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
         }
         else
         {
+            flags = EXTENDED_CLIENT_DATA_SUPPORTED;
+
+            if (client_info->vmconnect)
+            {
+                /* NLA is handled by the host and not us. */
+                flags |= RESTRICTED_ADMIN_MODE_SUPPORTED;
+            }
+
             /* [MS-RDPBCGR] RDP_NEG_RSP */
             out_uint8(s, RDP_NEG_RSP);                    /* type*/
-            //TODO: hardcoded flags
-            out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
+            out_uint8(s, flags);                          /* flags */
             out_uint16_le(s, 8);                          /* length (must be 8) */
             out_uint32_le(s, self->selectedProtocol);     /* selectedProtocol */
             LOG_DEVEL(LOG_LEVEL_TRACE, "Adding structure [MS-RDPBCGR] RDP_NEG_RSP "

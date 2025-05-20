@@ -22,10 +22,9 @@ fork=true
 ;   port=vsock://<cid>:<port>
 port=3389
 
-; 'port' above should be connected to with vsock instead of tcp
-; use this only with number alone in port above
-; prefer use vsock://<cid>:<port> above
-use_vsock=false
+; if used inside a Hyper-V VM through vmconnect and bound on vsock,
+; turn this on to enable wider security protocol support.
+#vmconnect=true
 
 ; Unprivileged User name and group to run the xrdp daemon.
 ; It is HIGHLY RECOMMENDED you set these values. See the xrdp.ini(5)

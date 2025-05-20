@@ -67,6 +67,12 @@ struct display_size_description
     unsigned int session_height;
 };
 
+/* Values used for the security_layer */
+/* TODO: Make this an enum, and move it below xrdp_client_info */
+#define SECURITY_LAYER_NEGOTIATE 0
+#define SECURITY_LAYER_RDP 1
+#define SECURITY_LAYER_TLS 2
+
 enum client_resize_mode
 {
     CRMODE_NONE,
@@ -165,7 +171,9 @@ struct xrdp_client_info
     int use_fast_path;
     int require_credentials; /* when true, credentials *must* be passed on cmd line */
 
-    int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
+    int security_layer; /* SECURITY_LAYER_* */
+    int vmconnect; /* Used when used from inside Hyper-V */
+
     int multimon; /* 0 = deny , 1 = allow */
     struct display_size_description display_sizes;
 

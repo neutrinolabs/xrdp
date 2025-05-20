@@ -2514,7 +2514,11 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     }
 
     /* initialize selected security layer */
-    if (iso->selectedProtocol > PROTOCOL_RDP)
+    if (self->rdp_layer->client_info.vmconnect && iso->selectedProtocol > PROTOCOL_RDP)
+    {
+        /* Security handled by host: do nothing. */
+    }
+    else if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         /* init tls security */
 

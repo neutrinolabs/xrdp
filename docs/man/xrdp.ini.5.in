@@ -24,6 +24,25 @@ All options and values (except for file names and paths) are case insensitive, a
 The options to be specified in the \fB[Globals]\fR section are the following:
 
 .TP
+\fBport\fR=\fIport_specification [ port_specification ... ]\fR
+Specify the port(s) that xrdp should listen on. More instructions and
+examples can be found within xrdp.ini itself.
+
+.TP
+\fBvmconnect\fR=\fI[true|false]\fR
+(Hyper-V VMs only). Enables a wider support of security protocols when a
+virtual machine running xrdp is hosted on Hyper-V, and the user connects
+to it via the vmms service on TCP port 2179. In this configuration,
+RDP security is handled by the vmms service, and security features which
+are not yet added to xrdp itself can be supported.
+
+This parameter is required in environments which do not support 'classic'
+RDP encryption.
+
+The parameter is ignored for connections which are not made to the
+virtual machine over the vsock transport.
+
+.TP
 \fBautorun\fP=\fIsession_name\fP
 Section name for automatic login. If set and the client supplies valid
 username and password, the user will be logged in automatically using the

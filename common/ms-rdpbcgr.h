@@ -35,7 +35,12 @@
 #define PROTOCOL_RDSTLS                0x00000004
 #define PROTOCOL_HYBRID_EX             0x00000008
 
-/* Negotiation packet flags (2.2.1.2.1) */
+/* Negotiation request packet flags (2.2.1.1.1) */
+#define RESTRICTED_ADMIN_MODE_REQUIRED          0x00000001
+#define REDIRECTED_AUTHENTICATION_MODE_REQUIRED 0x00000002
+#define CORRELATION_INFO_PRESENT                0x00000008
+
+/* Negotiation response packet flags (2.2.1.2.1) */
 #define EXTENDED_CLIENT_DATA_SUPPORTED            0x01
 #define DYNVC_GFX_PROTOCOL_SUPPORTED              0x02
 #define NEGRSP_RESERVED                           0x04

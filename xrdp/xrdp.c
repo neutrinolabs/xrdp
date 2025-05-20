@@ -332,6 +332,9 @@ read_xrdp_ini_startup_params(struct xrdp_startup_params *startup_params)
 
             else if (g_strcasecmp(name, "use_vsock") == 0)
             {
+                LOG(LOG_LEVEL_WARNING,
+                    "Config parameter 'use_vsock' is obsolete. "
+                    "Use 'port=vsock://...' instead");
                 startup_params->use_vsock = g_text2bool(val);
             }
 
