@@ -56,6 +56,15 @@ setxkbmap -model pc104 -layout ru
 setxkbmap -model pc104 -layout se
 ./xrdp-genkeymap ../instfiles/km-0000041d.ini
 
+# Latvian 'lv' 0x00000426
+setxkbmap -model pc104 -layout lv -variant ergonomic
+./xrdp-genkeymap ../instfiles/km-00000426.ini
+
+# Latvian standard 'lv' 0x00010426
+# 20426 Latvian(Standard) is symlinked to 10426 Latvian(QWERTY) elsewhere
+setxkbmap -model pc104 -layout lv
+./xrdp-genkeymap ../instfiles/km-00010426.ini
+
 # Portuguese -PT 'pt-pt' 0x00000816
 setxkbmap -model pc104 -layout pt
 ./xrdp-genkeymap ../instfiles/km-00000816.ini
