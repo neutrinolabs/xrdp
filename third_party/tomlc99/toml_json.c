@@ -91,15 +91,16 @@ static void print_raw(const char *s) {
     else
       millisec[0] = 0;
     if (ts.year && ts.hour) {
-      printf("{\"type\":\"datetime\",\"value\":\"%04d-%02d-%02dT%02d:%02d:%02d%"
+      printf("{\"type\":\"%s\",\"value\":\"%04d-%02d-%02dT%02d:%02d:%02d%"
              "s%s\"}",
+             (ts.z ? "datetime" : "datetime-local"),
              *ts.year, *ts.month, *ts.day, *ts.hour, *ts.minute, *ts.second,
              millisec, (ts.z ? ts.z : ""));
     } else if (ts.year) {
-      printf("{\"type\":\"date\",\"value\":\"%04d-%02d-%02d\"}", *ts.year,
+      printf("{\"type\":\"date-local\",\"value\":\"%04d-%02d-%02d\"}", *ts.year,
              *ts.month, *ts.day);
     } else if (ts.hour) {
-      printf("{\"type\":\"time\",\"value\":\"%02d:%02d:%02d%s\"}", *ts.hour,
+      printf("{\"type\":\"time-local\",\"value\":\"%02d:%02d:%02d%s\"}", *ts.hour,
              *ts.minute, *ts.second, millisec);
     }
   } else {
@@ -149,36 +150,43 @@ static void print_table_array(toml_array_t *curarr) {
 }
 
 static void print_array(toml_array_t *curarr) {
-  toml_array_t *arr;
-  const char *raw;
-  int i;
-
   if (toml_array_kind(curarr) == 't') {
     print_table_array(curarr);
     return;
   }
 
-  printf("{\"type\":\"array\",\"value\":[");
-  switch (toml_array_kind(curarr)) {
+  printf("[");
 
-  case 'v':
-    for (i = 0; 0 != (raw = toml_raw_at(curarr, i)); i++) {
-      printf("%s", i > 0 ? "," : "");
-      print_raw(raw);
-    }
-    break;
+  const char *raw;
+  toml_array_t *arr;
+  toml_table_t *tab;
 
-  case 'a':
-    for (i = 0; 0 != (arr = toml_array_at(curarr, i)); i++) {
-      printf("%s", i > 0 ? "," : "");
+  const int n = toml_array_nelem(curarr);
+  for (int i = 0; i < n; i++) {
+    printf("%s", i > 0 ? "," : "");
+
+    if (0 != (arr = toml_array_at(curarr, i))) {
       print_array(arr);
+      continue;
     }
-    break;
 
-  default:
-    break;
+    if (0 != (tab = toml_table_at(curarr, i))) {
+      print_table(tab);
+      continue;
+    }
+
+    raw = toml_raw_at(curarr, i);
+    if (raw) {
+      print_raw(raw);
+      continue;
+    }
+
+    fflush(stdout);
+    fprintf(stderr, "ERROR: unable to decode value in array\n");
+    exit(1);
   }
-  printf("]}");
+
+  printf("]");
 }
 
 static void cat(FILE *fp) {
