@@ -1351,6 +1351,7 @@ sound_deinit(void)
 #endif
 
     fifo_delete(g_in_fifo, NULL);
+    g_in_fifo = NULL;
 
     return 0;
 }
