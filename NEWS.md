@@ -1,3 +1,40 @@
+# Release notes for xrdp v0.10.4 (2025/07/02)
+
+## General announcements
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+* Experimental support for utmp/wtmp file is provided in this release. If you use this, be aware that these files are only updated when an xrdp session is created or destroyed. Disconnections and reconnections to the same session are not tracked. In particular:-
+  * the FROM address for a client (as shown by the `w` command) reflects the IP address of the client at the time of creation, and not the address of the currently connected client.
+  * Sessions started by the `xrdp-sesrun` command do not have a FROM address.
+* The use_vsock parameter in xrdp.ini is deprecated. Use 'port=vsock://' instead.
+
+## Security fixes
+None
+
+## New features
+* When running as a Hyper-V VM, additional security features can be provided by setting the vmconnect parameter in xrdp.ini. Thanks to @gpotter2 for this great feature (#3524)
+* Add Latvian keyboards (#3511 #3519)
+
+## Bug fixes
+* systemd detection has been improved on Debian-based systems (#3497 #3502)
+* xrdp sessions fail with Quest/OneIdentity Safeguard for Privileged Sessions (#3498 #3507)
+* A race condition at chansrv startup which can result in chansrv not being killed has been addressed (#3482)
+* Various Coverity warnings have been addressed (#3508)
+* A possible double-free on chansrv exit has been addressed (#3546)
+
+## Internal changes
+* The embedded TOML-C99 library is updated to the latest version (#3530)
+
+## Changes for users
+None
+
+## Changes for packagers or developers
+* The config file subdirectory (`xrdp` part of `/etc/xrdp`) can now be configured (#3369)
+* (from v0.10.2) Packagers using TigerVNC to provide the Xvnc backend may wish to configure the 'Xvnc over UDS' session type as a default by using a `code=1` line in xrdp.ini. Instructions are provided in the released xrdp.ini file.
+
+-----------------------
+
 # Release notes for xrdp v0.10.3 (2025/03/30)
 
 ## General announcements
@@ -97,6 +134,7 @@ None
 * `xrdp.ini` and `sesman.ini` are now dynamically substituted during the build process (it was not working as intended before) (#3187 #3188)
 * Running xrdp daemon as an unprivileged user is now officially supported. It is optional but consider creating a user/group for `xrdp` daemon in the post-install script or an appropriate location.
 * The libfuse version required is now > 3.1.0 (#3284)
+* The `--enable-utmp` needs to be added to enable UTMP support.
 * If moving from v0.9.x, read the v0.10.0 release note.
 
 -----------------------
@@ -131,7 +169,7 @@ Please consider sponsoring or making a donation to the project if you like xrdp.
 * An unnecessary licensing exchange during connection setup has been removed. This was causing problems for FIPS-compliant clients (#3132  backport of #3143)
 
 ## Internal changes
-* FreeBSD CI bumped to 13.3 (#3088, backport of #3104)
+* FreeBSD CI bumped to 14.2 (#3088 #3427)
 
 ## Changes for users
 * None since v0.10.0.
