@@ -172,7 +172,6 @@ struct xrdp_client_info
     int require_credentials; /* when true, credentials *must* be passed on cmd line */
 
     int security_layer; /* SECURITY_LAYER_* */
-    int vmconnect; /* Used when used from inside Hyper-V */
 
     int multimon; /* 0 = deny , 1 = allow */
     struct display_size_description display_sizes;
@@ -254,7 +253,7 @@ struct xrdp_client_info
     // Can we resize the desktop by using a Deactivation-Reactivation Sequence?
     enum client_resize_mode client_resize_mode;
 
-    int pad1; /* unused; unicode_input_state */
+    int vmconnect; /* Used when used from inside Hyper-V */
 };
 
 enum xrdp_encoder_flags
