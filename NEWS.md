@@ -1,3 +1,38 @@
+# Release notes for xrdp v0.10.4.1 (2025/07/07)
+
+## General announcements
+
+This is a bug-fix release for xrdp v0.10.4
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+* [V0.10.3] Experimental support for utmp/wtmp file is provided in this release. If you use this, be aware that these files are only updated when an xrdp session is created or destroyed. Disconnections and reconnections to the same session are not tracked. In particular:
+  * the FROM address for a client (as shown by the `w` command) reflects the IP address of the client at the time of creation, and not the address of the currently connected client.
+  * Sessions started by the `xrdp-sesrun` command do not have a FROM address.
+* The use_vsock parameter in xrdp.ini is deprecated. Use 'port=vsock://' instead.
+
+## Security fixes
+None
+
+## New features
+None
+
+## Bug fixes
+* A regression which prevented xorgxrdp v0.10.4 working with this release has been addressed (#3561)
+
+## Internal changes
+None
+
+## Changes for users
+None
+
+## Changes for packagers or developers
+* (from v0.10.3) The `--enable-utmp` needs to be added to enable UTMP support.
+* (from v0.10.3) The config file subdirectory (`xrdp` part of `/etc/xrdp`) can now be configured (#3369)
+* (from v0.10.3) Packagers using TigerVNC to provide the Xvnc backend may wish to configure the 'Xvnc over UDS' session type as a default by using a `code=1` line in xrdp.ini. Instructions are provided in the released xrdp.ini file.
+
+-----------------------
+
 # Release notes for xrdp v0.10.4 (2025/07/02)
 
 ## General announcements
