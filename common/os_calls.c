@@ -118,6 +118,14 @@ struct sockaddr_hvs
 #define INADDR_NONE ((unsigned long)-1)
 #endif
 
+// MacOS uses a different type for getgrouplist() than getgroups(). This
+// appears to be the only platform which does this.
+#ifdef __APPLE__
+#    define GETGROUPLIST_T int
+#else
+#    define GETGROUPLIST_T GETGROUPS_T
+#endif
+
 /**
  * Type big enough to hold socket address information for any connecting type
  */
@@ -3741,13 +3749,13 @@ g_check_user_in_group(const char *username, int gid, int *ok)
         // Some implementations of getgrouplist() (i.e. muslc) don't
         // allow ngroups to be <1 on entry
         int ngroups = 1;
-        GETGROUPS_T dummy;
+        GETGROUPLIST_T dummy;
         getgrouplist(username, pwd_1->pw_gid, &dummy, &ngroups);
 
         if (ngroups > 0) // Should always be true
         {
-            GETGROUPS_T *grouplist;
-            grouplist = (GETGROUPS_T *)malloc(ngroups * sizeof(grouplist[0]));
+            GETGROUPLIST_T *grouplist;
+            grouplist = (GETGROUPLIST_T *)malloc(ngroups * sizeof(grouplist[0]));
             if (grouplist != NULL)
             {
                 // Now get the actual groups. The number of groups returned
@@ -3763,7 +3771,7 @@ g_check_user_in_group(const char *username, int gid, int *ok)
                 int i;
                 for (i = 0 ; i < ngroups; ++i)
                 {
-                    if (grouplist[i] == (GETGROUPS_T)gid)
+                    if (grouplist[i] == (GETGROUPLIST_T)gid)
                     {
                         *ok = 1;
                         break;
