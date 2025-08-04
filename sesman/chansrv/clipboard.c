@@ -1810,7 +1810,7 @@ clipboard_event_selection_notify(XEvent *xevent)
             {
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: UTF8_STRING "
                           "data_size %d", data_size);
-                if ((g_clip_s2c.incr_in_progress == 0) && (data_size > 0))
+                if ((g_clip_s2c.incr_in_progress == 0) && (data_size >= 0))
                 {
                     g_free(g_clip_s2c.data);
                     g_clip_s2c.total_bytes = data_size;
