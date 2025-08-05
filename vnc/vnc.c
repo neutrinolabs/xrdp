@@ -403,17 +403,21 @@ resize_server_to_client_layout(struct vnc *v)
 {
     int error = 0;
 
-    if (v->resize_supported != VRSS_SUPPORTED)
-    {
-        LOG(LOG_LEVEL_ERROR, "%s: Asked to resize server, but not possible",
-            __func__);
-        error = 1;
-    }
-    else if (vnc_screen_layouts_equal(&v->server_layout, &v->client_layout))
+    /* Before checking the 'resize_supported' flag, see if this
+     * is a null operation. We can get here if the server doesn't
+     * support resize, and we've queued a request to resize the client
+     * to the server size */
+    if (vnc_screen_layouts_equal(&v->server_layout, &v->client_layout))
     {
         LOG(LOG_LEVEL_DEBUG, "Server layout is the same "
             "as the client layout");
         v->resize_status = VRS_DONE;
+    }
+    else if (v->resize_supported != VRSS_SUPPORTED)
+    {
+        LOG(LOG_LEVEL_ERROR, "%s: Asked to resize server, but not possible",
+            __func__);
+        error = 1;
     }
     else
     {
