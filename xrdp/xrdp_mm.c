@@ -317,8 +317,18 @@ xrdp_mm_create_session(struct xrdp_mm *self)
             type = SCP_SESSION_TYPE_XVNC_UDS;
             break;
 
-        case  XORG_SESSION_CODE:
+        case XORG_SESSION_CODE:
             type = SCP_SESSION_TYPE_XORG;
+            break;
+
+#if 0
+        case LABWC_SESSION_CODE:
+            type = SCP_SESSION_TYPE_LABWC;
+            break;
+#endif
+
+        case LABWC_OVER_VNC_SESSION_CODE:
+            type = SCP_SESSION_TYPE_LABWC_OVER_VNC;
             break;
 
         default:
@@ -5316,7 +5326,8 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             g_snprintf(text, sizeof(text), "%d", 5900 + self->display);
         }
         else if (self->code == XORG_SESSION_CODE ||
-                 self->code == XVNC_UDS_SESSION_CODE)
+                 self->code == XVNC_UDS_SESSION_CODE ||
+                 self->code == LABWC_OVER_VNC_SESSION_CODE)
         {
             g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
                        self->uid, self->display);
