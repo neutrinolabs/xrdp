@@ -39,6 +39,7 @@
 #include "sesexec.h"
 #include "sesexec_discover.h"
 #include "session.h"
+#include "session_parameters.h"
 
 /******************************************************************************/
 static int

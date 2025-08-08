@@ -34,6 +34,7 @@
 #include "trans.h"
 #include "sesexec.h"
 #include "session.h"
+#include "session_parameters.h"
 #include "sesman_config.h"
 #include "os_calls.h"
 #include "ercp.h"
