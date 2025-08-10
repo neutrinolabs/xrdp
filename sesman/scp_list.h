@@ -86,8 +86,8 @@ struct scp_list_item
     char start_ip_addr[MAX_PEER_ADDRSTRLEN];
     int is_admin;
     int create_session_in_progress; ///< Already handling a create_session
-    /// Display allocated for session. This is always valid (>= 0)
-    unsigned int session_display;
+    /// Display allocated for session (-1 if N/A)
+    int session_x11_display;
 };
 
 
@@ -157,11 +157,11 @@ int
 scp_list_check_wait_objs(void);
 
 /**
- * @brief Get all create-session displays
+ * @brief Get all create-session X11 displays
  *
- * Adds displays allocated to create-session operations to a set
+ * Adds X11 displays allocated to create-session operations to a set
  */
 void
-scp_list_get_create_session_displays(struct set_int *alloc_displays);
+scp_list_get_create_session_x11_displays(struct set_int *alloc_displays);
 
 #endif // SCP_LIST_H

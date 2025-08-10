@@ -149,12 +149,13 @@ handle_create_session_request(struct trans *self)
     int status;
 
     status = eicp_get_create_session_request(
-                 self, &sp.display,
+                 self, &sp.x11_display,
                  &sp.type, &sp.width, &sp.height,
                  &sp.bpp, &sp.shell, &sp.directory);
     if (status == 0)
     {
         enum scp_screate_status scp_status = E_SCP_SCREATE_OK;
+        const char *display = "";
 
         // Must be logged in to start a session
         if (g_login_info == NULL)
@@ -166,10 +167,15 @@ handle_create_session_request(struct trans *self)
             // Try to create the session
             sp.guid = guid_new();
             scp_status = session_start(g_login_info, &sp, &g_session_data);
+            if (scp_status == E_SCP_SCREATE_OK)
+            {
+                display = session_get_display(g_session_data);
+            }
         }
 
         // Return the creation status to sesman.
-        status = eicp_send_create_session_response(self, scp_status, &sp.guid);
+        status = eicp_send_create_session_response(self, scp_status, display,
+                 &sp.guid);
         if (status == 0 && scp_status == E_SCP_SCREATE_OK)
         {
             // Further comms to sesman is sent over the ERCP protocol
@@ -178,7 +184,7 @@ handle_create_session_request(struct trans *self)
             // Announce the session to sesman
             if ((status = ercp_send_session_announce_event(
                               self,
-                              sp.display,
+                              display,
                               g_login_info->uid,
                               sp.type,
                               sp.width,

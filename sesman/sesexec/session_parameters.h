@@ -36,7 +36,7 @@
  */
 struct session_parameters
 {
-    unsigned int display;
+    int x11_display;  // >= for X11 only
     enum scp_session_type type;
     unsigned short width;
     unsigned short height;

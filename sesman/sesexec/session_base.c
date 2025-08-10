@@ -72,6 +72,7 @@ session_base_new(const struct session_parameters *sp)
     if (self != NULL)
     {
         self->params = sp_copy;
+        memset(self->display, '\0', sizeof(self->display));
         self->chansrv_pid = -1;
         self->start_time = 0;
         self->connect_count = 0;
@@ -134,7 +135,7 @@ session_base_start_chansrv(struct session_data *self,
     }
     else
     {
-        env_set_user(login_info->uid, 0, self->params->display,
+        env_set_user(login_info->uid, 0,
                      g_cfg->env_names,
                      g_cfg->env_values);
 
@@ -250,7 +251,7 @@ session_base_cleanup_sockets(struct session_data *self)
     int error = 0;
 
     int uid = g_login_info->uid;
-    int display = self->params->display;
+    const char *display = STRIP_COLON(self->display);
 
     g_snprintf(file, sizeof(file), CHANSRV_PORT_OUT_STR, uid, display);
     if (g_file_exist(file))
@@ -320,8 +321,8 @@ session_base_process_sigchld_event(struct session_data *self)
         if (pid == self->chansrv_pid)
         {
             LOG(LOG_LEVEL_INFO,
-                "xrdp channel server pid %d on display :%d finished",
-                self->chansrv_pid, self->params->display);
+                "xrdp channel server pid %d on display %s finished",
+                self->chansrv_pid, self->display);
             self->chansrv_pid = -1;
         }
         else

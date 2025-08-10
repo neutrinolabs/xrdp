@@ -477,7 +477,7 @@ scp_get_create_session_request(struct trans *trans,
 int
 scp_send_create_session_response(struct trans *trans,
                                  enum scp_screate_status status,
-                                 int display,
+                                 const char *display,
                                  const struct guid *guid)
 {
     struct libipm_fsb guid_descriptor = { (void *)guid, sizeof(*guid) };
@@ -485,7 +485,7 @@ scp_send_create_session_response(struct trans *trans,
     return libipm_msg_out_simple_send(
                trans,
                (int)E_SCP_CREATE_SESSION_RESPONSE,
-               "iiB",
+               "isB",
                status,
                display,
                &guid_descriptor);
@@ -496,25 +496,27 @@ scp_send_create_session_response(struct trans *trans,
 int
 scp_get_create_session_response(struct trans *trans,
                                 enum scp_screate_status *status,
-                                int *display,
+                                const char **display,
                                 struct guid *guid)
 {
     /* Intermediate values */
     int32_t i_status;
-    int32_t i_display;
 
     const struct libipm_fsb guid_descriptor = { (void *)guid, sizeof(*guid) };
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "iiB",
+                 "isB",
                  &i_status,
-                 &i_display,
+                 display,
                  &guid_descriptor);
     if (rv == 0)
     {
         *status = (enum scp_screate_status)i_status;
-        *display = i_display;
+    }
+    else
+    {
+        *display = "";
     }
 
     return rv;
@@ -743,7 +745,7 @@ scp_send_list_sessions_response(
         rv = libipm_msg_out_simple_send(
                  trans,
                  (int)E_SCP_LIST_SESSIONS_RESPONSE,
-                 "iiuyqqyxisssx",
+                 "iisyqqyxisssx",
                  status,
                  info->sid,
                  info->display,
@@ -786,7 +788,7 @@ scp_get_list_sessions_response(
         if (*status == E_SCP_LS_SESSION_INFO)
         {
             int32_t i_sid;
-            uint32_t i_display;
+            char *i_display;
             uint8_t i_type;
             uint16_t i_width;
             uint16_t i_height;
@@ -800,7 +802,7 @@ scp_get_list_sessions_response(
 
             rv = libipm_msg_in_parse(
                      trans,
-                     "iuyqqyxisssx",
+                     "isyqqyxisssx",
                      &i_sid,
                      &i_display,
                      &i_type,
@@ -819,6 +821,7 @@ scp_get_list_sessions_response(
                 /* Allocate a block of memory large enough for the
                  * structure result, and the strings it contains */
                 unsigned int len = sizeof(struct scp_session_info) +
+                                   g_strlen(i_display) + 1 +
                                    g_strlen(i_start_ip_addr) + 1 +
                                    g_strlen(i_client_ip) + 1 +
                                    g_strlen(i_client_name) + 1;
@@ -840,7 +843,7 @@ scp_get_list_sessions_response(
     }
                     /* Copy the data over */
                     p->sid = i_sid;
-                    p->display = i_display;
+                    COPY_STRING(p->display, i_display);
                     p->type = (enum scp_session_type)i_type;
                     p->width = i_width;
                     p->height = i_height;

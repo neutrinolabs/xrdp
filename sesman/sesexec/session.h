@@ -99,6 +99,17 @@ time_t
 session_get_start_time(const struct session_data *self);
 
 /**
+ * Get a pointer to the session display name
+ *
+ * @param self session_data object
+ * @return session name (":n" or "wayland-n")
+ *
+ * A session name is set by a successful call to session_start()
+ */
+const char *
+session_get_display(const struct session_data *self);
+
+/**
  * Increment the connect count for an active session
  * @param self session_data object
  * @return Pre-increment value of the connect count

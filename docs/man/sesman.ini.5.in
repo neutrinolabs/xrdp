@@ -408,8 +408,7 @@ If first character is not a '/', this is relative to $HOME.
 The following substitutions are made in this string:-
     %U - Username
     %u - Numeric UID
-    %d - Numeric display number (ex 10)
-    %D - Display environment variable (ex :10.0)
+    %d - Display identifier (e.g. "10" for X11, or "wayland-1" for Wayland)
     %% - Percent character
 .HP 3
 1) The directory path permissions MUST be configured correctly by

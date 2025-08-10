@@ -131,6 +131,7 @@ struct session_data
 {
     const struct session_data_vtable *vtable;
     struct session_parameters *params;
+    char display[SCP_DISPLAY_NAME_SIZE]; // Set by derived class start()
     pid_t chansrv_pid; // Set by derived class start()
     time_t start_time; // Set by derived class start()
     unsigned int connect_count;

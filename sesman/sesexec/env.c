@@ -101,7 +101,7 @@ env_check_password_file(const char *filename, const char *passwd)
 /******************************************************************************/
 /*  its the responsibility of the caller to free passwd_file                  */
 int
-env_set_user(int uid, char **passwd_file, int display,
+env_set_user(int uid, char **passwd_file,
              const struct list *env_names, const struct list *env_values)
 {
     int error;
@@ -110,15 +110,12 @@ env_set_user(int uid, char **passwd_file, int display,
     int len;
     char *name;
     char *value;
-    char *pw_username;
-    char *pw_shell;
-    char *pw_dir;
+    char *pw_username = NULL;
+    char *pw_shell = NULL;
+    char *pw_dir = NULL;
+    char *display = NULL;
     char text[256];
     char hostname[256];
-
-    pw_username = 0;
-    pw_shell = 0;
-    pw_dir = 0;
 
     error = g_getuser_info_by_uid(uid, &pw_username, &pw_gid, &pw_shell,
                                   &pw_dir, 0);
@@ -156,27 +153,11 @@ env_set_user(int uid, char **passwd_file, int display,
             g_setenv_log("UID", text, 1);
             g_setenv_log("HOME", pw_dir, 1);
             g_set_current_dir(pw_dir);
-            g_snprintf(text, sizeof(text), ":%d.0", display);
-            g_setenv_log("DISPLAY", text, 1);
             // Use our PID as the XRDP_SESSION value
             g_snprintf(text, sizeof(text), "%d", g_pid);
             g_setenv_log("XRDP_SESSION", text, 1);
-            /* XRDP_SOCKET_PATH should be set here. It's used by
-             * xorgxrdp and the pulseaudio plugin */
-            g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
-            g_setenv_log("XRDP_SOCKET_PATH", text, 1);
-            /* pulse sink socket */
-            g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR, display);
-            g_setenv_log("XRDP_PULSE_SINK_SOCKET", text, 1);
-            /* pulse source socket */
-            g_snprintf(text, sizeof(text), CHANSRV_PORT_IN_BASE_STR, display);
-            g_setenv_log("XRDP_PULSE_SOURCE_SOCKET", text, 1);
-            if (g_cfg->sec.xauth_in_sysdir)
-            {
-                g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH "/Xauthority",
-                           uid);
-                g_setenv_log("XAUTHORITY", text, 1);
-            }
+
+            // Set the passed-in variables. This may include a DISPLAY
             if ((env_names != 0) && (env_values != 0) &&
                     (env_names->count == env_values->count))
             {
@@ -185,6 +166,38 @@ env_set_user(int uid, char **passwd_file, int display,
                     name = (char *) list_get_item(env_names, index),
                     value = (char *) list_get_item(env_values, index),
                     g_setenv_log(name, value, 1);
+
+                    // Look for a DISPLAY. WAYLAND_DISPLAY overrides
+                    // DISPLAY
+                    if (strcmp(name, "WAYLAND_DISPLAY") == 0 ||
+                            (strcmp(name, "DISPLAY") == 0 && display == NULL))
+                    {
+                        display = value;
+                    }
+                }
+            }
+
+            // Set things dependent on the DISPLAY
+            if (display != NULL)
+            {
+                /* XRDP_SOCKET_PATH should be set here. It's used by
+                 * xorgxrdp and the pulseaudio plugin */
+                g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
+                g_setenv_log("XRDP_SOCKET_PATH", text, 1);
+                /* pulse sink socket */
+                g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR,
+                           STRIP_COLON(display));
+                g_setenv_log("XRDP_PULSE_SINK_SOCKET", text, 1);
+                /* pulse source socket */
+                g_snprintf(text, sizeof(text), CHANSRV_PORT_IN_BASE_STR,
+                           STRIP_COLON(display));
+                g_setenv_log("XRDP_PULSE_SOURCE_SOCKET", text, 1);
+
+                if (display[0] == ':' && g_cfg->sec.xauth_in_sysdir)
+                {
+                    g_snprintf(text, sizeof(text),
+                               XRDP_SOCKET_PATH "/Xauthority", uid);
+                    g_setenv_log("XAUTHORITY", text, 1);
                 }
             }
             g_gethostname(hostname, 255);
@@ -205,8 +218,9 @@ env_set_user(int uid, char **passwd_file, int display,
                         }
                     }
 
-                    len = g_snprintf(NULL, 0, "%s/.vnc/sesman_passwd-%s@%s:%d",
-                                     pw_dir, pw_username, hostname, display);
+                    len = g_snprintf(NULL, 0, "%s/.vnc/sesman_passwd-%s@%s:%s",
+                                     pw_dir, pw_username, hostname,
+                                     STRIP_COLON(display));
                     ++len; // Allow for terminator
 
                     *passwd_file = (char *) g_malloc(len, 1);
@@ -214,8 +228,8 @@ env_set_user(int uid, char **passwd_file, int display,
                     {
                         /* Try legacy names first, remove if found */
                         g_snprintf(*passwd_file, len,
-                                   "%s/.vnc/sesman_%s_passwd:%d",
-                                   pw_dir, pw_username, display);
+                                   "%s/.vnc/sesman_%s_passwd:%s",
+                                   pw_dir, pw_username, STRIP_COLON(display));
                         if (g_file_exist(*passwd_file))
                         {
                             LOG(LOG_LEVEL_WARNING, "Removing old "
@@ -232,8 +246,9 @@ env_set_user(int uid, char **passwd_file, int display,
                             g_file_delete(*passwd_file);
                         }
                         g_snprintf(*passwd_file, len,
-                                   "%s/.vnc/sesman_passwd-%s@%s:%d",
-                                   pw_dir, pw_username, hostname, display);
+                                   "%s/.vnc/sesman_passwd-%s@%s:%s",
+                                   pw_dir, pw_username, hostname,
+                                   STRIP_COLON(display));
                     }
                 }
                 else

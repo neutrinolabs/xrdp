@@ -56,40 +56,68 @@ log_waitforx_messages(FILE *dp)
  * Contruct the command to run to check the X server
  */
 static struct list *
-make_xwait_command(int display)
+make_xwait_command(const char *display)
 {
     const char exe[] = XRDP_LIBEXEC_PATH "/waitforx";
-    char displaystr[64];
 
     struct list *cmd = list_create();
     if (cmd != NULL)
     {
         cmd->auto_free = 1;
-        g_snprintf(displaystr, sizeof(displaystr), ":%d", display);
 
-        if (!list_add_strdup_multi(cmd, exe, "-d", displaystr, NULL))
+        if (!list_add_strdup_multi(cmd, exe, NULL))
         {
-            list_delete(cmd);
-            cmd = NULL;
+            goto fail;
+        }
+
+        if (display != NULL)
+        {
+            if (!list_add_strdup_multi(cmd, "-d", display, NULL))
+            {
+                goto fail;
+            }
         }
     }
 
     return cmd;
+
+fail:
+    list_delete(cmd);
+    return NULL;
+
+}
+
+/******************************************************************************/
+/*
+ * Gets the display from the environment */
+static const char *
+get_display(struct list *env_names,
+            struct list *env_values)
+{
+    int i;
+    for (i = 0; i < env_names->count; ++i)
+    {
+        if (strcmp((const char *)list_get_item(env_names, i), "DISPLAY") == 0)
+        {
+            return (const char *)list_get_item(env_values, i);
+        }
+    }
+
+    return NULL;
 }
 
 /******************************************************************************/
 enum xwait_status
 wait_for_xserver(uid_t uid,
                  struct list *env_names,
-                 struct list *env_values,
-                 int display)
+                 struct list *env_values)
 {
     enum xwait_status rv = XW_STATUS_MISC_ERROR;
     int fd[2] = {-1, -1};
-    struct list *cmd = make_xwait_command(display);
-
 
     // Construct the command to execute to check the display
+    const char *display = get_display(env_names, env_values);
+    struct list *cmd = make_xwait_command(display);
     if (cmd == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Can't create xwait command list - no mem");
@@ -117,7 +145,6 @@ wait_for_xserver(uid_t uid,
             /* Move to the user context... */
             env_set_user(uid,
                          0,
-                         display,
                          env_names,
                          env_values);
 
@@ -130,8 +157,8 @@ wait_for_xserver(uid_t uid,
         else
         {
             LOG(LOG_LEVEL_DEBUG,
-                "Waiting for X server to start on display :%d",
-                display);
+                "Waiting for X server to start on display %s",
+                (display != NULL) ? display : "???");
 
             g_file_close(fd[1]);
             fd[1] = -1;

@@ -75,7 +75,7 @@ session_start_preamble(struct login_info *login_info,
     }
 #endif
 
-    if (auth_start_session(login_info->auth_info, s->display) != 0)
+    if (auth_start_session(login_info->auth_info, s->x11_display) != 0)
     {
         // Errors are logged by the auth module, as they are
         // specific to that module
@@ -90,14 +90,14 @@ session_start_preamble(struct login_info *login_info,
     {
         LOG(LOG_LEVEL_WARNING,
             "[session start] (display %d): setsid failed - pid %d",
-            s->display, g_getpid());
+            s->x11_display, g_getpid());
     }
 
     if (g_setlogin(login_info->username) < 0)
     {
         LOG(LOG_LEVEL_WARNING,
             "[session start] (display %d): setlogin failed for user %s - pid %d",
-            s->display, login_info->username, g_getpid());
+            s->x11_display, login_info->username, g_getpid());
     }
 #endif
 
@@ -169,6 +169,13 @@ session_get_start_time(const struct session_data *self)
 }
 
 /******************************************************************************/
+const char *
+session_get_display(const struct session_data *self)
+{
+    return self->display;
+}
+
+/******************************************************************************/
 unsigned int
 session_increment_connect_count(struct session_data *self)
 {
@@ -181,7 +188,7 @@ start_reconnect_script(struct session_data *self,
                        const struct login_info *login_info,
                        void *closure)
 {
-    env_set_user(login_info->uid, 0, self->params->display,
+    env_set_user(login_info->uid, 0,
                  g_cfg->env_names,
                  g_cfg->env_values);
 
@@ -203,14 +210,14 @@ start_reconnect_script(struct session_data *self,
         LOG_DEVEL_LEAKING_FDS("reconnect script", 3, -1);
 
         LOG(LOG_LEVEL_INFO,
-            "Starting session reconnection script on display %d: %s",
-            self->params->display, g_cfg->reconnect_sh);
+            "Starting session reconnection script on display %s: %s",
+            self->display, g_cfg->reconnect_sh);
         g_execlp3(g_cfg->reconnect_sh, g_cfg->reconnect_sh, 0);
 
         /* should not get here */
         LOG(LOG_LEVEL_ERROR,
-            "Error starting session reconnection script on display %d: %s",
-            self->params->display, g_cfg->reconnect_sh);
+            "Error starting session reconnection script on display %s: %s",
+            self->display, g_cfg->reconnect_sh);
     }
     else
     {
@@ -272,13 +279,13 @@ session_get_chansrv_fd(const struct session_data *self,
     if (self->chansrv_pid <= 0)
     {
         LOG(LOG_LEVEL_ERROR,
-            "Request to connect to chansrv :%u"
-            " which has exited", self->params->display);
+            "Request to connect to chansrv on display %s"
+            " which has exited", self->display);
     }
     else
     {
-        snprintf(portname, sizeof(portname),
-                 XRDP_CHANSRV_STR, login_info->uid, (int)self->params->display);
+        g_snprintf(portname, sizeof(portname), XRDP_CHANSRV_STR,
+                   login_info->uid, STRIP_COLON(self->display));
 
         // Use the transport library to get the fd
         struct trans *t = trans_create(TRANS_MODE_UNIX, 8192, 8192);
@@ -288,8 +295,8 @@ session_get_chansrv_fd(const struct session_data *self,
         }
         else if (trans_connect(t, NULL, portname, 10 * 1000) != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "Can't connect to chansrv :%u [%s]",
-                self->params->display,
+            LOG(LOG_LEVEL_ERROR, "Can't connect to chansrv on %s [%s]",
+                self->display,
                 g_get_strerror());
         }
         else

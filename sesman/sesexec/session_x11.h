@@ -19,7 +19,7 @@
 /**
  *
  * @file session_x11.h
- * @brief Base class for X11 session objects
+ * @brief Derived class for X11 session objects
  * @author Matt Burt
  *
  */

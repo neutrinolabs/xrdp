@@ -68,7 +68,7 @@ typedef struct utmp _utmp;
 #include "os_calls.h"
 #include "string_calls.h"
 
-#define XRDP_LINE_FORMAT "xrdp:%d"
+#define XRDP_LINE_FORMAT "xrdp:%s"
 // ut_id is a very small field on some platforms, so use the display
 // number in hex
 #define XRDP_ID_FORMAT ":%x"
@@ -107,14 +107,15 @@ str2memcpy(void *dest, const char *src, size_t n)
  * Prepare the utmp struct and write it.
  *
  * @param pid PID of session manager
- * @param display Display number of session
+ * @param display Display name of session
  * @param login_info Login info (NULL for MODE_LOGOUT)
  * @param mode see enum add_xtmp_mode
  * @param e Exit status (NULL unless MODE_LOGOUT)
  */
 
 static void
-add_xtmp_entry(int pid, int display, const struct login_info *login_info,
+add_xtmp_entry(int pid, const char *display,
+               const struct login_info *login_info,
                enum add_xtmp_mode mode, const struct proc_exit_status *e)
 {
     char idbuff[16];
@@ -124,8 +125,30 @@ add_xtmp_entry(int pid, int display, const struct login_info *login_info,
     struct timeval tv;
 
     g_memset(&ut, 0, sizeof(ut));
-    g_snprintf(str_display, sizeof(str_display), XRDP_LINE_FORMAT, display);
-    g_snprintf(idbuff, sizeof(idbuff), XRDP_ID_FORMAT, display);
+    if (display[0] == ':')
+    {
+        // X11 display
+        g_snprintf(str_display, sizeof(str_display), XRDP_LINE_FORMAT,
+                   display + 1);
+        g_snprintf(idbuff, sizeof(idbuff), XRDP_ID_FORMAT,
+                   g_atoi(display + 1));
+    }
+    else if (strncmp(display, "wayland-", 8) == 0)
+    {
+        // Conventional name of a wayland display
+        g_snprintf(str_display, sizeof(str_display), XRDP_LINE_FORMAT,
+                   display + 8);
+        g_snprintf(idbuff, sizeof(idbuff), XRDP_ID_FORMAT,
+                   g_atoi(display + 8));
+    }
+    else
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "Unconventional display name '%s' for utmp entry",
+            display);
+        str_display[0] = '\0';
+        idbuff[0] = '\0';
+    }
     gettimeofday(&tv, NULL);
 
     ut.ut_type = (mode == MODE_LOGIN) ? USER_PROCESS : DEAD_PROCESS;
@@ -170,7 +193,8 @@ add_xtmp_entry(int pid, int display, const struct login_info *login_info,
 }
 #else // USE_UTMP
 static void
-add_xtmp_entry(int pid, int display, const struct login_info *login_info,
+add_xtmp_entry(int pid, const char *display,
+               const struct login_info *login_info,
                short state, const struct proc_exit_status *e)
 {
 }
@@ -179,10 +203,10 @@ add_xtmp_entry(int pid, int display, const struct login_info *login_info,
 
 /******************************************************************************/
 void
-utmp_login(int pid, int display, const struct login_info *login_info)
+utmp_login(int pid, const char *display, const struct login_info *login_info)
 {
     log_message(LOG_LEVEL_DEBUG,
-                "adding login info for utmp: %d - %d - %s - %s",
+                "adding login info for utmp: %d - %s - %s - %s",
                 pid, display, login_info->username, login_info->ip_addr);
 
     add_xtmp_entry(pid, display, login_info, MODE_LOGIN, NULL);
@@ -190,10 +214,11 @@ utmp_login(int pid, int display, const struct login_info *login_info)
 
 /******************************************************************************/
 void
-utmp_logout(int pid, int display, const struct proc_exit_status *exit_status)
+utmp_logout(int pid, const char *display,
+            const struct proc_exit_status *exit_status)
 {
 
-    log_message(LOG_LEVEL_DEBUG, "adding logout info for utmp: %d - %d",
+    log_message(LOG_LEVEL_DEBUG, "adding logout info for utmp: %d - %s",
                 pid, display);
 
     add_xtmp_entry(pid, display, NULL, MODE_LOGOUT, exit_status);

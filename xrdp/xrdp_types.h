@@ -440,7 +440,7 @@ struct xrdp_mm
     struct xrdp_mod *(*mod_init)(void);
     int (*mod_exit)(struct xrdp_mod *);
     struct xrdp_mod *mod; /* module interface */
-    int display; /* 10 for :10.0, 11 for :11.0, etc */
+    char display[32]; /* ":n" or "wayland-n" */
     int uid; /* UID for a successful login, -1 otherwise */
     struct guid guid; /* GUID for the session, or all zeros  */
     int code; /* 0=Xvnc session, 20=xorg driver mode */

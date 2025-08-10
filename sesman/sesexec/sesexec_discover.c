@@ -93,7 +93,7 @@ discover_trans_conn_in(struct trans *trans, struct trans *new_trans)
         {
             (void)ercp_send_session_announce_event(
                 new_trans,
-                sp->display,
+                session_get_display(g_session_data),
                 g_login_info->uid,
                 sp->type,
                 sp->width,
@@ -143,9 +143,9 @@ sesexec_discover_enable(void)
     {
         char discover_port[XRDP_SOCKETS_MAXPATH];
 
-        snprintf(discover_port, sizeof(discover_port), "%s.r/%u",
+        snprintf(discover_port, sizeof(discover_port), "%s.r/%d",
                  g_cfg->listen_port,
-                 session_get_parameters(g_session_data)->display);
+                 session_get_parameters(g_session_data)->x11_display);
         g_discover_trans->is_term = sesexec_is_term;
         g_discover_trans->trans_conn_in = discover_trans_conn_in;
         if ((rv = trans_listen(g_discover_trans, discover_port)) != 0)

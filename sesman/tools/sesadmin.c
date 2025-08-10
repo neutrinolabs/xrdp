@@ -141,7 +141,7 @@ print_session(const struct scp_session_info *s)
     uptr = (username == NULL) ? "<unknown>" : username;
 
     printf("Session ID: %d\n", s->sid);
-    printf("\tDisplay: :%u\n", s->display);
+    printf("\tDisplay: %s\n", s->display);
     printf("\tUser: %s\n", uptr);
     printf("\tSession type: %s\n", SCP_SESSION_TYPE_TO_STR(s->type));
     printf("\tScreen size: %dx%d, color depth %d\n",

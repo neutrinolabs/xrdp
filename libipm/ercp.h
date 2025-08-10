@@ -176,7 +176,7 @@ ercp_msg_in_reset(struct trans *trans);
  */
 int
 ercp_send_session_announce_event(struct trans *trans,
-                                 unsigned int display,
+                                 const char *display,
                                  uid_t uid,
                                  enum scp_session_type type,
                                  unsigned short start_width,
@@ -206,7 +206,7 @@ ercp_send_session_announce_event(struct trans *trans,
  */
 int
 ercp_get_session_announce_event(struct trans *trans,
-                                unsigned int *display,
+                                const char **display,
                                 uid_t *uid,
                                 enum scp_session_type *type,
                                 unsigned short *start_width,

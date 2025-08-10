@@ -19,7 +19,7 @@
 /**
  *
  * @file session_x11.c
- * @brief Base class for X11 session objects
+ * @brief Derived class for X11 session objects
  * @author Matt Burt
  *
  */
@@ -97,7 +97,6 @@ start_window_manager(struct session_data *baseobj,
 
     env_set_user(login_info->uid,
                  0,
-                 baseobj->params->display,
                  g_cfg->env_names,
                  g_cfg->env_values);
 
@@ -127,8 +126,8 @@ start_window_manager(struct session_data *baseobj,
             {
                 LOG(LOG_LEVEL_INFO,
                     "Using user requested window manager on "
-                    "display %u with embedded arguments using a shell: %s",
-                    s->display, s->shell);
+                    "display :%d with embedded arguments using a shell: %s",
+                    s->x11_display, s->shell);
                 const char *argv[] = {"sh", "-c", s->shell, NULL};
                 g_execvp("/bin/sh", (char **)argv);
             }
@@ -136,7 +135,7 @@ start_window_manager(struct session_data *baseobj,
             {
                 LOG(LOG_LEVEL_INFO,
                     "Using user requested window manager on "
-                    "display %d: %s", s->display, s->shell);
+                    "display :%d : %s", s->x11_display, s->shell);
                 g_execlp3(s->shell, s->shell, 0);
             }
         }
@@ -150,8 +149,8 @@ start_window_manager(struct session_data *baseobj,
     }
     else
     {
-        LOG(LOG_LEVEL_DEBUG, "The user session on display %u did "
-            "not request a specific window manager", s->display);
+        LOG(LOG_LEVEL_DEBUG, "The user session on display :%d did not"
+            " request a specific window manager", s->x11_display);
     }
 
     /* try to execute user window manager if enabled */
@@ -162,8 +161,8 @@ start_window_manager(struct session_data *baseobj,
         if (g_file_exist(text))
         {
             LOG(LOG_LEVEL_INFO,
-                "Using window manager on display %u"
-                " from user home directory: %s", s->display, text);
+                "Using window manager on display :%d from user"
+                " home directory: %s", s->x11_display, text);
             g_execlp3(text, g_cfg->user_wm, 0);
         }
         else
@@ -176,21 +175,21 @@ start_window_manager(struct session_data *baseobj,
     }
 
     LOG(LOG_LEVEL_INFO,
-        "Using the default window manager on display %u: %s",
-        s->display, g_cfg->default_wm);
+        "Using the default window manager on display :%d : %s",
+        s->x11_display, g_cfg->default_wm);
     g_execlp3(g_cfg->default_wm, g_cfg->default_wm, 0);
 
     /* still a problem starting window manager just start xterm */
     LOG(LOG_LEVEL_WARNING,
-        "No window manager on display %u started, "
+        "No window manager on display :%d started, "
         "so falling back to starting xterm for user debugging",
-        s->display);
+        s->x11_display);
     g_execlp3("xterm", "xterm", 0);
 
     /* should not get here */
     LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting to start "
-        "the window manager on display %u, aborting connection",
-        s->display);
+        "the window manager on display :%d, aborting connection",
+        s->x11_display);
 }
 
 /******************************************************************************/
@@ -216,12 +215,12 @@ prepare_xorg_xserver_params(const struct session_parameters *s,
         if (g_cfg->sec.xorg_no_new_privileges && g_no_new_privs() != 0)
         {
             LOG(LOG_LEVEL_WARNING,
-                "[session start] (display %u): Failed to disable "
+                "[session start] (display :%d): Failed to disable "
                 "setuid on X server: %s",
-                s->display, g_get_strerror());
+                s->x11_display, g_get_strerror());
         }
 
-        g_snprintf(screen, sizeof(screen), ":%u", s->display);
+        g_snprintf(screen, sizeof(screen), ":%d", s->x11_display);
 
         /* some args are passed via env vars */
         g_snprintf(text, sizeof(text), "%d", s->width);
@@ -283,7 +282,7 @@ prepare_xvnc_xserver_params(const struct session_parameters *s,
     {
         params->auto_free = 1;
 
-        g_snprintf(screen, sizeof(screen), ":%u", s->display);
+        g_snprintf(screen, sizeof(screen), ":%d", s->x11_display);
         g_snprintf(geometry, sizeof(geometry), "%dx%d", s->width, s->height);
         g_snprintf(depth, sizeof(depth), "%d", s->bpp);
 
@@ -353,7 +352,6 @@ start_x_server(struct session_data *baseobj,
     {
         env_set_user(login_info->uid,
                      &passwd_file,
-                     baseobj->params->display,
                      g_cfg->env_names,
                      g_cfg->env_values);
     }
@@ -361,7 +359,6 @@ start_x_server(struct session_data *baseobj,
     {
         env_set_user(login_info->uid,
                      0,
-                     baseobj->params->display,
                      g_cfg->env_names,
                      g_cfg->env_values);
     }
@@ -378,11 +375,11 @@ start_x_server(struct session_data *baseobj,
     }
 
     /* Add the entry in XAUTHORITY file or exit if error */
-    if (add_xauth_cookie(baseobj->params->display, authfile) != 0)
+    if (add_xauth_cookie(baseobj->params->x11_display, authfile) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
-            "Error setting the xauth cookie for display %u in file %s",
-            baseobj->params->display, authfile);
+            "Error setting the xauth cookie for display :%d in file %s",
+            baseobj->params->x11_display, authfile);
     }
     else
     {
@@ -401,11 +398,16 @@ start_x_server(struct session_data *baseobj,
                 break;
 
             case SCP_SESSION_TYPE_XVNC_UDS:
+            {
+                char displaystr[32];
+                g_snprintf(displaystr, sizeof(displaystr), "%d",
+                           baseobj->params->x11_display);
                 g_snprintf(port, sizeof(port), XRDP_X11RDP_STR,
-                           login_info->uid, baseobj->params->display);
-                xserver_params = prepare_xvnc_xserver_params(baseobj->params,
-                                 authfile, NULL, port);
-                break;
+                           login_info->uid, displaystr);
+            }
+            xserver_params = prepare_xvnc_xserver_params(baseobj->params,
+                             authfile, NULL, port);
+            break;
 
             default:
                 unknown_session_type = 1;
@@ -423,8 +425,8 @@ start_x_server(struct session_data *baseobj,
         else
         {
             /* fire up X server */
-            LOG(LOG_LEVEL_INFO, "Starting X server on display %u: %s",
-                baseobj->params->display,
+            LOG(LOG_LEVEL_INFO, "Starting X server on display :%d: %s",
+                baseobj->params->x11_display,
                 dumpItemsToString(xserver_params, execvpparams, 2048));
             LOG_DEVEL_LEAKING_FDS("X server", 3, -1);
             g_execvp_list((const char *)xserver_params->items[0],
@@ -436,8 +438,8 @@ start_x_server(struct session_data *baseobj,
     g_free(passwd_file);
     list_delete(xserver_params);
     LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
-        "to start the X server on display %u, aborting connection",
-        baseobj->params->display);
+        "to start the X server on display :%d, aborting connection",
+        baseobj->params->x11_display);
 }
 
 /******************************************************************************/
@@ -449,10 +451,23 @@ start(struct session_data *baseobj,
     int chansrv_pid;
     int display_pid;
     int window_manager_pid;
+    char displayname[32];
     enum scp_screate_status status = E_SCP_SCREATE_GENERAL_ERROR;
 
     // Downcast the base object pointer to a pointer to the X11 session object
     struct session_data_x11 *self = (struct session_data_x11 *)baseobj;
+
+    snprintf(displayname, sizeof(displayname), ":%d",
+             s->x11_display);
+
+    /* Add the DISPLAY to the list of environment variables we
+     * set for all the sub-processes */
+    if (!list_add_strdup(g_cfg->env_names, "DISPLAY") ||
+            !list_add_strdup(g_cfg->env_values, displayname))
+    {
+        LOG(LOG_LEVEL_ERROR, "Out of memory adding DISPLAY to env");
+        return E_SCP_SCREATE_NO_MEMORY;
+    }
 
     /* start the X server in a new process group.
      *
@@ -468,8 +483,7 @@ start(struct session_data *baseobj,
         enum xwait_status xws;
         xws = wait_for_xserver(login_info->uid,
                                g_cfg->env_names,
-                               g_cfg->env_values,
-                               s->display);
+                               g_cfg->env_values);
 
         if (xws != XW_STATUS_OK)
         {
@@ -493,9 +507,13 @@ start(struct session_data *baseobj,
         }
         else
         {
-            LOG(LOG_LEVEL_INFO, "X server :%d is working", s->display);
-            LOG(LOG_LEVEL_INFO, "Starting window manager for display :%d",
-                s->display);
+            LOG(LOG_LEVEL_INFO, "X server :%d is working", s->x11_display);
+            // Set the base class display name so other methods can use it
+            snprintf(self->base.display, sizeof(self->base.display), ":%d",
+                     s->x11_display);
+
+            LOG(LOG_LEVEL_INFO, "Starting window manager for display %s",
+                self->base.display);
 
             window_manager_pid = session_base_fork_child(baseobj, login_info,
                                  display_pid, start_window_manager,
@@ -507,10 +525,10 @@ start(struct session_data *baseobj,
             }
             else
             {
-                utmp_login(window_manager_pid, s->display, login_info);
+                utmp_login(window_manager_pid, self->base.display, login_info);
                 LOG(LOG_LEVEL_INFO,
-                    "Starting the xrdp channel server for display :%d",
-                    s->display);
+                    "Starting the xrdp channel server for display %s",
+                    self->base.display);
 
                 chansrv_pid = session_base_fork_child(
                                   baseobj, login_info, display_pid,
@@ -519,7 +537,8 @@ start(struct session_data *baseobj,
                 self->win_mgr_pid = window_manager_pid;
                 self->x_server_pid = display_pid;
 
-                // Set the base class member variables we are responsible for
+                // Set the rest of the base class member variables we
+                // are responsible for
                 self->base.chansrv_pid = chansrv_pid;
                 self->base.start_time = time(NULL);
 
@@ -527,9 +546,9 @@ start(struct session_data *baseobj,
                 {
                     // Tell the caller we've started
                     LOG(LOG_LEVEL_INFO,
-                        "Session in progress on display :%d. Waiting until the "
+                        "Session in progress on display %s. Waiting until the "
                         "window manager (pid %d) exits to end the session",
-                        s->display, window_manager_pid);
+                        self->base.display, window_manager_pid);
 
                     status = E_SCP_SCREATE_OK;
                 }
@@ -582,7 +601,7 @@ cleanup_sockets(struct session_data_x11 *self)
     char file[XRDP_SOCKETS_MAXPATH];
 
     int uid = g_login_info->uid;
-    int display = self->base.params->display;
+    char *display = STRIP_COLON(self->base.display);
 
     // Cleanup sockets used by the base display class
     int error = session_base_cleanup_sockets(&self->base);
@@ -681,8 +700,13 @@ process_child_exit(struct session_data *baseobj,
 
     if (pid == self->x_server_pid)
     {
-        LOG(LOG_LEVEL_INFO, "X server pid %d on display :%d finished",
-            self->x_server_pid, self->base.params->display);
+        // Don't log the exit if we haven't got as far as registering
+        // the display name
+        if (baseobj->display[0] != '\0')
+        {
+            LOG(LOG_LEVEL_INFO, "X server pid %d on display %s finished",
+                self->x_server_pid, baseobj->display);
+        }
         self->x_server_pid = -1;
         // No other action - window manager should be going soon
     }
@@ -693,44 +717,44 @@ process_child_exit(struct session_data *baseobj,
         if (e->reason == E_PXR_STATUS_CODE && e->val == 0)
         {
             LOG(LOG_LEVEL_INFO,
-                "Window manager (pid %d, display %d) "
+                "Window manager (pid %d, display %s) "
                 "finished normally in %d secs",
-                self->win_mgr_pid, self->base.params->display, wm_wait_time);
+                self->win_mgr_pid, baseobj->display, wm_wait_time);
         }
         else
         {
             char reason[128];
             exit_status_to_str(e, reason, sizeof(reason));
 
-            LOG(LOG_LEVEL_WARNING, "Window manager (pid %d, display %d) "
+            LOG(LOG_LEVEL_WARNING, "Window manager (pid %d, display %s) "
                 "exited with %s. This "
                 "could indicate a window manager config problem",
-                self->win_mgr_pid, self->base.params->display, reason);
+                self->win_mgr_pid, baseobj->display, reason);
         }
         if (wm_wait_time < 10)
         {
             /* This could be a config issue. Log a significant error */
-            LOG(LOG_LEVEL_WARNING, "Window manager (pid %d, display %d) "
+            LOG(LOG_LEVEL_WARNING, "Window manager (pid %d, display %s) "
                 "exited quickly (%d secs). This could indicate a window "
                 "manager config problem",
-                self->win_mgr_pid, self->base.params->display, wm_wait_time);
+                self->win_mgr_pid, baseobj->display, wm_wait_time);
         }
 
-        utmp_logout(self->win_mgr_pid, self->base.params->display, e);
+        utmp_logout(self->win_mgr_pid, self->base.display, e);
         self->win_mgr_pid = -1;
 
         if (self->x_server_pid > 0)
         {
-            LOG(LOG_LEVEL_INFO, "Terminating X server (pid %d) on display :%d",
-                self->x_server_pid, self->base.params->display);
+            LOG(LOG_LEVEL_INFO, "Terminating X server (pid %d) on display %s",
+                self->x_server_pid, baseobj->display);
             g_sigterm(self->x_server_pid);
         }
 
         if (self->base.chansrv_pid > 0)
         {
             LOG(LOG_LEVEL_INFO, "Terminating the xrdp channel server (pid %d) "
-                "on display :%d",
-                self->base.chansrv_pid, self->base.params->display);
+                "on display %s",
+                self->base.chansrv_pid, baseobj->display);
             g_sigterm(self->base.chansrv_pid);
         }
     }
@@ -794,8 +818,8 @@ get_display_server_fd(
     if (self->x_server_pid <= 0)
     {
         LOG(LOG_LEVEL_ERROR,
-            "Request to connect to display server :%u"
-            " which has exited", self->base.params->display);
+            "Request to connect to display server %s"
+            " which has exited", baseobj->display);
     }
     else
     {
@@ -803,15 +827,15 @@ get_display_server_fd(
         {
             case SCP_SESSION_TYPE_XVNC:
                 socket_mode = TRANS_MODE_TCP;
-                snprintf(portname, sizeof(portname), "%u",
-                         5900 + self->base.params->display);
+                g_snprintf(portname, sizeof(portname), "%d",
+                           5900 + self->base.params->x11_display);
                 break;
 
             case SCP_SESSION_TYPE_XVNC_UDS:
             case SCP_SESSION_TYPE_XORG:
                 socket_mode = TRANS_MODE_UNIX;
-                snprintf(portname, sizeof(portname), XRDP_X11RDP_STR,
-                         login_info->uid, (int)self->base.params->display);
+                g_snprintf(portname, sizeof(portname), XRDP_X11RDP_STR,
+                           login_info->uid, STRIP_COLON(self->base.display));
 
                 break;
 
@@ -831,8 +855,8 @@ get_display_server_fd(
             }
             else if (trans_connect(t, localhost, portname, 3000) != 0)
             {
-                LOG(LOG_LEVEL_ERROR, "Can't connect to display server :%u [%s]",
-                    self->base.params->display,
+                LOG(LOG_LEVEL_ERROR, "Can't connect to display server %s [%s]",
+                    baseobj->display,
                     g_get_strerror());
             }
             else

@@ -2974,13 +2974,11 @@ static unsigned int format_user_info(char *dest, unsigned int len,
     char uidstr[64];
     char username[64];
     char display[64];
-    char displaynum[64];
     const struct info_string_tag map[] =
     {
         {'u', uidstr},
         {'U', username},
-        {'d', displaynum},
-        {'D', display},
+        {'d', display},
         INFO_STRING_END_OF_LIST
     };
 
@@ -2989,20 +2987,22 @@ static unsigned int format_user_info(char *dest, unsigned int len,
     if (g_getlogin(username, sizeof(username)) != 0)
     {
         /* Fall back to UID */
-        g_strncpy(username, uidstr, sizeof(username) - 1);
+        strlcpy(username, uidstr, sizeof(username));
     }
 
-    if (getenv("DISPLAY") == NULL)
+    if (g_get_display_string(display, sizeof(display)) < 0)
     {
         /* if environment variable is not set, set it to empty string */
         display[0] = '\0';
-        displaynum[0] = '\0';
     }
-    else
+    else if (display[0] == ':')
     {
-        g_strncpy(display, getenv("DISPLAY"), sizeof(display) - 1);
-        g_snprintf(displaynum, sizeof(displaynum), "%d",
-                   g_get_display_num_from_display(display));
+        // Lose the leading ':' for an X display
+        char *p = display;
+        while ((*p = *(p + 1)) != '\0')
+        {
+            ++p;
+        }
     }
 
     return g_format_info_string(dest, len, format, map);

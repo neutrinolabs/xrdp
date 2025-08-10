@@ -60,7 +60,7 @@ static lame_global_flags *g_lame_encoder = 0;
 #endif
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
-extern int g_display_num;       /* in chansrv.c */
+extern char g_display_str[];    /* in chansrv.c */
 extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 /* audio out: sound_server -> xrdp -> NeutrinoRDP */
@@ -1900,7 +1900,8 @@ sound_start_source_listener(void)
 
     g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
     g_audio_l_trans_in->is_term = g_is_term;
-    g_snprintf(port, sizeof(port), CHANSRV_PORT_IN_STR, g_getuid(), g_display_num);
+    g_snprintf(port, sizeof(port), CHANSRV_PORT_IN_STR, g_getuid(),
+               STRIP_COLON(g_display_str));
     g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
     if (trans_listen(g_audio_l_trans_in, port) != 0)
     {
@@ -1919,7 +1920,8 @@ sound_start_sink_listener(void)
 
     g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
     g_audio_l_trans_out->is_term = g_is_term;
-    g_snprintf(port, sizeof(port), CHANSRV_PORT_OUT_STR, g_getuid(), g_display_num);
+    g_snprintf(port, sizeof(port), CHANSRV_PORT_OUT_STR, g_getuid(),
+               STRIP_COLON(g_display_str));
     g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
     if (trans_listen(g_audio_l_trans_out, port) != 0)
     {

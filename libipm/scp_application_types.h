@@ -52,13 +52,22 @@ enum scp_session_type
 #define SCP_SESSION_TYPE_IS_X11(t) \
     ((t) >= SCP_SESSION_TYPE_XVNC && (t) <= SCP_SESSION_TYPE_XORG)
 
+// Other constants
+enum
+{
+    /*
+     * Storage space to allocate for a display name
+     */
+    SCP_DISPLAY_NAME_SIZE = 32
+};
+
 /**
  * @brief Information to display about a particular sesman session
  */
 struct scp_session_info
 {
     int sid; ///< Session ID
-    unsigned int display; ///< Display number
+    char *display; ///< Display name (":n" or "wayland-n")
     enum scp_session_type type; ///< Session type
     unsigned short width; ///< Initial session width
     unsigned short height; ///< Initial session height

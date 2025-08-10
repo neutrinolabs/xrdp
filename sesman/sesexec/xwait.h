@@ -17,13 +17,11 @@ enum xwait_status
  * @param uid User to run program under
  * @param env_names Environment to set for user (names)
  * @param env_values Environment to set for user (values)
- * @param display number
  * @return status
  *
  */
 enum xwait_status
 wait_for_xserver(uid_t uid,
                  struct list *env_names,
-                 struct list *env_values,
-                 int display);
+                 struct list *env_values);
 #endif

@@ -126,7 +126,7 @@ scp_list_item_new(void)
     {
         g_snprintf(result->peername, sizeof(result->peername), "unknown");
         result->uid = (uid_t) -1;
-        result->session_display = -1;
+        result->session_x11_display = -1;
         if (!list_add_item(g_scp_list, (tintptr)result))
         {
             g_free(result);
@@ -263,7 +263,7 @@ scp_list_check_wait_objs(void)
 
 /******************************************************************************/
 void
-scp_list_get_create_session_displays(struct set_int *alloc_displays)
+scp_list_get_create_session_x11_displays(struct set_int *alloc_displays)
 {
     int i = 0;
     for (i = 0; i < g_scp_list->count; ++i)
@@ -272,10 +272,12 @@ scp_list_get_create_session_displays(struct set_int *alloc_displays)
 
         sli = (struct scp_list_item *)list_get_item(g_scp_list, i);
 
+        // Only add X11 displays
         if (SCP_LIST_ITEM_IN_USE(sli) &&
-                sli->create_session_in_progress)
+                sli->create_session_in_progress &&
+                sli->session_x11_display >= 0)
         {
-            set_int_add(alloc_displays, sli->session_display);
+            set_int_add(alloc_displays, sli->session_x11_display);
         }
     }
 }

@@ -272,7 +272,7 @@ eicp_send_logout_request(struct trans *trans);
  * Send an E_EICP_CREATE_SESSION_REQUEST (sesman)
  *
  * @param trans EICP transport
- * @param display X display number to use
+ * @param x11_display X11 display number to use, or -1 if not X11
  * @param type Session type
  * @param width Initial session width
  * @param height Initial session height
@@ -292,7 +292,7 @@ eicp_send_logout_request(struct trans *trans);
  */
 int
 eicp_send_create_session_request(struct trans *trans,
-                                 unsigned int display,
+                                 int x11_display,
                                  enum scp_session_type type,
                                  unsigned short width,
                                  unsigned short height,
@@ -305,7 +305,7 @@ eicp_send_create_session_request(struct trans *trans,
  * Parse an incoming E_EICP_CREATE_SESSION_REQUEST (sesexec)
  *
  * @param trans EICP transport
- * @param[out] display X display number to use
+ * @param[out] x11_display X display number to use
  * @param[out] type Session type
  * @param[out] width Initial session width
  * @param[out] height Initial session height
@@ -319,7 +319,7 @@ eicp_send_create_session_request(struct trans *trans,
  */
 int
 eicp_get_create_session_request(struct trans *trans,
-                                unsigned int *display,
+                                int *x11_display,
                                 enum scp_session_type *type,
                                 unsigned short *width,
                                 unsigned short *height,
@@ -336,12 +336,15 @@ eicp_get_create_session_request(struct trans *trans,
  *
  * @param trans EICP transport
  * @param status Status of creation request
+ * @param display Display name, either (e.g) ":n" (X11) or
+ *                "wayland-n" (Wayland)
  * @param guid GUID of session
  * @return != 0 for error
  */
 int
 eicp_send_create_session_response(struct trans *trans,
                                   enum scp_screate_status status,
+                                  const char *display,
                                   const struct guid *guid);
 
 
@@ -354,12 +357,15 @@ eicp_send_create_session_response(struct trans *trans,
  *
  * @param trans EICP transport
  * @param[out] status Status of creation request
+ * @param display Display name, either (e.g) ":n" (X11) or
+ *                "wayland-n" (Wayland)
  * @param[out] guid GUID of session
  * @return != 0 for error
  */
 int
 eicp_get_create_session_response(struct trans *trans,
                                  enum scp_screate_status *status,
+                                 const char **display,
                                  struct guid *guid);
 
 #endif /* EICP_H */

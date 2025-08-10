@@ -164,10 +164,9 @@ static int
 connect_to_chansrv(void)
 {
     int bytes;
-    int dis;
+    char disstr[32];
     int error;
     char *xrdp_session;
-    char *xrdp_display;
     char *home_str;
     struct sockaddr_un saddr;
     struct sockaddr *psaddr;
@@ -184,11 +183,10 @@ connect_to_chansrv(void)
         LLOGLN(0, ("connect_to_chansrv: error, not xrdp session"));
         return 1;
     }
-    xrdp_display = getenv("DISPLAY");
-    if (xrdp_display == NULL)
+
+    if (g_get_display_string(disstr, sizeof(disstr)) < 0)
     {
-        /* DISPLAY must be set */
-        LLOGLN(0, ("connect_to_chansrv: error, display not set"));
+        LLOGLN(0, ("connect_to_chansrv: error, don't understand DISPLAY"));
         return 1;
     }
     home_str = getenv("HOME");
@@ -196,13 +194,6 @@ connect_to_chansrv(void)
     {
         /* HOME must be set */
         LLOGLN(0, ("connect_to_chansrv: error, home not set"));
-        return 1;
-    }
-    dis = g_get_display_num_from_display(xrdp_display);
-    if (dis < 0)
-    {
-        LLOGLN(0, ("connect_to_chansrv: error, don't understand DISPLAY='%s'",
-                   xrdp_display));
         return 1;
     }
     g_sck = socket(PF_LOCAL, SOCK_STREAM, 0);
@@ -214,7 +205,8 @@ connect_to_chansrv(void)
     memset(&saddr, 0, sizeof(struct sockaddr_un));
     saddr.sun_family = AF_UNIX;
     bytes = sizeof(saddr.sun_path);
-    snprintf(saddr.sun_path, bytes, "%s/.pcsc%d/pcscd.comm", home_str, dis);
+    snprintf(saddr.sun_path, bytes, "%s/.pcsc%s/pcscd.comm", home_str,
+             STRIP_COLON(disstr));
     saddr.sun_path[bytes - 1] = 0;
     LLOGLN(10, ("connect_to_chansrv: connecting to %s", saddr.sun_path));
     psaddr = (struct sockaddr *) &saddr;

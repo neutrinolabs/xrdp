@@ -162,8 +162,8 @@ g_text2bool(const char *s)
 }
 
 /*****************************************************************************/
-int
-g_get_display_num_from_display(const char *display_text)
+static int
+get_display_num_from_display(const char *display_text)
 {
     int rv = -1;
     const char *p;
@@ -186,6 +186,42 @@ g_get_display_num_from_display(const char *display_text)
         {
             rv = g_atoi(p);
         }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+int
+g_get_display_string(char buff[], unsigned int bufflen)
+{
+    const char *str;
+    const char *p = NULL;
+    int rv = 0;
+
+    if ((str = g_getenv("WAYLAND_DISPLAY")) != NULL)
+    {
+        // Return the unqualified part of the name
+        p = strrchr(str, '/');
+        p = (p != NULL) ? (p + 1) : str;
+        strlcpy(buff, p, bufflen);
+    }
+    else if ((str = g_getenv("DISPLAY")) != NULL)
+    {
+        int n = get_display_num_from_display(str);
+
+        if (n >= 0)
+        {
+            g_snprintf(buff, bufflen, ":%d", n);
+        }
+        else
+        {
+            rv = -1;
+        }
+    }
+    else
+    {
+        rv = -1;
     }
 
     return rv;

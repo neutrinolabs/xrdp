@@ -414,8 +414,8 @@ get_free_display(void)
     {
         // Get all the displays either allocated to sessions, or
         // potentially assigned to sessions on the SCP list
-        session_list_get_session_displays(alloc_displays);
-        scp_list_get_create_session_displays(alloc_displays);
+        session_list_get_session_x11_displays(alloc_displays);
+        scp_list_get_create_session_x11_displays(alloc_displays);
 
         // Find a free display, taking the allocated ones into account
         result = display_utils_get_free_display(alloc_displays);
@@ -441,7 +441,8 @@ process_create_session_request(struct scp_list_item *sli)
     const char *directory;
 
     struct guid guid;
-    int display = -1;
+    const char *display;
+    int x11_display = -1;
     struct session_item *s_item = NULL;
     int start_sesexec = (sli->sesexec_trans == NULL);
     int send_client_reply = 1;
@@ -474,7 +475,7 @@ process_create_session_request(struct scp_list_item *sli)
             {
                 // Found an existing session
                 LOG(LOG_LEVEL_INFO,
-                    "A suitable session on display :%d is already active",
+                    "A suitable session on display %s is already active",
                     s_item->display);
                 display = s_item->display;
                 guid = s_item->guid;
@@ -487,10 +488,11 @@ process_create_session_request(struct scp_list_item *sli)
                     "The maximum number of sessions has been reached");
                 status = E_SCP_SCREATE_MAX_REACHED;
             }
-            else if ((display = get_free_display()) < 0)
+            else if (SCP_SESSION_TYPE_IS_X11(type) &&
+                     (x11_display = get_free_display()) < 0)
             {
                 LOG(LOG_LEVEL_ERROR,
-                    "No free display can be found for a new session");
+                    "No free X11 display can be found for a new session");
                 status = E_SCP_SCREATE_NO_DISPLAY;
             }
             // Create a socket dir for this user
@@ -530,7 +532,7 @@ process_create_session_request(struct scp_list_item *sli)
                 int eicp_stat;
                 eicp_stat = eicp_send_create_session_request(
                                 sli->sesexec_trans,
-                                display,
+                                x11_display,
                                 type, width, height,
                                 bpp, shell, directory);
 
@@ -548,7 +550,7 @@ process_create_session_request(struct scp_list_item *sli)
                     // We're not sending a reply yet
                     send_client_reply = 0;
                     sli->create_session_in_progress = 1;
-                    sli->session_display = display; // Reserve display
+                    sli->session_x11_display = x11_display; // Reserve display
                 }
             }
         }
@@ -557,7 +559,7 @@ process_create_session_request(struct scp_list_item *sli)
         {
             if (status != E_SCP_SCREATE_OK)
             {
-                display = -1;
+                display = "";
                 guid_clear(&guid);
             }
             rv = scp_send_create_session_response(sli->client_trans,

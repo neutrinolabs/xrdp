@@ -147,7 +147,7 @@ ercp_msg_in_reset(struct trans *trans)
 
 int
 ercp_send_session_announce_event(struct trans *trans,
-                                 unsigned int display,
+                                 const char *display,
                                  uid_t uid,
                                  enum scp_session_type type,
                                  unsigned short start_width,
@@ -162,7 +162,7 @@ ercp_send_session_announce_event(struct trans *trans,
     return libipm_msg_out_simple_send(
                trans,
                (int)E_ERCP_SESSION_ANNOUNCE_EVENT,
-               "uiyqqyBsx",
+               "siyqqyBsx",
                display,
                uid,
                type,
@@ -178,7 +178,7 @@ ercp_send_session_announce_event(struct trans *trans,
 
 int
 ercp_get_session_announce_event(struct trans *trans,
-                                unsigned int *display,
+                                const char **display,
                                 uid_t *uid,
                                 enum scp_session_type *type,
                                 unsigned short *start_width,
@@ -189,7 +189,6 @@ ercp_get_session_announce_event(struct trans *trans,
                                 time_t *start_time)
 {
     /* Intermediate values */
-    uint32_t i_display;
     int32_t i_uid;
     uint8_t i_type;
     uint16_t i_width;
@@ -201,8 +200,8 @@ ercp_get_session_announce_event(struct trans *trans,
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "uiyqqyBsx",
-                 &i_display,
+                 "siyqqyBsx",
+                 display,
                  &i_uid,
                  &i_type,
                  &i_width,
@@ -214,13 +213,16 @@ ercp_get_session_announce_event(struct trans *trans,
 
     if (rv == 0)
     {
-        *display = i_display;
         *uid = (uid_t)i_uid;
         *type = (enum scp_session_type)i_type;
         *start_width = i_width;
         *start_height = i_height;
         *bpp = i_bpp;
         *start_time = (time_t)i_start_time;
+    }
+    else
+    {
+        *display = "";
     }
 
     return rv;
