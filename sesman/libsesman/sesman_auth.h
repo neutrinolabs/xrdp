@@ -64,14 +64,14 @@ auth_uds(const char *user, enum scp_login_status *errorcode);
  *
  * @brief Starts a session
  * @param auth_info. Auth handle created by auth_userpass
- * @param display_num Display number
+ * @param x11_display_num Display number (-1 if not used)
  * @return 0 on success, 1 on failure
  *
  * The resources allocated when the session is started are de-allocated
  * by auth_end() - there is no separate way to do this.
  */
 int
-auth_start_session(struct auth_info *auth_info, int display_num);
+auth_start_session(struct auth_info *auth_info, int x11_display_num);
 
 /**
  *

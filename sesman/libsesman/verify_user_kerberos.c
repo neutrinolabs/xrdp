@@ -224,7 +224,7 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
 /******************************************************************************/
 /* returns error */
 int
-auth_start_session(struct auth_info *auth_info, int display_num)
+auth_start_session(struct auth_info *auth_info, int x11_display_num)
 {
     return 0;
 }

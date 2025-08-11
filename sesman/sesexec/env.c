@@ -156,6 +156,10 @@ env_set_user(int uid, char **passwd_file,
             // Use our PID as the XRDP_SESSION value
             g_snprintf(text, sizeof(text), "%d", g_pid);
             g_setenv_log("XRDP_SESSION", text, 1);
+            /* XRDP_SOCKET_PATH is used by
+             * xorgxrdp and the pulseaudio plugin */
+            g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
+            g_setenv_log("XRDP_SOCKET_PATH", text, 1);
 
             // Set the passed-in variables. This may include a DISPLAY
             if ((env_names != 0) && (env_values != 0) &&
@@ -180,10 +184,6 @@ env_set_user(int uid, char **passwd_file,
             // Set things dependent on the DISPLAY
             if (display != NULL)
             {
-                /* XRDP_SOCKET_PATH should be set here. It's used by
-                 * xorgxrdp and the pulseaudio plugin */
-                g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
-                g_setenv_log("XRDP_SOCKET_PATH", text, 1);
                 /* pulse sink socket */
                 g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR,
                            STRIP_COLON(display));
