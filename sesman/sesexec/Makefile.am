@@ -43,8 +43,8 @@ xrdp_sesexec_SOURCES = \
   sessionrecord.h \
   xauth.c \
   xauth.h \
-  xwait.c \
-  xwait.h
+  display_server_util.c \
+  display_server_util.h
 
 xrdp_sesexec_LDFLAGS =
 

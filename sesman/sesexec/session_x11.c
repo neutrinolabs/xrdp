@@ -37,6 +37,7 @@
 
 #include "sesman_auth.h"
 #include "sesman_config.h"
+#include "display_server_util.h"
 #include "env.h"
 #include "guid.h"
 #include "list.h"
@@ -48,7 +49,6 @@
 #include "string_calls.h"
 #include "trans.h"
 #include "xauth.h"
-#include "xwait.h"
 #include "xrdp_sockets.h"
 
 /******************************************************************************/
@@ -443,6 +443,41 @@ start_x_server(struct session_data *baseobj,
 }
 
 /******************************************************************************/
+/**
+ * Waits for the X server to start using a helper prog
+ *
+ * @param login_info Login info for user
+ * @param env_names List of environment variables for the helper (names)
+ * @param env_values List of environment variables for the helper (values)
+ * @param display X11 display we're waiting for
+ */
+static enum display_server_status
+wait_for_xserver(struct login_info *login_info,
+                 const struct list *env_names,
+                 const struct list *env_values,
+                 const char *display)
+{
+    enum display_server_status rv = DS_STATUS_MISC_ERROR;
+    struct list *cmd = list_create();
+    if (cmd == NULL ||
+            (!(cmd->auto_free = 1)) ||  // Just set 'auto_free' inline
+            !list_add_strdup_multi(cmd,
+                                   XRDP_LIBEXEC_PATH "/waitforx",
+                                   "-d", display, NULL))
+    {
+        LOG(LOG_LEVEL_ERROR, "Out of memory running waitforx");
+    }
+    else
+    {
+        rv = wait_for_display_server(login_info, env_names, env_values, cmd,
+                                     NULL, NULL);
+    }
+
+    list_delete(cmd);
+    return rv;
+}
+
+/******************************************************************************/
 static enum scp_screate_status
 start(struct session_data *baseobj,
       struct login_info *login_info,
@@ -480,19 +515,20 @@ start(struct session_data *baseobj,
                                           start_x_server, NULL);
     if (display_pid > 0)
     {
-        enum xwait_status xws;
-        xws = wait_for_xserver(login_info->uid,
+        enum display_server_status dss;
+        dss = wait_for_xserver(login_info,
                                g_cfg->env_names,
-                               g_cfg->env_values);
+                               g_cfg->env_values,
+                               displayname);
 
-        if (xws != XW_STATUS_OK)
+        if (dss != DS_STATUS_OK)
         {
-            switch (xws)
+            switch (dss)
             {
-                case XW_STATUS_TIMED_OUT:
+                case DS_STATUS_TIMED_OUT:
                     LOG(LOG_LEVEL_ERROR, "Timed out waiting for X server");
                     break;
-                case XW_STATUS_FAILED_TO_START:
+                case DS_STATUS_FAILED_TO_START:
                     LOG(LOG_LEVEL_ERROR, "X server failed to start");
                     break;
                 default:

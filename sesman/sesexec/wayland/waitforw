@@ -25,11 +25,11 @@
 #
 # This is an analogue to waitforx.c in the X server world
 
-# See sesman/sesexec/xwait.h
-XW_STATUS_OK=0
-XW_STATUS_MISC_ERROR=1
-XW_STATUS_TIMED_OUT=2
-#XW_STATUS_FAILED_TO_START=3
+# See sesman/sesexec/display_server_util.h
+DS_STATUS_OK=0
+DS_STATUS_MISC_ERROR=1
+DS_STATUS_TIMED_OUT=2
+#DS_STATUS_FAILED_TO_START=3
 
 ATTEMPTS=10
 
@@ -61,7 +61,7 @@ for envvar in XRDP_SESSION XRDP_SOCKET_PATH; do
 done >/dev/null
 
 if ! $ok; then
-    exit "$XW_STATUS_MISC_ERROR"
+    exit "$DS_STATUS_MISC_ERROR"
 fi
 
 # Construct the name for the environment file
@@ -94,7 +94,7 @@ exec 4>/dev/null
 
 if ! $file_parsed; then
     echo "<E>Timed out waiting for display server"
-    exit "$XW_STATUS_TIMED_OUT"
+    exit "$DS_STATUS_TIMED_OUT"
 fi
 
-exit "$XW_STATUS_OK"
+exit "$DS_STATUS_OK"

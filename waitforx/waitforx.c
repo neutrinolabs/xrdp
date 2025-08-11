@@ -11,7 +11,7 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "xrdp_sockets.h"
-#include "xwait.h" // For return status codes
+#include "display_server_util.h" // For return status codes
 
 #define ATTEMPTS 10
 #define ALARM_WAIT 30
@@ -26,7 +26,7 @@ alarm_handler(int signal_num)
      * has been partly output */
     const char msg[] = "\n<E>Timed out waiting for X display\n";
     g_file_write(1, msg, g_strlen(msg));
-    exit(XW_STATUS_TIMED_OUT);
+    exit(DS_STATUS_TIMED_OUT);
 }
 
 /*****************************************************************************/
@@ -224,7 +224,7 @@ main(int argc, char **argv)
 {
     const char *display_name = NULL;
     int opt;
-    int status = XW_STATUS_MISC_ERROR;
+    int status = DS_STATUS_MISC_ERROR;
     Display *dpy = NULL;
 
     /* Disable stdout buffering so any messages are passed immediately
@@ -254,13 +254,13 @@ main(int argc, char **argv)
     if (!dpy)
     {
         printf("<E>Unable to open display %s\n", display_name);
-        status = XW_STATUS_FAILED_TO_START;
+        status = DS_STATUS_FAILED_TO_START;
     }
     else
     {
         if (wait_for_r_and_r(dpy) == 0)
         {
-            status = XW_STATUS_OK;
+            status = DS_STATUS_OK;
         }
         XCloseDisplay(dpy);
     }
