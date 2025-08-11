@@ -20,6 +20,11 @@
 # atomic operation. We use this to find out when the display
 # server has started.
 
+#Uncomment these for debugging
+#exec >/var/run/user/$(id -u)/labwc-getenv.log 2>&1
+#set -x
+#env | sort
+
 # ------------------------------------------------------------------------------
 # G L O B A L S
 # ------------------------------------------------------------------------------
@@ -35,7 +40,7 @@ ENV_LIST="
 #ok=true
 
 # shellcheck disable=SC2043
-for envvar in XRDP_SESSION XRDP_SOCKET_PATH; do
+for envvar in XRDP_SESSION XDG_RUNTIME_DIR; do
     eval val="\$$envvar"
     if [ -z "$val" ]; then
         echo "** $0: Environment variable '$envvar' is missing" >&2
@@ -47,7 +52,8 @@ if ! $ok; then
     false
 else
     # Get the name for the environment file
-    env_file="$XRDP_SOCKET_PATH/xrdp.$XRDP_SESSION.env"
+    mkdir -p "$XDG_RUNTIME_DIR/xrdp"
+    env_file="$XDG_RUNTIME_DIR/xrdp/session-$XRDP_SESSION.env"
 
     # It shouldn't be here already
     if [ -e "$env_file" ]; then

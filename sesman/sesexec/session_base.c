@@ -31,6 +31,7 @@
 #endif
 
 #include "session_base.h"
+#include "session_labwc.h"
 #include "session_x11.h"
 #include "session_parameters.h"
 
@@ -56,7 +57,7 @@ session_base_new(const struct session_parameters *sp)
         LOG(LOG_LEVEL_ERROR,
             "Out of memory allocating session parameter block");
     }
-    else
+    else if (SCP_SESSION_TYPE_IS_X11(sp->type))
     {
         struct session_data_x11 *self_x11 = session_x11_new();
         if (self_x11 == NULL)
@@ -67,6 +68,24 @@ session_base_new(const struct session_parameters *sp)
         {
             self = &self_x11->base;
         }
+    }
+    else if (SCP_SESSION_TYPE_IS_LABWC(sp->type))
+    {
+        struct session_data_labwc *self_labwc = session_labwc_new();
+        if (self_labwc == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Out of memory allocating labwc session object");
+        }
+        else
+        {
+            self = &self_labwc->base;
+        }
+    }
+    else
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Unsupported session type %d", (int)sp->type);
     }
 
     if (self != NULL)

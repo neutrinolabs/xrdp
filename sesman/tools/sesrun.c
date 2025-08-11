@@ -85,6 +85,7 @@ static struct
     { "Xvnc", SCP_SESSION_TYPE_XVNC},
     { "Xvnc-UDS", SCP_SESSION_TYPE_XVNC_UDS},
     { "Xorg", SCP_SESSION_TYPE_XORG},
+    { "labwc-vnc", SCP_SESSION_TYPE_LABWC_OVER_VNC},
     { NULL, (enum scp_session_type) - 1}
 };
 

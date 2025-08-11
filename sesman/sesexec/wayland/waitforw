@@ -25,6 +25,10 @@
 #
 # This is an analogue to waitforx.c in the X server world
 
+#Uncomment these for debugging
+#exec 2>/var/run/user/$(id -u)/waitforw.log
+#set -x
+
 # See sesman/sesexec/display_server_util.h
 DS_STATUS_OK=0
 DS_STATUS_MISC_ERROR=1
@@ -52,7 +56,7 @@ parse_env_file()
 #ok=true
 
 # shellcheck disable=SC2043
-for envvar in XRDP_SESSION XRDP_SOCKET_PATH; do
+for envvar in XRDP_SESSION XDG_RUNTIME_DIR; do
     eval val="\$$envvar"
     if [ -z "$val" ]; then
         echo "<E>Environment variable '$envvar' is missing" >&2
@@ -65,7 +69,8 @@ if ! $ok; then
 fi
 
 # Construct the name for the environment file
-env_file="$XRDP_SOCKET_PATH/xrdp.$XRDP_SESSION.env"
+mkdir -p "$XDG_RUNTIME_DIR/xrdp"
+env_file="$XDG_RUNTIME_DIR/xrdp/session-$XRDP_SESSION.env"
 
 # Wait for the env file to appear. We have to jump through some hoops
 # with Bourne shell to get an atomic test-and-open on the file.

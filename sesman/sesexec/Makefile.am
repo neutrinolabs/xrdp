@@ -21,6 +21,8 @@ xrdp_sesexec_SOURCES = \
   sesexec.h \
   session_base.c \
   session_base.h \
+  session_labwc.c \
+  session_labwc.h \
   session_x11.c \
   session_x11.h \
   session_parameters.c \
@@ -53,3 +55,6 @@ xrdp_sesexec_LDADD = \
   $(top_builddir)/libipm/libipm.la \
   $(top_builddir)/common/libcommon.la \
   $(SESEXEC_EXTRA_LIBS)
+
+SUBDIRS = \
+  wayland

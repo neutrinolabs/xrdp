@@ -395,6 +395,19 @@ Multiple \fIparam\fR lines are supported. This first line specifies the
 path to the X11 server executable. Following lines specify command line
 arguments passed to the X11 server.
 
+.SH "LABWC"
+Following parameters can be used in the \fB[Labwc]\fR section.
+
+.TP
+\fBLabwcExe\fR=\fI/path/to/executable\fR
+Defaults to \fIlabwc\fR. Specify the path to a labwc executable, if
+the executable you wish to use is not on the standard PATH.
+
+.TP
+\fBWayvncExe\fR=\fI/path/to/executable\fR
+Defaults to \fIwayvnc\fR. Specify the path to a wayvnc executable, if
+the executable you wish to use is not on the standard PATH.
+
 .SH "CHANSRV"
 Following parameters can be used in the \fB[Chansrv]\fR section.
 

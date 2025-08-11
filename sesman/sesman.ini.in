@@ -180,6 +180,10 @@ param=-localhost
 param=-dpi
 param=96
 
+[Labwc]
+#LabwcExe=labwc
+#WayvncExe=wayvnc
+
 [Chansrv]
 ; drive redirection
 ; See sesman.ini(5) for the format of this parameter

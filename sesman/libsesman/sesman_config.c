@@ -405,6 +405,61 @@ config_read_security(int file, struct config_security *sc,
     return 0;
 }
 
+
+/***************************************************************************//**
+ *
+ * @brief Reads sesman [Labwc] configuration section
+ * @param file configuration file descriptor
+ * @param sc pointer to a config_labwc struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
+ * @return 0 on success, 1 on failure
+ *
+ */
+static int
+config_read_labwc(int file, struct config_labwc *sc,
+                  struct list *param_n,
+                  struct list *param_v)
+{
+    int i;
+    const char *buf;
+    const char *value;
+
+    list_clear(param_v);
+    list_clear(param_n);
+
+    /* setting defaults */
+    sc->labwc_exe_path = g_strdup("");
+    sc->wayvnc_exe_path = g_strdup("");
+
+    file_read_section(file, "Labwc", param_n, param_v);
+
+    for (i = 0; i < param_n->count; i++)
+    {
+        buf = (const char *)list_get_item(param_n, i);
+        value = (const char *)list_get_item(param_v, i);
+
+        if (0 == g_strcasecmp(buf, "LabwcExe"))
+        {
+            g_free(sc->labwc_exe_path);
+            sc->labwc_exe_path = g_strdup(value);
+        }
+        else if (0 == g_strcasecmp(buf, "WayvncExe"))
+        {
+            g_free(sc->labwc_exe_path);
+            sc->wayvnc_exe_path = g_strdup(value);
+        }
+    }
+
+    /* Check all memory allocations worked */
+    if (sc->labwc_exe_path == NULL || sc->wayvnc_exe_path == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Memory allocation failure reading config");
+        return 1;
+    }
+    return 0;
+}
+
 /***************************************************************************//**
  *
  * @brief Reads sesman [Sessions] configuration section
@@ -636,6 +691,9 @@ config_read(const char *sesman_ini)
                 config_read_vnc_params(fd, cfg, param_n, param_v);
                 config_read_xorg_params(fd, cfg, param_n, param_v);
 
+                /* labwc parameters */
+                config_read_labwc(fd, &(cfg->labwc), param_n, param_v);
+
                 /* read security config */
                 config_read_security(fd, &(cfg->sec), param_n, param_v);
 
@@ -744,6 +802,13 @@ config_dump(struct config_sesman *config)
                   i, (char *)list_get_item(config->vnc_params, i));
     }
 
+    /* labwc */
+    g_writeln("labwc parameters:");
+    g_writeln("    LabwcExe:                  %s",
+              config->labwc.labwc_exe_path);
+    g_writeln("    WayvncExe:                 %s",
+              config->labwc.wayvnc_exe_path);
+
     /* SessionVariables */
     if (config->env_names->count)
     {
@@ -776,6 +841,8 @@ config_free(struct config_sesman *cs)
         g_free(cs->sec.ts_users);
         g_free(cs->sec.ts_admins);
         g_free(cs->sec.session_sockdir_group);
+        g_free(cs->labwc.labwc_exe_path);
+        g_free(cs->labwc.wayvnc_exe_path);
         g_free(cs);
     }
 }
