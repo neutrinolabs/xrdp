@@ -175,8 +175,11 @@ struct config_sessions
 
 struct config_labwc
 {
-    char *labwc_exe_path;
-    char *wayvnc_exe_path;
+    char *labwc_exe;
+    char *wayvnc_exe;
+    int enable_labwc_log;
+    int enable_wayvnc_log;
+    char *log_file_path;
 };
 
 /**

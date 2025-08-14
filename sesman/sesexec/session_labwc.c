@@ -192,6 +192,97 @@ start_window_manager(struct session_data *baseobj,
         s->x11_display);
 }
 
+/*****************************************************************************/
+/*
+ * Opens a log file on stdout and stderr
+ * @param name Unqualified name
+ * @return != 0 for error
+ *
+ * @pre Current directory is $HOME
+ *
+ * The file is either opened or not. If not, an error is logged on the
+ * standard mechanisms
+ */
+static int
+redirect_stdout_stderr(const char *name)
+{
+    char path[256];
+    char *log_path;
+    int rv;
+
+    rv = 1;
+    // Use the log path if it exists
+    if ((log_path = g_cfg->labwc.log_file_path) != NULL && log_path[0] != '\0')
+    {
+        char uidstr[64];
+        char username[64];
+        const struct info_string_tag map[] =
+        {
+            {'u', uidstr},
+            {'U', username},
+            INFO_STRING_END_OF_LIST
+        };
+
+        int uid = g_getuid();
+        g_snprintf(uidstr, sizeof(uidstr), "%d", uid);
+        if (g_getlogin(username, sizeof(username)) != 0)
+        {
+            /* Fall back to UID */
+            g_strncpy(username, uidstr, sizeof(username) - 1);
+        }
+
+        (void)g_format_info_string(path, sizeof(path), log_path, map);
+        if (g_create_path(path))
+        {
+            rv = 0;
+        }
+    }
+    else if ((log_path = g_getenv("XDG_DATA_HOME")) != NULL &&
+             log_path[0] != '\0')
+    {
+        g_snprintf(path, sizeof(path), "%s/xrdp", log_path);
+        if (g_create_path(path))
+        {
+            rv = 0;
+        }
+    }
+
+    // Always fall back to the home directory
+    if (rv != 0)
+    {
+        strlcpy(path, ".local/share/xrdp", sizeof(path));
+        if (g_create_path(path))
+        {
+            rv = 0;
+        }
+    }
+
+    if (rv == 0)
+    {
+        /* Add the name to the end */
+        unsigned int len = strlen(path);
+        if (len < sizeof(path))
+        {
+            g_snprintf(path + len, sizeof(path) - len, "/%s", name);
+        }
+
+        int fd = g_file_open_rw(path);
+        if (fd >= 0)
+        {
+            g_file_duplicate_on(fd, 1);
+            g_file_duplicate_on(fd, 2);
+            g_file_close(fd);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't open %s for writing [%s]",
+                path, g_get_strerror());
+            rv = 1;
+        }
+    }
+    return rv;
+}
+
 /******************************************************************************/
 /* Either execs wayvnc, or returns */
 static void
@@ -211,7 +302,7 @@ start_wayvnc(struct session_data *baseobj,
     auth_set_env(login_info->auth_info);
 
     /* get path of wayvnc from config */
-    const char *wayvnc = g_cfg->labwc.wayvnc_exe_path;
+    const char *wayvnc = g_cfg->labwc.wayvnc_exe;
     if (wayvnc == NULL || wayvnc[0] == '\0')
     {
         wayvnc = "wayvnc";
@@ -242,6 +333,17 @@ start_wayvnc(struct session_data *baseobj,
         LOG(LOG_LEVEL_INFO, "Starting wayvnc: %s",
             dumpItemsToString(params, execvpparams, 2048));
         LOG_DEVEL_LEAKING_FDS("wayvnc", 3, -1);
+
+        /* Logging? */
+        if (g_cfg->labwc.enable_wayvnc_log)
+        {
+            char name[64];
+            g_snprintf(name, sizeof(name),
+                       "wayvnc.%s.log", baseobj->display);
+            redirect_stdout_stderr(name);
+            (void)list_add_strdup_multi(params, "-L", "debug", NULL);
+        }
+
         g_execvp_list((const char *)params->items[0],
                       params);
 
@@ -292,7 +394,7 @@ start_labwc(struct session_data *baseobj,
         g_setenv("LABWC_UPDATE_ACTIVATION_ENV", "1", 1);
 
         /* get path of labwc from config */
-        const char *labwc = g_cfg->labwc.labwc_exe_path;
+        const char *labwc = g_cfg->labwc.labwc_exe;
         if (labwc == NULL || labwc[0] == '\0')
         {
             labwc = "labwc";
@@ -314,6 +416,14 @@ start_labwc(struct session_data *baseobj,
             LOG(LOG_LEVEL_INFO, "Starting labwc: %s",
                 dumpItemsToString(params, execvpparams, 2048));
             LOG_DEVEL_LEAKING_FDS("labwc", 3, -1);
+
+            /* Logging? */
+            if (g_cfg->labwc.enable_labwc_log)
+            {
+                redirect_stdout_stderr("labwc.log");
+                (void)list_add_strdup_multi(params, "-d", NULL);
+            }
+
             g_execvp_list((const char *)params->items[0],
                           params);
 

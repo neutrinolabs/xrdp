@@ -429,8 +429,11 @@ config_read_labwc(int file, struct config_labwc *sc,
     list_clear(param_n);
 
     /* setting defaults */
-    sc->labwc_exe_path = g_strdup("");
-    sc->wayvnc_exe_path = g_strdup("");
+    sc->labwc_exe = g_strdup("");
+    sc->wayvnc_exe = g_strdup("");
+    sc->enable_labwc_log = 0;
+    sc->enable_wayvnc_log = 0;
+    sc->log_file_path = g_strdup("");
 
     file_read_section(file, "Labwc", param_n, param_v);
 
@@ -441,18 +444,32 @@ config_read_labwc(int file, struct config_labwc *sc,
 
         if (0 == g_strcasecmp(buf, "LabwcExe"))
         {
-            g_free(sc->labwc_exe_path);
-            sc->labwc_exe_path = g_strdup(value);
+            g_free(sc->labwc_exe);
+            sc->labwc_exe = g_strdup(value);
+        }
+        else if (0 == g_strcasecmp(buf, "EnableLabwcLog"))
+        {
+            sc->enable_labwc_log = g_text2bool(value);
         }
         else if (0 == g_strcasecmp(buf, "WayvncExe"))
         {
-            g_free(sc->labwc_exe_path);
-            sc->wayvnc_exe_path = g_strdup(value);
+            g_free(sc->wayvnc_exe);
+            sc->wayvnc_exe = g_strdup(value);
+        }
+        else if (0 == g_strcasecmp(buf, "EnableWayvncLog"))
+        {
+            sc->enable_wayvnc_log = g_text2bool(value);
+        }
+        else if (0 == g_strcasecmp(buf, "LogFilePath"))
+        {
+            g_free(sc->log_file_path);
+            sc->log_file_path = g_strdup(value);
         }
     }
 
     /* Check all memory allocations worked */
-    if (sc->labwc_exe_path == NULL || sc->wayvnc_exe_path == NULL)
+    if (sc->labwc_exe == NULL || sc->wayvnc_exe == NULL ||
+            sc->log_file_path == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Memory allocation failure reading config");
         return 1;
@@ -805,9 +822,15 @@ config_dump(struct config_sesman *config)
     /* labwc */
     g_writeln("labwc parameters:");
     g_writeln("    LabwcExe:                  %s",
-              config->labwc.labwc_exe_path);
+              config->labwc.labwc_exe);
     g_writeln("    WayvncExe:                 %s",
-              config->labwc.wayvnc_exe_path);
+              config->labwc.wayvnc_exe);
+    g_writeln("    EnableLabwcLog:            %d",
+              config->labwc.enable_labwc_log);
+    g_writeln("    EnableWayvncLog:           %d",
+              config->labwc.enable_wayvnc_log);
+    g_writeln("    LogFilePath:               %s",
+              config->labwc.log_file_path);
 
     /* SessionVariables */
     if (config->env_names->count)
@@ -841,8 +864,9 @@ config_free(struct config_sesman *cs)
         g_free(cs->sec.ts_users);
         g_free(cs->sec.ts_admins);
         g_free(cs->sec.session_sockdir_group);
-        g_free(cs->labwc.labwc_exe_path);
-        g_free(cs->labwc.wayvnc_exe_path);
+        g_free(cs->labwc.labwc_exe);
+        g_free(cs->labwc.wayvnc_exe);
+        g_free(cs->labwc.log_file_path);
         g_free(cs);
     }
 }
