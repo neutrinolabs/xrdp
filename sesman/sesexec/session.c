@@ -611,6 +611,19 @@ session_start_wrapped(struct login_info *login_info,
     int window_manager_pid;
     enum scp_screate_status status = E_SCP_SCREATE_GENERAL_ERROR;
 
+    /* Set the secondary groups before starting the session to prevent
+     * problems on PAM-based systems (see Linux pam_setcred(3)).
+     * If we have *BSD setusercontext() this is not done here */
+#ifndef HAVE_SETUSERCONTEXT
+    if (g_initgroups(login_info->username) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Failed to initialise secondary groups for %s: %s",
+            login_info->username, g_get_strerror());
+        return E_SCP_SCREATE_GENERAL_ERROR;
+    }
+#endif
+
     if (auth_start_session(login_info->auth_info, s->display) != 0)
     {
         // Errors are logged by the auth module, as they are
@@ -634,19 +647,6 @@ session_start_wrapped(struct login_info *login_info,
         LOG(LOG_LEVEL_WARNING,
             "[session start] (display %d): setlogin failed for user %s - pid %d",
             s->display, login_info->username, g_getpid());
-    }
-#endif
-
-    /* Set the secondary groups before starting the session to prevent
-     * problems on PAM-based systems (see Linux pam_setcred(3)).
-     * If we have *BSD setusercontext() this is not done here */
-#ifndef HAVE_SETUSERCONTEXT
-    if (g_initgroups(login_info->username) != 0)
-    {
-        LOG(LOG_LEVEL_ERROR,
-            "Failed to initialise secondary groups for %s: %s",
-            login_info->username, g_get_strerror());
-        return E_SCP_SCREATE_GENERAL_ERROR;
     }
 #endif
 
