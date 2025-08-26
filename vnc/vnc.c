@@ -1370,7 +1370,10 @@ lib_framebuffer_look_for_forwarded_layout(struct vnc *v)
                 g_sleep(100);
             }
 
-            error = send_update_request_for_resize_status(v);
+            if (error != 0)
+            {
+                error = send_update_request_for_resize_status(v);
+            }
         }
     }
 
