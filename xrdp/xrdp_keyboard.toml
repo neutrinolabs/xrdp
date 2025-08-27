@@ -84,6 +84,12 @@ type = 7
 subtype = 2
 model = "pc105"
 
+[overrides.kb_type.kr_hangul]
+# Korean Hangul
+type = 8
+model = "pc105"
+options="korean:ralt_hangul korean:rctrl_hanja"
+
 [layouts]
 rdp_layout_us = 0x00000409
 rdp_layout_us_colemak = 0x00060409
@@ -99,6 +105,7 @@ rdp_layout_hu = 0x0000040E
 rdp_layout_it = 0x00000410
 rdp_layout_jp = [ 0x00000411, 0xe0010411, 0xe0200411, 0xe0210411 ]
 rdp_layout_kr = 0x00000412
+rdp_layout_kr_hangul = 0xe0010412
 rdp_layout_no = 0x00000414
 rdp_layout_pl = 0x00000415
 rdp_layout_br = 0x00000416
@@ -130,6 +137,7 @@ rdp_layout_hu = "hu"
 rdp_layout_it = "it"
 rdp_layout_jp = "jp"
 rdp_layout_kr = "kr"
+rdp_layout_kr_hangul = "kr(kr106)"
 rdp_layout_no = "no"
 rdp_layout_pl = "pl"
 rdp_layout_br = "br(abnt2)"
@@ -159,6 +167,7 @@ rdp_layout_hu = "hu"
 rdp_layout_it = "it"
 rdp_layout_jp = "jp"
 rdp_layout_kr = "kr"
+rdp_layout_kr_hangul = "kr(kr106)"
 rdp_layout_pl = "pl"
 rdp_layout_br = "br(abnt2)"
 rdp_layout_ru = "ru"
