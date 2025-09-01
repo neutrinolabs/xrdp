@@ -446,7 +446,7 @@ check_drop_privileges(struct xrdp_startup_params *startup_params)
         // We're running as a privileged user, and this isn't
         // overridden in our own config
         LOG(LOG_LEVEL_ALWAYS,
-            "You are running xrdp as uid=%d gid=%d. This is not safe.",
+            "You are running xrdp as uid=%d gid=%d. This is not recommended.",
             entry_uid, entry_gid);
         rv = 0; // Allowed for now for old configs
     }
