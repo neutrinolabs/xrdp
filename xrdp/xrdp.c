@@ -426,13 +426,29 @@ check_drop_privileges(struct xrdp_startup_params *startup_params)
     int rv = 1;
     const char *user = startup_params->runtime_user;
     const char *group = startup_params->runtime_group;
+    int entry_uid = g_getuid();
+    int entry_gid = g_getgid();
 
-    if (user[0] == '\0' && group[0] == '\0')
+    // Regard a user as privileged if either the UID or GID is zero
+    int privileged_user = (entry_uid == 0 || entry_gid == 0);
+    if (!privileged_user)
     {
-        // Allow this for now
-        LOG(LOG_LEVEL_ALWAYS,
-            "You are running xrdp as root. This is not safe.");
+        // xrdp daemon UID:GID is already set by whatever started it. We'll
+        // log this as it may be unexpected and continue. We don't have
+        // any privilege to override this.
+        LOG(LOG_LEVEL_INFO,
+            "xrdp is already running as an unprivileged user uid=%d gid=%d",
+            entry_uid, entry_gid);
         rv = 0;
+    }
+    else if (user[0] == '\0' && group[0] == '\0')
+    {
+        // We're running as a privileged user, and this isn't
+        // overridden in our own config
+        LOG(LOG_LEVEL_ALWAYS,
+            "You are running xrdp as uid=%d gid=%d. This is not recommended.",
+            entry_uid, entry_gid);
+        rv = 0; // Allowed for now for old configs
     }
     else if (user[0] == '\0' || group[0] == '\0')
     {
