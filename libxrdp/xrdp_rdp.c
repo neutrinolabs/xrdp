@@ -1111,7 +1111,8 @@ xrdp_rdp_send_synchronise(struct xrdp_rdp *self)
 /*****************************************************************************/
 /* Send a [MS-RDPBCGR] TS_CONTROL_PDU message */
 static int
-xrdp_rdp_send_control(struct xrdp_rdp *self, int action)
+xrdp_rdp_send_control(struct xrdp_rdp *self, int action,
+                      int grant_id, int control_id)
 {
     struct stream *s;
 
@@ -1126,8 +1127,8 @@ xrdp_rdp_send_control(struct xrdp_rdp *self, int action)
     }
 
     out_uint16_le(s, action);
-    out_uint16_le(s, 0); /* userid */
-    out_uint32_le(s, 1002); /* control id */
+    out_uint16_le(s, grant_id);
+    out_uint32_le(s, control_id);
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_CONTROL_PDU "
               "action %d, grantId 0, controlId 1002", action);
@@ -1164,8 +1165,9 @@ xrdp_rdp_process_data_control(struct xrdp_rdp *self, struct stream *s)
                   "TS_SYNCHRONIZE_PDU, TS_CONTROL_PDU with CTRLACTION_COOPERATE, "
                   " and TS_CONTROL_PDU with CTRLACTION_GRANTED_CONTROL");
         xrdp_rdp_send_synchronise(self);
-        xrdp_rdp_send_control(self, RDP_CTL_COOPERATE);
-        xrdp_rdp_send_control(self, RDP_CTL_GRANT_CONTROL);
+        xrdp_rdp_send_control(self, RDP_CTL_COOPERATE, 0, 0);
+        xrdp_rdp_send_control(self, RDP_CTL_GRANT_CONTROL,
+                              self->mcs_channel, 0x03ea);
     }
     else
     {
@@ -1602,6 +1604,8 @@ xrdp_rdp_disconnect(struct xrdp_rdp *self)
 int
 xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 {
+    // See [MS-RDPBCGR] 2.2.3.1.1
+    const char source_descriptor[] = { '\0' };
     struct stream *s;
 
     make_stream(s);
@@ -1613,12 +1617,13 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
         LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send_deactivate: xrdp_rdp_init failed");
         return 1;
     }
+    out_uint32_le(s, self->share_id);
+    out_uint16_le(s, sizeof(source_descriptor));
+    out_uint8p(s, source_descriptor, sizeof(source_descriptor));
 
-    /* TODO: why are all the fields missing from the TS_DEACTIVATE_ALL_PDU? */
     s_mark_end(s);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_DEACTIVATE_ALL_PDU "
-              "shareID <not set>, lengthSourceDescriptor <not set>, "
-              "sourceDescriptor <not set>");
+              "shareID %d, sourceDescriptor 0x0", self->share_id);
 
     if (xrdp_rdp_send(self, s, PDUTYPE_DEACTIVATEALLPDU) != 0)
     {
