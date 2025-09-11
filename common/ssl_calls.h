@@ -30,6 +30,14 @@ int
 ssl_init(void);
 int
 ssl_finish(void);
+/**
+ * Sets a log file for recording TLS pre-master secrets
+ *
+ * @param filename Filename to log secrets in
+ * @return != 0 if the log was successfully set
+ */
+int
+ssl_set_pre_master_secret_logfile(const char *filename);
 void *
 ssl_rc4_info_create(void);
 void

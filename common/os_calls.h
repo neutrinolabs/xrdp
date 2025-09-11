@@ -238,6 +238,7 @@ int      g_file_is_open(int fd);
 int      g_file_read(int fd, char *ptr, int len);
 int      g_file_write(int fd, const char *ptr, int len);
 int      g_file_seek(int fd, int offset);
+int      g_file_seek_end(int fd, int offset);
 int      g_file_lock(int fd, int start, int len);
 int
 g_file_map(int fd, int aread, int awrite, size_t length, void **addr);

@@ -2259,6 +2259,30 @@ g_file_seek(int fd, int offset)
 }
 
 /*****************************************************************************/
+/* move file pointer to end of file, plus an offset */
+int
+g_file_seek_end(int fd, int offset)
+{
+#if defined(_WIN32)
+    int rv;
+
+    rv = (int)SetFilePointer((HANDLE)fd, offset, 0, FILE_END);
+
+    if (rv == (int)INVALID_SET_FILE_POINTER)
+    {
+        return -1;
+    }
+    else
+    {
+        return rv;
+    }
+
+#else
+    return (int)lseek(fd, offset, SEEK_END);
+#endif
+}
+
+/*****************************************************************************/
 /* do a write lock on a file */
 /* return boolean */
 int

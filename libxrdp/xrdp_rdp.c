@@ -277,6 +277,14 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                     client_info->key_file, g_get_strerror());
             }
         }
+        else if (g_strcasecmp(item, "tls_pms_log_file") == 0)
+        {
+            if (ssl_set_pre_master_secret_logfile(value))
+            {
+                LOG(LOG_LEVEL_WARNING, "TLS pre-master secrets will be logged. "
+                    "This is a security risk.");
+            }
+        }
         else if (g_strcasecmp(item, "domain_user_separator") == 0
                  && g_strlen(value) > 0)
         {

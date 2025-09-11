@@ -61,6 +61,9 @@ crypt_level=high
 certificate=
 key_file=
 
+; [Debug] Log file for TLS pre-master secrets - see xrdp.ini(5)
+#tls_pms_log_file=/tmp/xrdp-pms/premaster.log
+
 ; set SSL protocols
 ; can be comma separated list of 'SSLv3', 'TLSv1', 'TLSv1.1', 'TLSv1.2', 'TLSv1.3'
 ssl_protocols=TLSv1.2, TLSv1.3
