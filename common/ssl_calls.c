@@ -225,6 +225,12 @@ ssl_set_pre_master_secret_logfile(const char *filename)
     {
         /* Ignore this one */
     }
+    else if (g_chmod_hex(filename, 0x640) != 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "Can't set expected permissions on %s [%s]",
+            filename, g_get_strerror());
+
+    }
     else if ((g_keylog_filename = g_strdup(filename)) == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Out of memory setting TLS pre-master log");
@@ -256,7 +262,6 @@ log_pre_master_secret(const SSL *ssl, const char *line)
         }
         else
         {
-            g_chmod_hex(g_keylog_filename, 0x640); // Must be group readable
             g_file_seek_end(fd, 0);
             g_file_write(fd, line, strlen(line));
             g_file_write(fd, "\n", 1);
