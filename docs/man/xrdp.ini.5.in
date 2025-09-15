@@ -74,6 +74,19 @@ If not specified, defaults to \fB@sysconfdir@/@sysconfsubdir@/cert.pem\fP, \fB@s
 This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
 
 .TP
+\fBtls_pms_log_file\fR=\fI<path-to-log-file>\fR
+Logs TLS pre-master secrets to the specified file. This allows packet capture
+tools (e.g. Wireshark) to decrypt captured PDUs.
+
+The file must be writeable by xrdp and readable by the packet capture tool.
+A good way to achive this is to create a temporary directory with
+permissions 2750 owned by the user running xrdp, and in the group used by
+the packet sniffer.
+
+SETTING THIS OPTION IS A SECURITY RISK. ONLY SET THIS OPTION FOR DEBUGGING
+COMMUNICATIONS BETWEEN XRDP AND A CLIENT.
+
+.TP
 \fBchannel_code\fP=\fI[true|false]\fP
 If set to \fB0\fR, \fBfalse\fR or \fBno\fR this option disables all channels \fBxrdp\fR(8).
 See section \fBCHANNELS\fP below for more fine grained options.

@@ -53,6 +53,11 @@ static EVP_CIPHER *g_cipher_des_ede3_cbc; /* DES3 CBC cipher */
 static EVP_MAC *g_mac_hmac; /* HMAC MAC */
 #endif
 
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+#define HAS_KEYLOG_CALLBACK /* SSL_CTX_set_keylog_callback() is available */
+static char *g_keylog_filename = NULL;
+#endif
+
 /* definition of ssl_tls */
 struct ssl_tls
 {
@@ -173,12 +178,100 @@ ssl_finish(void)
     /* De-allocate any allocated globals
      * For OpenSSL 3, these can all safely be passed a NULL pointer */
     EVP_MD_free(g_md_md5);
+    g_md_md5 = NULL;
     EVP_MD_free(g_md_sha1);
+    g_md_sha1 = NULL;
     EVP_CIPHER_free(g_cipher_des_ede3_cbc);
+    g_cipher_des_ede3_cbc = NULL;
     EVP_MAC_free(g_mac_hmac);
+    g_mac_hmac = NULL;
+#endif
+
+#ifdef HAS_KEYLOG_CALLBACK
+    free(g_keylog_filename);
+    g_keylog_filename = NULL;
 #endif
     return 0;
 }
+
+/*****************************************************************************/
+int
+ssl_set_pre_master_secret_logfile(const char *filename)
+{
+    int rv = 0;
+#ifdef HAS_KEYLOG_CALLBACK
+    int fd = -1;
+
+    /* Remove any existing setting */
+    free(g_keylog_filename);
+    g_keylog_filename = NULL;
+
+    if (filename == NULL || filename[0] == '\0')
+    {
+        /* all done */
+    }
+    else if (filename[0] != '/')
+    {
+        LOG(LOG_LEVEL_ERROR, "TLS pre-master log file must start with '/'");
+    }
+    else if ((fd = g_file_open_rw(filename)) < 0)
+    {
+        /* Can't open file for writing. We'll log a single error here
+         * rather than lots of errors in the callback */
+        LOG(LOG_LEVEL_ERROR, "Can't write TLS pre-master secrets to %s [%s]",
+            filename, g_get_strerror());
+    }
+    else if (g_file_close(fd) != 0)
+    {
+        /* Ignore this one */
+    }
+    else if (g_chmod_hex(filename, 0x640) != 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "Can't set expected permissions on %s [%s]",
+            filename, g_get_strerror());
+
+    }
+    else if ((g_keylog_filename = g_strdup(filename)) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Out of memory setting TLS pre-master log");
+    }
+    else
+    {
+        rv = 1;
+    }
+#else
+    LOG(LOG_LEVEL_WARNING,
+        "This system is unable to log TLS pre-master secrets");
+#endif
+    return rv;
+}
+
+/*****************************************************************************/
+/* Log the pre-master secret for debugging purposes */
+#ifdef HAS_KEYLOG_CALLBACK
+static void
+log_pre_master_secret(const SSL *ssl, const char *line)
+{
+    if (g_keylog_filename != NULL && g_keylog_filename[0] == '/')
+    {
+        int fd = g_file_open_rw(g_keylog_filename);
+        if (fd < 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't write pre-master secret to %s [ %s]",
+                g_keylog_filename, g_get_strerror());
+        }
+        else
+        {
+            g_file_seek_end(fd, 0);
+            g_file_write(fd, line, strlen(line));
+            g_file_write(fd, "\n", 1);
+            (void)g_file_close(fd);
+        }
+    }
+}
+#endif // HAS_KEYLOG_CALLBACK
+
+/*****************************************************************************/
 
 /* rc4 stuff
  *
@@ -1165,6 +1258,10 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
         return 1;
     }
 #endif
+
+#ifdef HAS_KEYLOG_CALLBACK
+    SSL_CTX_set_keylog_callback(self->ctx, log_pre_master_secret);
+#endif // HAS_KEYLOG_CALLBACK
 
     self->ssl = SSL_new(self->ctx);
 
