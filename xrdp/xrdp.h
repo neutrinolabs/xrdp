@@ -485,6 +485,20 @@ struct display_control_monitor_layout_data
     int using_egfx;
 };
 
+enum resize_queue_source
+{
+    RQ_IGNORE_MARKER, // Ignore marker
+    RQ_FROM_SERVER, // Requested by display server / desktop
+    RQ_FROM_CLIENT  // Requested by client (dynamic monitor data)
+};
+
+// Items stored on the resize queue
+struct resize_queue_item
+{
+    enum resize_queue_source src; // Where the item came from
+    struct display_size_description description;
+};
+
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self);
 int

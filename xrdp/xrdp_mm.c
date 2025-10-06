@@ -1597,6 +1597,46 @@ sync_dynamic_monitor_data(struct xrdp_wm *wm,
 }
 
 /******************************************************************************/
+/**
+ * Single point to add requests to the resize queue
+ *
+ * @param self xrdp_mm object
+ * @param src Where the request is coming from
+ * @param description The requt we're adding
+ * @return 0 for success
+ */
+static int
+add_resize_request_to_queue(struct xrdp_mm *self,
+                            enum resize_queue_source src,
+                            const struct display_size_description *description)
+{
+    int rv = 0;
+    struct resize_queue_item *resize_queue_item;
+    resize_queue_item = (struct resize_queue_item *)
+                        malloc(sizeof(struct resize_queue_item));
+    if (resize_queue_item == NULL)
+    {
+        rv = 1;
+    }
+    else
+    {
+        resize_queue_item->src = src;
+        resize_queue_item->description = *description;
+        if (!list_add_item(self->resize_queue, (tintptr)resize_queue_item))
+        {
+            free(resize_queue_item);
+            rv = 1;
+        }
+        else
+        {
+            g_set_wait_obj(self->resize_ready);
+        }
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
 static int
 dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
 {
@@ -1608,7 +1648,7 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
     struct xrdp_process *pro;
     struct xrdp_wm *wm;
     int monitor_layout_size;
-    struct display_size_description *display_size_data;
+    struct display_size_description description;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_data:");
     pro = (struct xrdp_process *) id;
@@ -1665,26 +1705,25 @@ dynamic_monitor_data(intptr_t id, int chan_id, char *data, int bytes)
         return 1;
     }
 
-    display_size_data = (struct display_size_description *)
-                        g_malloc(sizeof(struct display_size_description), 1);
-    if (!display_size_data)
-    {
-        return 1;
-    }
-    error = libxrdp_process_monitor_stream(s, display_size_data, 1);
+    error = libxrdp_process_monitor_stream(s, &description, 1);
     if (error)
     {
         LOG(LOG_LEVEL_ERROR, "dynamic_monitor_data:"
             " libxrdp_process_monitor_stream"
             " failed with error %d.", error);
-        g_free(display_size_data);
         return error;
     }
-    list_add_item(wm->mm->resize_queue, (tintptr)display_size_data);
-    g_set_wait_obj(wm->mm->resize_ready);
+    error = add_resize_request_to_queue(wm->mm, RQ_FROM_CLIENT, &description);
+    if (error)
+    {
+        LOG(LOG_LEVEL_ERROR, "dynamic_monitor_data:"
+            " out of memory adding resize request to queue");
+        return error;
+    }
     LOG(LOG_LEVEL_DEBUG, "dynamic_monitor_data:"
         " received width %d, received height %d.",
-        display_size_data->session_width, display_size_data->session_height);
+        description.session_width,
+        description.session_height);
     return 0;
 }
 
@@ -1933,6 +1972,19 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
 }
 
 /******************************************************************************/
+#ifdef USE_DEVEL_LOGGING
+static const char *
+resize_queue_source_to_str(enum resize_queue_source src)
+{
+    return
+        (src == RQ_IGNORE_MARKER) ? "RQ_IGNORE_MARKER" :
+        (src == RQ_FROM_SERVER) ? "RQ_FROM_SERVER" :
+        (src == RQ_FROM_CLIENT) ? "RQ_FROM_CLIENT" :
+        /* default */ "<unknown>";
+}
+#endif
+
+/******************************************************************************/
 static int
 dynamic_monitor_process_queue(struct xrdp_mm *self)
 {
@@ -1957,30 +2009,33 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
             LOG_DEVEL(LOG_LEVEL_DEBUG, "Resize queue is empty.");
             return 0;
         }
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "dynamic_monitor_process_queue: Queue is"
-                  " not empty. Filling out description.");
-        const struct display_size_description *queue_head =
-            (struct display_size_description *)
-            list_get_item(self->resize_queue, 0);
+        const struct resize_queue_item *queue_head =
+            (struct resize_queue_item *)list_get_item(self->resize_queue, 0);
 
-        const int invalid_dimensions = queue_head->session_width <= 0
-                                       || queue_head->session_height <= 0;
+        LOG_DEVEL(LOG_LEVEL_INFO, "dynamic_monitor_process_queue: source of"
+                  " resize queue head is %s",
+                  resize_queue_source_to_str(queue_head->src));
+        const struct display_size_description *queued_size =
+                &queue_head->description;
+
+        const int invalid_dimensions = queued_size->session_width <= 0
+                                       || queued_size->session_height <= 0;
 
         if (invalid_dimensions)
         {
             LOG(LOG_LEVEL_DEBUG,
                 "dynamic_monitor_process_queue: Not allowing"
                 " resize due to invalid dimensions (w: %d x h: %d)",
-                queue_head->session_width,
-                queue_head->session_height);
+                queued_size->session_width,
+                queued_size->session_height);
         }
 
         const struct display_size_description *current_size
                 = &wm->client_info->display_sizes;
 
-        const int already_this_size = queue_head->session_width
+        const int already_this_size = queued_size->session_width
                                       == current_size->session_width
-                                      && queue_head->session_height
+                                      && queued_size->session_height
                                       == current_size->session_height;
 
         if (already_this_size)
@@ -1988,8 +2043,8 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
             LOG(LOG_LEVEL_DEBUG,
                 "dynamic_monitor_process_queue: Not resizing."
                 " Already this size. (w: %d x h: %d)",
-                queue_head->session_width,
-                queue_head->session_height);
+                queued_size->session_width,
+                queued_size->session_height);
         }
 
         if (!invalid_dimensions && !already_this_size)
@@ -1998,8 +2053,7 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
                 sizeof(struct display_control_monitor_layout_data);
             self->resize_data = (struct display_control_monitor_layout_data *)
                                 g_malloc(LAYOUT_DATA_SIZE, 1);
-            g_memcpy(&(self->resize_data->description), queue_head,
-                     sizeof(struct display_size_description));
+            self->resize_data->description = *queued_size;
             const int time = g_time3();
             self->resize_data->start_time = time;
             self->resize_data->last_state_update_timestamp = time;
@@ -2096,7 +2150,12 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
 int
 xrdp_mm_drdynvc_up(struct xrdp_mm *self)
 {
-    struct display_control_monitor_layout_data *ignore_marker;
+    struct display_size_description null_desc =
+    {
+        .monitorCount = 0,
+        .session_width = 0,
+        .session_height = 0
+    };
     const char *enable_dynamic_resize;
     int error = 0;
 
@@ -2125,10 +2184,12 @@ xrdp_mm_drdynvc_up(struct xrdp_mm *self)
             " Client likely does not support it.");
         return error;
     }
-    ignore_marker = (struct display_control_monitor_layout_data *)
-                    g_malloc(sizeof(struct display_control_monitor_layout_data),
-                             1);
-    list_add_item(self->resize_queue, (tintptr)ignore_marker);
+    error = add_resize_request_to_queue(self, RQ_IGNORE_MARKER, &null_desc);
+    if (error != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "%s: Out of memory", __func__);
+        error = 1;
+    }
     return error;
 }
 
@@ -4627,7 +4688,7 @@ client_monitor_resize(struct xrdp_mod *mod, int width, int height,
 {
     int error = 0;
     struct xrdp_wm *wm;
-    struct display_size_description *display_size_data;
+    struct display_size_description description;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "client_monitor_resize:");
     wm = (struct xrdp_wm *)(mod->wm);
@@ -4650,25 +4711,23 @@ client_monitor_resize(struct xrdp_mod *mod, int width, int height,
         return 1;
     }
 
-    display_size_data = g_new0(struct display_size_description, 1);
-    if (display_size_data == NULL)
-    {
-        LOG(LOG_LEVEL_ERROR, "client_monitor_resize: Out of memory");
-        return 1;
-    }
     error = libxrdp_init_display_size_description(num_monitors,
             monitors,
-            display_size_data);
+            &description);
     if (error)
     {
         LOG(LOG_LEVEL_ERROR, "client_monitor_resize:"
             " libxrdp_init_display_size_description"
             " failed with error %d.", error);
-        free(display_size_data);
         return error;
     }
-    list_add_item(wm->mm->resize_queue, (tintptr)display_size_data);
-    g_set_wait_obj(wm->mm->resize_ready);
+    error = add_resize_request_to_queue(wm->mm, RQ_FROM_SERVER, &description);
+    if (error)
+    {
+        LOG(LOG_LEVEL_ERROR, "client_monitor_resize:"
+            " out of memory adding queue item");
+        return error;
+    }
 
     return 0;
 }
