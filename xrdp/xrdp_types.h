@@ -451,6 +451,8 @@ struct xrdp_mm
     /* Resize on-the-fly control */
     struct display_control_monitor_layout_data *resize_data;
     struct list *resize_queue;
+    /* wait obj for resize_queue
+     * Only allocated when the queue can be processed */
     tbus resize_ready;
 };
 
