@@ -1622,6 +1622,27 @@ add_resize_request_to_queue(struct xrdp_mm *self,
     {
         resize_queue_item->src = src;
         resize_queue_item->description = *description;
+
+        // See if there's already a previous item on the queue
+        if (self->resize_queue->count > 0)
+        {
+            int prev_num = self->resize_queue->count - 1;
+            struct resize_queue_item *prev;
+            prev = (struct resize_queue_item *)
+                   list_get_item(self->resize_queue, prev_num);
+            // If this is a RQ_FROM_CLIENT, and the previous item on the
+            // resize_queue is also RQ_FROM_CLIENT, and it hasn't yet been
+            // processed, we can simply ignore it
+            if (src == RQ_FROM_CLIENT && prev->src == RQ_FROM_CLIENT)
+            {
+                LOG_DEVEL(LOG_LEVEL_DEBUG,
+                          "dynamic_monitor_data: Removing unactioned resize request"
+                          " width %d, height %d.",
+                          prev->description.session_width,
+                          prev->description.session_height);
+                list_remove_item(self->resize_queue, prev_num);
+            }
+        }
         if (!list_add_item(self->resize_queue, (tintptr)resize_queue_item))
         {
             free(resize_queue_item);
