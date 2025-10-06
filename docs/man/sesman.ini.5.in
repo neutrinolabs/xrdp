@@ -427,6 +427,22 @@ This setting will be removed in a later version of xrdp, when GNOME 3 is
 no longer supported.
 
 .TP
+\fBFuseRootReportMaxFree\fR=\fI[false|true]\fR
+The existing FUSE implementation reports free space on remote drives
+in a way which can confuse some file managers if they check for free
+space at the FUSE mountpoint before copying files. KDE Dolphin is
+affected by this, and will report 'no space available' when trying to
+copy to remote drives.
+
+Setting this option will cause the FUSE fileystem to report a
+very large amount of free space for the root of the FUSE mountpoint.
+This will allow Dolphin to copy files to remote drives, but introduces
+a risk that the remote filesystem will run out of space during the copy.
+
+This setting will be removed in a later version of xrdp, when remote drives
+receive unique mountpoints.
+
+.TP
 \fBSoundNumSilentFramesAAC\fR=\fInumber\fR
 Sets the \fInumber\fR of silent frames which are sent to client before close
 message is sent, when AAC is selected. If set to 0, no silent frame is sent.

@@ -2777,6 +2777,22 @@ static void xfuse_cb_statfs(fuse_req_t req, fuse_ino_t ino)
     {
         /* specified file is a local resource */
         struct statvfs vfs_stats = {0};
+        if (g_cfg->fuse_root_report_max_free)
+        {
+            // Report an 95% free max-size filesystem
+            vfs_stats.f_bsize = 0x1000;
+            vfs_stats.f_frsize = vfs_stats.f_bsize;
+#if SIZEOF_FSBLKCNT_T < 8
+            vfs_stats.f_blocks = (fsblkcnt_t) -1;
+#else
+            // Max-size is taken from XFS (8 * 2^60 bytes). Using -1
+            // as a value does not work here.
+            vfs_stats.f_blocks = (fsblkcnt_t)8 * 0x10000 * 0x10000 * 0x10000;
+#endif
+            vfs_stats.f_bfree = vfs_stats.f_blocks - vfs_stats.f_blocks / 20;
+            vfs_stats.f_bavail = vfs_stats.f_bfree;
+            vfs_stats.f_namemax = XFS_MAXFILENAMELEN;
+        }
         fuse_reply_statfs(req, &vfs_stats);
     }
     else

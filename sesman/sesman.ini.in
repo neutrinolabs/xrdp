@@ -182,6 +182,9 @@ FileUmask=077
 ; and up, and you wish to cut-paste files between Nautilus and Windows. Do
 ; not use this setting for GNOME 4, or other file managers
 #UseNautilus3FlistFormat=true
+; Uncomment this line if your file manager erroneously reports
+; 'No free space' when trying to copy any files to remote drives.
+#FuseRootReportMaxFree=true
 ; sound redirection
 ; workaround for Microsoft mstsc.exe to suppress noise.
 ; SoundNumSilentFramesAAC | SoundNumSilentFramesMP3 silent frames are sent before SNDC_CLOSE is sent.
