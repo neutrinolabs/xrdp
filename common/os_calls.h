@@ -194,6 +194,11 @@ g_sck_get_peer_description(int sck,
 void     g_sleep(int msecs);
 int      g_pipe(int fd[2]);
 
+// Wait objects with this value are ignored by
+// g_set_wait_obj() / g_reset_wait_obj() / g_is_wait_obj_set() /
+// g_delete_wait_obj()
+#define NULL_WAIT_OBJ (tintptr)0
+
 tintptr  g_create_wait_obj(const char *name);
 tintptr  g_create_wait_obj_from_socket(tintptr socket, int write);
 void     g_delete_wait_obj_from_socket(tintptr wait_obj);
