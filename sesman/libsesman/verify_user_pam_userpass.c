@@ -69,7 +69,6 @@ common_pam_login(struct auth_info *auth_info,
                  int need_pam_authenticate)
 {
     int perror;
-    char service_name[256];
 
     perror = pam_start(SERVICE, auth_info->userpass.user,
                        &(auth_info->pamc), &(auth_info->ph));
@@ -92,7 +91,7 @@ common_pam_login(struct auth_info *auth_info,
         }
     }
 
-    perror = pam_set_item(auth_info->ph, PAM_TTY, service_name);
+    perror = pam_set_item(auth_info->ph, PAM_TTY, SERVICE);
     if (perror != PAM_SUCCESS)
     {
         LOG(LOG_LEVEL_ERROR, "pam_set_item(PAM_TTY) failed: %s",
