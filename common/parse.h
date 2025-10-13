@@ -529,6 +529,14 @@ in_utf16_le_terminated_as_utf8_length(struct stream *s);
     } while (0)
 
 /******************************************************************************/
+// Platform-endian out_uint32
+#if defined(B_ENDIAN)
+#define out_uint32_pe(s, v) out_uint32_be(s, v)
+#else
+#define out_uint32_pe(s, v) out_uint32_le(s, v)
+#endif
+
+/******************************************************************************/
 #define in_uint8p(s, v, n) do \
     { \
         S_CHECK_REM((s), (n)); \
