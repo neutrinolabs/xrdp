@@ -58,8 +58,8 @@ struct session_item
     struct trans *sesexec_trans; // trans for sesexec process. Always valid.
     pid_t sesexec_pid; // pid for sesexec process. Always valid
     /**
-     * May be valid if known when the session is starting, otherwise -1 */
-    int display;
+     * May be valid if known when the session is starting, otherwise "" */
+    char display[SCP_DISPLAY_NAME_SIZE];
     uid_t uid;
     enum scp_session_type type;
     unsigned short start_width;
@@ -123,10 +123,10 @@ session_list_new(void);
 /**
  * @brief Get all session displays
  *
- * Adds displays allocated to sessions to a set
+ * Adds X11 displays allocated to sessions to a set
  */
 void
-session_list_get_session_displays(struct set_int *alloc_displays);
+session_list_get_session_x11_displays(struct set_int *alloc_displays);
 
 /**
  *

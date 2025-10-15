@@ -1,0 +1,78 @@
+#!/bin/sh
+#
+# xrdp: A Remote Desktop Protocol server.
+#
+# Copyright (C) Jay Sorg and contributors 2004-2024
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Copies an environment list to a file on the filesystem in an
+# atomic operation. We use this to find out when the display
+# server has started.
+
+#Uncomment these for debugging
+#exec >/var/run/user/$(id -u)/labwc-getenv.log 2>&1
+#set -x
+#env | sort
+
+# ------------------------------------------------------------------------------
+# G L O B A L S
+# ------------------------------------------------------------------------------
+
+ENV_LIST="
+  WAYLAND_DISPLAY
+  DISPLAY
+"
+
+# ------------------------------------------------------------------------------
+# C H E C K   R E Q U I R E D   E N V I R O N M E N T
+# ------------------------------------------------------------------------------
+#ok=true
+
+# shellcheck disable=SC2043
+for envvar in XRDP_SESSION XDG_RUNTIME_DIR; do
+    eval val="\$$envvar"
+    if [ -z "$val" ]; then
+        echo "** $0: Environment variable '$envvar' is missing" >&2
+        ok=false
+    fi
+done >/dev/null
+
+if ! $ok; then
+    false
+else
+    # Get the name for the environment file
+    mkdir -p "$XDG_RUNTIME_DIR/xrdp"
+    env_file="$XDG_RUNTIME_DIR/xrdp/session-$XRDP_SESSION.env"
+
+    # It shouldn't be here already
+    if [ -e "$env_file" ]; then
+        echo "** $0: $env_file already exists" >&2
+        false
+    else
+        tmp=$(mktemp "$env_file.XXXXXXXX")
+        if [ -z "$tmp" ]; then
+            echo "** $0: Can't open temp file to dump environment" >&2
+            false
+        else
+            for env in $ENV_LIST; do
+                eval val="\$$env"
+                if [ -n "$val" ]; then
+                    echo "$env=$val"
+                fi
+            done >"$tmp"
+            mv "$tmp" "$env_file"
+        fi
+    fi
+fi
+exit $?

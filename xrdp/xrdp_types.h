@@ -39,11 +39,12 @@
 #define XVNC_SESSION_CODE 0
 #define XVNC_UDS_SESSION_CODE 1
 #define XORG_SESSION_CODE 20
+/* #define LABWC_SESSION_CODE 1000 */
+#define LABWC_OVER_VNC_SESSION_CODE 1001
 
 /* To check whether touch events has been implemented on session type 'mm' */
 #define XRDP_MM_IMPLEMENTS_TOUCH(mm) \
-    (((mm)->code != XVNC_SESSION_CODE) && \
-     ((mm)->code != XVNC_UDS_SESSION_CODE))
+    (((mm)->code == XORG_SESSION_CODE))
 
 struct source_info;
 struct list16;
@@ -439,7 +440,7 @@ struct xrdp_mm
     struct xrdp_mod *(*mod_init)(void);
     int (*mod_exit)(struct xrdp_mod *);
     struct xrdp_mod *mod; /* module interface */
-    int display; /* 10 for :10.0, 11 for :11.0, etc */
+    char display[32]; /* ":n" or "wayland-n" */
     int uid; /* UID for a successful login, -1 otherwise */
     struct guid guid; /* GUID for the session, or all zeros  */
     int code; /* 0=Xvnc session, 20=xorg driver mode */

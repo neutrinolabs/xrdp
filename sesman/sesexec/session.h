@@ -19,7 +19,7 @@
 /**
  *
  * @file session.h
- * @brief Session management definitions
+ * @brief Session management function declarations
  * @author Jay Sorg, Simone Fedele
  *
  */
@@ -30,27 +30,11 @@
 
 #include <time.h>
 
-#include "guid.h"
 #include "scp_application_types.h"
 
 struct login_info;
 struct proc_exit_status;
-
-/**
- * Information used to start a session
- */
-struct session_parameters
-{
-    unsigned int display;
-    enum scp_session_type type;
-    unsigned short width;
-    unsigned short height;
-    unsigned char  bpp;
-    struct guid guid;
-    const char *shell;  // Must not be NULL
-    const char *directory;  // Must not be NULL
-};
-
+struct session_parameters;
 
 /**
  * Data involved in running a session (opaque type)
@@ -77,89 +61,66 @@ session_start(struct login_info *login_info,
               struct session_data **session_data);
 
 /**
- * Processes a SIGCHLD event
- *
- * Any pending SIGCHLD events are processed.
- *
- * The PID of a failed child process is removed from the session_data.
- *
- * @param sd session_data for this session
- * @param pid PID of exited process
- * @param e Exit status of the exited process
- */
-void
-session_process_sigchld_event(struct session_data *sd);
-
-/**
- * Returns a count of active processes in the session
- *
- * @param sd session_data for this session
- */
-unsigned int
-session_active(const struct session_data *sd);
-
-/**
- * Returns the start time for an active session
- *
- * @param sd session_data for this session
- * @return session start time
- */
-time_t
-session_get_start_time(const struct session_data *sd);
-
-/**
- * Returns the connect count for an active session
- * @param sd session_data for this session
- * @return connect count
- */
-unsigned int
-session_get_connect_count(const struct session_data *sd);
-
-/**
- * Increment the connect count for an active session
- * @param sd session_data for this session
- * @return Pre-increment value of the connect count
- */
-unsigned int
-session_increment_connect_count(struct session_data *sd);
-
-/**
- * Returns the parameters used to start the session
- *
- * @param sd session_data for this session
- * @return Pointer to parameters
- *
- * The pointed-to data returned must not be modified in
- * any way.
- */
-const struct session_parameters *
-session_get_parameters(const struct session_data *sd);
-
-/***
- * Ask a session to terminate by signalling the window manager
- *
- * @param sd session_data for this session
- * @param wait_for_all != 0 to wait for all processes in the session
- *                     to terminate
- */
-void
-session_send_term(struct session_data *sd, int wait_for_all);
-
-/**
  * Frees a session_data object
  *
- * @param sd session_data for this session
+ * @param self session_data object
  *
  * Do not call this until session_active() returns zero, or you
  * lose the ability to track the session PIDs
  */
 void
-session_data_free(struct session_data *session_data);
+session_data_free(struct session_data *self);
+
+/**
+ * Process a SIGCHLD event for a session
+ *
+ * Any pending SIGCHLD events are processed.
+ *
+ * @param self session_data object
+ */
+void
+session_process_sigchld_event(struct session_data *self);
+
+/**
+ * Returns a count of active processes in the session
+ *
+ * @param self session_data object
+ */
+unsigned int
+session_active(const struct session_data *self);
+
+/**
+ * Get the session start time
+ *
+ * @param self session_data object
+ * @return session start time
+ */
+time_t
+session_get_start_time(const struct session_data *self);
+
+/**
+ * Get a pointer to the session display name
+ *
+ * @param self session_data object
+ * @return session name (":n" or "wayland-n")
+ *
+ * A session name is set by a successful call to session_start()
+ */
+const char *
+session_get_display(const struct session_data *self);
+
+/**
+ * Increment the connect count for an active session
+ * @param self session_data object
+ * @return Pre-increment value of the connect count
+ */
+unsigned int
+session_increment_connect_count(struct session_data *self);
 
 /**
  * Runs the reconnect script for the session
+ * @param self session_data object
  * @param login_info Login info for the session
- * @param sd Session data for the session
  * @param vars environment variables for the reconnect script
  *
  * The vars parameter points to an array of strings in pairs. The
@@ -167,22 +128,51 @@ session_data_free(struct session_data *session_data);
  * set, and the second string is the value
  */
 void
-session_run_reconnect_script(const struct login_info *login_info,
-                             const struct session_data *sd,
+session_run_reconnect_script(struct session_data *self,
+                             const struct login_info *login_info,
                              const char *vars[]);
 
 /**
- * Connects a file descriptor to the display server
+ * Returns the parameters used to start the session
+ *
+ * @param self session_data object
+ * @return Pointer to parameters
+ *
+ * The pointed-to data returned must not be modified in
+ * any way.
+ */
+const struct session_parameters *
+session_get_parameters(const struct session_data *self);
+
+/***
+ * Ask a session to terminate by signalling the window manager
+ *
+ * @param self session_data object
+ * @param wait_for_all != 0 to wait for all processes in the session
+ *                     to terminate
+ */
+void
+session_send_term(struct session_data *self, int wait_for_all);
+
+/**
+ * Get the session display server file descriptor
+ *
+ * @param self session_data_object
+ * @param login_info Login info for the session
+ * @return display server fd, or -1
  */
 int
-session_get_display_server_fd(const struct login_info *login_info,
-                              const struct session_data *sd);
+session_get_display_server_fd(const struct session_data *self,
+                              const struct login_info *login_info);
 
 /**
  * Connects a file descriptor to chansrv
+ * @param self session_data object
+ * @param login_info Login info for the session
+ * @return file descriptor connected to chansrv, or -1
  */
 int
-session_get_chansrv_fd(const struct login_info *login_info,
-                       const struct session_data *sd);
+session_get_chansrv_fd(const struct session_data *self,
+                       const struct login_info *login_info);
 
 #endif // SESSION_H

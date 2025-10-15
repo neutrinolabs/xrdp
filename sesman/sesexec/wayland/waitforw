@@ -1,0 +1,105 @@
+#!/bin/sh
+#
+# xrdp: A Remote Desktop Protocol server.
+#
+# Copyright (C) Jay Sorg and contributors 2004-2025
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Wait for the wayland server to start
+#
+# At present, we just look for the environment file created when
+# labwc is started. When the file is available, we read it and
+# send the contents to stdout tagged with "<V>" so sesman can
+# set environment variables.
+#
+# This is an analogue to waitforx.c in the X server world
+
+#Uncomment these for debugging
+#exec 2>/var/run/user/$(id -u)/waitforw.log
+#set -x
+
+# See sesman/sesexec/display_server_util.h
+DS_STATUS_OK=0
+DS_STATUS_MISC_ERROR=1
+DS_STATUS_TIMED_OUT=2
+#DS_STATUS_FAILED_TO_START=3
+
+ATTEMPTS=10
+
+# Send the environment to sesexec
+parse_env_file()
+{
+    while read -r line; do
+        case "$line" in
+            *=*) echo "<V>$line" ;;
+        esac
+    done
+
+    # We must do this to say the parse has been done
+    return 0
+}
+
+# ------------------------------------------------------------------------------
+# C H E C K   R E Q U I R E D   E N V I R O N M E N T
+# ------------------------------------------------------------------------------
+#ok=true
+
+# shellcheck disable=SC2043
+for envvar in XRDP_SESSION XDG_RUNTIME_DIR; do
+    eval val="\$$envvar"
+    if [ -z "$val" ]; then
+        echo "<E>Environment variable '$envvar' is missing" >&2
+        ok=false
+    fi
+done >/dev/null
+
+if ! $ok; then
+    exit "$DS_STATUS_MISC_ERROR"
+fi
+
+# Construct the name for the environment file
+mkdir -p "$XDG_RUNTIME_DIR/xrdp"
+env_file="$XDG_RUNTIME_DIR/xrdp/session-$XRDP_SESSION.env"
+
+# Wait for the env file to appear. We have to jump through some hoops
+# with Bourne shell to get an atomic test-and-open on the file.
+file_parsed=false
+count="$ATTEMPTS"
+
+exec 4>&2 ; # Save stderr in FD 4
+while [ "$count" -gt 0 ]; do
+    exec 2>/dev/null ;# Close stderr for the open attempt
+    # Try to open the file and parse it. If the open succeeds, during
+    # the call, the env_file is on stdin, and stderr is working
+    parse_env_file <"$env_file" 2>&4
+    status=$?
+    # Put stderr back again
+    exec 2>&4
+
+    if [ $status -eq 0 ]; then
+        file_parsed=true
+        rm "$env_file"
+        break
+    fi
+    sleep 1
+    count=$((count - 1))
+done
+exec 4>/dev/null
+
+if ! $file_parsed; then
+    echo "<E>Timed out waiting for display server"
+    exit "$DS_STATUS_TIMED_OUT"
+fi
+
+exit "$DS_STATUS_OK"

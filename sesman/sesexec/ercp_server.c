@@ -49,7 +49,7 @@ get_session_fds(struct session_data *sd, unsigned int scp_flags,
 {
     enum scp_sconnect_status result = E_SCP_SCONNECT_OK;
 
-    if ((*display_fd = session_get_display_server_fd(g_login_info, sd)) < 0)
+    if ((*display_fd = session_get_display_server_fd(sd, g_login_info)) < 0)
     {
         result = E_SCP_SCONNECT_SERVER_FAIL;
     }
@@ -61,7 +61,7 @@ get_session_fds(struct session_data *sd, unsigned int scp_flags,
     else
     {
         // If this fails, it's inconvenient, but not a show-stopper
-        *chan_fd = session_get_chansrv_fd(g_login_info, sd);
+        *chan_fd = session_get_chansrv_fd(sd, g_login_info);
     }
 
     return result;
@@ -147,16 +147,16 @@ handle_connect_session_request(struct trans *self)
                         g_login_info->username);
                     if (g_cfg->always_run_reconnect)
                     {
-                        session_run_reconnect_script(g_login_info,
-                                                     g_session_data, vars);
+                        session_run_reconnect_script(g_session_data,
+                                                     g_login_info, vars);
                     }
                 }
                 else
                 {
                     LOG(LOG_LEVEL_INFO, "User %s has reconnected to a session",
                         g_login_info->username);
-                    session_run_reconnect_script(g_login_info,
-                                                 g_session_data, vars);
+                    session_run_reconnect_script(g_session_data,
+                                                 g_login_info, vars);
                 }
 
                 // Convert the SCP transport to a CCP transport, and

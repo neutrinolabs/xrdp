@@ -676,6 +676,7 @@ AC_CONFIG_FILES([
   sesman/chansrv/Makefile
   sesman/Makefile
   sesman/sesexec/Makefile
+  sesman/sesexec/wayland/Makefile
   sesman/tools/Makefile
   tests/Makefile
   tests/common/Makefile

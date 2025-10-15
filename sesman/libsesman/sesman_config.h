@@ -173,6 +173,15 @@ struct config_sessions
     unsigned int startup_wait_time;
 };
 
+struct config_labwc
+{
+    char *labwc_exe;
+    char *wayvnc_exe;
+    int enable_labwc_log;
+    int enable_wayvnc_log;
+    char *log_file_path;
+};
+
 /**
  *
  * @struct config_sesman
@@ -239,11 +248,13 @@ struct config_sesman
      * @brief Xorg additional parameter list
      */
     struct list *xorg_params;
+
     /**
-     * @var log
-     * @brief Log configuration struct
+     * @var labwc
+     * @brief labwc configuration options struct
      */
-    //struct log_config log;
+    struct config_labwc labwc;
+
     /**
      * @var sec
      * @brief Security configuration options struct

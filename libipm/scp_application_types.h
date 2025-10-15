@@ -35,15 +35,33 @@ enum scp_session_type
 {
     SCP_SESSION_TYPE_XVNC = 0,  ///< Session used Xvnc
     SCP_SESSION_TYPE_XVNC_UDS,  ///< Session used Xvnc with UDS connection
-    SCP_SESSION_TYPE_XORG  ///< Session used Xorg + xorgxrdp
+    SCP_SESSION_TYPE_XORG,  ///< Session used Xorg + xorgxrdp
+    SCP_SESSION_TYPE_LABWC, ///< Labwc compositor session
+    SCP_SESSION_TYPE_LABWC_OVER_VNC  ///< Labwc over VNC compositor session
 };
 
 #define SCP_SESSION_TYPE_TO_STR(t) \
     ((t) == SCP_SESSION_TYPE_XVNC ? "Xvnc" : \
      (t) == SCP_SESSION_TYPE_XVNC_UDS ? "Xvnc-UDS" : \
      (t) == SCP_SESSION_TYPE_XORG ? "Xorg" : \
+     (t) == SCP_SESSION_TYPE_LABWC ? "labwc" : \
+     (t) == SCP_SESSION_TYPE_LABWC_OVER_VNC ? "labwc(vnc)" : \
      "unknown" \
     )
+
+#define SCP_SESSION_TYPE_IS_X11(t) \
+    ((t) >= SCP_SESSION_TYPE_XVNC && (t) <= SCP_SESSION_TYPE_XORG)
+#define SCP_SESSION_TYPE_IS_LABWC(t) \
+    ((t) >= SCP_SESSION_TYPE_LABWC && (t) <= SCP_SESSION_TYPE_LABWC_OVER_VNC)
+
+// Other constants
+enum
+{
+    /*
+     * Storage space to allocate for a display name
+     */
+    SCP_DISPLAY_NAME_SIZE = 32
+};
 
 /**
  * @brief Information to display about a particular sesman session
@@ -51,7 +69,7 @@ enum scp_session_type
 struct scp_session_info
 {
     int sid; ///< Session ID
-    unsigned int display; ///< Display number
+    char *display; ///< Display name (":n" or "wayland-n")
     enum scp_session_type type; ///< Session type
     unsigned short width; ///< Initial session width
     unsigned short height; ///< Initial session height
@@ -101,6 +119,8 @@ enum scp_screate_status
     E_SCP_SCREATE_MAX_REACHED, ///< Max number of sessions already reached
     E_SCP_SCREATE_NO_DISPLAY, ///< No X server display number is available
     E_SCP_SCREATE_X_SERVER_FAIL, ///< X server could not be started
+    E_SCP_SCREATE_LABWC_FAIL, ///< labwc could not be started
+    E_SCP_SCREATE_WAYVNC_FAIL, ///< wayvnc could not be started
     E_SCP_SCREATE_SESSION_FAIL, ///< The session failed quickly
     E_SCP_SCREATE_IN_PROGRESS, ///< A create session request is in progress
     E_SCP_SCREATE_GENERAL_ERROR ///< An unspecific error has occurred
@@ -135,7 +155,7 @@ enum scp_sconnect_status
     E_SCP_SCONNECT_NOT_LOGGED_IN, ///< Connection is not logged in
     E_SCP_SCONNECT_NO_SUCH_GUID, ///< GUID does not exist for this user
     E_SCP_SCONNECT_NO_MEMORY, ///< Memory allocation failure
-    E_SCP_SCONNECT_SERVER_FAIL, ///< Can't connect to X server
+    E_SCP_SCONNECT_SERVER_FAIL, ///< Can't connect to display server
     E_SCP_SCONNECT_GENERAL_ERROR ///< An unspecific error has occurred
 };
 

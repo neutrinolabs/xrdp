@@ -43,7 +43,7 @@ process_session_announce_event(struct session_item *si)
 {
     int rv;
     const char *start_ip_addr;
-    unsigned int display;
+    const char *display;
 
     rv = ercp_get_session_announce_event(si->sesexec_trans,
                                          &display,
@@ -57,26 +57,14 @@ process_session_announce_event(struct session_item *si)
                                          &si->start_time);
     if (rv == 0)
     {
-        // We may already know the display we sent sesexec. If we do,
-        // check sesexec sent the same value back.
-        if (si->display >= 0 && display != (unsigned int)si->display)
-        {
-            LOG(LOG_LEVEL_ERROR, "Bugcheck: sesman expected display %d, got %u",
-                si->display, display);
-            rv = 1;
-        }
-    }
-
-    if (rv == 0)
-    {
         snprintf(si->start_ip_addr, sizeof(si->start_ip_addr),
                  "%s", start_ip_addr);
-        si->display = display;
+        strlcpy(si->display, display, sizeof(si->display));
 
         si->state = E_SESSION_RUNNING;
 
         LOG(LOG_LEVEL_INFO,
-            "sesman: Session on display :%d is now running", si->display);
+            "sesman: Session on display %s is now running", si->display);
     }
 
     return rv;
@@ -86,7 +74,7 @@ process_session_announce_event(struct session_item *si)
 static void
 process_session_finished_event(struct session_item *si)
 {
-    LOG(LOG_LEVEL_INFO, "sesman: Session on display :%d has finished.",
+    LOG(LOG_LEVEL_INFO, "sesman: Session on display %s has finished.",
         si->display);
     // Setting the transport down will remove this connection from the list
     si->sesexec_trans->status = TRANS_STATUS_DOWN;
@@ -109,7 +97,7 @@ process_client_connect_event(struct session_item *si)
         strlcpy(si->client_name, client_name, sizeof(si->client_name));
         si->last_connect_disconnect = connect_time;
         LOG(LOG_LEVEL_INFO,
-            "sesman: Session on display :%d is connected from client '%s'",
+            "sesman: Session on display %s is connected from client '%s'",
             si->display, si->client_name);
     }
 
@@ -130,7 +118,7 @@ process_client_disconnect_event(struct session_item *si)
         si->client_name[0] = '\0';
         si->last_connect_disconnect = disconnect_time;
         LOG(LOG_LEVEL_INFO,
-            "sesman: Session on display :%d has no client connection",
+            "sesman: Session on display %s has no client connection",
             si->display);
     }
 

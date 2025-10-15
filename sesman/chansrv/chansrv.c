@@ -69,7 +69,8 @@ static tbus g_thread_done_event = 0;
 
 struct config_chansrv *g_cfg = NULL;
 
-int g_display_num = -1;
+char g_display_str[32];
+
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
 int g_rdpdr_chan_id = -1;   /* rdpdr   */
@@ -1350,7 +1351,8 @@ setup_listen(void)
 
     g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
     g_lis_trans->is_term = g_is_term;
-    g_snprintf(port, sizeof(port), XRDP_CHANSRV_STR, g_getuid(), g_display_num);
+    g_snprintf(port, sizeof(port), XRDP_CHANSRV_STR,
+               g_getuid(), STRIP_COLON(g_display_str));
 
     g_lis_trans->trans_conn_in = my_trans_conn_in;
     error = trans_listen(g_lis_trans, port);
@@ -1374,7 +1376,8 @@ setup_api_listen(void)
 
     g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192 * 4, 8192 * 4);
     g_api_lis_trans->is_term = g_is_term;
-    g_snprintf(port, sizeof(port), CHANSRV_API_STR, g_getuid(), g_display_num);
+    g_snprintf(port, sizeof(port), CHANSRV_API_STR,
+               g_getuid(), STRIP_COLON(g_display_str));
     g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
     error = trans_listen(g_api_lis_trans, port);
 
@@ -1845,24 +1848,15 @@ main(int argc, char **argv)
     char text[256];
     const char *config_path;
     char log_path[256];
-    const char *display_text;
     char log_file[256];
     enum logReturns error;
     struct log_config *logconfig;
     g_init("xrdp-chansrv"); /* os_calls */
     g_memset(g_drdynvcs, 0, sizeof(g_drdynvcs));
 
-    display_text = g_getenv("DISPLAY");
-    if (display_text == NULL)
+    if (g_get_display_string(g_display_str, sizeof(g_display_str)) < 0)
     {
-        g_writeln("DISPLAY is not set");
-        main_cleanup();
-        return 1;
-    }
-    g_display_num = g_get_display_num_from_display(display_text);
-    if (g_display_num < 0)
-    {
-        g_writeln("Unable to get display from DISPLAY='%s'", display_text);
+        g_writeln("Unable to get display string");
         main_cleanup();
         return 1;
     }
@@ -1888,7 +1882,8 @@ main(int argc, char **argv)
     pid = g_getpid();
 
     /* starting logging subsystem */
-    g_snprintf(log_file, 255, "%s/xrdp-chansrv.%d.log", log_path, g_display_num);
+    g_snprintf(log_file, sizeof(log_file),
+               "%s/xrdp-chansrv.%s.log", log_path, STRIP_COLON(g_display_str));
     g_writeln("chansrv::main: using log file [%s]", log_file);
     if (g_file_exist(log_file))
     {
@@ -1949,9 +1944,6 @@ main(int argc, char **argv)
 
     /* Cater for the X server exiting unexpectedly */
     xcommon_set_x_server_fatal_handler(x_server_fatal_handler);
-
-    LOG_DEVEL(LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text);
-    LOG_DEVEL(LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num);
 
     /* Set up RAIL sync objects */
     g_snprintf(text, sizeof(text), "xrdp_chansrv_%8.8x_exec", pid);

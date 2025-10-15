@@ -2764,7 +2764,10 @@ g_create_path(const char *path)
 
             if (!g_directory_exist(copypath))
             {
-                if (!g_create_dir(copypath))
+                // Create and check again to avoid a race with another
+                // process making the same traversal
+                (void)g_create_dir(copypath);
+                if (!g_directory_exist(copypath))
                 {
                     status = 0;
                     break;

@@ -387,15 +387,17 @@ scp_get_create_session_request(struct trans *trans,
  *
  * @param trans SCP transport
  * @param status Status of creation request
- * @param display Should be zero if create session failed.
+ * @param display Will be "" if create session failed
  * @param guid Guid for session. Should be all zeros if create session failed
  *
  * @return != 0 for error
+ *
+ * The display will be either ":n" (X11) or (e.g) "wayland-0" (Wayland)
  */
 int
 scp_send_create_session_response(struct trans *trans,
                                  enum scp_screate_status status,
-                                 int display,
+                                 const char *display,
                                  const struct guid *guid);
 
 
@@ -413,7 +415,7 @@ scp_send_create_session_response(struct trans *trans,
 int
 scp_get_create_session_response(struct trans *trans,
                                 enum scp_screate_status *status,
-                                int *display,
+                                const char **display,
                                 struct guid *guid);
 
 /**

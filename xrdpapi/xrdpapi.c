@@ -21,6 +21,7 @@
 #include <config_ac.h>
 #endif
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +43,7 @@
 struct wts_obj
 {
     int fd;
-    int display_num;
+    char display_name[32];
 };
 
 /* helper functions used by WTSxxx API - do not invoke directly */
@@ -112,6 +113,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     char *connect_data;
     int chan_name_bytes;
     int lerrno;
+    const char *display;
 
     if (SessionId != WTS_CURRENT_SESSION)
     {
@@ -125,13 +127,20 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
         return 0;
     }
     wts->fd = -1;
-    wts->display_num = g_get_display_num_from_display(getenv("DISPLAY"));
-    if (wts->display_num < 0)
+
+    if ((display = getenv("WAYLAND_DISPLAY")) == NULL)
     {
-        LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; invalid DISPLAY");
-        free_wts(wts);
-        return NULL;
+        display = getenv("DISPLAY");
+        if (display == NULL || display[0] != ':' || !isdigit(display[1]))
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "WTSVirtualChannelOpenEx: fatal error; invalid DISPLAY");
+            free_wts(wts);
+            return NULL;
+        }
     }
+
+    strlcpy(wts->display_name, display, sizeof(wts->display_name));
 
     /* we use unix domain socket to communicate with chansrv */
     if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
@@ -153,7 +162,8 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
     bytes = sizeof(s.sun_path);
-    snprintf(s.sun_path, bytes - 1, CHANSRV_API_STR, getuid(), wts->display_num);
+    snprintf(s.sun_path, bytes - 1, CHANSRV_API_STR,
+             getuid(), STRIP_COLON(wts->display_name));
     s.sun_path[bytes - 1] = 0;
     bytes = sizeof(struct sockaddr_un);
 

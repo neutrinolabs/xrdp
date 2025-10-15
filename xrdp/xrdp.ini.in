@@ -373,3 +373,18 @@ password=ask
 #channel.cliprdr=true
 #channel.rail=true
 #channel.xrdpvr=true
+
+; This is currently experimental only. 
+[labwc-vnc]
+name=labwc-vnc
+lib=libvnc.@lib_extension@
+username=ask
+password=ask
+; Set port to -1 (sesman controlled). Other values do not work at present.
+port=-1
+; Tell xrdp we're using labwc.
+code=1001
+; These parameters are VNC module specific
+#xserverbpp=24
+#delay_ms=2000
+#disabled_encodings_mask=0

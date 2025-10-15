@@ -207,19 +207,22 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
 
 /* returns error */
 static int
-auth_start_session_private(struct auth_info *auth_info, int display_num)
+auth_start_session_private(struct auth_info *auth_info, int x11_display_num)
 {
     int error;
-    char display[256];
 
-    g_sprintf(display, ":%d", display_num);
-    error = pam_set_item(auth_info->ph, PAM_TTY, display);
-
-    if (error != PAM_SUCCESS)
+    if (x11_display_num >= 0)
     {
-        LOG(LOG_LEVEL_ERROR, "pam_set_item failed: %s",
-            pam_strerror(auth_info->ph, error));
-        return 1;
+        char display[32];
+        g_snprintf(display, sizeof(display), ":%d", x11_display_num);
+        error = pam_set_item(auth_info->ph, PAM_TTY, display);
+
+        if (error != PAM_SUCCESS)
+        {
+            LOG(LOG_LEVEL_ERROR, "pam_set_item failed: %s",
+                pam_strerror(auth_info->ph, error));
+            return 1;
+        }
     }
 
     error = pam_setcred(auth_info->ph, PAM_ESTABLISH_CRED);

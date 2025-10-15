@@ -100,12 +100,12 @@ static int
 process_create_session_response(struct scp_list_item *sli)
 {
     struct session_item *s_item;
-    int display = -1;
+    const char *display;
     struct guid guid;
     enum scp_screate_status status;
 
     int rv = eicp_get_create_session_response(sli->sesexec_trans,
-             &status, &guid);
+             &status, &display, &guid);
     if (rv == 0)
     {
         // Create an entry on the session list for the new session
@@ -130,8 +130,7 @@ process_create_session_response(struct scp_list_item *sli)
             s_item->sesexec_pid = sli->sesexec_pid;
             s_item->guid = guid;
             s_item->uid = sli->uid;
-            s_item->display = sli->session_display;
-            display = s_item->display;
+            strlcpy(s_item->display, display, sizeof(s_item->display));
 
             // We don't use the sesexec process again
             sli->sesexec_trans = NULL;
@@ -140,12 +139,12 @@ process_create_session_response(struct scp_list_item *sli)
         else
         {
             guid_clear(&guid);
-            display = -1;
+            display = "";
         }
         rv = scp_send_create_session_response(sli->client_trans, status,
                                               display, &guid);
         sli->create_session_in_progress = 0;
-        sli->session_display = -1;
+        sli->session_x11_display = -1;
     }
 
     return rv;

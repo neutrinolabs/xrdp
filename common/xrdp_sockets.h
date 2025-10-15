@@ -45,13 +45,13 @@
 #define SCP_LISTEN_PORT_BASE_STR   "sesman.socket"
 
 /* names of socket files within XRDP_SOCKET_PATH, qualified by
- * display number */
-#define XRDP_CHANSRV_BASE_STR      "xrdp_chansrv_socket_%d"
-#define CHANSRV_PORT_OUT_BASE_STR  "xrdp_chansrv_audio_out_socket_%d"
-#define CHANSRV_PORT_IN_BASE_STR   "xrdp_chansrv_audio_in_socket_%d"
-#define CHANSRV_API_BASE_STR       "xrdpapi_%d"
-#define XRDP_X11RDP_BASE_STR       "xrdp_display_%d"
-#define XRDP_DISCONNECT_BASE_STR   "xrdp_disconnect_display_%d"
+ * display name (with leading colon stripped) */
+#define XRDP_CHANSRV_BASE_STR      "xrdp_chansrv_socket_%s"
+#define CHANSRV_PORT_OUT_BASE_STR  "xrdp_chansrv_audio_out_socket_%s"
+#define CHANSRV_PORT_IN_BASE_STR   "xrdp_chansrv_audio_in_socket_%s"
+#define CHANSRV_API_BASE_STR       "xrdpapi_%s"
+#define XRDP_X11RDP_BASE_STR       "xrdp_display_%s"
+#define XRDP_DISCONNECT_BASE_STR   "xrdp_disconnect_display_%s"
 
 /* fullpath declarations */
 #define XRDP_CHANSRV_STR      XRDP_SOCKET_PATH "/" XRDP_CHANSRV_BASE_STR
@@ -66,5 +66,12 @@
 
 /*  fullpath to an X11 display socket */
 #define X11_UNIX_SOCKET_STR X11_UNIX_SOCKET_DIRECTORY "/X%d"
+
+/* Use this to strip a colon from an X11 display name.
+ *
+ * This is for compatibility with previous versions of xrdp, which
+ * used X11 display numbers only. Using this macro results in the same
+ * behaviour for X11 sessions, but no change for Wayland sessions */
+#define STRIP_COLON(dname) (((dname)[0] == ':') ? (dname) + 1 : (dname))
 
 #endif

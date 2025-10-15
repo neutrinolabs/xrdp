@@ -180,6 +180,19 @@ param=-localhost
 param=-dpi
 param=96
 
+[Labwc]
+#LabwcExe=labwc
+#WayvncExe=wayvnc
+; Enable debug logs
+;
+; The labwc log cannot be qualified with a WAYLAND_DISPLAY. If a user
+; has two or more labwc sessions running at once, the labwc logs for
+; the sessions will collide.
+#EnableLabwcLog=0
+#EnableWayvncLog=0
+; Log file path (the default is in $XDG_DATA_HOME/xrdp)
+#LogFilePath=/run/user/%u/xrdp
+
 [Chansrv]
 ; drive redirection
 ; See sesman.ini(5) for the format of this parameter
