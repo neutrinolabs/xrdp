@@ -53,6 +53,7 @@ AM_CONDITIONAL(MACOS, [test "x$macos" = xyes])
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([long])
 AC_CHECK_SIZEOF([void *])
+AC_CHECK_SIZEOF([fsblkcnt_t],,[#include <sys/statvfs.h>])
 
 # runstatedir not available for autoconf <= 2.69
 if test "x$runstatedir" = "x" ; then

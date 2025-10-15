@@ -44,6 +44,7 @@
 #define DEFAULT_FUSE_DIRECT_IO              0
 #define DEFAULT_FILE_UMASK                  077
 #define DEFAULT_USE_NAUTILUS3_FLIST_FORMAT  0
+#define DEFAULT_FUSE_ROOT_REPORT_MAX_FREE   0
 #define DEFAULT_NUM_SILENT_FRAMES_AAC       4
 #define DEFAULT_NUM_SILENT_FRAMES_MP3       2
 #define DEFAULT_MSEC_DO_NOT_SEND            1000
@@ -252,6 +253,10 @@ read_config_chansrv(log_func_t logmsg,
         {
             cfg->use_nautilus3_flist_format = g_text2bool(value);
         }
+        else if (g_strcasecmp(name, "FuseRootReportMaxFree") == 0)
+        {
+            cfg->fuse_root_report_max_free = g_text2bool(value);
+        }
         else if (g_strcasecmp(name, "SoundNumSilentFramesAAC") == 0)
         {
             cfg->num_silent_frames_aac = strtoul(value, NULL, 0);
@@ -339,6 +344,7 @@ new_config(void)
         cfg->fuse_direct_io = DEFAULT_FUSE_DIRECT_IO;
         cfg->file_umask = DEFAULT_FILE_UMASK;
         cfg->use_nautilus3_flist_format = DEFAULT_USE_NAUTILUS3_FLIST_FORMAT;
+        cfg->fuse_root_report_max_free = DEFAULT_FUSE_ROOT_REPORT_MAX_FREE;
         cfg->num_silent_frames_aac = DEFAULT_NUM_SILENT_FRAMES_AAC;
         cfg->num_silent_frames_mp3 = DEFAULT_NUM_SILENT_FRAMES_MP3;
         cfg->msec_do_not_send = DEFAULT_MSEC_DO_NOT_SEND;
@@ -446,6 +452,8 @@ config_dump(struct config_chansrv *config)
     g_writeln("    FileMask:                  0%o", config->file_umask);
     g_writeln("    Nautilus 3 Flist Format:   %s",
               g_bool2text(config->use_nautilus3_flist_format));
+    g_writeln("    FuseRootReportMaxFree:     %s",
+              g_bool2text(config->fuse_root_report_max_free));
     g_writeln("    LogFilePath            :   %s",
               (config->log_file_path[0]) ? config->log_file_path : "<default>");
 }

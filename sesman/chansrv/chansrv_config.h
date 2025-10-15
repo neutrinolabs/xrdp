@@ -47,6 +47,9 @@ struct config_chansrv
     /** Whether to use nautilus3-compatible file lists for the clipboard */
     int use_nautilus3_flist_format;
 
+    /** Whether to report max free space for the FUSE mountpoint */
+    int fuse_root_report_max_free;
+
     /** Number of silent frames to send before SNDC_CLOSE is sent, setting from sesman.ini */
     unsigned int num_silent_frames_aac;
     unsigned int num_silent_frames_mp3;
