@@ -249,6 +249,8 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
         return NULL;
     }
 
+    free(connect_data);
+
     return wts;
 }
 
