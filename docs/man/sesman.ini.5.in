@@ -330,6 +330,13 @@ if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 If set to \fB0\fR, \fBfalse\fR or \fBno\fR, prevent usage of alternate shells by users.
 
 .TP
+\fBPassShellAsEnv\fR=\fI<name-of-environment-variable>\fR
+If this is set, alternate shells are not actioned directly, but
+passed in to the default window manager in the specified environment
+variable. This allows the system manager more control over exactly
+what alternate shells are permitted.
+
+.TP
 \fBXorgNoNewPrivileges\fR=\fI[true|false]\fR
 Only applicable on Linux. If set to \fB0\fR, \fBfalse\fR or \fBno\fR, do
 not use the kernel's \fIno_new_privs\fR restriction when invoking the Xorg
