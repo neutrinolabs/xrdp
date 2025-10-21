@@ -1459,22 +1459,33 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
 static int
 xrdp_mm_update_module_frame_ack(struct xrdp_mm *self)
 {
-    int fif;
     struct xrdp_encoder *encoder;
 
     encoder = self->encoder;
-    fif = encoder->frames_in_flight;
-    if (encoder->frame_id_client + fif > encoder->frame_id_server)
+    if (encoder == NULL)
     {
-        if (encoder->frame_id_server > encoder->frame_id_server_sent)
+        // Can't pass the ack to the encoder. Tell the module all
+        // frames are ACK'd
+        if (self->mod != NULL)
         {
-            LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_update_module_ack: "
-                      "frame_id_server %d", encoder->frame_id_server);
-            encoder->frame_id_server_sent = encoder->frame_id_server;
-            if (self->mod != NULL)
+            self->mod->mod_frame_ack(self->mod, 0, INT_MAX);
+        }
+    }
+    else
+    {
+        int fif = encoder->frames_in_flight;
+        if (encoder->frame_id_client + fif > encoder->frame_id_server)
+        {
+            if (encoder->frame_id_server > encoder->frame_id_server_sent)
             {
-                self->mod->mod_frame_ack(self->mod, 0,
-                                         encoder->frame_id_server);
+                LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_update_module_ack: "
+                          "frame_id_server %d", encoder->frame_id_server);
+                encoder->frame_id_server_sent = encoder->frame_id_server;
+                if (self->mod != NULL)
+                {
+                    self->mod->mod_frame_ack(self->mod, 0,
+                                             encoder->frame_id_server);
+                }
             }
         }
     }
@@ -3887,22 +3898,30 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
     {
         return 1;
     }
-    encoder = self->encoder;
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_frame_ack: "
-              "incoming %d, client %d, server %d", frame_id,
-              encoder->frame_id_client, encoder->frame_id_server);
-    if ((frame_id < 0) || (frame_id > encoder->frame_id_server))
+    if ((encoder = self->encoder) == NULL)
     {
-        /* if frame_id is negative or bigger then what server last sent
-           just ack all sent frames */
-        /* some clients can send big number just to clear all
-           pending frames */
-        encoder->frame_id_client = encoder->frame_id_server;
+        /* No encoder - Possibly a late frame ack with a resize in progress */
+        LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_frame_ack: "
+                  "Frame ack incoming %d with no encoder!", frame_id);
     }
     else
     {
-        /* frame acks can come out of order so ignore older one */
-        encoder->frame_id_client = MAX(frame_id, encoder->frame_id_client);
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_mm_frame_ack: "
+                  "incoming %d, client %d, server %d", frame_id,
+                  encoder->frame_id_client, encoder->frame_id_server);
+        if ((frame_id < 0) || (frame_id > encoder->frame_id_server))
+        {
+            /* if frame_id is negative or bigger then what server last sent
+               just ack all sent frames */
+            /* some clients can send big number just to clear all
+               pending frames */
+            encoder->frame_id_client = encoder->frame_id_server;
+        }
+        else
+        {
+            /* frame acks can come out of order so ignore older one */
+            encoder->frame_id_client = MAX(frame_id, encoder->frame_id_client);
+        }
     }
     xrdp_mm_update_module_frame_ack(self);
     return 0;
