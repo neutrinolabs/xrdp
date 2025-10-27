@@ -45,6 +45,8 @@ RestrictInboundClipboard=none
 ; passed in to the default window manager in the specified environment
 ; variable. This allows the system manager more control over exactly
 ; what alternate shells are permitted.
+; This will override any setting of the same environment variable
+; in the [SessionVariables] section.
 #PassShellAsEnv=XRDP_ALTERNATE_SHELL
 ; On Linux systems, the Xorg X11 server is normally invoked using
 ; no_new_privs to avoid problems if the executable is suid. This may,

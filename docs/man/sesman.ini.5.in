@@ -336,6 +336,9 @@ passed in to the default window manager in the specified environment
 variable. This allows the system manager more control over exactly
 what alternate shells are permitted.
 
+This will override any setting of the same environment variable
+in the \fB[SessionVariables]\fR section.
+
 .TP
 \fBXorgNoNewPrivileges\fR=\fI[true|false]\fR
 Only applicable on Linux. If set to \fB0\fR, \fBfalse\fR or \fBno\fR, do
