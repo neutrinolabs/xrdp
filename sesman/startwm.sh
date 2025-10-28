@@ -93,6 +93,9 @@ wm_start()
     # <your preferred desktop> shall be one of "ls -1 /usr/share/xsessions/|cut -d. -f1"
     # e.g.  [ -n "$XRDP_SESSION" ] && export DESKTOP_SESSION=ubuntu
 
+    # Alternatively, set "PassShellAsEnv=DESKTOP_SESSION" in sesman.ini, which
+    # lets the user specify the required session directly.
+
     # STARTUP is the default startup command.
     # if $1 is empty and STARTUP was not set
     # /etc/X11/Xsession.d/50x11-common_determine-startup will fallback to

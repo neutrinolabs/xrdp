@@ -70,6 +70,7 @@
 #define SESMAN_CFG_SEC_RESTRICT_OUTBOUND_CLIPBOARD "RestrictOutboundClipboard"
 #define SESMAN_CFG_SEC_RESTRICT_INBOUND_CLIPBOARD  "RestrictInboundClipboard"
 #define SESMAN_CFG_SEC_ALLOW_ALTERNATE_SHELL       "AllowAlternateShell"
+#define SESMAN_CFG_SEC_PASS_SHELL_AS_ENV           "PassShellAsEnv"
 #define SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES      "XorgNoNewPrivileges"
 #define SESMAN_CFG_SEC_SESSION_SOCKDIR_GROUP       "SessionSockdirGroup"
 
@@ -310,6 +311,7 @@ config_read_security(int file, struct config_security *sc,
     sc->restrict_outbound_clipboard = 0;
     sc->restrict_inbound_clipboard = 0;
     sc->allow_alternate_shell = 1;
+    sc->pass_shell_as_env = g_strdup("");
     sc->xorg_no_new_privileges = 1;
     sc->ts_users = g_strdup("");
     sc->ts_admins = g_strdup("");
@@ -376,6 +378,11 @@ config_read_security(int file, struct config_security *sc,
         {
             sc->allow_alternate_shell =
                 g_text2bool(value);
+        }
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_PASS_SHELL_AS_ENV))
+        {
+            g_free(sc->pass_shell_as_env);
+            sc->pass_shell_as_env = g_strdup(value);
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_XORG_NO_NEW_PRIVILEGES))
         {
@@ -674,6 +681,7 @@ config_dump(struct config_sesman *config)
     g_writeln("    MaxLoginRetry:             %d", sc->login_retry);
     g_writeln("    AlwaysGroupCheck:          %d", sc->ts_always_group_check);
     g_writeln("    AllowAlternateShell:       %d", sc->allow_alternate_shell);
+    g_writeln("    PassShellAsEnv:            %s", sc->pass_shell_as_env);
 #ifdef HAVE_SYS_PRCTL_H
     g_writeln("    XorgNoNewPrivileges:       %d", sc->xorg_no_new_privileges);
 #endif
@@ -742,6 +750,7 @@ config_free(struct config_sesman *cs)
         list_delete(cs->xorg_params);
         list_delete(cs->env_names);
         list_delete(cs->env_values);
+        g_free(cs->sec.pass_shell_as_env);
         g_free(cs->sec.ts_users);
         g_free(cs->sec.ts_admins);
         g_free(cs->sec.session_sockdir_group);

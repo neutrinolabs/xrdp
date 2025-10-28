@@ -104,6 +104,13 @@ struct config_security
      */
     int allow_alternate_shell;
 
+    /**
+     * @var pass_shell_as_env
+     * @brief Passes alternate shells in the environment
+     * @details name of environment variable to receive alternate shell
+     */
+    char *pass_shell_as_env;
+
     /*
      * @var xorg_no_new_privileges
      * @brief if the Xorg X11 server should be started with no_new_privs (Linux only)
