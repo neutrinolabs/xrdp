@@ -522,6 +522,7 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         enc_done->y = y;
         enc_done->cx = cx;
         enc_done->cy = cy;
+        enc_done->frame_id = enc->u.sc.frame_id;
         /* done with msg */
         /* inform main thread done */
         tc_mutex_lock(mutex);
