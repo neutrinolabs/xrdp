@@ -552,6 +552,7 @@ main(int argc, char **argv)
     enum logReturns error;
     struct xrdp_startup_params startup_params = {0};
     int pid;
+    int daemon_pid = 0;
     int daemon;
     char text[256];
     const char *pid_file = XRDP_PID_PATH "/xrdp.pid";
@@ -723,6 +724,7 @@ main(int argc, char **argv)
             g_exit(0);
         }
 
+        daemon_pid = g_getpid();
         g_sleep(1000);
         /* write our pid to file */
         g_sprintf(text, "%d", g_getpid());
@@ -811,7 +813,7 @@ main(int argc, char **argv)
     g_delete_wait_obj(g_get_sync_event());
     g_set_sync_event(0);
 
-    if (daemon)
+    if (daemon && (daemon_pid == g_getpid()))
     {
         /* Try to delete the PID file, although if we've dropped
          * privileges this won't be successful */
