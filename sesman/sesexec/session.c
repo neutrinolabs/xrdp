@@ -261,7 +261,7 @@ start_window_manager(struct login_info *login_info,
             "Setting variable '%s' to the specified shell of '%s'",
             g_cfg->sec.pass_shell_as_env,
             s->shell);
-        g_setenv(g_cfg->sec.pass_shell_as_env, s->shell, 1);
+        g_setenv_log(g_cfg->sec.pass_shell_as_env, s->shell, 1);
     }
     else if (s->shell[0] != '\0')
     {
