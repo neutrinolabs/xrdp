@@ -24,6 +24,19 @@
 #include "parse.h"
 #include "log.h"
 
+extern struct config_chansrv *g_cfg;
+
+extern int g_display_num;
+extern int g_cliprdr_chan_id;
+extern int g_rdpsnd_chan_id;
+extern int g_rdpdr_chan_id;
+extern int g_rail_chan_id;
+
+extern char *g_exec_name;
+extern tbus g_exec_event;
+extern tbus g_exec_mutex;
+extern tbus g_exec_sem;
+
 struct chan_item
 {
     int id;

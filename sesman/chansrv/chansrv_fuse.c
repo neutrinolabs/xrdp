@@ -16,15 +16,6 @@
  * limitations under the License.
  */
 
-/* FUSE mount point */
-char g_fuse_root_path[256] = "";
-#ifdef XRDP_FUSE
-static const char *g_fuse_root_path_basename; /* See xfuse_path_in_xfuse_fs() */
-static int g_fuse_root_parent_dev;   /* Ditto */
-static int g_fuse_root_parent_ino;   /* Ditto */
-#endif
-char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
-
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
@@ -44,6 +35,15 @@ char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 #include "arch.h"
 #include "chansrv_fuse.h"
 #include "chansrv_xfs.h"
+
+/* FUSE mount point */
+#ifdef XRDP_FUSE
+static char g_fuse_root_path[256] = "";
+static const char *g_fuse_root_path_basename; /* See xfuse_path_in_xfuse_fs() */
+static int g_fuse_root_parent_dev;   /* Ditto */
+static int g_fuse_root_parent_ino;   /* Ditto */
+#endif
+char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
 /* dummy calls when XRDP_FUSE is not defined */
 int xfuse_init(void)
@@ -189,9 +189,6 @@ int xfuse_path_in_xfuse_fs(const char *path)
 
 #define XFUSE_ATTR_TIMEOUT      5.0
 #define XFUSE_ENTRY_TIMEOUT     5.0
-
-
-extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 
 /* Local utility functions */

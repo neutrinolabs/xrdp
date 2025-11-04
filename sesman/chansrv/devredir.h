@@ -24,6 +24,8 @@
 #include "irp.h"
 #include "ms-rdpefs.h"
 
+extern tui32 g_completion_id;
+
 int devredir_init(void);
 int devredir_deinit(void);
 

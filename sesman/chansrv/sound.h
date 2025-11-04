@@ -25,6 +25,9 @@
 #include "chansrv.h"
 #include "trans.h"
 
+extern struct fifo *g_in_fifo;
+extern int g_bytes_in_fifo;
+
 #define SNDC_CLOSE          0x01
 #define SNDC_WAVE           0x02
 #define SNDC_SETVOLUME      0x03

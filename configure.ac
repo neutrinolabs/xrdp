@@ -235,6 +235,7 @@ AX_APPEND_COMPILE_FLAGS([-Wextra])
 AX_APPEND_COMPILE_FLAGS([-Wno-missing-field-initializers])
 AX_APPEND_COMPILE_FLAGS([-Wno-unused-parameter])
 AX_APPEND_COMPILE_FLAGS([-Wno-sign-compare])
+AX_APPEND_COMPILE_FLAGS([-Wmissing-variable-declarations], ,[-Werror])
 
 AM_COND_IF([LINUX],
   [AX_APPEND_COMPILE_FLAGS([-Werror])]) # bsd has warnings that have not been fixed yet

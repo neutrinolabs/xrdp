@@ -23,6 +23,11 @@
 #include "arch.h"
 #include "parse.h"
 
+extern int g_clip_up;
+
+extern struct clip_s2c g_clip_s2c;
+extern struct clip_c2s g_clip_c2s;
+
 int clipboard_init(void);
 int clipboard_deinit(void);
 int clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length, int total_length);

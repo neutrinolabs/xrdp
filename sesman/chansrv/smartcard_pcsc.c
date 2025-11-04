@@ -56,8 +56,6 @@
 #if PCSC_STANDIN
 
 
-extern int g_display_num; /* in chansrv.c */
-
 static int g_autoinc = 0; /* general purpose autoinc */
 
 struct pcsc_card /* item for list of open cards in one context */

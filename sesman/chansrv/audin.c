@@ -33,6 +33,7 @@
 #include "xrdp_constants.h"
 #include "fifo.h"
 #include "audin.h"
+#include "sound.h"
 
 #define MSG_SNDIN_VERSION       1
 #define MSG_SNDIN_FORMATS       2
@@ -47,10 +48,7 @@
 #define AUDIN_NAME "AUDIO_INPUT"
 #define AUDIN_FLAGS  1 /* WTS_CHANNEL_OPTION_DYNAMIC */
 
-extern struct fifo *g_in_fifo; /* in sound.c */
-extern int g_bytes_in_fifo; /* in sound.c */
-
-struct xr_wave_format_ex
+ struct xr_wave_format_ex
 {
     int wFormatTag;
     int nChannels;
