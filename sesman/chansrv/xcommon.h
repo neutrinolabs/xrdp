@@ -28,6 +28,10 @@
 
 typedef void (*x_server_fatal_cb_type)(void);
 
+extern int g_x_socket;
+extern tbus g_x_wait_obj;
+extern int g_screen_num;
+
 int
 xcommon_init(void);
 int

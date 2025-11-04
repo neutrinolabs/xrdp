@@ -59,7 +59,7 @@
 
 /* X11 */
 Display *g_display = NULL;
-static int g_x_socket = 0;
+int g_x_socket = 0;
 int g_screen_num = 0;
 static Screen *g_screen = NULL;
 Window g_root_window = None;

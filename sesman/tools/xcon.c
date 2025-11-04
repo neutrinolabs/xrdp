@@ -29,7 +29,7 @@
 #include <X11/Xlib.h>
 #include <sys/select.h>
 
-Display *g_display = 0;
+static Display *g_display = 0;
 int g_x_socket = 0;
 
 int main(int argc, char **argv)

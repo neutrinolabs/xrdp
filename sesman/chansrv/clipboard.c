@@ -185,11 +185,7 @@ x-special/gnome-copied-files
 #define BMPINFOHEADER_LEN       40
 
 extern Display *g_display;      /* in xcommon.c */
-extern int g_x_socket;          /* in xcommon.c */
-extern tbus g_x_wait_obj;       /* in xcommon.c */
 extern Screen *g_screen;        /* in xcommon.c */
-extern int g_screen_num;        /* in xcommon.c */
-
 int g_clip_up = 0;
 
 static Atom g_clipboard_atom = 0;      /* CLIPBOARD */
