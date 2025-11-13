@@ -19,6 +19,13 @@
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
+#include "arch.h"
+#include "chansrv_fuse.h"
+#include "chansrv_xfs.h"
+
+
+// Globals needed regardless of the value of XRDP_FUSE
+char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
 #ifndef XRDP_FUSE
 
@@ -31,19 +38,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "arch.h"
-#include "chansrv_fuse.h"
-#include "chansrv_xfs.h"
-
-/* FUSE mount point */
-#ifdef XRDP_FUSE
-static char g_fuse_root_path[256] = "";
-static const char *g_fuse_root_path_basename; /* See xfuse_path_in_xfuse_fs() */
-static int g_fuse_root_parent_dev;   /* Ditto */
-static int g_fuse_root_parent_ino;   /* Ditto */
-#endif
-char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
 /* dummy calls when XRDP_FUSE is not defined */
 int xfuse_init(void)
@@ -162,17 +156,20 @@ int xfuse_path_in_xfuse_fs(const char *path)
 #include <pthread.h>
 #include <sched.h>
 
-#include "arch.h"
 #include "os_calls.h"
 #include "string_calls.h"
 #include "clipboard_file.h"
-#include "chansrv_fuse.h"
-#include "chansrv_xfs.h"
 #include "chansrv.h"
 #include "chansrv_config.h"
 #include "devredir.h"
 #include "list.h"
 #include "file.h"
+
+/* FUSE mount point */
+static char g_fuse_root_path[256] = "";
+static const char *g_fuse_root_path_basename; /* See xfuse_path_in_xfuse_fs() */
+static int g_fuse_root_parent_dev;   /* Ditto */
+static int g_fuse_root_parent_ino;   /* Ditto */
 
 /* Check for FUSE features we may wish to use
  *
