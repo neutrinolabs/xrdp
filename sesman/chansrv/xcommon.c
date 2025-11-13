@@ -29,18 +29,22 @@
 #include "clipboard.h"
 #include "rail.h"
 #include "xcommon.h"
+#include "xcommon_x11.h"
 
-static Display *g_display = 0;
+/* globals declared in xcommon_x11.h */
+Display *g_display = 0;
+Screen *g_screen = 0;
+int g_screen_num = 0;
+Atom g_wm_delete_window_atom = 0;
+Atom g_wm_protocols_atom = 0;
+Atom g_utf8_string = 0;
+Atom g_net_wm_name = 0;
+Atom g_wm_state = 0;
+
+/* globals declared in xcommon.h */
 int g_x_socket = 0;
 tbus g_x_wait_obj = 0;
-static Screen *g_screen = 0;
-static int g_screen_num = 0;
-static Window g_root_window = 0;
-static Atom g_wm_delete_window_atom = 0;
-static Atom g_wm_protocols_atom = 0;
-static Atom g_utf8_string = 0;
-static Atom g_net_wm_name = 0;
-static Atom g_wm_state = 0;
+Window g_root_window = 0;
 
 static x_server_fatal_cb_type x_server_fatal_handler = 0;
 

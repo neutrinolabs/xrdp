@@ -16,34 +16,25 @@
  * limitations under the License.
  */
 
-#if !defined(XCOMMON_H)
-#define XCOMMON_H
-
-#include "arch.h"
-#include "parse.h"
-
-/* 32 implies long */
-#define FORMAT_TO_BYTES(_format) \
-    (_format) == 32 ? sizeof(long) : (_format) / 8
-
-typedef void (*x_server_fatal_cb_type)(void);
-
-/*
- * Global variables defined in xcommon.c
+/**
+ * @file sesman/chansrv/xcommon_vars.c
  *
- * For globals with X11-specific types, see xcommon_x11.h
+ * xcommon global variables
+ *
+ * Declares global variables defined in xcommon.h with X11-specific types
  */
-extern int g_x_socket;
-extern tbus g_x_wait_obj;
-extern int g_screen_num;
+#if !defined(XCOMMON_X11_H)
+#define XCOMMON_X11_H
 
-int
-xcommon_init(void);
-int
-xcommon_get_wait_objs(tbus *objs, int *count, int *timeout);
-int
-xcommon_check_wait_objs(void);
-void
-xcommon_set_x_server_fatal_handler(x_server_fatal_cb_type handler);
+#include <X11/Xlib.h>
+
+extern Display *g_display;
+extern Screen *g_screen;
+extern Window g_root_window;
+extern Atom g_wm_delete_window_atom;
+extern Atom g_wm_protocols_atom;
+extern Atom g_utf8_string;
+extern Atom g_net_wm_name;
+extern Atom g_wm_state;
 
 #endif
