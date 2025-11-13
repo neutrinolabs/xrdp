@@ -39,8 +39,8 @@
 #include "os_calls.h"
 #include "string_calls.h"
 
-int  g_loc_io_count = 0;  // bytes read from local port
-int  g_rem_io_count = 0;  // bytes read from remote port
+static int g_loc_io_count = 0;  // bytes read from local port
+static int g_rem_io_count = 0;  // bytes read from remote port
 
 static int g_terminated = 0;
 

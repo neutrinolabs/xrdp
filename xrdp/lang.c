@@ -46,7 +46,7 @@ struct km_general
     int caps_lock_supported;
 };
 
-const struct km_general km_general_default =
+static const struct km_general km_general_default =
 {
     .version = 0,
     .caps_lock_supported = 1

@@ -1,5 +1,5 @@
 #include <stdlib.h>
-const char copying_third_party[] = "\
+static const char copying_third_party[] = "\
 -- tomlc99: TOML C library\n\
 \n\
 MIT License\n\
@@ -27,4 +27,4 @@ SOFTWARE.\n\
 \n\
 --------------------------------------------------------------------------------\n\
 ";
-const size_t copying_third_party_len = sizeof(copying_third_party) - 1;
+static const size_t copying_third_party_len = sizeof(copying_third_party) - 1;

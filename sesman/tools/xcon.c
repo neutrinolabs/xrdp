@@ -30,7 +30,7 @@
 #include <sys/select.h>
 
 static Display *g_display = 0;
-int g_x_socket = 0;
+static int g_x_socket = 0;
 
 int main(int argc, char **argv)
 {
