@@ -56,6 +56,10 @@ setxkbmap -model pc104 -layout ru
 setxkbmap -model pc104 -layout se
 ./xrdp-genkeymap ../instfiles/km-0000041d.ini
 
+# Slovenian 'si' 0x00000424
+setxkbmap -model pc104 -layout si
+./xrdp-genkeymap ../instfiles/km-00000424.ini
+
 # Latvian 'lv' 0x00000426
 setxkbmap -model pc104 -layout lv -variant ergonomic
 ./xrdp-genkeymap ../instfiles/km-00000426.ini
