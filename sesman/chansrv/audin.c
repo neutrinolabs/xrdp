@@ -48,7 +48,7 @@
 #define AUDIN_NAME "AUDIO_INPUT"
 #define AUDIN_FLAGS  1 /* WTS_CHANNEL_OPTION_DYNAMIC */
 
- struct xr_wave_format_ex
+struct xr_wave_format_ex
 {
     int wFormatTag;
     int nChannels;
