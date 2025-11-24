@@ -81,6 +81,14 @@ xrdp_mm_create(struct xrdp_wm *owner)
 
     self->uid = -1; /* Never good to default UIDs to 0 */
 
+    // Resize queue support. The resize queue is available early on,
+    // but isn't processed until start_processing_resize_queue() is
+    // called.
+    self->resize_queue = list_create();
+    self->resize_queue->auto_free = 1;
+    self->resize_data = NULL;
+    self->resize_ready = NULL_WAIT_OBJ;
+
     init_libh264_loaded(self);
 
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_create: bpp %d mcs_connection_type %d "
@@ -2155,12 +2163,6 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
             "libxrdp_drdynvc_open failed %d", error);
         return error;
     }
-
-    // Initialize xrdp_mm specific variables.
-    self->resize_queue = list_create();
-    self->resize_queue->auto_free = 1;
-    self->resize_data = NULL;
-    self->resize_ready = NULL_WAIT_OBJ;
 
     return error;
 }
