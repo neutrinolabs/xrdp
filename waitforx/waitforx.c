@@ -2,7 +2,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/signal.h>
 #include <unistd.h>
 
 #include "config_ac.h"
