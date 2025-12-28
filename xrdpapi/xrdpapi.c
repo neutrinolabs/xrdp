@@ -55,6 +55,19 @@ mysend(int sck, const void *adata, int bytes);
 static int
 myrecv(int sck, void *adata, int bytes);
 
+static void
+free_wts(struct wts_obj *wts)
+{
+    if (wts != NULL)
+    {
+        if (wts->fd >= 0)
+        {
+            close(wts->fd);
+        }
+        free(wts);
+    }
+}
+
 /*
  * Opens a handle to the server end of a specified virtual channel - this
  * call is deprecated - use WTSVirtualChannelOpenEx() instead
@@ -116,7 +129,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if (wts->display_num < 0)
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: fatal error; invalid DISPLAY");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -124,7 +137,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: socket failed");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -155,7 +168,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
         else
         {
             LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: connect failed");
-            free(wts);
+            free_wts(wts);
             return NULL;
         }
     }
@@ -164,7 +177,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if (!can_send(wts->fd, 500, 1))
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: can_send failed");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -179,7 +192,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if (connect_data == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: calloc failed");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -208,7 +221,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if (mysend(wts->fd, connect_data, bytes) != bytes)
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: mysend failed");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
     LOG_DEVEL(LOG_LEVEL_DEBUG, "WTSVirtualChannelOpenEx: sent ok");
@@ -216,7 +229,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if (!can_recv(wts->fd, 500, 1))
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: can_recv failed");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -224,7 +237,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     if (myrecv(wts->fd, connect_data, 4) != 4)
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: myrecv failed");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -232,7 +245,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
             (connect_data[2] != 0) || (connect_data[3] != 0))
     {
         LOG(LOG_LEVEL_ERROR, "WTSVirtualChannelOpenEx: connect_data not ok");
-        free(wts);
+        free_wts(wts);
         return NULL;
     }
 
@@ -406,21 +419,14 @@ WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
 int
 WTSVirtualChannelClose(void *hChannelHandle)
 {
-    struct wts_obj *wts;
-
-    wts = (struct wts_obj *)hChannelHandle;
+    struct wts_obj *wts = (struct wts_obj *)hChannelHandle;
 
     if (wts == NULL)
     {
         return 0;
     }
 
-    if (wts->fd != -1)
-    {
-        close(wts->fd);
-    }
-
-    free(wts);
+    free_wts(wts);
     return 1;
 }
 
