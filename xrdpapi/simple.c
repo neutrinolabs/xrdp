@@ -158,7 +158,7 @@ run_echo_test(void)
             /* validate the echo */
             for (i = 0; i < bytes_read; i++, rd_ptr++)
             {
-                if (*rd_ptr != (unsigned char) in_buf[i])
+                if (*rd_ptr != in_buf[i])
                 {
                     printf("### data mismatch: expected 0x%x got 0x%x\n",
                            (unsigned char) *rd_ptr, (unsigned char) in_buf[i]);
