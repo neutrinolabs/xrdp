@@ -195,7 +195,7 @@ VirtualChannelOpen(unsigned int SessionId, const char *pVirtualName,
     cd.connect_data.version = XRDPAPI_CONNECT_PDU_VERSION;
     cd.connect_data.private_chan = private_chan;
     cd.connect_data.flags = flags;
-    strlcpy(cd.connect_data.name, pVirtualName, sizeof(cd.connect_data.name));
+    snprintf(cd.connect_data.name, sizeof(cd.connect_data.name), "%s", pVirtualName);
 
     if (mysend(wts->fd, &cd, sizeof(cd)) != sizeof(cd))
     {
