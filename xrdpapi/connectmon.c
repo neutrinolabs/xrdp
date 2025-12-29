@@ -112,11 +112,22 @@ main(int argc, char **argv)
         log_start_from_param(lc);
     }
 
-    if (argc > 1 && atoi(argv[1]) > 0)
+    if (argc > 1 && atoi(argv[1]) >= 0)
     {
         changes = atoi(argv[1]);
+        if (changes > 1000)
+        {
+            changes = 1000; // Use 0 for more than this
+        }
     }
-    printf("Connection monitor : exiting after %d state changes\n", changes);
+    if (changes > 0)
+    {
+        printf("Connection monitor : exiting after %d state changes\n", changes);
+    }
+    else
+    {
+        printf("Connection monitor\n");
+    }
 
     print_current_connection_state();
 
@@ -128,7 +139,7 @@ main(int argc, char **argv)
     else
     {
         int count = 0;
-        while (count < changes && result == 0)
+        while (result == 0)
         {
             struct pollfd pollarg =
             {
@@ -138,6 +149,11 @@ main(int argc, char **argv)
             };
             int pollstat;
             LRESULT cbresult;
+
+            if (changes > 0 && count >= changes)
+            {
+                break;
+            }
 
             if ((pollstat = poll(&pollarg, 1, -1)) < 0)
             {
