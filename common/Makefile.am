@@ -41,6 +41,7 @@ libcommon_la_SOURCES = \
   arch.h \
   base64.h \
   base64.c \
+  channel_defs.h \
   defines.h \
   fifo.c \
   fifo.h \
