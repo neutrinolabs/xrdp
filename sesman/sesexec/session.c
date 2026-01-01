@@ -251,38 +251,40 @@ start_window_manager(struct login_info *login_info,
         }
     }
 
-    if (g_cfg->sec.allow_alternate_shell &&
-            g_cfg->sec.pass_shell_as_env != NULL &&
-            g_cfg->sec.pass_shell_as_env[0] != '0')
+    if (s->shell[0] != '\0')
     {
-        // Pass the shell in to the standard startwm scripts
-        // in an environment variable
-        LOG(LOG_LEVEL_INFO,
-            "Setting variable '%s' to the specified shell of '%s'",
-            g_cfg->sec.pass_shell_as_env,
-            s->shell);
-        g_setenv_log(g_cfg->sec.pass_shell_as_env, s->shell, 1);
-    }
-    else if (s->shell[0] != '\0')
-    {
-        // Try to execute the shell directly (if permitted)
         if (g_cfg->sec.allow_alternate_shell)
         {
-            if (g_strchr(s->shell, ' ') != 0 || g_strchr(s->shell, '\t') != 0)
+            if (g_cfg->sec.pass_shell_as_env != NULL &&
+                    g_cfg->sec.pass_shell_as_env[0] != '\0')
             {
+                // Pass the shell in to the standard startwm scripts
+                // in an environment variable
                 LOG(LOG_LEVEL_INFO,
-                    "Using user requested window manager on "
-                    "display %u with embedded arguments using a shell: %s",
-                    s->display, s->shell);
-                const char *argv[] = {"sh", "-c", s->shell, NULL};
-                g_execvp("/bin/sh", (char **)argv);
+                    "Setting variable '%s' to the specified shell of '%s'",
+                    g_cfg->sec.pass_shell_as_env,
+                    s->shell);
+                g_setenv_log(g_cfg->sec.pass_shell_as_env, s->shell, 1);
             }
             else
             {
-                LOG(LOG_LEVEL_INFO,
-                    "Using user requested window manager on "
-                    "display %d: %s", s->display, s->shell);
-                g_execlp3(s->shell, s->shell, 0);
+                // Try to execute the shell directly (if permitted)
+                if (g_strchr(s->shell, ' ') != 0 || g_strchr(s->shell, '\t') != 0)
+                {
+                    LOG(LOG_LEVEL_INFO,
+                        "Using user requested window manager on "
+                        "display %u with embedded arguments using a shell: %s",
+                        s->display, s->shell);
+                    const char *argv[] = {"sh", "-c", s->shell, NULL};
+                    g_execvp("/bin/sh", (char **)argv);
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_INFO,
+                        "Using user requested window manager on "
+                        "display %d: %s", s->display, s->shell);
+                    g_execlp3(s->shell, s->shell, 0);
+                }
             }
         }
         else
