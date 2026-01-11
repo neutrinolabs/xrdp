@@ -10,7 +10,7 @@ set -e
 
 VERSION="${1:-0.10.0}"
 ARCH=$(uname -m)  # arm64 or x86_64
-PKG_NAME="xrdp-${VERSION}-macos-${ARCH}"
+PKG_NAME="xrdp-${VERSION}-ard-macos-${ARCH}"
 BUILD_DIR="/tmp/xrdp-pkg-build"
 INSTALL_PREFIX="/usr/local"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -49,11 +49,167 @@ echo "Installing to staging directory..."
 cd "$XRDP_SRC"
 make DESTDIR="$BUILD_DIR/root" install
 
+# Fix library paths - bundle OpenSSL and fix references
+echo "Fixing library paths..."
+
+# Define paths - detect OpenSSL location from built binary
+LIB_DEST="$BUILD_DIR/root$INSTALL_PREFIX/lib/xrdp"
+
+# Find where OpenSSL was linked from by checking the xrdp binary
+OPENSSL_SRC=""
+if [ -f "$BUILD_DIR/root$INSTALL_PREFIX/sbin/xrdp" ]; then
+    OPENSSL_PATH=$(otool -L "$BUILD_DIR/root$INSTALL_PREFIX/sbin/xrdp" 2>/dev/null | grep libssl | awk '{print $1}' | head -1)
+    if [ -n "$OPENSSL_PATH" ] && [ "$OPENSSL_PATH" != "/usr/lib/libssl"* ]; then
+        OPENSSL_SRC=$(dirname "$OPENSSL_PATH")
+    fi
+fi
+
+# Fallback to common locations if not detected
+if [ -z "$OPENSSL_SRC" ] || [ ! -f "$OPENSSL_SRC/libssl.3.dylib" ]; then
+    for dir in "$HOME/xrdp-deps/local/lib" "/opt/homebrew/opt/openssl@3/lib" "/usr/local/opt/openssl@3/lib"; do
+        if [ -f "$dir/libssl.3.dylib" ]; then
+            OPENSSL_SRC="$dir"
+            break
+        fi
+    done
+fi
+
+echo "  OpenSSL source: ${OPENSSL_SRC:-not found}"
+
+# Copy OpenSSL libraries to the package
+if [ -f "$OPENSSL_SRC/libssl.3.dylib" ]; then
+    cp "$OPENSSL_SRC/libssl.3.dylib" "$LIB_DEST/"
+    cp "$OPENSSL_SRC/libcrypto.3.dylib" "$LIB_DEST/"
+    chmod 755 "$LIB_DEST/libssl.3.dylib" "$LIB_DEST/libcrypto.3.dylib"
+
+    # Fix the id of the bundled libraries
+    install_name_tool -id "$INSTALL_PREFIX/lib/xrdp/libssl.3.dylib" "$LIB_DEST/libssl.3.dylib"
+    install_name_tool -id "$INSTALL_PREFIX/lib/xrdp/libcrypto.3.dylib" "$LIB_DEST/libcrypto.3.dylib"
+
+    # Fix libssl's reference to libcrypto
+    install_name_tool -change "$OPENSSL_SRC/libcrypto.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libcrypto.3.dylib" "$LIB_DEST/libssl.3.dylib"
+
+    echo "  Bundled OpenSSL libraries"
+else
+    echo "WARNING: OpenSSL libraries not found at $OPENSSL_SRC"
+    echo "         The package may not work on other systems!"
+fi
+
+# Fix all binaries and libraries that reference the hardcoded paths
+fix_library_paths() {
+    local file="$1"
+    if [ -f "$file" ] && file "$file" | grep -q "Mach-O"; then
+        # Check if it has the hardcoded path
+        if otool -L "$file" 2>/dev/null | grep -q "$OPENSSL_SRC"; then
+            install_name_tool -change "$OPENSSL_SRC/libssl.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libssl.3.dylib" "$file" 2>/dev/null || true
+            install_name_tool -change "$OPENSSL_SRC/libcrypto.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libcrypto.3.dylib" "$file" 2>/dev/null || true
+            echo "  Fixed: $(basename "$file")"
+        fi
+    fi
+}
+
+# Fix binaries
+for bin in "$BUILD_DIR/root$INSTALL_PREFIX/sbin"/*; do
+    fix_library_paths "$bin"
+done
+
+for bin in "$BUILD_DIR/root$INSTALL_PREFIX/bin"/*; do
+    fix_library_paths "$bin"
+done
+
+# Fix libraries
+for lib in "$BUILD_DIR/root$INSTALL_PREFIX/lib/xrdp"/*.dylib; do
+    fix_library_paths "$lib"
+done
+
+# Also fix any .so files (module plugins)
+for lib in "$BUILD_DIR/root$INSTALL_PREFIX/lib/xrdp"/*.so; do
+    fix_library_paths "$lib"
+done
+
+echo "  Library path fixup complete"
+
 # Copy additional files
 echo "Adding macOS-specific files..."
 
 # Create share directory for our files
 mkdir -p "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp"
+mkdir -p "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/licenses"
+
+# Copy license files
+echo "  Adding license files..."
+
+# Copy main xrdp license
+cp "$XRDP_SRC/COPYING" "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/licenses/XRDP-LICENSE.txt"
+
+# Copy third-party licenses from xrdp repo
+cp "$XRDP_SRC/third_party/COPYING-THIRD-PARTY" "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/licenses/TOMLC99-LICENSE.txt"
+
+# Add OpenSSL license (required when bundling OpenSSL libraries)
+cat > "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/licenses/OPENSSL-LICENSE.txt" << 'OPENSSL_EOF'
+OpenSSL 3.x - Apache License 2.0
+
+Copyright (c) OpenSSL Project Contributors
+https://www.openssl.org/
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+OPENSSL_EOF
+
+# Add NeutrinoRDP/FreeRDP license (Apache 2.0)
+cat > "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/licenses/NEUTRINORDP-LICENSE.txt" << 'FREERDP_EOF'
+NeutrinoRDP (FreeRDP fork) - Apache License 2.0
+
+Copyright 2011-2012 Vic Lee
+Copyright 2011-2012 Marc-Andre Moreau <marcandre.moreau@gmail.com>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+FREERDP_EOF
+
+# Create a combined NOTICE file
+cat > "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/licenses/NOTICE.txt" << 'NOTICE_EOF'
+xrdp macOS Package - Third-Party Licenses
+==========================================
+
+This package contains the following third-party software:
+
+1. xrdp - Apache License 2.0
+   https://github.com/neutrinolabs/xrdp
+   See: XRDP-LICENSE.txt
+
+2. OpenSSL 3.x - Apache License 2.0
+   https://www.openssl.org/
+   See: OPENSSL-LICENSE.txt
+
+3. NeutrinoRDP (FreeRDP fork) - Apache License 2.0
+   https://github.com/neutrinolabs/NeutrinoRDP
+   See: NEUTRINORDP-LICENSE.txt
+
+4. tomlc99 - MIT License
+   https://github.com/cktan/tomlc99
+   See: TOMLC99-LICENSE.txt
+
+All licenses are included in this directory.
+NOTICE_EOF
 
 # Copy launchd plists
 cp "$SCRIPT_DIR/com.xrdp.xrdp.plist" "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/"
