@@ -129,6 +129,37 @@ done
 
 echo "  Library path fixup complete"
 
+# Code signing
+echo "Signing binaries..."
+
+# Detect signing identity
+SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}' || echo "")
+
+if [ -n "$SIGNING_IDENTITY" ]; then
+    echo "  Using identity: $SIGNING_IDENTITY"
+
+    # Sign all binaries
+    for bin in "$BUILD_DIR/root$INSTALL_PREFIX/sbin"/* "$BUILD_DIR/root$INSTALL_PREFIX/bin"/* "$BUILD_DIR/root$INSTALL_PREFIX/libexec/xrdp"/*; do
+        if [ -f "$bin" ] && file "$bin" | grep -q "Mach-O"; then
+            codesign --force --sign "$SIGNING_IDENTITY" --timestamp --options runtime "$bin" 2>/dev/null && \
+                echo "  Signed: $(basename "$bin")" || true
+        fi
+    done
+
+    # Sign all libraries
+    for lib in "$BUILD_DIR/root$INSTALL_PREFIX/lib/xrdp"/*.dylib "$BUILD_DIR/root$INSTALL_PREFIX/lib/xrdp"/*.so; do
+        if [ -f "$lib" ] && file "$lib" | grep -q "Mach-O"; then
+            codesign --force --sign "$SIGNING_IDENTITY" --timestamp "$lib" 2>/dev/null && \
+                echo "  Signed: $(basename "$lib")" || true
+        fi
+    done
+
+    echo "  Code signing complete"
+else
+    echo "  WARNING: No Developer ID certificate found - binaries will not be signed"
+    echo "  Run: $SCRIPT_DIR/setup-signing.sh to create a certificate"
+fi
+
 # Copy additional files
 echo "Adding macOS-specific files..."
 
@@ -336,11 +367,25 @@ EOF
 
 # Build product archive
 echo "Building final installer package..."
+UNSIGNED_PKG="$BUILD_DIR/$PKG_NAME-unsigned.pkg"
 productbuild \
     --distribution "$BUILD_DIR/distribution.xml" \
     --resources "$BUILD_DIR/resources" \
     --package-path "$BUILD_DIR" \
-    "$SCRIPT_DIR/$PKG_NAME.pkg"
+    "$UNSIGNED_PKG"
+
+# Sign the package
+INSTALLER_IDENTITY=$(security find-identity -v -p basic | grep "Developer ID Installer" | head -1 | awk -F'"' '{print $2}' || echo "")
+if [ -n "$INSTALLER_IDENTITY" ]; then
+    echo "Signing package..."
+    echo "  Using identity: $INSTALLER_IDENTITY"
+    productsign --sign "$INSTALLER_IDENTITY" --timestamp "$UNSIGNED_PKG" "$SCRIPT_DIR/$PKG_NAME.pkg"
+    echo "  Package signed successfully"
+else
+    # No signing identity, just move unsigned package
+    mv "$UNSIGNED_PKG" "$SCRIPT_DIR/$PKG_NAME.pkg"
+    echo "  WARNING: Package is unsigned"
+fi
 
 echo ""
 echo "============================================"
