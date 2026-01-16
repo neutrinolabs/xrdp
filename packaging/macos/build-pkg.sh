@@ -327,6 +327,12 @@ if [ -f "$XRDP_SRC/docs/macos/README.md" ]; then
     cp "$XRDP_SRC/docs/macos/README.md" "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/"
 fi
 
+# Copy enable-remotefx.sh script
+if [ -f "$SCRIPT_DIR/enable-remotefx.sh" ]; then
+    cp "$SCRIPT_DIR/enable-remotefx.sh" "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/"
+    chmod +x "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/enable-remotefx.sh"
+fi
+
 # Copy install scripts
 cp "$SCRIPT_DIR/preinstall" "$BUILD_DIR/scripts/"
 cp "$SCRIPT_DIR/postinstall" "$BUILD_DIR/scripts/"

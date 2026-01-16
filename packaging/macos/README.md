@@ -200,7 +200,19 @@ After installing the package, users need to:
    - Run: `csrutil enable` (optional, to re-enable SIP)
    - Reboot
 
-3. **Connect**
+3. **(Optional) Enable RemoteFX and Advanced Features**
+   ```bash
+   sudo /usr/local/share/xrdp/enable-remotefx.sh
+   ```
+   This enables:
+   - RemoteFX (RFX) codec at 60 fps
+   - H.264 video codec at 60 fps
+   - Graphics Pipeline Extension (GFX)
+   - Progressive rendering
+   - Multi-monitor support
+   - Optimized performance settings
+
+4. **Connect**
    - Use any RDP client to connect to port 3389
    - Login with macOS username and password
 
