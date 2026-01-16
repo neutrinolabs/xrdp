@@ -36,18 +36,37 @@ if [ ! -f "$XRDP_SRC/xrdp/xrdp" ]; then
         ./bootstrap
     fi
 
+    # Ensure pkg-config is in PATH
+    export PATH="$HOME/xrdp-deps/local/bin:$PATH"
+    export PKG_CONFIG_PATH="$HOME/xrdp-deps/local/lib/pkgconfig"
+
     ./configure --prefix="$INSTALL_PREFIX" \
         --enable-vsock \
         --disable-pam \
         --with-socketdir=/var/run/xrdp
 
     make -j$(sysctl -n hw.ncpu)
-fi
 
-# Install to staging directory
-echo "Installing to staging directory..."
-cd "$XRDP_SRC"
-make DESTDIR="$BUILD_DIR/root" install
+    # Install to staging directory
+    echo "Installing to staging directory..."
+    make DESTDIR="$BUILD_DIR/root" install
+else
+    # Copy from installed system
+    echo "Copying from installed system..."
+    mkdir -p "$BUILD_DIR/root$INSTALL_PREFIX"/{bin,sbin,lib/xrdp,libexec/xrdp,share/xrdp}
+    mkdir -p "$BUILD_DIR/root/etc/xrdp"
+
+    # Copy binaries
+    cp -a $INSTALL_PREFIX/bin/xrdp-* "$BUILD_DIR/root$INSTALL_PREFIX/bin/" 2>/dev/null || true
+    cp -a $INSTALL_PREFIX/sbin/xrdp* "$BUILD_DIR/root$INSTALL_PREFIX/sbin/" 2>/dev/null || true
+    cp -a $INSTALL_PREFIX/libexec/xrdp/* "$BUILD_DIR/root$INSTALL_PREFIX/libexec/xrdp/" 2>/dev/null || true
+
+    # Copy libraries
+    cp -a $INSTALL_PREFIX/lib/xrdp/*.{so,a,la,dylib} "$BUILD_DIR/root$INSTALL_PREFIX/lib/xrdp/" 2>/dev/null || true
+
+    # Copy configs
+    cp -a /etc/xrdp/* "$BUILD_DIR/root/etc/xrdp/" 2>/dev/null || true
+fi
 
 # Fix library paths - bundle OpenSSL and fix references
 echo "Fixing library paths..."
@@ -95,14 +114,60 @@ else
     echo "         The package may not work on other systems!"
 fi
 
+# Bundle NeutrinoRDP (FreeRDP fork) libraries if they exist
+echo "Bundling NeutrinoRDP libraries..."
+FREERDP_SRC="/usr/local/lib"
+
+FREERDP_LIBS=(
+    "libfreerdp-core.1.0.dylib"
+    "libfreerdp-codec.1.0.dylib"
+    "libfreerdp-gdi.1.0.dylib"
+    "libfreerdp-kbd.1.0.dylib"
+    "libfreerdp-rail.1.0.dylib"
+    "libfreerdp-channels.1.0.dylib"
+    "libfreerdp-utils.1.0.dylib"
+)
+
+FREERDP_COUNT=0
+for lib in "${FREERDP_LIBS[@]}"; do
+    if [ -f "$FREERDP_SRC/$lib" ]; then
+        cp "$FREERDP_SRC/$lib" "$LIB_DEST/"
+        chmod 755 "$LIB_DEST/$lib"
+        # Fix the id of the bundled library
+        install_name_tool -id "$INSTALL_PREFIX/lib/xrdp/$lib" "$LIB_DEST/$lib"
+        FREERDP_COUNT=$((FREERDP_COUNT + 1))
+    fi
+done
+
+if [ $FREERDP_COUNT -gt 0 ]; then
+    echo "  Bundled $FREERDP_COUNT NeutrinoRDP libraries"
+else
+    echo "  No NeutrinoRDP libraries found (optional - only needed for RDP client functionality)"
+fi
+
 # Fix all binaries and libraries that reference the hardcoded paths
 fix_library_paths() {
     local file="$1"
     if [ -f "$file" ] && file "$file" | grep -q "Mach-O"; then
-        # Check if it has the hardcoded path
+        local fixed=false
+
+        # Fix OpenSSL references
         if otool -L "$file" 2>/dev/null | grep -q "$OPENSSL_SRC"; then
             install_name_tool -change "$OPENSSL_SRC/libssl.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libssl.3.dylib" "$file" 2>/dev/null || true
             install_name_tool -change "$OPENSSL_SRC/libcrypto.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libcrypto.3.dylib" "$file" 2>/dev/null || true
+            fixed=true
+        fi
+
+        # Fix NeutrinoRDP (FreeRDP) references - change relative paths to absolute bundled paths
+        for lib in "${FREERDP_LIBS[@]}"; do
+            if otool -L "$file" 2>/dev/null | grep -q "$lib"; then
+                install_name_tool -change "$lib" "$INSTALL_PREFIX/lib/xrdp/$lib" "$file" 2>/dev/null || true
+                install_name_tool -change "$FREERDP_SRC/$lib" "$INSTALL_PREFIX/lib/xrdp/$lib" "$file" 2>/dev/null || true
+                fixed=true
+            fi
+        done
+
+        if [ "$fixed" = true ]; then
             echo "  Fixed: $(basename "$file")"
         fi
     fi
@@ -138,7 +203,7 @@ SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID
 if [ -n "$SIGNING_IDENTITY" ]; then
     echo "  Using identity: $SIGNING_IDENTITY"
 
-    # Sign all binaries
+    # Sign all binaries with hardened runtime (now that libraries are bundled properly)
     for bin in "$BUILD_DIR/root$INSTALL_PREFIX/sbin"/* "$BUILD_DIR/root$INSTALL_PREFIX/bin"/* "$BUILD_DIR/root$INSTALL_PREFIX/libexec/xrdp"/*; do
         if [ -f "$bin" ] && file "$bin" | grep -q "Mach-O"; then
             codesign --force --sign "$SIGNING_IDENTITY" --timestamp --options runtime "$bin" 2>/dev/null && \
