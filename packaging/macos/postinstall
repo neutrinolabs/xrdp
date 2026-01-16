@@ -34,14 +34,28 @@ if [ -f "$CONFIG_DIR/sesman.ini" ]; then
     sed -i '' 's/^SessionSockdirGroup=root/SessionSockdirGroup=wheel/' "$CONFIG_DIR/sesman.ini" 2>/dev/null || true
 fi
 
-# Add macOS session to xrdp.ini if not present
+# Add macOS sessions to xrdp.ini if not present
 if [ -f "$CONFIG_DIR/xrdp.ini" ]; then
+    # Add native ScreenCaptureKit module (primary option)
+    if ! grep -q "\[macos_native\]" "$CONFIG_DIR/xrdp.ini"; then
+        echo "Adding native macOS session to xrdp.ini..."
+        cat >> "$CONFIG_DIR/xrdp.ini" << 'EOF'
+
+[macos_native]
+name=macOS Desktop (Native - No VNC Required)
+lib=libmacos.dylib
+username=ask
+password=ask
+EOF
+    fi
+
+    # Add VNC fallback option
     if ! grep -q "\[macos\]" "$CONFIG_DIR/xrdp.ini"; then
-        echo "Adding macOS session to xrdp.ini..."
+        echo "Adding VNC macOS session to xrdp.ini..."
         cat >> "$CONFIG_DIR/xrdp.ini" << 'EOF'
 
 [macos]
-name=macOS Desktop
+name=macOS Desktop (VNC)
 lib=libvnc.dylib
 ip=127.0.0.1
 port=5900
@@ -70,6 +84,25 @@ if [ ! -f "$CONFIG_DIR/rsakeys.ini" ]; then
     fi
 fi
 
+# Enable Screen Sharing (VNC) automatically
+echo "Enabling Screen Sharing..."
+# Enable Screen Sharing via kickstart
+/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+    -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent 2>/dev/null || true
+
+# Also enable via launchctl
+launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
+
+# Wait for VNC to start
+sleep 2
+
+# Verify VNC is running
+if lsof -i :5900 >/dev/null 2>&1; then
+    echo "  Screen Sharing enabled successfully"
+else
+    echo "  Note: You may need to enable Screen Sharing manually in System Settings"
+fi
+
 # Create log directory
 mkdir -p /var/log
 touch /var/log/xrdp.log /var/log/xrdp.err
@@ -85,10 +118,19 @@ echo "============================================"
 echo "xrdp installation complete!"
 echo "============================================"
 echo ""
-echo "IMPORTANT: To connect to macOS Screen Sharing, you need to:"
+echo "TWO CONNECTION OPTIONS:"
 echo ""
-echo "1. Enable Screen Sharing:"
-echo "   System Settings → General → Sharing → Screen Sharing"
+echo "Option 1: Native Capture (Recommended - No VNC Required)"
+echo "  - Select 'macos_native' at RDP login screen"
+echo "  - Requires Screen Recording permission (see below)"
+echo "  - Better performance, lower latency"
+echo ""
+echo "Option 2: VNC Fallback"
+echo "  - Select 'macos' at RDP login screen"
+echo "  - Requires Screen Sharing enabled:"
+echo "    System Settings → General → Sharing → Screen Sharing"
+echo ""
+echo "SCREEN RECORDING PERMISSION (for Native Capture):"
 echo ""
 echo "2. Grant TCC permissions (requires SIP disabled):"
 echo "   - Boot to Recovery Mode and run: csrutil disable"

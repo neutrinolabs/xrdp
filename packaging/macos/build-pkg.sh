@@ -146,6 +146,23 @@ else
     echo "  No NeutrinoRDP libraries found (optional - only needed for RDP client functionality)"
 fi
 
+# Build and bundle native macOS capture module
+echo "Building native macOS capture module..."
+if [ -d "$XRDP_SRC/module_macos" ] && [ -f "$XRDP_SRC/module_macos/Makefile" ]; then
+    cd "$XRDP_SRC/module_macos"
+    /usr/bin/make clean
+    /usr/bin/make
+
+    if [ -f "libmacos.dylib" ]; then
+        cp "libmacos.dylib" "$LIB_DEST/"
+        echo "  Built and bundled libmacos.dylib (native ScreenCaptureKit module)"
+    else
+        echo "  WARNING: Failed to build libmacos.dylib"
+    fi
+else
+    echo "  Native module source not found (optional - VNC fallback available)"
+fi
+
 # Fix all binaries and libraries that reference the hardcoded paths
 fix_library_paths() {
     local file="$1"
