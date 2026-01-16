@@ -832,7 +832,20 @@ static int sock_write(int sock, const void *buf, size_t len) {
     size_t total = 0;
     while (total < len) {
         ssize_t n = send(sock, (const char*)buf + total, len - total, 0);
-        if (n <= 0) return -1;
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                /* Socket is non-blocking and buffer full, wait a bit */
+                usleep(1000);  /* 1ms */
+                continue;
+            }
+            DPRINTF("[TLS] sock_write: send returned %zd (errno=%d), wanted %zu more bytes\n", n, errno, len - total);
+            return -1;
+        }
+        if (n == 0) {
+            /* Should not happen with send(), but handle it */
+            DPRINTF("[TLS] sock_write: send returned 0\n");
+            return -1;
+        }
         total += n;
     }
     return 0;
@@ -1545,32 +1558,73 @@ bool tls13_accept(tls13_conn *conn) {
     size_t pos = 4;  /* Skip handshake type and length */
 
     /* Client version */
+    if (pos + 2 > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for version\n");
+        return false;
+    }
     pos += 2;
 
     /* Client random */
+    if (pos + 32 > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for random\n");
+        return false;
+    }
     memcpy(conn->client_random, buf + pos, 32);
     pos += 32;
 
     /* Session ID */
+    if (pos + 1 > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for session ID length\n");
+        return false;
+    }
     uint8_t sid_len = buf[pos++];
     uint8_t session_id[32];
     if (sid_len > 0) {
+        if (pos + sid_len > (size_t)len) {
+            DPRINTF("[TLS Server] ClientHello too short for session ID\n");
+            return false;
+        }
         memcpy(session_id, buf + pos, sid_len);
         pos += sid_len;
     }
 
     /* Cipher suites */
+    if (pos + 2 > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for cipher suites length\n");
+        return false;
+    }
     uint16_t cs_len = ((uint16_t)buf[pos] << 8) | buf[pos + 1];
-    pos += 2 + cs_len;  /* Skip cipher suites for now */
+    pos += 2;
+    if (pos + cs_len > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for cipher suites\n");
+        return false;
+    }
+    pos += cs_len;  /* Skip cipher suites for now */
 
     /* Compression methods */
+    if (pos + 1 > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for compression length\n");
+        return false;
+    }
     uint8_t comp_len = buf[pos++];
+    if (pos + comp_len > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for compression methods\n");
+        return false;
+    }
     pos += comp_len;
 
     /* Extensions */
+    if (pos + 2 > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello too short for extensions length\n");
+        return false;
+    }
     uint16_t ext_total_len = ((uint16_t)buf[pos] << 8) | buf[pos + 1];
     pos += 2;
     size_t ext_end = pos + ext_total_len;
+    if (ext_end > (size_t)len) {
+        DPRINTF("[TLS Server] ClientHello extensions exceed message length\n");
+        return false;
+    }
 
     DPRINTF("[TLS Server] Extensions total length: %d, parsing from pos=%zu to %zu\n", ext_total_len, pos, ext_end);
 
@@ -1582,17 +1636,27 @@ bool tls13_accept(tls13_conn *conn) {
         uint16_t elen = ((uint16_t)buf[pos + 2] << 8) | buf[pos + 3];
         pos += 4;
 
+        if (pos + elen > ext_end) {
+            DPRINTF("[TLS Server] Extension length exceeds extensions block\n");
+            return false;
+        }
+
         DPRINTF("[TLS Server] Extension type=0x%04x len=%d at pos=%zu\n", ext_type, elen, pos - 4);
 
         if (ext_type == TLS_EXT_KEY_SHARE) {
             DPRINTF("[TLS Server] Found key_share extension, elen=%d\n", elen);
             /* key_share extension for ClientHello: key_share_entry list length(2) + entries */
-            if (elen >= 38) {
+            if (elen >= 38 && pos + 2 <= pos + elen) {
                 uint16_t kse_list_len = ((uint16_t)buf[pos] << 8) | buf[pos + 1];
                 pos += 2;
                 DPRINTF("[TLS Server] key_share_entry list length: %d\n", kse_list_len);
 
                 size_t kse_end = pos + kse_list_len;
+                if (kse_end > pos + elen - 2) {
+                    DPRINTF("[TLS Server] key_share_entry list exceeds extension\n");
+                    return false;
+                }
+
                 while (pos + 6 <= kse_end) {
                     uint16_t group = ((uint16_t)buf[pos] << 8) | buf[pos + 1];
                     pos += 2;
@@ -1600,6 +1664,11 @@ bool tls13_accept(tls13_conn *conn) {
                     pos += 2;
 
                     DPRINTF("[TLS Server] key_share entry: group=0x%04x key_len=%d\n", group, key_len);
+
+                    if (pos + key_len > kse_end) {
+                        DPRINTF("[TLS Server] key_share entry exceeds list\n");
+                        return false;
+                    }
 
                     if (group == 0x001d && key_len == 32) {  /* x25519 */
                         memcpy(client_public, buf + pos, 32);
