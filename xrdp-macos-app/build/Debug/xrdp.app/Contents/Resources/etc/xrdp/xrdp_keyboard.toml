@@ -1,0 +1,176 @@
+#
+# RDP Keyboard <-> X11 Keyboard layout map (xorgxrdp support)
+#
+# How this file works
+# -------------------
+#
+#   Inputs from the RDP client:-
+#   - Keyboard type 'kb_type' (see below)
+#   - Keyboard subtype 'kb_subtype' (see below)
+#   - RDP layout identifier 'layout_id' (see [MS-LCID])
+#
+#   1. The following values are read from the [defaults] table:-
+#       - layouts   Required. The name of the table which translates the
+#                   layout_id to a layout_name, using reverse-lookup.
+#       - map       Required. A table mapping layout names to XKB
+#                   layout strings.
+#       - model     Optional. Value defining the XKB model name
+#       - variant   Optional. Value defining the XKB variant name
+#       - options   Optional. Value defining the XKB options string
+#
+#   2. The [overrides] sub-tables are scanned:-
+#      a) The [overrides.kb_type.*] tables are scanned looking for a
+#         match on kb_type, kb_subtype, or both. A successful match
+#         results in overrides being applied to the values described in 1.
+#
+#      Other table names directly under the [overrides] table are reserved
+#      for future use.
+#
+#   3. The ['layouts'] table is reverse-looked-up to get a layout_name using
+#      the 'layout_id'.
+#   4. The ['map'] table is looked-up by the layout_name to get an XKB
+#      layout for the session.
+#
+# There are some subtleties:-
+#   1. (In step 3) If a layout_id > 0xffff fails to match, the lookup
+#      is retried with the lower 16-bits of the layout_id.
+#   2. (In step 2). More than one layout_id can be mapped to the
+#      same layout_name using an array of values.
+#
+#       RDP Keyboard Type [MS-RDPBCGR] section 2.2.7.1.6
+#       ------------------------------------------------
+#
+#          0 is not a valid value
+#
+#          1 - IBM PC/XT or compatible (83-key) keyboard
+#          2 - Olivetti "ICO" (102-key) keyboard
+#          3 - IBM PC/AT (84-key) or similar keyboard
+#          4 - IBM enhanced (101- or 102-key) keyboard
+#          5 - Nokia 1050 and similar keyboards
+#          6 - Nokia 9140 and similar keyboards
+#          7 - Japanese keyboard
+#
+#       RDP Keyboard Subtype
+#       --------------------
+#       This is vendor dependent. XRDP defines as follows:
+#
+#          0 is not a valid value
+#
+#          1 - Standard
+#          2 - FreeRDP JP keyboard
+#          3 - Macintosh
+#          ... - < any vendor dependent subtype >
+#
+#       The list can be augmented.
+
+[defaults]
+layouts = "layouts"
+map = "default_layouts_map"
+# user can set these values, but generally they should be inferred
+# automatically based on keyboard type and subtype
+#model = 
+#variant = 
+#options = 
+
+[overrides.kb_type.mac]
+# Mac - set a variant and alternate layouts map
+subtype = 3
+map = "mac_layouts_map"
+variant = "mac"
+
+[overrides.kb_type.jp]
+# Japanese - set the keyboard model
+type = 7
+subtype = 2
+model = "pc105"
+
+[layouts]
+rdp_layout_us = 0x00000409
+rdp_layout_us_colemak = 0x00060409
+rdp_layout_us_dvorak = 0x00010409
+rdp_layout_us_dvp = 0x19360409
+rdp_layout_cz = 0x00000405
+rdp_layout_dk = 0x00000406
+rdp_layout_de = 0x00000407
+rdp_layout_es = 0x0000040A
+rdp_layout_fi = 0x0000040B
+rdp_layout_fr = 0x0000040C
+rdp_layout_hu = 0x0000040E
+rdp_layout_it = 0x00000410
+rdp_layout_jp = [ 0x00000411, 0xe0010411, 0xe0200411, 0xe0210411 ]
+rdp_layout_kr = 0x00000412
+rdp_layout_no = 0x00000414
+rdp_layout_pl = 0x00000415
+rdp_layout_br = 0x00000416
+rdp_layout_ru = 0x00000419
+rdp_layout_se = 0x0000041D
+rdp_layout_si = 0x00000424
+rdp_layout_lv = 0x00000426
+rdp_layout_lv_std = [ 0x00010426, 0x00020426 ]
+rdp_layout_ch = 0x00000807
+rdp_layout_ch_fr = 0x0000100C
+rdp_layout_gb = 0x00000809
+rdp_layout_latam = 0x0000080A
+rdp_layout_be = 0x00000813
+rdp_layout_pt = 0x00000816
+
+
+# <rdp layout name> = <X11 keyboard layout value>
+[default_layouts_map]
+rdp_layout_us = "us"
+rdp_layout_us_colemak = "us(colemak)"
+rdp_layout_us_dvorak = "us(dvorak)"
+rdp_layout_us_dvp = "us(dvp)"
+rdp_layout_cz = "cz"
+rdp_layout_dk = "dk"
+rdp_layout_de = "de"
+rdp_layout_es = "es"
+rdp_layout_fi = "fi"
+rdp_layout_fr = "fr"
+rdp_layout_hu = "hu"
+rdp_layout_it = "it"
+rdp_layout_jp = "jp"
+rdp_layout_kr = "kr"
+rdp_layout_no = "no"
+rdp_layout_pl = "pl"
+rdp_layout_br = "br(abnt2)"
+rdp_layout_ru = "ru"
+rdp_layout_se = "se"
+rdp_layout_si = "si"
+rdp_layout_lv = "lv(ergonomic)"
+rdp_layout_lv_std = "lv"
+rdp_layout_ch = "ch"
+rdp_layout_ch_fr = "ch(fr)"
+rdp_layout_gb = "gb"
+rdp_layout_latam = "latam"
+rdp_layout_be = "be"
+rdp_layout_pt = "pt"
+
+[mac_layouts_map]
+rdp_layout_us = "us"
+rdp_layout_us_colemak = "us(colemak)"
+rdp_layout_us_dvorak = "us(dvorak)"
+rdp_layout_us_dvp = "us(dvp)"
+rdp_layout_cz = "cz"
+rdp_layout_dk = "dk"
+rdp_layout_de = "de"
+rdp_layout_es = "es"
+rdp_layout_fi = "fi"
+rdp_layout_fr = "fr"
+rdp_layout_hu = "hu"
+rdp_layout_it = "it"
+rdp_layout_jp = "jp"
+rdp_layout_kr = "kr"
+rdp_layout_pl = "pl"
+rdp_layout_br = "br(abnt2)"
+rdp_layout_ru = "ru"
+rdp_layout_se = "se"
+rdp_layout_si = "si"
+rdp_layout_lv = "lv(ergonomic)"
+rdp_layout_lv_std = "lv"
+rdp_layout_ch = "ch"
+rdp_layout_ch_fr = "ch(fr)"
+rdp_layout_gb = "gb"
+rdp_layout_latam = "latam"
+rdp_layout_be = "be"
+rdp_layout_pt = "pt"

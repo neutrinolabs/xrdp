@@ -26,6 +26,10 @@
 #include "log.h"
 #include "string_calls.h"
 
+#ifdef __APPLE__
+#include <openssl/crypto.h>
+#endif
+
 /* 'g_process' is protected by the semaphore 'g_process_sem'.  One thread sets
    g_process and waits for the other to process it */
 static tbus g_process_sem = 0;
@@ -689,6 +693,7 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
     struct xrdp_process *process;
     struct trans *ltrans;
 
+    /* OpenSSL 3.0+ handles fork() automatically via pthread_atfork() */
     pid = g_fork();
 
     if (pid == 0)

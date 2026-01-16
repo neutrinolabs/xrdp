@@ -1,0 +1,87 @@
+[codec]
+order = [ "H.264", "RFX" ]
+
+# Specify a preferred H.264 encoder, "x264" or "OpenH264".
+# This parameter takes effect only when more than one encoder is
+# enabled at compile time. If only one encoder is enabled, the encoder
+# will be used regardless the value of this parameter.
+h264_encoder = "x264"
+
+#
+# Configurations for x264
+#
+[x264.default]
+# NOTE: x264 specifies bitrate in unit of kbps.
+preset = "ultrafast"
+tune = "zerolatency"
+profile = "main"     # profile is forced to baseline if preset == ultrafast
+vbv_max_bitrate = 0
+vbv_buffer_size = 0
+fps_num = 60
+fps_den = 1
+threads = 1          # recommended: 1 or 2, see `man gfx.toml` for details
+
+[x264.lan]
+# inherits default
+
+[x264.wan]
+vbv_max_bitrate = 15_000
+vbv_buffer_size = 1_500
+
+[x264.broadband_high]
+preset = "superfast"
+vbv_max_bitrate = 8_000
+vbv_buffer_Size = 800
+
+[x264.satellite]
+preset = "superfast"
+vbv_max_bitrate = 5_000
+vbv_buffer_size = 500
+
+[x264.broadband_low]
+preset = "veryfast"
+vbv_max_bitrate = 1_600
+vbv_buffer_size = 66
+
+[x264.modem]
+preset = "fast"
+vbv_max_bitrate = 1_200
+vbv_buffer_size = 50
+
+#
+# Configurations for OpenH264
+#
+[OpenH264.default]
+# NOTE: OpenH264 specifies bitrate in unit of bps, not kbps.
+EnableFrameSkip = false
+TargetBitrate = 20_000_000
+MaxBitrate =    0          # unspecified
+MaxFrameRate = 60.0
+
+[OpenH264.lan]
+# inherits default
+
+[OpenH264.wan]
+TargetBitrate = 10_000_000
+MaxBitrate =    12_000_000
+
+[OpenH264.broadband_high]
+EnableFrameSkip = true
+TargetBitrate = 8_000_000
+MaxBitrate =   10_000_000
+
+[OpenH264.satellite]
+EnableFrameSkip = true
+TargetBitrate = 4_000_000
+MaxBitrate =    6_000_000
+
+[OpenH264.broadband_low]
+EnableFrameSkip = true
+TargetBitrate = 1_600_000
+MaxBitrate =    1_800_000
+
+[OpenH264.modem]
+EnableFrameSkip = true
+TargetBitrate =   600_000
+MaxBitrate =    1_200_000
+

@@ -25,6 +25,8 @@
 
 #include <stdlib.h> /* needed for openssl headers */
 #include <string.h>
+
+/* OpenSSL headers - needed for all platforms */
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rc4.h>
@@ -40,6 +42,12 @@
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/param_build.h>
 #include <openssl/core_names.h>
+#endif
+
+/* Use NeutrinoSSL on macOS to avoid OpenSSL PAC issues with TLS */
+#ifdef __APPLE__
+#define USE_NEUTRINOSSL 1
+#include "neutrinossl.h"
 #endif
 
 #include "os_calls.h"
@@ -68,8 +76,13 @@ static char *g_keylog_filename = NULL;
 /* definition of ssl_tls */
 struct ssl_tls
 {
+#ifdef USE_NEUTRINOSSL
+    NEUTRINOSSL *ssl;
+    NEUTRINOSSL_CTX *ctx;
+#else
     SSL *ssl; /* SSL * */
     SSL_CTX *ctx; /* SSL_CTX * */
+#endif
     char *cert;
     char *key;
     struct trans *trans;
@@ -171,10 +184,14 @@ dump_ssl_error_stack(struct ssl_tls *self)
 int
 ssl_init(void)
 {
+#ifdef USE_NEUTRINOSSL
+    return neutrinossl_init();
+#else
     SSL_load_error_strings();
     SSL_library_init();
 
     return 0;
+#endif
 }
 
 /*****************************************************************************/
@@ -1130,6 +1147,63 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                int (*is_term)(void))
 {
     int connection_status;
+#ifdef USE_NEUTRINOSSL
+    /* NeutrinoSSL implementation for macOS */
+    LOG(LOG_LEVEL_DEBUG, "Using NeutrinoSSL for TLS connection");
+
+    /* Create NeutrinoSSL context with certificate and key */
+    self->ctx = neutrinossl_ctx_new_server(self->cert, self->key);
+    if (self->ctx == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to create NeutrinoSSL context: %s",
+            neutrinossl_get_error());
+        return 1;
+    }
+
+    /* Create NeutrinoSSL connection object */
+    self->ssl = neutrinossl_new(self->ctx, self->trans->sck);
+    if (self->ssl == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to create NeutrinoSSL connection: %s",
+            neutrinossl_get_error());
+        return 1;
+    }
+
+    /* Perform TLS handshake */
+    while (1)
+    {
+        connection_status = neutrinossl_accept(self->ssl);
+
+        if (connection_status > 0)
+        {
+            /* Success */
+            break;
+        }
+        else if (connection_status == 0)
+        {
+            /* Connection closed */
+            LOG(LOG_LEVEL_ERROR, "TLS handshake failed: connection closed");
+            return 1;
+        }
+        else
+        {
+            /* Error - for now, fail immediately */
+            /* TODO: Handle SSL_ERROR_WANT_READ/WRITE retries if needed */
+            LOG(LOG_LEVEL_ERROR, "TLS handshake failed: %s",
+                neutrinossl_get_error());
+            return 1;
+        }
+
+        if (is_term != NULL && (*is_term)())
+        {
+            return 1;
+        }
+    }
+
+    LOG(LOG_LEVEL_TRACE, "NeutrinoSSL TLS connection accepted");
+    return 0;
+#else
+    /* OpenSSL implementation */
     long options = 0;
 
     ERR_clear_error();
@@ -1175,7 +1249,13 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
      */
     options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    /* Use TLS_server_method() for OpenSSL 1.1.0+ (including 3.x) */
+    self->ctx = SSL_CTX_new(TLS_server_method());
+#else
+    /* Use SSLv23_server_method() for older OpenSSL versions */
     self->ctx = SSL_CTX_new(SSLv23_server_method());
+#endif
     if (self->ctx == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to negotiate a TLS connection with the client");
@@ -1333,6 +1413,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     LOG(LOG_LEVEL_TRACE, "TLS connection accepted");
 
     return 0;
+#endif /* USE_NEUTRINOSSL */
 }
 
 /*****************************************************************************/
@@ -1340,8 +1421,6 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
 int
 ssl_tls_disconnect(struct ssl_tls *self)
 {
-    int status;
-
     if (self == NULL)
     {
         return 0;
@@ -1350,6 +1429,13 @@ ssl_tls_disconnect(struct ssl_tls *self)
     {
         return 0;
     }
+
+#ifdef USE_NEUTRINOSSL
+    neutrinossl_shutdown(self->ssl);
+    return 0;
+#else
+    int status;
+
     status = SSL_shutdown(self->ssl);
     if (status != 1)
     {
@@ -1368,6 +1454,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
         }
     }
     return 0;
+#endif
 }
 
 /*****************************************************************************/
@@ -1376,6 +1463,17 @@ ssl_tls_delete(struct ssl_tls *self)
 {
     if (self != NULL)
     {
+#ifdef USE_NEUTRINOSSL
+        if (self->ssl)
+        {
+            neutrinossl_free(self->ssl);
+        }
+
+        if (self->ctx)
+        {
+            neutrinossl_ctx_free(self->ctx);
+        }
+#else
         if (self->ssl)
         {
             SSL_free(self->ssl);
@@ -1385,6 +1483,7 @@ ssl_tls_delete(struct ssl_tls *self)
         {
             SSL_CTX_free(self->ctx);
         }
+#endif
 
         g_delete_wait_obj(self->rwo);
 
@@ -1396,6 +1495,20 @@ ssl_tls_delete(struct ssl_tls *self)
 int
 ssl_tls_read(struct ssl_tls *tls, char *data, int length)
 {
+#ifdef USE_NEUTRINOSSL
+    int status;
+
+    status = neutrinossl_read(tls->ssl, data, length);
+
+    if (status < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "NeutrinoSSL read error: %s",
+            neutrinossl_get_error());
+        return -1;
+    }
+
+    return status;
+#else
     int status;
     int break_flag;
 
@@ -1444,12 +1557,27 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
     }
 
     return status;
+#endif
 }
 
 /*****************************************************************************/
 int
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 {
+#ifdef USE_NEUTRINOSSL
+    int status;
+
+    status = neutrinossl_write(tls->ssl, data, length);
+
+    if (status < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "NeutrinoSSL write error: %s",
+            neutrinossl_get_error());
+        return -1;
+    }
+
+    return status;
+#else
     int status;
     int break_flag;
 
@@ -1493,6 +1621,7 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
     }
 
     return status;
+#endif
 }
 
 /*****************************************************************************/

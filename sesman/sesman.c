@@ -426,8 +426,9 @@ sesman_create_listening_transport(const struct config_sesman *cfg)
         }
         else if (g_chown(cfg->listen_port, g_getuid(), g_getuid()) != 0)
         {
-            LOG(LOG_LEVEL_ERROR,
-                "Can't set ownership of '%s' [%s]",
+            // On macOS, chown may fail in app bundles - this is OK, just warn
+            LOG(LOG_LEVEL_WARNING,
+                "Can't set ownership of '%s' [%s] - continuing anyway",
                 cfg->listen_port, g_get_strerror());
         }
         else if ((rv = g_chmod_hex(cfg->listen_port, 0x666)) != 0)

@@ -2633,6 +2633,11 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
                         {
                             strlcpy(port, val, port_bytes);
                         }
+                        else if (val[0] == '/')
+                        {
+                            /* Unix domain socket path */
+                            strlcpy(port, val, port_bytes);
+                        }
 
                         break;
                     }

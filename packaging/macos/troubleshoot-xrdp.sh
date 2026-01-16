@@ -222,25 +222,62 @@ else
     ISSUES_FOUND=$((ISSUES_FOUND + 1))
 fi
 
+# Check Screen Sharing (VNC)
+echo ""
+echo "Checking Screen Sharing (VNC)..."
+VNC_RUNNING=0
+if lsof -i :5900 >/dev/null 2>&1; then
+    print_status "ok" "Screen Sharing is enabled (VNC port 5900)"
+    VNC_RUNNING=1
+else
+    print_status "warn" "Screen Sharing is NOT enabled"
+    echo "   xrdp requires Screen Sharing to display the desktop"
+    echo ""
+    read -p "   Enable Screen Sharing now? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "   Enabling Screen Sharing..."
+        /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -allowAccessFor -allUsers -privs -all -restart -agent 2>/dev/null || true
+        launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
+        sleep 2
+        if lsof -i :5900 >/dev/null 2>&1; then
+            print_status "ok" "Screen Sharing enabled successfully"
+            VNC_RUNNING=1
+        else
+            print_status "error" "Failed to enable Screen Sharing automatically"
+            echo "   Please enable manually: System Settings → General → Sharing → Screen Sharing"
+        fi
+    fi
+fi
+
 echo ""
 echo "============================================"
 echo "  Summary"
 echo "============================================"
 echo ""
 
-if [ $ISSUES_FOUND -eq 0 ] && [ $XRDP_RUNNING -eq 1 ] && [ $SESMAN_RUNNING -eq 1 ] && [ $PORT_LISTENING -eq 1 ]; then
+if [ $ISSUES_FOUND -eq 0 ] && [ $XRDP_RUNNING -eq 1 ] && [ $SESMAN_RUNNING -eq 1 ] && [ $PORT_LISTENING -eq 1 ] && [ $VNC_RUNNING -eq 1 ]; then
     print_status "ok" "xrdp is fully operational!"
     echo ""
     echo "Connection Information:"
     echo "  Port: 3389"
     echo "  Protocol: RDP"
     echo ""
-    echo "Next steps:"
-    echo "  1. Enable Screen Sharing in System Settings"
-    echo "  2. Connect via RDP client to port 3389"
+    echo "Connect via RDP client and select 'macos' session type"
     echo ""
     echo "Optional:"
     echo "  Enable RemoteFX (60fps H.264): sudo $INSTALL_PREFIX/share/xrdp/enable-remotefx.sh"
+    echo ""
+elif [ $VNC_RUNNING -eq 0 ]; then
+    print_status "warn" "xrdp is running but Screen Sharing is disabled"
+    echo ""
+    echo "You will see a BLACK SCREEN when connecting until Screen Sharing is enabled."
+    echo ""
+    echo "To fix:"
+    echo "  1. Enable Screen Sharing: System Settings → General → Sharing → Screen Sharing"
+    echo "  OR"
+    echo "  2. Run this script again and choose to enable it automatically"
     echo ""
 else
     print_status "error" "Found $ISSUES_FOUND issue(s)"

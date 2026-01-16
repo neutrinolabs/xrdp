@@ -64,3 +64,14 @@ xrdp_configure_options.h
 xrdpapi/xrdp-xrdpapi-simple
 .vscode/*
 xrdp_accel_assist/xrdp-accel-assist
+# Binary and intermediate files
+*.dylib
+*.pkg
+*-new
+*-original
+.lineno
+*.bak
+.DS_Store
+test_rdp_client
+test_rdp_neutrino
+freerdp_test_client
