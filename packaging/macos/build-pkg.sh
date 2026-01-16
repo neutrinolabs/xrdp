@@ -126,6 +126,7 @@ FREERDP_LIBS=(
     "libfreerdp-rail.1.0.dylib"
     "libfreerdp-channels.1.0.dylib"
     "libfreerdp-utils.1.0.dylib"
+    "libfreerdp-cache.1.0.dylib"
 )
 
 FREERDP_COUNT=0
