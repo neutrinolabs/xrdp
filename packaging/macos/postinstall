@@ -62,6 +62,14 @@ chmod 644 "$LAUNCHD_DIR/com.xrdp.sesman.plist" 2>/dev/null || true
 chown root:wheel "$LAUNCHD_DIR/com.xrdp.xrdp.plist" 2>/dev/null || true
 chown root:wheel "$LAUNCHD_DIR/com.xrdp.sesman.plist" 2>/dev/null || true
 
+# Generate RSA keys if not present
+if [ ! -f "$CONFIG_DIR/rsakeys.ini" ]; then
+    echo "Generating RSA keys..."
+    if [ -f "$INSTALL_PREFIX/bin/xrdp-keygen" ]; then
+        "$INSTALL_PREFIX/bin/xrdp-keygen" xrdp "$CONFIG_DIR/rsakeys.ini" || true
+    fi
+fi
+
 # Create log directory
 mkdir -p /var/log
 touch /var/log/xrdp.log /var/log/xrdp.err

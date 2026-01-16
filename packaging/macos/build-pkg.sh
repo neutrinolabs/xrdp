@@ -355,6 +355,12 @@ if [ -f "$SCRIPT_DIR/enable-remotefx.sh" ]; then
     chmod +x "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/enable-remotefx.sh"
 fi
 
+# Copy troubleshooting script
+if [ -f "$SCRIPT_DIR/troubleshoot-xrdp.sh" ]; then
+    cp "$SCRIPT_DIR/troubleshoot-xrdp.sh" "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/"
+    chmod +x "$BUILD_DIR/root$INSTALL_PREFIX/share/xrdp/troubleshoot-xrdp.sh"
+fi
+
 # Copy install scripts
 cp "$SCRIPT_DIR/preinstall" "$BUILD_DIR/scripts/"
 cp "$SCRIPT_DIR/postinstall" "$BUILD_DIR/scripts/"
