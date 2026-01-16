@@ -152,21 +152,42 @@ fix_library_paths() {
     if [ -f "$file" ] && file "$file" | grep -q "Mach-O"; then
         local fixed=false
 
-        # Fix OpenSSL references
+        # Fix OpenSSL references (check multiple possible locations)
         if otool -L "$file" 2>/dev/null | grep -q "$OPENSSL_SRC"; then
             install_name_tool -change "$OPENSSL_SRC/libssl.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libssl.3.dylib" "$file" 2>/dev/null || true
             install_name_tool -change "$OPENSSL_SRC/libcrypto.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libcrypto.3.dylib" "$file" 2>/dev/null || true
             fixed=true
         fi
 
-        # Fix NeutrinoRDP (FreeRDP) references - change relative paths to absolute bundled paths
+        # Also fix hardcoded xrdp-deps paths (for NeutrinoRDP libraries)
+        if otool -L "$file" 2>/dev/null | grep -q "xrdp-deps/local/lib/libssl"; then
+            install_name_tool -change "$HOME/xrdp-deps/local/lib/libssl.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libssl.3.dylib" "$file" 2>/dev/null || true
+            install_name_tool -change "$HOME/xrdp-deps/local/lib/libcrypto.3.dylib" "$INSTALL_PREFIX/lib/xrdp/libcrypto.3.dylib" "$file" 2>/dev/null || true
+            fixed=true
+        fi
+
+        # Fix NeutrinoRDP (FreeRDP) references - change relative and system paths to bundled paths
         for lib in "${FREERDP_LIBS[@]}"; do
+            # Fix references to this library (both relative and absolute system paths)
             if otool -L "$file" 2>/dev/null | grep -q "$lib"; then
                 install_name_tool -change "$lib" "$INSTALL_PREFIX/lib/xrdp/$lib" "$file" 2>/dev/null || true
                 install_name_tool -change "$FREERDP_SRC/$lib" "$INSTALL_PREFIX/lib/xrdp/$lib" "$file" 2>/dev/null || true
                 fixed=true
             fi
         done
+
+        # If this IS a library, fix its install_name (its own ID)
+        if [[ "$(basename "$file")" == *.dylib ]]; then
+            local basename_file=$(basename "$file")
+            # Check if this is one of our bundled libraries and fix its ID
+            for lib in "${FREERDP_LIBS[@]}" "libssl.3.dylib" "libcrypto.3.dylib"; do
+                if [[ "$basename_file" == "$lib" ]]; then
+                    install_name_tool -id "$INSTALL_PREFIX/lib/xrdp/$lib" "$file" 2>/dev/null || true
+                    fixed=true
+                    break
+                fi
+            done
+        fi
 
         if [ "$fixed" = true ]; then
             echo "  Fixed: $(basename "$file")"
