@@ -394,6 +394,22 @@ echo "============================================"
 echo ""
 echo "Output: $SCRIPT_DIR/$PKG_NAME.pkg"
 echo ""
+
+# Optional: Notarize the package
+if [ "$NOTARIZE" = "yes" ]; then
+    echo "Notarizing package with Apple..."
+    "$SCRIPT_DIR/notarize-pkg.sh" "$SCRIPT_DIR/$PKG_NAME.pkg"
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "✓ Package is notarized and ready for distribution"
+    else
+        echo ""
+        echo "WARNING: Notarization failed. Package is signed but not notarized."
+        echo "Run: $SCRIPT_DIR/notarize-pkg.sh $SCRIPT_DIR/$PKG_NAME.pkg"
+    fi
+fi
+
+echo ""
 echo "To install: sudo installer -pkg $SCRIPT_DIR/$PKG_NAME.pkg -target /"
 echo ""
 

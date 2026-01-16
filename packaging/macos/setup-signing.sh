@@ -7,9 +7,34 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-API_KEY_PATH="$HOME/Downloads/AuthKey_N5Q2ZKTJB5.p8"
-API_KEY_ID="N5Q2ZKTJB5"
-ISSUER_ID="e73e7c0f-7ade-4a3f-bf61-f9c176b84abc"
+
+# App Store Connect API credentials
+# Get these from: https://appstoreconnect.apple.com/access/integrations/api
+API_KEY_PATH="${API_KEY_PATH:-}"
+API_KEY_ID="${API_KEY_ID:-}"
+ISSUER_ID="${ISSUER_ID:-}"
+
+# Certificate details
+CERT_EMAIL="${CERT_EMAIL:-}"
+CERT_COMMON_NAME="${CERT_COMMON_NAME:-Developer ID Application}"
+CERT_ORG="${CERT_ORG:-}"
+
+if [ -z "$API_KEY_PATH" ] || [ -z "$API_KEY_ID" ] || [ -z "$ISSUER_ID" ]; then
+    echo "ERROR: Missing App Store Connect API credentials"
+    echo ""
+    echo "Set environment variables:"
+    echo "  export API_KEY_PATH=~/Downloads/AuthKey_XXXXXXXXXX.p8"
+    echo "  export API_KEY_ID=XXXXXXXXXX  # 10-character key ID"
+    echo "  export ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    echo ""
+    echo "Optional certificate details:"
+    echo "  export CERT_EMAIL=your@email.com"
+    echo "  export CERT_ORG='Your Organization'"
+    echo ""
+    echo "Get API credentials from:"
+    echo "https://appstoreconnect.apple.com/access/integrations/api"
+    exit 1
+fi
 
 echo "============================================"
 echo "  xrdp Code Signing Setup"
@@ -40,10 +65,15 @@ echo "[1/4] Generating Certificate Signing Request..."
 CSR_PATH="/tmp/xrdp-dev-id.csr"
 KEY_PATH="/tmp/xrdp-dev-id.key"
 
+# Build subject string
+SUBJ="/CN=$CERT_COMMON_NAME"
+[ -n "$CERT_EMAIL" ] && SUBJ="$SUBJ/emailAddress=$CERT_EMAIL"
+[ -n "$CERT_ORG" ] && SUBJ="$SUBJ/O=$CERT_ORG"
+
 openssl req -new -newkey rsa:2048 -nodes \
     -keyout "$KEY_PATH" \
     -out "$CSR_PATH" \
-    -subj "/emailAddress=admin@remotex.app/CN=Developer ID Application/O=RemoteX" \
+    -subj "$SUBJ" \
     2>/dev/null
 
 echo "  CSR created: $CSR_PATH"
