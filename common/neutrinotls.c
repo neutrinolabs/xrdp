@@ -4,15 +4,26 @@
  */
 
 /* Set to 1 for debug output */
+#ifndef TLS13_DEBUG
 #define TLS13_DEBUG 1
+#endif
 
-#if TLS13_DEBUG
-#define DPRINTF(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define DPRINTF(...) ((void)0)
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
 #endif
 
 #include "neutrinotls.h"
+#include "log.h"
+
+#if TLS13_DEBUG
+#define DPRINTF(...) do { \
+    char _dprintf_buf[512]; \
+    snprintf(_dprintf_buf, sizeof(_dprintf_buf), __VA_ARGS__); \
+    LOG(LOG_LEVEL_DEBUG, "[NeutrinoTLS] %s", _dprintf_buf); \
+} while(0)
+#else
+#define DPRINTF(...) ((void)0)
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
