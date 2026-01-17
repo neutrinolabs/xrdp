@@ -13,6 +13,7 @@
 @property (strong, nonatomic) NSMenu *statusMenu;
 @property (strong, nonatomic) NSTask *xrdpTask;
 @property (strong, nonatomic) NSTask *sesmanTask;
+@property (strong, nonatomic) NSTask *chansrvTask;
 @property (strong, nonatomic) NSMenuItem *statusMenuItem;
 @property (strong, nonatomic) NSMenuItem *startMenuItem;
 @property (strong, nonatomic) NSMenuItem *stopMenuItem;
@@ -107,45 +108,42 @@
 }
 
 - (void)killExistingProcesses {
-    NSLog(@"Checking for existing xrdp processes...");
+    NSLog(@"Checking for existing xrdp server processes...");
 
-    // Kill xrdp
+    // Kill xrdp server processes in Helpers directory (not the app itself)
+    NSString *helpersDir = [[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents"] stringByAppendingPathComponent:@"Helpers"];
+
+    // Kill xrdp server
     NSTask *killXrdp = [[NSTask alloc] init];
-    killXrdp.launchPath = @"/usr/bin/killall";
-    killXrdp.arguments = @[@"-9", @"xrdp"];
-    killXrdp.standardOutput = [NSPipe pipe];
-    killXrdp.standardError = [NSPipe pipe];
+    killXrdp.launchPath = @"/usr/bin/pkill";
+    killXrdp.arguments = @[@"-9", @"-f", [helpersDir stringByAppendingPathComponent:@"xrdp"]];
     @try {
         [killXrdp launch];
         [killXrdp waitUntilExit];
     } @catch (NSException *exception) {
-        NSLog(@"killall xrdp: %@", exception);
+        // Ignore - process may not exist
     }
 
     // Kill xrdp-sesman
     NSTask *killSesman = [[NSTask alloc] init];
-    killSesman.launchPath = @"/usr/bin/killall";
-    killSesman.arguments = @[@"-9", @"xrdp-sesman"];
-    killSesman.standardOutput = [NSPipe pipe];
-    killSesman.standardError = [NSPipe pipe];
+    killSesman.launchPath = @"/usr/bin/pkill";
+    killSesman.arguments = @[@"-9", @"-f", [helpersDir stringByAppendingPathComponent:@"xrdp-sesman"]];
     @try {
         [killSesman launch];
         [killSesman waitUntilExit];
     } @catch (NSException *exception) {
-        NSLog(@"killall xrdp-sesman: %@", exception);
+        // Ignore - process may not exist
     }
 
     // Kill xrdp-chansrv
     NSTask *killChansrv = [[NSTask alloc] init];
-    killChansrv.launchPath = @"/usr/bin/killall";
-    killChansrv.arguments = @[@"-9", @"xrdp-chansrv"];
-    killChansrv.standardOutput = [NSPipe pipe];
-    killChansrv.standardError = [NSPipe pipe];
+    killChansrv.launchPath = @"/usr/bin/pkill";
+    killChansrv.arguments = @[@"-9", @"-f", [helpersDir stringByAppendingPathComponent:@"xrdp-chansrv"]];
     @try {
         [killChansrv launch];
         [killChansrv waitUntilExit];
     } @catch (NSException *exception) {
-        NSLog(@"killall xrdp-chansrv: %@", exception);
+        // Ignore - process may not exist
     }
 
     // Wait a moment for processes to terminate
@@ -197,6 +195,7 @@
         [self.xrdpTask launch];
         NSLog(@"Started xrdp (PID: %d)", self.xrdpTask.processIdentifier);
         [self updateMenuState:YES];
+        NSLog(@"Note: xrdp-chansrv will be started automatically by sesman when a user connects");
     } @catch (NSException *exception) {
         NSLog(@"Failed to start xrdp: %@", exception);
         [self showAlert:@"Failed to start xrdp server" message:exception.reason];
@@ -212,6 +211,11 @@
     NSLog(@"Stopping xrdp server...");
 
     // Terminate tasks gracefully first
+    if (self.chansrvTask && self.chansrvTask.isRunning) {
+        [self.chansrvTask terminate];
+        self.chansrvTask = nil;
+    }
+
     if (self.xrdpTask && self.xrdpTask.isRunning) {
         [self.xrdpTask terminate];
         self.xrdpTask = nil;

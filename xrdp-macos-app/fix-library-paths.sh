@@ -24,13 +24,27 @@ if [ -f "libcrypto.3.dylib" ]; then
     echo "✅ Fixed libcrypto.3.dylib"
 fi
 
-# Fix any libraries that reference /usr/local/lib/xrdp
+# Fix any libraries that reference /usr/local/lib/xrdp or @rpath
 for lib in *.dylib; do
     if [ -f "$lib" ]; then
+        # Fix library ID if it uses @rpath
+        if otool -L "$lib" | head -2 | tail -1 | grep -q "@rpath"; then
+            install_name_tool -id "@executable_path/../Resources/lib/xrdp/$lib" "$lib" 2>/dev/null || true
+        fi
+
         # Check if library references /usr/local/lib/xrdp
         if otool -L "$lib" | grep -q "/usr/local/lib/xrdp"; then
-            echo "Fixing references in $lib"
+            echo "Fixing /usr/local references in $lib"
             otool -L "$lib" | grep "/usr/local/lib/xrdp" | awk '{print $1}' | while read dep; do
+                libname=$(basename "$dep")
+                install_name_tool -change "$dep" "@executable_path/../Resources/lib/xrdp/$libname" "$lib" 2>/dev/null || true
+            done
+        fi
+
+        # Check if library references @rpath
+        if otool -L "$lib" | grep -q "@rpath"; then
+            echo "Fixing @rpath references in $lib"
+            otool -L "$lib" | grep "@rpath" | awk '{print $1}' | while read dep; do
                 libname=$(basename "$dep")
                 install_name_tool -change "$dep" "@executable_path/../Resources/lib/xrdp/$libname" "$lib" 2>/dev/null || true
             done
