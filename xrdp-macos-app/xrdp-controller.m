@@ -45,7 +45,7 @@
 
     // Create status bar item
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
-    self.statusItem.button.title = @"⚡️";
+    self.statusItem.button.title = @"⚛";
     self.statusItem.button.toolTip = @"xrdp Remote Desktop";
 
     // Create menu
@@ -273,12 +273,12 @@
 - (void)updateMenuState:(BOOL)running {
     if (running) {
         self.statusMenuItem.title = @"xrdp Server: Running";
-        self.statusItem.button.title = @"⚡️";
+        self.statusItem.button.title = @"⚛";
         [self.startMenuItem setEnabled:NO];
         [self.stopMenuItem setEnabled:YES];
     } else {
         self.statusMenuItem.title = @"xrdp Server: Stopped";
-        self.statusItem.button.title = @"⚡️";
+        self.statusItem.button.title = @"⚛";
         [self.startMenuItem setEnabled:YES];
         [self.stopMenuItem setEnabled:NO];
     }
@@ -418,9 +418,9 @@
 - (void)updateConnectionsDisplay {
     // Update menu icon
     if (self.connectionCount > 0) {
-        self.statusItem.button.title = [NSString stringWithFormat:@"👥 %ld", (long)self.connectionCount];
+        self.statusItem.button.title = [NSString stringWithFormat:@"⚛ %ld", (long)self.connectionCount];
     } else {
-        self.statusItem.button.title = @"⚡️";
+        self.statusItem.button.title = @"⚛";
     }
 
     // Update connections menu item
@@ -501,7 +501,7 @@
 
 - (void)showAbout:(id)sender {
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"⚛️ xrdp for macOS";
+    alert.messageText = @"⚛ xrdp for macOS";
 
     NSString *aboutText = @"xrdp - Open Source Remote Desktop Protocol Server\n"
                           @"Version: 1.0.0\n\n"
@@ -528,7 +528,7 @@
                           @"NeutrinoTLS: Apache License 2.0\n\n"
                           @"Full license text available at:\n"
                           @"https://www.apache.org/licenses/LICENSE-2.0\n\n"
-                          @"⚛️ Built with Claude Code";
+                          @"⚛ Built with Claude Code";
 
     alert.informativeText = aboutText;
     [alert addButtonWithTitle:@"OK"];
