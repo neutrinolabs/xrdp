@@ -29,7 +29,7 @@
     // Create menu
     self.statusMenu = [[NSMenu alloc] init];
 
-    self.statusMenuItem = [[NSMenuItem alloc] initWithTitle:@"xrdp Server: Stopped" action:nil keyEquivalent:@""];
+    self.statusMenuItem = [[NSMenuItem alloc] initWithTitle:@"xrdp Server: Starting..." action:nil keyEquivalent:@""];
     [self.statusMenuItem setEnabled:NO];
     [self.statusMenu addItem:self.statusMenuItem];
 
@@ -53,6 +53,14 @@
 
     // Initial state
     [self updateMenuState:NO];
+
+    // Kill any existing xrdp processes
+    [self killExistingProcesses];
+
+    // Auto-start server
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self startServer:nil];
+    });
 
     // Check for Screen Recording permission
     [self checkScreenRecordingPermission];
@@ -96,6 +104,53 @@
 
 - (NSString *)sesmanConfigPath {
     return [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"etc/xrdp/sesman.ini"];
+}
+
+- (void)killExistingProcesses {
+    NSLog(@"Checking for existing xrdp processes...");
+
+    // Kill xrdp
+    NSTask *killXrdp = [[NSTask alloc] init];
+    killXrdp.launchPath = @"/usr/bin/killall";
+    killXrdp.arguments = @[@"-9", @"xrdp"];
+    killXrdp.standardOutput = [NSPipe pipe];
+    killXrdp.standardError = [NSPipe pipe];
+    @try {
+        [killXrdp launch];
+        [killXrdp waitUntilExit];
+    } @catch (NSException *exception) {
+        NSLog(@"killall xrdp: %@", exception);
+    }
+
+    // Kill xrdp-sesman
+    NSTask *killSesman = [[NSTask alloc] init];
+    killSesman.launchPath = @"/usr/bin/killall";
+    killSesman.arguments = @[@"-9", @"xrdp-sesman"];
+    killSesman.standardOutput = [NSPipe pipe];
+    killSesman.standardError = [NSPipe pipe];
+    @try {
+        [killSesman launch];
+        [killSesman waitUntilExit];
+    } @catch (NSException *exception) {
+        NSLog(@"killall xrdp-sesman: %@", exception);
+    }
+
+    // Kill xrdp-chansrv
+    NSTask *killChansrv = [[NSTask alloc] init];
+    killChansrv.launchPath = @"/usr/bin/killall";
+    killChansrv.arguments = @[@"-9", @"xrdp-chansrv"];
+    killChansrv.standardOutput = [NSPipe pipe];
+    killChansrv.standardError = [NSPipe pipe];
+    @try {
+        [killChansrv launch];
+        [killChansrv waitUntilExit];
+    } @catch (NSException *exception) {
+        NSLog(@"killall xrdp-chansrv: %@", exception);
+    }
+
+    // Wait a moment for processes to terminate
+    [NSThread sleepForTimeInterval:0.3];
+    NSLog(@"Cleanup complete");
 }
 
 - (void)startServer:(id)sender {
@@ -154,17 +209,21 @@
 }
 
 - (void)stopServer:(id)sender {
+    NSLog(@"Stopping xrdp server...");
+
+    // Terminate tasks gracefully first
     if (self.xrdpTask && self.xrdpTask.isRunning) {
         [self.xrdpTask terminate];
-        [self.xrdpTask waitUntilExit];
         self.xrdpTask = nil;
     }
 
     if (self.sesmanTask && self.sesmanTask.isRunning) {
         [self.sesmanTask terminate];
-        [self.sesmanTask waitUntilExit];
         self.sesmanTask = nil;
     }
+
+    // Ensure all processes are killed
+    [self killExistingProcesses];
 
     [self updateMenuState:NO];
 }
