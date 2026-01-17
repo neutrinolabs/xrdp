@@ -1,0 +1,67 @@
+xrdp NeutrinoTLS - Current State
+================================
+Date: 2026-01-16 15:14 PST
+
+STATUS: READY BUT BLOCKED
+-------------------------
+
+The NeutrinoTLS implementation is complete and all code fixes have been applied.
+However, the server cannot run due to a port conflict that requires manual intervention.
+
+BLOCKING ISSUE
+--------------
+Port 3389 is bound by system daemon (/usr/local/sbin/xrdp)
+GUI app with NeutrinoTLS (/Applications/xrdp.app) cannot start
+
+REQUIRED ACTION
+---------------
+Run: ./disable-system-xrdp.sh
+
+This script requires sudo password and will:
+1. Unload launchd services
+2. Kill system daemon processes
+3. Free port 3389
+
+AFTER RUNNING SCRIPT
+-------------------
+1. Restart GUI app: open -a /Applications/xrdp.app
+2. Verify listening: lsof -nP -iTCP:3389 -sTCP:LISTEN
+3. Monitor logs: tail -f /Users/cyclic/Library/Logs/xrdp/xrdp.log
+
+CODE FIXES COMPLETED
+--------------------
+✓ TLS debug logging enabled (TLS13_DEBUG=1)
+✓ Added ssl_get_version() - returns "TLSv1.3"
+✓ Added ssl_get_cipher_name() - returns "TLS_CHACHA20_POLY1305_SHA256"
+✓ Bounds checking in ClientHello parsing
+✓ EAGAIN/EWOULDBLOCK handling
+✓ Extension parsing validation
+
+BUILDS READY
+------------
+✓ /tmp/libcommon.0.dylib-v2 (latest with all fixes)
+✓ /Users/cyclic/xrdp/xrdp/.libs/xrdp (updated binary)
+✓ /Applications/xrdp.app (ready to run)
+
+DOCUMENTATION
+-------------
+✓ README_IMPORTANT.md - Critical action items
+✓ STATUS.md - Detailed status
+✓ READY_FOR_TESTING.md - Testing procedures
+✓ SESSION_SUMMARY.md - Changes made
+✓ QUICK_REFERENCE.md - Quick commands
+✓ CURRENT_STATE.txt - This file
+
+MONITORING
+----------
+Background log monitor: Running
+Waiting for: Port conflict to be resolved
+Will detect: New connection attempts, errors, handshakes
+
+LAST LOG ENTRY
+--------------
+[2026-01-16T15:03:34.567-0800] [CORE ] Failed to start xrdp daemon, possibly address already in use.
+
+NEXT STEP
+---------
+Run ./disable-system-xrdp.sh to unblock the server

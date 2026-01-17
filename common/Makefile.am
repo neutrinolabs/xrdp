@@ -71,6 +71,12 @@ libcommon_la_SOURCES = \
   set_int.h \
   ssl_calls.c \
   ssl_calls.h \
+  neutrinocrypto.c \
+  neutrinocrypto.h \
+  neutrinossl.c \
+  neutrinossl.h \
+  neutrinotls.c \
+  neutrinotls.h \
   string_calls.c \
   string_calls.h \
   thread_calls.c \
