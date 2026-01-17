@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'xrdp' in project 'xrdp' (no dependencies)

@@ -100,6 +100,18 @@ int neutrinossl_shutdown(NEUTRINOSSL* ssl);
  */
 const char* neutrinossl_get_error(void);
 
+/**
+ * Get TLS version string
+ * @return TLS version (e.g., "TLSv1.3")
+ */
+const char* neutrinossl_get_version(void);
+
+/**
+ * Get cipher suite name
+ * @return Cipher suite name
+ */
+const char* neutrinossl_get_cipher_name(void);
+
 #endif /* __APPLE__ */
 
 #endif /* NEUTRINOSSL_H */

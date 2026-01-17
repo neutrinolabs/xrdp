@@ -298,4 +298,20 @@ const char* neutrinossl_get_error(void)
     return g_neutrinossl_error[0] ? g_neutrinossl_error : "No error";
 }
 
+/**
+ * Get TLS version string
+ */
+const char* neutrinossl_get_version(void)
+{
+    return "TLSv1.3";
+}
+
+/**
+ * Get cipher suite name
+ */
+const char* neutrinossl_get_cipher_name(void)
+{
+    return "TLS_CHACHA20_POLY1305_SHA256";
+}
+
 #endif /* __APPLE__ */

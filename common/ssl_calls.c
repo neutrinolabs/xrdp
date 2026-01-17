@@ -26,9 +26,21 @@
 #include <stdlib.h> /* needed for openssl headers */
 #include <string.h>
 
-/* OpenSSL headers - needed for all platforms */
-#include <openssl/ssl.h>
+/* Use NeutrinoSSL on macOS to avoid OpenSSL PAC issues with TLS */
+#ifdef __APPLE__
+#define USE_NEUTRINOSSL 1
+#endif
+
+#ifdef USE_NEUTRINOSSL
+/* NeutrinoSSL for TLS only */
+#include "neutrinossl.h"
+#endif
+
+/* OpenSSL headers for crypto functions (always needed) */
 #include <openssl/err.h>
+#ifndef USE_NEUTRINOSSL
+#include <openssl/ssl.h>
+#endif
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
@@ -42,12 +54,6 @@
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/param_build.h>
 #include <openssl/core_names.h>
-#endif
-
-/* Use NeutrinoSSL on macOS to avoid OpenSSL PAC issues with TLS */
-#ifdef __APPLE__
-#define USE_NEUTRINOSSL 1
-#include "neutrinossl.h"
 #endif
 
 #include "os_calls.h"
@@ -1087,6 +1093,7 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
     return self;
 }
 /*****************************************************************************/
+#ifndef USE_NEUTRINOSSL
 static int
 ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
 {
@@ -1124,6 +1131,7 @@ ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
 
     return result;
 }
+#endif /* !USE_NEUTRINOSSL */
 
 /**************************************************************************//**
  * Log an attempt to use an encrypted file
@@ -1629,10 +1637,12 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 {
+#ifndef USE_NEUTRINOSSL
     if (SSL_pending(tls->ssl) > 0)
     {
         return 1;
     }
+#endif
     g_reset_wait_obj(tls->rwo);
     return g_sck_can_recv(sck, millis);
 }
@@ -1641,14 +1651,22 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 const char *
 ssl_get_version(const struct ssl_tls *ssl)
 {
+#ifdef USE_NEUTRINOSSL
+    return neutrinossl_get_version();
+#else
     return SSL_get_version(ssl->ssl);
+#endif
 }
 
 /*****************************************************************************/
 const char *
 ssl_get_cipher_name(const struct ssl_tls *ssl)
 {
+#ifdef USE_NEUTRINOSSL
+    return neutrinossl_get_cipher_name();
+#else
     return SSL_get_cipher_name(ssl->ssl);
+#endif
 }
 
 /*****************************************************************************/

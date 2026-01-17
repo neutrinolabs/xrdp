@@ -4,7 +4,7 @@
  */
 
 /* Set to 1 for debug output */
-#define TLS13_DEBUG 0
+#define TLS13_DEBUG 1
 
 #if TLS13_DEBUG
 #define DPRINTF(...) fprintf(stderr, __VA_ARGS__)

@@ -75,3 +75,5 @@ xrdp_accel_assist/xrdp-accel-assist
 test_rdp_client
 test_rdp_neutrino
 freerdp_test_client
+xrdp-macos-app/build/
+*.ips

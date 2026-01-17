@@ -306,6 +306,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"USE_NEUTRINOSSL=1",
 					"XRDP_RUNTIME_DIR=\\\"$(HOME)/Library/Application",
 					"Support/xrdp/run\\\"",
 				);
@@ -347,6 +348,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"USE_NEUTRINOSSL=1",
 					"XRDP_RUNTIME_DIR=\\\"$(HOME)/Library/Application",
 					"Support/xrdp/run\\\"",
 				);
