@@ -46,24 +46,37 @@
     // Create status bar item with proper clickable icon
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
 
-    // Use SF Symbol for atom/network icon
+    // Use SF Symbol for server icon
     if (@available(macOS 11.0, *)) {
+        // Try multiple symbols in order of preference
         NSImage *icon = [NSImage imageWithSystemSymbolName:@"atom" accessibilityDescription:@"xrdp"];
         if (!icon) {
-            // Fallback to network icon if atom not available
+            icon = [NSImage imageWithSystemSymbolName:@"server.rack" accessibilityDescription:@"xrdp"];
+        }
+        if (!icon) {
             icon = [NSImage imageWithSystemSymbolName:@"network" accessibilityDescription:@"xrdp"];
+        }
+        if (!icon) {
+            icon = [NSImage imageWithSystemSymbolName:@"circle.hexagongrid" accessibilityDescription:@"xrdp"];
         }
         if (icon) {
             [icon setTemplate:YES];
             self.statusItem.button.image = icon;
+            NSLog(@"Using SF Symbol icon for menu bar");
         } else {
             self.statusItem.button.title = @"⚛";
+            NSLog(@"Fallback to text glyph for menu bar");
         }
     } else {
         self.statusItem.button.title = @"⚛";
+        NSLog(@"macOS < 11.0: using text glyph");
     }
 
     self.statusItem.button.toolTip = @"xrdp Remote Desktop";
+
+    // Ensure button is enabled and visible
+    [self.statusItem.button setEnabled:YES];
+    self.statusItem.visible = YES;
 
     // Create menu
     self.statusMenu = [[NSMenu alloc] init];
@@ -443,15 +456,18 @@
     // Update menu icon with connection count
     if (@available(macOS 11.0, *)) {
         if (self.statusItem.button.image) {
-            // Use image with text badge
+            // Use image - don't set title text at all, only the image
+            // Adding text alongside image can cause click issues
             if (self.connectionCount > 0) {
-                // Show connection count as title alongside icon
-                self.statusItem.button.title = [NSString stringWithFormat:@"%ld", (long)self.connectionCount];
+                // Show connection count in tooltip instead
+                self.statusItem.button.toolTip = [NSString stringWithFormat:@"xrdp Remote Desktop - %ld active connection%@",
+                                                  (long)self.connectionCount,
+                                                  self.connectionCount == 1 ? @"" : @"s"];
             } else {
-                self.statusItem.button.title = @"";
+                self.statusItem.button.toolTip = @"xrdp Remote Desktop";
             }
         } else {
-            // Fallback to text
+            // Fallback to text only
             if (self.connectionCount > 0) {
                 self.statusItem.button.title = [NSString stringWithFormat:@"⚛ %ld", (long)self.connectionCount];
             } else {
