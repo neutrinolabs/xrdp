@@ -62,9 +62,11 @@
         if (icon) {
             [icon setTemplate:YES];
             self.statusItem.button.image = icon;
+            self.statusItem.button.title = nil; // Explicitly clear title when using image
             NSLog(@"Using SF Symbol icon for menu bar");
         } else {
             self.statusItem.button.title = @"⚛";
+            self.statusItem.button.image = nil; // Clear image when using text
             NSLog(@"Fallback to text glyph for menu bar");
         }
     } else {
@@ -456,10 +458,11 @@
     // Update menu icon with connection count
     if (@available(macOS 11.0, *)) {
         if (self.statusItem.button.image) {
-            // Use image - don't set title text at all, only the image
-            // Adding text alongside image can cause click issues
+            // Use image - explicitly ensure no title is set
+            self.statusItem.button.title = nil;
+
+            // Show connection count in tooltip instead
             if (self.connectionCount > 0) {
-                // Show connection count in tooltip instead
                 self.statusItem.button.toolTip = [NSString stringWithFormat:@"xrdp Remote Desktop - %ld active connection%@",
                                                   (long)self.connectionCount,
                                                   self.connectionCount == 1 ? @"" : @"s"];
