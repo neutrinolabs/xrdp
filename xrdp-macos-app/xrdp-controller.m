@@ -43,9 +43,26 @@
     self.activeSessions = [NSMutableArray array];
     self.connectionCount = 0;
 
-    // Create status bar item
-    self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
-    self.statusItem.button.title = @"⚛";
+    // Create status bar item with proper clickable icon
+    self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+
+    // Use SF Symbol for atom/network icon
+    if (@available(macOS 11.0, *)) {
+        NSImage *icon = [NSImage imageWithSystemSymbolName:@"atom" accessibilityDescription:@"xrdp"];
+        if (!icon) {
+            // Fallback to network icon if atom not available
+            icon = [NSImage imageWithSystemSymbolName:@"network" accessibilityDescription:@"xrdp"];
+        }
+        if (icon) {
+            [icon setTemplate:YES];
+            self.statusItem.button.image = icon;
+        } else {
+            self.statusItem.button.title = @"⚛";
+        }
+    } else {
+        self.statusItem.button.title = @"⚛";
+    }
+
     self.statusItem.button.toolTip = @"xrdp Remote Desktop";
 
     // Create menu
@@ -273,14 +290,21 @@
 - (void)updateMenuState:(BOOL)running {
     if (running) {
         self.statusMenuItem.title = @"xrdp Server: Running";
-        self.statusItem.button.title = @"⚛";
         [self.startMenuItem setEnabled:NO];
         [self.stopMenuItem setEnabled:YES];
     } else {
         self.statusMenuItem.title = @"xrdp Server: Stopped";
-        self.statusItem.button.title = @"⚛";
         [self.startMenuItem setEnabled:YES];
         [self.stopMenuItem setEnabled:NO];
+    }
+
+    // Update icon to default state (unless connections update it)
+    if (@available(macOS 11.0, *)) {
+        if (self.statusItem.button.image) {
+            // Keep using image
+        }
+    } else {
+        self.statusItem.button.title = @"⚛";
     }
 }
 
@@ -416,11 +440,31 @@
 }
 
 - (void)updateConnectionsDisplay {
-    // Update menu icon
-    if (self.connectionCount > 0) {
-        self.statusItem.button.title = [NSString stringWithFormat:@"⚛ %ld", (long)self.connectionCount];
+    // Update menu icon with connection count
+    if (@available(macOS 11.0, *)) {
+        if (self.statusItem.button.image) {
+            // Use image with text badge
+            if (self.connectionCount > 0) {
+                // Show connection count as title alongside icon
+                self.statusItem.button.title = [NSString stringWithFormat:@"%ld", (long)self.connectionCount];
+            } else {
+                self.statusItem.button.title = @"";
+            }
+        } else {
+            // Fallback to text
+            if (self.connectionCount > 0) {
+                self.statusItem.button.title = [NSString stringWithFormat:@"⚛ %ld", (long)self.connectionCount];
+            } else {
+                self.statusItem.button.title = @"⚛";
+            }
+        }
     } else {
-        self.statusItem.button.title = @"⚛";
+        // macOS < 11.0: use text
+        if (self.connectionCount > 0) {
+            self.statusItem.button.title = [NSString stringWithFormat:@"⚛ %ld", (long)self.connectionCount];
+        } else {
+            self.statusItem.button.title = @"⚛";
+        }
     }
 
     // Update connections menu item
