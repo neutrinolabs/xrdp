@@ -12,8 +12,9 @@ if [ ! -f "$XRDP_INI" ]; then
     exit 0
 fi
 
-RUNTIME_DIR="/Applications/xrdp.app/Contents/run"
+RUNTIME_DIR="/Applications/$PRODUCT_NAME.app/Contents/run"
 echo "Patching xrdp configuration files..."
+echo "Using runtime directory: $RUNTIME_DIR"
 
 mkdir -p "$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/run"
 

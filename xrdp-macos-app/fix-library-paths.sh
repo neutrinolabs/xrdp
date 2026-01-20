@@ -10,6 +10,12 @@ LIB_DIR="$APP_DIR/Contents/Resources/lib/xrdp"
 
 echo "Fixing library install_name paths..."
 
+# Skip if no libraries were copied
+if [ ! -d "$LIB_DIR" ] || [ -z "$(ls -A "$LIB_DIR" 2>/dev/null)" ]; then
+    echo "No libraries to fix (directory empty or doesn't exist)"
+    exit 0
+fi
+
 cd "$LIB_DIR"
 
 # Fix OpenSSL library install_names

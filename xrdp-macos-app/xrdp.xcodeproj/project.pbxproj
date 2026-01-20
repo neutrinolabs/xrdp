@@ -193,6 +193,7 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/sign-helpers.sh",
 			);
 			name = "Sign Helpers";
 			outputFileListPaths = (
@@ -211,6 +212,7 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(SRCROOT)/fix-library-paths.sh",
 			);
 			name = "Fix Library Paths";
 			outputFileListPaths = (
