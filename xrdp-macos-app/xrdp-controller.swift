@@ -27,13 +27,8 @@ class XRDPSession: Identifiable {
 @Observable
 @MainActor
 class XRDPAppState {
-    var isServerRunning: Bool = false
     var activeSessions: [XRDPSession] = []
     var connectionCount: Int = 0
-
-    var statusText: String {
-        isServerRunning ? "xrdp Server: Running" : "xrdp Server: Stopped"
-    }
 
     var connectionsText: String {
         "Active Connections: \(connectionCount)"
@@ -53,10 +48,33 @@ class XRDPServerManager {
     private var lastLogPosition: UInt64 = 0
     private var connectionAttempts: Int = 0
     private var failedConnections: Int = 0
+    private var hasAutoStarted = false
+
+    // Computed property - no background updates, only checked when accessed
+    var isServerRunning: Bool {
+        xrdpTask?.isRunning ?? false
+    }
+
+    var statusText: String {
+        isServerRunning ? "xrdp Server: Running" : "xrdp Server: Stopped"
+    }
 
     init() {
-        requestNotificationPermission()
-        startLogMonitoring()
+        // Do everything in background to never block UI
+        Task.detached { @MainActor @Sendable [weak self] in
+            guard let self = self else { return }
+
+            self.requestNotificationPermission()
+            self.startLogMonitoring()
+
+            try? await Task.sleep(for: .seconds(1))
+            if !self.hasAutoStarted {
+                self.hasAutoStarted = true
+                self.killExistingProcesses()
+                try? await Task.sleep(for: .seconds(0.5))
+                self.startServer()
+            }
+        }
     }
 
     private func requestNotificationPermission() {
@@ -132,10 +150,7 @@ class XRDPServerManager {
                 body: "Server terminated unexpectedly. \(errorDetails)",
                 sound: true
             )
-
-            Task { @MainActor in
-                self?.appState.isServerRunning = false
-            }
+            // No need to update state - isServerRunning is computed from xrdpTask.isRunning
         }
 
         do {
@@ -149,9 +164,7 @@ class XRDPServerManager {
             // Verify it's still running
             if xrdpTask?.isRunning == true {
                 print("xrdp daemon is running successfully")
-                await MainActor.run {
-                    appState.isServerRunning = true
-                }
+                // No need to update state - isServerRunning is computed from xrdpTask.isRunning
                 startConnectionMonitoring()
             } else {
                 print("xrdp daemon failed to start or exited immediately")
@@ -185,8 +198,7 @@ class XRDPServerManager {
         sesmanTask = nil
 
         killExistingProcesses()
-
-        appState.isServerRunning = false
+        // No need to update state - isServerRunning is computed from xrdpTask.isRunning
     }
 
     deinit {
@@ -219,13 +231,10 @@ class XRDPServerManager {
     }
 
     private func startConnectionMonitoring() {
+        // Disabled connection monitoring to prevent menu hangs
+        // The issue is that updating observable state while menu is open causes SwiftUI to hang
         monitorTask?.cancel()
-        monitorTask = Task { [weak self] in
-            while !Task.isCancelled {
-                await self?.updateConnectionsAsync()
-                try? await Task.sleep(for: .seconds(5))
-            }
-        }
+        monitorTask = nil
     }
 
     private func stopConnectionMonitoring() {
@@ -383,7 +392,9 @@ class XRDPServerManager {
             }
         }
 
-        await MainActor.run {
+        // Only update state if it actually changed to avoid unnecessary re-renders
+        let hasChanged = currentPIDs != previousSessionPIDs || newSessions.count != appState.connectionCount
+        if hasChanged {
             previousSessionPIDs = currentPIDs
             appState.activeSessions = newSessions
             appState.connectionCount = newSessions.count
@@ -495,7 +506,7 @@ struct MenuBarView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Status
-            Text(serverManager.appState.statusText)
+            Text(serverManager.statusText)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
 
@@ -544,12 +555,12 @@ struct MenuBarView: View {
             Button("Start Server") {
                 serverManager.startServer()
             }
-            .disabled(serverManager.appState.isServerRunning)
+            .disabled(serverManager.isServerRunning)
 
             Button("Stop Server") {
                 serverManager.stopServer()
             }
-            .disabled(!serverManager.appState.isServerRunning)
+            .disabled(!serverManager.isServerRunning)
 
             Divider()
 
