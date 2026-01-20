@@ -9,6 +9,135 @@
 import SwiftUI
 import UserNotifications
 
+// MARK: - Notification Model
+@Observable
+@MainActor
+class XRDPNotification: Identifiable {
+    let id = UUID()
+    var title: String
+    var body: String
+    var timestamp: Date
+    var category: NotificationCategory
+    var debugInfo: String = ""
+
+    enum NotificationCategory: String {
+        case connection = "Connection"
+        case disconnection = "Disconnection"
+        case tlsError = "TLS Error"
+        case protocolError = "Protocol Error"
+        case serverCrash = "Server Crash"
+        case other = "Other"
+    }
+
+    init(title: String, body: String, category: NotificationCategory = .other, debugInfo: String = "") {
+        self.title = title
+        self.body = body
+        self.timestamp = Date()
+        self.category = category
+        self.debugInfo = debugInfo
+    }
+
+    var troubleshootingSteps: String {
+        switch category {
+        case .tlsError:
+            return """
+            TROUBLESHOOTING STEPS:
+            1. Verify client supports TLS 1.3
+            2. Check if client uses ChaCha20-Poly1305 cipher
+            3. Try updating your RDP client to latest version
+            4. On Windows: Use Microsoft Remote Desktop (not mstsc.exe)
+            5. On macOS: Use Microsoft Remote Desktop from App Store
+
+            TECHNICAL DETAILS:
+            - Server uses NeutrinoTLS 1.3
+            - Cipher: TLS_CHACHA20_POLY1305_SHA256
+            - Key Exchange: X25519 (Curve25519 ECDH)
+
+            COMMON CAUSES:
+            - Client doesn't support TLS 1.3
+            - Client using older TLS version (1.2 or below)
+            - Incompatible cipher suite negotiation
+            """
+        case .protocolError:
+            return """
+            TROUBLESHOOTING STEPS:
+            1. Check network connectivity
+            2. Verify firewall allows port 3389
+            3. Restart XRDP server
+            4. Check client RDP version compatibility
+            5. Review server logs for details
+
+            TECHNICAL DETAILS:
+            - Protocol: RDP 8.0+
+            - Port: 3389 (TCP)
+            - Encryption: TLS 1.3
+
+            COMMON CAUSES:
+            - Network interruption during connection
+            - Client sent malformed RDP packet
+            - TLS connection dropped unexpectedly
+            """
+        case .serverCrash:
+            return """
+            TROUBLESHOOTING STEPS:
+            1. Check system logs for crash details
+            2. Restart the XRDP server
+            3. Verify all helper processes are running
+            4. Check system resources (CPU, memory)
+            5. Report issue if crash persists
+
+            TECHNICAL DETAILS:
+            - Components: xrdp, xrdp-sesman, xrdp-chansrv
+            - Runtime Dir: ~/Library/Application Support/xrdp
+            - Logs: ~/Library/Logs/xrdp/
+
+            COMMON CAUSES:
+            - Out of memory
+            - Segmentation fault in xrdp daemon
+            - Missing or corrupted config files
+            """
+        case .connection:
+            return """
+            INFORMATION:
+            A new RDP connection was established successfully.
+
+            CONNECTION DETAILS:
+            - Protocol: RDP over TLS 1.3
+            - Encryption: ChaCha20-Poly1305
+            - Authentication: System credentials
+
+            SECURITY:
+            - Connection is encrypted end-to-end
+            - Server uses Developer ID signed certificate
+            - All traffic secured via TLS 1.3
+            """
+        case .disconnection:
+            return """
+            INFORMATION:
+            An RDP session was disconnected.
+
+            NORMAL DISCONNECTION:
+            - User logged out
+            - Client closed connection
+            - Session timeout
+
+            IF UNEXPECTED:
+            1. Check network stability
+            2. Verify client didn't crash
+            3. Review server logs
+            """
+        case .other:
+            return """
+            TROUBLESHOOTING STEPS:
+            1. Review the notification details above
+            2. Check server logs at ~/Library/Logs/xrdp/
+            3. Restart XRDP server if needed
+            4. Contact support if issue persists
+            """
+        }
+    }
+}
+
 // MARK: - Session Model
 @Observable
 @MainActor
@@ -29,9 +158,18 @@ class XRDPSession: Identifiable {
 class XRDPAppState {
     var activeSessions: [XRDPSession] = []
     var connectionCount: Int = 0
+    var recentNotifications: [XRDPNotification] = []
+    private let maxNotifications = 50  // Keep last 50 notifications
 
     var connectionsText: String {
         "Active Connections: \(connectionCount)"
+    }
+
+    func addNotification(_ notification: XRDPNotification) {
+        recentNotifications.insert(notification, at: 0)
+        if recentNotifications.count > maxNotifications {
+            recentNotifications.removeLast()
+        }
     }
 }
 
@@ -148,7 +286,9 @@ class XRDPServerManager {
             self?.sendNotification(
                 title: "⚠️ xrdp Server Crashed",
                 body: "Server terminated unexpectedly. \(errorDetails)",
-                sound: true
+                sound: true,
+                category: .serverCrash,
+                debugInfo: "Exit code: \(process.terminationStatus)\nPID: \(process.processIdentifier)"
             )
             // No need to update state - isServerRunning is computed from xrdpTask.isRunning
         }
@@ -301,26 +441,34 @@ class XRDPServerManager {
             sendNotification(
                 title: "🔒 TLS Decryption Error",
                 body: "Connection failed: Bad MAC after handshake. Client may not support TLS 1.3 properly. Failed: \(failedConnections)",
-                sound: false
+                sound: false,
+                category: .tlsError,
+                debugInfo: line
             )
         } else if line.contains("TLS handshake failed") {
             failedConnections += 1
             sendNotification(
                 title: "🔒 TLS Handshake Failed",
                 body: "Client TLS handshake error. Total failures: \(failedConnections)",
-                sound: false
+                sound: false,
+                category: .tlsError,
+                debugInfo: line
             )
         } else if line.contains("libxrdp_force_read: header read error") {
             sendNotification(
                 title: "📡 Protocol Error",
                 body: "RDP header read failed after TLS. Connection dropped.",
-                sound: false
+                sound: false,
+                category: .protocolError,
+                debugInfo: line
             )
         } else if line.contains("xrdp_mcs_incoming failed") {
             sendNotification(
                 title: "🔌 MCS Connection Failed",
                 body: "Multi-Channel Service connection failed. RDP protocol layer error.",
-                sound: false
+                sound: false,
+                category: .protocolError,
+                debugInfo: line
             )
         }
     }
@@ -376,7 +524,9 @@ class XRDPServerManager {
                 sendNotification(
                     title: "New Connection",
                     body: "\(session.username) connected from \(session.ipAddress)",
-                    sound: true
+                    sound: true,
+                    category: .connection,
+                    debugInfo: "PID: \(session.pid)\nProtocol: \(session.protocolType)\nEncryption: \(session.encryption)"
                 )
             }
         }
@@ -387,7 +537,9 @@ class XRDPServerManager {
                 sendNotification(
                     title: "User Disconnected",
                     body: "\(session.username) from \(session.ipAddress) has disconnected",
-                    sound: false
+                    sound: false,
+                    category: .disconnection,
+                    debugInfo: "PID: \(session.pid)\nDuration: \(Date().timeIntervalSince(session.connectedAt)) seconds"
                 )
             }
         }
@@ -401,10 +553,18 @@ class XRDPServerManager {
         }
     }
 
-    nonisolated private func sendNotification(title: String, body: String, sound: Bool) {
+    nonisolated private func sendNotification(title: String, body: String, sound: Bool, category: XRDPNotification.NotificationCategory = .other, debugInfo: String = "") {
+        // Format timestamp
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy 'at' h:mm:ss a"
+        let timestamp = formatter.string(from: Date())
+
+        // Add timestamp to notification body
+        let bodyWithTimestamp = "\(timestamp)\n\(body)"
+
         let content = UNMutableNotificationContent()
         content.title = title
-        content.body = body
+        content.body = bodyWithTimestamp
         if sound {
             content.sound = .default
         }
@@ -419,6 +579,17 @@ class XRDPServerManager {
             if let error = error {
                 print("Notification error: \(error)")
             }
+        }
+
+        // Store notification in history
+        Task { @MainActor in
+            let notification = XRDPNotification(
+                title: title,
+                body: body,
+                category: category,
+                debugInfo: debugInfo
+            )
+            self.appState.addNotification(notification)
         }
     }
 
@@ -486,7 +657,9 @@ class XRDPServerManager {
                 sendNotification(
                     title: "Session Terminated",
                     body: "Manually disconnected \(session.username) from \(session.ipAddress)",
-                    sound: false
+                    sound: false,
+                    category: .disconnection,
+                    debugInfo: "Manual disconnect by administrator\nPID: \(session.pid)"
                 )
 
                 // Force immediate update
@@ -499,6 +672,283 @@ class XRDPServerManager {
 }
 
 // MARK: - SwiftUI Views
+
+struct NotificationsView: View {
+    let notifications: [XRDPNotification]
+    @State private var expandedNotifications: Set<UUID> = []
+    @State private var selectedNotification: XRDPNotification?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if notifications.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "bell.slash")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    Text("No recent notifications")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text("Notifications will appear here when connections are made or errors occur")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 1) {
+                        ForEach(notifications) { notification in
+                            NotificationRow(
+                                notification: notification,
+                                isExpanded: expandedNotifications.contains(notification.id),
+                                onToggleExpand: {
+                                    if expandedNotifications.contains(notification.id) {
+                                        expandedNotifications.remove(notification.id)
+                                    } else {
+                                        expandedNotifications.insert(notification.id)
+                                    }
+                                },
+                                onEmail: {
+                                    emailNotification(notification)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 800, minHeight: 600)
+    }
+
+    private func emailNotification(_ notification: XRDPNotification) {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .long
+
+        let emailBody = """
+        Notification Details:
+
+        Title: \(notification.title)
+        Category: \(notification.category.rawValue)
+        Time: \(formatter.string(from: notification.timestamp))
+
+        Description:
+        \(notification.body)
+
+        Debug Information:
+        \(notification.debugInfo.isEmpty ? "No debug info available" : notification.debugInfo)
+
+        Troubleshooting Steps:
+        \(notification.troubleshootingSteps)
+
+        ---
+        System Information:
+        macOS Version: \(ProcessInfo.processInfo.operatingSystemVersionString)
+        XRDP Version: 0.10.0
+
+        Please describe your issue below:
+
+
+        """.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+
+        let subject = "XRDP Support: \(notification.title)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+
+        if let url = URL(string: "mailto:support@neutrinos.app?subject=\(subject)&body=\(emailBody)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
+struct NotificationRow: View {
+    let notification: XRDPNotification
+    let isExpanded: Bool
+    let onToggleExpand: () -> Void
+    let onEmail: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            Button(action: onToggleExpand) {
+                HStack(spacing: 12) {
+                    // Category icon
+                    categoryIcon
+                        .font(.title2)
+                        .frame(width: 30)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(notification.title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+
+                        Text(timeAgo(notification.timestamp))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Expanded content
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 16) {
+                    Divider()
+
+                    // Timestamp
+                    HStack {
+                        Text("Time:")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                        Text(fullTimestamp(notification.timestamp))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+
+                    // Category
+                    HStack {
+                        Text("Category:")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                        Text(notification.category.rawValue)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+
+                    // Body
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Details:")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                        Text(notification.body)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                    }
+                    .padding(.horizontal)
+
+                    // Debug info
+                    if !notification.debugInfo.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Debug Information:")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                            Text(notification.debugInfo)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.secondary.opacity(0.1))
+                        .cornerRadius(8)
+                        .padding(.horizontal)
+                    }
+
+                    // Troubleshooting
+                    DisclosureGroup("Troubleshooting Steps") {
+                        Text(notification.troubleshootingSteps)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .padding(.top, 8)
+                    }
+                    .padding(.horizontal)
+
+                    // Actions
+                    HStack(spacing: 12) {
+                        Button(action: onEmail) {
+                            Label("Email to Support", systemImage: "envelope")
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button(action: {
+                            copyToClipboard()
+                        }) {
+                            Label("Copy Details", systemImage: "doc.on.doc")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom)
+                }
+            }
+        }
+        .background(Color(nsColor: .controlBackgroundColor))
+        .overlay(
+            Rectangle()
+                .frame(height: 1)
+                .foregroundStyle(Color.secondary.opacity(0.2)),
+            alignment: .bottom
+        )
+    }
+
+    private var categoryIcon: some View {
+        switch notification.category {
+        case .connection:
+            return Text("✅")
+        case .disconnection:
+            return Text("👋")
+        case .tlsError:
+            return Text("🔒")
+        case .protocolError:
+            return Text("📡")
+        case .serverCrash:
+            return Text("⚠️")
+        case .other:
+            return Text("ℹ️")
+        }
+    }
+
+    private func timeAgo(_ date: Date) -> String {
+        let interval = Date().timeIntervalSince(date)
+        if interval < 60 {
+            return "Just now"
+        } else if interval < 3600 {
+            let minutes = Int(interval / 60)
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") ago"
+        } else if interval < 86400 {
+            let hours = Int(interval / 3600)
+            return "\(hours) hour\(hours == 1 ? "" : "s") ago"
+        } else {
+            let days = Int(interval / 86400)
+            return "\(days) day\(days == 1 ? "" : "s") ago"
+        }
+    }
+
+    private func fullTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy 'at' h:mm:ss a"
+        return formatter.string(from: date)
+    }
+
+    private func copyToClipboard() {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .long
+
+        let text = """
+        \(notification.title)
+        Category: \(notification.category.rawValue)
+        Time: \(formatter.string(from: notification.timestamp))
+
+        \(notification.body)
+
+        Debug Info:
+        \(notification.debugInfo)
+        """
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+}
 
 struct MenuBarView: View {
     @Bindable var serverManager: XRDPServerManager
@@ -564,6 +1014,13 @@ struct MenuBarView: View {
 
             Divider()
 
+            // Recent Notifications
+            Button("Recent Notifications...") {
+                showNotificationsWindow()
+            }
+
+            Divider()
+
             // About
             Button("About XRDP...") {
                 showAboutDialog()
@@ -578,6 +1035,20 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q")
         }
+    }
+
+    private func showNotificationsWindow() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.center()
+        window.title = "Recent Notifications"
+        window.contentView = NSHostingView(rootView: NotificationsView(notifications: serverManager.appState.recentNotifications))
+        window.makeKeyAndOrderFront(nil)
+        window.isReleasedWhenClosed = false
     }
 
     private func showAboutDialog() {
