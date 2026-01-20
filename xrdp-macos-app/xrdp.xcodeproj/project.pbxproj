@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1000001000000000000001 /* xrdp-controller.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* xrdp-controller.m */; };
+		A1000001000000000000001 /* xrdp-controller.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* xrdp-controller.swift */; };
 		A1000003000000000000001 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* Cocoa.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A1000002000000000000001 /* xrdp-controller.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "xrdp-controller.m"; sourceTree = "<group>"; };
+		A1000002000000000000001 /* xrdp-controller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "xrdp-controller.swift"; sourceTree = "<group>"; };
 		A1000004000000000000001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		A1000005000000000000001 /* xrdp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = xrdp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000006000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -34,7 +34,7 @@
 		A1000009000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				A1000002000000000000001 /* xrdp-controller.m */,
+				A1000002000000000000001 /* xrdp-controller.swift */,
 				A1000006000000000000001 /* Info.plist */,
 				A1000007000000000000001 /* xrdp.entitlements */,
 				A1000010000000000000001 /* Frameworks */,
@@ -223,7 +223,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000001000000000000001 /* xrdp-controller.m in Sources */,
+				A1000001000000000000001 /* xrdp-controller.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,7 +280,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.3;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -321,6 +321,7 @@
 				MARKETING_VERSION = 0.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.neutrinolabs.xrdp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
@@ -363,6 +364,7 @@
 				MARKETING_VERSION = 0.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.neutrinolabs.xrdp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;

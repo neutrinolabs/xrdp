@@ -11,6 +11,7 @@ import UserNotifications
 
 // MARK: - Session Model
 @Observable
+@MainActor
 class XRDPSession: Identifiable {
     let id = UUID()
     var sessionId: String = ""
@@ -24,6 +25,7 @@ class XRDPSession: Identifiable {
 
 // MARK: - App State
 @Observable
+@MainActor
 class XRDPAppState {
     var isServerRunning: Bool = false
     var activeSessions: [XRDPSession] = []
@@ -40,15 +42,21 @@ class XRDPAppState {
 
 // MARK: - Server Manager
 @Observable
+@MainActor
 class XRDPServerManager {
     var appState = XRDPAppState()
     private var monitorTask: Task<Void, Never>?
+    private var logMonitorTask: Task<Void, Never>?
     private var xrdpTask: Process?
     private var sesmanTask: Process?
     private var previousSessionPIDs: Set<Int> = []
+    private var lastLogPosition: UInt64 = 0
+    private var connectionAttempts: Int = 0
+    private var failedConnections: Int = 0
 
     init() {
         requestNotificationPermission()
+        startLogMonitoring()
     }
 
     private func requestNotificationPermission() {
@@ -108,11 +116,25 @@ class XRDPServerManager {
         xrdpTask?.standardError = errorPipe
 
         // Monitor termination
-        xrdpTask?.terminationHandler = { process in
+        xrdpTask?.terminationHandler = { [weak self] process in
             print("xrdp terminated with status: \(process.terminationStatus)")
+
+            var errorDetails = "Exit code: \(process.terminationStatus)"
             if let errorData = try? errorPipe.fileHandleForReading.readToEnd(),
                let errorString = String(data: errorData, encoding: .utf8), !errorString.isEmpty {
                 print("xrdp error output: \(errorString)")
+                errorDetails += "\n\(errorString)"
+            }
+
+            // Send crash notification
+            self?.sendNotification(
+                title: "⚠️ xrdp Server Crashed",
+                body: "Server terminated unexpectedly. \(errorDetails)",
+                sound: true
+            )
+
+            Task { @MainActor in
+                self?.appState.isServerRunning = false
             }
         }
 
@@ -169,7 +191,7 @@ class XRDPServerManager {
 
     deinit {
         print("XRDPServerManager deinit - this should NOT happen while app is running!")
-        stopServer()
+        // Deinit runs on non-isolated context, can't access actor-isolated properties
     }
 
     func killExistingProcesses() {
@@ -200,11 +222,10 @@ class XRDPServerManager {
         monitorTask?.cancel()
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
-                self?.updateConnections()
+                await self?.updateConnectionsAsync()
                 try? await Task.sleep(for: .seconds(5))
             }
         }
-        updateConnections()
     }
 
     private func stopConnectionMonitoring() {
@@ -215,7 +236,94 @@ class XRDPServerManager {
         appState.connectionCount = 0
     }
 
-    private func updateConnections() {
+    private func startLogMonitoring() {
+        logMonitorTask?.cancel()
+        logMonitorTask = Task { [weak self] in
+            // Get initial file size
+            let logPath = NSHomeDirectory() + "/Library/Logs/xrdp/xrdp.log"
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: logPath),
+               let fileSize = attrs[.size] as? UInt64 {
+                self?.lastLogPosition = fileSize
+            }
+
+            while !Task.isCancelled {
+                self?.checkLogForErrors()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }
+
+    private func checkLogForErrors() {
+        let logPath = NSHomeDirectory() + "/Library/Logs/xrdp/xrdp.log"
+
+        guard let fileHandle = FileHandle(forReadingAtPath: logPath) else { return }
+        defer { try? fileHandle.close() }
+
+        // Get current file size
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: logPath),
+              let currentSize = attrs[.size] as? UInt64 else { return }
+
+        // Only read new content
+        if currentSize <= lastLogPosition { return }
+
+        fileHandle.seek(toFileOffset: lastLogPosition)
+        let newData = fileHandle.readDataToEndOfFile()
+        lastLogPosition = currentSize
+
+        guard let newContent = String(data: newData, encoding: .utf8) else { return }
+
+        // Parse for errors and connection attempts
+        let lines = newContent.components(separatedBy: "\n")
+        for line in lines {
+            if line.contains("[ERROR]") {
+                parseError(line)
+            } else if line.contains("TLS handshake") || line.contains("connection") {
+                parseConnectionEvent(line)
+            }
+        }
+    }
+
+    private func parseError(_ line: String) {
+        print("ERROR detected: \(line)")
+
+        // Extract error details
+        if line.contains("Decryption failed") {
+            failedConnections += 1
+            sendNotification(
+                title: "🔒 TLS Decryption Error",
+                body: "Connection failed: Bad MAC after handshake. Client may not support TLS 1.3 properly. Failed: \(failedConnections)",
+                sound: false
+            )
+        } else if line.contains("TLS handshake failed") {
+            failedConnections += 1
+            sendNotification(
+                title: "🔒 TLS Handshake Failed",
+                body: "Client TLS handshake error. Total failures: \(failedConnections)",
+                sound: false
+            )
+        } else if line.contains("libxrdp_force_read: header read error") {
+            sendNotification(
+                title: "📡 Protocol Error",
+                body: "RDP header read failed after TLS. Connection dropped.",
+                sound: false
+            )
+        } else if line.contains("xrdp_mcs_incoming failed") {
+            sendNotification(
+                title: "🔌 MCS Connection Failed",
+                body: "Multi-Channel Service connection failed. RDP protocol layer error.",
+                sound: false
+            )
+        }
+    }
+
+    private func parseConnectionEvent(_ line: String) {
+        if line.contains("new connection") || line.contains("starting xrdp") {
+            connectionAttempts += 1
+            print("Connection attempt #\(connectionAttempts)")
+        }
+    }
+
+    private func updateConnectionsAsync() async {
         let task = Process()
         task.launchPath = "/bin/ps"
         task.arguments = ["aux"]
@@ -229,14 +337,14 @@ class XRDPServerManager {
 
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if let output = String(data: data, encoding: .utf8) {
-                parseConnectionInfo(output)
+                await parseConnectionInfo(output)
             }
         } catch {
             print("Failed to get connection info: \(error)")
         }
     }
 
-    private func parseConnectionInfo(_ psOutput: String) {
+    private func parseConnectionInfo(_ psOutput: String) async {
         var newSessions: [XRDPSession] = []
 
         let lines = psOutput.components(separatedBy: "\n")
@@ -275,12 +383,14 @@ class XRDPServerManager {
             }
         }
 
-        previousSessionPIDs = currentPIDs
-        appState.activeSessions = newSessions
-        appState.connectionCount = newSessions.count
+        await MainActor.run {
+            previousSessionPIDs = currentPIDs
+            appState.activeSessions = newSessions
+            appState.connectionCount = newSessions.count
+        }
     }
 
-    private func sendNotification(title: String, body: String, sound: Bool) {
+    nonisolated private func sendNotification(title: String, body: String, sound: Bool) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
@@ -351,26 +461,28 @@ class XRDPServerManager {
     }
 
     func disconnectSession(_ session: XRDPSession) {
-        let task = Process()
-        task.launchPath = "/bin/kill"
-        task.arguments = ["-9", "\(session.pid)"]
+        Task {
+            let task = Process()
+            task.launchPath = "/bin/kill"
+            task.arguments = ["-9", "\(session.pid)"]
 
-        do {
-            try task.run()
-            task.waitUntilExit()
-            print("Disconnected session for \(session.username) (PID: \(session.pid))")
+            do {
+                try task.run()
+                task.waitUntilExit()
+                print("Disconnected session for \(session.username) (PID: \(session.pid))")
 
-            // Send notification
-            sendNotification(
-                title: "Session Terminated",
-                body: "Manually disconnected \(session.username) from \(session.ipAddress)",
-                sound: false
-            )
+                // Send notification
+                sendNotification(
+                    title: "Session Terminated",
+                    body: "Manually disconnected \(session.username) from \(session.ipAddress)",
+                    sound: false
+                )
 
-            // Force immediate update
-            updateConnections()
-        } catch {
-            print("Failed to disconnect session: \(error)")
+                // Force immediate update
+                await updateConnectionsAsync()
+            } catch {
+                print("Failed to disconnect session: \(error)")
+            }
         }
     }
 }
@@ -379,7 +491,6 @@ class XRDPServerManager {
 
 struct MenuBarView: View {
     @Bindable var serverManager: XRDPServerManager
-    @State private var hasStarted = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -456,13 +567,6 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q")
         }
-        .task {
-            if !hasStarted {
-                hasStarted = true
-                try? await Task.sleep(for: .seconds(0.5))
-                serverManager.startServer()
-            }
-        }
     }
 
     private func showAboutDialog() {
@@ -503,8 +607,6 @@ struct MenuBarView: View {
 
         Full license text available at:
         https://www.apache.org/licenses/LICENSE-2.0
-
-        ⚛ Built with Claude Code
         """
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "View on GitHub")
@@ -533,13 +635,7 @@ struct MenuBarView: View {
 
 @main
 struct XRDPApp: App {
-    // Use @StateObject equivalent to keep strong reference
-    private let serverManager = XRDPServerManager()
-
-    init() {
-        // Kill existing processes on startup
-        serverManager.killExistingProcesses()
-    }
+    @State private var serverManager = XRDPServerManager()
 
     var body: some Scene {
         MenuBarExtra {

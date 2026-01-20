@@ -90,6 +90,7 @@ typedef struct {
 
     /* Handshake state */
     bool handshake_complete;
+    bool is_server;          /* true if this is server mode, false if client mode */
     bool server_encrypted;   /* Server is sending encrypted after ServerHello */
     bool client_encrypted;   /* Client is sending encrypted after client Finished */
     uint8_t client_random[32];

@@ -1019,7 +1019,7 @@ static int tls13_recv_record(tls13_conn *conn, uint8_t *type, uint8_t *data, siz
         const uint8_t *recv_iv;
         uint64_t *recv_seq;
 
-        if (conn->server_encrypted && !conn->client_encrypted) {
+        if (conn->is_server) {
             /* Server mode - decrypt client's messages with client keys */
             recv_key = conn->client_key;
             recv_iv = conn->client_iv;
@@ -1515,6 +1515,7 @@ static void derive_traffic_secrets(tls13_conn *conn) {
 
 bool tls13_connect(tls13_conn *conn, const char *host, int port) {
     tls13_init(conn);
+    conn->is_server = false;  /* Client mode */
 
     DPRINTF("[TLS] TCP connecting...\n");
     if (!tls13_tcp_connect(conn, host, port)) { DPRINTF("[TLS] TCP connect failed\n"); return false; }
@@ -1553,6 +1554,9 @@ bool tls13_accept(tls13_conn *conn) {
      * 5. Receive client Finished
      * 6. Derive application traffic secrets
      */
+
+    /* Mark this connection as server mode */
+    conn->is_server = true;
 
     uint8_t buf[16384];
     uint8_t type;
