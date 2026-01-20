@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		A1000001000000000000001 /* xrdp-controller.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* xrdp-controller.swift */; };
-		A1000003000000000000001 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* Cocoa.framework */; };
+		A1000003000000000000002 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000003000000000000001 /* Assets.xcassets */; };
+		A1000008000000000000002 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* Cocoa.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1000002000000000000001 /* xrdp-controller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "xrdp-controller.swift"; sourceTree = "<group>"; };
+		A1000003000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000004000000000000001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		A1000005000000000000001 /* xrdp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = xrdp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000006000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -24,7 +26,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000003000000000000001 /* Cocoa.framework in Frameworks */,
+				A1000008000000000000002 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -35,6 +37,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000002000000000000001 /* xrdp-controller.swift */,
+				A1000003000000000000001 /* Assets.xcassets */,
 				A1000006000000000000001 /* Info.plist */,
 				A1000007000000000000001 /* xrdp.entitlements */,
 				A1000010000000000000001 /* Frameworks */,
@@ -120,6 +123,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1000003000000000000002 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -291,6 +295,7 @@
 		A1000022000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = xrdp.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
@@ -334,6 +339,7 @@
 		A1000023000000000000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = xrdp.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
