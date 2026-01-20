@@ -33,7 +33,7 @@
 #include "log.h"
 #include "ssl_calls.h"
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(USE_NEUTRINOSSL)
 #include <openssl/crypto.h>
 #endif
 

@@ -717,9 +717,9 @@ struct xrdp_bitmap
 };
 
 #define MAX_FONT_CHARS 0x4e00
-#define DEFAULT_FONT_NAME "sans-10.fv1"
+#define DEFAULT_FONT_NAME "system"
 #define DEFAULT_FONT_PIXEL_SIZE 16
-#define DEFAULT_FV1_SELECT "130:sans-18.fv1,0:" DEFAULT_FONT_NAME
+#define DEFAULT_FV1_SELECT "130:system,0:system"
 
 #define DEFAULT_BUTTON_MARGIN_H 12
 #define DEFAULT_BUTTON_MARGIN_W 12
