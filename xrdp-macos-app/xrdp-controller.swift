@@ -959,6 +959,9 @@ struct NotificationRow: View {
 struct MenuBarView: View {
     @Bindable var serverManager: XRDPServerManager
 
+    // Store windows to prevent deallocation
+    private static var notificationsWindow: NSWindow?
+
     var body: some View {
         VStack(spacing: 0) {
             // Status
@@ -1044,6 +1047,10 @@ struct MenuBarView: View {
     }
 
     private func showNotificationsWindow() {
+        // Close existing window if open
+        Self.notificationsWindow?.close()
+
+        // Create new window
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
             styleMask: [.titled, .closable, .resizable],
@@ -1053,8 +1060,13 @@ struct MenuBarView: View {
         window.center()
         window.title = "Recent Notifications"
         window.contentView = NSHostingView(rootView: NotificationsView(notifications: serverManager.appState.recentNotifications))
-        window.makeKeyAndOrderFront(nil)
         window.isReleasedWhenClosed = false
+
+        // Store reference to prevent deallocation
+        Self.notificationsWindow = window
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func showAboutDialog() {
