@@ -19,6 +19,10 @@ echo "Using runtime directory: $RUNTIME_DIR"
 mkdir -p "$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/run"
 
 # Patch sesman.ini to use app bundle socket paths
+# First fix any existing /Applications paths (both uppercase and lowercase)
+sed -i '' "s|/Applications/[Xx][Rr][Dd][Pp]\.app/Contents/run|$RUNTIME_DIR|g" "$SESMAN_INI"
+sed -i '' "s|/Applications/[Xx][Rr][Dd][Pp]\.app/Contents/Resources|/Applications/$PRODUCT_NAME.app/Contents/Resources|g" "$SESMAN_INI"
+# Then apply the standard patches
 sed -i '' "s|ListenPort=.*|ListenPort=$RUNTIME_DIR/sesman.socket|g" "$SESMAN_INI"
 sed -i '' "s|/var/run/xrdp|$RUNTIME_DIR|g" "$SESMAN_INI"
 sed -i '' "s|/run/user.*|$RUNTIME_DIR/user|g" "$SESMAN_INI"
