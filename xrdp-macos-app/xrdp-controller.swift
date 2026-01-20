@@ -56,7 +56,7 @@ class XRDPServerManager {
     }
 
     var statusText: String {
-        isServerRunning ? "xrdp Server: Running" : "xrdp Server: Stopped"
+        isServerRunning ? "XRDP Server: Running" : "XRDP Server: Stopped"
     }
 
     init() {
@@ -565,7 +565,7 @@ struct MenuBarView: View {
             Divider()
 
             // About
-            Button("About xrdp...") {
+            Button("About XRDP...") {
                 showAboutDialog()
             }
 
@@ -582,9 +582,9 @@ struct MenuBarView: View {
 
     private func showAboutDialog() {
         let alert = NSAlert()
-        alert.messageText = "⚛ xrdp for macOS"
+        alert.messageText = "⚛ XRDP for macOS"
         alert.informativeText = """
-        xrdp - Open Source Remote Desktop Protocol Server
+        XRDP - Open Source Remote Desktop Protocol Server
         Version: 1.0.0
 
         Built with NeutrinoTLS - Pure C TLS 1.3 Implementation
@@ -592,7 +592,7 @@ struct MenuBarView: View {
 
         ACKNOWLEDGEMENTS
 
-        xrdp Project:
+        XRDP Project:
           Copyright © 2004-2024 Jay Sorg and all contributors
           Licensed under Apache License 2.0
 
@@ -612,7 +612,7 @@ struct MenuBarView: View {
 
         LICENSES
 
-        xrdp: Apache License 2.0
+        XRDP: Apache License 2.0
         OpenSSL: Apache License 2.0
         NeutrinoTLS: Apache License 2.0
 
