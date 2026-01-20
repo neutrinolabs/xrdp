@@ -44,7 +44,8 @@
     self.connectionCount = 0;
 
     // Create status bar item with proper clickable icon
-    self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+    // Use NSSquareStatusItemLength to ensure full clickable area
+    self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
 
     // Use SF Symbol for server icon
     if (@available(macOS 11.0, *)) {
