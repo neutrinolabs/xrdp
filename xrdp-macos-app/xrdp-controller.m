@@ -81,6 +81,10 @@
     [self.statusItem.button setEnabled:YES];
     self.statusItem.visible = YES;
 
+    // Explicitly set button action to nil to use menu
+    self.statusItem.button.action = nil;
+    self.statusItem.button.target = nil;
+
     // Create menu
     self.statusMenu = [[NSMenu alloc] init];
 
