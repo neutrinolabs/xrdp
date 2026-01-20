@@ -164,7 +164,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "# Copy configuration files\nCONFIG_DIR=\"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Resources/etc\"\n\nmkdir -p \"$CONFIG_DIR\"\n\n# Copy config from existing installation\nif [ -d \"/Applications/xrdp.app/Contents/Resources/etc\" ]; then\n    echo \"Copying config from existing installation...\"\n    cp -R /Applications/xrdp.app/Contents/Resources/etc/* \"$CONFIG_DIR/\"\nfi\n\necho \"Configuration copied\"\n";
+			shellScript = "# Copy configuration files\nCONFIG_DIR=\"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Resources/etc/xrdp\"\n\nmkdir -p \"$CONFIG_DIR\"\n\necho \"Copying config files from source...\"\n\n# Copy xrdp config files\nif [ -d \"$SRCROOT/../xrdp\" ]; then\n    cp \"$SRCROOT/../xrdp/\"*.ini \"$CONFIG_DIR/\" 2>/dev/null || true\nfi\n\n# Copy sesman config files  \nif [ -d \"$SRCROOT/../sesman\" ]; then\n    cp \"$SRCROOT/../sesman/\"*.ini \"$CONFIG_DIR/\" 2>/dev/null || true\nfi\n\n# Create dummy rsakeys.ini (not needed with security_layer=tls)\nif [ ! -f \"$CONFIG_DIR/rsakeys.ini\" ]; then\n    echo \"[keys]\" > \"$CONFIG_DIR/rsakeys.ini\"\n    echo \"# Dummy RSA keys file - not used when security_layer=tls\" >> \"$CONFIG_DIR/rsakeys.ini\"\n    echo \"# XRDP is configured to use TLS with NeutrinoTLS/NeutrinoCrypto only\" >> \"$CONFIG_DIR/rsakeys.ini\"\nfi\n\necho \"Configuration copied\"\n";
 		};
 		A1000018000000000000002 /* Patch Configs */ = {
 			isa = PBXShellScriptBuildPhase;
