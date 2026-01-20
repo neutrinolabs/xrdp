@@ -67,8 +67,8 @@ echo "Fixing helper binary paths..."
 for binary in "$HELPERS_DIR"/*; do
     if [ -f "$binary" ] && [ -x "$binary" ]; then
         echo "Fixing $(basename "$binary")..."
-        # Change /Applications paths to @executable_path
-        otool -L "$binary" | grep "/Applications/xrdp.app/Contents/Resources/lib/xrdp" | awk '{print $1}' | while read dep; do
+        # Change /Applications paths to @executable_path (handle both xrdp.app and XRDP.app)
+        otool -L "$binary" | grep "/Applications/.*\.app/Contents/Resources/lib/xrdp" | awk '{print $1}' | while read dep; do
             libname=$(basename "$dep")
             install_name_tool -change "$dep" "@executable_path/../Resources/lib/xrdp/$libname" "$binary" 2>/dev/null || true
         done
