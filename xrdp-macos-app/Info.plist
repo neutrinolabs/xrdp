@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>XRDP</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.neutrinolabs.xrdp</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -22,6 +22,8 @@
 	<string>12.3</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>XRDP uses AppleEvents to manage system services and firewall configuration.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
@@ -32,7 +34,5 @@
 	<true/>
 	<key>NSSystemAdministrationUsageDescription</key>
 	<string>XRDP needs administrator access to configure firewall rules for incoming RDP connections on port 3389.</string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>XRDP uses AppleEvents to manage system services and firewall configuration.</string>
 </dict>
 </plist>
