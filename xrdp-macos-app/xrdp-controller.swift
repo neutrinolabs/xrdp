@@ -285,12 +285,18 @@ class XRDPServerManager {
             // Send crash notification
             self?.sendNotification(
                 title: "⚠️ xrdp Server Crashed",
-                body: "Server terminated unexpectedly. \(errorDetails)",
+                body: "Server terminated unexpectedly. Auto-restarting in 2 seconds...",
                 sound: true,
                 category: .serverCrash,
-                debugInfo: "Exit code: \(process.terminationStatus)\nPID: \(process.processIdentifier)"
+                debugInfo: "Exit code: \(process.terminationStatus)\nPID: \(process.processIdentifier)\n\(errorDetails)"
             )
-            // No need to update state - isServerRunning is computed from xrdpTask.isRunning
+
+            // Auto-restart after a brief delay
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                print("Auto-restarting xrdp server after crash...")
+                self?.startServer()
+            }
         }
 
         do {
