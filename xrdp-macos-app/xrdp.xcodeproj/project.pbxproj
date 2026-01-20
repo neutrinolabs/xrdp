@@ -16,7 +16,7 @@
 		A1000002000000000000001 /* xrdp-controller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "xrdp-controller.swift"; sourceTree = "<group>"; };
 		A1000003000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000004000000000000001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
-		A1000005000000000000001 /* xrdp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = xrdp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000005000000000000001 /* XRDP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XRDP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000006000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000007000000000000001 /* xrdp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = xrdp.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -56,7 +56,7 @@
 		A1000011000000000000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A1000005000000000000001 /* xrdp.app */,
+				A1000005000000000000001 /* XRDP.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -325,7 +325,7 @@
 				);
 				MARKETING_VERSION = 0.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.neutrinolabs.xrdp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = XRDP;
 				SWIFT_VERSION = 6.0;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
@@ -369,7 +369,7 @@
 				);
 				MARKETING_VERSION = 0.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.neutrinolabs.xrdp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = XRDP;
 				SWIFT_VERSION = 6.0;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
