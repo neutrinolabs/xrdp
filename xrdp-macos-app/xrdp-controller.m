@@ -81,9 +81,10 @@
     [self.statusItem.button setEnabled:YES];
     self.statusItem.visible = YES;
 
-    // Explicitly set button action to nil to use menu
-    self.statusItem.button.action = nil;
-    self.statusItem.button.target = nil;
+    // Set behavior for status item
+    if (@available(macOS 10.12, *)) {
+        self.statusItem.behavior = NSStatusItemBehaviorRemovalAllowed;
+    }
 
     // Create menu
     self.statusMenu = [[NSMenu alloc] init];
