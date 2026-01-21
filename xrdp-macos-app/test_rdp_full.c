@@ -571,8 +571,16 @@ int main(int argc, char **argv) {
     uint8_t transcript_hash3[32];
     sha256_final(&transcript_copy3, transcript_hash3);
 
+    /* Master secret derivation following TLS 1.3 RFC 8446 */
+    /* Compute the master secret by re-deriving the full chain (matching server implementation) */
+    uint8_t derived_temp[32];
+    hkdf_expand_label(early_secret, "derived", empty_hash, 32, derived_temp, 32);
+
+    uint8_t handshake_secret_recheck[32];
+    hkdf_extract(derived_temp, 32, shared_secret, 32, handshake_secret_recheck);
+
     uint8_t derived_secret2[32];
-    hkdf_expand_label(handshake_secret, "derived", empty_hash, 32, derived_secret2, 32);
+    hkdf_expand_label(handshake_secret_recheck, "derived", empty_hash, 32, derived_secret2, 32);
 
     uint8_t master_secret[32];
     hkdf_extract(derived_secret2, 32, zeros, 32, master_secret);
@@ -581,12 +589,23 @@ int main(int argc, char **argv) {
     hkdf_expand_label(master_secret, "c ap traffic", transcript_hash3, 32, client_app_secret, 32);
     hkdf_expand_label(master_secret, "s ap traffic", transcript_hash3, 32, server_app_secret, 32);
 
+    printf("      Debug - Master secret: ");
+    for (int i = 0; i < 8; i++) printf("%02x", master_secret[i]);
+    printf("...\n");
+    printf("      Debug - Transcript hash: ");
+    for (int i = 0; i < 8; i++) printf("%02x", transcript_hash3[i]);
+    printf("...\n");
+
     uint8_t client_app_key[32], client_app_iv[12];
     uint8_t server_app_key[32], server_app_iv[12];
 
     hkdf_expand_label(client_app_secret, "key", NULL, 0, client_app_key, 32);
     hkdf_expand_label(client_app_secret, "iv", NULL, 0, client_app_iv, 12);
     hkdf_expand_label(server_app_secret, "key", NULL, 0, server_app_key, 32);
+
+    printf("      Debug - Client app key: ");
+    for (int i = 0; i < 8; i++) printf("%02x", client_app_key[i]);
+    printf("...\n");
     hkdf_expand_label(server_app_secret, "iv", NULL, 0, server_app_iv, 12);
 
     printf("      ✓ Application traffic secrets derived\n");
