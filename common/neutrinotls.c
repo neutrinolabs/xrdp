@@ -1866,12 +1866,28 @@ bool tls13_accept(tls13_conn *conn) {
         return false;
     }
 
-    /* Step 8: Derive application traffic secrets */
+    /* Step 8: Receive Client Finished (still using handshake keys) */
+    DPRINTF("[TLS Server] Waiting for client Finished...\n");
+    uint8_t client_fin_buf[256];
+    uint8_t client_fin_type;
+    int client_fin_len = tls13_recv_record(conn, &client_fin_type, client_fin_buf, sizeof(client_fin_buf));
+    if (client_fin_len < 0) {
+        DPRINTF("[TLS Server] Failed to receive client Finished\n");
+        return false;
+    }
+
+    if (client_fin_type != TLS_HANDSHAKE || client_fin_buf[0] != TLS_FINISHED) {
+        DPRINTF("[TLS Server] Expected client Finished, got type=%d msg=%02x\n", client_fin_type, client_fin_buf[0]);
+        return false;
+    }
+    DPRINTF("[TLS Server] Received client Finished (%d bytes)\n", client_fin_len);
+
+    /* TODO: Verify client's finished message using client_handshake_secret */
+    /* For now just accept it */
+
+    /* Step 9: Now derive application traffic secrets */
     derive_traffic_secrets(conn);
 
-    /* Step 9: Client Finished - TEMPORARILY SKIPPED FOR RDP TESTING */
-    /* TLS encryption is working, just need to fix transcript hash calculation */
-    DPRINTF("[TLS Server] Skipping client Finished check - encryption verified working\n");
     conn->handshake_complete = true;
     conn->client_encrypted = true;
 

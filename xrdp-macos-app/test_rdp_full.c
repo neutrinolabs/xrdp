@@ -40,6 +40,10 @@ int main(int argc, char **argv) {
     const char *host = "127.0.0.1";
     int port = 3389;
 
+    setbuf(stdout, NULL);  /* Disable buffering */
+    setbuf(stderr, NULL);
+
+    fprintf(stderr, "Starting test...\n");
     printf("==================================================\n");
     printf("Full RDP+TLS 1.3 Handshake Test\n");
     printf("==================================================\n\n");
@@ -447,9 +451,9 @@ int main(int argc, char **argv) {
 
                         printf("      ✓ Decrypted: %s (%zu bytes)\n", msg_name, plaintext_len);
 
-                        /* Update transcript with ALL handshake messages including Finished */
-                        /* This is needed for deriving application traffic secrets */
-                        sha256_update(&transcript, plaintext, plaintext_len + 1);
+                        /* Update transcript with handshake message (without content type byte) */
+                        /* The server only adds the raw handshake message, not the inner content type */
+                        sha256_update(&transcript, plaintext, plaintext_len);
 
                         messages_received++;
 
