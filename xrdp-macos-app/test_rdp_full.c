@@ -447,10 +447,9 @@ int main(int argc, char **argv) {
 
                         printf("      ✓ Decrypted: %s (%zu bytes)\n", msg_name, plaintext_len);
 
-                        /* Update transcript with handshake messages */
-                        if (handshake_type != 0x14) {  /* Don't include Finished in its own transcript */
-                            sha256_update(&transcript, plaintext, plaintext_len + 1);
-                        }
+                        /* Update transcript with ALL handshake messages including Finished */
+                        /* This is needed for deriving application traffic secrets */
+                        sha256_update(&transcript, plaintext, plaintext_len + 1);
 
                         messages_received++;
 
@@ -566,9 +565,9 @@ int main(int argc, char **argv) {
     /* Derive application traffic secrets */
     printf("\n[9/10] Deriving application traffic secrets...\n");
 
-    /* Compute master secret */
+    /* Compute master secret - DO NOT include client's Finished in transcript! */
+    /* The transcript for application traffic includes all server messages but NOT client's Finished */
     sha256_ctx transcript_copy3 = transcript;
-    sha256_update(&transcript_copy3, finished_msg, 36);
     uint8_t transcript_hash3[32];
     sha256_final(&transcript_copy3, transcript_hash3);
 
