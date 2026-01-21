@@ -1064,12 +1064,21 @@ static int tls13_recv_record(tls13_conn *conn, uint8_t *type, uint8_t *data, siz
         }
         DPRINTF("[TLS] Decryption successful, ciphertext_len=%zu\n", ciphertext_len);
 
+        /* Debug: print first and last bytes of plaintext */
+        DPRINTF("[TLS] Plaintext first 16: ");
+        for (size_t i = 0; i < 16 && i < ciphertext_len; i++) DPRINTF("%02x ", plaintext[i]);
+        DPRINTF("\n");
+        DPRINTF("[TLS] Plaintext last 16: ");
+        for (size_t i = ciphertext_len > 16 ? ciphertext_len - 16 : 0; i < ciphertext_len; i++) DPRINTF("%02x ", plaintext[i]);
+        DPRINTF("\n");
+
         /* Find inner content type (last non-zero byte) */
         size_t pt_len = ciphertext_len;
         while (pt_len > 0 && plaintext[pt_len - 1] == 0) pt_len--;
         if (pt_len == 0) { free(plaintext); return -1; }
         *type = plaintext[pt_len - 1];
         pt_len--;
+        DPRINTF("[TLS] Inner content type: 0x%02x, plaintext len: %zu\n", *type, pt_len);
 
         memcpy(data, plaintext, pt_len);
         free(plaintext);

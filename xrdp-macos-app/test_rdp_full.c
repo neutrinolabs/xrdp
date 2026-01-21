@@ -621,12 +621,12 @@ int main(int argc, char **argv) {
     /* Build a minimal MCS Connect-Initial PDU */
     uint8_t mcs_connect_initial[] = {
         /* X.224 Data header */
-        0x03, 0x00, 0x00, 0x65,  /* TPKT: length 101 bytes */
+        0x03, 0x00, 0x00, 0x6a,  /* TPKT: length 106 bytes */
         0x02, 0xf0, 0x80,         /* X.224 Data TPDU */
 
         /* MCS Connect-Initial (simplified) */
         0x7f, 0x65,  /* BER: Connect-Initial tag */
-        0x5f,        /* Length: 95 bytes */
+        0x60,        /* Length: 96 bytes */
 
         /* callingDomainSelector */
         0x04, 0x01, 0x01,
@@ -637,8 +637,8 @@ int main(int argc, char **argv) {
         /* upwardFlag */
         0x01, 0x01, 0xff,
 
-        /* targetParameters */
-        0x30, 0x1a,
+        /* targetParameters (25 bytes content) */
+        0x30, 0x19,
         0x02, 0x01, 0x22,  /* maxChannelIds: 34 */
         0x02, 0x01, 0x02,  /* maxUserIds: 2 */
         0x02, 0x01, 0x00,  /* maxTokenIds: 0 */
@@ -648,8 +648,8 @@ int main(int argc, char **argv) {
         0x02, 0x02, 0xff, 0xff,  /* maxMCSPDUsize: 65535 */
         0x02, 0x01, 0x02,  /* protocolVersion: 2 */
 
-        /* minimumParameters (same as targetParameters) */
-        0x30, 0x1a,
+        /* minimumParameters (25 bytes content) */
+        0x30, 0x19,
         0x02, 0x01, 0x01,
         0x02, 0x01, 0x01,
         0x02, 0x01, 0x01,
@@ -659,8 +659,8 @@ int main(int argc, char **argv) {
         0x02, 0x02, 0x04, 0x20,
         0x02, 0x01, 0x02,
 
-        /* maximumParameters */
-        0x30, 0x1c,
+        /* maximumParameters (29 bytes content) */
+        0x30, 0x1d,
         0x02, 0x02, 0xff, 0xff,
         0x02, 0x02, 0xfc, 0x17,
         0x02, 0x02, 0xff, 0xff,
