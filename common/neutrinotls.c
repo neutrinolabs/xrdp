@@ -1904,12 +1904,25 @@ ssize_t tls13_send(tls13_conn *conn, const void *data, size_t len) {
 ssize_t tls13_recv(tls13_conn *conn, void *data, size_t len) {
     if (!conn->handshake_complete) return -1;
 
-    /* TLS 1.3 max record: 16384 plaintext + 1 content type + 16 tag + 256 padding = 16657 */
+    DPRINTF("[TLS] tls13_recv called, len=%zu, pending=%zu\n", len, conn->recv_len);
+
+    /* First, return any pending data from previous reads */
+    if (conn->recv_len > 0) {
+        size_t copy = conn->recv_len < len ? conn->recv_len : len;
+        memcpy(data, conn->recv_buf, copy);
+        /* Move remaining data to front of buffer */
+        if (copy < conn->recv_len) {
+            memmove(conn->recv_buf, conn->recv_buf + copy, conn->recv_len - copy);
+        }
+        conn->recv_len -= copy;
+        DPRINTF("[TLS] Returned %zu bytes from pending buffer, %zu remaining\n", copy, conn->recv_len);
+        return copy;
+    }
+
+    /* No pending data, read a new TLS record */
     uint8_t buf[16657];
     uint8_t type;
     int n;
-
-    DPRINTF("[TLS] tls13_recv called, len=%zu\n", len);
 
     /* Keep reading until we get application data (skip post-handshake messages like NewSessionTicket) */
     while (1) {
@@ -1934,8 +1947,22 @@ ssize_t tls13_recv(tls13_conn *conn, void *data, size_t len) {
         /* Unknown type, skip */
     }
 
+    /* Copy as much as requested, buffer the rest */
     size_t copy = (size_t)n < len ? (size_t)n : len;
     memcpy(data, buf, copy);
+
+    /* Store leftover data in pending buffer */
+    if ((size_t)n > copy) {
+        size_t leftover = (size_t)n - copy;
+        if (leftover <= sizeof(conn->recv_buf)) {
+            memcpy(conn->recv_buf, buf + copy, leftover);
+            conn->recv_len = leftover;
+            DPRINTF("[TLS] Buffered %zu leftover bytes\n", leftover);
+        } else {
+            DPRINTF("[TLS] Warning: leftover %zu bytes exceeds buffer size!\n", leftover);
+        }
+    }
+
     return copy;
 }
 
