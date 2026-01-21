@@ -941,28 +941,26 @@ static bool tls13_send_record(tls13_conn *conn, uint8_t type, const uint8_t *dat
         uint8_t tag[16];
         uint8_t nonce[12];
 
-        /* Choose keys and IV based on who is sending:
-         * - If server_encrypted is true and client_encrypted is false, we're the server sending (use server keys)
-         * - If client_encrypted is true, we're the client sending (use client keys)
-         * Note: server_key/server_iv and client_key/client_iv are populated with handshake keys first,
-         * then overwritten with traffic keys after derive_traffic_secrets().
+        /* Choose keys based on who is sending:
+         * - Server sends with server keys, client sends with client keys
+         * This is determined by conn->is_server, not by encryption flags
          */
         const uint8_t *send_key;
         const uint8_t *send_iv;
         uint64_t *send_seq;
 
-        if (conn->server_encrypted && !conn->client_encrypted) {
-            /* Server mode - use server keys (handshake keys at this point) */
+        if (conn->is_server) {
+            /* Server mode - use server keys */
             send_key = conn->server_key;
             send_iv = conn->server_iv;
             send_seq = &conn->server_seq;
-            DPRINTF("[TLS] Using SERVER keys for send (seq=%llu)\n", conn->server_seq);
+            DPRINTF("[TLS] Server sending: using SERVER keys (seq=%llu)\n", conn->server_seq);
         } else {
             /* Client mode - use client keys */
             send_key = conn->client_key;
             send_iv = conn->client_iv;
             send_seq = &conn->client_seq;
-            DPRINTF("[TLS] Using CLIENT keys for send (seq=%llu)\n", conn->client_seq);
+            DPRINTF("[TLS] Client sending: using CLIENT keys (seq=%llu)\n", conn->client_seq);
         }
 
         build_nonce(nonce, send_iv, *send_seq);
@@ -1489,6 +1487,18 @@ static void derive_traffic_secrets(tls13_conn *conn) {
     uint8_t transcript_hash[32];
     sha256_final(&ctx_copy, transcript_hash);
 
+    /* Write debug to file since xrdp forks and loses stderr */
+    FILE *dbg = fopen("/tmp/tls_debug.log", "a");
+
+    DPRINTF("[TLS Server] Transcript hash for app secrets: ");
+    for (int i = 0; i < 8; i++) DPRINTF("%02x", transcript_hash[i]);
+    DPRINTF("...\n");
+    if (dbg) {
+        fprintf(dbg, "[TLS Server] Transcript hash: ");
+        for (int i = 0; i < 32; i++) fprintf(dbg, "%02x", transcript_hash[i]);
+        fprintf(dbg, "\n");
+    }
+
     /* Master secret is in client_traffic_secret from earlier derivation */
     uint8_t master_secret[32];
     uint8_t zeros[32] = {0};
@@ -1505,17 +1515,45 @@ static void derive_traffic_secrets(tls13_conn *conn) {
     hkdf_expand_label(handshake_secret, "derived", empty_hash, 32, derived, 32);
     hkdf_extract(derived, 32, zeros, 32, master_secret);
 
+    DPRINTF("[TLS Server] Master secret: ");
+    for (int i = 0; i < 8; i++) DPRINTF("%02x", master_secret[i]);
+    DPRINTF("...\n");
+    if (dbg) {
+        fprintf(dbg, "[TLS Server] Master secret: ");
+        for (int i = 0; i < 32; i++) fprintf(dbg, "%02x", master_secret[i]);
+        fprintf(dbg, "\n");
+    }
+
     /* Derive traffic secrets */
     hkdf_expand_label(master_secret, "c ap traffic", transcript_hash, 32,
                       conn->client_traffic_secret, 32);
     hkdf_expand_label(master_secret, "s ap traffic", transcript_hash, 32,
                       conn->server_traffic_secret, 32);
 
+    DPRINTF("[TLS Server] Server app secret: ");
+    for (int i = 0; i < 8; i++) DPRINTF("%02x", conn->server_traffic_secret[i]);
+    DPRINTF("...\n");
+    if (dbg) {
+        fprintf(dbg, "[TLS Server] Server app secret: ");
+        for (int i = 0; i < 32; i++) fprintf(dbg, "%02x", conn->server_traffic_secret[i]);
+        fprintf(dbg, "\n");
+    }
+
     /* Derive traffic keys */
     hkdf_expand_label(conn->client_traffic_secret, "key", NULL, 0, conn->client_key, 32);
     hkdf_expand_label(conn->client_traffic_secret, "iv", NULL, 0, conn->client_iv, 12);
     hkdf_expand_label(conn->server_traffic_secret, "key", NULL, 0, conn->server_key, 32);
     hkdf_expand_label(conn->server_traffic_secret, "iv", NULL, 0, conn->server_iv, 12);
+
+    DPRINTF("[TLS Server] Server traffic key: ");
+    for (int i = 0; i < 8; i++) DPRINTF("%02x", conn->server_key[i]);
+    DPRINTF("...\n");
+    if (dbg) {
+        fprintf(dbg, "[TLS Server] Server traffic key: ");
+        for (int i = 0; i < 32; i++) fprintf(dbg, "%02x", conn->server_key[i]);
+        fprintf(dbg, "\n");
+        fclose(dbg);
+    }
 
     /* Reset sequence numbers */
     conn->client_seq = 0;
@@ -1875,6 +1913,11 @@ bool tls13_accept(tls13_conn *conn) {
         return false;
     }
 
+    /* Save transcript state NOW - after Server Finished, before Client Finished
+     * This is the transcript hash used for application traffic secrets per RFC 8446 */
+    sha256_ctx transcript_for_app_secrets;
+    memcpy(&transcript_for_app_secrets, &conn->transcript, sizeof(sha256_ctx));
+
     /* Step 8: Receive Client Finished (still using handshake keys) */
     DPRINTF("[TLS Server] Waiting for client Finished...\n");
     uint8_t client_fin_buf[256];
@@ -1894,8 +1937,14 @@ bool tls13_accept(tls13_conn *conn) {
     /* TODO: Verify client's finished message using client_handshake_secret */
     /* For now just accept it */
 
-    /* Step 9: Now derive application traffic secrets */
-    derive_traffic_secrets(conn);
+    /* Now derive application traffic secrets using saved transcript (ending at Server Finished) */
+    DPRINTF("[TLS Server] Deriving application traffic secrets...\n");
+    {
+        sha256_ctx saved_transcript = conn->transcript;  /* Save current transcript */
+        conn->transcript = transcript_for_app_secrets;    /* Use transcript ending at Server Finished */
+        derive_traffic_secrets(conn);                     /* Derive secrets and keys */
+        conn->transcript = saved_transcript;              /* Restore transcript */
+    }
 
     conn->handshake_complete = true;
     conn->client_encrypted = true;

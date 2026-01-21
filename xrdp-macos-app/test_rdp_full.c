@@ -594,11 +594,14 @@ int main(int argc, char **argv) {
     hkdf_expand_label(master_secret, "s ap traffic", transcript_hash3, 32, server_app_secret, 32);
 
     printf("      Debug - Master secret: ");
-    for (int i = 0; i < 8; i++) printf("%02x", master_secret[i]);
-    printf("...\n");
+    for (int i = 0; i < 32; i++) printf("%02x", master_secret[i]);
+    printf("\n");
     printf("      Debug - Transcript hash: ");
-    for (int i = 0; i < 8; i++) printf("%02x", transcript_hash3[i]);
-    printf("...\n");
+    for (int i = 0; i < 32; i++) printf("%02x", transcript_hash3[i]);
+    printf("\n");
+    printf("      Debug - Server app secret: ");
+    for (int i = 0; i < 32; i++) printf("%02x", server_app_secret[i]);
+    printf("\n");
 
     uint8_t client_app_key[32], client_app_iv[12];
     uint8_t server_app_key[32], server_app_iv[12];
@@ -608,9 +611,13 @@ int main(int argc, char **argv) {
     hkdf_expand_label(server_app_secret, "key", NULL, 0, server_app_key, 32);
 
     printf("      Debug - Client app key: ");
-    for (int i = 0; i < 8; i++) printf("%02x", client_app_key[i]);
-    printf("...\n");
+    for (int i = 0; i < 32; i++) printf("%02x", client_app_key[i]);
+    printf("\n");
     hkdf_expand_label(server_app_secret, "iv", NULL, 0, server_app_iv, 12);
+
+    printf("      Debug - Server app key: ");
+    for (int i = 0; i < 32; i++) printf("%02x", server_app_key[i]);
+    printf("\n");
 
     printf("      ✓ Application traffic secrets derived\n");
     printf("      ✓ TLS 1.3 handshake complete!\n");
@@ -621,12 +628,12 @@ int main(int argc, char **argv) {
     /* Build a minimal MCS Connect-Initial PDU */
     uint8_t mcs_connect_initial[] = {
         /* X.224 Data header */
-        0x03, 0x00, 0x00, 0x6a,  /* TPKT: length 106 bytes */
+        0x03, 0x00, 0x01, 0x75,  /* TPKT: length 373 bytes (verified) */
         0x02, 0xf0, 0x80,         /* X.224 Data TPDU */
 
-        /* MCS Connect-Initial (simplified) */
+        /* MCS Connect-Initial */
         0x7f, 0x65,  /* BER: Connect-Initial tag */
-        0x60,        /* Length: 96 bytes */
+        0x82, 0x01, 0x69,  /* Length: 361 bytes (long form, verified) */
 
         /* callingDomainSelector */
         0x04, 0x01, 0x01,
@@ -670,13 +677,79 @@ int main(int argc, char **argv) {
         0x02, 0x03, 0xff, 0xff, 0xff,
         0x02, 0x01, 0x02,
 
-        /* userData (minimal) */
-        0x04, 0x00  /* Empty user data */
+        /* userData - GCC Conference Create Request */
+        0x04, 0x82, 0x01, 0x0b,  /* OCTET STRING, length 267 bytes */
+
+        /* T.124 GCC ConferenceCreateRequest */
+        0x00, 0x05, 0x00, 0x14, 0x7c, 0x00, 0x01,  /* PER header */
+        0x81, 0x00,  /* calledConnectId length */
+        0x00, 0x08, 0x00, 0x10, 0x00, 0x01, 0xc0, 0x00,  /* Connect-PDU header */
+        0x44, 0x75, 0x63, 0x61,  /* "Duca" - Client core data magic */
+        0x80, 0xf0,  /* User data length (240) */
+
+        /* CS_CORE (Client Core Data) - 216 bytes */
+        0x01, 0xc0,  /* Type: CS_CORE */
+        0xd8, 0x00,  /* Length: 216 bytes */
+        0x04, 0x00, 0x08, 0x00,  /* version (RDP 8.0) */
+        0x00, 0x05,  /* desktopWidth: 1280 */
+        0x00, 0x04,  /* desktopHeight: 1024 */
+        0x01, 0xca,  /* colorDepth: 8bpp */
+        0x03, 0xaa,  /* SASSequence */
+        0x09, 0x04, 0x00, 0x00,  /* keyboardLayout: US */
+        0xce, 0x0e, 0x00, 0x00,  /* clientBuild */
+        /* clientName (32 bytes) */
+        0x54, 0x00, 0x45, 0x00, 0x53, 0x00, 0x54, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x04, 0x00, 0x00, 0x00,  /* keyboardType */
+        0x00, 0x00, 0x00, 0x00,  /* keyboardSubType */
+        0x0c, 0x00, 0x00, 0x00,  /* keyboardFunctionKey */
+        /* imeFileName (64 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0xca,  /* postBeta2ColorDepth */
+        0x01, 0x00,  /* clientProductId */
+        0x00, 0x00, 0x00, 0x00,  /* serialNumber */
+        0x18, 0x00,  /* highColorDepth: 24bpp */
+        0x07, 0x00,  /* supportedColorDepths */
+        0x01, 0x00,  /* earlyCapabilityFlags */
+        /* clientDigProductId (64 bytes) */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,  /* connectionType */
+        0x00,  /* pad1octet */
+        0x00, 0x00, 0x00, 0x00,  /* serverSelectedProtocol */
+
+        /* CS_SECURITY (Client Security Data) - 12 bytes */
+        0x02, 0xc0,  /* Type: CS_SECURITY */
+        0x0c, 0x00,  /* Length: 12 bytes */
+        0x1b, 0x00, 0x00, 0x00,  /* encryptionMethods: 40bit+128bit+56bit */
+        0x00, 0x00, 0x00, 0x00,  /* extEncryptionMethods */
+
+        /* CS_NET (Client Network Data) - 12 bytes */
+        0x03, 0xc0,  /* Type: CS_NET */
+        0x0c, 0x00,  /* Length: 12 bytes */
+        0x00, 0x00, 0x00, 0x00,  /* channelCount: 0 */
+        0x00, 0x00, 0x00, 0x00   /* padding */
     };
 
     /* Encrypt and send MCS Connect-Initial */
-    uint8_t mcs_plaintext[256];
+    uint8_t mcs_plaintext[512];  /* Needs to be larger than mcs_connect_initial */
     size_t mcs_len = sizeof(mcs_connect_initial);
+    printf("      MCS PDU size: %zu bytes\n", mcs_len);
     memcpy(mcs_plaintext, mcs_connect_initial, mcs_len);
     mcs_plaintext[mcs_len] = 0x17;  /* Content type: Application Data */
     mcs_len++;
