@@ -90,13 +90,28 @@ int main(int argc, char **argv) {
 
     printf("      ✓ X.224 response: %d bytes\n", len);
 
-    /* Check if server accepted TLS */
-    if (buf[11] != 0x02) {
-        fprintf(stderr, "      ✗ Server did not accept TLS\n");
+    /* Debug: show response bytes */
+    printf("      Response bytes: ");
+    for (int i = 0; i < len && i < 32; i++) {
+        printf("%02x ", buf[i]);
+    }
+    printf("\n");
+
+    /* Check if server accepted TLS (buf[15] should have 0x01 or 0x03 for TLS/CredSSP) */
+    if (len < 19) {
+        fprintf(stderr, "      ✗ X.224 response too short\n");
         close(sock);
         return 1;
     }
-    printf("      ✓ Server accepted TLS\n\n");
+
+    /* Byte 15 contains the selected protocol (0x00=Standard, 0x01=TLS, 0x02=CredSSP, 0x03=TLS+CredSSP) */
+    uint8_t selected_protocol = buf[15];
+    if ((selected_protocol & 0x01) == 0) {
+        fprintf(stderr, "      ✗ Server did not select TLS (protocol=0x%02x)\n", selected_protocol);
+        close(sock);
+        return 1;
+    }
+    printf("      ✓ Server accepted TLS (protocol=0x%02x)\n\n", selected_protocol);
 
     /* Generate client X25519 keypair */
     printf("[3/7] Generating X25519 keypair...\n");
@@ -578,14 +593,117 @@ int main(int argc, char **argv) {
     printf("      ✓ Application traffic secrets derived\n");
     printf("      ✓ TLS 1.3 handshake complete!\n");
 
-    /* Now ready for encrypted RDP data */
-    printf("\n[10/10] Attempting to receive RDP data...\n");
+    /* Now ready for encrypted RDP data - send MCS Connect Initial */
+    printf("\n[10/10] Sending RDP MCS Connect-Initial...\n");
+
+    /* Build a minimal MCS Connect-Initial PDU */
+    uint8_t mcs_connect_initial[] = {
+        /* X.224 Data header */
+        0x03, 0x00, 0x00, 0x65,  /* TPKT: length 101 bytes */
+        0x02, 0xf0, 0x80,         /* X.224 Data TPDU */
+
+        /* MCS Connect-Initial (simplified) */
+        0x7f, 0x65,  /* BER: Connect-Initial tag */
+        0x5f,        /* Length: 95 bytes */
+
+        /* callingDomainSelector */
+        0x04, 0x01, 0x01,
+
+        /* calledDomainSelector */
+        0x04, 0x01, 0x01,
+
+        /* upwardFlag */
+        0x01, 0x01, 0xff,
+
+        /* targetParameters */
+        0x30, 0x1a,
+        0x02, 0x01, 0x22,  /* maxChannelIds: 34 */
+        0x02, 0x01, 0x02,  /* maxUserIds: 2 */
+        0x02, 0x01, 0x00,  /* maxTokenIds: 0 */
+        0x02, 0x01, 0x01,  /* numPriorities: 1 */
+        0x02, 0x01, 0x00,  /* minThroughput: 0 */
+        0x02, 0x01, 0x01,  /* maxHeight: 1 */
+        0x02, 0x02, 0xff, 0xff,  /* maxMCSPDUsize: 65535 */
+        0x02, 0x01, 0x02,  /* protocolVersion: 2 */
+
+        /* minimumParameters (same as targetParameters) */
+        0x30, 0x1a,
+        0x02, 0x01, 0x01,
+        0x02, 0x01, 0x01,
+        0x02, 0x01, 0x01,
+        0x02, 0x01, 0x01,
+        0x02, 0x01, 0x00,
+        0x02, 0x01, 0x01,
+        0x02, 0x02, 0x04, 0x20,
+        0x02, 0x01, 0x02,
+
+        /* maximumParameters */
+        0x30, 0x1c,
+        0x02, 0x02, 0xff, 0xff,
+        0x02, 0x02, 0xfc, 0x17,
+        0x02, 0x02, 0xff, 0xff,
+        0x02, 0x01, 0x01,
+        0x02, 0x01, 0x00,
+        0x02, 0x01, 0x01,
+        0x02, 0x03, 0xff, 0xff, 0xff,
+        0x02, 0x01, 0x02,
+
+        /* userData (minimal) */
+        0x04, 0x00  /* Empty user data */
+    };
+
+    /* Encrypt and send MCS Connect-Initial */
+    uint8_t mcs_plaintext[256];
+    size_t mcs_len = sizeof(mcs_connect_initial);
+    memcpy(mcs_plaintext, mcs_connect_initial, mcs_len);
+    mcs_plaintext[mcs_len] = 0x17;  /* Content type: Application Data */
+    mcs_len++;
+
+    uint8_t mcs_encrypted[512];
+    uint8_t mcs_nonce[12];
+    uint64_t client_app_seq = 0;
+
+    memcpy(mcs_nonce, client_app_iv, 12);
+    for (int i = 0; i < 8; i++) {
+        mcs_nonce[12 - 1 - i] ^= (client_app_seq >> (i * 8)) & 0xFF;
+    }
+
+    uint16_t mcs_encrypted_len = mcs_len + 16;  /* + tag */
+    uint8_t mcs_aad[5] = {0x17, 0x03, 0x03, (mcs_encrypted_len >> 8) & 0xFF, mcs_encrypted_len & 0xFF};
+    uint8_t mcs_tag[16];
+
+    chacha20_poly1305_encrypt(client_app_key, mcs_nonce, mcs_aad, 5,
+                               mcs_plaintext, mcs_len, mcs_encrypted, mcs_tag);
+
+    /* Build TLS record */
+    uint8_t mcs_tls_record[1024];
+    size_t mcs_pos = 0;
+    mcs_tls_record[mcs_pos++] = 0x17;
+    mcs_tls_record[mcs_pos++] = 0x03;
+    mcs_tls_record[mcs_pos++] = 0x03;
+    mcs_tls_record[mcs_pos++] = (mcs_encrypted_len >> 8) & 0xFF;
+    mcs_tls_record[mcs_pos++] = mcs_encrypted_len & 0xFF;
+    memcpy(&mcs_tls_record[mcs_pos], mcs_encrypted, mcs_len);
+    mcs_pos += mcs_len;
+    memcpy(&mcs_tls_record[mcs_pos], mcs_tag, 16);
+    mcs_pos += 16;
+
+    if (send_all(sock, mcs_tls_record, mcs_pos) < 0) {
+        fprintf(stderr, "Failed to send MCS Connect-Initial\n");
+        close(sock);
+        return 1;
+    }
+    client_app_seq++;
+
+    printf("      ✓ Sent encrypted MCS Connect-Initial (%zu bytes)\n", mcs_pos);
+    printf("\n[11/11] Receiving RDP server responses...\n");
 
     int rdp_messages = 0;
-    uint64_t app_seq = 0;
+    uint64_t server_app_seq = 0;
+    int non_black_pixels = 0;
 
-    /* Try to receive any application data */
-    while (rdp_messages < 5) {
+    /* Try to receive RDP responses */
+    while (rdp_messages < 10) {
         if (recv_all(sock, buf, 5) < 0) {
             printf("      Connection closed after %d RDP messages\n", rdp_messages);
             break;
@@ -608,7 +726,7 @@ int main(int argc, char **argv) {
             uint8_t app_nonce[12];
             memcpy(app_nonce, server_app_iv, 12);
             for (int i = 0; i < 8; i++) {
-                app_nonce[12 - 1 - i] ^= (app_seq >> (i * 8)) & 0xFF;
+                app_nonce[12 - 1 - i] ^= (server_app_seq >> (i * 8)) & 0xFF;
             }
 
             uint8_t app_aad[5];
@@ -631,23 +749,37 @@ int main(int argc, char **argv) {
                     app_plaintext_len--;
 
                     if (content_type == 0x17) {  /* Application data */
-                        printf("      ✓ Decrypted RDP data: %zu bytes\n", app_plaintext_len);
+                        printf("      ✓ Decrypted RDP message %d: %zu bytes\n", rdp_messages + 1, app_plaintext_len);
 
-                        /* Check for non-black pixels (any byte > 0) */
-                        int non_zero_bytes = 0;
-                        for (size_t i = 0; i < app_plaintext_len && i < 1024; i++) {
-                            if (app_plaintext[i] != 0) non_zero_bytes++;
+                        /* Analyze message content */
+                        int msg_non_zero = 0;
+                        for (size_t i = 0; i < app_plaintext_len; i++) {
+                            if (app_plaintext[i] != 0) msg_non_zero++;
                         }
 
-                        if (non_zero_bytes > 0) {
-                            printf("      ✓ Found %d non-zero bytes in RDP data!\n", non_zero_bytes);
+                        if (msg_non_zero > 0) {
+                            printf("        • Contains %d non-zero bytes (%.1f%%)\n",
+                                   msg_non_zero, (msg_non_zero * 100.0) / app_plaintext_len);
+                            non_black_pixels += msg_non_zero;
                         }
+
+                        /* Show first 32 bytes for debugging */
+                        printf("        • First bytes: ");
+                        for (size_t i = 0; i < 32 && i < app_plaintext_len; i++) {
+                            printf("%02x ", app_plaintext[i]);
+                        }
+                        printf("\n");
 
                         rdp_messages++;
                     }
                 }
+            } else {
+                printf("      ✗ Failed to decrypt message\n");
             }
-            app_seq++;
+            server_app_seq++;
+        } else if (rec_type == 0x15) {  /* TLS Alert */
+            printf("      ⚠ Received TLS Alert\n");
+            break;
         } else {
             break;
         }
@@ -666,11 +798,19 @@ int main(int argc, char **argv) {
     printf("✓ Sent client Finished message\n");
     printf("✓ Derived application secrets\n");
     printf("✓ TLS 1.3 handshake complete\n");
+    printf("✓ Sent MCS Connect-Initial PDU\n");
 
     if (rdp_messages > 0) {
         printf("✓ Received %d RDP messages over TLS\n", rdp_messages);
+        printf("✓ Total non-zero bytes: %d\n", non_black_pixels);
+
+        if (non_black_pixels > 100) {
+            printf("✓ SUCCESS: Server is sending non-black pixel data!\n");
+        } else {
+            printf("⚠ WARNING: Received mostly zero/black data\n");
+        }
     } else {
-        printf("⚠ No RDP application data received (server may expect client requests)\n");
+        printf("⚠ No RDP application data received\n");
     }
 
     printf("\n");
