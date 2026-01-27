@@ -1,8 +1,8 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ([2.69])
-AC_INIT([xrdp], [0.10.4.1], [xrdp-devel@googlegroups.com])
-AC_DEFINE([VERSION_YEAR], 2025, [Copyright year])
+AC_INIT([xrdp], [0.10.5], [xrdp-devel@googlegroups.com])
+AC_DEFINE([VERSION_YEAR], 2026, [Copyright year])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
