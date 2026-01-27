@@ -1,3 +1,56 @@
+# Release notes for xrdp v0.10.5 (2026/01/27)
+
+## General announcements
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+* [V0.10.3] Experimental support for utmp/wtmp file is provided in this release. If you use this, be aware that these files are only updated when an xrdp session is created or destroyed. Disconnections and reconnections to the same session are not tracked. In particular:
+  * the FROM address for a client (as shown by the `w` command) reflects the IP address of the client at the time of creation, and not the address of the currently connected client.
+  * Sessions started by the `xrdp-sesrun` command do not have a FROM address.
+* The use_vsock parameter in xrdp.ini is deprecated. Use 'port=vsock://' instead.
+
+## Security fixes
+* [CVE-2025-68670: Improper bounds checking of domain string length leads to Stack-based Buffer Overflow](https://nvd.nist.gov/vuln/detail/CVE-2025-68670)
+
+## New features
+- It is now possible to start the xrdp daemon entirely unprivileged from the service manager (#3599 #3603). If you do this certain restrictions will apply. See https://github.com/neutrinolabs/xrdp/wiki/Running-the-xrdp-process-as-non-root for details.
+- TLS pre-master secrets can now be recorded for packet captures (#3617)
+- Add a `FuseRootReportMaxFree` to work around 'no free space' issues with some file managers (#3639)
+- Alternate shell names can now be passed to startwm.sh in an environment variable for more system management control (#3624 #3651)
+- Updated Xorg paths in sesman.ini to include more recent distros (#3663)
+- Add Slovenian keyboard (#3668 #3670)
+- xrdpapi: Add a way to monitor connect/disconnect events (#3693)
+
+
+## Bug fixes
+- Allow an empty X11 UTF8_STRING to be pasted to the clipboard (#3580 #3582)
+- Fix a regression introduced in v0.10.x, where it became impossible to connect to a VNC server which did not support the ExtendedDesktopSize encoding (#3540 #3584)
+- Fix a regression introduced in v0.10.x related to PAM groups handling (#3594)
+- Inconsistencies with [MS-RDPBCGR] have been addressed (#3608)
+- A reference to uninitialised data within the verify_user_pam_userpass.c module has been fixed (#3638)
+- Prevent some possible crashes when the RFX encoder is resized (#3590 #3644)
+- Fixes a regression introduced by GFX development which prevented the JPEG encoder from working correctly (#3649)
+- Fixes a regression introduced by #2974 which resulted in the xrdp PID file being deleted unexpectedly (#3650)
+- Do not overwrite a VNC port set by the user when not using sesman (#3674)
+- Fix regression from 0.9.x when freerdp client uses /workarea (#3618 #3676)
+- Fixes a crash where a resize is attempted with drdynvc disabled (#3672 #3680)
+- getgrouplist() now compiles on MacOS (#3575)
+- Various Coverity warnings have been addressed (#3656)
+- Documentation improvements (#3665)
+
+## Internal changes
+- An unnecessary include of sys/signal.h causing a compile warning on MUSL-C has been removed (#3679)
+
+## Changes for users
+None
+
+## Changes for packagers or developers
+* (from v0.10.3) The `--enable-utmp` needs to be added to enable UTMP support.
+* (from v0.10.3) The config file subdirectory (`xrdp` part of `/etc/xrdp`) can now be configured (#3369)
+* (from v0.10.3) Packagers using TigerVNC to provide the Xvnc backend may wish to configure the 'Xvnc over UDS' session type as a default by using a `code=1` line in xrdp.ini. Instructions are provided in the released xrdp.ini file.
+
+-----------------------
+
 # Release notes for xrdp v0.10.4.1 (2025/07/07)
 
 ## General announcements
@@ -102,7 +155,7 @@ None
 
 
 ## Internal changes
-* FreeBSD CI bumped to 14.2 (#3427)
+* FreeBSD CI bumped to 14.3 (#3427 #3685)
 
 ## Changes for users
 None
