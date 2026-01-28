@@ -1,3 +1,31 @@
+# Release notes for xrdp v0.9.27 (2026/01/28)
+
+## General announcements
+
+_xrdp v0.9.x is end-of-life. New releases may happen when severe security vulnerabilities or critical bugs are found._
+
+We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
+
+## Security fixes
+* Unauthenticated RDP security scan finding / partial auth bypass (no CVE). Thanks to @txtdawg for reporting this.
+* [CVE-2025-68670: Improper bounds checking of domain string length leads to Stack-based Buffer Overflow](https://nvd.nist.gov/vuln/detail/CVE-2025-68670)
+
+## Bug fixes
+* xrdp.ini manpage updated (#3158)
+
+## New features
+No new features in this release.
+
+## Internal changes
+* FreeBSD CI bumped to 14.3 (#3706)
+* AC_C_CONST macro removed from configure.ac files (#3709)
+
+## Known issues
+* On-the-fly resolution change requires the Microsoft Store version of Remote Desktop client but sometimes crashes on connect (#1869)
+* xrdp's login dialog is not relocated at the center of the new resolution after on-the-fly resolution change happens (#1867)
+
+-----------------------
+
 # Release notes for xrdp v0.9.26 (2024/06/20)
 
 ## General announcements
