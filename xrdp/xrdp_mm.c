@@ -462,6 +462,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_set_pointer_large = server_set_pointer_large;
             self->mod->server_paint_rects_ex = server_paint_rects_ex;
             self->mod->server_set_pointer_system = server_set_pointer_system;
+            self->mod->server_set_pointer_position = server_set_pointer_position;
             self->mod->si = &(self->wm->session->si);
         }
     }
@@ -4477,6 +4478,17 @@ server_set_pointer_system(struct xrdp_mod *mod, int pointer_type)
 
     wm = (struct xrdp_wm *)(mod->wm);
     xrdp_wm_send_pointer_system(wm, pointer_type);
+    return 0;
+}
+
+/*****************************************************************************/
+int
+server_set_pointer_position(struct xrdp_mod *mod, int x, int y)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    xrdp_wm_send_pointer_position(wm, x, y);
     return 0;
 }
 
