@@ -29,6 +29,8 @@
 #endif
 
 #include <stdio.h>
+#include <dirent.h>
+#include <ctype.h>
 
 #include "arch.h"
 #include "display_utils.h"
@@ -38,6 +40,68 @@
 #include "sesman_config.h"
 #include "set_int.h"
 #include "xrdp_sockets.h"
+
+static int
+check_process_running(int display)
+{
+    DIR *dir;
+    struct dirent *ent;
+    char path[256];
+    char buf[4096];
+    char display_param[32];
+    int found = 0;
+
+    g_snprintf(display_param, sizeof(display_param), ":%d", display);
+
+    if (!(dir = opendir("/proc")))
+    {
+        return 0;
+    }
+
+    while ((ent = readdir(dir)) != NULL)
+    {
+        if (!isdigit(ent->d_name[0]))
+        {
+            continue;
+        }
+
+        g_snprintf(path, sizeof(path), "/proc/%s/cmdline", ent->d_name);
+        
+        int fd = g_file_open_ro(path);
+        if (fd == -1)
+        {
+            continue;
+        }
+
+        int len = g_file_read(fd, buf, sizeof(buf) - 1);
+        g_file_close(fd);
+
+        if (len > 0)
+        {
+            int i;
+            buf[len] = '\0';
+            for (i = 0; i < len; ++i)
+            {
+                if (buf[i] == '\0')
+                {
+                    buf[i] = ' ';
+                }
+            }
+
+            if ((strstr(buf, "Xorg") != NULL ||
+                 strstr(buf, "Xvnc") != NULL ||
+                 strstr(buf, "Xxrdp") != NULL) &&
+                strstr(buf, display_param) != NULL)
+            {
+                found = 1;
+                break;
+            }
+        }
+    }
+
+    closedir(dir);
+    return found;
+}
 
 /******************************************************************************/
 /**
@@ -54,8 +118,13 @@ x_server_running_check_ports(int display)
     int x_running;
     int sck;
 
-    (void)snprintf(text, sizeof(text), X11_UNIX_SOCKET_STR, display);
-    x_running = g_file_exist(text);
+    x_running = check_process_running(display);
+
+    if (!x_running)
+    {
+        (void)snprintf(text, sizeof(text), X11_UNIX_SOCKET_STR, display);
+        x_running = g_file_exist(text);
+    }
 
     if (!x_running)
     {
@@ -99,7 +168,7 @@ x_server_running_check_ports(int display)
 
     if (x_running)
     {
-        LOG(LOG_LEVEL_INFO, "Found X server running at %s", text);
+        LOG(LOG_LEVEL_INFO, "Found X server running for display %d", display);
     }
 
     return x_running;
