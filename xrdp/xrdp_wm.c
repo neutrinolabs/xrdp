@@ -416,6 +416,20 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 
 /*****************************************************************************/
 int
+xrdp_wm_send_pointer_system(struct xrdp_wm *self, int pointer_type)
+{
+    return libxrdp_send_pointer_system(self->session, pointer_type);
+}
+
+/*****************************************************************************/
+int
+xrdp_wm_send_pointer_position(struct xrdp_wm *self, int x, int y)
+{
+    return libxrdp_send_pointer_position(self->session, x, y);
+}
+
+/*****************************************************************************/
+int
 xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
                      char *data, char *mask, int x, int y, int bpp,
                      int width, int height)

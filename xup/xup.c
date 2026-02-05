@@ -1455,6 +1455,34 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int
+process_server_set_pointer_system(struct mod *amod, struct stream *s)
+{
+    int rv;
+    int pointer_type;
+
+    in_uint32_le(s, pointer_type);
+    rv = amod->server_set_pointer_system(amod, pointer_type);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+process_server_set_pointer_position(struct mod *amod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+
+    in_uint16_le(s, x);
+    in_uint16_le(s, y);
+    rv = amod->server_set_pointer_position(amod, x, y);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
 send_server_version_message(struct mod *mod, struct stream *s)
 {
     /* send version message */
@@ -1686,6 +1714,12 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 64: /* server_paint_rect_shmfd */
             rv = process_server_paint_rect_shmfd(mod, s);
+            break;
+        case 65: /* server_set_pointer_system */
+            rv = process_server_set_pointer_system(mod, s);
+            break;
+        case 66: /* server_set_pointer_position */
+            rv = process_server_set_pointer_position(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,

@@ -122,6 +122,10 @@ int
 libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     int bpp, char *data, int x, int y, int cx, int cy);
 int
+libxrdp_send_pointer_system(struct xrdp_session *session, int pointer_type);
+int
+libxrdp_send_pointer_position(struct xrdp_session *session, int x, int y);
+int
 libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                      char *data, char *mask, int x, int y, int bpp,
                      int width, int height);

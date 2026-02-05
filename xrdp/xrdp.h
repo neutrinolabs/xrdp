@@ -162,6 +162,10 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags);
 int
 xrdp_wm_pu(struct xrdp_wm *self, struct xrdp_bitmap *control);
 int
+xrdp_wm_send_pointer_system(struct xrdp_wm *self, int pointer_type);
+int
+xrdp_wm_send_pointer_position(struct xrdp_wm *self, int x, int y);
+int
 xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
                      char *data, char *mask, int x, int y, int bpp,
                      int width, int height);
@@ -564,6 +568,10 @@ server_paint_rects(struct xrdp_mod *mod, int num_drects, short *drects,
                    int num_crects, short *crects,
                    char *data, int width, int height,
                    int flags, int frame_id);
+int
+server_set_pointer_system(struct xrdp_mod *mod, int pointer_type);
+int
+server_set_pointer_position(struct xrdp_mod *mod, int x, int y);
 int
 server_set_pointer(struct xrdp_mod *mod, int x, int y,
                    char *data, char *mask);

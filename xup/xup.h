@@ -176,7 +176,9 @@ struct mod
     int (*server_egfx_cmd)(struct mod *v,
                            char *cmd, int cmd_bytes,
                            char *data, int data_bytes);
-    tintptr server_dumby[100 - 50]; /* align, 100 minus the number of server
+    int (*server_set_pointer_system)(struct mod *v, int pointer_type);
+    int (*server_set_pointer_position)(struct mod *v, int x, int y);
+    tintptr server_dumby[100 - 52]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
