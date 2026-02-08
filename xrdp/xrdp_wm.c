@@ -1201,9 +1201,13 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
             self->current_pointer = self->screen->pointer;
         }
 
-        if (self->mm != 0 && self->mm->mod != 0 && self->mm->mod->mod_event != 0)
+        if (self->mm != 0)
         {
-            self->mm->mod->mod_event(self->mm->mod, WM_MOUSEMOVE, x, y, 0, 0);
+            struct xrdp_mod *m = self->mm->mod;
+            if (m != 0 && m->mod_event != 0)
+            {
+                m->mod_event(m, WM_MOUSEMOVE, x, y, 0, 0);
+            }
         }
     }
 
@@ -1281,19 +1285,31 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
 int
 xrdp_wm_mouse_touch(struct xrdp_wm *self, int gesture, int param)
 {
+    struct xrdp_mod *m;
     LOG(LOG_LEVEL_DEBUG, "mouse touch event gesture %d param %d", gesture, param);
+
+    if (self == 0 || self->mm == 0)
+    {
+        return 0;
+    }
+
+    m = self->mm->mod;
+    if (m == 0 || m->mod_event == 0)
+    {
+        return 0;
+    }
 
     switch (gesture)
     {
         case TOUCH_TWO_FINGERS_UP:
         case TOUCH_TWO_FINGERS_DOWN:
-            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_VSCROLL,
-                                     self->mouse_x, self->mouse_y, param, 0);
+            m->mod_event(m, WM_TOUCH_VSCROLL,
+                         self->mouse_x, self->mouse_y, param, 0);
             break;
         case TOUCH_TWO_FINGERS_RIGHT:
         case TOUCH_TWO_FINGERS_LEFT:
-            self->mm->mod->mod_event(self->mm->mod, WM_TOUCH_HSCROLL,
-                                     self->mouse_x, self->mouse_y, param, 0);
+            m->mod_event(m, WM_TOUCH_HSCROLL,
+                         self->mouse_x, self->mouse_y, param, 0);
             break;
     }
 
@@ -1365,89 +1381,93 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 
     if (control == 0)
     {
-        if (self->mm != 0 && self->mm->mod != 0 && self->mm->mod->mod_event != 0)
+        if (self->mm != 0)
         {
-            if (down)
+            struct xrdp_mod *m = self->mm->mod;
+            if (m != 0 && m->mod_event != 0)
             {
-                self->mm->mod->mod_event(self->mm->mod, WM_MOUSEMOVE, x, y, 0, 0);
-            }
-            if (but == 1 && down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_LBUTTONDOWN, x, y, 0, 0);
-            }
-            else if (but == 1 && !down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_LBUTTONUP, x, y, 0, 0);
-            }
+                if (down)
+                {
+                    m->mod_event(m, WM_MOUSEMOVE, x, y, 0, 0);
+                }
+                if (but == 1 && down)
+                {
+                    m->mod_event(m, WM_LBUTTONDOWN, x, y, 0, 0);
+                }
+                else if (but == 1 && !down)
+                {
+                    m->mod_event(m, WM_LBUTTONUP, x, y, 0, 0);
+                }
 
-            if (but == 2 && down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_RBUTTONDOWN, x, y, 0, 0);
-            }
-            else if (but == 2 && !down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_RBUTTONUP, x, y, 0, 0);
-            }
+                if (but == 2 && down)
+                {
+                    m->mod_event(m, WM_RBUTTONDOWN, x, y, 0, 0);
+                }
+                else if (but == 2 && !down)
+                {
+                    m->mod_event(m, WM_RBUTTONUP, x, y, 0, 0);
+                }
 
-            if (but == 3 && down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3DOWN, x, y, 0, 0);
-            }
-            else if (but == 3 && !down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3UP, x, y, 0, 0);
-            }
+                if (but == 3 && down)
+                {
+                    m->mod_event(m, WM_BUTTON3DOWN, x, y, 0, 0);
+                }
+                else if (but == 3 && !down)
+                {
+                    m->mod_event(m, WM_BUTTON3UP, x, y, 0, 0);
+                }
 
-            if (but == 8 && down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON8DOWN, x, y, 0, 0);
-            }
-            else if (but == 8 && !down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON8UP, x, y, 0, 0);
-            }
-            if (but == 9 && down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON9DOWN, x, y, 0, 0);
-            }
-            else if (but == 9 && !down)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON9UP, x, y, 0, 0);
-            }
-            /* vertical scroll */
+                if (but == 8 && down)
+                {
+                    m->mod_event(m, WM_BUTTON8DOWN, x, y, 0, 0);
+                }
+                else if (but == 8 && !down)
+                {
+                    m->mod_event(m, WM_BUTTON8UP, x, y, 0, 0);
+                }
+                if (but == 9 && down)
+                {
+                    m->mod_event(m, WM_BUTTON9DOWN, x, y, 0, 0);
+                }
+                else if (but == 9 && !down)
+                {
+                    m->mod_event(m, WM_BUTTON9UP, x, y, 0, 0);
+                }
+                /* vertical scroll */
 
-            if (but == 4)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON4DOWN,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON4UP,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-            }
+                if (but == 4)
+                {
+                    m->mod_event(m, WM_BUTTON4DOWN,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                    m->mod_event(m, WM_BUTTON4UP,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                }
 
-            if (but == 5)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5DOWN,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5UP,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-            }
+                if (but == 5)
+                {
+                    m->mod_event(m, WM_BUTTON5DOWN,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                    m->mod_event(m, WM_BUTTON5UP,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                }
 
-            /* horizontal scroll */
+                /* horizontal scroll */
 
-            if (but == 6)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6DOWN,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6UP,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-            }
+                if (but == 6)
+                {
+                    m->mod_event(m, WM_BUTTON6DOWN,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                    m->mod_event(m, WM_BUTTON6UP,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                }
 
-            if (but == 7)
-            {
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7DOWN,
-                                         self->mouse_x, self->mouse_y, 0, 0);
-                self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7UP,
-                                         self->mouse_x, self->mouse_y, 0, 0);
+                if (but == 7)
+                {
+                    m->mod_event(m, WM_BUTTON7DOWN,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                    m->mod_event(m, WM_BUTTON7UP,
+                                 self->mouse_x, self->mouse_y, 0, 0);
+                }
             }
         }
     }
