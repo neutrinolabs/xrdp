@@ -53,6 +53,12 @@ env_check_password_file(const char *filename, const char *passwd)
     void *des;
     void *sha1;
 
+    if (filename == NULL)
+    {
+        LOG(LOG_LEVEL_WARNING, "Cannot write VNC password hash to NULL file");
+        return 1;
+    }
+
     /*
      * If we're in FIPS mode, do not write the GUID to disk after it's
      * been encrypted with an insecure algorithm.
@@ -63,7 +69,7 @@ env_check_password_file(const char *filename, const char *passwd)
         return 1;
     }
     /* create password hash from password */
-    passwd_bytes = g_strlen(passwd);
+    passwd_bytes = (passwd == NULL) ? 0 : strlen(passwd);
     sha1 = ssl_sha1_info_create();
     ssl_sha1_clear(sha1);
     ssl_sha1_transform(sha1, "xrdp_vnc", 8);
