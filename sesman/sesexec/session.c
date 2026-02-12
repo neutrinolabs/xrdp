@@ -433,7 +433,6 @@ prepare_xvnc_xserver_params(const struct session_parameters *s,
         g_snprintf(depth, sizeof(depth), "%d", s->bpp);
 
         guid_to_str(&s->guid, guid_str);
-        env_check_password_file(passwd_file, guid_str);
 
         /* get path of Xvnc from config */
         xserver = (const char *)list_get_item(g_cfg->vnc_params, 0);
@@ -449,6 +448,7 @@ prepare_xvnc_xserver_params(const struct session_parameters *s,
         if (passwd_file != NULL)
         {
             /* RFB authorization */
+            env_check_password_file(passwd_file, guid_str);
             list_add_strdup_multi(params,
                                   "-rfbauth", passwd_file,
                                   NULL);
