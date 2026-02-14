@@ -711,12 +711,12 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
         struct xrdp_wm *wm = self->wm;
         if (wm == 0)
         {
-            return 0;
+            goto bail;
         }
         struct xrdp_mm *mm = wm->mm;
         if (mm == 0)
         {
-            return 0;
+            goto bail;
         }
         struct xrdp_mod *m = mm->mod;
         if (m != 0 && m->mod_event != 0)
@@ -1022,6 +1022,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
         }
     }
 
+bail:
     xrdp_painter_end_update(painter);
     xrdp_painter_delete(painter);
     return 0;
