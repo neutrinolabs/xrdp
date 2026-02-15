@@ -4403,10 +4403,9 @@ server_paint_rects_ex(struct xrdp_mod *mod,
     if (wm->client_info->gfx)
     {
         LOG(LOG_LEVEL_DEBUG, "server_paint_rects: gfx session and no encoder");
-        struct xrdp_mod *m = mm->mod;
-        if (m != 0 && m->mod_frame_ack != 0)
+        if (mod->mod_frame_ack != 0)
         {
-            m->mod_frame_ack(m, flags, frame_id);
+            mod->mod_frame_ack(mod, flags, frame_id);
         }
         return 0;
     }
@@ -4426,10 +4425,9 @@ server_paint_rects_ex(struct xrdp_mod *mod,
         s += 4;
     }
     xrdp_bitmap_delete(b);
-    struct xrdp_mod *m = mm->mod;
-    if (m != 0 && m->mod_frame_ack != 0)
+    if (mod->mod_frame_ack != 0)
     {
-        m->mod_frame_ack(m, flags, frame_id);
+        mod->mod_frame_ack(mod, flags, frame_id);
     }
     if (shmem_ptr != NULL)
     {
