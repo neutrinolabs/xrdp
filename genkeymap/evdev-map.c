@@ -19,14 +19,14 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301, USA
  *
- * xfree86(base)->evdev keycode mapping
+ * xrdp keycode->evdev keycode mapping
  */
 
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
 
-int xfree86_to_evdev[137 - 8 + 1] =
+int xrdp_keycode_to_evdev[137 - 8 + 1] =
 {
     /* MDSW */ 203,
     /* ESC */ 9,
@@ -137,13 +137,13 @@ int xfree86_to_evdev[137 - 8 + 1] =
     /* BRK */ 419,
     /* LWIN */ 133,
     /* RWIN */ 134,
-    /* MENU */ 0,
+    /* MENU */ 135,
     /* FK13 */ 191,
     /* FK14 */ 192,
     /* FK15 */ 193,
     /* FK16 */ 194,
     /* FK17 */ 195,
-    /* KPDC */ 0,
+    /* KPDC */ 97,
     /* LVL3 */ 92,
     /* ALT */ 204,
     /* KPEQ */ 125,
@@ -154,7 +154,7 @@ int xfree86_to_evdev[137 - 8 + 1] =
     /* NFER */ 0,
     /* I04 */ 0,
     /* AE13 */ 132,
-    /* I06 */ 0,
+    /* ABNT_C2 */ 129,
     /* I07 */ 0,
     0,
     0

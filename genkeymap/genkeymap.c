@@ -44,7 +44,10 @@
 #include <X11/XKBlib.h>
 #include <locale.h>
 
-extern int xfree86_to_evdev[137 - 8 + 1];
+// Keys which need special handling
+#define VK_ABNT_C1 123   // '/?' Key on Brazilian ABNT2 keyboard
+
+extern int xrdp_keycode_to_evdev[137 - 8 + 1];
 
 int main(int argc, char **argv)
 {
@@ -142,11 +145,20 @@ int main(int argc, char **argv)
         {
             if (is_evdev)
             {
-                e.keycode = xfree86_to_evdev[i - 8];
+                // Map xrdp keycode to an evdev keycode
+                e.keycode = xrdp_keycode_to_evdev[i - 8];
             }
             else
             {
-                e.keycode = i;
+                // Map xrdp keycode to a base keycode
+                switch (i)
+                {
+                    case VK_ABNT_C1:
+                        e.keycode = 211;
+                        break;
+                    default:
+                        e.keycode = i;
+                }
             }
             nbytes = XLookupString(&e, text, 255, &ks, NULL);
             text[nbytes] = 0;
