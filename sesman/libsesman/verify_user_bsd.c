@@ -69,7 +69,8 @@ struct auth_info
 /* returns non-NULL for success */
 struct auth_info *
 auth_userpass(const char *const_user, const char *const_pass,
-              const char *client_ip, enum scp_login_status *errorcode)
+              const char *client_ip, enum scp_login_status *errorcode,
+              struct trans *scp_trans)
 {
     /* Need a non-NULL pointer to return to indicate success */
     static struct auth_info success = {0};

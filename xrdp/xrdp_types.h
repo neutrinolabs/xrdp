@@ -592,6 +592,7 @@ struct xrdp_wm
 
     struct xrdp_region *screen_dirty_region;
     unsigned int last_screen_draw_time;
+    struct xrdp_bitmap *prompt_wnd;
 };
 
 /* rdp process */
@@ -717,6 +718,8 @@ struct xrdp_bitmap
 #define DEFAULT_WND_HELP_H    300
 #define DEFAULT_WND_LOG_W     400
 #define DEFAULT_WND_LOG_H     400
+#define DEFAULT_WND_PROMPT_W  400
+#define DEFAULT_WND_PROMPT_H  340
 #define DEFAULT_WND_SPECIAL_H 100
 
 /* font */
@@ -798,6 +801,8 @@ struct xrdp_ls_dimensions
     int combo_height;         /* Height of a combo box */
     int help_wnd_width;        /* Width of login help window */
     int help_wnd_height;       /* Height of login help window */
+    int prompt_wnd_width;        /* Width of login help window */
+    int prompt_wnd_height;       /* Height of login help window */
 };
 
 struct xrdp_cfg_globals

@@ -73,6 +73,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_encoder.o \
     $(top_builddir)/xrdp/xrdp_process.o \
     $(top_builddir)/xrdp/xrdp_login_wnd.o \
+    $(top_builddir)/xrdp/xrdp_prompt.o \
     $(top_builddir)/xrdp/xrdp_tconfig.o \
     $(top_builddir)/xrdp/xrdp_main_utils.o \
     $(top_builddir)/libpainter/src/libpainter.la \
