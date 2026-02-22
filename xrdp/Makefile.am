@@ -78,6 +78,7 @@ xrdp_SOURCES = \
   xrdp_login.h \
   xrdp_login_lvgl.c \
   xrdp_login_lvgl.h \
+  xrdp_prompt.c \
   xrdp_mm.c \
   xrdp_mm_ccp.c \
   xrdp_mm.h \

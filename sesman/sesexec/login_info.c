@@ -84,11 +84,13 @@ log_authfail_message(const char *username, const char *ip_addr)
  *
  * @post If E_SCP_LOGIN_OK is returned, g_login_info is filled in
  */
+#if 0
 static enum scp_login_status
-authenticate_and_authorize_connection(const char *supplied_username,
-                                      const char *password,
-                                      const char *ip_addr,
-                                      struct login_info *login_info)
+authenticate_and_authorize_connection1(const char *supplied_username,
+                                       const char *password,
+                                       const char *ip_addr,
+                                       struct login_info *login_info,
+                                       struct trans *scp_trans)
 {
     int uid;
     char *username; // From reverse-looking up the UID
@@ -133,7 +135,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
                 username, uid);
         }
 
-        auth_info = auth_userpass(username, password, ip_addr, &status);
+        auth_info = auth_userpass(username, password, ip_addr, &status, scp_trans);
 
         /* Sanity check on result of call */
         if ((auth_info != NULL && status != E_SCP_LOGIN_OK) ||
@@ -205,6 +207,121 @@ authenticate_and_authorize_connection(const char *supplied_username,
             g_sleep(FAILED_LOGIN_CONSTANT_TIME - elapsed_ms);
         }
     }
+    return status;
+}
+#endif
+
+static enum scp_login_status
+authenticate_and_authorize_connection(const char *supplied_username,
+                                      const char *password,
+                                      const char *ip_addr,
+                                      struct login_info *login_info,
+                                      struct trans *scp_trans)
+{
+    int uid;
+    char *username = NULL; // From reverse-looking up the UID
+    enum scp_login_status status;
+    struct auth_info *auth_info;
+
+    status = E_SCP_LOGIN_NOT_AUTHENTICATED;
+    auth_info = auth_userpass(supplied_username, password, ip_addr, &status, scp_trans);
+
+    /* Sanity check on result of call */
+    if ((auth_info != NULL && status != E_SCP_LOGIN_OK) ||
+            (auth_info == NULL && status == E_SCP_LOGIN_OK))
+    {
+        LOG(LOG_LEVEL_ERROR, "Bugcheck; inconsistent auth result. "
+            "info = %p, status = %d", (void *)auth_info, (int)status);
+        status = E_SCP_LOGIN_GENERAL_ERROR;
+        auth_end(auth_info);
+        auth_info = NULL;
+    }
+
+    if (g_getuser_info_by_name(supplied_username,
+                               &uid, NULL, NULL, NULL, NULL) != 0)
+    {
+        /* we can't get a UID for the user */
+        LOG(LOG_LEVEL_ERROR, "Can't get UID for user %s",
+            supplied_username);
+        log_authfail_message(supplied_username, ip_addr);
+        status = E_SCP_LOGIN_NOT_AUTHENTICATED;
+        auth_end(auth_info);
+        auth_info = NULL;
+    }
+    else if (g_getuser_info_by_uid(uid,
+                                   &username,
+                                   NULL, NULL, NULL, NULL) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't reverse lookup UID %d", uid);
+        status = E_SCP_LOGIN_NOT_AUTHENTICATED;
+        auth_end(auth_info);
+        auth_info = NULL;
+    }
+    else
+    {
+        if (g_strcmp(username, supplied_username) != 0)
+        {
+            /*
+             * If using a federated naming service (e.g. AD), the username
+             * supplied may not match that name mapped to by the UID. We
+             * will generate a warning in this instance so the user can see
+             * what is being used
+             */
+            LOG(LOG_LEVEL_WARNING,
+                "Using username %s for the session (from UID %d)",
+                username, uid);
+        }
+    }
+
+    /* Group access allowed? */
+    if (status == E_SCP_LOGIN_OK &&
+            !access_login_allowed(&g_cfg->sec, username))
+    {
+        LOG(LOG_LEVEL_INFO, "Username okay but group problem for "
+            "user: %s", username);
+        status = E_SCP_LOGIN_NOT_AUTHORIZED;
+        auth_end(auth_info);
+        auth_info = NULL;
+    }
+
+    switch (status)
+    {
+        case E_SCP_LOGIN_OK:
+        {
+            char *dup_username = g_strdup(username);
+            char *dup_ip_addr = g_strdup(ip_addr);
+
+            if (dup_username == NULL || dup_ip_addr == NULL)
+            {
+                LOG(LOG_LEVEL_ERROR, "%s : Memory allocation failed",
+                    __func__);
+                g_free(dup_username);
+                g_free(dup_ip_addr);
+                status = E_SCP_LOGIN_NO_MEMORY;
+                auth_end(auth_info);
+                auth_info = NULL;
+            }
+            else
+            {
+                LOG(LOG_LEVEL_INFO, "Access permitted for user: %s",
+                    username);
+                login_info->uid = uid;
+                login_info->username = dup_username;
+                login_info->ip_addr = dup_ip_addr;
+                login_info->auth_info = auth_info;
+            }
+        }
+        break;
+
+        case E_SCP_LOGIN_NOT_AUTHENTICATED:
+            log_authfail_message(username, ip_addr);
+            break;
+
+        default:
+            break;
+    }
+
+    g_free(username);
     return status;
 }
 
@@ -292,7 +409,8 @@ login_info_sys_login_user(struct trans *scp_trans,
             status = authenticate_and_authorize_connection(username,
                      password,
                      ip_addr,
-                     result);
+                     result,
+                     scp_trans);
 
             if (status != E_SCP_LOGIN_OK)
             {

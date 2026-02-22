@@ -293,7 +293,7 @@ main(int argc, char **argv)
         else
         {
             auth_info = auth_userpass(amp.username, amp.password,
-                                      NULL, &errorcode);
+                                      NULL, &errorcode, NULL);
         }
         scp_login_status_to_str(errorcode, errstr, sizeof(errstr));
         LOG(LOG_LEVEL_INFO,
