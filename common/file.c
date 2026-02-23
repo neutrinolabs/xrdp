@@ -248,7 +248,7 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     char *text;
     char *name;
     char *value;
-    char *lvalue;
+    const char *lvalue;
     int len;
     int file_size;
 

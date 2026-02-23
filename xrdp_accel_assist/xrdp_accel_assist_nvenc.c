@@ -112,9 +112,9 @@ xrdp_accel_assist_nvenc_create_encoder(int width, int height, int tex,
     NV_ENC_CONFIG encCfg;
     NVENCSTATUS nv_error;
     struct enc_info *lei;
-    char *rateControlMode_str;
-    char *averageBitRate_str;
-    char *qp_str;
+    const char *rateControlMode_str;
+    const char *averageBitRate_str;
+    const char *qp_str;
     int qp_int;
     int averageBitRate_int;
     int rc_set;

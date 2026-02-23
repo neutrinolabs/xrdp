@@ -717,7 +717,7 @@ xrdp_channel_drdynvc_send_capability_request(struct xrdp_channel *self)
     int flags;
     int total_data_len;
     int channel_id;
-    char *phold;
+    const char *phold;
 
     /* setup stream */
     make_stream(s);
@@ -774,8 +774,8 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
     {
         int index;
         int count;
-        struct mcs_channel_item *ci;
-        struct mcs_channel_item *dci;
+        const struct mcs_channel_item *ci;
+        const struct mcs_channel_item *dci;
         dci = NULL;
         count = self->mcs_layer->channel_list->count;
         for (index = 0; index < count; index++)

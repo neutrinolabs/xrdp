@@ -413,7 +413,7 @@ static int
 xrdp_listen_pp(struct xrdp_listen *self, int *index,
                char *address, char *port, int *mode)
 {
-    struct xrdp_startup_params *startup_params;
+    const struct xrdp_startup_params *startup_params;
     const char *str;
     const char *str_end;
     int lindex;

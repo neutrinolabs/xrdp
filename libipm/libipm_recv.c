@@ -645,7 +645,7 @@ enum libipm_status
 libipm_msg_in_parse(struct trans *trans, const char *format, ...)
 {
     enum libipm_status rv;
-    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+    const struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
     if (priv == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "uninitialised transport");

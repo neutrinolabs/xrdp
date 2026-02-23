@@ -495,7 +495,7 @@ libipm_msg_out_init(struct trans *trans, unsigned short msgno,
                     const char *format, ...)
 {
     enum libipm_status rv;
-    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+    const struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
     if (priv == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "uninitialised transport");
@@ -521,7 +521,7 @@ enum libipm_status
 libipm_msg_out_append(struct trans *trans, const char *format, ...)
 {
     enum libipm_status rv;
-    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+    const struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
     if (priv == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "uninitialised transport");
@@ -543,7 +543,7 @@ libipm_msg_out_append(struct trans *trans, const char *format, ...)
 void
 libipm_msg_out_mark_end(struct trans *trans)
 {
-    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+    const struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
     if (priv == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "uninitialised transport");
@@ -574,7 +574,7 @@ libipm_msg_out_simple_send(struct trans *trans, unsigned short msgno,
                            const char *format, ...)
 {
     enum libipm_status rv;
-    struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
+    const struct libipm_priv *priv = (struct libipm_priv *)trans->extra_data;
     if (priv == NULL)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "uninitialised transport");

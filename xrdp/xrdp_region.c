@@ -141,7 +141,7 @@ xrdp_region_get_rect(struct xrdp_region *self, int index,
 int
 xrdp_region_get_bounds(struct xrdp_region *self, struct xrdp_rect *rect)
 {
-    struct pixman_box16 *box;
+    const struct pixman_box16 *box;
 
     box = pixman_region_extents(self->reg);
     if (box != 0)

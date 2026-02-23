@@ -754,7 +754,7 @@ handle_cb_caps(struct vnc *v, struct stream *s)
 static void
 send_format_list(struct vnc *v)
 {
-    struct vnc_clipboard_data *vc = v->vc;
+    const struct vnc_clipboard_data *vc = v->vc;
     int use_long_names = vc->capability_flags & CB_USE_LONG_FORMAT_NAMES;
     struct stream *out_s;
     unsigned int i = 0;

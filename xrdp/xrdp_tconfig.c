@@ -110,14 +110,14 @@ tconfig_load_gfx_openh264_ct(toml_table_t *tfile, const int connection_type,
         return 1;
     }
 
-    toml_table_t *oh264 = toml_table_in(tfile, "OpenH264");
+    const toml_table_t *oh264 = toml_table_in(tfile, "OpenH264");
     if (!oh264)
     {
         TCLOG(LOG_LEVEL_WARNING, "[OpenH264] OpenH264 params are not defined");
         return 1;
     }
 
-    toml_table_t *oh264_ct =
+    const toml_table_t *oh264_ct =
         toml_table_in(oh264, rdpbcgr_connection_type_names[connection_type]);
     toml_datum_t datum;
 
@@ -199,14 +199,14 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
         return 1;
     }
 
-    toml_table_t *x264 = toml_table_in(tfile, "x264");
+    const toml_table_t *x264 = toml_table_in(tfile, "x264");
     if (!x264)
     {
         TCLOG(LOG_LEVEL_WARNING, "[x264] x264 params are not defined");
         return 1;
     }
 
-    toml_table_t *x264_ct =
+    const toml_table_t *x264_ct =
         toml_table_in(x264, rdpbcgr_connection_type_names[connection_type]);
     toml_datum_t datum;
 
@@ -372,7 +372,7 @@ static int tconfig_load_gfx_h264_encoder(toml_table_t *tfile, struct xrdp_tconfi
 {
     TCLOG(LOG_LEVEL_TRACE, "[codec]");
 
-    toml_table_t *codec;
+    const toml_table_t *codec;
     int valid_encoder_found = 0;
 
     if ((codec = toml_table_in(tfile, "codec")) != NULL)
@@ -427,8 +427,8 @@ static int tconfig_load_gfx_order(toml_table_t *tfile, struct xrdp_tconfig_gfx *
 
     config->codec.codec_count = 0;
 
-    toml_table_t *codec;
-    toml_array_t *order;
+    const toml_table_t *codec;
+    const toml_array_t *order;
 
     if ((codec = toml_table_in(tfile, "codec")) != NULL &&
             (order = toml_array_in(codec, "order")) != NULL)

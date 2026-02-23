@@ -375,7 +375,7 @@ int
 WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
                        unsigned int Length, unsigned int *pBytesWritten)
 {
-    struct wts_obj *wts;
+    const struct wts_obj *wts;
     int rv;
 
     wts = (struct wts_obj *) hChannelHandle;
@@ -481,7 +481,7 @@ int
 WTSVirtualChannelQuery(void *hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
                        void **ppBuffer, unsigned int *pBytesReturned)
 {
-    struct wts_obj *wts;
+    const struct wts_obj *wts;
 
     wts = (struct wts_obj *)hChannelHandle;
 
