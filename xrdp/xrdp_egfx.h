@@ -150,7 +150,7 @@ int
 xrdp_egfx_shutdown_delete_surface(struct xrdp_egfx *egfx);
 int
 xrdp_egfx_shutdown_close_connection(struct xrdp_egfx *egfx);
-int
+void
 xrdp_egfx_shutdown_delete(struct xrdp_egfx *egfx);
 int
 xrdp_egfx_shutdown_full(struct xrdp_egfx *egfx);

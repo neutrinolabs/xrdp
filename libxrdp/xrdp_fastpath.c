@@ -117,6 +117,8 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
                                long param1, long param2,
                                long param3, long param4)
 {
+    int error = 0;
+
     if (self->session->callback != 0)
     {
         /* msg_type can be
@@ -125,14 +127,14 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
           RDP_INPUT_MOUSE - 0x8001
           RDP_INPUT_MOUSEX - 0x8002 */
         /* call to xrdp_wm.c : callback */
-        self->session->callback(self->session->id, msg,
-                                param1, param2, param3, param4);
+        error = self->session->callback(self->session->id, msg,
+                                        param1, param2, param3, param4);
     }
     else
     {
         LOG_DEVEL(LOG_LEVEL_WARNING, "Bug: session is NULL");
     }
-    return 0;
+    return error;
 }
 
 /*****************************************************************************/
@@ -283,6 +285,8 @@ static int
 xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self,
                                  int eventFlags, struct stream *s)
 {
+    int error;
+
     /*
      * The eventCode bitfield (3 bits in size) MUST be set to
      * FASTPATH_INPUT_EVENT_SYNC (3).
@@ -295,10 +299,10 @@ xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self,
               "eventHeader.eventFlags 0x%2.2x, eventHeader.eventCode (ignored), ",
               eventFlags);
 
-    xrdp_fastpath_session_callback(self, RDP_INPUT_SYNCHRONIZE,
-                                   eventFlags, 0, 0, 0);
+    error = xrdp_fastpath_session_callback(self, RDP_INPUT_SYNCHRONIZE,
+                                           eventFlags, 0, 0, 0);
 
-    return 0;
+    return error;
 }
 
 /*****************************************************************************/

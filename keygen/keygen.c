@@ -427,17 +427,13 @@ key_gen(const char *path_and_file_name)
         g_writeln("Generating %d bit rsa key...", g_key_size_bits);
         g_writeln("%s", "");
 
-        if (error == 0)
+        error = ssl_gen_key_xrdp1(g_key_size_bits, e_data, e_len, n_data, n_len,
+                                  d_data, d_len);
+        if (error != 0)
         {
-            error = ssl_gen_key_xrdp1(g_key_size_bits, e_data, e_len, n_data, n_len,
-                                      d_data, d_len);
-            if (error != 0)
-            {
-                g_writeln("error %d in key_gen, ssl_gen_key_xrdp1", error);
-            }
+            g_writeln("error %d in key_gen, ssl_gen_key_xrdp1", error);
         }
-
-        if (error == 0)
+        else
         {
             g_writeln("ssl_gen_key_xrdp1 ok");
             g_writeln("%s", "");

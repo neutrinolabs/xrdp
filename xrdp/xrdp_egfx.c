@@ -1128,22 +1128,19 @@ xrdp_egfx_shutdown_close_connection(struct xrdp_egfx *egfx)
 }
 
 /******************************************************************************/
-int
+void
 xrdp_egfx_shutdown_delete(struct xrdp_egfx *egfx)
 {
-    int error = 0;
-
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_delete:");
 
     if (egfx == 0)
     {
         LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_delete: EGFX is already null!");
-        return 0;
+        return;
     }
 
     g_free(egfx);
 
-    return error;
 }
 
 /******************************************************************************/
@@ -1176,13 +1173,7 @@ xrdp_egfx_shutdown_full(struct xrdp_egfx *egfx)
         return error;
     }
 
-    error = xrdp_egfx_shutdown_delete(egfx);
-    if (error != 0)
-    {
-        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_shutdown_full:"
-            " xrdp_egfx_shutdown_delete failed %d", error);
-        return error;
-    }
+    xrdp_egfx_shutdown_delete(egfx);
 
     return error;
 }

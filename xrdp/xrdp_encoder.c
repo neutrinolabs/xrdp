@@ -1518,8 +1518,7 @@ proc_enc_msg(void *arg)
     term_obj = g_get_term();
     lterm_obj = self->xrdp_encoder_term_request;
 
-    cont = 1;
-    while (cont)
+    while (1)
     {
         timeout = -1;
         robjs_count = 0;
