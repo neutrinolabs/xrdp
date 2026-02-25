@@ -23,6 +23,8 @@
 #include "arch.h"
 #include "parse.h"
 
+extern int g_rail_up;
+
 int
 rail_init(void);
 int

@@ -7,9 +7,9 @@
 
 #include "test_libxrdp.h"
 
-struct xrdp_sec *sec_layer;
-struct xrdp_rdp *rdp_layer;
-struct xrdp_session *session;
+static struct xrdp_sec *sec_layer;
+static struct xrdp_rdp *rdp_layer;
+static struct xrdp_session *session;
 
 static void setup(void)
 {

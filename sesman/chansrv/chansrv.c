@@ -78,7 +78,7 @@ char *g_exec_name;
 tbus g_exec_event = 0;
 tbus g_exec_mutex;
 tbus g_exec_sem;
-int g_exec_pid = 0;
+static int g_exec_pid = 0;
 
 #define ARRAYSIZE(x) (sizeof(x)/sizeof(*(x)))
 /* max total channel bytes size */

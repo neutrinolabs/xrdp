@@ -34,8 +34,8 @@
 #include <unistd.h>
 
 
-char cmnd[257];
-char port[257];
+static char cmnd[257];
+static char port[257];
 
 static int cmndList(struct trans *t);
 static int cmndKill(struct trans *t);

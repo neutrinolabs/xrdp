@@ -184,16 +184,8 @@ x-special/gnome-copied-files
 #define BMPFILEHEADER_LEN       14
 #define BMPINFOHEADER_LEN       40
 
-extern int g_cliprdr_chan_id;   /* in chansrv.c */
-
 extern Display *g_display;      /* in xcommon.c */
-extern int g_x_socket;          /* in xcommon.c */
-extern tbus g_x_wait_obj;       /* in xcommon.c */
 extern Screen *g_screen;        /* in xcommon.c */
-extern int g_screen_num;        /* in xcommon.c */
-
-extern struct config_chansrv *g_cfg; /* in chansrv.c */
-
 int g_clip_up = 0;
 
 static Atom g_clipboard_atom = 0;      /* CLIPBOARD */

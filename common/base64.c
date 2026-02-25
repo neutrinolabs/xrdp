@@ -54,7 +54,7 @@
 #ifdef PLATFORM_IS_ASCII
 #define CHARMAP_BASE 0x28
 #define E_IV E_INVALID  /* For table alignment */
-const unsigned char charmap[] =
+static const unsigned char charmap[] =
 {
     /* 0x28 */ E_IV, E_IV, E_IV, 0x3e, E_IV, E_IV, E_IV, 0x3f,
     /* 0x30 */ 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b,

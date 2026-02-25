@@ -62,10 +62,6 @@ static OpusEncoder *g_opus_encoder = 0;
 static lame_global_flags *g_lame_encoder = 0;
 #endif
 
-extern int g_rdpsnd_chan_id;    /* in chansrv.c */
-extern int g_display_num;       /* in chansrv.c */
-extern struct config_chansrv *g_cfg; /* in chansrv.c */
-
 /* audio out: sound_server -> xrdp -> NeutrinoRDP */
 static struct trans *g_audio_l_trans_out = 0; /* listener */
 static struct trans *g_audio_c_trans_out = 0; /* connection */

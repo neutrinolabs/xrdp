@@ -74,6 +74,7 @@ xrdp_chansrv_SOURCES = \
   sound.h \
   xcommon.c \
   xcommon.h \
+  xcommon_x11.h \
   input.h \
   audin.c \
   audin.h

@@ -25,6 +25,8 @@
 #include "arch.h"
 #include "ms-erref.h"
 
+extern char g_fuse_clipboard_path[256];
+
 /* Used to pass file info back to chansrv_fuse from devredir */
 struct file_attr
 {

@@ -44,13 +44,6 @@
 #include "chansrv_fuse.h"
 #include "ms-rdpeclip.h"
 
-extern int g_cliprdr_chan_id; /* in chansrv.c */
-
-extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
-extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
-
-extern char g_fuse_clipboard_path[];
-
 struct cb_file_info
 {
     char *pathname;

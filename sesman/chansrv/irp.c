@@ -31,7 +31,7 @@
 #include "string_calls.h"
 #include "irp.h"
 
-IRP *g_irp_head = NULL;
+static IRP *g_irp_head = NULL;
 
 /**
  * Create a new IRP and append to linked list

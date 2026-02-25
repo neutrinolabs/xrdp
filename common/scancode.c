@@ -311,7 +311,7 @@ enum settings_index
     SI_BASE
 };
 
-const struct map_settings global_settings[] =
+static const struct map_settings global_settings[] =
 {
     {
         // SI_EVDEV
@@ -328,7 +328,7 @@ const struct map_settings global_settings[] =
 };
 
 // Default mapping set is "evdev"
-const struct map_settings *settings = &global_settings[SI_EVDEV];
+static const struct map_settings *settings = &global_settings[SI_EVDEV];
 
 /*****************************************************************************/
 int

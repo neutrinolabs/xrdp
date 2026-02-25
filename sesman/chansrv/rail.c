@@ -37,27 +37,12 @@
 #include "chansrv.h"
 #include "rail.h"
 #include "xcommon.h"
+#include "xcommon_x11.h"
 #include "log.h"
 #include "os_calls.h"
 #include "string_calls.h"
 #include "thread_calls.h"
 #include "list.h"
-
-extern int g_rail_chan_id;      /* in chansrv.c */
-extern int g_display_num;       /* in chansrv.c */
-extern char *g_exec_name;       /* in chansrv.c */
-extern tbus g_exec_event;       /* in chansrv.c */
-extern tbus g_exec_mutex;       /* in chansrv.c */
-extern tbus g_exec_sem;         /* in chansrv.c */
-
-extern Display *g_display;           /* in xcommon.c */
-extern Screen *g_screen;             /* in xcommon.c */
-extern Window g_root_window;         /* in xcommon.c */
-extern Atom g_wm_delete_window_atom; /* in xcommon.c */
-extern Atom g_wm_protocols_atom;     /* in xcommon.c */
-extern Atom g_utf8_string;           /* in xcommon.c */
-extern Atom g_net_wm_name;           /* in xcommon.c */
-extern Atom g_wm_state;              /* in xcommon.c */
 
 static Atom g_rwd_atom = 0;
 

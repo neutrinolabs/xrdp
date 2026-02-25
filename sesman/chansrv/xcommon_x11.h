@@ -1,8 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2013
- * Copyright (C) Laxmikant Rashinkar 2012-2013
+ * Copyright (C) Jay Sorg 2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +16,25 @@
  * limitations under the License.
  */
 
-#if !defined(CLIPBOARD_H)
-#define CLIPBOARD_H
+/**
+ * @file sesman/chansrv/xcommon_vars.c
+ *
+ * xcommon global variables
+ *
+ * Declares global variables defined in xcommon.h with X11-specific types
+ */
+#if !defined(XCOMMON_X11_H)
+#define XCOMMON_X11_H
 
-#include "arch.h"
-#include "parse.h"
+#include <X11/Xlib.h>
 
-extern int g_clip_up;
-
-extern struct clip_s2c g_clip_s2c;
-extern struct clip_c2s g_clip_c2s;
-
-int clipboard_init(void);
-int clipboard_deinit(void);
-int clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length, int total_length);
-int clipboard_xevent(void *xevent);
+extern Display *g_display;
+extern Screen *g_screen;
+extern Window g_root_window;
+extern Atom g_wm_delete_window_atom;
+extern Atom g_wm_protocols_atom;
+extern Atom g_utf8_string;
+extern Atom g_net_wm_name;
+extern Atom g_wm_state;
 
 #endif

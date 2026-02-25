@@ -100,9 +100,6 @@ enum COMPLETION_TYPE
 };
 
 
-/* globals */
-extern int g_rdpdr_chan_id; /* in chansrv.c */
-
 /* Capabilities from GENERAL_CAPS_SET in Client Core Capability Response */
 struct client_caps
 {
@@ -118,10 +115,10 @@ static struct client_caps g_ccap;
 
 tui32 g_completion_id = 1;
 
-tui32 g_clientID;           /* unique client ID - announced by client */
-tui32 g_device_id;          /* unique device ID - announced by client */
-tui16 g_client_rdp_version; /* returned by client                     */
-struct stream *g_input_stream = NULL;
+static tui32 g_clientID;           /* unique client ID - announced by client */
+static tui32 g_device_id;          /* unique device ID - announced by client */
+static tui16 g_client_rdp_version; /* returned by client                     */
+static struct stream *g_input_stream = NULL;
 
 /*
  * Local functions called from devredir_proc_device_iocompletion()

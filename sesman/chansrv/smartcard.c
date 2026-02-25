@@ -124,14 +124,10 @@ typedef struct smartcard
 } SMARTCARD;
 
 /* globals */
-SMARTCARD   *smartcards[MAX_SMARTCARDS];
-int          g_smartcards_inited = 0;
+static SMARTCARD   *smartcards[MAX_SMARTCARDS];
+static int          g_smartcards_inited = 0;
 static tui32 g_device_id = 0;
 static int   g_scard_index = 0;
-
-/* externs */
-extern tui32 g_completion_id;
-extern int   g_rdpdr_chan_id;    /* in chansrv.c */
 
 
 /******************************************************************************
