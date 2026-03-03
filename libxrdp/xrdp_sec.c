@@ -219,7 +219,7 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
         {
             s_push_layer(s, sec_hdr, 4 + 8);
         }
-        else if (self->crypt_level)
+        else
         {
             s_push_layer(s, sec_hdr, 4);
         }
@@ -1783,8 +1783,7 @@ xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream *s)
         LOG(LOG_LEVEL_DEBUG, "Client supports fips encryption");
     }
     found = 0;
-    if ((found == 0) &&
-            (self->mcs_layer->iso_layer->selectedProtocol == PROTOCOL_SSL))
+    if (self->mcs_layer->iso_layer->selectedProtocol == PROTOCOL_SSL)
     {
         LOG(LOG_LEVEL_DEBUG,
             "The connection is using TLS, skipping RDP crypto negotiation");

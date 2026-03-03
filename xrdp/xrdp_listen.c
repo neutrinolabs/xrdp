@@ -111,7 +111,10 @@ xrdp_listen_delete(struct xrdp_listen *self)
 static int
 xrdp_listen_add_pro(struct xrdp_listen *self, struct xrdp_process *process)
 {
-    list_add_item(self->process_list, (tbus)process);
+    if (list_add_item(self->process_list, (tbus)process) == 0)
+    {
+        return -1;
+    }
     return 0;
 }
 
@@ -902,9 +905,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     xrdp_listen_stop_all_listen(self);
 
     /* second loop to wait for all process threads to close */
-    cont = 1;
-
-    while (cont)
+    while (1)
     {
         if (self->process_list->count == 0)
         {
