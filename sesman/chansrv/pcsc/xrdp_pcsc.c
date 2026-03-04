@@ -999,7 +999,7 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     memcpy(msg + offset, pbSendBuffer, cbSendLength);
     offset += cbSendLength;
     got_recv_pci = (pioRecvPci != NULL) && (pioRecvPci->cbPciLength >= 8);
-    // TODO figure out why recv pci does not work
+    // cppcheck-suppress redundantAssignment - TODO figure out why recv pci does not work
     got_recv_pci = 0;
     if (got_recv_pci == 0)
     {

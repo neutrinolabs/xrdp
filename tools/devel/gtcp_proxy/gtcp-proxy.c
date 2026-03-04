@@ -158,6 +158,7 @@ int main(int argc, char **argv)
                      GTK_FILL, GTK_FILL, 5, 0);
     row++;
 
+    // cppcheck-suppress redundantAssignment - intentional reset of row
     row = 0;
 
     /* insert text boxes into table */
