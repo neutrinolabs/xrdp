@@ -158,6 +158,10 @@ param=xrdp/xorg.conf
 param=-noreset
 param=-nolisten
 param=tcp
+; Logging levels are 4 for debug and 5 for trace. Uncomment and
+; edit these lines to get debugging info in the xorgxrdp log file
+#param=-logverbose
+#param=5
 param=-logfile
 param=.xorgxrdp.%s.log
 
