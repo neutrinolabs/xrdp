@@ -881,10 +881,23 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     if (self->rdp_layer->client_info.domain_user_separator[0] != '\0'
             && self->rdp_layer->client_info.domain[0] != '\0')
     {
-        LOG(LOG_LEVEL_DEBUG, "Client supplied domain with user name. Overwriting user name with user name parsed from domain.");
-        int size = sizeof(self->rdp_layer->client_info.username);
-        g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain_user_separator, size - 1 - g_strlen(self->rdp_layer->client_info.domain_user_separator));
-        g_strncat(self->rdp_layer->client_info.username, self->rdp_layer->client_info.domain, size - 1 - g_strlen(self->rdp_layer->client_info.domain));
+        // Check the composite string is not too long
+        unsigned int size =
+            g_strlen(self->rdp_layer->client_info.username) +
+            g_strlen(self->rdp_layer->client_info.domain_user_separator) +
+            g_strlen(self->rdp_layer->client_info.domain);
+
+        if (size >= sizeof(self->rdp_layer->client_info.username))
+        {
+            LOG(LOG_LEVEL_ERROR, "Username/domain is too long");
+            return 1;
+        }
+        LOG(LOG_LEVEL_DEBUG, "Client supplied domain with user name."
+            " Overwriting user name with user name parsed from domain.");
+        g_strcat(self->rdp_layer->client_info.username,
+                 self->rdp_layer->client_info.domain_user_separator);
+        g_strcat(self->rdp_layer->client_info.username,
+                 self->rdp_layer->client_info.domain);
     }
 
     if (ts_info_utf16_in(s, len_program, self->rdp_layer->client_info.program, sizeof(self->rdp_layer->client_info.program)) != 0)
