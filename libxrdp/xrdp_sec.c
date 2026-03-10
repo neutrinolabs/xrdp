@@ -1384,7 +1384,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     int len;
     int ver;
     int pad;
-
+    const char *data_signature;
 
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
@@ -1428,7 +1428,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             in_uint16_le(s, len); /* length */
             in_uint8(s, ver); /* version */
             in_uint8(s, pad); /* padlen */
-            in_uint8s(s, 8); /* signature(8) */
+            in_uint8p(s, data_signature, 8);
             LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
                       "length %d, version %d, padlen %d, dataSignature (ignored)",
                       len, ver, pad);
@@ -1446,6 +1446,12 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             }
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
+            if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
+                                         s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for FIPS PDU");
+                return 1;
+            }
         }
         else if (self->crypt_level > CRYPT_LEVEL_NONE)
         {
