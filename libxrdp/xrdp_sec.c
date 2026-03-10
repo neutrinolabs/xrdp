@@ -22,6 +22,8 @@
 #include <config_ac.h>
 #endif
 
+#include <inttypes.h>
+
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
@@ -1204,6 +1206,29 @@ xrdp_sec_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
 }
 
 /*****************************************************************************/
+/* Function to return a 64-bit int from an 64 bit signature */
+static uint64_t
+sig64_to_uint64(const char sig[], int sig_len)
+{
+    uint64_t rv;
+    const unsigned char *usig = (const unsigned char *)sig;
+    if (sig_len == 8)
+    {
+        rv =
+            ((uint64_t)usig[0] << 0) | ((uint64_t)usig[1] << 8) |
+            ((uint64_t)usig[2] << 16) | ((uint64_t)usig[3] << 24) |
+            ((uint64_t)usig[4] << 32) | ((uint64_t)usig[5] << 40) |
+            ((uint64_t)usig[6] << 48) | ((uint64_t)usig[7] << 56);
+    }
+    else
+    {
+        rv = (uint64_t) -1;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 static void
 xrdp_sec_hash_16(char *out, char *in, char *salt1, char *salt2)
 {
@@ -1437,9 +1462,11 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
               "fpInputHeader.action (ignored), "
               "fpInputHeader.numEvents (see final numEvents), "
               "fpInputHeader.flags %d, length1 (ToDo), length2 (ToDo), "
-              "fipsInformation %s, dataSignature (ignored), numEvents %d",
+              "fipsInformation %s, dataSignature 0x%8.8" PRIx64
+              ", numEvents %d",
               self->fastpath_layer->secFlags,
               (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) ? "(see above)" : "(not present)",
+              sig64_to_uint64(data_signature, 8),
               self->fastpath_layer->numEvents);
 
     return 0;
@@ -1498,9 +1525,11 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             in_uint8(s, ver); /* version */
             in_uint8(s, pad); /* padlen */
             in_uint8p(s, data_signature, 8);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
-                      "length %d, version %d, padlen %d, dataSignature (ignored)",
-                      len, ver, pad);
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+                      "length %d, version %d, padlen %d,"
+                      " dataSignature 0x%8.8" PRIx64,
+                      len, ver, pad, sig64_to_uint64(data_signature, 8));
             if (len != 16)
             {
                 LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
@@ -1530,8 +1559,10 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             }
             /* TS_SECURITY_HEADER1 */
             in_uint8p(s, data_signature, 8);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
-                      "dataSignature (ignored)");
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Received header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
+                      "dataSignature 0x%8.8" PRIx64,
+                      sig64_to_uint64(data_signature, 8));
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
             if (!xrdp_sec_check_sig(self, data_signature, 8,
                                     s->p, (int)(s->end - s->p)))
@@ -1633,11 +1664,12 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
             out_uint8(s, pad); /* fips pad */
             xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
             xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
                       "flags 0x%4.4x, flagsHi 0x%4.4x, length 16, version 1, "
-                      "padlen %d, dataSignature 0x%8.8x 0x%8.8x",
+                      "padlen %d, dataSignature 0x%8.8" PRIx64,
                       SEC_ENCRYPT & 0xffff, (SEC_ENCRYPT & 0xffff0000) >> 16,
-                      pad, *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                      pad, sig64_to_uint64(s->p, 8));
         }
         else if (self->crypt_level > CRYPT_LEVEL_LOW)
         {
@@ -1645,15 +1677,18 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
             datalen = (int)((s->end - s->p) - 8);
             xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
             xrdp_sec_encrypt(self, s->p + 8, datalen);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
-                      "flags 0x%4.4x, flagsHi 0x%4.4x, dataSignature 0x%8.8x 0x%8.8x",
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
+                      "flags 0x%4.4x, flagsHi 0x%4.4x, "
+                      "dataSignature 0x%8.8" PRIx64,
                       SEC_ENCRYPT & 0xffff, (SEC_ENCRYPT & 0xffff0000) >> 16,
-                      *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                      sig64_to_uint64(s->p, 8));
         }
         else
         {
             out_uint32_le(s, 0);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER "
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER "
                       "flags 0x0000, flagsHi 0x0000");
         }
     }
@@ -1750,9 +1785,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
                   "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
                   "fpOutputHeader.flags 0x2, length1 0x%2.2x, length2 0x%2.2x, "
                   "fipsInformation.length 16, fipsInformation.version 1, "
-                  "fipsInformation.padlen %d, dataSignature 0x%8.8x 0x%8.8x, ",
+                  "fipsInformation.padlen %d, dataSignature 0x%8.8" PRIx64,
                   pdulen >> 4, pdulen & 0xff, pad,
-                  *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                  sig64_to_uint64(s->p, 8));
         error = xrdp_fastpath_send(self->fastpath_layer, s);
         g_memcpy(s->p + 8 + datalen, save, pad);
     }
@@ -1771,9 +1806,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_UPDATE_PDU "
                   "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
                   "fpOutputHeader.flags 0x2, length1 0x%2.2x, length2 0x%2.2x, "
-                  "dataSignature 0x%8.8x 0x%8.8x, ",
+                  "dataSignature 0x%8.8" PRIx64,
                   pdulen >> 4, pdulen & 0xff,
-                  *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                  sig64_to_uint64(s->p, 8));
         error = xrdp_fastpath_send(self->fastpath_layer, s);
     }
     else
