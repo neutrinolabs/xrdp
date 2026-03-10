@@ -1121,7 +1121,10 @@ xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
 }
 
 /*****************************************************************************/
-/* Check a FIPS hash is valid */
+/* Check a FIPS hash is valid
+ *
+ * Result is boolean (i.e. != 0 is OK)
+ * */
 static int
 xrdp_sec_fips_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
                         char *data, int data_len)
@@ -1138,6 +1141,66 @@ xrdp_sec_fips_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
     ssl_hmac_complete(self->sign_fips_info, buf, 20);
 
     return memcmp(buf, sig, sig_len) == 0;
+}
+
+/*****************************************************************************/
+/* Generate a MAC hash (5.3.6.1), using a combination of SHA1 and MD5
+ *
+ * Salted MAC is not currently supported */
+static void
+xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
+              char *data, int data_len)
+{
+    char shasig[20];
+    char md5sig[16];
+    char lenhdr[4];
+    void *sha1_info;
+    void *md5_info;
+
+    buf_out_uint32(lenhdr, data_len);
+    sha1_info = ssl_sha1_info_create();
+    md5_info = ssl_md5_info_create();
+    ssl_sha1_clear(sha1_info);
+    ssl_sha1_transform(sha1_info, self->sign_key, self->rc4_key_len);
+    ssl_sha1_transform(sha1_info, (char *)g_pad_54, 40);
+    ssl_sha1_transform(sha1_info, lenhdr, 4);
+    ssl_sha1_transform(sha1_info, data, data_len);
+    ssl_sha1_complete(sha1_info, shasig);
+    ssl_md5_clear(md5_info);
+    ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
+    ssl_md5_transform(md5_info, (char *)g_pad_92, 48);
+    ssl_md5_transform(md5_info, shasig, 20);
+    ssl_md5_complete(md5_info, md5sig);
+    g_memcpy(out, md5sig, out_len);
+    ssl_sha1_info_delete(sha1_info);
+    ssl_md5_info_delete(md5_info);
+}
+
+/*****************************************************************************/
+/* Check a non-FIPS hash is valid
+ *
+ * Salted MAC is not currently supported
+ *
+ * Result is boolean (i.e. != 0 is OK) */
+static int
+xrdp_sec_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
+                   char *data, int data_len)
+{
+    char computed[8];
+    int rv = 0;
+    if (sig_len > (int)sizeof(computed))
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_check_sig() Buffer overflow (got %d expected %d)",
+            sig_len, (int)sizeof(computed));
+    }
+    else
+    {
+        xrdp_sec_sign(self, computed, sig_len, data, data_len);
+        rv = (memcmp(computed, sig, sig_len) == 0);
+    }
+
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1460,10 +1523,16 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
                 return 1;
             }
             /* TS_SECURITY_HEADER1 */
-            in_uint8s(s, 8); /* signature(8) */
+            in_uint8p(s, data_signature, 8);
             LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
                       "dataSignature (ignored)");
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+            if (!xrdp_sec_check_sig(self, data_signature, 8,
+                                    s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for non-FIPS PDU");
+                return 1;
+            }
         }
     }
 
@@ -1532,37 +1601,6 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     }
 
     return 0;
-}
-
-/*****************************************************************************/
-/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
-static void
-xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
-              char *data, int data_len)
-{
-    char shasig[20];
-    char md5sig[16];
-    char lenhdr[4];
-    void *sha1_info;
-    void *md5_info;
-
-    buf_out_uint32(lenhdr, data_len);
-    sha1_info = ssl_sha1_info_create();
-    md5_info = ssl_md5_info_create();
-    ssl_sha1_clear(sha1_info);
-    ssl_sha1_transform(sha1_info, self->sign_key, self->rc4_key_len);
-    ssl_sha1_transform(sha1_info, (char *)g_pad_54, 40);
-    ssl_sha1_transform(sha1_info, lenhdr, 4);
-    ssl_sha1_transform(sha1_info, data, data_len);
-    ssl_sha1_complete(sha1_info, shasig);
-    ssl_md5_clear(md5_info);
-    ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
-    ssl_md5_transform(md5_info, (char *)g_pad_92, 48);
-    ssl_md5_transform(md5_info, shasig, 20);
-    ssl_md5_complete(md5_info, md5sig);
-    g_memcpy(out, md5sig, out_len);
-    ssl_sha1_info_delete(sha1_info);
-    ssl_md5_info_delete(md5_info);
 }
 
 /*****************************************************************************/
