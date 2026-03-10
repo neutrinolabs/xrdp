@@ -1409,8 +1409,14 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
                 return 1;
             }
             /* remainder of TS_FP_INPUT_PDU */
-            in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
+            in_uint8p(s, data_signature, 8);
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+            if (!xrdp_sec_check_sig(self, data_signature, 8,
+                                    s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for FP-non-FIPS PDU");
+                return 1;
+            }
         }
     }
 
