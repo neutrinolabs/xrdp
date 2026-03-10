@@ -1093,6 +1093,54 @@ xrdp_sec_hash_48(char *out, char *in, char *salt1, char *salt2, int salt)
 }
 
 /*****************************************************************************/
+/* Output a uint32 into a buffer (little-endian) */
+static void
+buf_out_uint32(char *buffer, int value)
+{
+    buffer[0] = (value) & 0xff;
+    buffer[1] = (value >> 8) & 0xff;
+    buffer[2] = (value >> 16) & 0xff;
+    buffer[3] = (value >> 24) & 0xff;
+}
+
+/*****************************************************************************/
+/* Generate a MAC hash (5.2.3.1), using SHA1 for outgoing data */
+static void
+xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
+                   char *data, int data_len)
+{
+    char buf[20];
+    char lenhdr[4];
+
+    buf_out_uint32(lenhdr, self->encrypt_use_count);
+    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
+    ssl_hmac_transform(self->sign_fips_info, data, data_len);
+    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
+    ssl_hmac_complete(self->sign_fips_info, buf, 20);
+    g_memcpy(out, buf, out_len);
+}
+
+/*****************************************************************************/
+/* Check a FIPS hash is valid */
+static int
+xrdp_sec_fips_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
+                        char *data, int data_len)
+{
+    char buf[20];
+    char lenhdr[4];
+
+    // Account for the decrypt operation which has just happened when
+    // creating the HMAC
+    buf_out_uint32(lenhdr, self->decrypt_use_count - 1);
+    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
+    ssl_hmac_transform(self->sign_fips_info, data, data_len);
+    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
+    ssl_hmac_complete(self->sign_fips_info, buf, 20);
+
+    return memcmp(buf, sig, sig_len) == 0;
+}
+
+/*****************************************************************************/
 static void
 xrdp_sec_hash_16(char *out, char *in, char *salt1, char *salt2)
 {
@@ -1244,6 +1292,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     int ver;
     int len;
     int pad;
+    const char *data_signature;
 
 #ifndef USE_DEVEL_LOGGING
     /* TODO: remove UNUSED_VAR once the `ver` variable is used for more than
@@ -1279,11 +1328,15 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
             }
 
             /* remainder of TS_FP_INPUT_PDU */
-            in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
-            LOG_DEVEL(LOG_LEVEL_TRACE, "CRYPT_LEVEL_FIPS - data len %d",
-                      (int)(s->end - s->p));
+            in_uint8p(s, data_signature, 8);
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
+            if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
+                                         s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for FP-FIPS PDU");
+                return 1;
+            }
         }
         else
         {
@@ -1473,34 +1526,6 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     }
 
     return 0;
-}
-
-/*****************************************************************************/
-/* Output a uint32 into a buffer (little-endian) */
-static void
-buf_out_uint32(char *buffer, int value)
-{
-    buffer[0] = (value) & 0xff;
-    buffer[1] = (value >> 8) & 0xff;
-    buffer[2] = (value >> 16) & 0xff;
-    buffer[3] = (value >> 24) & 0xff;
-}
-
-/*****************************************************************************/
-/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
-static void
-xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
-                   char *data, int data_len)
-{
-    char buf[20];
-    char lenhdr[4];
-
-    buf_out_uint32(lenhdr, self->encrypt_use_count);
-    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
-    ssl_hmac_transform(self->sign_fips_info, data, data_len);
-    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
-    ssl_hmac_complete(self->sign_fips_info, buf, 20);
-    g_memcpy(out, buf, out_len);
 }
 
 /*****************************************************************************/
