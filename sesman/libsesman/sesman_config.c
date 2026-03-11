@@ -310,7 +310,7 @@ config_read_security(int file, struct config_security *sc,
     sc->login_retry = 3;
     sc->restrict_outbound_clipboard = 0;
     sc->restrict_inbound_clipboard = 0;
-    sc->allow_alternate_shell = 1;
+    sc->allow_alternate_shell = 0;
     sc->pass_shell_as_env = g_strdup("");
     sc->xorg_no_new_privileges = 1;
     sc->ts_users = g_strdup("");
