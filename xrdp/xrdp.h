@@ -484,9 +484,6 @@ struct display_control_monitor_layout_data
     enum display_resize_state state;
     int last_state_update_timestamp;
     int start_time;
-    /// This flag is set if the state machine needs to
-    /// shutdown/startup EGFX
-    int using_egfx;
 };
 
 enum resize_queue_source
