@@ -526,10 +526,12 @@ devredir_send_server_core_cap_req(void)
     /* the header                     */
     xstream_wr_u32_le(s, 2);                /* Version                        */
 
+#ifdef XRDP_SMARTCARD
     /* setup smart card capability */
     xstream_wr_u16_le(s, CAP_SMARTCARD_TYPE);
     xstream_wr_u16_le(s, 8);
     xstream_wr_u32_le(s, 1);
+#endif
 
     /* send to client */
     bytes = xstream_len(s);
