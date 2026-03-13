@@ -202,6 +202,11 @@ AC_ARG_WITH(imlib2, AS_HELP_STRING([--with-imlib2=ARG], [imlib2 library to use f
 
 AC_ARG_WITH(freetype2, AS_HELP_STRING([--with-freetype2=ARG], [freetype2 library to use for rendering fonts (ARG=yes/no/<abs-path>)]),,)
 
+AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--enable-smartcard],
+              [Enable experimental smartcard code. Not for production. (default: no)]),
+              [], [enable_smartcard=no])
+AM_CONDITIONAL(XRDP_SMARTCARD, [test x$enable_smartcard = xyes])
+
 # Obsolete options
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [This option is no longer supported - use --enable-devel-all]))
@@ -653,56 +658,57 @@ AC_OUTPUT
 echo ""
 echo "xrdp will be compiled with:"
 echo ""
-echo "  mp3lame                 $enable_mp3lame"
-echo "  opus                    $enable_opus"
-echo "  fdkaac                  $enable_fdkaac"
-echo "  jpeg                    $enable_jpeg"
-echo "  turbo jpeg              $enable_tjpeg"
-echo "  rfxcodec                $enable_rfxcodec"
-echo "  x264                    $enable_x264"
-echo "  openh264                $enable_openh264"
-echo "  painter                 $enable_painter"
-echo "  pixman                  $enable_pixman"
-echo "  fuse                    $enable_fuse"
-echo "  ipv6                    $enable_ipv6"
-echo "  ipv6only                $enable_ipv6only"
-echo "  vsock                   $enable_vsock"
-echo "  auth mechanism          $auth_mech"
-echo "  rdpsndaudin             $enable_rdpsndaudin"
-echo "  utmp support            $enable_utmp"
+echo "  mp3lame                         $enable_mp3lame"
+echo "  opus                            $enable_opus"
+echo "  fdkaac                          $enable_fdkaac"
+echo "  jpeg                            $enable_jpeg"
+echo "  turbo jpeg                      $enable_tjpeg"
+echo "  rfxcodec                        $enable_rfxcodec"
+echo "  x264                            $enable_x264"
+echo "  openh264                        $enable_openh264"
+echo "  painter                         $enable_painter"
+echo "  pixman                          $enable_pixman"
+echo "  fuse                            $enable_fuse"
+echo "  ipv6                            $enable_ipv6"
+echo "  ipv6only                        $enable_ipv6only"
+echo "  vsock                           $enable_vsock"
+echo "  auth mechanism                  $auth_mech"
+echo "  rdpsndaudin                     $enable_rdpsndaudin"
+echo "  smartcard (not for production)  $enable_smartcard"
+echo "  utmp support                    $enable_utmp"
 if test x$enable_utmp = xyes; then
-    echo "    utmpx.ut_host         $ac_cv_utmpx_has_ut_host"
-    echo "    utmpx.ut_exit         $ac_cv_utmpx_has_ut_exit"
+    echo "    utmpx.ut_host                 $ac_cv_utmpx_has_ut_host"
+    echo "    utmpx.ut_exit                 $ac_cv_utmpx_has_ut_exit"
 fi
 if test -n "$with_systemdsystemunitdir" \
         -a "x$with_systemdsystemunitdir" != xno; then
-    echo "  systemd support         yes"
-    echo "    unit file directory   $with_systemdsystemunitdir"
+    echo "  systemd support                 yes"
+    echo "    unit file directory           $with_systemdsystemunitdir"
 else
-    echo "  systemd support         no"
+    echo "  systemd support                 no"
 fi
 
 echo
-echo "  with imlib2             $use_imlib2"
-echo "  with freetype2          $use_freetype2"
+echo "  with imlib2                     $use_imlib2"
+echo "  with freetype2                  $use_freetype2"
 
 echo
-echo "  development logging     $devel_logging"
-echo "  development streamcheck $devel_streamcheck"
+echo "  development logging             $devel_logging"
+echo "  development streamcheck         $devel_streamcheck"
 echo ""
-echo "  strict_locations        $enable_strict_locations"
-echo "  prefix                  $prefix"
-echo "  exec_prefix             $exec_prefix"
-echo "  libdir                  $libdir"
-echo "  bindir                  $bindir"
-echo "  sysconfdir              $sysconfdir"
-echo "  sysconfdir+subdir       $sysconfdir/$sysconfsubdir"
-echo "  pamconfdir              $pamconfdir"
-echo "  localstatedir           $localstatedir"
-echo "  runstatedir             $runstatedir"
-echo "  socketdir               $socketdir"
+echo "  strict_locations                $enable_strict_locations"
+echo "  prefix                          $prefix"
+echo "  exec_prefix                     $exec_prefix"
+echo "  libdir                          $libdir"
+echo "  bindir                          $bindir"
+echo "  sysconfdir                      $sysconfdir"
+echo "  sysconfdir+subdir               $sysconfdir/$sysconfsubdir"
+echo "  pamconfdir                      $pamconfdir"
+echo "  localstatedir                   $localstatedir"
+echo "  runstatedir                     $runstatedir"
+echo "  socketdir                       $socketdir"
 echo ""
-echo "  unit tests performable  $perform_unit_tests"
+echo "  unit tests performable          $perform_unit_tests"
 echo ""
 echo "  CFLAGS = $CFLAGS"
 echo "  LDFLAGS = $LDFLAGS"
