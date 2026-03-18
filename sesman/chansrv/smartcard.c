@@ -273,30 +273,36 @@ static void scard_handle_GetAttrib_Return(struct stream *s, IRP *irp,
 
 /**
  *****************************************************************************/
-void
+int
 scard_device_announce(tui32 device_id)
 {
     LOG_DEVEL(LOG_LEVEL_DEBUG, "entered: device_id=%d", device_id);
+    int rv;
 
     if (g_smartcards_inited)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "already init");
-        return;
-    }
-
-    g_memset(&smartcards, 0, sizeof(smartcards));
-    g_smartcards_inited = 1;
-    g_device_id = device_id;
-    g_scard_index = scard_add_new_device(device_id);
-
-    if (g_scard_index < 0)
-    {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_add_new_device failed with DeviceId=%d", g_device_id);
+        rv = (device_id == g_device_id) ? 0 : 1;
     }
     else
     {
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "added smartcard with DeviceId=%d to list", g_device_id);
+        g_memset(&smartcards, 0, sizeof(smartcards));
+        g_smartcards_inited = 1;
+        g_scard_index = scard_add_new_device(device_id);
+
+        if (g_scard_index < 0)
+        {
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_add_new_device failed with DeviceId=%d", g_device_id);
+            rv = 1;
+        }
+        else
+        {
+            LOG_DEVEL(LOG_LEVEL_DEBUG, "added smartcard with DeviceId=%d to list", g_device_id);
+            g_device_id = device_id;
+            rv = 0;
+        }
     }
+    return rv;
 }
 
 /**

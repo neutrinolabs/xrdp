@@ -28,10 +28,10 @@
 
 #include "arch.h"
 
-void scard_device_announce(tui32 device_id);
-int  scard_get_wait_objs(tbus *objs, int *count, int *timeout);
-int  scard_check_wait_objs(void);
-int  scard_init(void);
-int  scard_deinit(void);
+int scard_device_announce(tui32 device_id);
+int scard_get_wait_objs(tbus *objs, int *count, int *timeout);
+int scard_check_wait_objs(void);
+int scard_init(void);
+int scard_deinit(void);
 
 #endif /* end #ifndef SMARTCARD_H */

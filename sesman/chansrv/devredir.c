@@ -482,14 +482,18 @@ devredir_send_server_core_cap_req(void)
 {
     struct stream *s;
     int            bytes;
+    int caps_count = 4;
 
+#ifdef XRDP_SMARTCARD
+    ++caps_count;
+#endif
     xstream_new(s, 1024);
 
     /* setup header */
     xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
     xstream_wr_u16_le(s, PAKID_CORE_SERVER_CAPABILITY);
 
-    xstream_wr_u16_le(s, 5);                /* num of caps we are sending     */
+    xstream_wr_u16_le(s, caps_count);       /* num of caps we are sending     */
     xstream_wr_u16_le(s, 0x0000);           /* padding                        */
 
     /* setup general capability */
@@ -974,9 +978,10 @@ devredir_proc_client_devlist_announce_req(struct stream *s)
                           "device_type=SMARTCARD device_id=0x%x dosname=%s",
                           g_device_id, preferred_dos_name);
 
-                response_status = STATUS_SUCCESS;
-
-                scard_device_announce(g_device_id);
+                if (scard_device_announce(g_device_id) == 0)
+                {
+                    response_status = STATUS_SUCCESS;
+                }
                 break;
 
             default:
