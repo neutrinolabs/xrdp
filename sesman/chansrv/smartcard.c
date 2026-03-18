@@ -42,6 +42,7 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "smartcard.h"
+#include "smartcard_internal.h"
 #include "log.h"
 #include "irp.h"
 #include "devredir.h"

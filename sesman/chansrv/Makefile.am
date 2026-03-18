@@ -66,16 +66,25 @@ xrdp_chansrv_SOURCES = \
   irp.h \
   rail.c \
   rail.h \
-  smartcard.c \
   smartcard.h \
-  smartcard_pcsc.c \
-  smartcard_pcsc.h \
   sound.c \
   sound.h \
   xcommon.c \
   xcommon.h \
   audin.c \
   audin.h
+
+if XRDP_SMARTCARD
+AM_CPPFLAGS += -DXRDP_SMARTCARD
+xrdp_chansrv_SOURCES += \
+  smartcard.c \
+  smartcard_internal.h \
+  smartcard_pcsc.c \
+  smartcard_pcsc.h
+else
+xrdp_chansrv_SOURCES += \
+  smartcard_dummy.c
+endif
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)
