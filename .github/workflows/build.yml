@@ -133,7 +133,7 @@ jobs:
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "CFLAGS=$CFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS_${{ matrix.arch }}" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: "Install Dependencies"
         # See https://github.com/actions/runner-images/issues/7192
         run: |
@@ -153,7 +153,7 @@ jobs:
         if: ${{ matrix.DISTCHECK }}
         run: make distcheck -j $(nproc)
       - name: "Artifact: test-suite.log distcheck"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always() && steps.dist_check.outcome == 'failure'
         with:
           name: test-suite-distcheck-${{ matrix.cc }}-${{ matrix.feature_set }}
@@ -174,9 +174,9 @@ jobs:
         id: os
         run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Cache cppcheck
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-cppcheck
         with:
@@ -203,9 +203,9 @@ jobs:
         id: os
         run: echo "image=$ImageOS" >>$GITHUB_OUTPUT
         shell: bash
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Cache astyle
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-astyle
         with:
