@@ -849,6 +849,22 @@ connect_loopback(int sck, const char *port)
 #endif
 
 /*****************************************************************************/
+/* returns boolean, 1 if the address is IPv4, else 0 */
+static int
+addr_is_ipv4(const char *address)
+{
+    struct in_addr addr;
+
+    if (address == NULL || *address == '\0')
+    {
+        return 0;
+    }
+
+    /* inet_pton returns 1 on success */
+    return inet_pton(AF_INET, address, &addr) == 1;
+}
+
+/*****************************************************************************/
 /* returns error, zero is good                                               */
 /* The connection might get to be in progress, if so -1 is returned.         */
 /* The caller needs to call again to check if succeed.                       */
@@ -857,6 +873,8 @@ int
 g_tcp_connect(int sck, const char *address, const char *port)
 {
     int res = 0;
+    union sock_info sock_info;
+    socklen_t sock_len = sizeof(sock_info);
     struct addrinfo p;
     struct addrinfo *h = (struct addrinfo *)NULL;
     struct addrinfo *rp = (struct addrinfo *)NULL;
@@ -865,16 +883,49 @@ g_tcp_connect(int sck, const char *address, const char *port)
 
     p.ai_socktype = SOCK_STREAM;
     p.ai_protocol = IPPROTO_TCP;
-    p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
-    p.ai_family = AF_INET6;
-    if (g_strcmp(address, "127.0.0.1") == 0)
+
+    if (getsockname(sck, &sock_info.sa, &sock_len) != 0)
     {
-        return connect_loopback(sck, port);
+        LOG(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
+            sck, g_get_strerror());
+        return -1;
     }
-    else
+
+    p.ai_family = sock_info.sa.sa_family;
+    switch (p.ai_family)
     {
-        res = getaddrinfo(address, port, &p, &h);
+        case AF_INET:
+            if (!addr_is_ipv4(address))
+            {
+                LOG(LOG_LEVEL_ERROR, "Address %s is not a valid IPv4 address",
+                    address);
+                return -1;
+            }
+            p.ai_flags = AI_ADDRCONFIG;
+
+            if (g_strcmp(address, "127.0.0.1") == 0)
+            {
+                return connect_loopback(sck, port);
+            }
+
+            break;
+
+        case AF_INET6:
+            /* if dest address was ipv6, it might accept ipv4-mapped ipv6 address
+            so no v4 check */
+            p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+            if (g_strcmp(address, "::1") == 0)
+            {
+                return connect_loopback(sck, port);
+            }
+            break;
+
+        default:
+            LOG(LOG_LEVEL_ERROR, "Unknown socket family %d", p.ai_family);
+            return -1;
     }
+
+    res = getaddrinfo(address, port, &p, &h);
     if (res != 0)
     {
         LOG(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getaddrinfo() failed: %s",
@@ -892,6 +943,7 @@ g_tcp_connect(int sck, const char *address, const char *port)
                 {
                     break; /* Return -1 */
                 }
+                /* Mac OSX connect() returns -1 for already established connections */
                 if (res == 0 || (res == -1 && errno == EISCONN))
                 {
                     res = 0;
@@ -1001,6 +1053,7 @@ g_tcp_bind(int sck, const char *port)
     sa.sin6_port = htons((tui16)atoi(port));
     if (bind(sck, (struct sockaddr *)&sa, sizeof(sa)) == 0)
     {
+        printf("bound to ipv6\n");
         return 0;
     }
     errno6 = errno;
@@ -1012,6 +1065,7 @@ g_tcp_bind(int sck, const char *port)
     s.sin_port = htons((tui16)atoi(port));
     if (bind(sck, (struct sockaddr *)&s, sizeof(s)) == 0)
     {
+        printf("bound to ipv4\n");
         return 0;
     }
 
