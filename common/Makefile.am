@@ -29,7 +29,8 @@ AM_CPPFLAGS = \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  -DXRDP_LOG_PATH=\"${localstatedir}/log\"
+  -DXRDP_LOG_PATH=\"${localstatedir}/log\" \
+  -DTLS13_DEBUG=1
 
 if XRDP_NVENC
 AM_CPPFLAGS += -DXRDP_NVENC
@@ -72,6 +73,12 @@ libcommon_la_SOURCES = \
   set_int.h \
   ssl_calls.c \
   ssl_calls.h \
+  neutrinocrypto.c \
+  neutrinocrypto.h \
+  neutrinossl.c \
+  neutrinossl.h \
+  neutrinotls.c \
+  neutrinotls.h \
   string_calls.c \
   string_calls.h \
   thread_calls.c \

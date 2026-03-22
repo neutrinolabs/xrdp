@@ -23,6 +23,7 @@
 #include <config_ac.h>
 #endif
 
+#include <stdio.h>
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
@@ -331,12 +332,20 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
 {
     int len;
 
+    LOG(LOG_LEVEL_DEBUG, "DomainParams: before parse, next bytes: %02x %02x %02x %02x",
+        (s->end - s->p > 0) ? (unsigned char)s->p[0] : 0,
+        (s->end - s->p > 1) ? (unsigned char)s->p[1] : 0,
+        (s->end - s->p > 2) ? (unsigned char)s->p[2] : 0,
+        (s->end - s->p > 3) ? (unsigned char)s->p[3] : 0);
+
     if (xrdp_mcs_ber_parse_header(self, s, MCS_TAG_DOMAIN_PARAMS, &len) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "Parsing [ITU-T T.125] DomainParameters failed");
         return 1;
     }
+
+    LOG(LOG_LEVEL_DEBUG, "DomainParams: len=%d, skipping %d bytes", len, len);
 
     if (len < 0)
     {
@@ -375,6 +384,22 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     {
         LOG(LOG_LEVEL_ERROR, "Processing [ITU-T T.125] Connect-Initial failed");
         return 1;
+    }
+
+    /* Debug: dump first 128 bytes of received MCS data */
+    {
+        int dbg_len = s->end - s->p;
+        if (dbg_len > 128) dbg_len = 128;
+        LOG(LOG_LEVEL_DEBUG, "MCS Connect-Initial raw data (%d bytes total):", (int)(s->end - s->p));
+        for (int i = 0; i < dbg_len; i += 16)
+        {
+            char hex[64] = {0};
+            for (int j = 0; j < 16 && (i + j) < dbg_len; j++)
+            {
+                sprintf(hex + j*3, "%02x ", (unsigned char)s->p[i+j]);
+            }
+            LOG(LOG_LEVEL_DEBUG, "  %04x: %s", i, hex);
+        }
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_CONNECT_INITIAL, &len) != 0)
@@ -467,6 +492,45 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
         LOG(LOG_LEVEL_ERROR,
             "Parsing [ITU-T T.125] Connect-Initial maximumParameters failed");
         return 1;
+    }
+
+    /* Debug: show position before userData parsing */
+    {
+        int rem = s->end - s->p;
+        LOG(LOG_LEVEL_DEBUG, "Before userData: %d bytes remaining, next bytes: %02x %02x %02x %02x",
+            rem,
+            rem > 0 ? (unsigned char)s->p[0] : 0,
+            rem > 1 ? (unsigned char)s->p[1] : 0,
+            rem > 2 ? (unsigned char)s->p[2] : 0,
+            rem > 3 ? (unsigned char)s->p[3] : 0);
+    }
+
+    /* Some clients (like Apple Remote Desktop) may send extra data or have
+     * misaligned DomainParameters lengths. Search for the OCTET STRING tag
+     * that starts the userData field. */
+    {
+        int rem = s->end - s->p;
+        int found = 0;
+        for (int i = 0; i < rem - 4 && i < 32; i++)
+        {
+            if ((unsigned char)s->p[i] == 0x04)
+            {
+                /* Check if this looks like a valid OCTET STRING header */
+                unsigned char next = (unsigned char)s->p[i + 1];
+                if (next < 0x80 || next == 0x82)
+                {
+                    LOG(LOG_LEVEL_DEBUG, "Found OCTET STRING tag at offset +%d", i);
+                    in_uint8s(s, i); /* Skip to the OCTET STRING */
+                    found = 1;
+                    break;
+                }
+            }
+        }
+        if (!found)
+        {
+            LOG(LOG_LEVEL_ERROR, "Could not find userData OCTET STRING tag");
+            return 1;
+        }
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)

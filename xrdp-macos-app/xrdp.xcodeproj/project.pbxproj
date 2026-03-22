@@ -1,0 +1,421 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001000000000000001 /* xrdp-controller.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* xrdp-controller.swift */; };
+		A1000003000000000000002 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000003000000000000001 /* Assets.xcassets */; };
+		A1000008000000000000002 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* Cocoa.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000002000000000000001 /* xrdp-controller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "xrdp-controller.swift"; sourceTree = "<group>"; };
+		A1000003000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000004000000000000001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		A1000005000000000000001 /* XRDP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XRDP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000006000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000007000000000000001 /* xrdp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = xrdp.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1000008000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000008000000000000002 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1000009000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A1000002000000000000001 /* xrdp-controller.swift */,
+				A1000003000000000000001 /* Assets.xcassets */,
+				A1000006000000000000001 /* Info.plist */,
+				A1000007000000000000001 /* xrdp.entitlements */,
+				A1000010000000000000001 /* Frameworks */,
+				A1000011000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000010000000000000001 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A1000004000000000000001 /* Cocoa.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A1000011000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000005000000000000001 /* XRDP.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1000012000000000000001 /* xrdp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000013000000000000001 /* Build configuration list for PBXNativeTarget "xrdp" */;
+			buildPhases = (
+				A1000014000000000000001 /* Sources */,
+				A1000008000000000000001 /* Frameworks */,
+				A1000015000000000000001 /* Resources */,
+				A1000016000000000000001 /* Copy Helpers */,
+				A1000017000000000000001 /* Copy Config */,
+				A1000018000000000000002 /* Patch Configs */,
+				A1000030000000000000001 /* Fix Library Paths */,
+				A1000020000000000000002 /* Sign Helpers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = xrdp;
+			productName = xrdp;
+			productReference = A1000005000000000000001 /* XRDP.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1000018000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					A1000012000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A1000019000000000000001 /* Build configuration list for PBXProject "xrdp" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1000009000000000000001;
+			productRefGroup = A1000011000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1000012000000000000001 /* xrdp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000015000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000003000000000000002 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1000016000000000000001 /* Copy Helpers */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Helpers";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Copy xrdp binaries and libraries\nHELPERS_DIR=\"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nLIB_DIR=\"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Resources/lib/xrdp\"\n\nmkdir -p \"$HELPERS_DIR\"\nmkdir -p \"$LIB_DIR\"\n\n# Copy newly built binaries\nif [ -f \"$SRCROOT/../xrdp/.libs/xrdp\" ]; then\n    echo \"Copying newly built xrdp...\"\n    cp \"$SRCROOT/../xrdp/.libs/xrdp\" \"$HELPERS_DIR/xrdp\"\nfi\n\nif [ -f \"$SRCROOT/../sesman/.libs/xrdp-sesman\" ]; then\n    echo \"Copying newly built xrdp-sesman...\"\n    cp \"$SRCROOT/../sesman/.libs/xrdp-sesman\" \"$HELPERS_DIR/xrdp-sesman\"\nfi\n\nif [ -f \"$SRCROOT/../sesman/chansrv/.libs/xrdp-chansrv\" ]; then\n    echo \"Copying newly built xrdp-chansrv...\"\n    cp \"$SRCROOT/../sesman/chansrv/.libs/xrdp-chansrv\" \"$HELPERS_DIR/xrdp-chansrv\"\nfi\n\n# Copy libraries from build\necho \"Copying libraries...\"\nfor libdir in common libipm libxrdp sesman/libsesman xup vnc mc third_party/tomlc99; do\n    if [ -d \"$SRCROOT/../$libdir/.libs\" ]; then\n        cp \"$SRCROOT/../$libdir/.libs/\"*.dylib \"$LIB_DIR/\" 2>/dev/null || true\n    fi\ndone\n\n# Also copy libmacos.dylib if it exists\nif [ -f \"/usr/local/lib/xrdp/libmacos.dylib\" ]; then\n    cp \"/usr/local/lib/xrdp/libmacos.dylib\" \"$LIB_DIR/\"\nfi\n\n# Copy OpenSSL libraries\nif [ -f \"/usr/local/lib/xrdp/libssl.3.dylib\" ]; then\n    cp \"/usr/local/lib/xrdp/libssl.\"*.dylib \"$LIB_DIR/\" 2>/dev/null || true\n    cp \"/usr/local/lib/xrdp/libcrypto.\"*.dylib \"$LIB_DIR/\" 2>/dev/null || true\nfi\n\necho \"Helpers and libraries copied\"\n";
+		};
+		A1000017000000000000001 /* Copy Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Copy configuration files\nCONFIG_DIR=\"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Resources/etc/xrdp\"\n\nmkdir -p \"$CONFIG_DIR\"\n\necho \"Copying config files from source...\"\n\n# Copy xrdp config files\nif [ -d \"$SRCROOT/../xrdp\" ]; then\n    cp \"$SRCROOT/../xrdp/\"*.ini \"$CONFIG_DIR/\" 2>/dev/null || true\nfi\n\n# Copy sesman config files  \nif [ -d \"$SRCROOT/../sesman\" ]; then\n    cp \"$SRCROOT/../sesman/\"*.ini \"$CONFIG_DIR/\" 2>/dev/null || true\nfi\n\n# Create dummy rsakeys.ini (not needed with security_layer=tls)\nif [ ! -f \"$CONFIG_DIR/rsakeys.ini\" ]; then\n    echo \"[keys]\" > \"$CONFIG_DIR/rsakeys.ini\"\n    echo \"# Dummy RSA keys file - not used when security_layer=tls\" >> \"$CONFIG_DIR/rsakeys.ini\"\n    echo \"# XRDP is configured to use TLS with NeutrinoTLS/NeutrinoCrypto only\" >> \"$CONFIG_DIR/rsakeys.ini\"\nfi\n\necho \"Configuration copied\"\n";
+		};
+		A1000018000000000000002 /* Patch Configs */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/patch-configs.sh",
+			);
+			name = "Patch Configs";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "$SRCROOT/patch-configs.sh\n";
+		};
+		A1000020000000000000002 /* Sign Helpers */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/sign-helpers.sh",
+			);
+			name = "Sign Helpers";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "$SRCROOT/sign-helpers.sh\n";
+		};
+		A1000030000000000000001 /* Fix Library Paths */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/fix-library-paths.sh",
+			);
+			name = "Fix Library Paths";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "$SRCROOT/fix-library-paths.sh\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1000014000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001000000000000001 /* xrdp-controller.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1000020000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = H4PF9B4P9G;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+			};
+			name = Debug;
+		};
+		A1000022000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				AUTOMATION_APPLE_EVENTS = YES;
+				CODE_SIGN_ENTITLEMENTS = xrdp.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = YES;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"USE_NEUTRINOSSL=1",
+					"XRDP_RUNTIME_DIR=\\\"$(HOME)/Library/Application",
+					"Support/xrdp/run\\\"",
+				);
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright ©2026 Neutrinos Software Corporation. Some portions Classify®";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = remotex.app;
+				PRODUCT_NAME = XRDP;
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A1000023000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				AUTOMATION_APPLE_EVENTS = YES;
+				CODE_SIGN_ENTITLEMENTS = xrdp.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 4;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = H4PF9B4P9G;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = YES;
+				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = YES;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"USE_NEUTRINOSSL=1",
+					"XRDP_RUNTIME_DIR=\\\"$(HOME)/Library/Application",
+					"Support/xrdp/run\\\"",
+				);
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright ©2026 Neutrinos Software Corporation. Some portions Classify®";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.10.0;
+				PRODUCT_BUNDLE_IDENTIFIER = remotex.app;
+				PRODUCT_NAME = XRDP;
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
+				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
+				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
+				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1000013000000000000001 /* Build configuration list for PBXNativeTarget "xrdp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000022000000000000001 /* Debug */,
+				A1000023000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000019000000000000001 /* Build configuration list for PBXProject "xrdp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000020000000000000001 /* Debug */,
+				A1000022000000000000001 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1000018000000000000001 /* Project object */;
+}

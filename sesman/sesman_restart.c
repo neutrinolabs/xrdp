@@ -84,9 +84,10 @@ init_restart_directory(const char *restart_dir)
         // or not we created it
         if (g_chown(restart_dir, g_getuid(), g_getuid()) != 0)
         {
-            LOG(LOG_LEVEL_ERROR, "Can't set ownership of '%s' [%s]",
+            // On macOS, chown may fail in app bundles - this is OK, just warn
+            LOG(LOG_LEVEL_WARNING, "Can't set ownership of '%s' [%s] - continuing anyway",
                 restart_dir, g_get_strerror());
-            rv = E_RESTART_DIR_ERROR;
+            // Don't set rv to error - continue anyway
         }
         else if (g_chmod_hex(restart_dir, 0x700) != 0)
         {

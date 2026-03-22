@@ -31,6 +31,11 @@
 
 #include "xrdp.h"
 #include "log.h"
+#include "ssl_calls.h"
+
+#if defined(__APPLE__) && !defined(USE_NEUTRINOSSL)
+#include <openssl/crypto.h>
+#endif
 
 #define THREAD_WAITING 100
 
@@ -139,6 +144,11 @@ xrdp_child_fork(void)
     g_sigchld_event = -1;
     g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
     g_sync_event = g_create_wait_obj(text);
+
+    /* OpenSSL 3.0+ handles fork() automatically via pthread_atfork() */
+    /* Log that we're in the child process */
+    LOG(LOG_LEVEL_INFO, "Child process forked (PID %d)", pid);
+
     return 0;
 }
 

@@ -1,0 +1,3 @@
+b8b845ac6c117801a0efeadcb1875266e264d4761bc2f54e8862c7f20199f06c  XRDP-0.10.0-macos-5-neutrinossl-signed-clean.pkg
+72c06c95cec03ad6fa818a6af92472e38e993a2246844cf28721ed6dcb4c748a  XRDP-0.10.0-macos-5-neutrinossl.dmg
+24833881f044da2987c17138292b4f24f747d1f0e6d92e540f451b24b62a150f  XRDP-0.10.0-macos-5-neutrinossl.iso

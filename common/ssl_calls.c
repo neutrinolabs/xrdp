@@ -24,8 +24,21 @@
 #endif
 
 #include <stdlib.h> /* needed for openssl headers */
-#include <openssl/ssl.h>
+#include <string.h>
+
+/* Use NeutrinoSSL on macOS to avoid OpenSSL PAC issues with TLS */
+#ifdef __APPLE__
+#define USE_NEUTRINOSSL 1
+#endif
+
+#ifdef USE_NEUTRINOSSL
+/* NeutrinoSSL for TLS and NeutrinoCrypto for crypto primitives */
+#include "neutrinossl.h"
+#include "neutrinocrypto.h"
+#else
+/* OpenSSL headers for TLS and crypto functions */
 #include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
@@ -34,6 +47,13 @@
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
 #include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/aes.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/param_build.h>
+#include <openssl/core_names.h>
+#endif
+#endif
 
 #include "os_calls.h"
 #include "string_calls.h"
@@ -44,6 +64,7 @@
 
 #define SSL_WANT_READ_WRITE_TIMEOUT 100
 
+#ifndef USE_NEUTRINOSSL
 /*
  * Globals used by openssl 3 and later */
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -57,12 +78,18 @@ static EVP_MAC *g_mac_hmac; /* HMAC MAC */
 #define HAS_KEYLOG_CALLBACK /* SSL_CTX_set_keylog_callback() is available */
 static char *g_keylog_filename = NULL;
 #endif
+#endif /* USE_NEUTRINOSSL */
 
 /* definition of ssl_tls */
 struct ssl_tls
 {
+#ifdef USE_NEUTRINOSSL
+    NEUTRINOSSL *ssl;
+    NEUTRINOSSL_CTX *ctx;
+#else
     SSL *ssl; /* SSL * */
     SSL_CTX *ctx; /* SSL_CTX * */
+#endif
     char *cert;
     char *key;
     struct trans *trans;
@@ -70,6 +97,7 @@ struct ssl_tls
     int error_logged; /* Error has already been logged */
 };
 
+#ifndef USE_NEUTRINOSSL
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
 HMAC_CTX_new(void)
@@ -130,10 +158,12 @@ DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
     return 1;
 }
 #endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+#endif /* USE_NEUTRINOSSL */
 
 
 
 /*****************************************************************************/
+#ifndef USE_NEUTRINOSSL
 static void
 dump_error_stack(const char *prefix)
 {
@@ -159,15 +189,20 @@ dump_ssl_error_stack(struct ssl_tls *self)
         self->error_logged = 1;
     }
 }
+#endif /* USE_NEUTRINOSSL */
 
 /*****************************************************************************/
 int
 ssl_init(void)
 {
+#ifdef USE_NEUTRINOSSL
+    return neutrinossl_init();
+#else
     SSL_load_error_strings();
     SSL_library_init();
 
     return 0;
+#endif
 }
 
 /*****************************************************************************/
@@ -295,7 +330,9 @@ struct rc4_data
 void *
 ssl_rc4_info_create(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    return g_malloc(sizeof(nc_rc4_ctx), 1);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(RC4_KEY), 1);
 #else
     return g_malloc(sizeof(struct rc4_data), 1);
@@ -313,7 +350,9 @@ ssl_rc4_info_delete(void *rc4_info)
 void
 ssl_rc4_set_key(void *rc4_info, const char *key, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_rc4_set_key((nc_rc4_ctx *)rc4_info, (const uint8_t *)key, len);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     RC4_set_key((RC4_KEY *)rc4_info, len, (tui8 *)key);
 #else
     unsigned char *S = ((struct rc4_data *)rc4_info)->S;
@@ -340,7 +379,9 @@ ssl_rc4_set_key(void *rc4_info, const char *key, int len)
 void
 ssl_rc4_crypt(void *rc4_info, char *data, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_rc4_crypt((nc_rc4_ctx *)rc4_info, (uint8_t *)data, len);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     RC4((RC4_KEY *)rc4_info, len, (tui8 *)data, (tui8 *)data);
 #else
     unsigned char *S = ((struct rc4_data *)rc4_info)->S;
@@ -390,7 +431,9 @@ ssl_rc4_crypt(void *rc4_info, char *data, int len)
 void *
 ssl_sha1_info_create(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    return g_malloc(sizeof(nc_sha1_ctx), 1);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(SHA_CTX), 1);
 #else
     /*
@@ -414,7 +457,9 @@ ssl_sha1_info_create(void)
 void
 ssl_sha1_info_delete(void *sha1_info)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    g_free(sha1_info);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     g_free(sha1_info);
 #else
     EVP_MD_CTX_free((EVP_MD_CTX *)sha1_info);
@@ -425,7 +470,9 @@ ssl_sha1_info_delete(void *sha1_info)
 void
 ssl_sha1_clear(void *sha1_info)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_sha1_init((nc_sha1_ctx *)sha1_info);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Init((SHA_CTX *)sha1_info);
 #else
     if (sha1_info != NULL)
@@ -439,7 +486,9 @@ ssl_sha1_clear(void *sha1_info)
 void
 ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_sha1_update((nc_sha1_ctx *)sha1_info, (const uint8_t *)data, len);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
 #else
     if (sha1_info != NULL)
@@ -453,7 +502,9 @@ ssl_sha1_transform(void *sha1_info, const char *data, int len)
 void
 ssl_sha1_complete(void *sha1_info, char *data)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_sha1_final((nc_sha1_ctx *)sha1_info, (uint8_t *)data);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     SHA1_Final((tui8 *)data, (SHA_CTX *)sha1_info);
 #else
     if (sha1_info != NULL)
@@ -470,7 +521,9 @@ ssl_sha1_complete(void *sha1_info, char *data)
 void *
 ssl_md5_info_create(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    return g_malloc(sizeof(nc_md5_ctx), 1);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     return g_malloc(sizeof(MD5_CTX), 1);
 #else
     /*
@@ -494,7 +547,9 @@ ssl_md5_info_create(void)
 void
 ssl_md5_info_delete(void *md5_info)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    g_free(md5_info);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     g_free(md5_info);
 #else
     EVP_MD_CTX_free((EVP_MD_CTX *)md5_info);
@@ -505,7 +560,9 @@ ssl_md5_info_delete(void *md5_info)
 void
 ssl_md5_clear(void *md5_info)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_md5_init((nc_md5_ctx *)md5_info);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Init((MD5_CTX *)md5_info);
 #else
     if (md5_info != NULL)
@@ -519,7 +576,9 @@ ssl_md5_clear(void *md5_info)
 void
 ssl_md5_transform(void *md5_info, const char *data, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_md5_update((nc_md5_ctx *)md5_info, (const uint8_t *)data, len);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Update((MD5_CTX *)md5_info, data, len);
 #else
     if (md5_info != NULL)
@@ -533,7 +592,9 @@ ssl_md5_transform(void *md5_info, const char *data, int len)
 void
 ssl_md5_complete(void *md5_info, char *data)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    nc_md5_final((nc_md5_ctx *)md5_info, (uint8_t *)data);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
 #else
     if (md5_info != NULL)
@@ -545,10 +606,27 @@ ssl_md5_complete(void *md5_info, char *data)
 
 /* FIPS stuff */
 
+#ifdef USE_NEUTRINOSSL
+/* Structure to hold DES3 context and IV for NeutrinoCrypto */
+struct des3_info
+{
+    nc_des3_ctx ctx;
+    uint8_t iv[8];
+    int encrypt; /* 1 for encrypt, 0 for decrypt */
+};
+#endif
+
 /*****************************************************************************/
 void *
 ssl_des3_encrypt_info_create(const char *key, const char *ivec)
 {
+#ifdef USE_NEUTRINOSSL
+    struct des3_info *info = (struct des3_info *)g_malloc(sizeof(struct des3_info), 1);
+    nc_des3_set_key(&info->ctx, (const uint8_t *)key);
+    g_memcpy(info->iv, ivec, 8);
+    info->encrypt = 1;
+    return info;
+#else
     EVP_CIPHER_CTX *des3_ctx;
     const tui8 *lkey;
     const tui8 *livec;
@@ -579,12 +657,20 @@ ssl_des3_encrypt_info_create(const char *key, const char *ivec)
 #endif
     EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
     return des3_ctx;
+#endif
 }
 
 /*****************************************************************************/
 void *
 ssl_des3_decrypt_info_create(const char *key, const char *ivec)
 {
+#ifdef USE_NEUTRINOSSL
+    struct des3_info *info = (struct des3_info *)g_malloc(sizeof(struct des3_info), 1);
+    nc_des3_set_key(&info->ctx, (const uint8_t *)key);
+    g_memcpy(info->iv, ivec, 8);
+    info->encrypt = 0;
+    return info;
+#else
     EVP_CIPHER_CTX *des3_ctx;
     const tui8 *lkey;
     const tui8 *livec;
@@ -615,12 +701,16 @@ ssl_des3_decrypt_info_create(const char *key, const char *ivec)
 #endif
     EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
     return des3_ctx;
+#endif
 }
 
 /*****************************************************************************/
 void
 ssl_des3_info_delete(void *des3)
 {
+#ifdef USE_NEUTRINOSSL
+    g_free(des3);
+#else
     EVP_CIPHER_CTX *des3_ctx;
 
     des3_ctx = (EVP_CIPHER_CTX *) des3;
@@ -628,12 +718,18 @@ ssl_des3_info_delete(void *des3)
     {
         EVP_CIPHER_CTX_free(des3_ctx);
     }
+#endif
 }
 
 /*****************************************************************************/
 int
 ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
 {
+#ifdef USE_NEUTRINOSSL
+    struct des3_info *info = (struct des3_info *)des3;
+    nc_des3_cbc_encrypt(&info->ctx, info->iv, (const uint8_t *)in_data, (uint8_t *)out_data, length);
+    return 0;
+#else
     EVP_CIPHER_CTX *des3_ctx;
     int len;
     const tui8 *lin_data;
@@ -648,12 +744,18 @@ ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
         EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
     }
     return 0;
+#endif
 }
 
 /*****************************************************************************/
 int
 ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
 {
+#ifdef USE_NEUTRINOSSL
+    struct des3_info *info = (struct des3_info *)des3;
+    nc_des3_cbc_decrypt(&info->ctx, info->iv, (const uint8_t *)in_data, (uint8_t *)out_data, length);
+    return 0;
+#else
     EVP_CIPHER_CTX *des3_ctx;
     int len;
     const tui8 *lin_data;
@@ -668,13 +770,32 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
         EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
     }
     return 0;
+#endif
 }
+
+#ifdef USE_NEUTRINOSSL
+/* Structure for HMAC - we'll store key and data, compute on complete */
+struct hmac_info
+{
+    uint8_t key[64];
+    size_t key_len;
+    uint8_t data[8192];  /* Buffer for accumulating data */
+    size_t data_len;
+    int is_sha1;  /* 1 for SHA1, 0 for MD5 */
+};
+#endif
 
 /*****************************************************************************/
 void *
 ssl_hmac_info_create(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    struct hmac_info *info = (struct hmac_info *)g_malloc(sizeof(struct hmac_info), 1);
+    info->key_len = 0;
+    info->data_len = 0;
+    info->is_sha1 = 0;
+    return info;
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     return (HMAC_CTX *)HMAC_CTX_new();
 #else
     /* Need a MAC algorithm loaded */
@@ -695,7 +816,9 @@ ssl_hmac_info_create(void)
 void
 ssl_hmac_info_delete(void *hmac)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    g_free(hmac);
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
 
     hmac_ctx = (HMAC_CTX *) hmac;
@@ -712,7 +835,13 @@ ssl_hmac_info_delete(void *hmac)
 void
 ssl_hmac_sha1_init(void *hmac, const char *data, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    struct hmac_info *info = (struct hmac_info *)hmac;
+    info->is_sha1 = 1;
+    info->key_len = len;
+    g_memcpy(info->key, data, len);
+    info->data_len = 0;
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
 
     hmac_ctx = (HMAC_CTX *) hmac;
@@ -738,7 +867,14 @@ ssl_hmac_sha1_init(void *hmac, const char *data, int len)
 void
 ssl_hmac_transform(void *hmac, const char *data, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    struct hmac_info *info = (struct hmac_info *)hmac;
+    if (info->data_len + len <= sizeof(info->data))
+    {
+        g_memcpy(info->data + info->data_len, data, len);
+        info->data_len += len;
+    }
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
     const tui8 *ldata;
 
@@ -757,7 +893,17 @@ ssl_hmac_transform(void *hmac, const char *data, int len)
 void
 ssl_hmac_complete(void *hmac, char *data, int len)
 {
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#ifdef USE_NEUTRINOSSL
+    struct hmac_info *info = (struct hmac_info *)hmac;
+    if (info->is_sha1)
+    {
+        nc_hmac_sha1(info->key, info->key_len, info->data, info->data_len, (uint8_t *)data);
+    }
+    else
+    {
+        nc_hmac_md5(info->key, info->key_len, info->data, info->data_len, (uint8_t *)data);
+    }
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *hmac_ctx;
     tui8 *ldata;
     tui32 llen;
@@ -796,6 +942,7 @@ ssl_reverse_it(char *p, int len)
 }
 
 /*****************************************************************************/
+#ifndef USE_NEUTRINOSSL
 int
 ssl_mod_exp(char *out, int out_len, const char *in, int in_len,
             const char *mod, int mod_len, const char *exp, int exp_len)
@@ -967,6 +1114,24 @@ ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
     g_free(lpri);
     return error;
 }
+#else /* USE_NEUTRINOSSL */
+/* Stub implementations for keygen - RSA not supported with NeutrinoSSL */
+int
+ssl_mod_exp(char *out, int out_len, const char *in, int in_len,
+            const char *mod, int mod_len, const char *exp, int exp_len)
+{
+    LOG(LOG_LEVEL_ERROR, "ssl_mod_exp: RSA operations not supported with NeutrinoSSL");
+    return 1; /* error */
+}
+
+int
+ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
+                  char *mod, int mod_len, char *pri, int pri_len)
+{
+    LOG(LOG_LEVEL_ERROR, "ssl_gen_key_xrdp1: RSA key generation not supported with NeutrinoSSL");
+    return 1; /* error */
+}
+#endif /* USE_NEUTRINOSSL */
 
 /*****************************************************************************/
 /** static DH parameter, can be used if no custom parameter is specified
@@ -977,7 +1142,7 @@ see also
  * We dont do this for OpenSSL 3 - we use SSL_CTX_set_dh_auto() instead, as this
  * can cater for different key sizes on the certificate
 */
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if !defined(USE_NEUTRINOSSL) && OPENSSL_VERSION_NUMBER < 0x30000000L
 static DH *ssl_get_dh2236()
 {
     static unsigned char dh2236_p[] =
@@ -1063,6 +1228,7 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
     return self;
 }
 /*****************************************************************************/
+#ifndef USE_NEUTRINOSSL
 static int
 ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
 {
@@ -1100,6 +1266,7 @@ ssl_tls_log_error(struct ssl_tls *self, const char *func, int value)
 
     return result;
 }
+#endif /* !USE_NEUTRINOSSL */
 
 /**************************************************************************//**
  * Log an attempt to use an encrypted file
@@ -1123,6 +1290,63 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                int (*is_term)(void))
 {
     int connection_status;
+#ifdef USE_NEUTRINOSSL
+    /* NeutrinoSSL implementation for macOS */
+    LOG(LOG_LEVEL_DEBUG, "Using NeutrinoSSL for TLS connection");
+
+    /* Create NeutrinoSSL context with certificate and key */
+    self->ctx = neutrinossl_ctx_new_server(self->cert, self->key);
+    if (self->ctx == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to create NeutrinoSSL context: %s",
+            neutrinossl_get_error());
+        return 1;
+    }
+
+    /* Create NeutrinoSSL connection object */
+    self->ssl = neutrinossl_new(self->ctx, self->trans->sck);
+    if (self->ssl == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to create NeutrinoSSL connection: %s",
+            neutrinossl_get_error());
+        return 1;
+    }
+
+    /* Perform TLS handshake */
+    while (1)
+    {
+        connection_status = neutrinossl_accept(self->ssl);
+
+        if (connection_status > 0)
+        {
+            /* Success */
+            break;
+        }
+        else if (connection_status == 0)
+        {
+            /* Connection closed */
+            LOG(LOG_LEVEL_ERROR, "TLS handshake failed: connection closed");
+            return 1;
+        }
+        else
+        {
+            /* Error - for now, fail immediately */
+            /* TODO: Handle SSL_ERROR_WANT_READ/WRITE retries if needed */
+            LOG(LOG_LEVEL_ERROR, "TLS handshake failed: %s",
+                neutrinossl_get_error());
+            return 1;
+        }
+
+        if (is_term != NULL && (*is_term)())
+        {
+            return 1;
+        }
+    }
+
+    LOG(LOG_LEVEL_TRACE, "NeutrinoSSL TLS connection accepted");
+    return 0;
+#else
+    /* OpenSSL implementation */
     long options = 0;
 
     ERR_clear_error();
@@ -1168,7 +1392,13 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
      */
     options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    /* Use TLS_server_method() for OpenSSL 1.1.0+ (including 3.x) */
+    self->ctx = SSL_CTX_new(TLS_server_method());
+#else
+    /* Use SSLv23_server_method() for older OpenSSL versions */
     self->ctx = SSL_CTX_new(SSLv23_server_method());
+#endif
     if (self->ctx == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to negotiate a TLS connection with the client");
@@ -1326,6 +1556,7 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
     LOG(LOG_LEVEL_TRACE, "TLS connection accepted");
 
     return 0;
+#endif /* USE_NEUTRINOSSL */
 }
 
 /*****************************************************************************/
@@ -1333,8 +1564,6 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
 int
 ssl_tls_disconnect(struct ssl_tls *self)
 {
-    int status;
-
     if (self == NULL)
     {
         return 0;
@@ -1343,6 +1572,13 @@ ssl_tls_disconnect(struct ssl_tls *self)
     {
         return 0;
     }
+
+#ifdef USE_NEUTRINOSSL
+    neutrinossl_shutdown(self->ssl);
+    return 0;
+#else
+    int status;
+
     status = SSL_shutdown(self->ssl);
     if (status != 1)
     {
@@ -1361,6 +1597,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
         }
     }
     return 0;
+#endif
 }
 
 /*****************************************************************************/
@@ -1369,6 +1606,17 @@ ssl_tls_delete(struct ssl_tls *self)
 {
     if (self != NULL)
     {
+#ifdef USE_NEUTRINOSSL
+        if (self->ssl)
+        {
+            neutrinossl_free(self->ssl);
+        }
+
+        if (self->ctx)
+        {
+            neutrinossl_ctx_free(self->ctx);
+        }
+#else
         if (self->ssl)
         {
             SSL_free(self->ssl);
@@ -1378,6 +1626,7 @@ ssl_tls_delete(struct ssl_tls *self)
         {
             SSL_CTX_free(self->ctx);
         }
+#endif
 
         g_delete_wait_obj(self->rwo);
 
@@ -1389,6 +1638,20 @@ ssl_tls_delete(struct ssl_tls *self)
 int
 ssl_tls_read(struct ssl_tls *tls, char *data, int length)
 {
+#ifdef USE_NEUTRINOSSL
+    int status;
+
+    status = neutrinossl_read(tls->ssl, data, length);
+
+    if (status < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "NeutrinoSSL read error: %s",
+            neutrinossl_get_error());
+        return -1;
+    }
+
+    return status;
+#else
     int status;
     int break_flag;
 
@@ -1437,12 +1700,27 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
     }
 
     return status;
+#endif
 }
 
 /*****************************************************************************/
 int
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 {
+#ifdef USE_NEUTRINOSSL
+    int status;
+
+    status = neutrinossl_write(tls->ssl, data, length);
+
+    if (status < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "NeutrinoSSL write error: %s",
+            neutrinossl_get_error());
+        return -1;
+    }
+
+    return status;
+#else
     int status;
     int break_flag;
 
@@ -1486,6 +1764,7 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
     }
 
     return status;
+#endif
 }
 
 /*****************************************************************************/
@@ -1493,10 +1772,12 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 {
+#ifndef USE_NEUTRINOSSL
     if (SSL_pending(tls->ssl) > 0)
     {
         return 1;
     }
+#endif
     g_reset_wait_obj(tls->rwo);
     return g_sck_can_recv(sck, millis);
 }
@@ -1505,14 +1786,22 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 const char *
 ssl_get_version(const struct ssl_tls *ssl)
 {
+#ifdef USE_NEUTRINOSSL
+    return neutrinossl_get_version();
+#else
     return SSL_get_version(ssl->ssl);
+#endif
 }
 
 /*****************************************************************************/
 const char *
 ssl_get_cipher_name(const struct ssl_tls *ssl)
 {
+#ifdef USE_NEUTRINOSSL
+    return neutrinossl_get_cipher_name();
+#else
     return SSL_get_cipher_name(ssl->ssl);
+#endif
 }
 
 /*****************************************************************************/
@@ -1627,11 +1916,349 @@ ssl_get_protocols_from_string(const char *str, long *ssl_protocols)
 const char
 *get_openssl_version(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#ifdef USE_NEUTRINOSSL
+    return "NeutrinoSSL/TLS/Crypto 1.0";
+#elif OPENSSL_VERSION_NUMBER < 0x10100000L
     return SSLeay_version(SSLEAY_VERSION);
 #else
     return OpenSSL_version(OPENSSL_VERSION);
 #endif
 
+}
+
+/*****************************************************************************/
+#ifndef USE_NEUTRINOSSL
+/* DH key exchange for Apple ARD authentication */
+void *
+ssl_dh_create(int key_len, const unsigned char *generator,
+              const unsigned char *prime, const unsigned char *server_pubkey,
+              unsigned char *client_pubkey, unsigned char *shared_secret)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /* OpenSSL 3.x uses EVP API for DH */
+    EVP_PKEY_CTX *pctx = NULL;
+    EVP_PKEY *params = NULL;
+    EVP_PKEY *dh_key = NULL;
+    EVP_PKEY *peer_key = NULL;
+    OSSL_PARAM_BLD *param_bld = NULL;
+    OSSL_PARAM *params_array = NULL;
+    BIGNUM *p = NULL;
+    BIGNUM *g = NULL;
+    BIGNUM *pub_key = NULL;
+    BIGNUM *peer_pub = NULL;
+    size_t shared_len = key_len;
+    int gen_value;
+
+    /* Convert generator (2 bytes big endian) to int */
+    gen_value = (generator[0] << 8) | generator[1];
+
+    /* Create BIGNUMs */
+    p = BN_bin2bn(prime, key_len, NULL);
+    g = BN_new();
+    BN_set_word(g, gen_value);
+    peer_pub = BN_bin2bn(server_pubkey, key_len, NULL);
+
+    if (!p || !g || !peer_pub)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: BN_bin2bn failed");
+        goto cleanup;
+    }
+
+    /* Build DH parameters */
+    param_bld = OSSL_PARAM_BLD_new();
+    if (!param_bld)
+    {
+        goto cleanup;
+    }
+
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, p);
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, g);
+    params_array = OSSL_PARAM_BLD_to_param(param_bld);
+
+    /* Create parameter key */
+    pctx = EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL);
+    if (!pctx)
+    {
+        goto cleanup;
+    }
+
+    if (EVP_PKEY_fromdata_init(pctx) <= 0 ||
+        EVP_PKEY_fromdata(pctx, &params, EVP_PKEY_KEY_PARAMETERS, params_array) <= 0)
+    {
+        goto cleanup;
+    }
+    EVP_PKEY_CTX_free(pctx);
+    pctx = NULL;
+
+    /* Generate key pair */
+    pctx = EVP_PKEY_CTX_new(params, NULL);
+    if (!pctx || EVP_PKEY_keygen_init(pctx) <= 0 ||
+        EVP_PKEY_generate(pctx, &dh_key) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* Extract our public key */
+    if (EVP_PKEY_get_bn_param(dh_key, OSSL_PKEY_PARAM_PUB_KEY, &pub_key) <= 0)
+    {
+        goto cleanup;
+    }
+    BN_bn2binpad(pub_key, client_pubkey, key_len);
+
+    /* Create peer key for deriving shared secret */
+    OSSL_PARAM_BLD_free(param_bld);
+    param_bld = OSSL_PARAM_BLD_new();
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, p);
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, g);
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_PUB_KEY, peer_pub);
+    OSSL_PARAM_free(params_array);
+    params_array = OSSL_PARAM_BLD_to_param(param_bld);
+
+    EVP_PKEY_CTX_free(pctx);
+    pctx = EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL);
+    if (EVP_PKEY_fromdata_init(pctx) <= 0 ||
+        EVP_PKEY_fromdata(pctx, &peer_key, EVP_PKEY_PUBLIC_KEY, params_array) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* Derive shared secret */
+    EVP_PKEY_CTX_free(pctx);
+    pctx = EVP_PKEY_CTX_new(dh_key, NULL);
+    if (!pctx || EVP_PKEY_derive_init(pctx) <= 0 ||
+        EVP_PKEY_derive_set_peer(pctx, peer_key) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* First get the required size */
+    if (EVP_PKEY_derive(pctx, NULL, &shared_len) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* Derive into temp buffer to handle padding */
+    {
+        unsigned char *temp_secret = g_new(unsigned char, shared_len);
+        if (!temp_secret)
+        {
+            goto cleanup;
+        }
+        if (EVP_PKEY_derive(pctx, temp_secret, &shared_len) <= 0)
+        {
+            g_free(temp_secret);
+            goto cleanup;
+        }
+
+        /* Left-pad with zeros if needed (ARD requires exact key_len) */
+        g_memset(shared_secret, 0, key_len);
+        if ((int)shared_len >= key_len)
+        {
+            g_memcpy(shared_secret, temp_secret + (shared_len - key_len), key_len);
+        }
+        else
+        {
+            g_memcpy(shared_secret + (key_len - shared_len), temp_secret, shared_len);
+        }
+        g_free(temp_secret);
+    }
+
+    /* Success - return non-NULL */
+    EVP_PKEY_CTX_free(pctx);
+    EVP_PKEY_free(params);
+    EVP_PKEY_free(dh_key);
+    EVP_PKEY_free(peer_key);
+    OSSL_PARAM_BLD_free(param_bld);
+    OSSL_PARAM_free(params_array);
+    BN_free(p);
+    BN_free(g);
+    BN_free(pub_key);
+    BN_free(peer_pub);
+    return (void *)1; /* Return non-NULL to indicate success */
+
+cleanup:
+    if (pctx) EVP_PKEY_CTX_free(pctx);
+    if (params) EVP_PKEY_free(params);
+    if (dh_key) EVP_PKEY_free(dh_key);
+    if (peer_key) EVP_PKEY_free(peer_key);
+    if (param_bld) OSSL_PARAM_BLD_free(param_bld);
+    if (params_array) OSSL_PARAM_free(params_array);
+    if (p) BN_free(p);
+    if (g) BN_free(g);
+    if (pub_key) BN_free(pub_key);
+    if (peer_pub) BN_free(peer_pub);
+    return NULL;
+
+#else
+    /* OpenSSL 1.x - use deprecated DH API */
+    DH *dh = NULL;
+    BIGNUM *p_bn = NULL;
+    BIGNUM *g_bn = NULL;
+    BIGNUM *peer_pub_bn = NULL;
+    const BIGNUM *pub_key = NULL;
+    int gen_value;
+    int secret_len;
+
+    /* Convert generator (2 bytes big endian) to int */
+    gen_value = (generator[0] << 8) | generator[1];
+
+    dh = DH_new();
+    if (!dh)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_new failed");
+        return NULL;
+    }
+
+    p_bn = BN_bin2bn(prime, key_len, NULL);
+    g_bn = BN_new();
+    BN_set_word(g_bn, gen_value);
+
+    if (!p_bn || !g_bn)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: BN creation failed");
+        DH_free(dh);
+        BN_free(p_bn);
+        BN_free(g_bn);
+        return NULL;
+    }
+
+    if (!DH_set0_pqg(dh, p_bn, NULL, g_bn))
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_set0_pqg failed");
+        DH_free(dh);
+        return NULL;
+    }
+
+    /* Generate key pair */
+    if (!DH_generate_key(dh))
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_generate_key failed");
+        DH_free(dh);
+        return NULL;
+    }
+
+    /* Get our public key */
+    DH_get0_key(dh, &pub_key, NULL);
+    BN_bn2binpad(pub_key, client_pubkey, key_len);
+
+    /* Compute shared secret */
+    peer_pub_bn = BN_bin2bn(server_pubkey, key_len, NULL);
+    secret_len = DH_compute_key(shared_secret, peer_pub_bn, dh);
+    BN_free(peer_pub_bn);
+
+    if (secret_len < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_compute_key failed");
+        DH_free(dh);
+        return NULL;
+    }
+
+    /* Pad shared secret with leading zeros if needed */
+    if (secret_len < key_len)
+    {
+        memmove(shared_secret + (key_len - secret_len), shared_secret, secret_len);
+        memset(shared_secret, 0, key_len - secret_len);
+    }
+
+    DH_free(dh);
+    return (void *)1; /* Return non-NULL to indicate success */
+#endif
+}
+
+/*****************************************************************************/
+void
+ssl_dh_delete(void *dh_info)
+{
+    /* Nothing to free - we return a dummy pointer */
+    (void)dh_info;
+}
+#endif /* USE_NEUTRINOSSL */
+
+/*****************************************************************************/
+/* AES-128-ECB encryption for Apple ARD authentication */
+void *
+ssl_aes128_ecb_encrypt_info_create(const unsigned char *key)
+{
+#ifdef USE_NEUTRINOSSL
+    nc_aes128_ctx *ctx = (nc_aes128_ctx *)g_malloc(sizeof(nc_aes128_ctx), 1);
+    nc_aes128_set_key(ctx, key);
+    return ctx;
+#elif OPENSSL_VERSION_NUMBER >= 0x30000000L
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        return NULL;
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key, NULL) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return NULL;
+    }
+
+    /* Disable padding - Apple ARD uses exact block sizes */
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+    return ctx;
+#else
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        return NULL;
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key, NULL) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return NULL;
+    }
+
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+    return ctx;
+#endif
+}
+
+/*****************************************************************************/
+void
+ssl_aes128_ecb_encrypt(void *aes_info, const unsigned char *in_data,
+                       unsigned char *out_data, int len)
+{
+#ifdef USE_NEUTRINOSSL
+    nc_aes128_ctx *ctx = (nc_aes128_ctx *)aes_info;
+    /* AES-128-ECB processes in 16-byte blocks */
+    int i;
+    for (i = 0; i < len; i += 16)
+    {
+        nc_aes128_ecb_encrypt(ctx, in_data + i, out_data + i);
+    }
+#else
+    EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)aes_info;
+    int out_len = 0;
+    int final_len = 0;
+
+    if (!ctx)
+    {
+        return;
+    }
+
+    EVP_EncryptUpdate(ctx, out_data, &out_len, in_data, len);
+    EVP_EncryptFinal_ex(ctx, out_data + out_len, &final_len);
+#endif
+}
+
+/*****************************************************************************/
+void
+ssl_aes128_info_delete(void *aes_info)
+{
+#ifdef USE_NEUTRINOSSL
+    g_free(aes_info);
+#else
+    EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)aes_info;
+    if (ctx)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+    }
+#endif
 }
 

@@ -157,6 +157,13 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
     else if ((security_type_mask & PROTOCOL_SSL) != 0)
     {
         /* Can we do TLS? (basic check). VMConnect is exempt. */
+        /* NeutrinoTLS uses ephemeral X25519 keys, so certificate files are optional */
+#if defined(__APPLE__)
+        /* On macOS with NeutrinoTLS, we don't need certificate files */
+        LOG(LOG_LEVEL_INFO, "Selected TLS security (NeutrinoTLS - no certificates required)");
+        self->selectedProtocol = PROTOCOL_SSL;
+        got_protocol = 1;
+#else
         if ((g_file_readable(client_info->certificate) &&
                 g_file_readable(client_info->key_file)) || client_info->vmconnect)
         {
@@ -181,6 +188,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
                 rv = 1;
             }
         }
+#endif
     }
     else if (client_info->security_layer == SECURITY_LAYER_TLS)
     {

@@ -167,6 +167,40 @@ xrdp_font_create(struct xrdp_wm *wm, unsigned int dpi)
     }
     get_font_name_from_dpi(globals, dpi, font_name, sizeof(font_name));
 
+    /* If font name is "system" or empty, create a minimal dummy font */
+    if (font_name[0] == '\0' || g_strcmp(font_name, "system") == 0)
+    {
+        unsigned int i;
+        LOG(LOG_LEVEL_INFO, "xrdp_font_create: using system fonts, creating minimal font structure");
+        self = (struct xrdp_font *)g_malloc(sizeof(struct xrdp_font), 1);
+        self->wm = wm;
+        self->size = 16;
+        self->style = 0;
+        self->body_height = 16;
+        self->char_count = 256;  /* Support basic ASCII */
+        g_snprintf(self->name, sizeof(self->name), "system");
+
+        /* Initialize all ASCII characters with dummy data */
+        for (i = FIRST_CHAR; i < self->char_count; i++)
+        {
+            struct xrdp_font_char *ch = &self->chars[i];
+            ch->width = 8;
+            ch->height = 16;
+            ch->offset = 0;
+            ch->baseline = 0;
+            ch->incby = 8;
+            ch->bpp = 1;
+            /* Allocate minimal blank glyph data */
+            ch->data = (char *)g_malloc(FONT_DATASIZE(ch), 1);
+        }
+
+        /* Set default_char to first character (space) */
+        self->default_char = &self->chars[FIRST_CHAR];
+
+        LOG(LOG_LEVEL_INFO, "xrdp_font_create: dummy font created with %u characters", self->char_count);
+        return self;
+    }
+
     if (font_name[0] == '/')
     {
         /* User specified absolute path */
