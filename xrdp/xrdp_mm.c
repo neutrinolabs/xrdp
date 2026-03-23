@@ -2390,7 +2390,7 @@ xrdp_mm_trans_process_drdynvc_channel_open(struct xrdp_mm *self,
     char name[1024 + 1];
     struct xrdp_drdynvc_procs procs;
 
-    if (!s_check_rem(s, 2))
+    if (!s_check_rem(s, 4))
     {
         return 1;
     }
