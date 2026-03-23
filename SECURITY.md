@@ -3,6 +3,9 @@
 
 ## Reporting a Vulnerability
 
+V0.9.x is EOL. Report security vulnerabilities against a supported version
+of xrdp. Sufficiently severe vulnerabilities may be back-ported to V0.9.x.
+
 Please DO NOT report any security issues to public GitHub issue.
 
 Please DO report security vulnerabilities via the [Report Form](https://github.com/neutrinolabs/xrdp/security/advisories/new) so that we can fix the security problem to protect a lot of users around the world as soon as possible.
