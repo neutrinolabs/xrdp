@@ -30,6 +30,7 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "log.h"
+#include "xup_client_info.h"
 
 #include "xrdp_accel_assist.h"
 #include "xrdp_accel_assist_x11.h"
@@ -502,7 +503,7 @@ xorg_process_message(struct xorgxrdp_info *xi, struct stream *s)
     in_uint16_le(s, type);
     in_uint16_le(s, num);
     in_uint32_le(s, size);
-    if (type == 3)
+    if (type == XUP_MSG_ORDER_LIST)
     {
         for (index = 0; index < num; index++)
         {
@@ -513,7 +514,7 @@ xorg_process_message(struct xorgxrdp_info *xi, struct stream *s)
             s->end = phold + size;
             switch (type)
             {
-                case 62:
+                case XUP_ORDER_EGFX_SHMFD:
                     /* process_server_egfx_shmfd */
                     if (xorg_process_message_62(xi, s) != 0)
                     {
@@ -522,7 +523,7 @@ xorg_process_message(struct xorgxrdp_info *xi, struct stream *s)
                         return 1;
                     }
                     break;
-                case 63:
+                case XUP_ORDER_SET_POINTER_SHMFD:
                     /* process_server_set_pointer_shmfd */
                     if (xorg_process_message_63(xi, s) != 0)
                     {
@@ -531,7 +532,7 @@ xorg_process_message(struct xorgxrdp_info *xi, struct stream *s)
                         return 1;
                     }
                     break;
-                case 64:
+                case XUP_ORDER_PAINT_RECT_SHMFD:
                     /* process_server_paint_rect_shmfd */
                     if (xorg_process_message_64(xi, s) != 0)
                     {
@@ -545,7 +546,7 @@ xorg_process_message(struct xorgxrdp_info *xi, struct stream *s)
             s->end = endhold;
         }
     }
-    else if (type == 100)
+    else if (type == XUP_MSG_METADATA)
     {
         for (index = 0; index < num; index++)
         {
@@ -555,11 +556,11 @@ xorg_process_message(struct xorgxrdp_info *xi, struct stream *s)
             LOG(LOG_LEVEL_DEBUG, "100 type %d size %d", type, size);
             switch (type)
             {
-                case 1:
+                case XUP_METADATA_CLEAR_MONITORS:
                     LOG(LOG_LEVEL_DEBUG, "calling xrdp_accel_assist_x11_delete_all_pixmaps");
                     xrdp_accel_assist_x11_delete_all_pixmaps();
                     break;
-                case 2:
+                case XUP_METADATA_ADD_MONITOR:
                     in_uint16_le(s, width);
                     in_uint16_le(s, height);
                     in_uint32_le(s, magic);
@@ -653,18 +654,18 @@ xrdp_process_message(struct xorgxrdp_info *xi, struct stream *s)
 
     in_uint32_le(s, len);
     in_uint16_le(s, msg_type1);
-    if (msg_type1 == 103) /* client message */
+    if (msg_type1 == XUP_MSG_CLIENT_DATA)
     {
         in_uint32_le(s, msg_type2);
-        if (msg_type2 == 200) /* invalidate */
+        if (msg_type2 == XUP_CLIENT_DATA_INVALIDATE)
         {
             LOG(LOG_LEVEL_DEBUG, "Invalidate found (len: %d, msg1: %d, msg2: %d)", len, msg_type1, msg_type2);
         }
-        else if (msg_type2 == 300) /* resize */
+        else if (msg_type2 == XUP_CLIENT_DATA_DESKTOP_RESIZE)
         {
             LOG(LOG_LEVEL_DEBUG, "Resize 300 found (len: %d, msg1: %d, msg2: %d)", len, msg_type1, msg_type2);
         }
-        else if (msg_type2 == 302) /* resize */
+        else if (msg_type2 == XUP_CLIENT_DATA_MONITOR_UPDATE)
         {
             LOG(LOG_LEVEL_DEBUG, "Resize 302 found (len: %d, msg1: %d, msg2: %d)", len, msg_type1, msg_type2);
         }

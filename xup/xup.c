@@ -246,7 +246,7 @@ lib_send_client_info(struct mod *mod)
     make_stream(s);
     init_stream(s, (int)sizeof(xup_client_info) + 64);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 104);
+    out_uint16_le(s, XUP_MSG_CLIENT_INFO);
     g_memcpy(s->p, &xup_client_info, sizeof(xup_client_info));
     s->p += sizeof(xup_client_info);
     s_mark_end(s);
@@ -455,7 +455,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
                     16  0      65507  29     49152 */
                     init_stream(s, 8192);
                     s_push_layer(s, iso_hdr, 4);
-                    out_uint16_le(s, 103);
+                    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
                     out_uint32_le(s, 16); /* key up */
                     out_uint32_le(s, 0);
                     out_uint32_le(s, 65507); /* left control */
@@ -484,7 +484,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
 
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
     out_uint32_le(s, msg);
     out_uint32_le(s, param1);
     out_uint32_le(s, param2);
@@ -1141,7 +1141,7 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 105);
+    out_uint16_le(s, XUP_MSG_CLIENT_REGION);
     out_uint32_le(s, flags);
     out_uint32_le(s, frame_id);
     out_uint32_le(s, x);
@@ -1246,7 +1246,7 @@ send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 106);
+    out_uint16_le(s, XUP_MSG_CLIENT_REGION_EX);
     out_uint32_le(s, flags);
     out_uint32_le(s, frame_id);
     s_mark_end(s);
@@ -1270,7 +1270,7 @@ send_suppress_output(struct mod *mod, int suppress,
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 108);
+    out_uint16_le(s, XUP_MSG_CLIENT_SUPPRESS_OUTPUT);
     out_uint32_le(s, suppress);
     out_uint32_le(s, left);
     out_uint32_le(s, top);
@@ -1646,12 +1646,12 @@ send_server_version_message(struct mod *mod, struct stream *s)
     /* send version message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
-    out_uint32_le(s, 301);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
+    out_uint32_le(s, XUP_CLIENT_DATA_VERSION);
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
-    out_uint32_le(s, 1);
+    out_uint32_le(s, XUP_PROTOCOL_VERSION);
     s_mark_end(s);
     int len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
@@ -1671,8 +1671,8 @@ send_server_monitor_update(struct mod *mod, struct stream *s,
     /* send monitor update message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
-    out_uint32_le(s, 302);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
+    out_uint32_le(s, XUP_CLIENT_DATA_MONITOR_UPDATE);
     out_uint32_le(s, width);
     out_uint32_le(s, height);
     out_uint32_le(s, num_monitors);
@@ -1697,8 +1697,8 @@ send_server_monitor_full_invalidate(
     /* send invalidate message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
-    out_uint32_le(s, 200);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
+    out_uint32_le(s, XUP_CLIENT_DATA_INVALIDATE);
     /* x and y */
     int i = 0;
     out_uint32_le(s, i);
@@ -1774,109 +1774,109 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     rv = 0;
     switch (type)
     {
-        case 1: /* server_begin_update */
+        case XUP_ORDER_BEGIN_UPDATE:
             rv = mod->server_begin_update(mod);
             break;
-        case 2: /* server_end_update */
+        case XUP_ORDER_END_UPDATE:
             rv = mod->server_end_update(mod);
             break;
-        case 3: /* server_fill_rect */
+        case XUP_ORDER_FILL_RECT:
             rv = process_server_fill_rect(mod, s);
             break;
-        case 4: /* server_screen_blt */
+        case XUP_ORDER_SCREEN_BLT:
             rv = process_server_screen_blt(mod, s);
             break;
-        case 5: /* server_paint_rect */
+        case XUP_ORDER_PAINT_RECT:
             rv = process_server_paint_rect(mod, s);
             break;
-        case 10: /* server_set_clip */
+        case XUP_ORDER_SET_CLIP:
             rv = process_server_set_clip(mod, s);
             break;
-        case 11: /* server_reset_clip */
+        case XUP_ORDER_RESET_CLIP:
             rv = process_server_reset_clip(mod, s);
             break;
-        case 12: /* server_set_fgcolor */
+        case XUP_ORDER_SET_FGCOLOR:
             rv = process_server_set_fgcolor(mod, s);
             break;
-        case 13: /* server_set_bgcolor */
+        case XUP_ORDER_SET_BGCOLOR:
             rv = process_server_set_bgcolor(mod, s);
             break;
-        case 14: /* server_set_opcode */
+        case XUP_ORDER_SET_OPCODE:
             rv =  process_server_set_opcode(mod, s);
             break;
-        case 17: /* server_set_pen */
+        case XUP_ORDER_SET_PEN:
             rv = process_server_set_pen(mod, s);
             break;
-        case 18: /* server_draw_line */
+        case XUP_ORDER_DRAW_LINE:
             rv = process_server_draw_line(mod, s);
             break;
-        case 19: /* server_set_cursor */
+        case XUP_ORDER_SET_CURSOR:
             rv = process_server_set_cursor(mod, s);
             break;
-        case 20: /* server_create_os_surface */
+        case XUP_ORDER_CREATE_OS_SURFACE:
             rv = process_server_create_os_surface(mod, s);
             break;
-        case 21: /* server_switch_os_surface */
+        case XUP_ORDER_SWITCH_OS_SURFACE:
             rv = process_server_switch_os_surface(mod, s);
             break;
-        case 22: /* server_delete_os_surface */
+        case XUP_ORDER_DELETE_OS_SURFACE:
             rv = process_server_delete_os_surface(mod, s);
             break;
-        case 23: /* server_paint_rect_os */
+        case XUP_ORDER_PAINT_RECT_OS:
             rv = process_server_paint_rect_os(mod, s);
             break;
-        case 24: /* server_set_hints */
+        case XUP_ORDER_SET_HINTS:
             rv = process_server_set_hints(mod, s);
             break;
-        case 25: /* server_window_new_update */
+        case XUP_ORDER_WINDOW_NEW_UPDATE:
             rv = process_server_window_new_update(mod, s);
             break;
-        case 26: /* server_window_delete */
+        case XUP_ORDER_WINDOW_DELETE:
             rv = process_server_window_delete(mod, s);
             break;
-        case 27: /* server_window_new_update - show */
+        case XUP_ORDER_WINDOW_SHOW:
             rv = process_server_window_show(mod, s);
             break;
-        case 28: /* server_add_char */
+        case XUP_ORDER_ADD_CHAR:
             rv = process_server_add_char(mod, s);
             break;
-        case 29: /* server_add_char_alpha */
+        case XUP_ORDER_ADD_CHAR_ALPHA:
             rv = process_server_add_char_alpha(mod, s);
             break;
-        case 30: /* server_draw_text */
+        case XUP_ORDER_DRAW_TEXT:
             rv = process_server_draw_text(mod, s);
             break;
-        case 31: /* server_create_os_surface_bpp */
+        case XUP_ORDER_CREATE_OS_SURFACE_BPP:
             rv = process_server_create_os_surface_bpp(mod, s);
             break;
-        case 32: /* server_paint_rect_bpp */
+        case XUP_ORDER_PAINT_RECT_BPP:
             rv = process_server_paint_rect_bpp(mod, s);
             break;
-        case 33: /* server_composite */
+        case XUP_ORDER_COMPOSITE:
             rv = process_server_composite(mod, s);
             break;
-        case 51: /* server_set_pointer_ex */
+        case XUP_ORDER_SET_CURSOR_EX:
             rv = process_server_set_pointer_ex(mod, s);
             break;
-        case 60: /* server_paint_rect_shmem */
+        case XUP_ORDER_PAINT_RECT_SHMEM:
             rv = process_server_paint_rect_shmem(mod, s);
             break;
-        case 61: /* server_paint_rect_shmem_ex */
+        case XUP_ORDER_PAINT_RECT_SHMEM_EX:
             rv = process_server_paint_rect_shmem_ex(mod, s);
             break;
-        case 62:
+        case XUP_ORDER_EGFX_SHMFD:
             rv = process_server_egfx_shmfd(mod, s);
             break;
-        case 63: /* server_set_pointer_shmfd */
+        case XUP_ORDER_SET_POINTER_SHMFD:
             rv = process_server_set_pointer_shmfd(mod, s);
             break;
-        case 64: /* server_paint_rect_shmfd */
+        case XUP_ORDER_PAINT_RECT_SHMFD:
             rv = process_server_paint_rect_shmfd(mod, s);
             break;
-        case 65: /* server_set_pointer_system */
+        case XUP_ORDER_SET_POINTER_SYSTEM:
             rv = process_server_set_pointer_system(mod, s);
             break;
-        case 66: /* server_set_pointer_position */
+        case XUP_ORDER_SET_POINTER_POSITION:
             rv = process_server_set_pointer_position(mod, s);
             break;
         default:
@@ -1911,7 +1911,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "lib_mod_process_message: type %d", type);
 
     rv = 0;
-    if (type == 1) /* original order list */
+    if (type == XUP_MSG_ORDER_LIST_LEGACY)
     {
         for (index = 0; index < num_orders; ++index)
         {
@@ -1924,11 +1924,11 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             }
         }
     }
-    else if (type == 2) /* caps */
+    else if (type == XUP_MSG_CAPS)
     {
         mod->caps_processing_status = E_CAPS_OK;   /* Assume all OK */
         LOG_DEVEL(LOG_LEVEL_TRACE,
-                  "lib_mod_process_message: type 2 len %d", len);
+                  "lib_mod_process_message: caps len %d", len);
         for (index = 0; index < num_orders; index++)
         {
             phold = s->p;
@@ -1937,7 +1937,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
 
             switch (type)
             {
-                case 100:
+                case XUP_CAPS_VERSION:
                     in_uint32_le(s, version);
                     if (version != XUP_CLIENT_INFO_CURRENT_VERSION)
                     {
@@ -1961,10 +1961,10 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             s->p = phold + len;
         }
     }
-    else if (type == 3) /* order list with len after type */
+    else if (type == XUP_MSG_ORDER_LIST)
     {
         LOG_DEVEL(LOG_LEVEL_INFO,
-                  "lib_mod_process_message: type 3 len %d", len);
+                  "lib_mod_process_message: order list len %d", len);
         for (index = 0; index < num_orders; index++)
         {
             phold = s->p;
@@ -1980,10 +1980,10 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             s->p = phold + len;
         }
     }
-    else if (type == 100) // metadata commands.
+    else if (type == XUP_MSG_METADATA)
     {
         LOG_DEVEL(LOG_LEVEL_INFO,
-                  "lib_mod_process_message: type 100 len %d", len);
+                  "lib_mod_process_message: metadata len %d", len);
         for (index = 0; index < num_orders; ++index)
         {
             phold = s->p;
@@ -1991,7 +1991,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             in_uint16_le(s, len);
             switch (type)
             {
-                case 3: // memory allocation complete
+                case XUP_METADATA_MEMORY_ALLOCATION_COMPLETE:
                     in_uint16_le(s, width);
                     in_uint16_le(s, height);
                     LOG(LOG_LEVEL_INFO, "Received memory_allocation_complete"
