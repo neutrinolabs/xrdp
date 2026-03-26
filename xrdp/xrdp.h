@@ -38,7 +38,8 @@
 #include "xrdp_client_info.h"
 #include "log.h"
 
-#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_NVENC)
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG) || \
+    defined(XRDP_NVENC)
 #if !defined(XRDP_H264)
 #define XRDP_H264 1
 #endif

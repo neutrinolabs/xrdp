@@ -1,0 +1,23 @@
+[codec]
+order = [ "H.264", "RFX" ]
+h264_encoder = "FFmpeg"
+
+[FFmpeg]
+path = "vulkan"
+drm_device = "/dev/dri/renderD129"
+vulkan_device = "vk0"
+
+[FFmpeg.default]
+preset = "superfast"
+tune = "zerolatency"
+profile = "high"
+vbv_max_bitrate = 12000
+vbv_buffer_size = 6000
+fps_num = 30
+fps_den = 1
+threads = 2
+
+[FFmpeg.wan]
+vbv_max_bitrate = 4000
+vbv_buffer_size = 1000
+fps_num = 24

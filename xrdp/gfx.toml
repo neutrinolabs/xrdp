@@ -1,7 +1,7 @@
 [codec]
 order = [ "H.264", "RFX" ]
 
-# Specify a preferred H.264 encoder, "x264" or "OpenH264".
+# Specify a preferred H.264 encoder, "x264", "OpenH264" or "FFmpeg".
 # This parameter takes effect only when more than one encoder is
 # enabled at compile time. If only one encoder is enabled, the encoder
 # will be used regardless the value of this parameter.
@@ -85,3 +85,48 @@ EnableFrameSkip = true
 TargetBitrate =   600_000
 MaxBitrate =    1_200_000
 
+#
+# Configuration for the FFmpeg backend
+#
+[FFmpeg]
+path = "software"
+drm_device = "/dev/dri/renderD128"
+vulkan_device = ""
+
+[FFmpeg.default]
+# NOTE: vbv_* values use kbps like x264.
+preset = "ultrafast"
+tune = "zerolatency"
+profile = "main"
+vbv_max_bitrate = 0
+vbv_buffer_size = 0
+fps_num = 60
+fps_den = 1
+threads = 1
+
+[FFmpeg.lan]
+# inherits default
+
+[FFmpeg.wan]
+vbv_max_bitrate = 15_000
+vbv_buffer_size = 1_500
+
+[FFmpeg.broadband_high]
+preset = "superfast"
+vbv_max_bitrate = 8_000
+vbv_buffer_size = 800
+
+[FFmpeg.satellite]
+preset = "superfast"
+vbv_max_bitrate = 5_000
+vbv_buffer_size = 500
+
+[FFmpeg.broadband_low]
+preset = "veryfast"
+vbv_max_bitrate = 1_600
+vbv_buffer_size = 66
+
+[FFmpeg.modem]
+preset = "fast"
+vbv_max_bitrate = 1_200
+vbv_buffer_size = 50

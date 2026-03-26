@@ -181,6 +181,10 @@ AC_ARG_ENABLE(openh264, AS_HELP_STRING([--enable-openh264],
               [Use Cisco OpenH264 library (default: no)]),
               [], [enable_openh264=no])
 AM_CONDITIONAL(XRDP_OPENH264, [test x$enable_openh264 = xyes])
+AC_ARG_ENABLE(ffmpeg, AS_HELP_STRING([--enable-ffmpeg],
+              [Use generic FFmpeg H.264 encoder backend (default: no)]),
+              [], [enable_ffmpeg=no])
+AM_CONDITIONAL(XRDP_FFMPEG, [test x$enable_ffmpeg = xyes])
 AC_ARG_ENABLE(nvenc, AS_HELP_STRING([--enable-nvenc],
               [Use nvenc library (default: no), env vars XRDP_NVENC_CFLAGS and
                XRDP_NVENC_LIBS should be set if used]),
@@ -522,6 +526,10 @@ AS_IF( [test "x$enable_x264" = "xyes"] , [PKG_CHECK_MODULES(XRDP_X264, x264 >= 0
 
 AS_IF( [test "x$enable_openh264" = "xyes"] , [PKG_CHECK_MODULES(XRDP_OPENH264, openh264 >= 2.0.0)] )
 
+AS_IF( [test "x$enable_ffmpeg" = "xyes"] ,
+       [PKG_CHECK_MODULES(XRDP_FFMPEG,
+                          [libavcodec >= 60.0.0 libavutil >= 58.0.0 libavfilter >= 9.0.0 libdrm >= 2.4.0])] )
+
 if test "x$enable_nvenc" = "xyes"
 then
 enable_accel=$enable_nvenc
@@ -721,6 +729,7 @@ echo "  turbo jpeg                      $enable_tjpeg"
 echo "  rfxcodec                        $enable_rfxcodec"
 echo "  x264                            $enable_x264"
 echo "  openh264                        $enable_openh264"
+echo "  ffmpeg                          $enable_ffmpeg"
 echo "  nvenc                           $enable_nvenc"
 echo "  accel                           $enable_accel"
 echo "  painter                         $enable_painter"

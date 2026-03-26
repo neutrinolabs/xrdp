@@ -62,7 +62,35 @@ enum xrdp_tconfig_codecs
 enum xrdp_tconfig_h264_encoders
 {
     XTC_H264_X264,
-    XTC_H264_OPENH264
+    XTC_H264_OPENH264,
+    XTC_H264_FFMPEG
+};
+
+enum xrdp_tconfig_ffmpeg_paths
+{
+    XTC_FFMPEG_PATH_SOFTWARE,
+    XTC_FFMPEG_PATH_VAAPI,
+    XTC_FFMPEG_PATH_VULKAN
+};
+
+struct xrdp_tconfig_gfx_ffmpeg_param
+{
+    char preset[16];
+    char tune[16];
+    char profile[16];
+    int vbv_max_bitrate;
+    int vbv_buffer_size;
+    int fps_num;
+    int fps_den;
+    int threads;
+};
+
+struct xrdp_tconfig_gfx_ffmpeg
+{
+    enum xrdp_tconfig_ffmpeg_paths path;
+    char drm_device[256];
+    char vulkan_device[256];
+    struct xrdp_tconfig_gfx_ffmpeg_param param[NUM_CONNECTION_TYPES];
 };
 
 struct xrdp_tconfig_gfx_codec_order
@@ -79,6 +107,7 @@ struct xrdp_tconfig_gfx
     struct xrdp_tconfig_gfx_x264_param x264_param[NUM_CONNECTION_TYPES];
     struct xrdp_tconfig_gfx_openh264_param
         openh264_param[NUM_CONNECTION_TYPES];
+    struct xrdp_tconfig_gfx_ffmpeg ffmpeg;
 };
 
 static const char *const rdpbcgr_connection_type_names[] =

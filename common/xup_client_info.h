@@ -111,7 +111,9 @@ enum xup_order_type
     XUP_ORDER_SET_POINTER_SHMFD = 63,
     XUP_ORDER_PAINT_RECT_SHMFD = 64,
     XUP_ORDER_SET_POINTER_SYSTEM = 65,
-    XUP_ORDER_SET_POINTER_POSITION = 66
+    XUP_ORDER_SET_POINTER_POSITION = 66,
+    XUP_ORDER_PAINT_RECT_DMABUF = 67,
+    XUP_ORDER_EGFX_DMABUF = 68
 };
 
 /**
@@ -147,6 +149,7 @@ struct xup_client_info
 
     enum xrdp_capture_code capture_code;
     int capture_format;
+    int capture_transport_flags;
 
     /* X11 keyboard layout - inferred from keyboard type/subtype */
     char model[CI_KBD_MODEL_SIZE];
@@ -166,6 +169,6 @@ struct xup_client_info
 };
 
 /* yyyymmdd of last incompatible change to xup_client_info */
-#define XUP_CLIENT_INFO_CURRENT_VERSION 20250528
+#define XUP_CLIENT_INFO_CURRENT_VERSION 20260325
 
 #endif // XUP_CLIENT_INFO_H

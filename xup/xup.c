@@ -28,6 +28,7 @@
 #include "trans.h"
 #include "string_calls.h"
 #include "scancode.h"
+#include "../xrdp/xrdp_encoder.h"
 
 static int
 send_server_monitor_update(struct mod *v, struct stream *s,
@@ -45,11 +46,30 @@ send_server_version_message(struct mod *v, struct stream *s);
 static int
 lib_mod_process_message(struct mod *mod, struct stream *s);
 
+static void
+xup_dmabuf_surface_delete(struct xrdp_encoder_dmabuf_surface **surface);
+
 /******************************************************************************/
 static int
 lib_send_copy(struct mod *mod, struct stream *s)
 {
     return trans_write_copy_s(mod->trans, s);
+}
+
+/******************************************************************************/
+static void
+xup_dmabuf_surface_delete(struct xrdp_encoder_dmabuf_surface **surface)
+{
+    if (surface == NULL || *surface == NULL)
+    {
+        return;
+    }
+    if ((*surface)->fd >= 0)
+    {
+        g_file_close((*surface)->fd);
+    }
+    g_free(*surface);
+    *surface = NULL;
 }
 
 /******************************************************************************/
@@ -214,6 +234,7 @@ convert_xrdp_client_info_to_xup_client_info(
 
     dst->capture_code = src->capture_code;
     dst->capture_format = src->capture_format;
+    dst->capture_transport_flags = src->capture_transport_flags;
 
     memcpy(dst->model, src->model, CI_KBD_MODEL_SIZE);
     memcpy(dst->layout, src->layout, CI_KBD_LAYOUT_SIZE);
@@ -1424,7 +1445,7 @@ process_server_egfx_shmfd(struct mod *amod, struct stream *s)
     in_uint32_le(s, shmem_bytes);
     if (shmem_bytes == 0)
     {
-        return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0);
+        return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0, NULL);
     }
     fd = -1;
     num_fds = -1;
@@ -1446,10 +1467,77 @@ process_server_egfx_shmfd(struct mod *amod, struct stream *s)
                    xrdp_mm_process_enc_done(gfx) */
                 data = (char *) shmem_ptr;
                 rv = amod->server_egfx_cmd(amod, cmd, cmd_bytes,
-                                           data, shmem_bytes);
+                                           data, shmem_bytes, NULL);
             }
             g_file_close(fd);
         }
+    }
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+process_server_egfx_dmabuf(struct mod *amod, struct stream *s)
+{
+    char *cmd;
+    int cmd_bytes;
+    int width;
+    int height;
+    int stride;
+    int size;
+    unsigned int fourcc;
+    int fd;
+    int recv_bytes;
+    unsigned int num_fds;
+    char msg[4];
+    int rv;
+    struct xrdp_encoder_dmabuf_surface *surface;
+
+    in_uint32_le(s, cmd_bytes);
+    in_uint8p(s, cmd, cmd_bytes);
+    in_uint32_le(s, width);
+    in_uint32_le(s, height);
+    in_uint32_le(s, stride);
+    in_uint32_le(s, fourcc);
+    in_uint32_le(s, size);
+
+    fd = -1;
+    num_fds = 0;
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        return 1;
+    }
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_egfx_dmabuf: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes != 4 || num_fds != 1)
+    {
+        if (fd >= 0)
+        {
+            g_file_close(fd);
+        }
+        return 1;
+    }
+
+    surface = g_new0(struct xrdp_encoder_dmabuf_surface, 1);
+    if (surface == NULL)
+    {
+        g_file_close(fd);
+        return 1;
+    }
+    surface->surface_id = -1;
+    surface->width = width;
+    surface->height = height;
+    surface->stride = stride;
+    surface->fourcc = fourcc;
+    surface->size = size;
+    surface->fd = fd;
+
+    rv = amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0, surface);
+    if (rv != 0)
+    {
+        xup_dmabuf_surface_delete(&surface);
     }
     return rv;
 }
@@ -1575,6 +1663,13 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     in_uint16_le(s, width);
     in_uint16_le(s, height);
 
+    if (shmem_bytes == 0)
+    {
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+
     if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
     {
         g_free(ldrects);
@@ -1600,10 +1695,128 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
                                                  num_crects, lcrects, bmpdata,
                                                  left, top, width, height,
                                                  flags, frame_id,
-                                                 shmem_ptr, shmem_bytes);
+                                                 shmem_ptr, shmem_bytes, NULL);
             }
             g_file_close(fd);
         }
+    }
+    g_free(ldrects);
+    g_free(lcrects);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+process_server_paint_rect_dmabuf(struct mod *amod, struct stream *s)
+{
+    int num_drects;
+    int num_crects;
+    int flags;
+    int frame_id;
+    int left;
+    int top;
+    int width;
+    int height;
+    int surface_width;
+    int surface_height;
+    int stride;
+    int size;
+    int index;
+    int rv;
+    int fd;
+    int recv_bytes;
+    int16_t *ldrects;
+    int16_t *ldrects1;
+    int16_t *lcrects;
+    int16_t *lcrects1;
+    unsigned int fourcc;
+    unsigned int num_fds;
+    char msg[4];
+    struct xrdp_encoder_dmabuf_surface *surface;
+
+    in_uint16_le(s, num_drects);
+    ldrects = g_new(int16_t, 2 * 4 * num_drects);
+    ldrects1 = ldrects;
+    for (index = 0; index < num_drects; index++)
+    {
+        in_sint16_le(s, ldrects1[0]);
+        in_sint16_le(s, ldrects1[1]);
+        in_sint16_le(s, ldrects1[2]);
+        in_sint16_le(s, ldrects1[3]);
+        ldrects1 += 4;
+    }
+
+    in_uint16_le(s, num_crects);
+    lcrects = g_new(int16_t, 2 * 4 * num_crects);
+    lcrects1 = lcrects;
+    for (index = 0; index < num_crects; index++)
+    {
+        in_sint16_le(s, lcrects1[0]);
+        in_sint16_le(s, lcrects1[1]);
+        in_sint16_le(s, lcrects1[2]);
+        in_sint16_le(s, lcrects1[3]);
+        lcrects1 += 4;
+    }
+
+    in_uint32_le(s, flags);
+    in_uint32_le(s, frame_id);
+    in_uint16_le(s, left);
+    in_uint16_le(s, top);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_uint32_le(s, surface_width);
+    in_uint32_le(s, surface_height);
+    in_uint32_le(s, stride);
+    in_uint32_le(s, fourcc);
+    in_uint32_le(s, size);
+
+    fd = -1;
+    num_fds = 0;
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_paint_rect_dmabuf: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes != 4 || num_fds != 1)
+    {
+        if (fd >= 0)
+        {
+            g_file_close(fd);
+        }
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+
+    surface = g_new0(struct xrdp_encoder_dmabuf_surface, 1);
+    if (surface == NULL)
+    {
+        g_file_close(fd);
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+    surface->surface_id = (flags >> 28) & 0xF;
+    surface->width = surface_width;
+    surface->height = surface_height;
+    surface->stride = stride;
+    surface->fourcc = fourcc;
+    surface->size = size;
+    surface->fd = fd;
+
+    rv = amod->server_paint_rects_ex(amod, num_drects, ldrects,
+                                     num_crects, lcrects, NULL,
+                                     left, top, width, height,
+                                     flags, frame_id,
+                                     NULL, 0, surface);
+    if (rv != 0)
+    {
+        xup_dmabuf_surface_delete(&surface);
     }
     g_free(ldrects);
     g_free(lcrects);
@@ -1873,11 +2086,17 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case XUP_ORDER_PAINT_RECT_SHMFD:
             rv = process_server_paint_rect_shmfd(mod, s);
             break;
+        case XUP_ORDER_PAINT_RECT_DMABUF:
+            rv = process_server_paint_rect_dmabuf(mod, s);
+            break;
         case XUP_ORDER_SET_POINTER_SYSTEM:
             rv = process_server_set_pointer_system(mod, s);
             break;
         case XUP_ORDER_SET_POINTER_POSITION:
             rv = process_server_set_pointer_position(mod, s);
+            break;
+        case XUP_ORDER_EGFX_DMABUF:
+            rv = process_server_egfx_dmabuf(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,

@@ -51,6 +51,11 @@ static void
 xrdp_mm_connect_sm(struct xrdp_mm *self);
 static int
 xrdp_mm_send_unicode_shutdown(struct xrdp_mm *self, struct trans *trans);
+static void
+xrdp_mm_dmabuf_surface_delete(
+    struct xrdp_encoder_dmabuf_surface **surface);
+static struct xrdp_encoder *
+xrdp_mm_create_encoder(struct xrdp_mm *self);
 
 /*****************************************************************************/
 static void
@@ -70,6 +75,48 @@ init_libh264_loaded(struct xrdp_mm *self)
 #else
     self->libh264_loaded = 0;
 #endif
+}
+
+/*****************************************************************************/
+static void
+xrdp_mm_dmabuf_surface_delete(
+    struct xrdp_encoder_dmabuf_surface **surface)
+{
+    if (surface == NULL || *surface == NULL)
+    {
+        return;
+    }
+
+    if ((*surface)->map != NULL)
+    {
+        g_munmap((*surface)->map, (*surface)->size);
+    }
+    if ((*surface)->fd >= 0)
+    {
+        g_file_close((*surface)->fd);
+    }
+    g_free(*surface);
+    *surface = NULL;
+}
+
+static struct xrdp_encoder *
+xrdp_mm_create_encoder(struct xrdp_mm *self)
+{
+    struct xrdp_encoder *encoder;
+
+    if (self == NULL)
+    {
+        return NULL;
+    }
+
+    if (self->encoder != NULL)
+    {
+        return self->encoder;
+    }
+
+    encoder = xrdp_encoder_create(self);
+    self->encoder = encoder;
+    return encoder;
 }
 
 /*****************************************************************************/
@@ -114,7 +161,7 @@ xrdp_mm_create(struct xrdp_wm *owner)
              (self->wm->client_info->jpeg_codec_id != 0) ||
              (self->wm->client_info->rfx_codec_id != 0)))
     {
-        self->encoder = xrdp_encoder_create(self);
+        xrdp_mm_create_encoder(self);
     }
 
     return self;
@@ -1273,7 +1320,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             error, self->wm->client_info->display_sizes.monitorCount);
         self->egfx_up = 1;
         xrdp_mm_egfx_create_surfaces(self);
-        self->encoder = xrdp_encoder_create(self);
+        xrdp_mm_create_encoder(self);
         xrdp_mm_egfx_invalidate_wm_screen(self);
 
         if (self->resize_data != NULL
@@ -1299,7 +1346,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         lrect.bottom = screen->height;
         self->wm->client_info->gfx = 0;
         xrdp_encoder_delete(self->encoder);
-        self->encoder = xrdp_encoder_create(self);
+        xrdp_mm_create_encoder(self);
         xrdp_bitmap_invalidate(screen, &lrect);
     }
     g_free(ver_flags);
@@ -1819,7 +1866,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
         case WMRZ_ENCODER_CREATE:
             if (mm->encoder == NULL)
             {
-                mm->encoder = xrdp_encoder_create(mm);
+                xrdp_mm_create_encoder(mm);
             }
             advance_resize_state_machine(mm, WMRZ_SERVER_INVALIDATE);
             break;
@@ -3828,7 +3875,11 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                 g_free(enc->u.sc.drects);
                 g_free(enc->u.sc.crects);
             }
-            if (enc->shmem_ptr != NULL)
+            if (enc->dmabuf_surface != NULL)
+            {
+                xrdp_mm_dmabuf_surface_delete(&enc->dmabuf_surface);
+            }
+            else if (enc->shmem_ptr != NULL)
             {
                 g_munmap(enc->shmem_ptr, enc->shmem_bytes);
             }
@@ -4334,7 +4385,8 @@ server_paint_rects_ex(struct xrdp_mod *mod,
                       char *data, int left, int top,
                       int width, int height,
                       int flags, int frame_id,
-                      void *shmem_ptr, int shmem_bytes)
+                      void *shmem_ptr, int shmem_bytes,
+                      struct xrdp_encoder_dmabuf_surface *dmabuf_surface)
 {
     struct xrdp_wm *wm;
     struct xrdp_mm *mm;
@@ -4355,7 +4407,11 @@ server_paint_rects_ex(struct xrdp_mod *mod,
         enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 1);
         if (enc_data == 0)
         {
-            if (shmem_ptr != NULL)
+            if (dmabuf_surface != NULL)
+            {
+                xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+            }
+            else if (shmem_ptr != NULL)
             {
                 g_munmap(shmem_ptr, shmem_bytes);
             }
@@ -4366,7 +4422,11 @@ server_paint_rects_ex(struct xrdp_mod *mod,
                                 g_malloc(sizeof(short) * num_drects * 4, 0);
         if (enc_data->u.sc.drects == 0)
         {
-            if (shmem_ptr != NULL)
+            if (dmabuf_surface != NULL)
+            {
+                xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+            }
+            else if (shmem_ptr != NULL)
             {
                 g_munmap(shmem_ptr, shmem_bytes);
             }
@@ -4378,7 +4438,11 @@ server_paint_rects_ex(struct xrdp_mod *mod,
                                 g_malloc(sizeof(short) * num_crects * 4, 0);
         if (enc_data->u.sc.crects == 0)
         {
-            if (shmem_ptr != NULL)
+            if (dmabuf_surface != NULL)
+            {
+                xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+            }
+            else if (shmem_ptr != NULL)
             {
                 g_munmap(shmem_ptr, shmem_bytes);
             }
@@ -4391,6 +4455,7 @@ server_paint_rects_ex(struct xrdp_mod *mod,
         g_memcpy(enc_data->u.sc.crects, crects, sizeof(short) * num_crects * 4);
 
         enc_data->mod = mod;
+        enc_data->type = XRDP_ENC_DATA_TYPE_SURFACE;
         enc_data->u.sc.num_drects = num_drects;
         enc_data->u.sc.num_crects = num_crects;
         enc_data->u.sc.data = data;
@@ -4402,6 +4467,7 @@ server_paint_rects_ex(struct xrdp_mod *mod,
         enc_data->u.sc.frame_id = frame_id;
         enc_data->shmem_ptr = shmem_ptr;
         enc_data->shmem_bytes = shmem_bytes;
+        enc_data->dmabuf_surface = dmabuf_surface;
         if (width == 0 || height == 0)
         {
             LOG_DEVEL(LOG_LEVEL_WARNING, "server_paint_rects: error");
@@ -4425,6 +4491,10 @@ server_paint_rects_ex(struct xrdp_mod *mod,
         {
             mod->mod_frame_ack(mod, flags, frame_id);
         }
+        if (dmabuf_surface != NULL)
+        {
+            xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+        }
         return 0;
     }
 
@@ -4447,7 +4517,11 @@ server_paint_rects_ex(struct xrdp_mod *mod,
     {
         mod->mod_frame_ack(mod, flags, frame_id);
     }
-    if (shmem_ptr != NULL)
+    if (dmabuf_surface != NULL)
+    {
+        xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+    }
+    else if (shmem_ptr != NULL)
     {
         g_munmap(shmem_ptr, shmem_bytes);
     }
@@ -4462,7 +4536,7 @@ server_paint_rects(struct xrdp_mod *mod, int num_drects, short *drects,
 {
     return server_paint_rects_ex(mod, num_drects, drects, num_crects, crects,
                                  data, 0, 0, width, height, flags, frame_id,
-                                 NULL, 0);
+                                 NULL, 0, NULL);
 }
 
 /*****************************************************************************/
@@ -4480,7 +4554,8 @@ server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes)
 static int
 server_egfx_cmd(struct xrdp_mod *mod,
                 char *cmd, int cmd_bytes,
-                char *data, int data_bytes)
+                char *data, int data_bytes,
+                struct xrdp_encoder_dmabuf_surface *dmabuf_surface)
 {
     XRDP_ENC_DATA *enc;
     struct xrdp_wm *wm;
@@ -4492,7 +4567,11 @@ server_egfx_cmd(struct xrdp_mod *mod,
     {
         // This can happen when we are in the resize state machine, if
         // there are messages queued up by the X server
-        if (data != NULL)
+        if (dmabuf_surface != NULL)
+        {
+            xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+        }
+        else if (data != NULL)
         {
             g_munmap(data, data_bytes);
         }
@@ -4501,17 +4580,26 @@ server_egfx_cmd(struct xrdp_mod *mod,
     enc = g_new0(struct xrdp_enc_data, 1);
     if (enc == NULL)
     {
-        if (data != NULL)
+        if (dmabuf_surface != NULL)
+        {
+            xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+        }
+        else if (data != NULL)
         {
             g_munmap(data, data_bytes);
         }
         return 1;
     }
     ENC_SET_BIT(enc->flags, ENC_FLAGS_GFX_BIT);
+    enc->type = XRDP_ENC_DATA_TYPE_GFX;
     enc->u.gfx.cmd = g_new(char, cmd_bytes);
     if (enc->u.gfx.cmd == NULL)
     {
-        if (data != NULL)
+        if (dmabuf_surface != NULL)
+        {
+            xrdp_mm_dmabuf_surface_delete(&dmabuf_surface);
+        }
+        else if (data != NULL)
         {
             g_munmap(data, data_bytes);
         }
@@ -4524,6 +4612,7 @@ server_egfx_cmd(struct xrdp_mod *mod,
     enc->u.gfx.data_bytes = data_bytes;
     enc->shmem_ptr = data;
     enc->shmem_bytes = data_bytes;
+    enc->dmabuf_surface = dmabuf_surface;
     /* insert into fifo for encoder thread to process */
     tc_mutex_lock(mm->encoder->mutex);
     fifo_add_item(mm->encoder->fifo_to_proc, enc);
@@ -5552,6 +5641,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         *
          * If we got an fd for the display server from sesman, this
          * call will use it */
+        (void) xrdp_mm_create_encoder(self);
         if (mod->mod_connect(mod, self->sesman_display_fd) == 0)
         {
             rv = 0; /* connect success */

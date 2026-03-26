@@ -25,6 +25,7 @@
 #include "xrdp_encoder.h"
 #include "xrdp.h"
 #include "ms-rdpbcgr.h"
+#include "xup_client_info.h"
 #include "thread_calls.h"
 #include "fifo.h"
 #include "xrdp_egfx.h"
@@ -40,6 +41,10 @@
 
 #ifdef XRDP_OPENH264
 #include "xrdp_encoder_openh264.h"
+#endif
+
+#ifdef XRDP_FFMPEG
+#include "xrdp_encoder_ffmpeg.h"
 #endif
 
 #define DEFAULT_XRDP_GFX_FRAMES_IN_FLIGHT 2
@@ -98,12 +103,21 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 static int
 process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 #endif
-#if defined(XRDP_X264) || defined(XRDP_OPENH264)
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
 static int
 process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 #endif
 static int
 process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
+static int
+xrdp_encoder_process_item(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
+static void
+xrdp_encoder_dmabuf_surface_delete(struct xrdp_encoder_dmabuf_surface **surface);
+static void
+xrdp_encoder_clear_h264_handles(struct xrdp_encoder *self);
+static void *
+xrdp_encoder_ensure_h264_handle(struct xrdp_encoder *self, int mon_index,
+                                int use_array);
 
 /*****************************************************************************/
 /* Item destructor for self->fifo_to_proc */
@@ -111,14 +125,18 @@ static void
 xrdp_enc_data_destructor(void *item, void *closure)
 {
     XRDP_ENC_DATA *enc = (XRDP_ENC_DATA *)item;
-    if (ENC_IS_BIT_SET(enc->flags, ENC_FLAGS_GFX_BIT))
+    if (enc->type == XRDP_ENC_DATA_TYPE_GFX)
     {
         g_free(enc->u.gfx.cmd);
     }
-    else
+    else if (enc->type == XRDP_ENC_DATA_TYPE_SURFACE)
     {
         g_free(enc->u.sc.drects);
         g_free(enc->u.sc.crects);
+    }
+    if (enc->dmabuf_surface != NULL)
+    {
+        xrdp_encoder_dmabuf_surface_delete(&enc->dmabuf_surface);
     }
     g_free(enc);
 }
@@ -133,6 +151,60 @@ xrdp_enc_data_done_destructor(void *item, void *closure)
 }
 
 /*****************************************************************************/
+static void
+xrdp_encoder_dmabuf_surface_delete(struct xrdp_encoder_dmabuf_surface **surface)
+{
+    struct xrdp_encoder_dmabuf_surface *lsurface;
+
+    if (surface == NULL || *surface == NULL)
+    {
+        return;
+    }
+
+    lsurface = *surface;
+    if (lsurface->map != NULL)
+    {
+        g_munmap(lsurface->map, lsurface->size);
+    }
+    if (lsurface->fd >= 0)
+    {
+        g_file_close(lsurface->fd);
+    }
+    g_free(lsurface);
+    *surface = NULL;
+}
+
+/*-------------------------------------------------------------------------*/
+static void
+xrdp_encoder_clear_h264_handles(struct xrdp_encoder *self)
+{
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
+    int index;
+
+    if (self == NULL || self->xrdp_encoder_h264_delete == NULL)
+    {
+        return;
+    }
+
+    for (index = 0; index < 16; ++index)
+    {
+        if (self->codec_handle_h264_gfx[index] != NULL)
+        {
+            self->xrdp_encoder_h264_delete(self->codec_handle_h264_gfx[index]);
+            self->codec_handle_h264_gfx[index] = NULL;
+        }
+    }
+    if (self->codec_handle_h264 != NULL)
+    {
+        self->xrdp_encoder_h264_delete(self->codec_handle_h264);
+        self->codec_handle_h264 = NULL;
+    }
+#else
+    (void) self;
+#endif
+}
+
+/*****************************************************************************/
 /**
  * Sets the methods used by the software H.264 module
  */
@@ -140,37 +212,75 @@ static void
 set_h264_encoder_methods(struct xrdp_encoder *self)
 {
     const char *encoder_name = NULL;
-#if defined(XRDP_X264) && defined(XRDP_OPENH264)
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
     struct xrdp_tconfig_gfx gfxconfig;
     tconfig_load_gfx(GFX_CONF, &gfxconfig);
+#endif
 
+    self->h264_impl = XRDP_H264_IMPL_NONE;
+    self->xrdp_encoder_h264_create = NULL;
+    self->xrdp_encoder_h264_delete = NULL;
+    self->xrdp_encoder_h264_encode = NULL;
+    self->xrdp_encoder_h264_encode_dmabuf = NULL;
+    self->mm->wm->client_info->capture_transport_flags =
+        XUP_CAPTURE_TRANSPORT_NONE;
+
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
     switch (gfxconfig.h264_encoder)
     {
+#if defined(XRDP_FFMPEG)
+        case XTC_H264_FFMPEG:
+            encoder_name = "FFmpeg";
+            self->h264_impl = XRDP_H264_IMPL_FFMPEG;
+            self->xrdp_encoder_h264_create = xrdp_encoder_ffmpeg_create;
+            self->xrdp_encoder_h264_delete = xrdp_encoder_ffmpeg_delete;
+            self->xrdp_encoder_h264_encode = xrdp_encoder_ffmpeg_encode;
+            self->xrdp_encoder_h264_encode_dmabuf =
+                xrdp_encoder_ffmpeg_encode_dmabuf;
+            self->mm->wm->client_info->capture_transport_flags =
+                XUP_CAPTURE_TRANSPORT_DMABUF;
+            break;
+#endif
+#if defined(XRDP_OPENH264)
         case XTC_H264_OPENH264:
             encoder_name = "OpenH264";
+            self->h264_impl = XRDP_H264_IMPL_SOFTWARE;
             self->xrdp_encoder_h264_create = xrdp_encoder_openh264_create;
             self->xrdp_encoder_h264_delete = xrdp_encoder_openh264_delete;
             self->xrdp_encoder_h264_encode = xrdp_encoder_openh264_encode;
             break;
+#endif
+#if defined(XRDP_X264)
         case XTC_H264_X264:
         default:
-            /* x264 is the default H.264 software encoder */
             encoder_name = "x264";
+            self->h264_impl = XRDP_H264_IMPL_SOFTWARE;
             self->xrdp_encoder_h264_create = xrdp_encoder_x264_create;
             self->xrdp_encoder_h264_delete = xrdp_encoder_x264_delete;
             self->xrdp_encoder_h264_encode = xrdp_encoder_x264_encode;
             break;
-    }
 #elif defined(XRDP_OPENH264)
-    encoder_name = "OpenH264";
-    self->xrdp_encoder_h264_create = xrdp_encoder_openh264_create;
-    self->xrdp_encoder_h264_delete = xrdp_encoder_openh264_delete;
-    self->xrdp_encoder_h264_encode = xrdp_encoder_openh264_encode;
-#elif defined(XRDP_X264)
-    encoder_name = "x264";
-    self->xrdp_encoder_h264_create = xrdp_encoder_x264_create;
-    self->xrdp_encoder_h264_delete = xrdp_encoder_x264_delete;
-    self->xrdp_encoder_h264_encode = xrdp_encoder_x264_encode;
+        default:
+            encoder_name = "OpenH264";
+            self->h264_impl = XRDP_H264_IMPL_SOFTWARE;
+            self->xrdp_encoder_h264_create = xrdp_encoder_openh264_create;
+            self->xrdp_encoder_h264_delete = xrdp_encoder_openh264_delete;
+            self->xrdp_encoder_h264_encode = xrdp_encoder_openh264_encode;
+            break;
+#elif defined(XRDP_FFMPEG)
+        default:
+            encoder_name = "FFmpeg";
+            self->h264_impl = XRDP_H264_IMPL_FFMPEG;
+            self->xrdp_encoder_h264_create = xrdp_encoder_ffmpeg_create;
+            self->xrdp_encoder_h264_delete = xrdp_encoder_ffmpeg_delete;
+            self->xrdp_encoder_h264_encode = xrdp_encoder_ffmpeg_encode;
+            self->xrdp_encoder_h264_encode_dmabuf =
+                xrdp_encoder_ffmpeg_encode_dmabuf;
+            self->mm->wm->client_info->capture_transport_flags =
+                XUP_CAPTURE_TRANSPORT_DMABUF;
+            break;
+#endif
+    }
 #endif
 
     // Don't log the library we're going to use if we
@@ -178,7 +288,7 @@ set_h264_encoder_methods(struct xrdp_encoder *self)
     if (encoder_name != NULL && self->mm->libh264_loaded)
     {
         LOG(LOG_LEVEL_INFO, "xrdp_encoder_create: using %s for "
-            "software encoder", encoder_name);
+            "H.264 encoder", encoder_name);
     }
 }
 
@@ -225,7 +335,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         client_info->capture_format = XRDP_a8b8g8r8;
         self->process_enc = process_enc_jpg;
     }
-#if defined(XRDP_X264) || defined(XRDP_OPENH264)
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
     else if (mm->libh264_loaded && (mm->egfx_flags & XRDP_EGFX_H264) != 0)
     {
         LOG(LOG_LEVEL_INFO,
@@ -364,6 +474,21 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     self->frames_in_flight = MAX(self->frames_in_flight, 1);
 
     set_h264_encoder_methods(self);
+    if ((client_info->capture_code == CC_GFX_A2 ||
+            client_info->capture_code == CC_SUF_A2) &&
+            self->xrdp_encoder_h264_create == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_encoder_create: no H.264 encoder available");
+        g_delete_wait_obj(self->xrdp_encoder_event_to_proc);
+        g_delete_wait_obj(self->xrdp_encoder_event_processed);
+        g_delete_wait_obj(self->xrdp_encoder_term_request);
+        g_delete_wait_obj(self->xrdp_encoder_term_done);
+        fifo_delete(self->fifo_to_proc, NULL);
+        fifo_delete(self->fifo_processed, NULL);
+        tc_mutex_delete(self->mutex);
+        g_free(self);
+        return NULL;
+    }
 
     /* create thread to process messages */
     tc_thread_create(proc_enc_msg, self);
@@ -375,9 +500,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 void
 xrdp_encoder_delete(struct xrdp_encoder *self)
 {
-#if defined(XRDP_RFXCODEC) || defined(XRDP_X264) || defined(XRDP_OPENH264)
     int index;
-#endif
 
 
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_encoder_delete:");
@@ -411,18 +534,8 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     }
 #endif
 
-#if defined(XRDP_X264) || defined(XRDP_OPENH264)
-    for (index = 0; index < 16; index++)
-    {
-        if (self->codec_handle_h264_gfx[index] != NULL)
-        {
-            self->xrdp_encoder_h264_delete(self->codec_handle_h264_gfx[index]);
-        }
-    }
-    if (self->codec_handle_h264 != NULL)
-    {
-        self->xrdp_encoder_h264_delete(self->codec_handle_h264);
-    }
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
+    xrdp_encoder_clear_h264_handles(self);
 #endif
 
     /* destroy wait objects used for signalling */
@@ -686,7 +799,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 }
 #endif
 
-#if defined(XRDP_X264) || defined(XRDP_OPENH264)
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
 
 /*****************************************************************************/
 static int
@@ -742,11 +855,124 @@ out_RFX_AVC420_METABLOCK(struct xrdp_egfx_rect *dst_rect,
 }
 
 /*****************************************************************************/
+static void *
+xrdp_encoder_ensure_h264_handle(struct xrdp_encoder *self, int mon_index,
+                                int use_array)
+{
+    void **slot;
+
+    if (use_array)
+    {
+        if (mon_index < 0 || mon_index >= 16)
+        {
+            return NULL;
+        }
+        slot = &(self->codec_handle_h264_gfx[mon_index]);
+    }
+    else
+    {
+        slot = &(self->codec_handle_h264);
+    }
+
+    if (*slot == NULL)
+    {
+        *slot = self->xrdp_encoder_h264_create();
+    }
+    return *slot;
+}
+
+/*****************************************************************************/
 /* called from encoder thread */
 static int
 process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 {
-    LOG_DEVEL(LOG_LEVEL_INFO, "process_enc_h264: dummy func");
+    XRDP_ENC_DATA_DONE *enc_done;
+    char *out_data;
+    void *codec_handle;
+    int bitmap_data_length;
+    int mon_index;
+    int connection_type;
+    int use_dmabuf;
+    int use_array_handle;
+    int error;
+    int flags;
+
+    connection_type = self->mm->wm->client_info->mcs_connection_type;
+    mon_index = (enc->u.sc.flags >> 28) & 0xF;
+    use_dmabuf = (enc->u.sc.flags & XRDP_ENC_SOURCE_DMABUF) != 0;
+    use_array_handle = (self->h264_impl == XRDP_H264_IMPL_FFMPEG) ||
+                       use_dmabuf;
+    codec_handle = xrdp_encoder_ensure_h264_handle(self, mon_index,
+                                                   use_array_handle);
+    if (codec_handle == NULL)
+    {
+        return 1;
+    }
+
+    out_data = g_new(char, XRDP_SURCMD_PREFIX_BYTES +
+                     self->max_compressed_bytes);
+    if (out_data == NULL)
+    {
+        return 1;
+    }
+    bitmap_data_length = self->max_compressed_bytes;
+    flags = 0;
+
+    if (use_dmabuf)
+    {
+        struct xrdp_encoder_dmabuf_surface *surface;
+
+        surface = enc->dmabuf_surface;
+        if (surface == NULL || self->xrdp_encoder_h264_encode_dmabuf == NULL)
+        {
+            g_free(out_data);
+            return 1;
+        }
+        error = self->xrdp_encoder_h264_encode_dmabuf(
+                    codec_handle, surface,
+                    enc->u.sc.width, enc->u.sc.height,
+                    self->mm->wm->client_info->capture_format,
+                    enc->u.sc.crects, enc->u.sc.num_crects,
+                    connection_type,
+                    (enc->u.sc.flags & KEY_FRAME_REQUESTED) != 0,
+                    out_data + XRDP_SURCMD_PREFIX_BYTES,
+                    &bitmap_data_length, &flags);
+    }
+    else
+    {
+        error = self->xrdp_encoder_h264_encode(
+                    codec_handle, 0,
+                    enc->u.sc.left, enc->u.sc.top,
+                    enc->u.sc.width, enc->u.sc.height,
+                    enc->u.sc.width, enc->u.sc.height,
+                    self->mm->wm->client_info->capture_format,
+                    enc->u.sc.data,
+                    enc->u.sc.crects, enc->u.sc.num_crects,
+                    out_data + XRDP_SURCMD_PREFIX_BYTES,
+                    &bitmap_data_length,
+                    connection_type, &flags);
+    }
+
+    enc_done = g_new0(XRDP_ENC_DATA_DONE, 1);
+    if (enc_done == NULL)
+    {
+        g_free(out_data);
+        return 1;
+    }
+    enc_done->comp_bytes = (error == 0) ? bitmap_data_length : 0;
+    enc_done->pad_bytes = XRDP_SURCMD_PREFIX_BYTES;
+    enc_done->comp_pad_data = out_data;
+    enc_done->enc = enc;
+    enc_done->last = 1;
+    enc_done->x = enc->u.sc.left;
+    enc_done->y = enc->u.sc.top;
+    enc_done->cx = enc->u.sc.width;
+    enc_done->cy = enc->u.sc.height;
+    enc_done->frame_id = enc->u.sc.frame_id;
+    tc_mutex_lock(self->mutex);
+    fifo_add_item(self->fifo_processed, enc_done);
+    tc_mutex_unlock(self->mutex);
+    g_set_wait_obj(self->xrdp_encoder_event_processed);
     return 0;
 }
 #endif
@@ -791,7 +1017,7 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
                    struct xrdp_egfx_bulk *bulk, struct stream *in_s,
                    XRDP_ENC_DATA *enc)
 {
-#if defined(XRDP_X264) || defined(XRDP_OPENH264)
+#if defined(XRDP_X264) || defined(XRDP_OPENH264) || defined(XRDP_FFMPEG)
     int index;
     int surface_id;
     int codec_id;
@@ -940,7 +1166,45 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     g_free(c_rects);
     g_free(d_rects);
 
-    if (ENC_IS_BIT_SET(flags, 0))
+    if ((flags & XRDP_ENC_SOURCE_DMABUF) != 0)
+    {
+        struct xrdp_encoder_dmabuf_surface *surface;
+
+        surface = enc->dmabuf_surface;
+        bitmap_data_length = s_rem_out(s);
+        if (surface == NULL || self->xrdp_encoder_h264_encode_dmabuf == NULL)
+        {
+            g_free(s->data);
+            g_free(crects);
+            return NULL;
+        }
+        if (xrdp_encoder_ensure_h264_handle(self, mon_index, 1) == NULL)
+        {
+            g_free(s->data);
+            g_free(crects);
+            return NULL;
+        }
+        error = self->xrdp_encoder_h264_encode_dmabuf(
+                    self->codec_handle_h264_gfx[mon_index], surface,
+                    width, height,
+                    self->mm->wm->client_info->capture_format,
+                    crects, num_rects_c,
+                    connection_type,
+                    (flags & KEY_FRAME_REQUESTED) != 0,
+                    s->p, &bitmap_data_length,
+                    NULL);
+        if (error == 0)
+        {
+            xstream_seek(s, bitmap_data_length);
+        }
+        else
+        {
+            g_free(s->data);
+            g_free(crects);
+            return NULL;
+        }
+    }
+    else if (ENC_IS_BIT_SET(flags, 0))
     {
         /* already compressed */
         out_uint8a(s, enc_gfx_cmd->data, enc_gfx_cmd->data_bytes);
@@ -955,16 +1219,11 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
             return NULL;
         }
         bitmap_data_length = s_rem_out(s);
-        if (self->codec_handle_h264_gfx[mon_index] == NULL)
+        if (xrdp_encoder_ensure_h264_handle(self, mon_index, 1) == NULL)
         {
-            self->codec_handle_h264_gfx[mon_index] =
-                self->xrdp_encoder_h264_create();
-            if (self->codec_handle_h264_gfx[mon_index] == NULL)
-            {
-                g_free(s->data);
-                g_free(crects);
-                return NULL;
-            }
+            g_free(s->data);
+            g_free(crects);
+            return NULL;
         }
         error = self->xrdp_encoder_h264_encode(
                     self->codec_handle_h264_gfx[mon_index], 0,
@@ -1482,6 +1741,20 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     return 0;
 }
 
+/*****************************************************************************/
+static int
+xrdp_encoder_process_item(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
+{
+    switch (enc->type)
+    {
+        case XRDP_ENC_DATA_TYPE_GFX:
+            return process_enc_egfx(self, enc);
+        case XRDP_ENC_DATA_TYPE_SURFACE:
+        default:
+            return self->process_enc(self, enc);
+    }
+}
+
 /**
  * Encoder thread main loop
  *****************************************************************************/
@@ -1558,7 +1831,7 @@ proc_enc_msg(void *arg)
             while (enc != 0)
             {
                 /* do work */
-                self->process_enc(self, enc);
+                xrdp_encoder_process_item(self, enc);
                 /* get next msg */
                 tc_mutex_lock(mutex);
                 enc = (XRDP_ENC_DATA *) fifo_remove_item(fifo_to_proc);
