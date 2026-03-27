@@ -179,6 +179,11 @@ struct config_sessions
      * @brief Wait time to make sure a session has started.
      */
     unsigned int startup_wait_time;
+    /**
+     * @var screen_sleep_time_limit
+     * @brief Screen sleep time limit.
+     */
+    int screen_sleep_time_limit;
 };
 
 /**

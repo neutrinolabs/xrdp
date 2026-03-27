@@ -213,6 +213,13 @@ If set to \fI0\fR, idle sessions will never be disconnected by timeout.
 This works only with xorgxrdp sessions. Moreover, xorgxrdp must be v0.2.9 or later.
 
 .TP
+\fBScreenSleepTimeLimit\fR=\fI[number|off]\fR
+Sets the idle time limit (in seconds) before xorgxrdp pauses display updates.
+Use \fBoff\fR or \fI0\fR to disable this feature. Allowed numeric range is
+\fI0\fR to \fI86400\fR.
+Paused output resumes when user activity is detected.
+
+.TP
 \fBPolicy\fR=\fI[Default|Separate|{UBDI}]\fR
 Session allocation policy. Used to decide when to allocate a
 new session. Set to one of the following values:

@@ -111,6 +111,14 @@ DisconnectedTimeLimit=0
 ; Set to 0 to disable idle disconnection.
 IdleTimeLimit=0
 
+;; ScreenSleepTimeLimit (seconds) - stop screen updates for idle xorgxrdp
+; Type: integer or 'off'
+; Default: 0 (off)
+; Allowed values: off or 0..86400
+; When enabled, screen updates are paused after this many idle seconds and
+; resume on user activity.
+ScreenSleepTimeLimit=0
+
 ;; Policy - session allocation policy
 ;
 ;  Type: enum [ "Default" | "Separate" | Combination from {UBDI} ]

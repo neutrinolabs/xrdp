@@ -28,6 +28,9 @@
 #include <config_ac.h>
 #endif
 
+#include <errno.h>
+#include <limits.h>
+
 #include "arch.h"
 #include "sesman_config.h"
 #include "sesman_clip_restrict.h"
@@ -84,6 +87,8 @@
 #define SESMAN_CFG_SESS_X11DISPLAYOFFSET "X11DisplayOffset"
 #define SESMAN_CFG_SESS_MAX_DISPLAY  "MaxDisplayNumber"
 #define SESMAN_CFG_SESS_STARTUP_WAIT_TIME "StartupWaitTime"
+#define SESMAN_CFG_SESS_SCREEN_SLEEP_LIMIT "ScreenSleepTimeLimit"
+#define SESMAN_CFG_SESS_SCREEN_SLEEP_LIMIT_MAX (24 * 60 * 60)
 
 #define SESMAN_CFG_SESS_POLICY_S "Policy"
 #define SESMAN_CFG_SESS_POLICY_DFLT_S "Default"
@@ -138,6 +143,43 @@ parse_policy_string(const char *value)
     }
 
     return rv;
+}
+
+/***************************************************************************//**
+ * Parse ScreenSleepTimeLimit value in seconds.
+ */
+static int
+parse_screen_sleep_time_limit(const char *value, int *time_limit)
+{
+    char *endptr;
+    long parsed;
+
+    if (value == NULL || value[0] == '\0')
+    {
+        return 1;
+    }
+
+    if (0 == g_strcasecmp(value, "off"))
+    {
+        *time_limit = 0;
+        return 0;
+    }
+
+    errno = 0;
+    parsed = strtol(value, &endptr, 10);
+    if (errno != 0 || endptr == value || *endptr != '\0')
+    {
+        return 1;
+    }
+
+    if (parsed < 0 || parsed > SESMAN_CFG_SESS_SCREEN_SLEEP_LIMIT_MAX ||
+            parsed > INT_MAX)
+    {
+        return 1;
+    }
+
+    *time_limit = (int) parsed;
+    return 0;
 }
 
 /******************************************************************************/
@@ -444,6 +486,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     se->kill_disconnected = 0;
     se->policy = SESMAN_CFG_SESS_POLICY_DEFAULT;
     se->startup_wait_time = 1500;
+    se->screen_sleep_time_limit = 0;
 
     file_read_section(file, SESMAN_CFG_SESSIONS, param_n, param_v);
 
@@ -510,6 +553,19 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
             {
                 LOG(LOG_LEVEL_WARNING,
                     "Ignoring bad " SESMAN_CFG_SESS_STARTUP_WAIT_TIME " value");
+            }
+        }
+
+        else if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_SCREEN_SLEEP_LIMIT))
+        {
+            if (parse_screen_sleep_time_limit(value,
+                                              &se->screen_sleep_time_limit) != 0)
+            {
+                LOG(LOG_LEVEL_WARNING,
+                    "Ignoring bad " SESMAN_CFG_SESS_SCREEN_SLEEP_LIMIT
+                    " value '%s' (allowed: off or 0..%d seconds)",
+                    value,
+                    SESMAN_CFG_SESS_SCREEN_SLEEP_LIMIT_MAX);
             }
         }
     }
@@ -705,6 +761,8 @@ config_dump(struct config_sesman *config)
     g_writeln("    DisconnectedTimeLimit:    %d", se->max_disc_time);
     g_writeln("    Policy:                   %s", policy_s);
     g_writeln("    StartupWaitTime:          %u", se->startup_wait_time);
+    g_writeln("    ScreenSleepTimeLimit:     %d sec",
+              se->screen_sleep_time_limit);
 
     /* Security configuration */
     g_writeln("Security configuration:");

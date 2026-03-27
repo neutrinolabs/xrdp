@@ -394,6 +394,9 @@ prepare_xorg_xserver_params(const struct session_data *sd,
         g_snprintf(text, sizeof(text), "%d", g_cfg->sess.kill_disconnected);
         g_setenv_log("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
+        g_snprintf(text, sizeof(text), "%d", g_cfg->sess.screen_sleep_time_limit);
+        g_setenv_log("XRDP_SCREEN_SLEEP_TIME", text, 1);
+
         g_snprintf(text, sizeof(text), XRDP_X11RDP_BASE_STR, sd->display);
         g_setenv_log("XRDP_X11RDP_SOCKET", text, 1);
 
