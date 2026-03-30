@@ -73,6 +73,7 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
     self->mcs_layer = owner;
     self->trans = trans;
 
+#ifndef VMCONNECT_FORCE
     // See if we're running in vmconnect mode on this connection
     struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
     if (client_info->vmconnect && trans->mode != TRANS_MODE_VSOCK)
@@ -83,6 +84,7 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
             desc);
         client_info->vmconnect = 0;
     }
+#endif
     return self;
 }
 

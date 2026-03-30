@@ -42,6 +42,9 @@
 #include "xrdp_encoder_openh264.h"
 #endif
 
+/* On Linux 32, Windows 20. */
+#define MAX_USER_LENGTH 32
+
 /* Forward declarations */
 static int
 xrdp_mm_setup_mod1(struct xrdp_mm *self);
@@ -3197,6 +3200,106 @@ xrdp_mm_display_server_connect(struct xrdp_mm *self)
     return rv;
 }
 
+/*****************************************************************************/
+static int
+xrdp_mm_send_save_session_info(struct xrdp_mm *self)
+{
+    int rv = 0;
+    int bytes;
+    const char *username;
+    size_t username_len;
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 8192);
+
+    /* Get username */
+    if ((username = xrdp_mm_get_value(self, "username")) == NULL)
+    {
+        username = "???";
+        username_len = 3;
+    }
+    else
+    {
+        username_len = g_strlen(username);
+    }
+    /* Check for overflow */
+    if (username_len > MAX_USER_LENGTH)
+    {
+        rv = 1;
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR, "Username too big !");
+        goto cleanup;
+    }
+
+    /* [MS-RDPBCGR] sect 3.3.5.10.1 - Sending Save Session Info PDU */
+
+    /* "A logon notification of type INFOTYPE_LOGON or INFOTYPE_LOGON_LONG SHOULD
+     * be sent if the INFO_LOGONNOTIFY flag was set by the client
+     * in the Client Info PDU or if the username or domain used to log on to
+     * the session is different from what was sent in the Client Info PDU." */
+
+    if ((self->wm->client_info->rdp_logonnotify ||
+            g_strcmp(self->wm->client_info->username, username) != 0))
+    {
+        /* We should send a logon notification */
+        if (!self->wm->client_info->long_credentials_supported)
+        {
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                            "Sending Session Info 'INFOTYPE_LOGON'");
+            /* infoType */
+            out_uint32_le(s, INFOTYPE_LOGON);
+            /* [MS-RDPBCGR] sect 2.2.10.1.1.1 */
+            out_uint32_le(s, 2);                       /* cbDomain */
+            out_uint8s(s, 52);                         /* Domain (empty) */
+            out_uint32_le(s, username_len * 2 + 2);    /* cbUserName */
+            out_utf8_as_utf16_le(s, username,
+                                 username_len);        /* Username */
+            out_uint8s(s, 512 - 2 - username_len * 2); /* Delimiter + pad */
+            out_uint32_le(s, 0);  /* SessionId */
+        }
+        else
+        {
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                            "Sending Session Info 'INFOTYPE_LOGON_LONG'");
+            /* infoType */
+            out_uint32_le(s, INFOTYPE_LOGON_LONG);
+            /* [MS-RDPBCGR] sect 2.2.10.1.1.2 */
+            out_uint16_le(s, 0x0001);               /* Version */
+            out_uint32_le(s, 574);                  /* Size */
+            out_uint32_le(s, 0);                    /* SessionId */
+            out_uint32_le(s, 2);                    /* cbDomain */
+            out_uint32_le(s, username_len * 2 + 2); /* cbUserName */
+            out_uint8s(s, 558);                     /* Pad */
+            out_uint8s(s, 2);                       /* Domain (empty) */
+            out_utf8_as_utf16_le(s, username,
+                                 username_len * 2); /* Username */
+            out_uint8s(s, 2);                       /* Delimiter */
+        }
+    }
+    else
+    {
+        /* "A logon notification of type INFOTYPE_LOGON_PLAINNOTIFY SHOULD be sent whenever
+         * a notification of type INFOTYPE_LOGON or INFOTYPE_LOGON_LONG would not be sent." */
+
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                        "Sending Session Info 'INFOTYPE_LOGON_PLAINNOTIFY'");
+
+        /* infoType */
+        out_uint32_le(s, INFOTYPE_LOGON_PLAINNOTIFY);
+        /* [MS-RDPBCGR] sect 2.2.10.1.1.3 */
+        out_uint8s(s, 576); /* Pad */
+    }
+    s_mark_end(s);
+
+    /* send to client */
+    bytes = (int) (s->end - s->data);
+    self->mod->server_session_info(self->mod, s->data, bytes);
+
+cleanup:
+    free_stream(s);
+    return rv;
+}
+
 /**************************************************************************//**
  * Initialise and start the connect sequence
  *
@@ -3519,6 +3622,12 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                         xrdp_mm_chansrv_connect(self);
                     }
                 }
+            }
+            break;
+
+            case MMCS_SEND_SESSIONINFO:
+            {
+                status = xrdp_mm_send_save_session_info(self);
             }
             break;
 
