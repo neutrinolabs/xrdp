@@ -974,10 +974,12 @@ xrdp_egfx_data_first(intptr_t id, int chan_id, char *data, int bytes,
     egfx = process->wm->mm->egfx;
     if (egfx->s != NULL)
     {
-        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_data_first: Error!"
-            " Stream is not working on initial data received!");
+        LOG(LOG_LEVEL_ERROR, "DYNVC_DATA_FIRST PDU received while"
+            " another stream is active on channel %d", chan_id);
+        return 1;
     }
     make_stream(egfx->s);
+    // Caller has checked total_bytes is >= 0  and bytes is < total_bytes
     init_stream(egfx->s, total_bytes);
     out_uint8a(egfx->s, data, bytes);
     return 0;
@@ -1032,7 +1034,8 @@ xrdp_egfx_data(intptr_t id, int chan_id, char *data, int bytes)
     }
     if (!s_check_rem_out(egfx->s, bytes))
     {
-        LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_data: error");
+        LOG(LOG_LEVEL_ERROR, "DYNVC_DATA PDU data overflow on channel %d",
+            chan_id);
         return 1;
     }
     out_uint8a(egfx->s, data, bytes);
