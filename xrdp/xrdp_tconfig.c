@@ -48,6 +48,8 @@
 #define X264_DEFAULT_FPS_NUM 24
 #define X264_DEFAULT_FPS_DEN 1
 #define X264_DEFAULT_THREADS 1 /* not to exhaust CPU threads for 1 user */
+#define FFMPEG_DEFAULT_DRM_DEVICE "/dev/dri/renderD128"
+#define FFMPEG_DEFAULT_VULKAN_DEVICE ""
 
 const char *
 tconfig_codec_order_to_str(
@@ -368,6 +370,176 @@ tconfig_load_gfx_x264_ct(toml_table_t *tfile, const int connection_type,
     return 0;
 }
 
+static int
+tconfig_load_gfx_ffmpeg_ct(toml_table_t *tfile, const int connection_type,
+                           struct xrdp_tconfig_gfx_ffmpeg_param *param)
+{
+    toml_table_t *ffmpeg;
+    toml_table_t *ffmpeg_ct;
+    toml_datum_t datum;
+
+    TCLOG(LOG_LEVEL_TRACE, "[FFmpeg]");
+
+    if (connection_type > NUM_CONNECTION_TYPES)
+    {
+        TCLOG(LOG_LEVEL_ERROR, "[FFmpeg] Invalid connection type is given");
+        return 1;
+    }
+
+    ffmpeg = toml_table_in(tfile, "FFmpeg");
+    if (ffmpeg == NULL)
+    {
+        TCLOG(LOG_LEVEL_WARNING, "[FFmpeg] FFmpeg params are not defined");
+        return 1;
+    }
+
+    ffmpeg_ct = toml_table_in(ffmpeg,
+                              rdpbcgr_connection_type_names[connection_type]);
+    if (ffmpeg_ct == NULL)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "FFmpeg params for connection type [%s] is not defined",
+              rdpbcgr_connection_type_names[connection_type]);
+        return 1;
+    }
+
+    datum = toml_string_in(ffmpeg_ct, "preset");
+    if (datum.ok)
+    {
+        g_strncpy(param[connection_type].preset, datum.u.s,
+                  sizeof(param[connection_type].preset) - 1);
+        free(datum.u.s);
+        datum.u.s = NULL;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] preset is not set, adopting the default value \""
+              X264_DEFAULT_PRESET "\"",
+              rdpbcgr_connection_type_names[connection_type]);
+        g_strncpy(param[connection_type].preset, X264_DEFAULT_PRESET,
+                  sizeof(param[connection_type].preset) - 1);
+    }
+
+    datum = toml_string_in(ffmpeg_ct, "tune");
+    if (datum.ok)
+    {
+        g_strncpy(param[connection_type].tune, datum.u.s,
+                  sizeof(param[connection_type].tune) - 1);
+        free(datum.u.s);
+        datum.u.s = NULL;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] tune is not set, adopting the default value \""
+              X264_DEFAULT_TUNE "\"",
+              rdpbcgr_connection_type_names[connection_type]);
+        g_strncpy(param[connection_type].tune, X264_DEFAULT_TUNE,
+                  sizeof(param[connection_type].tune) - 1);
+    }
+
+    datum = toml_string_in(ffmpeg_ct, "profile");
+    if (datum.ok)
+    {
+        g_strncpy(param[connection_type].profile, datum.u.s,
+                  sizeof(param[connection_type].profile) - 1);
+        free(datum.u.s);
+        datum.u.s = NULL;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] profile is not set, adopting the default value \""
+              X264_DEFAULT_PROFILE "\"",
+              rdpbcgr_connection_type_names[connection_type]);
+        g_strncpy(param[connection_type].profile, X264_DEFAULT_PROFILE,
+                  sizeof(param[connection_type].profile) - 1);
+    }
+
+    datum = toml_int_in(ffmpeg_ct, "vbv_max_bitrate");
+    if (datum.ok)
+    {
+        param[connection_type].vbv_max_bitrate = datum.u.i;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] vbv_max_bitrate is not set, adopting the default value [0]",
+              rdpbcgr_connection_type_names[connection_type]);
+        param[connection_type].vbv_max_bitrate = 0;
+    }
+
+    datum = toml_int_in(ffmpeg_ct, "vbv_buffer_size");
+    if (datum.ok)
+    {
+        param[connection_type].vbv_buffer_size = datum.u.i;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] vbv_buffer_size is not set, adopting the default value [0]",
+              rdpbcgr_connection_type_names[connection_type]);
+        param[connection_type].vbv_buffer_size = 0;
+    }
+
+    datum = toml_int_in(ffmpeg_ct, "fps_num");
+    if (datum.ok)
+    {
+        param[connection_type].fps_num = datum.u.i;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] fps_num is not set, adopting the default value [%d]",
+              rdpbcgr_connection_type_names[connection_type],
+              X264_DEFAULT_FPS_NUM);
+        param[connection_type].fps_num = X264_DEFAULT_FPS_NUM;
+    }
+
+    datum = toml_int_in(ffmpeg_ct, "fps_den");
+    if (datum.ok)
+    {
+        param[connection_type].fps_den = datum.u.i;
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] fps_den is not set, adopting the default value [%d]",
+              rdpbcgr_connection_type_names[connection_type],
+              X264_DEFAULT_FPS_DEN);
+        param[connection_type].fps_den = X264_DEFAULT_FPS_DEN;
+    }
+
+    datum = toml_int_in(ffmpeg_ct, "threads");
+    if (datum.ok)
+    {
+        if (datum.u.i >= 0)
+        {
+            param[connection_type].threads = datum.u.i;
+        }
+        else
+        {
+            TCLOG(LOG_LEVEL_WARNING,
+                  "[FFmpeg.%s] an invalid value (< 0) is specified for threads, "
+                  "adopting the default value [%d]",
+                  rdpbcgr_connection_type_names[connection_type],
+                  X264_DEFAULT_THREADS);
+            param[connection_type].threads = X264_DEFAULT_THREADS;
+        }
+    }
+    else if (connection_type == 0)
+    {
+        TCLOG(LOG_LEVEL_WARNING,
+              "[FFmpeg.%s] threads is not set, adopting the default value [%d]",
+              rdpbcgr_connection_type_names[connection_type],
+              X264_DEFAULT_THREADS);
+        param[connection_type].threads = X264_DEFAULT_THREADS;
+    }
+
+    return 0;
+}
+
 static int tconfig_load_gfx_h264_encoder(toml_table_t *tfile, struct xrdp_tconfig_gfx *config)
 {
     TCLOG(LOG_LEVEL_TRACE, "[codec]");
@@ -393,6 +565,12 @@ static int tconfig_load_gfx_h264_encoder(toml_table_t *tfile, struct xrdp_tconfi
                 valid_encoder_found = 1;
                 config->h264_encoder = XTC_H264_OPENH264;
             }
+            if (g_strcasecmp(h264_encoder.u.s, "FFmpeg") == 0)
+            {
+                TCLOG(LOG_LEVEL_DEBUG, "[codec] h264_encoder = FFmpeg");
+                valid_encoder_found = 1;
+                config->h264_encoder = XTC_H264_FFMPEG;
+            }
 
             free(h264_encoder.u.s);
         }
@@ -408,6 +586,85 @@ static int tconfig_load_gfx_h264_encoder(toml_table_t *tfile, struct xrdp_tconfi
         return 1;
     }
 
+    return 0;
+}
+
+static int
+tconfig_load_gfx_ffmpeg_settings(toml_table_t *tfile,
+                                 struct xrdp_tconfig_gfx *config)
+{
+    toml_table_t *ffmpeg;
+    toml_datum_t datum;
+
+    config->ffmpeg.path = XTC_FFMPEG_PATH_SOFTWARE;
+    g_snprintf(config->ffmpeg.drm_device,
+               sizeof(config->ffmpeg.drm_device), "%s",
+               FFMPEG_DEFAULT_DRM_DEVICE);
+    g_snprintf(config->ffmpeg.vulkan_device,
+               sizeof(config->ffmpeg.vulkan_device), "%s",
+               FFMPEG_DEFAULT_VULKAN_DEVICE);
+
+    ffmpeg = toml_table_in(tfile, "FFmpeg");
+    if (ffmpeg == NULL)
+    {
+        TCLOG(LOG_LEVEL_DEBUG,
+              "[FFmpeg] using default path software, drm device %s, vulkan device \"%s\"",
+              config->ffmpeg.drm_device, config->ffmpeg.vulkan_device);
+        return 0;
+    }
+
+    datum = toml_string_in(ffmpeg, "path");
+    if (datum.ok)
+    {
+        if (g_strcasecmp(datum.u.s, "software") == 0)
+        {
+            config->ffmpeg.path = XTC_FFMPEG_PATH_SOFTWARE;
+        }
+        else if (g_strcasecmp(datum.u.s, "vaapi") == 0)
+        {
+            config->ffmpeg.path = XTC_FFMPEG_PATH_VAAPI;
+        }
+        else if (g_strcasecmp(datum.u.s, "vulkan") == 0)
+        {
+            config->ffmpeg.path = XTC_FFMPEG_PATH_VULKAN;
+        }
+        else
+        {
+            TCLOG(LOG_LEVEL_WARNING,
+                  "[FFmpeg] invalid path \"%s\", using default \"software\"",
+                  datum.u.s);
+        }
+        free(datum.u.s);
+    }
+
+    datum = toml_string_in(ffmpeg, "drm_device");
+    if (datum.ok)
+    {
+        if (datum.u.s != NULL && datum.u.s[0] != '\0')
+        {
+            g_snprintf(config->ffmpeg.drm_device,
+                       sizeof(config->ffmpeg.drm_device),
+                       "%s", datum.u.s);
+        }
+        free(datum.u.s);
+    }
+
+    datum = toml_string_in(ffmpeg, "vulkan_device");
+    if (datum.ok)
+    {
+        if (datum.u.s != NULL)
+        {
+            g_snprintf(config->ffmpeg.vulkan_device,
+                       sizeof(config->ffmpeg.vulkan_device),
+                       "%s", datum.u.s);
+        }
+        free(datum.u.s);
+    }
+
+    TCLOG(LOG_LEVEL_DEBUG,
+          "[FFmpeg] path = %d drm_device = %s vulkan_device = %s",
+          config->ffmpeg.path, config->ffmpeg.drm_device,
+          config->ffmpeg.vulkan_device);
     return 0;
 }
 
@@ -537,6 +794,8 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
     config->codec.codec_count = 1;
     config->codec.codecs[0] = XTC_RFX;
     memset(config->x264_param, 0, sizeof(config->x264_param));
+    memset(config->openh264_param, 0, sizeof(config->openh264_param));
+    memset(&config->ffmpeg, 0, sizeof(config->ffmpeg));
 
     if ((fp = fopen(filename, "r")) == NULL)
     {
@@ -559,6 +818,8 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
     tconfig_load_gfx_order(tfile, config);
     /* Load H.264 encoder */
     tconfig_load_gfx_h264_encoder(tfile, config);
+    /* Load FFmpeg config */
+    tconfig_load_gfx_ffmpeg_settings(tfile, config);
 
     /* H.264 configuration */
     if (codec_enabled(&config->codec, XTC_H264))
@@ -566,9 +827,12 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
         /* First of all, read the default params */
         int x264_loaded;
         int oh264_loaded;
+        int ffmpeg_loaded;
 
         x264_loaded = tconfig_load_gfx_x264_ct(tfile, 0, config->x264_param);
         oh264_loaded = tconfig_load_gfx_openh264_ct(tfile, 0, config->openh264_param);
+        ffmpeg_loaded = tconfig_load_gfx_ffmpeg_ct(tfile, 0,
+                                                   config->ffmpeg.param);
 
         if (x264_loaded == 0)
         {
@@ -594,6 +858,16 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
             }
         }
 
+        if (ffmpeg_loaded == 0)
+        {
+            for (int ct = CONNECTION_TYPE_MODEM; ct < NUM_CONNECTION_TYPES;
+                    ct++)
+            {
+                config->ffmpeg.param[ct] = config->ffmpeg.param[0];
+                tconfig_load_gfx_ffmpeg_ct(tfile, ct, config->ffmpeg.param);
+            }
+        }
+
         if (x264_loaded != 0 && config->h264_encoder == XTC_H264_X264)
         {
             /* We can't get x264 defaults. Disable H.264. */
@@ -611,9 +885,16 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
             disable_codec(&config->codec, XTC_H264);
             rv = 1;
         }
+
+        if (ffmpeg_loaded != 0 && config->h264_encoder == XTC_H264_FFMPEG)
+        {
+            TCLOG(LOG_LEVEL_WARNING, "FFmpeg is selected as H.264 encoder but "
+                  "cannot load default config for FFmpeg, disabling H.264");
+            disable_codec(&config->codec, XTC_H264);
+            rv = 1;
+        }
     }
     toml_free(tfile);
 
     return rv;
 }
-

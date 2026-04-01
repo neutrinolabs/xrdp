@@ -29,7 +29,9 @@ EXTRA_DIST = \
   gfx/gfx_codec_rfx_preferred_odd.toml \
   gfx/gfx_codec_rfx_preferred.toml \
   gfx/gfx_h264_encoder_invalid.toml \
+  gfx/gfx_h264_encoder_ffmpeg.toml \
   gfx/gfx_h264_encoder_openh264.toml \
+  gfx/gfx_h264_encoder_vaapi.toml \
   gfx/gfx_h264_encoder_undefined.toml \
   gfx/gfx_h264_encoder_x264.toml \
   gfx/gfx_missing_h264.toml
@@ -97,4 +99,11 @@ AM_CPPFLAGS += -DXRDP_X264 $(XRDP_OPENH264_CFLAGS)
 test_xrdp_LDADD += \
     $(top_builddir)/xrdp/xrdp_encoder_openh264.o \
     $(XRDP_OPENH264_LIBS)
+endif
+
+if XRDP_FFMPEG
+AM_CPPFLAGS += -DXRDP_FFMPEG $(XRDP_FFMPEG_CFLAGS)
+test_xrdp_LDADD += \
+    $(top_builddir)/xrdp/xrdp_encoder_ffmpeg.o \
+    $(XRDP_FFMPEG_LIBS)
 endif

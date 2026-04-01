@@ -106,7 +106,14 @@ enum xrdp_encoder_flags
     ENCODE_COMPLETE                        = 1 << 0,
     GFX_PROGRESSIVE_RFX                    = 1 << 1,
     GFX_H264                               = 1 << 2,
-    KEY_FRAME_REQUESTED                    = 1 << 3
+    KEY_FRAME_REQUESTED                    = 1 << 3,
+    XRDP_ENC_SOURCE_DMABUF                 = 1 << 4
+};
+
+enum xrdp_capture_transport_flags
+{
+    XUP_CAPTURE_TRANSPORT_NONE             = 0,
+    XUP_CAPTURE_TRANSPORT_DMABUF           = 1 << 0
 };
 
 /* Size definitions for some arrays in xrdp_client_info */
@@ -214,6 +221,7 @@ struct xrdp_client_info
 
     int max_fastpath_frag_bytes;
     int capture_format;
+    int capture_transport_flags;
 
     char certificate[1024];
     char key_file[1024];

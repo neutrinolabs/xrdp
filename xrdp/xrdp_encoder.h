@@ -13,6 +13,7 @@
     do { _flags &= ~(_mask); _flags |= (_bits) & (_mask); } while (0)
 
 struct xrdp_enc_data;
+struct xrdp_encoder_dmabuf_surface;
 
 typedef void *(*xrdp_encoder_h264_create_proc)(void);
 typedef int (*xrdp_encoder_h264_delete_proc)(void *handle);
@@ -23,6 +24,21 @@ typedef int (*xrdp_encoder_h264_encode_proc)(
     short *crects, int num_crects,
     char *cdata, int *cdata_bytes,
     int connection_type, int *flags_ptr);
+typedef int (*xrdp_encoder_h264_encode_dmabuf_proc)(
+    void *handle,
+    const struct xrdp_encoder_dmabuf_surface *surface,
+    int width, int height, int format,
+    short *crects, int num_crects,
+    int connection_type, int keyframe,
+    char *cdata, int *cdata_bytes,
+    int *flags_ptr);
+
+enum xrdp_h264_impl
+{
+    XRDP_H264_IMPL_NONE = 0,
+    XRDP_H264_IMPL_SOFTWARE,
+    XRDP_H264_IMPL_FFMPEG
+};
 
 /* for codec mode operations */
 struct xrdp_encoder
@@ -57,9 +73,23 @@ struct xrdp_encoder
     int quant_idx_u;
     int quant_idx_v;
     int pad0;
+    enum xrdp_h264_impl h264_impl;
     xrdp_encoder_h264_create_proc xrdp_encoder_h264_create;
     xrdp_encoder_h264_delete_proc xrdp_encoder_h264_delete;
     xrdp_encoder_h264_encode_proc xrdp_encoder_h264_encode;
+    xrdp_encoder_h264_encode_dmabuf_proc xrdp_encoder_h264_encode_dmabuf;
+};
+
+struct xrdp_encoder_dmabuf_surface
+{
+    int surface_id;
+    int width;
+    int height;
+    int stride;
+    unsigned int fourcc;
+    int size;
+    int fd;
+    void *map;
 };
 
 /* cmd_id = 0 */
@@ -113,14 +143,22 @@ struct xrdp_enc_data_done
 
 #define ENC_FLAGS_GFX_BIT   0
 
+enum xrdp_enc_data_type
+{
+    XRDP_ENC_DATA_TYPE_SURFACE = 0,
+    XRDP_ENC_DATA_TYPE_GFX
+};
+
 /* used when scheduling tasks in xrdp_encoder.c */
 struct xrdp_enc_data
 {
     struct xrdp_mod *mod;
+    int type; /* xrdp_enc_data_type */
     int flags; /* ENC_FLAGS_* */
     int pad0;
     void *shmem_ptr;
     int shmem_bytes;
+    struct xrdp_encoder_dmabuf_surface *dmabuf_surface;
     int pad1;
     union _u
     {

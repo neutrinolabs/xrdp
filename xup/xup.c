@@ -28,6 +28,7 @@
 #include "trans.h"
 #include "string_calls.h"
 #include "scancode.h"
+#include "../xrdp/xrdp_encoder.h"
 
 static int
 send_server_monitor_update(struct mod *v, struct stream *s,
@@ -45,11 +46,30 @@ send_server_version_message(struct mod *v, struct stream *s);
 static int
 lib_mod_process_message(struct mod *mod, struct stream *s);
 
+static void
+xup_dmabuf_surface_delete(struct xrdp_encoder_dmabuf_surface **surface);
+
 /******************************************************************************/
 static int
 lib_send_copy(struct mod *mod, struct stream *s)
 {
     return trans_write_copy_s(mod->trans, s);
+}
+
+/******************************************************************************/
+static void
+xup_dmabuf_surface_delete(struct xrdp_encoder_dmabuf_surface **surface)
+{
+    if (surface == NULL || *surface == NULL)
+    {
+        return;
+    }
+    if ((*surface)->fd >= 0)
+    {
+        g_file_close((*surface)->fd);
+    }
+    g_free(*surface);
+    *surface = NULL;
 }
 
 /******************************************************************************/
@@ -214,6 +234,7 @@ convert_xrdp_client_info_to_xup_client_info(
 
     dst->capture_code = src->capture_code;
     dst->capture_format = src->capture_format;
+    dst->capture_transport_flags = src->capture_transport_flags;
 
     memcpy(dst->model, src->model, CI_KBD_MODEL_SIZE);
     memcpy(dst->layout, src->layout, CI_KBD_LAYOUT_SIZE);
@@ -246,7 +267,7 @@ lib_send_client_info(struct mod *mod)
     make_stream(s);
     init_stream(s, (int)sizeof(xup_client_info) + 64);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 104);
+    out_uint16_le(s, XUP_MSG_CLIENT_INFO);
     g_memcpy(s->p, &xup_client_info, sizeof(xup_client_info));
     s->p += sizeof(xup_client_info);
     s_mark_end(s);
@@ -455,7 +476,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
                     16  0      65507  29     49152 */
                     init_stream(s, 8192);
                     s_push_layer(s, iso_hdr, 4);
-                    out_uint16_le(s, 103);
+                    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
                     out_uint32_le(s, 16); /* key up */
                     out_uint32_le(s, 0);
                     out_uint32_le(s, 65507); /* left control */
@@ -484,7 +505,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
 
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
     out_uint32_le(s, msg);
     out_uint32_le(s, param1);
     out_uint32_le(s, param2);
@@ -1141,7 +1162,7 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 105);
+    out_uint16_le(s, XUP_MSG_CLIENT_REGION);
     out_uint32_le(s, flags);
     out_uint32_le(s, frame_id);
     out_uint32_le(s, x);
@@ -1246,7 +1267,7 @@ send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 106);
+    out_uint16_le(s, XUP_MSG_CLIENT_REGION_EX);
     out_uint32_le(s, flags);
     out_uint32_le(s, frame_id);
     s_mark_end(s);
@@ -1270,7 +1291,7 @@ send_suppress_output(struct mod *mod, int suppress,
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 108);
+    out_uint16_le(s, XUP_MSG_CLIENT_SUPPRESS_OUTPUT);
     out_uint32_le(s, suppress);
     out_uint32_le(s, left);
     out_uint32_le(s, top);
@@ -1424,7 +1445,7 @@ process_server_egfx_shmfd(struct mod *amod, struct stream *s)
     in_uint32_le(s, shmem_bytes);
     if (shmem_bytes == 0)
     {
-        return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0);
+        return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0, NULL);
     }
     fd = -1;
     num_fds = -1;
@@ -1446,10 +1467,77 @@ process_server_egfx_shmfd(struct mod *amod, struct stream *s)
                    xrdp_mm_process_enc_done(gfx) */
                 data = (char *) shmem_ptr;
                 rv = amod->server_egfx_cmd(amod, cmd, cmd_bytes,
-                                           data, shmem_bytes);
+                                           data, shmem_bytes, NULL);
             }
             g_file_close(fd);
         }
+    }
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+process_server_egfx_dmabuf(struct mod *amod, struct stream *s)
+{
+    char *cmd;
+    int cmd_bytes;
+    int width;
+    int height;
+    int stride;
+    int size;
+    unsigned int fourcc;
+    int fd;
+    int recv_bytes;
+    unsigned int num_fds;
+    char msg[4];
+    int rv;
+    struct xrdp_encoder_dmabuf_surface *surface;
+
+    in_uint32_le(s, cmd_bytes);
+    in_uint8p(s, cmd, cmd_bytes);
+    in_uint32_le(s, width);
+    in_uint32_le(s, height);
+    in_uint32_le(s, stride);
+    in_uint32_le(s, fourcc);
+    in_uint32_le(s, size);
+
+    fd = -1;
+    num_fds = 0;
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        return 1;
+    }
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_egfx_dmabuf: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes != 4 || num_fds != 1)
+    {
+        if (fd >= 0)
+        {
+            g_file_close(fd);
+        }
+        return 1;
+    }
+
+    surface = g_new0(struct xrdp_encoder_dmabuf_surface, 1);
+    if (surface == NULL)
+    {
+        g_file_close(fd);
+        return 1;
+    }
+    surface->surface_id = -1;
+    surface->width = width;
+    surface->height = height;
+    surface->stride = stride;
+    surface->fourcc = fourcc;
+    surface->size = size;
+    surface->fd = fd;
+
+    rv = amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0, surface);
+    if (rv != 0)
+    {
+        xup_dmabuf_surface_delete(&surface);
     }
     return rv;
 }
@@ -1575,6 +1663,13 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     in_uint16_le(s, width);
     in_uint16_le(s, height);
 
+    if (shmem_bytes == 0)
+    {
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+
     if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
     {
         g_free(ldrects);
@@ -1600,10 +1695,128 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
                                                  num_crects, lcrects, bmpdata,
                                                  left, top, width, height,
                                                  flags, frame_id,
-                                                 shmem_ptr, shmem_bytes);
+                                                 shmem_ptr, shmem_bytes, NULL);
             }
             g_file_close(fd);
         }
+    }
+    g_free(ldrects);
+    g_free(lcrects);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+process_server_paint_rect_dmabuf(struct mod *amod, struct stream *s)
+{
+    int num_drects;
+    int num_crects;
+    int flags;
+    int frame_id;
+    int left;
+    int top;
+    int width;
+    int height;
+    int surface_width;
+    int surface_height;
+    int stride;
+    int size;
+    int index;
+    int rv;
+    int fd;
+    int recv_bytes;
+    int16_t *ldrects;
+    int16_t *ldrects1;
+    int16_t *lcrects;
+    int16_t *lcrects1;
+    unsigned int fourcc;
+    unsigned int num_fds;
+    char msg[4];
+    struct xrdp_encoder_dmabuf_surface *surface;
+
+    in_uint16_le(s, num_drects);
+    ldrects = g_new(int16_t, 2 * 4 * num_drects);
+    ldrects1 = ldrects;
+    for (index = 0; index < num_drects; index++)
+    {
+        in_sint16_le(s, ldrects1[0]);
+        in_sint16_le(s, ldrects1[1]);
+        in_sint16_le(s, ldrects1[2]);
+        in_sint16_le(s, ldrects1[3]);
+        ldrects1 += 4;
+    }
+
+    in_uint16_le(s, num_crects);
+    lcrects = g_new(int16_t, 2 * 4 * num_crects);
+    lcrects1 = lcrects;
+    for (index = 0; index < num_crects; index++)
+    {
+        in_sint16_le(s, lcrects1[0]);
+        in_sint16_le(s, lcrects1[1]);
+        in_sint16_le(s, lcrects1[2]);
+        in_sint16_le(s, lcrects1[3]);
+        lcrects1 += 4;
+    }
+
+    in_uint32_le(s, flags);
+    in_uint32_le(s, frame_id);
+    in_uint16_le(s, left);
+    in_uint16_le(s, top);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_uint32_le(s, surface_width);
+    in_uint32_le(s, surface_height);
+    in_uint32_le(s, stride);
+    in_uint32_le(s, fourcc);
+    in_uint32_le(s, size);
+
+    fd = -1;
+    num_fds = 0;
+    if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
+    {
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+    recv_bytes = g_sck_recv_fd_set(amod->trans->sck, msg, 4, &fd, 1, &num_fds);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "process_server_paint_rect_dmabuf: "
+              "g_sck_recv_fd_set rv %d fd %d", recv_bytes, fd);
+    if (recv_bytes != 4 || num_fds != 1)
+    {
+        if (fd >= 0)
+        {
+            g_file_close(fd);
+        }
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+
+    surface = g_new0(struct xrdp_encoder_dmabuf_surface, 1);
+    if (surface == NULL)
+    {
+        g_file_close(fd);
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
+    surface->surface_id = (flags >> 28) & 0xF;
+    surface->width = surface_width;
+    surface->height = surface_height;
+    surface->stride = stride;
+    surface->fourcc = fourcc;
+    surface->size = size;
+    surface->fd = fd;
+
+    rv = amod->server_paint_rects_ex(amod, num_drects, ldrects,
+                                     num_crects, lcrects, NULL,
+                                     left, top, width, height,
+                                     flags, frame_id,
+                                     NULL, 0, surface);
+    if (rv != 0)
+    {
+        xup_dmabuf_surface_delete(&surface);
     }
     g_free(ldrects);
     g_free(lcrects);
@@ -1646,12 +1859,12 @@ send_server_version_message(struct mod *mod, struct stream *s)
     /* send version message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
-    out_uint32_le(s, 301);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
+    out_uint32_le(s, XUP_CLIENT_DATA_VERSION);
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
-    out_uint32_le(s, 1);
+    out_uint32_le(s, XUP_PROTOCOL_VERSION);
     s_mark_end(s);
     int len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
@@ -1671,8 +1884,8 @@ send_server_monitor_update(struct mod *mod, struct stream *s,
     /* send monitor update message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
-    out_uint32_le(s, 302);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
+    out_uint32_le(s, XUP_CLIENT_DATA_MONITOR_UPDATE);
     out_uint32_le(s, width);
     out_uint32_le(s, height);
     out_uint32_le(s, num_monitors);
@@ -1697,8 +1910,8 @@ send_server_monitor_full_invalidate(
     /* send invalidate message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
-    out_uint16_le(s, 103);
-    out_uint32_le(s, 200);
+    out_uint16_le(s, XUP_MSG_CLIENT_DATA);
+    out_uint32_le(s, XUP_CLIENT_DATA_INVALIDATE);
     /* x and y */
     int i = 0;
     out_uint32_le(s, i);
@@ -1774,110 +1987,116 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     rv = 0;
     switch (type)
     {
-        case 1: /* server_begin_update */
+        case XUP_ORDER_BEGIN_UPDATE:
             rv = mod->server_begin_update(mod);
             break;
-        case 2: /* server_end_update */
+        case XUP_ORDER_END_UPDATE:
             rv = mod->server_end_update(mod);
             break;
-        case 3: /* server_fill_rect */
+        case XUP_ORDER_FILL_RECT:
             rv = process_server_fill_rect(mod, s);
             break;
-        case 4: /* server_screen_blt */
+        case XUP_ORDER_SCREEN_BLT:
             rv = process_server_screen_blt(mod, s);
             break;
-        case 5: /* server_paint_rect */
+        case XUP_ORDER_PAINT_RECT:
             rv = process_server_paint_rect(mod, s);
             break;
-        case 10: /* server_set_clip */
+        case XUP_ORDER_SET_CLIP:
             rv = process_server_set_clip(mod, s);
             break;
-        case 11: /* server_reset_clip */
+        case XUP_ORDER_RESET_CLIP:
             rv = process_server_reset_clip(mod, s);
             break;
-        case 12: /* server_set_fgcolor */
+        case XUP_ORDER_SET_FGCOLOR:
             rv = process_server_set_fgcolor(mod, s);
             break;
-        case 13: /* server_set_bgcolor */
+        case XUP_ORDER_SET_BGCOLOR:
             rv = process_server_set_bgcolor(mod, s);
             break;
-        case 14: /* server_set_opcode */
+        case XUP_ORDER_SET_OPCODE:
             rv =  process_server_set_opcode(mod, s);
             break;
-        case 17: /* server_set_pen */
+        case XUP_ORDER_SET_PEN:
             rv = process_server_set_pen(mod, s);
             break;
-        case 18: /* server_draw_line */
+        case XUP_ORDER_DRAW_LINE:
             rv = process_server_draw_line(mod, s);
             break;
-        case 19: /* server_set_cursor */
+        case XUP_ORDER_SET_CURSOR:
             rv = process_server_set_cursor(mod, s);
             break;
-        case 20: /* server_create_os_surface */
+        case XUP_ORDER_CREATE_OS_SURFACE:
             rv = process_server_create_os_surface(mod, s);
             break;
-        case 21: /* server_switch_os_surface */
+        case XUP_ORDER_SWITCH_OS_SURFACE:
             rv = process_server_switch_os_surface(mod, s);
             break;
-        case 22: /* server_delete_os_surface */
+        case XUP_ORDER_DELETE_OS_SURFACE:
             rv = process_server_delete_os_surface(mod, s);
             break;
-        case 23: /* server_paint_rect_os */
+        case XUP_ORDER_PAINT_RECT_OS:
             rv = process_server_paint_rect_os(mod, s);
             break;
-        case 24: /* server_set_hints */
+        case XUP_ORDER_SET_HINTS:
             rv = process_server_set_hints(mod, s);
             break;
-        case 25: /* server_window_new_update */
+        case XUP_ORDER_WINDOW_NEW_UPDATE:
             rv = process_server_window_new_update(mod, s);
             break;
-        case 26: /* server_window_delete */
+        case XUP_ORDER_WINDOW_DELETE:
             rv = process_server_window_delete(mod, s);
             break;
-        case 27: /* server_window_new_update - show */
+        case XUP_ORDER_WINDOW_SHOW:
             rv = process_server_window_show(mod, s);
             break;
-        case 28: /* server_add_char */
+        case XUP_ORDER_ADD_CHAR:
             rv = process_server_add_char(mod, s);
             break;
-        case 29: /* server_add_char_alpha */
+        case XUP_ORDER_ADD_CHAR_ALPHA:
             rv = process_server_add_char_alpha(mod, s);
             break;
-        case 30: /* server_draw_text */
+        case XUP_ORDER_DRAW_TEXT:
             rv = process_server_draw_text(mod, s);
             break;
-        case 31: /* server_create_os_surface_bpp */
+        case XUP_ORDER_CREATE_OS_SURFACE_BPP:
             rv = process_server_create_os_surface_bpp(mod, s);
             break;
-        case 32: /* server_paint_rect_bpp */
+        case XUP_ORDER_PAINT_RECT_BPP:
             rv = process_server_paint_rect_bpp(mod, s);
             break;
-        case 33: /* server_composite */
+        case XUP_ORDER_COMPOSITE:
             rv = process_server_composite(mod, s);
             break;
-        case 51: /* server_set_pointer_ex */
+        case XUP_ORDER_SET_CURSOR_EX:
             rv = process_server_set_pointer_ex(mod, s);
             break;
-        case 60: /* server_paint_rect_shmem */
+        case XUP_ORDER_PAINT_RECT_SHMEM:
             rv = process_server_paint_rect_shmem(mod, s);
             break;
-        case 61: /* server_paint_rect_shmem_ex */
+        case XUP_ORDER_PAINT_RECT_SHMEM_EX:
             rv = process_server_paint_rect_shmem_ex(mod, s);
             break;
-        case 62:
+        case XUP_ORDER_EGFX_SHMFD:
             rv = process_server_egfx_shmfd(mod, s);
             break;
-        case 63: /* server_set_pointer_shmfd */
+        case XUP_ORDER_SET_POINTER_SHMFD:
             rv = process_server_set_pointer_shmfd(mod, s);
             break;
-        case 64: /* server_paint_rect_shmfd */
+        case XUP_ORDER_PAINT_RECT_SHMFD:
             rv = process_server_paint_rect_shmfd(mod, s);
             break;
-        case 65: /* server_set_pointer_system */
+        case XUP_ORDER_PAINT_RECT_DMABUF:
+            rv = process_server_paint_rect_dmabuf(mod, s);
+            break;
+        case XUP_ORDER_SET_POINTER_SYSTEM:
             rv = process_server_set_pointer_system(mod, s);
             break;
-        case 66: /* server_set_pointer_position */
+        case XUP_ORDER_SET_POINTER_POSITION:
             rv = process_server_set_pointer_position(mod, s);
+            break;
+        case XUP_ORDER_EGFX_DMABUF:
+            rv = process_server_egfx_dmabuf(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,
@@ -1911,7 +2130,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "lib_mod_process_message: type %d", type);
 
     rv = 0;
-    if (type == 1) /* original order list */
+    if (type == XUP_MSG_ORDER_LIST_LEGACY)
     {
         for (index = 0; index < num_orders; ++index)
         {
@@ -1924,11 +2143,11 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             }
         }
     }
-    else if (type == 2) /* caps */
+    else if (type == XUP_MSG_CAPS)
     {
         mod->caps_processing_status = E_CAPS_OK;   /* Assume all OK */
         LOG_DEVEL(LOG_LEVEL_TRACE,
-                  "lib_mod_process_message: type 2 len %d", len);
+                  "lib_mod_process_message: caps len %d", len);
         for (index = 0; index < num_orders; index++)
         {
             phold = s->p;
@@ -1937,7 +2156,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
 
             switch (type)
             {
-                case 100:
+                case XUP_CAPS_VERSION:
                     in_uint32_le(s, version);
                     if (version != XUP_CLIENT_INFO_CURRENT_VERSION)
                     {
@@ -1961,10 +2180,10 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             s->p = phold + len;
         }
     }
-    else if (type == 3) /* order list with len after type */
+    else if (type == XUP_MSG_ORDER_LIST)
     {
         LOG_DEVEL(LOG_LEVEL_INFO,
-                  "lib_mod_process_message: type 3 len %d", len);
+                  "lib_mod_process_message: order list len %d", len);
         for (index = 0; index < num_orders; index++)
         {
             phold = s->p;
@@ -1980,10 +2199,10 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             s->p = phold + len;
         }
     }
-    else if (type == 100) // metadata commands.
+    else if (type == XUP_MSG_METADATA)
     {
         LOG_DEVEL(LOG_LEVEL_INFO,
-                  "lib_mod_process_message: type 100 len %d", len);
+                  "lib_mod_process_message: metadata len %d", len);
         for (index = 0; index < num_orders; ++index)
         {
             phold = s->p;
@@ -1991,7 +2210,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
             in_uint16_le(s, len);
             switch (type)
             {
-                case 3: // memory allocation complete
+                case XUP_METADATA_MEMORY_ALLOCATION_COMPLETE:
                     in_uint16_le(s, width);
                     in_uint16_le(s, height);
                     LOG(LOG_LEVEL_INFO, "Received memory_allocation_complete"

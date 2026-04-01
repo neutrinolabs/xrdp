@@ -42,10 +42,11 @@ enum caps_processing_status
 #include "xrdp_constants.h"
 #include "xrdp_rail.h"
 
-#define CURRENT_MOD_VER 4
+#define CURRENT_MOD_VER 6
 
 struct source_info;
 struct xrdp_client_info;
+struct xrdp_encoder_dmabuf_surface;
 
 struct mod
 {
@@ -186,10 +187,12 @@ struct mod
                                  char *data, int left, int top,
                                  int width, int height,
                                  int flags, int frame_id,
-                                 void *shmem_ptr, int shmem_bytes);
+                                 void *shmem_ptr, int shmem_bytes,
+                                 struct xrdp_encoder_dmabuf_surface *dmabuf_surface);
     int (*server_egfx_cmd)(struct mod *v,
                            char *cmd, int cmd_bytes,
-                           char *data, int data_bytes);
+                           char *data, int data_bytes,
+                           struct xrdp_encoder_dmabuf_surface *dmabuf_surface);
     int (*server_set_pointer_system)(struct mod *v, int pointer_type);
     int (*server_set_pointer_position)(struct mod *v, int x, int y);
     tintptr server_dumby[100 - 53]; /* align, 100 minus the number of server
