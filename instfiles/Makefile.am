@@ -109,4 +109,4 @@ if FREEBSD
 		$(DESTDIR)$(sysconfdir)/rc.d/xrdp-sesman
 endif
 	(cd $(DESTDIR)${startscriptdir} && \
-		$(LN_S) km-00010426.ini km-00020426.ini)
+		$(LN_S) -f km-00010426.ini km-00020426.ini)
