@@ -468,6 +468,15 @@ drdynvc_process_data_first(struct xrdp_channel *self,
               "ChannelId %d, Length %d, Data (omitted from the log)",
               chan_id, total_bytes);
 
+    // See [MS-RDPBCGR] 2.2.3
+    if (total_bytes < 1590 || bytes > total_bytes)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "Badly formed DYNVC_DATA_FIRST PDU received on dynamic channel %d",
+            chan_id);
+        return 1;
+    }
+
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
@@ -513,7 +522,7 @@ drdynvc_process_data(struct xrdp_channel *self,
     session = self->sec_layer->rdp_layer->session;
     if (chan_id > 255)
     {
-        LOG(LOG_LEVEL_ERROR, "Received message for an invalid "
+        LOG(LOG_LEVEL_ERROR, "Received DYNVC_DATA PDU for an invalid "
             "channel id. channel id %d", chan_id);
         return 1;
     }
