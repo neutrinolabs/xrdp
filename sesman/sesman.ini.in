@@ -37,8 +37,8 @@ RestrictOutboundClipboard=none
 ;   false: an alias of none
 ;   yes: an alias of all
 RestrictInboundClipboard=none
-; Set to 'no' to prevent users from logging in with alternate shells
-#AllowAlternateShell=true
+; Set to 'yes' to allow users to log in with alternate shells
+#AllowAlternateShell=no
 ; Normally, alternate shells (if permitted) are executed directly, as
 ; specified.
 ; If this is set, alternate shells are not actioned directly, but
