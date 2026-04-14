@@ -481,7 +481,6 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             size = (int)param2;
             data = (char *)param3;
             total_size = (int)param4;
-
             LOG_DEVEL(LOG_LEVEL_DEBUG, "lxrdp_event: client to server ,chanid= %d  flags= %d", chanid, flags);
 
             if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
@@ -490,40 +489,124 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
                 break;
             }
 
+            if (size < 0 || total_size < 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Bad WM_CHANNEL_DATA received");
+                g_free(mod->chan_buf);
+                mod->chan_buf = NULL;
+                mod->chan_buf_bytes = 0;
+                mod->chan_buf_valid = 0;
+                break;
+            }
+
             lchid = mod->inst->settings->channels[chanid].channel_id;
 
             switch (flags & 3)
             {
                 case 3:
-                    mod->inst->SendChannelData(mod->inst, lchid, (tui8 *)data, total_size);
+                    if (mod->chan_buf != NULL)
+                    {
+                        // This shouldn't happen. Lose the fragments we have
+                        LOG(LOG_LEVEL_WARNING,
+                            "WM_CHANNEL_DATA - unexpected full chunk received");
+                        g_free(mod->chan_buf);
+                        mod->chan_buf = NULL;
+                        mod->chan_buf_bytes = 0;
+                        mod->chan_buf_valid = 0;
+                    }
+                    if (size != total_size)
+                    {
+                        LOG(LOG_LEVEL_ERROR,
+                            "WM_CHANNEL_DATA - inconsistent full chunk size");
+                    }
+                    else
+                    {
+                        mod->inst->SendChannelData(mod->inst, lchid, (tui8 *)data, total_size);
+                    }
                     break;
 
                 case 2:
                     /* end */
-                    g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
-                    mod->chan_buf_valid += size;
-                    mod->inst->SendChannelData(mod->inst, lchid, (tui8 *)(mod->chan_buf),
-                                               total_size);
+                    if (size != (mod->chan_buf_bytes - mod->chan_buf_valid))
+                    {
+                        LOG(LOG_LEVEL_ERROR,
+                            "WM_CHANNEL_DATA - bad end fragment size."
+                            " Was %d s/b %d",
+                            size, mod->chan_buf_bytes - mod->chan_buf_valid);
+                    }
+                    else
+                    {
+                        g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
+                        mod->chan_buf_valid += size;
+                        mod->inst->SendChannelData(mod->inst, lchid, (tui8 *)(mod->chan_buf),
+                                                   total_size);
+                    }
                     g_free(mod->chan_buf);
-                    mod->chan_buf = 0;
+                    mod->chan_buf = NULL;
                     mod->chan_buf_bytes = 0;
                     mod->chan_buf_valid = 0;
                     break;
 
                 case 1:
                     /* start */
+                    if (mod->chan_buf != NULL)
+                    {
+                        // This shouldn't happen
+                        LOG(LOG_LEVEL_WARNING,
+                            "WM_CHANNEL_DATA - unexpected start chunk received");
+                    }
                     g_free(mod->chan_buf);
-                    mod->chan_buf = (char *)g_malloc(total_size, 0);
-                    mod->chan_buf_bytes = total_size;
+                    mod->chan_buf = NULL;
+                    mod->chan_buf_bytes = 0;
                     mod->chan_buf_valid = 0;
-                    g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
-                    mod->chan_buf_valid += size;
+                    if (size > total_size)
+                    {
+                        LOG(LOG_LEVEL_ERROR,
+                            "WM_CHANNEL_DATA - bad start fragment size");
+                    }
+                    else
+                    {
+                        if (total_size == 0)
+                        {
+                            // Nothing in the specification disallows this,
+                            // but it seems pathological
+                            mod->chan_buf = (char *)g_malloc(1, 0);
+                        }
+                        else
+                        {
+                            mod->chan_buf = (char *)g_malloc(total_size, 0);
+                        }
+                        if (mod->chan_buf == NULL)
+                        {
+                            LOG(LOG_LEVEL_ERROR,
+                                "WM_CHANNEL_DATA - can't allocate %d bytes",
+                                total_size);
+                        }
+                        else
+                        {
+                            mod->chan_buf_bytes = total_size;
+                            g_memcpy(mod->chan_buf, data, size);
+                            mod->chan_buf_valid += size;
+                        }
+                    }
                     break;
 
                 default:
                     /* middle */
-                    g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
-                    mod->chan_buf_valid += size;
+                    if (size > (mod->chan_buf_bytes - mod->chan_buf_valid))
+                    {
+                        LOG(LOG_LEVEL_ERROR,
+                            "WM_CHANNEL_DATA - oversized middle fragment");
+                        g_free(mod->chan_buf);
+                        mod->chan_buf = NULL;
+                        mod->chan_buf_bytes = 0;
+                        mod->chan_buf_valid = 0;
+                    }
+                    else
+                    {
+                        g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
+                        mod->chan_buf_valid += size;
+                    }
                     break;
             }
 
