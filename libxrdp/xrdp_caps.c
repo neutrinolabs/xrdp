@@ -578,25 +578,26 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     {
         codec_guid = s->p;
 
-        g_memcpy(guid.g, s->p, GUID_SIZE);
-        guid_to_str(&guid, codec_guid_str);
-
-        if (len < 16 + 1 + 2)
+        if (len < GUID_SIZE + 1 + 2)
         {
-            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_codecs: error");
+            LOG(LOG_LEVEL_ERROR, "Short codec data received");
             return 1;
         }
-        in_uint8s(s, 16);
+
+        in_uint8a(s, guid.g, GUID_SIZE);
         in_uint8(s, codec_id);
         in_uint16_le(s, codec_properties_length);
-        len -= 16 + 1 + 2;
+        len -= GUID_SIZE + 1 + 2;
+
         if (len < codec_properties_length)
         {
-            LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_codecs: error");
+            LOG(LOG_LEVEL_ERROR, "Short codec properties");
             return 1;
         }
         len -= codec_properties_length;
         next_guid = s->p + codec_properties_length;
+
+        guid_to_str(&guid, codec_guid_str);
 
         if (g_memcmp(codec_guid, XR_CODEC_GUID_NSCODEC, 16) == 0)
         {
