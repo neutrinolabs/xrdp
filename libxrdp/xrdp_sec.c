@@ -22,6 +22,8 @@
 #include <config_ac.h>
 #endif
 
+#include <inttypes.h>
+
 #include "libxrdp.h"
 #include "ms-rdpbcgr.h"
 #include "log.h"
@@ -1106,6 +1108,140 @@ xrdp_sec_hash_48(char *out, char *in, char *salt1, char *salt2, int salt)
 }
 
 /*****************************************************************************/
+/* Output a uint32 into a buffer (little-endian) */
+static void
+buf_out_uint32(char *buffer, int value)
+{
+    buffer[0] = (value) & 0xff;
+    buffer[1] = (value >> 8) & 0xff;
+    buffer[2] = (value >> 16) & 0xff;
+    buffer[3] = (value >> 24) & 0xff;
+}
+
+/*****************************************************************************/
+/* Generate a MAC hash (5.2.3.1), using SHA1 for outgoing data */
+static void
+xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
+                   char *data, int data_len)
+{
+    char buf[20];
+    char lenhdr[4];
+
+    buf_out_uint32(lenhdr, self->encrypt_use_count);
+    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
+    ssl_hmac_transform(self->sign_fips_info, data, data_len);
+    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
+    ssl_hmac_complete(self->sign_fips_info, buf, 20);
+    g_memcpy(out, buf, out_len);
+}
+
+/*****************************************************************************/
+/* Check a FIPS hash is valid
+ *
+ * Result is boolean (i.e. != 0 is OK)
+ * */
+static int
+xrdp_sec_fips_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
+                        char *data, int data_len)
+{
+    char buf[20];
+    char lenhdr[4];
+
+    // Account for the decrypt operation which has just happened when
+    // creating the HMAC
+    buf_out_uint32(lenhdr, self->decrypt_use_count - 1);
+    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
+    ssl_hmac_transform(self->sign_fips_info, data, data_len);
+    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
+    ssl_hmac_complete(self->sign_fips_info, buf, 20);
+
+    return memcmp(buf, sig, sig_len) == 0;
+}
+
+/*****************************************************************************/
+/* Generate a MAC hash (5.3.6.1), using a combination of SHA1 and MD5
+ *
+ * Salted MAC is not currently supported */
+static void
+xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
+              char *data, int data_len)
+{
+    char shasig[20];
+    char md5sig[16];
+    char lenhdr[4];
+    void *sha1_info;
+    void *md5_info;
+
+    buf_out_uint32(lenhdr, data_len);
+    sha1_info = ssl_sha1_info_create();
+    md5_info = ssl_md5_info_create();
+    ssl_sha1_clear(sha1_info);
+    ssl_sha1_transform(sha1_info, self->sign_key, self->rc4_key_len);
+    ssl_sha1_transform(sha1_info, (char *)g_pad_54, 40);
+    ssl_sha1_transform(sha1_info, lenhdr, 4);
+    ssl_sha1_transform(sha1_info, data, data_len);
+    ssl_sha1_complete(sha1_info, shasig);
+    ssl_md5_clear(md5_info);
+    ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
+    ssl_md5_transform(md5_info, (char *)g_pad_92, 48);
+    ssl_md5_transform(md5_info, shasig, 20);
+    ssl_md5_complete(md5_info, md5sig);
+    g_memcpy(out, md5sig, out_len);
+    ssl_sha1_info_delete(sha1_info);
+    ssl_md5_info_delete(md5_info);
+}
+
+/*****************************************************************************/
+/* Check a non-FIPS hash is valid
+ *
+ * Salted MAC is not currently supported
+ *
+ * Result is boolean (i.e. != 0 is OK) */
+static int
+xrdp_sec_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
+                   char *data, int data_len)
+{
+    char computed[8];
+    int rv = 0;
+    if (sig_len > (int)sizeof(computed))
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "xrdp_sec_check_sig() Buffer overflow (got %d expected %d)",
+            sig_len, (int)sizeof(computed));
+    }
+    else
+    {
+        xrdp_sec_sign(self, computed, sig_len, data, data_len);
+        rv = (memcmp(computed, sig, sig_len) == 0);
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+/* Function to return a 64-bit int from an 64 bit signature */
+static uint64_t
+sig64_to_uint64(const char sig[], int sig_len)
+{
+    uint64_t rv;
+    const unsigned char *usig = (const unsigned char *)sig;
+    if (sig_len == 8)
+    {
+        rv =
+            ((uint64_t)usig[0] << 0) | ((uint64_t)usig[1] << 8) |
+            ((uint64_t)usig[2] << 16) | ((uint64_t)usig[3] << 24) |
+            ((uint64_t)usig[4] << 32) | ((uint64_t)usig[5] << 40) |
+            ((uint64_t)usig[6] << 48) | ((uint64_t)usig[7] << 56);
+    }
+    else
+    {
+        rv = (uint64_t) -1;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 static void
 xrdp_sec_hash_16(char *out, char *in, char *salt1, char *salt2)
 {
@@ -1257,6 +1393,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     int ver;
     int len;
     int pad;
+    const char *data_signature;
 
 #ifndef USE_DEVEL_LOGGING
     /* TODO: remove UNUSED_VAR once the `ver` variable is used for more than
@@ -1292,11 +1429,15 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
             }
 
             /* remainder of TS_FP_INPUT_PDU */
-            in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
-            LOG_DEVEL(LOG_LEVEL_TRACE, "CRYPT_LEVEL_FIPS - data len %d",
-                      (int)(s->end - s->p));
+            in_uint8p(s, data_signature, 8);
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
+            if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
+                                         s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for FP-FIPS PDU");
+                return 1;
+            }
         }
         else
         {
@@ -1306,8 +1447,14 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
                 return 1;
             }
             /* remainder of TS_FP_INPUT_PDU */
-            in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
+            in_uint8p(s, data_signature, 8);
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+            if (!xrdp_sec_check_sig(self, data_signature, 8,
+                                    s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for FP-non-FIPS PDU");
+                return 1;
+            }
         }
     }
 
@@ -1328,9 +1475,11 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
               "fpInputHeader.action (ignored), "
               "fpInputHeader.numEvents (see final numEvents), "
               "fpInputHeader.flags %d, length1 (ToDo), length2 (ToDo), "
-              "fipsInformation %s, dataSignature (ignored), numEvents %d",
+              "fipsInformation %s, dataSignature 0x%8.8" PRIx64
+              ", numEvents %d",
               self->fastpath_layer->secFlags,
               (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) ? "(see above)" : "(not present)",
+              sig64_to_uint64(data_signature, 8),
               self->fastpath_layer->numEvents);
 
     return 0;
@@ -1344,7 +1493,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     int len;
     int ver;
     int pad;
-
+    const char *data_signature;
 
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
@@ -1388,10 +1537,12 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             in_uint16_le(s, len); /* length */
             in_uint8(s, ver); /* version */
             in_uint8(s, pad); /* padlen */
-            in_uint8s(s, 8); /* signature(8) */
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
-                      "length %d, version %d, padlen %d, dataSignature (ignored)",
-                      len, ver, pad);
+            in_uint8p(s, data_signature, 8);
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+                      "length %d, version %d, padlen %d,"
+                      " dataSignature 0x%8.8" PRIx64,
+                      len, ver, pad, sig64_to_uint64(data_signature, 8));
             if (len != 16)
             {
                 LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
@@ -1406,6 +1557,12 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             }
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
+            if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
+                                         s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for FIPS PDU");
+                return 1;
+            }
         }
         else if (self->crypt_level > CRYPT_LEVEL_NONE)
         {
@@ -1414,10 +1571,18 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
                 return 1;
             }
             /* TS_SECURITY_HEADER1 */
-            in_uint8s(s, 8); /* signature(8) */
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
-                      "dataSignature (ignored)");
+            in_uint8p(s, data_signature, 8);
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Received header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
+                      "dataSignature 0x%8.8" PRIx64,
+                      sig64_to_uint64(data_signature, 8));
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+            if (!xrdp_sec_check_sig(self, data_signature, 8,
+                                    s->p, (int)(s->end - s->p)))
+            {
+                LOG(LOG_LEVEL_ERROR, "MAC checksum error for non-FIPS PDU");
+                return 1;
+            }
         }
     }
 
@@ -1489,65 +1654,6 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 }
 
 /*****************************************************************************/
-/* Output a uint32 into a buffer (little-endian) */
-static void
-buf_out_uint32(char *buffer, int value)
-{
-    buffer[0] = (value) & 0xff;
-    buffer[1] = (value >> 8) & 0xff;
-    buffer[2] = (value >> 16) & 0xff;
-    buffer[3] = (value >> 24) & 0xff;
-}
-
-/*****************************************************************************/
-/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
-static void
-xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
-                   char *data, int data_len)
-{
-    char buf[20];
-    char lenhdr[4];
-
-    buf_out_uint32(lenhdr, self->encrypt_use_count);
-    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
-    ssl_hmac_transform(self->sign_fips_info, data, data_len);
-    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
-    ssl_hmac_complete(self->sign_fips_info, buf, 20);
-    g_memcpy(out, buf, out_len);
-}
-
-/*****************************************************************************/
-/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
-static void
-xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
-              char *data, int data_len)
-{
-    char shasig[20];
-    char md5sig[16];
-    char lenhdr[4];
-    void *sha1_info;
-    void *md5_info;
-
-    buf_out_uint32(lenhdr, data_len);
-    sha1_info = ssl_sha1_info_create();
-    md5_info = ssl_md5_info_create();
-    ssl_sha1_clear(sha1_info);
-    ssl_sha1_transform(sha1_info, self->sign_key, self->rc4_key_len);
-    ssl_sha1_transform(sha1_info, (char *)g_pad_54, 40);
-    ssl_sha1_transform(sha1_info, lenhdr, 4);
-    ssl_sha1_transform(sha1_info, data, data_len);
-    ssl_sha1_complete(sha1_info, shasig);
-    ssl_md5_clear(md5_info);
-    ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
-    ssl_md5_transform(md5_info, (char *)g_pad_92, 48);
-    ssl_md5_transform(md5_info, shasig, 20);
-    ssl_md5_complete(md5_info, md5sig);
-    g_memcpy(out, md5sig, out_len);
-    ssl_sha1_info_delete(sha1_info);
-    ssl_md5_info_delete(md5_info);
-}
-
-/*****************************************************************************/
 /* returns error */
 int
 xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
@@ -1571,11 +1677,12 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
             out_uint8(s, pad); /* fips pad */
             xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
             xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER2 "
                       "flags 0x%4.4x, flagsHi 0x%4.4x, length 16, version 1, "
-                      "padlen %d, dataSignature 0x%8.8x 0x%8.8x",
+                      "padlen %d, dataSignature 0x%8.8" PRIx64,
                       SEC_ENCRYPT & 0xffff, (SEC_ENCRYPT & 0xffff0000) >> 16,
-                      pad, *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                      pad, sig64_to_uint64(s->p, 8));
         }
         else if (self->crypt_level > CRYPT_LEVEL_LOW)
         {
@@ -1583,15 +1690,18 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
             datalen = (int)((s->end - s->p) - 8);
             xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
             xrdp_sec_encrypt(self, s->p + 8, datalen);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
-                      "flags 0x%4.4x, flagsHi 0x%4.4x, dataSignature 0x%8.8x 0x%8.8x",
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER1 "
+                      "flags 0x%4.4x, flagsHi 0x%4.4x, "
+                      "dataSignature 0x%8.8" PRIx64,
                       SEC_ENCRYPT & 0xffff, (SEC_ENCRYPT & 0xffff0000) >> 16,
-                      *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                      sig64_to_uint64(s->p, 8));
         }
         else
         {
             out_uint32_le(s, 0);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER "
+            LOG_DEVEL(LOG_LEVEL_TRACE,
+                      "Adding header [MS-RDPBCGR] TS_SECURITY_HEADER "
                       "flags 0x0000, flagsHi 0x0000");
         }
     }
@@ -1688,9 +1798,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
                   "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
                   "fpOutputHeader.flags 0x2, length1 0x%2.2x, length2 0x%2.2x, "
                   "fipsInformation.length 16, fipsInformation.version 1, "
-                  "fipsInformation.padlen %d, dataSignature 0x%8.8x 0x%8.8x, ",
+                  "fipsInformation.padlen %d, dataSignature 0x%8.8" PRIx64,
                   pdulen >> 4, pdulen & 0xff, pad,
-                  *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                  sig64_to_uint64(s->p, 8));
         error = xrdp_fastpath_send(self->fastpath_layer, s);
         g_memcpy(s->p + 8 + datalen, save, pad);
     }
@@ -1709,9 +1819,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_FP_UPDATE_PDU "
                   "fpOutputHeader.action 0, fpOutputHeader.reserved 0, "
                   "fpOutputHeader.flags 0x2, length1 0x%2.2x, length2 0x%2.2x, "
-                  "dataSignature 0x%8.8x 0x%8.8x, ",
+                  "dataSignature 0x%8.8" PRIx64,
                   pdulen >> 4, pdulen & 0xff,
-                  *((uint32_t *) s->p), *((uint32_t *) (s->p + 4)));
+                  sig64_to_uint64(s->p, 8));
         error = xrdp_fastpath_send(self->fastpath_layer, s);
     }
     else
