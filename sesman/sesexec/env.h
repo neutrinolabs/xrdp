@@ -46,10 +46,14 @@ env_check_password_file(const char *filename, const char *password);
  * @param uid user ID
  * @param passwd_file VNC password file
  * @param display The session display
- * @return 0 on success, g_getuser_info() error codes on error
+ * @param env_names List of session environment variables to set
+ * @param env_values List of session environment values to set
+ *
+ * On error, the calling process exits, to prevent privilege
+ * escalations.
  *
  */
-int
+void
 env_set_user(int uid, char **passwd_file, int display,
              const struct list *env_names, const struct list *env_values);
 
