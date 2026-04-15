@@ -979,6 +979,21 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
 }
 
 /**************************************************************************//**
+ * Checks the size parameters from a framebuffer update are sane
+ * @param cx Width of update
+ * @param cy height of update
+ * @return 0 if the proposed sizes could result in overflow
+ *
+ * [MS-RDPBCGR] allows for a max desktop size of 32766 x 32766.
+ * Each pixel needs up to 4 bytes
+ */
+static int
+framebuffer_update_size_ok(int cx, int cy)
+{
+    return (cx <= 32766 && cy <= 32766 && (cx * cy) <= (INT_MAX / 4));
+}
+
+/**************************************************************************//**
  * Parses an entire framebuffer update message from the wire, and returns the
  * first matching ExtendedDesktopSize encoding if found.
  *
@@ -1036,9 +1051,15 @@ find_matching_extended_rect(struct vnc *v,
                 in_uint16_be(s, cy);
                 in_uint32_be(s, encoding);
 
-                if (encoding == RFB_ENC_EXTENDED_DESKTOP_SIZE &&
-                        !found &&
-                        match(x, y, cx, cy))
+                if (!framebuffer_update_size_ok(cx, cy))
+                {
+                    LOG(LOG_LEVEL_ERROR,
+                        "find_matching_extended_rect: Frame buffer too large");
+                    error = 1;
+                }
+                else if (encoding == RFB_ENC_EXTENDED_DESKTOP_SIZE &&
+                         !found &&
+                         match(x, y, cx, cy))
                 {
                     LOG(LOG_LEVEL_DEBUG,
                         "VNC_RESIZE: VNC matched ExtendedDesktopSize rectangle "
@@ -1467,7 +1488,13 @@ lib_framebuffer_update(struct vnc *v)
             in_uint16_be(s, cy);
             in_uint32_be(s, encoding);
 
-            if (encoding == RFB_ENC_RAW)
+            if (!framebuffer_update_size_ok(cx, cy))
+            {
+                LOG(LOG_LEVEL_ERROR,
+                    "lib_framebuffer_update: Frame buffer too large");
+                error = 1;
+            }
+            else if (encoding == RFB_ENC_RAW)
             {
                 need_size = cx * cy * get_bytes_per_pixel(v->server_bpp);
                 init_stream(pixel_s, need_size);
