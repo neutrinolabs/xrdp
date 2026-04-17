@@ -1,3 +1,49 @@
+# Release notes for xrdp v0.10.6 (2026/04/17)
+
+## General announcements
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+* [V0.10.3] Experimental support for utmp/wtmp file is provided in this release. If you use this, be aware that these files are only updated when an xrdp session is created or destroyed. Disconnections and reconnections to the same session are not tracked. In particular:
+  * the FROM address for a client (as shown by the `w` command) reflects the IP address of the client at the time of creation, and not the address of the currently connected client.
+  * Sessions started by the `xrdp-sesrun` command do not have a FROM address.
+* The use_vsock parameter in xrdp.ini is deprecated. Use 'port=vsock://' instead.
+
+## Security fixes
+
+Thanks to @explitintel, @smittix and @hessandrew!
+
+- [CVE-2026-32105](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-j2jm-c596-c5q3)
+- [CVE-2026-32107](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-p5m6-7m43-pjv9)
+- [CVE-2026-32623](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-phw3-qp59-x2v4)
+- [CVE-2026-32624](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-7q2g-6fjr-h6pp)
+- [CVE-2026-33145](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-rmvv-7633-fg7h)
+- [CVE-2026-33516](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-rvh9-9wm3-28c7)
+- [CVE-2026-33689](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-92mr-6wpp-27jj)
+- [CVE-2026-35512](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-jg6p-7fg8-9hh6)
+
+## New features
+- Support for xorgxrdp bug fixes #249 and #342 (#3721)
+
+## Bug fixes
+- Honour `pass_shell_as_env` setting only if user sets a shell (#3725)
+- We no longer try to create a NULL authentication file when using VNC over UDS (#3727)
+- Problems with the Brazilian ABNT2 keyboard mapping have been corrected (#3728 3736)
+- A 'file exists' error when installing xrdp over an existing installation has been addressed (#3780)
+
+## Internal changes
+None
+
+## Changes for users
+None
+
+## Changes for packagers or developers
+* (from v0.10.3) The `--enable-utmp` needs to be added to enable UTMP support.
+* (from v0.10.3) The config file subdirectory (`xrdp` part of `/etc/xrdp`) can now be configured (#3369)
+* (from v0.10.3) Packagers using TigerVNC to provide the Xvnc backend may wish to configure the 'Xvnc over UDS' session type as a default by using a `code=1` line in xrdp.ini. Instructions are provided in the released xrdp.ini file.
+* The unfinished PIV smartcard support is now disabled by default, but can be re-enabled by adding `--enable-smartcard` to the configure command. Because of possible security issues with this code, this should only be done by developers working in non-production environments (#3759)
+-----------------------
+
 # Release notes for xrdp v0.10.5 (2026/01/27)
 
 ## General announcements
