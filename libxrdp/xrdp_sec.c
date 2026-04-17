@@ -1220,6 +1220,8 @@ xrdp_sec_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
 
 /*****************************************************************************/
 /* Function to return a 64-bit int from an 64 bit signature */
+
+#ifdef USE_DEVEL_LOGGING
 static uint64_t
 sig64_to_uint64(const char sig[], int sig_len)
 {
@@ -1240,6 +1242,7 @@ sig64_to_uint64(const char sig[], int sig_len)
 
     return rv;
 }
+#endif
 
 /*****************************************************************************/
 static void
