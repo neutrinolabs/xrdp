@@ -133,11 +133,6 @@ AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [], [enable_neutrinordp=no])
 AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$enable_neutrinordp = xyes])
 
-AC_ARG_ENABLE(ulalaca, AS_HELP_STRING([--enable-ulalaca],
-              [Build ulalaca module (experimental) (default: no)]),
-              [], [enable_ulalaca=no])
-AM_CONDITIONAL(XRDP_ULALACA, [test x$enable_ulalaca = xyes])
-
 AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
               [], [enable_jpeg=no])
@@ -624,7 +619,6 @@ AC_CONFIG_FILES([
   Makefile
   mc/Makefile
   neutrinordp/Makefile
-  ulalaca/Makefile
   pkgconfig/Makefile
   pkgconfig/xrdp.pc
   pkgconfig/xrdp-uninstalled.pc

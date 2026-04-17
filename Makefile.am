@@ -38,12 +38,6 @@ else
 RFXCODECDIR =
 endif
 
-if XRDP_ULALACA
-ULALACADIR = ulalaca
-else
-ULALACADIR =
-endif
-
 # This should not be dictionary order but build order
 SUBDIRS = \
   third_party \
@@ -68,7 +62,6 @@ SUBDIRS = \
   xrdpapi \
   pkgconfig \
   $(XRDPVRDIR) \
-  $(ULALACADIR) \
   tests \
   tools
 
