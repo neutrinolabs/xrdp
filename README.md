@@ -8,6 +8,11 @@
 
 ## Overview
 
+_xrdp v0.9.x is end-of-life. It contains known vulnerabilities. Please upgrade to v0.10.x as soon as possible._
+
+If you'd like us to fix vulnerabilities in xrdp v0.9.x and are willing
+to sponsor the work, contact xrdp-core@googlegroups.com.
+
 **xrdp** provides a graphical login to remote machines using Microsoft
 Remote Desktop Protocol (RDP). xrdp accepts connections from a variety of RDP clients:
   * FreeRDP
