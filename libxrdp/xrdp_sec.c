@@ -1396,7 +1396,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
     int ver;
     int len;
     int pad;
-    const char *data_signature;
+    char data_signature[8] = {0};
 
 #ifndef USE_DEVEL_LOGGING
     /* TODO: remove UNUSED_VAR once the `ver` variable is used for more than
@@ -1432,7 +1432,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
             }
 
             /* remainder of TS_FP_INPUT_PDU */
-            in_uint8p(s, data_signature, 8);
+            in_uint8a(s, data_signature, sizeof(data_signature));
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
             s->end -= pad;
             if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
@@ -1450,7 +1450,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
                 return 1;
             }
             /* remainder of TS_FP_INPUT_PDU */
-            in_uint8p(s, data_signature, 8);
+            in_uint8a(s, data_signature, sizeof(data_signature));
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
             if (!xrdp_sec_check_sig(self, data_signature, 8,
                                     s->p, (int)(s->end - s->p)))
@@ -1482,7 +1482,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
               ", numEvents %d",
               self->fastpath_layer->secFlags,
               (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) ? "(see above)" : "(not present)",
-              sig64_to_uint64(data_signature, 8),
+              sig64_to_uint64(data_signature, sizeof(data_signature)),
               self->fastpath_layer->numEvents);
 
     return 0;
@@ -1496,7 +1496,6 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     int len;
     int ver;
     int pad;
-    const char *data_signature;
 
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
@@ -1530,6 +1529,8 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
+        char *data_signature = NULL;
+
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
             if (!s_check_rem_and_log(s, 12, "Parsing [MS-RDPBCGR] TS_SECURITY_HEADER2"))
