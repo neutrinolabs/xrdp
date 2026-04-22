@@ -2,7 +2,10 @@
 
 ## General announcements
 
-_xrdp v0.9.x is end-of-life. New releases may happen when severe security vulnerabilities or critical bugs are found._
+_xrdp v0.9.x is end-of-life. It contains known vulnerabilities. Please upgrade to v0.10.x as soon as possible._
+
+If you'd like us to fix vulnerabilities in xrdp v0.9.x and are willing
+to sponsor the work, contact xrdp-core@googlegroups.com.
 
 We have created a fund on [Open Collective](https://opencollective.com/xrdp-project). Support us if you like xrdp!  Direct donations to each developer via GitHub Sponsors are also welcomed.
 
