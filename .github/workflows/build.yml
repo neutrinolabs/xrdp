@@ -247,3 +247,20 @@ jobs:
         run: scripts/run_astyle.sh -v $ASTYLE_VER
       - name: Check code formatting
         run: git diff --exit-code
+
+  ci_on_freebsd:
+    name: FreeBSD
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: test run
+      uses: vmactions/freebsd-vm@v1
+      with:
+        run: |
+          pwd
+          ls -lha
+          whoami
+          env
+          freebsd-version -kru
+          uname -a
+          sysctl -a
