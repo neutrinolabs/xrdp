@@ -256,7 +256,7 @@ jobs:
     - name: test run
       uses: vmactions/freebsd-vm@v1
       with:
-        prepare: pkg install -y git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr libxkbfile nasm fusefs-lib3 check imlib2 freetype2 cmocka ibus
+        prepare: pkg install -y git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr libxkbfile nasm fusefs-libs3 check imlib2 freetype2 cmocka ibus
         run: |
           ./bootstrap
           ./configure --localstatedir=/var --enable-strict-locations --with-pkgconfigdir=/usr/local/libdata/pkgconfig --enable-strict-locations --enable-ibus --enable-ipv6 --enable-opus --enable-jpeg --enable-fdkaac --enable-painter --enable-pixman --enable-fuse --with-imlib2 --with-freetype2
