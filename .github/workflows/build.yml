@@ -256,6 +256,9 @@ jobs:
     - name: test run
       uses: vmactions/freebsd-vm@v1
       with:
+        envs: |
+          CPPFLAGS: "-I/usr/local/include"
+          LDFLAGS: "-L/usr/local/lib "
         prepare: pkg install -y git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr libxkbfile nasm fusefs-libs3 check imlib2 freetype2 cmocka ibus
         run: |
           ./bootstrap
