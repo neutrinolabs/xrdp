@@ -256,6 +256,7 @@ jobs:
     - name: test run
       uses: vmactions/freebsd-vm@v1
       with:
+        disable-cache: true
         envs: |
           CPPFLAGS: "-I/usr/local/include"
           LDFLAGS: "-L/usr/local/lib "
