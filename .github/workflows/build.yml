@@ -217,3 +217,36 @@ jobs:
         run: scripts/run_astyle.sh -v $ASTYLE_VER
       - name: Check code formatting
         run: git diff --exit-code
+
+  build_on_freebsd:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        freebsd-version: ["15.0", "14.4"]
+        ssl: ["", "libressl"]
+    name: FreeBSD ${{ matrix.freebsd-version }} Build with ${{ matrix.ssl || 'base openssl' }}
+    env:
+      CPPFLAGS: "-I/usr/local/include"
+      LDFLAGS: "-L/usr/local/lib "
+      SSL: ${{ matrix.ssl }}
+    steps:
+    - name: checkout sources
+      uses: actions/checkout@v6
+      with:
+        submodules: recursive
+    - name: test run
+      uses: vmactions/freebsd-vm@v1
+      with:
+        release: ${{ matrix.freebsd-version }}
+        envs: 'CPPFLAGS LDFLAGS SSL'
+        prepare: |
+          pkg install -y $SSL git autoconf automake libtool pkgconf opus jpeg-turbo fdk-aac pixman libX11 libXfixes libXrandr libxkbfile nasm fusefs-libs3 check imlib2 freetype2 cmocka ibus
+        run: |
+          ./bootstrap
+          ./configure --localstatedir=/var --enable-strict-locations --with-pkgconfigdir=/usr/local/libdata/pkgconfig --enable-strict-locations --enable-ibus --enable-ipv6 --enable-opus --enable-jpeg --enable-fdkaac --enable-painter --enable-pixman --enable-fuse --with-imlib2 --with-freetype2
+          make -j $(nproc || echo 4)
+          make check
+          make install
+          /usr/local/sbin/xrdp -v
+
