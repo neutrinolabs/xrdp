@@ -1433,7 +1433,14 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
 
             /* remainder of TS_FP_INPUT_PDU */
             in_uint8a(s, data_signature, sizeof(data_signature));
+            // Decrypt the packet, and subtract the padding length,
+            // after checking the validity
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
+            if (pad > 7 || pad > (int)(s->end - s->p))
+            {
+                LOG(LOG_LEVEL_ERROR, "Bad padding for TS_FP_FIPS_INFO PDU");
+                return 1;
+            }
             s->end -= pad;
             if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
                                          s->p, (int)(s->end - s->p)))
@@ -1559,7 +1566,14 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
                     "has unexpected version. Expected 1, actual %d", ver);
                 return 1;
             }
+            // Decrypt the packet, and subtract the padding length,
+            // after checking the validity
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
+            if (pad > 7 || pad > (int)(s->end - s->p))
+            {
+                LOG(LOG_LEVEL_ERROR, "Bad padding for TS_SECURITY_HEADER2 PDU");
+                return 1;
+            }
             s->end -= pad;
             if (!xrdp_sec_fips_check_sig(self, data_signature, 8,
                                          s->p, (int)(s->end - s->p)))
