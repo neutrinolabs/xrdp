@@ -1023,8 +1023,10 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
         in_uint32_le(s, time);
         in_uint16_le(s, msg_type);
         in_uint16_le(s, device_flags);
-        in_sint16_le(s, param1);
-        in_sint16_le(s, param2);
+        /* Unicode input carries UTF-16 code units, so keep the raw
+         * unsigned value. Sign-extension would corrupt non-ASCII input. */
+        in_uint16_le(s, param1);
+        in_uint16_le(s, param2);
         LOG_DEVEL(LOG_LEVEL_TRACE, "With field [MS-RDPBCGR] TS_INPUT_EVENT "
                   "eventTime %d, messageType 0x%4.4x", time, msg_type);
 
@@ -1697,4 +1699,3 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
     free_stream(s);
     return 0;
 }
-
