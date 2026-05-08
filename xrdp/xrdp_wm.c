@@ -1791,9 +1791,9 @@ fake_kbd_event_from_scancode_index(struct xrdp_wm *self, int device_flags,
  * events wrapped in terminal bracketed-paste delimiters. These markers are not
  * user text, so strip them while preserving all other Unicode codepoints. */
 static const char32_t g_bracketed_paste_start[BRACKETED_PASTE_SEQ_LEN] =
-    { 0x1b, '[', '2', '0', '0', '~' };
+{ 0x1b, '[', '2', '0', '0', '~' };
 static const char32_t g_bracketed_paste_end[BRACKETED_PASTE_SEQ_LEN] =
-    { 0x1b, '[', '2', '0', '1', '~' };
+{ 0x1b, '[', '2', '0', '1', '~' };
 
 static int
 xrdp_wm_send_unicode_to_backend(struct xrdp_wm *self, char32_t unicode)
@@ -1862,7 +1862,7 @@ xrdp_wm_flush_pending_unicode_chars(struct xrdp_wm *self)
     for (index = 0; index < self->unicode_pending_chars_len; ++index)
     {
         if (xrdp_wm_send_unicode_to_backend(self,
-                self->unicode_pending_chars[index]) != 0)
+                                            self->unicode_pending_chars[index]) != 0)
         {
             rv = 1;
         }
