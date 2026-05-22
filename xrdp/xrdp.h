@@ -444,7 +444,8 @@ get_key_info_from_kbd_event(int keyboard_flags, int key_code, int *keys,
                             int caps_lock, int num_lock, int scroll_lock,
                             struct xrdp_keymap *keymap);
 int
-get_keymaps(int keylayout, struct xrdp_keymap *keymap);
+get_keymaps(int keylayout, int keyboard_type, int keyboard_subtype,
+            struct xrdp_keymap *keymap);
 
 int
 km_load_file(const char *filename, struct xrdp_keymap *keymap);
