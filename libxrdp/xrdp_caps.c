@@ -647,7 +647,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             g_memcpy(self->client_info.jpeg_prop, s->p, i1);
             self->client_info.jpeg_prop_len = i1;
             /* make sure that requested quality is  between 0 to 100 */
-            if (self->client_info.jpeg_prop[0] < 0 || self->client_info.jpeg_prop[0] > 100)
+            if (self->client_info.jpeg_prop[0] > 100)
             {
                 LOG(LOG_LEVEL_WARNING, "  Warning: the requested jpeg quality (%d) is invalid, "
                     "falling back to default", self->client_info.jpeg_prop[0]);
