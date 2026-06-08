@@ -984,13 +984,17 @@ skip_encoding(struct vnc *v, int x, int y, int cx, int cy,
  * @param cy height of update
  * @return 0 if the proposed sizes could result in overflow
  *
- * [MS-RDPBCGR] allows for a max desktop size of 32766 x 32766.
+ * [MS-RDPBCGR] allows for a max desktop size of
+ *     CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_WIDTH x
+ *     CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_HEIGHT
  * Each pixel needs up to 4 bytes
  */
 static int
 framebuffer_update_size_ok(int cx, int cy)
 {
-    return (cx <= 32766 && cy <= 32766 && (cx * cy) <= (INT_MAX / 4));
+    return (cx <= CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_WIDTH &&
+            cy <= CLIENT_MONITOR_DATA_MAXIMUM_VIRTUAL_DESKTOP_HEIGHT &&
+            (cx * cy) <= (INT_MAX / 4));
 }
 
 /**************************************************************************//**
