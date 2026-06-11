@@ -415,6 +415,11 @@ xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
     int inputFlags;
     int client_does_fastpath_input;
 
+    if (len < 2)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_input: missing data");
+        return 1;
+    }
     in_uint16_le(s, inputFlags);
     client_does_fastpath_input = (inputFlags & INPUT_FLAG_FASTPATH_INPUT) ||
                                  (inputFlags & INPUT_FLAG_FASTPATH_INPUT2);
@@ -668,6 +673,11 @@ xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
 {
     int MaxRequestSize;
 
+    if (len < 4)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_multifragmentupdate: missing data");
+        return 1;
+    }
     in_uint32_le(s, MaxRequestSize);
     if (self->client_info.use_fast_path & 1)
     {
@@ -683,6 +693,11 @@ xrdp_caps_process_largepointer(struct xrdp_rdp *self, struct stream *s,
 {
     int largePointerSupportFlags;
 
+    if (len < 2)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_largepointer: missing data");
+        return 1;
+    }
     in_uint16_le(s, largePointerSupportFlags);
     self->client_info.large_pointer_support_flags = largePointerSupportFlags;
     return 0;
@@ -692,16 +707,25 @@ xrdp_caps_process_largepointer(struct xrdp_rdp *self, struct stream *s,
 static int
 xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 {
+    int max_count;
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_frame_ack:");
-    self->client_info.use_frame_acks = 1;
-    in_uint32_le(s, self->client_info.max_unacknowledged_frame_count);
-    if (self->client_info.max_unacknowledged_frame_count < 0)
+    if (len < 4)
     {
-        LOG(LOG_LEVEL_WARNING, "  invalid max_unacknowledged_frame_count value (%d), setting to 0",
-            self->client_info.max_unacknowledged_frame_count);
-        self->client_info.max_unacknowledged_frame_count = 0;
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_frame_ack: missing data");
+        return 1;
     }
-    LOG_DEVEL(LOG_LEVEL_TRACE, "  max_unacknowledged_frame_count %d", self->client_info.max_unacknowledged_frame_count);
+    self->client_info.use_frame_acks = 1;
+    in_uint32_le(s, max_count);
+    if (max_count < 0)
+    {
+        LOG(LOG_LEVEL_WARNING,
+            "  invalid max_unacknowledged_frame_count value (%d), setting to 0",
+            max_count);
+        max_count = 0;
+    }
+    LOG_DEVEL(LOG_LEVEL_TRACE,
+              "  max_unacknowledged_frame_count %d", max_count);
+    self->client_info.max_unacknowledged_frame_count = max_count;
     return 0;
 }
 
@@ -715,6 +739,12 @@ xrdp_caps_process_surface_cmds(struct xrdp_rdp *self, struct stream *s, int len)
     logging in debug mode */
     UNUSED_VAR(cmdFlags);
 #endif
+    // Check the data is there, whether or not we are logging it
+    if (len < 8)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_caps_process_surface_cmds: missing data");
+        return 1;
+    }
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_caps_process_surface_cmds:");
     in_uint32_le(s, cmdFlags);
@@ -802,22 +832,34 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
             case CAPSTYPE_GENERAL:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_GENERAL");
-                xrdp_caps_process_general(self, s, len);
+                if (xrdp_caps_process_general(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_BITMAP:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_BITMAP");
-                xrdp_caps_process_bitmap(self, s, len);
+                if (xrdp_caps_process_bitmap(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_ORDER:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_ORDER");
-                xrdp_caps_process_order(self, s, len);
+                if (xrdp_caps_process_order(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_BITMAPCACHE:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_BITMAPCACHE");
-                xrdp_caps_process_bmpcache(self, s, len);
+                if (xrdp_caps_process_bmpcache(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_CONTROL:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
@@ -826,7 +868,10 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
             case 6:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = 6");
-                xrdp_caps_process_cache_v3_codec_id(self, s, len);
+                if (xrdp_caps_process_cache_v3_codec_id(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_ACTIVATION:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
@@ -835,7 +880,10 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
             case CAPSTYPE_POINTER:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_POINTER");
-                xrdp_caps_process_pointer(self, s, len);
+                if (xrdp_caps_process_pointer(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_SHARE:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
@@ -852,7 +900,10 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
             case CAPSTYPE_INPUT:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_INPUT");
-                xrdp_caps_process_input(self, s, len);
+                if (xrdp_caps_process_input(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_FONT:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
@@ -861,22 +912,34 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
             case CAPSTYPE_BRUSH:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_BRUSH");
-                xrdp_caps_process_brushcache(self, s, len);
+                if (xrdp_caps_process_brushcache(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_GLYPHCACHE:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_GLYPHCACHE");
-                xrdp_caps_process_glyphcache(self, s, len);
+                if (xrdp_caps_process_glyphcache(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_OFFSCREENCACHE:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_OFFSCREENCACHE");
-                xrdp_caps_process_offscreen_bmpcache(self, s, len);
+                if (xrdp_caps_process_offscreen_bmpcache(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_BITMAPCACHE_REV2:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_BITMAPCACHE_REV2");
-                xrdp_caps_process_bmpcache2(self, s, len);
+                if (xrdp_caps_process_bmpcache2(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_VIRTUALCHANNEL:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
@@ -893,37 +956,58 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
             case CAPSTYPE_RAIL:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_RAIL");
-                xrdp_caps_process_rail(self, s, len);
+                if (xrdp_caps_process_rail(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_WINDOW:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_WINDOW");
-                xrdp_caps_process_window(self, s, len);
+                if (xrdp_caps_process_window(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSSETTYPE_MULTIFRAGMENTUPDATE:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSSETTYPE_MULTIFRAGMENTUPDATE");
-                xrdp_caps_process_multifragmentupdate(self, s, len);
+                if (xrdp_caps_process_multifragmentupdate(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSETTYPE_LARGE_POINTER:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSETTYPE_LARGE_POINTER");
-                xrdp_caps_process_largepointer(self, s, len);
+                if (xrdp_caps_process_largepointer(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSETTYPE_SURFACE_COMMANDS:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSETTYPE_SURFACE_COMMANDS");
-                xrdp_caps_process_surface_cmds(self, s, len);
+                if (xrdp_caps_process_surface_cmds(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSSETTYPE_BITMAP_CODECS:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSSETTYPE_BITMAP_CODECS");
-                xrdp_caps_process_codecs(self, s, len);
+                if (xrdp_caps_process_codecs(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             case CAPSTYPE_FRAME_ACKNOWLEDGE:
                 LOG_DEVEL(LOG_LEVEL_INFO, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
                           "capabilitySetType = CAPSTYPE_FRAME_ACKNOWLEDGE");
-                xrdp_caps_process_frame_ack(self, s, len);
+                if (xrdp_caps_process_frame_ack(self, s, len) != 0)
+                {
+                    return 1;
+                }
                 break;
             default:
                 LOG(LOG_LEVEL_WARNING, "Received [MS-RDPBCGR] TS_CONFIRM_ACTIVE_PDU - TS_CAPS_SET "
