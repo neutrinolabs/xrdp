@@ -2151,6 +2151,10 @@ xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream *s)
     int crypt_method;
     int found;
 
+    if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPBCGR] CS_SECURITY"))
+    {
+        return 1;
+    }
     in_uint32_le(s, crypt_method);
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] TS_UD_CS_SEC "
               "encryptionMethods 0x%8.8x, extEncryptionMethods (ignored)",
