@@ -41,6 +41,17 @@
 #include "sesexec.h"
 #include "string_calls.h"
 
+// Sys login fails all take a fixed time before returning. This
+// prevents an attacker using timing differences to determine
+// information about the users on the system (CVE-2026-42218)
+//
+// Note that some systems may provide an upper time bound for
+// a login failure that is higher than this. For example, the Linux
+// PAM stack default sys login fail time is around 2000 milli-seconds.
+// Consequently, it is important the auth stack is always called, even
+// if it has been determined that this is unnecessary.
+#define FAILED_LOGIN_CONSTANT_TIME 600 // milli-seconds
+
 /******************************************************************************/
 /**
  * Logs an authentication failure message
@@ -72,7 +83,6 @@ log_authfail_message(const char *username, const char *ip_addr)
  * @return Status for the operation
  *
  * @post If E_SCP_LOGIN_OK is returned, g_login_info is filled in
- *
  */
 static enum scp_login_status
 authenticate_and_authorize_connection(const char *supplied_username,
@@ -84,6 +94,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
     char *username; // From reverse-looking up the UID
     enum scp_login_status status;
     struct auth_info *auth_info;
+    unsigned int start_time = g_get_elapsed_ms();
 
     if (g_getuser_info_by_name(supplied_username,
                                &uid, NULL, NULL, NULL, NULL) != 0)
@@ -93,6 +104,11 @@ authenticate_and_authorize_connection(const char *supplied_username,
             supplied_username);
         log_authfail_message(supplied_username, ip_addr);
         status = E_SCP_LOGIN_NOT_AUTHENTICATED;
+
+        /* Call the auth stack anyway. On some systems (e.g. linux-pam),
+         * a fixed delay is built in to the stack for an unsuccessful
+         * login, and this delay may exceed FAILED_LOGIN_CONSTANT_TIME */
+        auth_end(auth_userpass(username, password, ip_addr, NULL));
     }
     else if (g_getuser_info_by_uid(uid,
                                    &username,
@@ -100,6 +116,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
     {
         LOG(LOG_LEVEL_ERROR, "Can't reverse lookup UID %d", uid);
         status = E_SCP_LOGIN_NOT_AUTHENTICATED;
+        auth_end(auth_userpass(username, password, ip_addr, NULL));
     }
     else
     {
@@ -178,6 +195,15 @@ authenticate_and_authorize_connection(const char *supplied_username,
         }
 
         g_free(username);
+    }
+
+    if (status != E_SCP_LOGIN_OK)
+    {
+        unsigned int elapsed_ms = g_get_elapsed_ms() - start_time;
+        if (elapsed_ms < FAILED_LOGIN_CONSTANT_TIME)
+        {
+            g_sleep(FAILED_LOGIN_CONSTANT_TIME - elapsed_ms);
+        }
     }
     return status;
 }
