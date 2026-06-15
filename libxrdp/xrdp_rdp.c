@@ -1159,6 +1159,10 @@ xrdp_rdp_process_data_control(struct xrdp_rdp *self, struct stream *s)
 {
     int action;
 
+    if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_CONTROL_PDU"))
+    {
+        return 1;
+    }
     in_uint16_le(s, action);
     in_uint8s(s, 2); /* user id */
     in_uint8s(s, 4); /* control id */
