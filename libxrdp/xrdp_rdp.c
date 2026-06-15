@@ -543,23 +543,26 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     {
         s->next_packet = 0;
         *code = 0;
-        LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: out code 0 (skip data) "
-            "bad RDP packet");
-        return 0;
+        LOG(LOG_LEVEL_ERROR, "xrdp_rdp_recv: out code 0 bad RDP packet");
+        return 1;
     }
-    else
+    in_uint16_le(s, len);      /* totalLength */
+    in_uint16_le(s, pdu_code); /* pduType */
+    in_uint8s(s, 2);           /* pduSource */
+    // Length must be at least the size of TS_SHARECONTROLHEADER, and
+    // cannot fall beyond the end of the PDU
+    if (len < 6 || !s_check_rem(s, len - 6))
     {
-        in_uint16_le(s, len);      /* totalLength */
-        in_uint16_le(s, pdu_code); /* pduType */
-        *code = pdu_code & 0xf;
-        in_uint8s(s, 2);           /* pduSource */
-        s->next_packet += len;
-        LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
-                  "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
-                  "pduSource (ignored)", len, PDUTYPE_TO_STR(*code), *code,
-                  ((pdu_code & 0xfff0) >> 4));
-        return 0;
+        LOG(LOG_LEVEL_ERROR, "bad TS_SHARECONTROLHEADER length 0x%04X", len);
+        return 1;
     }
+    *code = pdu_code & 0xf;
+    s->next_packet += len;
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] TS_SHARECONTROLHEADER "
+              "totalLength %d, pduType.type %s (%d), pduType.PDUVersion %d, "
+              "pduSource (ignored)", len, PDUTYPE_TO_STR(*code), *code,
+              ((pdu_code & 0xfff0) >> 4));
+    return 0;
 }
 
 /*****************************************************************************/
