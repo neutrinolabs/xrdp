@@ -108,7 +108,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
         /* Call the auth stack anyway. On some systems (e.g. linux-pam),
          * a fixed delay is built in to the stack for an unsuccessful
          * login, and this delay may exceed FAILED_LOGIN_CONSTANT_TIME */
-        auth_end(auth_userpass(username, password, ip_addr, NULL));
+        auth_end(auth_userpass(supplied_username, password, ip_addr, NULL));
     }
     else if (g_getuser_info_by_uid(uid,
                                    &username,
@@ -116,7 +116,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
     {
         LOG(LOG_LEVEL_ERROR, "Can't reverse lookup UID %d", uid);
         status = E_SCP_LOGIN_NOT_AUTHENTICATED;
-        auth_end(auth_userpass(username, password, ip_addr, NULL));
+        auth_end(auth_userpass(supplied_username, password, ip_addr, NULL));
     }
     else
     {
