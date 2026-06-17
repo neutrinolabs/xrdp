@@ -94,7 +94,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
     char *username; // From reverse-looking up the UID
     enum scp_login_status status;
     struct auth_info *auth_info;
-    unsigned int start_time = g_get_elapsed_ms();
+    int start_time = g_time3();
 
     if (g_getuser_info_by_name(supplied_username,
                                &uid, NULL, NULL, NULL, NULL) != 0)
@@ -108,7 +108,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
         /* Call the auth stack anyway. On some systems (e.g. linux-pam),
          * a fixed delay is built in to the stack for an unsuccessful
          * login, and this delay may exceed FAILED_LOGIN_CONSTANT_TIME */
-        auth_end(auth_userpass(username, password, ip_addr, NULL));
+        auth_end(auth_userpass(supplied_username, password, ip_addr, NULL));
     }
     else if (g_getuser_info_by_uid(uid,
                                    &username,
@@ -116,7 +116,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
     {
         LOG(LOG_LEVEL_ERROR, "Can't reverse lookup UID %d", uid);
         status = E_SCP_LOGIN_NOT_AUTHENTICATED;
-        auth_end(auth_userpass(username, password, ip_addr, NULL));
+        auth_end(auth_userpass(supplied_username, password, ip_addr, NULL));
     }
     else
     {
@@ -199,8 +199,8 @@ authenticate_and_authorize_connection(const char *supplied_username,
 
     if (status != E_SCP_LOGIN_OK)
     {
-        unsigned int elapsed_ms = g_get_elapsed_ms() - start_time;
-        if (elapsed_ms < FAILED_LOGIN_CONSTANT_TIME)
+        int elapsed_ms = g_time3() - start_time;
+        if (elapsed_ms > 0 && elapsed_ms < FAILED_LOGIN_CONSTANT_TIME)
         {
             g_sleep(FAILED_LOGIN_CONSTANT_TIME - elapsed_ms);
         }
