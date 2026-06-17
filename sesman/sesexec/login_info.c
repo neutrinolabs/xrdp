@@ -94,7 +94,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
     char *username; // From reverse-looking up the UID
     enum scp_login_status status;
     struct auth_info *auth_info;
-    unsigned int start_time = g_get_elapsed_ms();
+    int start_time = g_time3();
 
     if (g_getuser_info_by_name(supplied_username,
                                &uid, NULL, NULL, NULL, NULL) != 0)
@@ -199,8 +199,8 @@ authenticate_and_authorize_connection(const char *supplied_username,
 
     if (status != E_SCP_LOGIN_OK)
     {
-        unsigned int elapsed_ms = g_get_elapsed_ms() - start_time;
-        if (elapsed_ms < FAILED_LOGIN_CONSTANT_TIME)
+        int elapsed_ms = g_time3() - start_time;
+        if (elapsed_ms > 0 && elapsed_ms < FAILED_LOGIN_CONSTANT_TIME)
         {
             g_sleep(FAILED_LOGIN_CONSTANT_TIME - elapsed_ms);
         }
