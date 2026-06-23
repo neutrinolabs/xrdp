@@ -989,7 +989,7 @@ xrdp_mm_egfx_invalidate_wm_screen(struct xrdp_mm *self)
     // updates sent directly from the module via the encoder.
     if (self->mod_uses_wm_screen_for_gfx || self->mod_handle == 0)
     {
-        struct xrdp_bitmap *screen = self->wm->screen;
+        const struct xrdp_bitmap *screen = self->wm->screen;
         struct xrdp_rect xr_rect;
 
         xr_rect.left = 0;
@@ -1100,8 +1100,8 @@ xrdp_mm_egfx_create_surfaces(struct xrdp_mm *self)
     int top;
     int width;
     int height;
-    struct monitor_info *mi;
-    struct xrdp_bitmap *screen;
+    const struct monitor_info *mi;
+    const struct xrdp_bitmap *screen;
 
     screen = self->wm->screen;
     count = self->wm->client_info->display_sizes.monitorCount;
@@ -1252,7 +1252,7 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
     }
 
     int best_index = -1;
-    struct xrdp_tconfig_gfx_codec_order *co = &self->wm->gfx_config->codec;
+    const struct xrdp_tconfig_gfx_codec_order *co = &self->wm->gfx_config->codec;
     char cobuff[64];
 
     LOG(LOG_LEVEL_INFO, "Codec search order is %s",
@@ -1495,7 +1495,7 @@ add_resize_request_to_queue(struct xrdp_mm *self,
         if (self->resize_queue->count > 0)
         {
             int prev_num = self->resize_queue->count - 1;
-            struct resize_queue_item *prev;
+            const struct resize_queue_item *prev;
             prev = (struct resize_queue_item *)
                    list_get_item(self->resize_queue, prev_num);
             // If this is a RQ_FROM_CLIENT, and the previous item on the
@@ -2322,7 +2322,7 @@ xrdp_mm_trans_process_drdynvc_data_first(struct xrdp_mm *self,
     int error;
     int data_bytes;
     int total_bytes;
-    char *data;
+    const char *data;
 
     if (!s_check_rem(s, 12))
     {
@@ -2356,7 +2356,7 @@ xrdp_mm_trans_process_drdynvc_data(struct xrdp_mm *self,
     int chan_id;
     int error;
     int data_bytes;
-    char *data;
+    const char *data;
 
     if (!s_check_rem(s, 8))
     {
@@ -2647,7 +2647,7 @@ xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
     int total_length;
     int flags;
     int id;
-    char *data;
+    const char *data;
 
     rv = 0;
 
@@ -3868,7 +3868,7 @@ xrdp_mm_draw_dirty(struct xrdp_mm *self)
     int jndex;
     int count;
     int surface_id;
-    struct monitor_info *mi;
+    const struct monitor_info *mi;
     int rv = 0;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_draw_dirty:");
@@ -4909,7 +4909,7 @@ server_monitor_resize_done(struct xrdp_mod *mod)
 static int
 server_get_channel_count(struct xrdp_mod *mod)
 {
-    struct xrdp_wm *wm;
+    const struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
 

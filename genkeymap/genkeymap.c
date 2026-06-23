@@ -220,7 +220,7 @@ output_setxkbmap_comment(FILE *outf, const struct kbd_info *kbd_info)
             char *optionstr = strdup(kbd_info->options);
             if (optionstr != NULL)
             {
-                char *p = strtok(optionstr, ",");
+                const char *p = strtok(optionstr, ",");
                 fprintf(outf, " -option \"\"");
                 while (p != NULL)
                 {
@@ -357,7 +357,7 @@ int main(int argc, char **argv)
     const char *programname;
     int opt;
     char *displayname = NULL;
-    char *outfname;
+    const char *outfname;
     const char *sections[NUM_STATES] =
     {
         "noshift", "shift", "altgr", "shiftaltgr",

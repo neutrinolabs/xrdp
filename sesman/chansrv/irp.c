@@ -270,7 +270,7 @@ IRP *devredir_irp_get_last(void)
 
 void devredir_irp_dump(void)
 {
-    IRP *irp = g_irp_head;
+    const IRP *irp = g_irp_head;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "------- dumping IRPs --------");
     while (irp)

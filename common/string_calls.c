@@ -853,7 +853,7 @@ g_strnjoin(char *dest, int dest_len, const char *joiner, const char *src[], int 
     int i = 0;
     int dest_remaining;
     char *dest_pos = dest;
-    char *dest_end;
+    const char *dest_end;
 
     if (dest == NULL || dest_len < 1)
     {

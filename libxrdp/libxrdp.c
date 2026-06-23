@@ -76,7 +76,7 @@ int EXPORT_CC
 libxrdp_disconnect(struct xrdp_session *session, int errinfo)
 {
     int rv = 0;
-    struct trans *trans = NULL;
+    const struct trans *trans = NULL;
     struct xrdp_rdp *rdp = NULL;
     int early_capability_flags = 0;
 
@@ -853,9 +853,9 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                      int width, int height)
 {
     struct stream *s;
-    char *p;
-    tui16 *p16;
-    tui32 *p32;
+    const char *p;
+    const tui16 *p16;
+    const tui32 *p32;
     int i;
     int j;
     int data_bytes;
@@ -1440,7 +1440,7 @@ libxrdp_get_channel_id(struct xrdp_session *session, const char *name)
     int count = 0;
     struct xrdp_rdp *rdp = session->rdp;
     struct xrdp_mcs *mcs = rdp->sec_layer->mcs_layer;
-    struct mcs_channel_item *channel_item = NULL;
+    const struct mcs_channel_item *channel_item = NULL;
 
 
     if (mcs->channel_list == NULL)
@@ -1516,7 +1516,7 @@ libxrdp_disable_channel(struct xrdp_session *session, int channel_id,
                         int is_disabled)
 {
     struct xrdp_rdp *rdp = session->rdp;
-    struct xrdp_mcs *mcs = rdp->sec_layer->mcs_layer;
+    const struct xrdp_mcs *mcs = rdp->sec_layer->mcs_layer;
     struct mcs_channel_item *channel_item;
 
     if (mcs->channel_list == NULL)
