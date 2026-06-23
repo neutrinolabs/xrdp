@@ -36,6 +36,7 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "xrdp_sockets.h"
+#include "xrdp_client_info.h"
 
 /*****************************************************************************/
 static const char *
@@ -420,19 +421,21 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *instance_name)
+                                const char *instance_name,
+                                unsigned short dpi)
 {
     return libipm_msg_out_simple_send(
                trans,
                (int)E_SCP_CREATE_SESSION_REQUEST,
-               "yqqysss",
+               "yqqysssq",
                type,
                width,
                height,
                bpp,
                shell,
                directory,
-               instance_name);
+               instance_name,
+               dpi);
 }
 
 /*****************************************************************************/
@@ -445,24 +448,27 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **instance_name)
+                               const char **instance_name,
+                               unsigned short *dpi)
 {
     /* Intermediate values */
     uint8_t i_type;
     uint16_t i_width;
     uint16_t i_height;
     uint8_t i_bpp;
+    uint16_t i_dpi;
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "yqqysss",
+                 "yqqysssq",
                  &i_type,
                  &i_width,
                  &i_height,
                  &i_bpp,
                  shell,
                  directory,
-                 instance_name);
+                 instance_name,
+                 &i_dpi);
 
     if (rv == 0)
     {
@@ -471,6 +477,9 @@ scp_get_create_session_request(struct trans *trans,
         *height = i_height;
         /* bpp is fixed for Xorg session types */
         *bpp = (*type == SCP_SESSION_TYPE_XORG) ? 24 : i_bpp;
+        /* Don't trust the sender: reject an out-of-range DPI (defense in
+           depth - 0 means "no client DPI") */
+        *dpi = xrdp_client_info_dpi_valid_for_session(i_dpi) ? i_dpi : 0;
     }
 
     return rv;

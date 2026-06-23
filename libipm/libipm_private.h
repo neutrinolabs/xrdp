@@ -33,8 +33,12 @@ enum
 
     /**
      * Version of libipm wire protocol
+     *
+     * Bumped to 3: the SCP/EICP create-session requests carry a trailing
+     * client-DPI field. xrdp, sesman, sesexec and sesrun must be upgraded
+     * in lockstep; a version mismatch is rejected cleanly (fail-closed).
      */
-    LIBIPM_VERSION = 2,
+    LIBIPM_VERSION = 3,
 
     /**
      * Size of libipm header

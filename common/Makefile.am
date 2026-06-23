@@ -81,6 +81,7 @@ libcommon_la_SOURCES = \
   trans.c \
   trans.h \
   unicode_defines.h \
+  xrdp_client_info.c \
   $(PIXMAN_SOURCES)
 
 libcommon_la_LIBADD = \

@@ -151,7 +151,7 @@ handle_create_session_request(struct trans *self)
                  self, &sp.x11_display,
                  &sp.type, &sp.width, &sp.height,
                  &sp.bpp, &sp.shell, &sp.directory,
-                 &sp.instance_name);
+                 &sp.instance_name, &sp.dpi);
     if (status == 0)
     {
         enum scp_screate_status scp_status = E_SCP_SCREATE_OK;

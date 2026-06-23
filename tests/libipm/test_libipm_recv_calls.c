@@ -9,6 +9,8 @@
 #include "os_calls.h"
 #include "string_calls.h"
 #include "trans.h"
+#include "scp.h"
+#include "eicp.h"
 
 #include "test_libipm.h"
 
@@ -886,6 +888,137 @@ START_TEST(test_libipm_receive_programming_errors)
 }
 END_TEST
 
+/***************************************************************************//**
+ * Round-trips an SCP create-session request and returns the parsed DPI.
+ *
+ * Sends the request over the loopback link with the supplied DPI, receives
+ * and demarshals it, asserts the non-DPI fields survive intact (i.e. the
+ * appended DPI field does not disturb the existing layout), and returns the
+ * DPI as seen by the receiver. This is a semantic round trip - it does not
+ * assert raw wire bytes, so it remains robust against future field additions.
+ */
+static unsigned short
+scp_create_session_dpi_roundtrip(unsigned short sent_dpi)
+{
+    enum scp_session_type type = SCP_SESSION_TYPE_XVNC;
+    unsigned short width = 0;
+    unsigned short height = 0;
+    unsigned char bpp = 0;
+    const char *shell = NULL;
+    const char *directory = NULL;
+    const char *instance_name = NULL;
+    unsigned short dpi = 0xffff;
+    int status;
+
+    status = scp_send_create_session_request(
+                 g_t_out, SCP_SESSION_TYPE_XORG,
+                 1920, 1080, 24, "xterm", "/tmp", "inst", sent_dpi);
+    ck_assert_int_eq(status, E_LI_SUCCESS);
+
+    check_for_incoming_message(E_SCP_CREATE_SESSION_REQUEST);
+
+    status = scp_get_create_session_request(
+                 g_t_in, &type, &width, &height, &bpp,
+                 &shell, &directory, &instance_name, &dpi);
+    ck_assert_int_eq(status, E_LI_SUCCESS);
+
+    /* Non-DPI fields must be unaffected by the appended field */
+    ck_assert_int_eq(type, SCP_SESSION_TYPE_XORG);
+    ck_assert_int_eq(width, 1920);
+    ck_assert_int_eq(height, 1080);
+    ck_assert_str_eq(shell, "xterm");
+    ck_assert_str_eq(directory, "/tmp");
+    ck_assert_str_eq(instance_name, "inst");
+
+    return dpi;
+}
+
+/***************************************************************************//**
+ * Round-trips an EICP create-session request and returns the parsed DPI.
+ * See scp_create_session_dpi_roundtrip() for rationale.
+ */
+static unsigned short
+eicp_create_session_dpi_roundtrip(unsigned short sent_dpi)
+{
+    int x11_display = -1;
+    enum scp_session_type type = SCP_SESSION_TYPE_XVNC;
+    unsigned short width = 0;
+    unsigned short height = 0;
+    unsigned char bpp = 0;
+    const char *shell = NULL;
+    const char *directory = NULL;
+    const char *instance_name = NULL;
+    unsigned short dpi = 0xffff;
+    int status;
+
+    status = eicp_send_create_session_request(
+                 g_t_out, 7, SCP_SESSION_TYPE_XORG,
+                 1920, 1080, 24, "xterm", "/tmp", "inst", sent_dpi);
+    ck_assert_int_eq(status, E_LI_SUCCESS);
+
+    check_for_incoming_message(E_EICP_CREATE_SESSION_REQUEST);
+
+    status = eicp_get_create_session_request(
+                 g_t_in, &x11_display, &type, &width, &height, &bpp,
+                 &shell, &directory, &instance_name, &dpi);
+    ck_assert_int_eq(status, E_LI_SUCCESS);
+
+    ck_assert_int_eq(x11_display, 7);
+    ck_assert_int_eq(type, SCP_SESSION_TYPE_XORG);
+    ck_assert_int_eq(width, 1920);
+    ck_assert_int_eq(height, 1080);
+    ck_assert_str_eq(shell, "xterm");
+
+    return dpi;
+}
+
+/***************************************************************************//**
+ * A valid in-range DPI survives the SCP create-session round trip.
+ */
+START_TEST(test_scp_create_session_dpi_valid)
+{
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(139), 139);
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(50), 50);
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(400), 400);
+}
+END_TEST
+
+/***************************************************************************//**
+ * An out-of-range or absent DPI is rejected (mapped to 0) on SCP receive,
+ * so sesman never trusts an out-of-range value from the sender.
+ */
+START_TEST(test_scp_create_session_dpi_out_of_range)
+{
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(0), 0);
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(49), 0);
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(401), 0);
+    ck_assert_int_eq(scp_create_session_dpi_roundtrip(10000), 0);
+}
+END_TEST
+
+/***************************************************************************//**
+ * A valid in-range DPI survives the EICP create-session round trip.
+ */
+START_TEST(test_eicp_create_session_dpi_valid)
+{
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(139), 139);
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(50), 50);
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(400), 400);
+}
+END_TEST
+
+/***************************************************************************//**
+ * An out-of-range or absent DPI is rejected (mapped to 0) on EICP receive.
+ */
+START_TEST(test_eicp_create_session_dpi_out_of_range)
+{
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(0), 0);
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(49), 0);
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(401), 0);
+    ck_assert_int_eq(eicp_create_session_dpi_roundtrip(10000), 0);
+}
+END_TEST
+
 /******************************************************************************/
 Suite *
 make_suite_test_libipm_recv_calls(void)
@@ -916,6 +1049,10 @@ make_suite_test_libipm_recv_calls(void)
     tcase_add_test(tc, test_libipm_receive_bad_header);
     tcase_add_test(tc, test_libipm_receive_msg_erase);
     tcase_add_test(tc, test_libipm_receive_programming_errors);
+    tcase_add_test(tc, test_scp_create_session_dpi_valid);
+    tcase_add_test(tc, test_scp_create_session_dpi_out_of_range);
+    tcase_add_test(tc, test_eicp_create_session_dpi_valid);
+    tcase_add_test(tc, test_eicp_create_session_dpi_out_of_range);
 
     return s;
 }

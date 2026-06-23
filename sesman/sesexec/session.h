@@ -46,6 +46,7 @@ struct session_parameters
     unsigned short width;
     unsigned short height;
     unsigned char  bpp;
+    unsigned short dpi;  // Client monitor DPI, or 0 for none (Xorg only)
     struct guid guid;
     const char *shell;  // Must not be NULL
     const char *directory;  // Must not be NULL

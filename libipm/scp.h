@@ -345,6 +345,8 @@ scp_send_logout_request(struct trans *trans);
  * @param shell User program to run. May be ""
  * @param directory Directory to run the program in. May be ""
  * @param instance_name Name of xrdp instance. May be ""
+ * @param dpi Client monitor DPI for the session, or 0 for none. Used for
+ *        Xorg sessions only; values outside the accepted range are ignored.
  * @return != 0 for error
  *
  * Server replies with E_SCP_CREATE_SESSION_RESPONSE
@@ -357,7 +359,8 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *instance_name);
+                                const char *instance_name,
+                                unsigned short dpi);
 
 
 /**
@@ -371,6 +374,8 @@ scp_send_create_session_request(struct trans *trans,
  * @param[out] shell User program to run. May be ""
  * @param[out] directory Directory to run the program in. May be ""
  * @param[out] instance_name Name of xrdp instance. May be ""
+ * @param[out] dpi Client monitor DPI for the session, or 0 for none. An
+ *        out-of-range value received on the wire is reported as 0.
  * @return != 0 for error
  *
  * Returned string pointers are valid until scp_msg_in_reset() is
@@ -384,7 +389,8 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **instance_name);
+                               const char **instance_name,
+                               unsigned short *dpi);
 
 /**
  * Send an E_SCP_CREATE_SESSION_RESPONSE (SCP server)

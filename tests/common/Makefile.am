@@ -27,7 +27,8 @@ test_common_SOURCES = \
     test_base64.c \
     test_guid.c \
     test_scancode.c \
-    test_timers.c
+    test_timers.c \
+    test_xrdp_client_info.c
 
 test_common_CFLAGS = \
     @CHECK_CFLAGS@ \

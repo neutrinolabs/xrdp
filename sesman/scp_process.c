@@ -440,6 +440,7 @@ process_create_session_request(struct scp_list_item *sli)
     const char *shell;
     const char *directory;
     const char *instance_name;
+    unsigned short dpi;
 
     struct guid guid;
     const char *display;
@@ -453,7 +454,7 @@ process_create_session_request(struct scp_list_item *sli)
     rv = scp_get_create_session_request(sli->client_trans,
                                         &type, &width, &height,
                                         &bpp, &shell, &directory,
-                                        &instance_name);
+                                        &instance_name, &dpi);
 
     if (rv == 0)
     {
@@ -470,6 +471,12 @@ process_create_session_request(struct scp_list_item *sli)
             LOG(LOG_LEVEL_INFO,
                 "Received request from %s to create a session for user %s",
                 sli->peername, sli->username);
+
+            if (dpi > 0)
+            {
+                LOG(LOG_LEVEL_INFO,
+                    "Received client DPI for Xorg session: %d", dpi);
+            }
 
             s_item = session_list_get_bydata(sli->uid, type, width, height,
                                              bpp, sli->start_ip_addr, instance_name);
@@ -537,7 +544,7 @@ process_create_session_request(struct scp_list_item *sli)
                                 x11_display,
                                 type, width, height,
                                 bpp, shell, directory,
-                                instance_name);
+                                instance_name, dpi);
 
                 if (eicp_stat != 0)
                 {

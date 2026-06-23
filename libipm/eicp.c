@@ -32,6 +32,7 @@
 #include "guid.h"
 #include "os_calls.h"
 #include "trans.h"
+#include "xrdp_client_info.h"
 
 /*****************************************************************************/
 static const char *
@@ -280,12 +281,13 @@ eicp_send_create_session_request(struct trans *trans,
                                  unsigned char bpp,
                                  const char *shell,
                                  const char *directory,
-                                 const char *instance_name)
+                                 const char *instance_name,
+                                 unsigned short dpi)
 {
     return libipm_msg_out_simple_send(
                trans,
                (int)E_EICP_CREATE_SESSION_REQUEST,
-               "iyqqysss",
+               "iyqqysssq",
                x11_display,
                type,
                width,
@@ -293,7 +295,8 @@ eicp_send_create_session_request(struct trans *trans,
                bpp,
                shell,
                directory,
-               instance_name);
+               instance_name,
+               dpi);
 }
 
 /*****************************************************************************/
@@ -307,7 +310,8 @@ eicp_get_create_session_request(struct trans *trans,
                                 unsigned char *bpp,
                                 const char **shell,
                                 const char **directory,
-                                const char **instance_name)
+                                const char **instance_name,
+                                unsigned short *dpi)
 {
     /* Intermediate values */
     int32_t i_x11_display;
@@ -315,10 +319,11 @@ eicp_get_create_session_request(struct trans *trans,
     uint16_t i_width;
     uint16_t i_height;
     uint8_t i_bpp;
+    uint16_t i_dpi;
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "iyqqysss",
+                 "iyqqysssq",
                  &i_x11_display,
                  &i_type,
                  &i_width,
@@ -326,7 +331,8 @@ eicp_get_create_session_request(struct trans *trans,
                  &i_bpp,
                  shell,
                  directory,
-                 instance_name);
+                 instance_name,
+                 &i_dpi);
 
     if (rv == 0)
     {
@@ -336,6 +342,9 @@ eicp_get_create_session_request(struct trans *trans,
         *height = i_height;
         /* bpp is fixed for Xorg session types */
         *bpp = (*type == SCP_SESSION_TYPE_XORG) ? 24 : i_bpp;
+        /* Don't trust the sender: reject an out-of-range DPI (defense in
+           depth - 0 means "no client DPI") */
+        *dpi = xrdp_client_info_dpi_valid_for_session(i_dpi) ? i_dpi : 0;
     }
 
     return rv;

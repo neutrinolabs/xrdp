@@ -8,7 +8,7 @@
  * value change, tests will fail! */
 enum
 {
-    LIBIPM_VERSION = 2,
+    LIBIPM_VERSION = 3,
     LIBIPM_HEADER_SIZE = 12,
     LIBIPM_MAX_MESSAGE_SIZE = 8192,
     LIBIPM_MAX_FD_PER_MSG = 8,

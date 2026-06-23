@@ -287,4 +287,37 @@ struct xrdp_client_info
 #define OUTPUT_SUPPRESSED_FOR_REASON(ci,reason) \
     (((ci)->suppress_output_mask & (unsigned int)reason) != 0)
 
+/*
+ * Acceptable range for a session (desktop) DPI derived from client
+ * monitor metadata. The login screen uses the raw computed DPI; only the
+ * value propagated to the Xorg session is constrained to this range.
+ */
+#define XRDP_SESSION_DPI_MIN 50
+#define XRDP_SESSION_DPI_MAX 400
+
+/**
+ * Compute monitor DPI from a physical height.
+ *
+ * @param height_pixels Monitor/desktop height in pixels
+ * @param height_mm Physical monitor/desktop height in millimetres
+ * @return Computed DPI, or 0 if it cannot be determined (missing physical
+ *         size, zero pixels, or arithmetic overflow).
+ *
+ * This is the raw geometric DPI and is NOT clamped to any range. Callers
+ * needing a session-safe value must additionally check
+ * xrdp_client_info_dpi_valid_for_session().
+ */
+unsigned int
+xrdp_client_info_calculate_dpi(unsigned int height_pixels,
+                               unsigned int height_mm);
+
+/**
+ * Test whether a DPI value is within the acceptable session DPI range.
+ *
+ * @param dpi DPI value to test
+ * @return != 0 if XRDP_SESSION_DPI_MIN <= dpi <= XRDP_SESSION_DPI_MAX
+ */
+int
+xrdp_client_info_dpi_valid_for_session(unsigned int dpi);
+
 #endif

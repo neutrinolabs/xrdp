@@ -507,7 +507,8 @@ send_create_session_request(struct trans *t, const struct session_params *sp)
     return scp_send_create_session_request(
                t, sp->session_type,
                sp->width, sp->height, sp->bpp, sp->shell,
-               sp->directory, sp->instance_name);
+               sp->directory, sp->instance_name,
+               0 /* dpi: sesrun does not supply a client DPI */);
 }
 
 /**************************************************************************//**

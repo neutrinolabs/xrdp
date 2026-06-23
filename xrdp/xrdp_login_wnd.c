@@ -691,8 +691,13 @@ xrdp_login_wnd_get_monitor_dpi(struct xrdp_wm *self)
         {
             if (mi->is_primary)
             {
-                height_pixels = mi->bottom - mi->top + 1;
-                height_mm = mi->physical_height;
+                /* Guard against an inverted rectangle which would
+                   underflow the unsigned height calculation */
+                if (mi->bottom >= mi->top)
+                {
+                    height_pixels = mi->bottom - mi->top + 1;
+                    height_mm = mi->physical_height;
+                }
                 break;
             }
         }
@@ -731,12 +736,7 @@ xrdp_login_wnd_get_monitor_dpi(struct xrdp_wm *self)
 
     if (height_mm != 0)
     {
-        /*
-         * DPI = height_pixels / (height_mm / 25.4)
-         *     = (height_pixels * 25.4) / height_mm
-         *     = (height_pixels * 127) / (height_mm * 5)
-         */
-        result = (height_pixels * 127 ) / (height_mm * 5);
+        result = xrdp_client_info_calculate_dpi(height_pixels, height_mm);
         LOG(LOG_LEVEL_INFO,
             "Login screen monitor height is %u pixels over %u mm (%u DPI)",
             height_pixels,

@@ -53,6 +53,7 @@
 #include "string_calls.h"
 #include "trans.h"
 #include "xauth.h"
+#include "xrdp_client_info.h"
 #include "xwait.h"
 #include "xrdp_sockets.h"
 
@@ -349,6 +350,32 @@ start_window_manager(const struct login_info *login_info,
 }
 
 /******************************************************************************/
+/**
+ * Determine whether the configured [Xorg] params already specify -dpi.
+ *
+ * Uses an exact-token comparison so an admin-supplied "-dpi" always takes
+ * precedence and we never emit a duplicate.
+ *
+ * @return != 0 if a "-dpi" token is present in g_cfg->xorg_params
+ */
+static int
+xorg_params_contain_dpi(void)
+{
+    int i;
+
+    for (i = 0; i < g_cfg->xorg_params->count; ++i)
+    {
+        const char *param = (const char *)list_get_item(g_cfg->xorg_params, i);
+        if (param != NULL && g_strcmp(param, "-dpi") == 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
 static struct list *
 prepare_xorg_xserver_params(const struct session_data *sd,
                             const char *authfile)
@@ -411,6 +438,38 @@ prepare_xorg_xserver_params(const struct session_data *sd,
 
         /* additional parameters from sesman.ini file */
         list_append_list_strdup(g_cfg->xorg_params, params, 1);
+
+        /*
+         * Append the client monitor DPI as two argv tokens ("-dpi" "<n>",
+         * integer only, never via a shell) when we have a valid in-range
+         * client DPI and the admin has not already configured -dpi in the
+         * [Xorg] params. The admin value always wins; we never emit a
+         * duplicate -dpi. The range is re-checked here as defense in depth.
+         */
+        if (xrdp_client_info_dpi_valid_for_session(sd->params.dpi))
+        {
+            if (xorg_params_contain_dpi())
+            {
+                LOG(LOG_LEVEL_INFO,
+                    "[session start] (display :%d): -dpi is set in "
+                    "sesman.ini [Xorg] params; ignoring client DPI %d",
+                    sd->params.x11_display, sd->params.dpi);
+            }
+            else
+            {
+                char dpi_str[12];
+                g_snprintf(dpi_str, sizeof(dpi_str), "%d", sd->params.dpi);
+                list_add_strdup(params, "-dpi");
+                list_add_strdup(params, dpi_str);
+                LOG(LOG_LEVEL_INFO,
+                    "[session start] (display :%d): starting Xorg with "
+                    "client DPI %d. This sets the X server core DPI only; "
+                    "GUI toolkits (GTK/Qt) follow it only when the desktop's "
+                    "font DPI is automatic. If fonts do not scale, set the "
+                    "desktop to auto DPI (e.g. XFCE Xft/DPI = -1).",
+                    sd->params.x11_display, sd->params.dpi);
+            }
+        }
     }
 
     return params;

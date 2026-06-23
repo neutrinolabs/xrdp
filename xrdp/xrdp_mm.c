@@ -313,6 +313,7 @@ xrdp_mm_create_session(struct xrdp_mm *self)
     int rv = 0;
     int xserverbpp;
     enum scp_session_type type;
+    unsigned short dpi = 0;
 
     /* Map the session code to an SCP session type */
     switch (self->code)
@@ -340,6 +341,22 @@ xrdp_mm_create_session(struct xrdp_mm *self)
         xserverbpp = xrdp_mm_get_value_int(self, "xserverbpp",
                                            self->wm->screen->bpp);
 
+        /*
+         * For Xorg sessions, derive the client monitor DPI so the desktop
+         * can be started to match. Only a value within the accepted range
+         * is propagated; anything else (absent/invalid metadata, or an
+         * out-of-range value) is sent as 0 = "no DPI", preserving the
+         * current default-96-DPI behavior.
+         */
+        if (type == SCP_SESSION_TYPE_XORG)
+        {
+            unsigned int raw_dpi = xrdp_login_wnd_get_monitor_dpi(self->wm);
+            if (xrdp_client_info_dpi_valid_for_session(raw_dpi))
+            {
+                dpi = raw_dpi;
+            }
+        }
+
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                         "sending create session request to session"
                         " manager. Please wait...");
@@ -351,7 +368,8 @@ xrdp_mm_create_session(struct xrdp_mm *self)
                  xserverbpp,
                  self->wm->client_info->program,
                  self->wm->client_info->directory,
-                 self->wm->pro_layer->lis_layer->startup_params->instance_name);
+                 self->wm->pro_layer->lis_layer->startup_params->instance_name,
+                 dpi);
     }
 
     return rv;
