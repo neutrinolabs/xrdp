@@ -341,7 +341,7 @@ clipboard_send_data_response_for_file(const char *data, int data_size)
     tui32 ui32;
     unsigned int utf8_count;
     unsigned int utf16_count;
-    struct cb_file_info *cfi;
+    const struct cb_file_info *cfi;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_file: data_size %d",
               data_size);
@@ -728,7 +728,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list, int file_list_size,
     int str_len;
     struct clip_file_desc cfd;
     char *ptr;
-    char *last; /* Last writeable char in buffer */
+    const char *last; /* Last writeable char in buffer */
     int dropped_files = 0; /* # files we can't add to buffer */
 
     if (file_list_size < 1)

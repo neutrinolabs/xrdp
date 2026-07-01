@@ -406,14 +406,14 @@ static int
 xrdp_iso_send_cc(struct xrdp_iso *self)
 {
     struct stream *s;
-    char *holdp;
+    const char *holdp;
     char *len_ptr;
     char *len_indicator_ptr;
     char flags;
     int len;
     int len_indicator;
 
-    struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
+    const struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
 
     make_stream(s);
     init_stream(s, 8192);

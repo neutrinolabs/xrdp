@@ -477,7 +477,7 @@ main(int argc, char *argv[])
     FT_Library library = NULL;   /* handle to library     */
     FT_Face face = NULL;      /* handle to face object */
     FT_Error error;
-    struct fv1_glyph *g;
+    const struct fv1_glyph *g;
     struct program_args pa;
     struct log_config *logging;
     int rv = 1;

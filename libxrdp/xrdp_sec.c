@@ -1269,7 +1269,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
-        char *data_signature = NULL;
+        const char *data_signature = NULL;
 
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
@@ -2012,7 +2012,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 {
     int num_channels;
     int index;
-    struct xrdp_client_info *client_info;
+    const struct xrdp_client_info *client_info;
     struct mcs_channel_item *channel_item;
     int next_mcs_channel_id;
 
@@ -2365,7 +2365,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     struct list *values = NULL;
     struct xrdp_iso *iso;
     int index;
-    char *item = NULL;
+    const char *item = NULL;
     char *value = NULL;
     char key_file[256];
 

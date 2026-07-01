@@ -458,7 +458,7 @@ xrdp_painter_text_width_count(struct xrdp_painter *self, const char *text,
         unsigned int index;
         for (index = 0 ; index < c32_count; ++index)
         {
-            struct xrdp_font_char *font_item;
+            const struct xrdp_font_char *font_item;
             char32_t c32 = utf8_get_next_char(&text, NULL);
             if (c32 == 0)
             {
@@ -484,7 +484,7 @@ xrdp_painter_repeated_char_width(struct xrdp_painter *self,
 
     if (self->font != NULL)
     {
-        struct xrdp_font_char *font_item = XRDP_FONT_GET_CHAR(self->font, chr);
+        const struct xrdp_font_char *font_item = XRDP_FONT_GET_CHAR(self->font, chr);
         rv = font_item->incby * repeat_count;
     }
 

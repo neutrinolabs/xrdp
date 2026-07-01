@@ -231,7 +231,7 @@ xrdp_wm_cancel_clicked(struct xrdp_bitmap *wnd)
 static int
 xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 {
-    struct xrdp_bitmap *combo;
+    const struct xrdp_bitmap *combo;
     struct xrdp_bitmap *label;
     struct xrdp_bitmap *edit;
     struct xrdp_wm *wm;
@@ -368,9 +368,9 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     int index;
     int insert_index;
     int username_set;
-    char *name;
+    const char *name;
     char *value;
-    struct xrdp_mod_data *mod;
+    const struct xrdp_mod_data *mod;
     struct xrdp_bitmap *b;
     struct xrdp_cfg_globals *globals;
     char resultIP[256];
@@ -536,7 +536,7 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
                      struct xrdp_bitmap *sender,
                      int msg, long param1, long param2)
 {
-    struct xrdp_bitmap *b;
+    const struct xrdp_bitmap *b;
     struct xrdp_rect rect;
     int i;
 
@@ -598,9 +598,9 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
     int fd;
     int i;
     int j;
-    char *p;
-    char *q;
-    char *r;
+    const char *p;
+    const char *q;
+    const char *r;
     char name[256];
     struct xrdp_mod_data *mod_data;
     const char *xrdp_ini = self->session->xrdp_ini;
@@ -1063,10 +1063,10 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     struct list *names;
     struct list *values;
 
-    char *n;
-    char *v;
-    int   fd;
-    int   i;
+    const char *n;
+    const char *v;
+    int         fd;
+    int         i;
 
     if (!config)
     {

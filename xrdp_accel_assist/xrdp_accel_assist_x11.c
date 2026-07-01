@@ -489,7 +489,7 @@ get_vertices420(GLuint *vertices_bytes, GLuint *vertices_pointes,
     const GLfloat fac13 = 1.0 / 3.0;
     const GLfloat fac23 = 2.0 / 3.0;
     const GLfloat fac43 = 4.0 / 3.0;
-    struct xh_rect *crect;
+    const struct xh_rect *crect;
 
     if (num_crects < 1)
     {
@@ -561,7 +561,7 @@ get_vertices444(GLuint *vertices_bytes, GLuint *vertices_pointes,
     int index;
     GLfloat fwidth;
     GLfloat fheight;
-    struct xh_rect *crect;
+    const struct xh_rect *crect;
 
     if (num_crects < 1)
     {

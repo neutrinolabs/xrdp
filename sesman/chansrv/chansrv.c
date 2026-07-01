@@ -161,7 +161,7 @@ add_timeout(int msoffset, void (*callback)(void *data), void *data)
 static int
 get_timeout(int *timeout)
 {
-    struct timeout_obj *tobj;
+    const struct timeout_obj *tobj;
     tui32 now;
     int ltimeout;
 
@@ -376,7 +376,7 @@ xrdpapi_send_session_state_event_all(void)
 {
     int index;
     struct trans *ltran;
-    struct xrdp_api_data *api_data;
+    const struct xrdp_api_data *api_data;
 
     for (index = 0; index < g_api_con_trans_list->count; index++)
     {
@@ -501,7 +501,7 @@ process_message_channel_data(struct stream *s)
     int found;
     struct stream *ls;
     struct trans *ltran;
-    struct xrdp_api_data *api_data;
+    const struct xrdp_api_data *api_data;
 
     in_uint16_le(s, chan_id);
     in_uint16_le(s, chan_flags);
@@ -1292,7 +1292,7 @@ static int
 my_api_trans_data_in(struct trans *trans)
 {
     struct stream *s;
-    struct xrdp_api_data *ad;
+    const struct xrdp_api_data *ad;
     int rv;
     int bytes;
 

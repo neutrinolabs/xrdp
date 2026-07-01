@@ -268,7 +268,7 @@ scp_list_get_create_session_x11_displays(struct set_int *alloc_displays)
     int i = 0;
     for (i = 0; i < g_scp_list->count; ++i)
     {
-        struct scp_list_item *sli;
+        const struct scp_list_item *sli;
 
         sli = (struct scp_list_item *)list_get_item(g_scp_list, i);
 
