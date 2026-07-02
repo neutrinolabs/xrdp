@@ -2162,17 +2162,19 @@ xrdp_mm_drdynvc_data_first(struct xrdp_process *id, int chan_id, char *data,
     struct xrdp_wm *wm;
     int chansrv_chan_id;
 
+    // Size of PDU sent to chansrv
+    int pdu_size = 8 + 8 + 4 + 4 + 4 + bytes;
     wm = id->wm;
     trans = wm->mm->chan_trans;
-    s = trans_get_out_s(trans, 8192);
+    s = trans_get_out_s(trans, pdu_size);
     if (s == NULL)
     {
         return 1;
     }
     out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8 + 4 + 4 + 4 + bytes);
+    out_uint32_le(s, pdu_size);
     out_uint32_le(s, 17); /* msg id */
-    out_uint32_le(s, 8 + 4 + 4 + 4 + bytes);
+    out_uint32_le(s, pdu_size - 8);
     chansrv_chan_id = wm->mm->xr2cr_cid_map[chan_id];
     out_uint32_le(s, chansrv_chan_id);
     out_uint32_le(s, bytes);
@@ -2193,17 +2195,19 @@ xrdp_mm_drdynvc_data(struct xrdp_process *id, int chan_id,
     struct xrdp_wm *wm;
     int chansrv_chan_id;
 
+    // Size of PDU sent to chansrv
+    int pdu_size = 8 + 8 + 4 + 4 + bytes;
     wm = id->wm;
     trans = wm->mm->chan_trans;
-    s = trans_get_out_s(trans, 8192);
+    s = trans_get_out_s(trans, pdu_size);
     if (s == NULL)
     {
         return 1;
     }
     out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8 + 4 + 4 + bytes);
+    out_uint32_le(s, pdu_size);
     out_uint32_le(s, 19); /* msg id */
-    out_uint32_le(s, 8 + 4 + 4 + bytes);
+    out_uint32_le(s, pdu_size - 8);
     chansrv_chan_id = wm->mm->xr2cr_cid_map[chan_id];
     out_uint32_le(s, chansrv_chan_id);
     out_uint32_le(s, bytes);
@@ -2641,38 +2645,39 @@ int
 xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
                              tbus param3, tbus param4)
 {
-    struct stream *s;
-    int rv;
-    int length;
-    int total_length;
-    int flags;
-    int id;
-    char *data;
-
-    rv = 0;
+    int rv = 0;
 
     if ((self->chan_trans != 0) && self->chan_trans->status == TRANS_STATUS_UP)
     {
-        s = trans_get_out_s(self->chan_trans, 8192);
+        int id = LOWORD(param1);
+        int flags = HIWORD(param1);
+        int length = param2;
+        const char *data = (const char *)param3;
+        int total_length = param4;
 
+        // Check passed-in lengths
+        if (length > 65535)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_mm_process_channel_data(): length overflow");
+            return 1;
+        }
+
+        if (total_length < length)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_mm_process_channel_data(): total_len < length");
+            return 1;
+        }
+
+        // Size of PDU sent to chansrv
+        int pdu_size = 8 + 8 + 2 + 2 + 2 + 4 + length;
+
+        struct stream *s = trans_get_out_s(self->chan_trans, pdu_size);
         if (s != 0)
         {
-            id = LOWORD(param1);
-            flags = HIWORD(param1);
-            length = param2;
-            data = (char *)param3;
-            total_length = param4;
-
-            if (total_length < length)
-            {
-                LOG(LOG_LEVEL_WARNING, "WARNING in xrdp_mm_process_channel_data(): total_len < length");
-                total_length = length;
-            }
-
             out_uint32_le(s, 0); /* version */
-            out_uint32_le(s, 8 + 8 + 2 + 2 + 2 + 4 + length);
+            out_uint32_le(s, pdu_size);
             out_uint32_le(s, 5); /* msg id */
-            out_uint32_le(s, 8 + 2 + 2 + 2 + 4 + length);
+            out_uint32_le(s, pdu_size - 8);
             out_uint16_le(s, id);
             out_uint16_le(s, flags);
             out_uint16_le(s, length);
