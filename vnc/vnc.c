@@ -30,6 +30,8 @@
 #include <config_ac.h>
 #endif
 
+#include <limits.h>
+
 #include "vnc.h"
 #include "vnc_clip.h"
 #include "rfb.h"
