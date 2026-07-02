@@ -73,6 +73,8 @@ struct source_info;
 /* Defined in vnc_clip.c */
 struct vnc_clipboard_data;
 
+#define VNC_PALETTE_SIZE 256
+
 /* Defined in xrdp_client_info.h */
 struct monitor_info;
 
@@ -162,7 +164,7 @@ struct vnc
     int server_bpp;
     char mod_name[256];
     int mod_mouse_state;
-    int palette[256];
+    int palette[VNC_PALETTE_SIZE];
     int vnc_desktop;
     char username[256];
     char password[256];
