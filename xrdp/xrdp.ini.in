@@ -298,33 +298,37 @@ port=-1
 #disabled_encodings_mask=0
 
 ; Generic VNC Proxy
-; Tailor this to specific hosts and VNC instances by specifying an ip
+; To use this, remove the '#-#' prefix from the lines below. Tailor
+; the section to specific hosts and VNC instances by specifying an ip
 ; and port and setting a suitable name.
-[vnc-any]
-name=vnc-any
-lib=libvnc.@lib_extension@
-ip=ask
-port=ask5900
-username=na
-password=ask
-#pamusername=asksame
-#pampassword=asksame
-#delay_ms=2000
-; Use one of these to connect to a chansrv instance created outside of sesman
-; (e.g. as part of an x11vnc console session). Replace 's' with the
-; display string of the session, and (if applicable) 'u' with the numeric
-; UID of the session.
-;
-; For compatibility, a completely numeric display string is taken to be
-; an X11 display number
-;
-; You will also need to change the value of SessionSockdirGroup in
-; sesman.ini to allow xrdp to reach the chansrv instance
-;
-; If 'username' or 'pamusername' is set, you probably don't need to use
-; the two parameter variant with 'u'.
-#chansrvport=DISPLAY(n)
-#chansrvport=DISPLAY(n,u)
+; This can be used with no customisations in test environments, but
+; should always be locked down to specific hosts and/or ports in
+; production.
+#-#[vnc-any]
+#-#name=vnc-any
+#-#lib=libvnc.@lib_extension@
+#-#ip=ask
+#-#port=ask5900
+#-#username=na
+#-#password=ask
+#-##pamusername=asksame
+#-##pampassword=asksame
+#-##delay_ms=2000
+#-#; Use one of these to connect to a chansrv instance created outside of sesman
+#-#; (e.g. as part of an x11vnc console session). Replace 's' with the
+#-#; display string of the session, and (if applicable) 'u' with the numeric
+#-#; UID of the session.
+#-#;
+#-#; For compatibility, a completely numeric display string is taken to be
+#-#; an X11 display number
+#-#;
+#-#; You will also need to change the value of SessionSockdirGroup in
+#-#; sesman.ini to allow xrdp to reach the chansrv instance
+#-#;
+#-#; If 'username' or 'pamusername' is set, you probably don't need to use
+#-#; the two parameter variant with 'u'.
+#-##chansrvport=DISPLAY(n)
+#-##chansrvport=DISPLAY(n,u)
 
 ; Generic RDP proxy using NeutrinoRDP
 ; Tailor this to specific hosts by specifying an ip and port and setting

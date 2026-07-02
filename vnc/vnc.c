@@ -1649,6 +1649,13 @@ lib_palette_update(struct vnc *v)
         in_uint8s(s, 1);
         in_uint16_be(s, first_color);
         in_uint16_be(s, num_colors);
+        if ((first_color + num_colors) > VNC_PALETTE_SIZE)
+        {
+            LOG(LOG_LEVEL_ERROR, "lib_palette_update: palette overflow");
+            free_stream(s);
+            return 1;
+        }
+
         init_stream(s, 8192);
         error = trans_force_read_s(v->trans, s, num_colors * 6);
     }
