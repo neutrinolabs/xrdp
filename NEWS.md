@@ -1,3 +1,43 @@
+# Release notes for xrdp v0.10.6.1 (2026/07/06)
+
+## General announcements
+
+This release fixes 10 vulnerabilities and 1 regression introduced by a vulnerability fix in the previous release.
+
+If you like xrdp, please consider sponsoring or donating to the project. We accept financial contributions through [Open Collective](https://opencollective.com/xrdp-project), and direct donations to individual developers via GitHub Sponsors are also welcome.
+
+## Security fixes
+
+- [CVE-2026-41252](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-w5vg-6qmv-j63j)
+- [CVE-2026-41521](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-v8w6-pf78-9458)
+- [CVE-2026-44178](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-hh7r-2rmq-q4g4)
+- [CVE-2026-42218](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-3wr5-fwmh-qh34)
+- [CVE-2026-44978](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-9cg5-f7m7-ppvj)
+- [CVE-2026-54538](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-9j3q-9mvw-qv7j)
+- [CVE-2026-55238](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-mg8j-x9rw-9xv3)
+- [CVE-2026-55626](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-m3xx-cpc4-982r)
+- [CVE-2026-55639](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-6g36-mxcf-r3gc)
+- [CVE-2026-55645](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-3m4m-h22g-c7xx)
+
+## New features
+None
+
+## Bug fixes
+- regression: Fix SEGV in xrdp when running over TLS (#3793)
+
+## Internal changes
+- CI: Switch FreeBSD CI from Cirrus CI to GitHub Actions (#3800)
+
+## Changes for users
+None
+
+## Changes for packagers or developers
+* (from v0.10.3) The `--enable-utmp` needs to be added to enable UTMP support.
+* (from v0.10.3) The config file subdirectory (`xrdp` part of `/etc/xrdp`) can now be configured (#3369)
+* (from v0.10.3) Packagers using TigerVNC to provide the Xvnc backend may wish to configure the 'Xvnc over UDS' session type as a default by using a `code=1` line in xrdp.ini. Instructions are provided in the released xrdp.ini file.
+* The unfinished PIV smartcard support is now disabled by default, but can be re-enabled by adding `--enable-smartcard` to the configure command. Because of possible security issues with this code, this should only be done by developers working in non-production environments (#3759)
+-----------------------
+
 # Release notes for xrdp v0.10.6 (2026/04/17)
 
 ## General announcements
@@ -11,7 +51,7 @@ If you like xrdp, please consider sponsoring or donating to the project. We acce
 
 ## Security fixes
 
-Thanks to @explitintel, @smittix and @hessandrew!
+Thanks to @exploitintel, @smittix and @hessandrew!
 
 - [CVE-2026-32105](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-j2jm-c596-c5q3)
 - [CVE-2026-32107](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-p5m6-7m43-pjv9)
@@ -23,7 +63,7 @@ Thanks to @explitintel, @smittix and @hessandrew!
 - [CVE-2026-35512](https://github.com/neutrinolabs/xrdp/security/advisories/GHSA-jg6p-7fg8-9hh6)
 
 ## New features
-- Support for xorgxrdp bug fixes #249 and #342 (#3721)
+- Support for xorgxrdp bug fixes neutrinolabs/xorgxrdp#249 and neutrinolabs/xorgxrdp#342 (#3721)
 
 ## Bug fixes
 - Honour `pass_shell_as_env` setting only if user sets a shell (#3725)
