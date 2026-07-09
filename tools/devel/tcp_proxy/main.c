@@ -133,6 +133,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
     int lis_sck = -1;
     int acc_sck = -1;
     int con_sck = -1;
+    int (*is_term)(void) = NULL;
     int sel;
     int count;
     int error;
@@ -208,16 +209,8 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
     /* connect outgoing socket */
     if (error == 0)
     {
+        error = g_tcp_connect(&con_sck, remote_ip, remote_port, is_term, 3000);
         con_sck = g_tcp_socket();
-        if (con_sck < 0)
-        {
-            error = 1;
-        }
-        else
-        {
-            g_tcp_set_non_blocking(con_sck);
-            error = g_tcp_connect(con_sck, remote_ip, remote_port);
-        }
 
         if ((error == -1) && g_tcp_last_error_would_block(con_sck))
         {

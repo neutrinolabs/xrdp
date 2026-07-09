@@ -34,11 +34,6 @@
 
 #define MAX_SBYTES 0
 
-/** Time between polls of is_term when connecting */
-#define CONNECT_TERM_POLL_MS 3000
-/** Time we wait before another connect() attempt if one fails immediately */
-#define CONNECT_DELAY_ON_FAIL_MS 2000
-
 /*****************************************************************************/
 static int
 trans_tls_recv(struct trans *self, char *ptr, int len)
@@ -689,57 +684,14 @@ trans_write_copy(struct trans *self)
  * to g_tcp_local_connect()
  */
 static int
-local_connect_shim(int fd, const char *server, const char *port)
+local_connect_shim(int *fd, const char *server, const char *port, int (*is_term)(void), int async_to)
 {
-    return g_tcp_local_connect(fd, port);
-}
-
-/**************************************************************************//**
- * Waits for an asynchronous connect to complete.
- * @param self - Transport object
- * @param start_time Start time of connect (from g_get_elapsed_ms())
- * @param timeout Total wait timeout
- * @return 0 - connect succeeded, 1 - Connect failed
- *
- * If the transport is set up for checking a termination object, this
- * on a regular basis.
- */
-static int
-poll_for_async_connect(struct trans *self, unsigned int start_time, int timeout)
-{
-    int rv = 1;
-    int ms_remaining = timeout - (int)(g_get_elapsed_ms() - start_time);
-
-    while (ms_remaining > 0)
+    *fd = g_tcp_local_socket();
+    if (*fd < 0)
     {
-        int poll_time = ms_remaining;
-        /* Lower bound for waiting for a result */
-        if (poll_time < 100)
-        {
-            poll_time = 100;
-        }
-        /* Limit the wait time if we need to poll for termination */
-        if (self->is_term != NULL && poll_time > CONNECT_TERM_POLL_MS)
-        {
-            poll_time = CONNECT_TERM_POLL_MS;
-        }
-
-        if (g_tcp_can_send(self->sck, poll_time))
-        {
-            /* Connect has finished - return the socket status */
-            rv = g_sck_socket_ok(self->sck) ? 0 : 1;
-            break;
-        }
-
-        /* Check for program termination */
-        if (self->is_term != NULL && self->is_term())
-        {
-            break;
-        }
-
-        ms_remaining = timeout - (int)(g_get_elapsed_ms() - start_time);
+        return -1;
     }
-    return rv;
+    return g_tcp_local_connect(fd, port, is_term, async_to);
 }
 
 /*****************************************************************************/
@@ -748,26 +700,21 @@ int
 trans_connect(struct trans *self, const char *server, const char *port,
               int timeout)
 {
-    unsigned int start_time = g_get_elapsed_ms();
     int error;
-    int ms_before_next_connect;
     int connect_errno = 0;
 
     /*
      * Function pointers which we use in the main loop to avoid
      * having to switch on the socket mode */
-    int (*f_alloc_socket)(void);
-    int (*f_connect)(int fd, const char *server, const char *port);
+    int (*f_connect)(int *sck, const char *server, const char *port, int (*is_term)(void), int async_to);
 
     switch (self->mode)
     {
         case TRANS_MODE_TCP:
-            f_alloc_socket = g_tcp_socket;
             f_connect = g_tcp_connect;
             break;
 
         case TRANS_MODE_UNIX:
-            f_alloc_socket = g_tcp_local_socket;
             f_connect = local_connect_shim;
             break;
 
@@ -776,77 +723,8 @@ trans_connect(struct trans *self, const char *server, const char *port,
             return 1;
     }
 
-    while (1)
-    {
-        /* Check the program isn't terminating */
-        if (self->is_term != NULL && self->is_term())
-        {
-            error = 1;
-            break;
-        }
-
-        /* Allocate a new socket */
-        if (self->sck >= 0)
-        {
-            g_tcp_close(self->sck);
-        }
-        self->sck = f_alloc_socket();
-
-        if (self->sck < 0)
-        {
-            connect_errno = errno;
-            error = 1;
-            break;
-        }
-
-        /* Try to connect asynchronously */
-        g_file_set_cloexec(self->sck, 1);
-        g_tcp_set_non_blocking(self->sck);
-        error = f_connect(self->sck, server, port);
-        connect_errno = errno;
-        if (error == 0)
-        {
-            /* Connect was immediately successful */
-            break;
-        }
-
-        if (g_tcp_last_error_would_block(self->sck))
-        {
-            /* Async connect is in progress */
-            if (poll_for_async_connect(self, start_time, timeout) == 0)
-            {
-                /* Async connect was successful */
-                error = 0;
-                break;
-            }
-            /* No need to wait any more before the next connect attempt */
-            ms_before_next_connect = 0;
-        }
-        else
-        {
-            /* Connect failed immediately. Wait a bit before the next
-             * attempt */
-            ms_before_next_connect = CONNECT_DELAY_ON_FAIL_MS;
-        }
-
-        /* Have we reached the total timeout yet? */
-        int ms_left = timeout - (int)(g_get_elapsed_ms() - start_time);
-        if (ms_left <= 0)
-        {
-            error = 1;
-            break;
-        }
-
-        /* Sleep a bit before trying again */
-        if (ms_before_next_connect > 0)
-        {
-            if (ms_before_next_connect > ms_left)
-            {
-                ms_before_next_connect = ms_left;
-            }
-            g_sleep(ms_before_next_connect);
-        }
-    }
+    error = f_connect((int *)&self->sck, server, port, self->is_term, timeout);
+    connect_errno = errno;
 
     if (error != 0)
     {
