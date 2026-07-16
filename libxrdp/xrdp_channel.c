@@ -23,6 +23,7 @@
 #endif
 
 #include "libxrdp.h"
+#include "parse.h"
 #include "string_calls.h"
 #include "xrdp_channel.h"
 
@@ -610,6 +611,8 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
             }
             out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
             in_uint8s(s, length);              /* virtualChannelData */
+            s_mark_end(self->s);
+            self->s->p = self->s->data;
             ls = self->s;
             break;
         case 3: /* CHANNEL_FLAG_FIRST and CHANNEL_FLAG_LAST */
@@ -635,19 +638,19 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
     switch (cmd & 0xf0)
     {
         case CMD_DVC_CAPABILITY:
-            rv = drdynvc_process_capability_response(self, cmd, s);
+            rv = drdynvc_process_capability_response(self, cmd, ls);
             break;
         case CMD_DVC_OPEN_CHANNEL:
-            rv = drdynvc_process_open_channel_response(self, cmd, s);
+            rv = drdynvc_process_open_channel_response(self, cmd, ls);
             break;
         case CMD_DVC_CLOSE_CHANNEL:
-            rv = drdynvc_process_close_channel_response(self, cmd, s);
+            rv = drdynvc_process_close_channel_response(self, cmd, ls);
             break;
         case CMD_DVC_DATA_FIRST:
-            rv = drdynvc_process_data_first(self, cmd, s);
+            rv = drdynvc_process_data_first(self, cmd, ls);
             break;
         case CMD_DVC_DATA:
-            rv = drdynvc_process_data(self, cmd, s);
+            rv = drdynvc_process_data(self, cmd, ls);
             break;
         default:
             LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPEDYC] with "
