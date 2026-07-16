@@ -18,12 +18,12 @@
  * channel layer
  */
 
-#include "parse.h"
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
 
 #include "libxrdp.h"
+#include "parse.h"
 #include "string_calls.h"
 #include "xrdp_channel.h"
 
