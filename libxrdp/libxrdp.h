@@ -147,6 +147,8 @@ struct xrdp_drdynvc
     int (*data)(intptr_t id, int chan_id, char *data, int bytes);
 };
 
+struct vc_dechunker; // Forward declaration
+
 /* channel */
 struct xrdp_channel
 {
@@ -154,7 +156,7 @@ struct xrdp_channel
     struct xrdp_mcs *mcs_layer;
     int drdynvc_channel_id;
     int drdynvc_state;
-    struct stream *s;
+    struct vc_dechunker *drdynvc_dc;
     struct xrdp_drdynvc drdynvcs[256];
 };
 
