@@ -296,6 +296,11 @@ int      g_strcasecmp(const char *c1, const char *c2);
 int      g_strncasecmp(const char *c1, const char *c2, int len);
 int      g_atoi(const char *str);
 
+/* Non-standard but useful functions */
+#if !defined(HAVE_STRLCPY)
+size_t   strlcpy(char *dst, const char *src, size_t dsize);
+#endif
+
 /**
  * Extends g_atoi(), Converts decimal and hexadecimal number String to integer
  *
