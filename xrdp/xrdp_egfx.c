@@ -936,6 +936,8 @@ xrdp_egfx_open_response(struct xrdp_process *id, int chan_id,
 static int
 xrdp_egfx_close_response(struct xrdp_process *id, int chan_id)
 {
+    UNUSED_VAR(id);
+    UNUSED_VAR(chan_id);
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_close_response:");
     return 0;
 }
