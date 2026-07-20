@@ -938,6 +938,8 @@ advance_resize_state_machine(struct xrdp_mm *mm,
 static int
 xrdp_egfx_close_response(intptr_t id, int chan_id)
 {
+    UNUSED_VAR(id);
+    UNUSED_VAR(chan_id);
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_close_response:");
     return 0;
 }

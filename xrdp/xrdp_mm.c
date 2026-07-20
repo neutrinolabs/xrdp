@@ -1957,17 +1957,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
             break;
 
         case WMRZ_ENCODER_CREATE:
-            if (mm->egfx_up)
-            {
-                xrdp_mm_egfx_create_surfaces(mm);
-            }
-            mm->encoder = xrdp_encoder_create(mm);
-
-            // Ack all frames to speed up resize.
-            module->mod_frame_ack(module, 0, INT_MAX);
-
-            // Restart module output after resizing and invalidating
-            // the screen. This causes an automatic redraw.
+            // Resize the screen to the target size
             error = xrdp_bitmap_resize(
                         wm->screen, desc_width, desc_height);
             if (error != 0)
@@ -1977,6 +1967,18 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " xrdp_bitmap_resize failed %d", error);
                 return advance_error(error, mm);
             }
+
+            // Create the encoder and surfaces
+            if (mm->egfx_up)
+            {
+                xrdp_mm_egfx_create_surfaces(mm);
+            }
+            mm->encoder = xrdp_encoder_create(mm);
+
+            // Ack all frames to speed up resize.
+            module->mod_frame_ack(module, 0, INT_MAX);
+
+            // Redraw the screen
             xrdp_bitmap_invalidate(wm->screen, 0);
             xrdp_rdp_suppress_output((struct xrdp_rdp *)wm->session->rdp,
                                      0, XSO_REASON_DYNAMIC_RESIZE,
