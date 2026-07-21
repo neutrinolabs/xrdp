@@ -8,6 +8,3 @@
 	url = https://github.com/neutrinolabs/libpainter.git
 	branch = .
 	ignore = untracked
-[submodule "ulalaca"]
-	path = ulalaca
-	url = https://github.com/neutrinolabs/ulalaca-xrdp.git
