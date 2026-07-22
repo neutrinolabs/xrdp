@@ -14,6 +14,7 @@ check_PROGRAMS = test_common
 test_common_SOURCES = \
     test_common.h \
     test_common_main.c \
+    test_dechunker.c \
     test_fifo_calls.c \
     test_list_calls.c \
     test_parse.c \
