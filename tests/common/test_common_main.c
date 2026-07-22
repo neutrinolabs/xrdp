@@ -46,7 +46,8 @@ int main (void)
     int number_failed;
     SRunner *sr;
 
-    sr = srunner_create (make_suite_test_fifo());
+    sr = srunner_create (make_suite_test_dechunker());
+    srunner_add_suite(sr, make_suite_test_fifo());
     srunner_add_suite(sr, make_suite_test_list());
     srunner_add_suite(sr, make_suite_test_list16());
     srunner_add_suite(sr, make_suite_test_parse());
