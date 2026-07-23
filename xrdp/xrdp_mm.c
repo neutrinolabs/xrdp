@@ -1306,6 +1306,29 @@ xrdp_mm_egfx_create_surfaces(struct xrdp_mm *self)
 
 /******************************************************************************/
 static int
+xrdp_mm_egfx_delete_surfaces(struct xrdp_mm *self)
+{
+    int index;
+    int count = self->wm->client_info->display_sizes.monitorCount;
+
+    LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_mm_egfx_delete_surfaces: "
+              "monitor count %d", count);
+    if (count < 1)
+    {
+        xrdp_egfx_send_delete_surface(self->egfx, self->egfx->surface_id);
+    }
+    else
+    {
+        for (index = 0; index < count; index++)
+        {
+            xrdp_egfx_send_delete_surface(self->egfx, index);
+        }
+    }
+    return 0;
+}
+
+/******************************************************************************/
+static int
 xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
                             int *versions, int *flagss)
 {
@@ -1438,11 +1461,6 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
         self->encoder = xrdp_encoder_create(self);
         xrdp_mm_egfx_invalidate_wm_screen(self);
 
-        if (self->resize_data != NULL
-                && self->resize_data->state == WMRZ_EGFX_INITALIZING)
-        {
-            advance_resize_state_machine(self, WMRZ_EGFX_INITIALIZED);
-        }
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: egfx created.");
         if (self->gfx_delay_autologin)
         {
@@ -1777,14 +1795,11 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
     int error = 0;
     struct xrdp_mm *mm;
     struct xrdp_mod *module;
-    struct xrdp_rdp *rdp;
-    struct xrdp_sec *sec;
-    struct xrdp_channel *chan;
     int in_progress;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "process_display_control_monitor_layout_data:");
 
-    if (wm == NULL)
+    if (wm == NULL || wm->session == NULL || wm->session->rdp == NULL)
     {
         return 1;
     }
@@ -1813,8 +1828,7 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
     {
         case WMRZ_ENCODER_DELETE:
             // Stop any output from the module
-            rdp = (struct xrdp_rdp *) (wm->session->rdp);
-            xrdp_rdp_suppress_output(rdp,
+            xrdp_rdp_suppress_output((struct xrdp_rdp *)wm->session->rdp,
                                      1, XSO_REASON_DYNAMIC_RESIZE,
                                      0, 0, 0, 0);
             // Disable the encoder until the resize is complete.
@@ -1823,58 +1837,35 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                 xrdp_encoder_delete(mm->encoder);
                 mm->encoder = NULL;
             }
-            if (mm->resize_data->using_egfx == 0)
+            if (!mm->egfx_up)
             {
                 advance_resize_state_machine(mm, WMRZ_SERVER_MONITOR_RESIZE);
             }
             else
             {
-                advance_resize_state_machine(mm, WMRZ_EGFX_DELETE_SURFACE);
+                advance_resize_state_machine(mm, WMRZ_EGFX_RESET_GRAPHICS);
             }
             break;
-        case WMRZ_EGFX_DELETE_SURFACE:
-            if (error == 0 && module != 0)
-            {
-                xrdp_egfx_shutdown_delete_surface(mm->egfx);
-            }
-            advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSE);
-            break;
-        case WMRZ_EGFX_CONN_CLOSE:
-            if (error == 0 && module != 0)
-            {
-                xrdp_egfx_shutdown_close_connection(wm->mm->egfx);
-                mm->egfx_up = 0;
-            }
-            advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSING);
-            break;
-        // Also processed in xrdp_egfx_close_response
-        case WMRZ_EGFX_CONN_CLOSING:
-            rdp = (struct xrdp_rdp *) (wm->session->rdp);
-            sec = rdp->sec_layer;
-            chan = sec->chan_layer;
 
-            // Continue to check to see if the connection is closed. If it
-            // ever is, advance the state machine!
-            if (chan->drdynvcs[mm->egfx->channel_id].status
-                    == XRDP_DRDYNVC_STATUS_CLOSED
-                    || (g_time3() - description->last_state_update_timestamp) > 100)
+        case WMRZ_EGFX_RESET_GRAPHICS:
+            // EGFX only. Delete the surfaces and send a 'reset graphics'
+            // command to resize the client. For EGFX, that's all we
+            // need to do.
+            xrdp_mm_egfx_delete_surfaces(mm);
+            error = xrdp_egfx_send_reset_graphics(mm->egfx,
+                                                  desc_width, desc_height,
+                                                  description->description.monitorCount,
+                                                  description->description.minfo);
+            if (error != 0)
             {
-                advance_resize_state_machine(mm, WMRZ_EGFX_CONN_CLOSED);
-                break;
-            }
-            g_set_wait_obj(mm->resize_ready);
-            break;
-        case WMRZ_EGFX_CONN_CLOSED:
-            advance_resize_state_machine(mm, WRMZ_EGFX_DELETE);
-            break;
-        case WRMZ_EGFX_DELETE:
-            if (error == 0 && module != 0)
-            {
-                xrdp_egfx_shutdown_delete(wm->mm->egfx);
-                mm->egfx = NULL;
+                LOG_DEVEL(LOG_LEVEL_INFO,
+                          "process_display_control_monitor_layout_data:"
+                          " egfx_send_reset_graphics failed %d", error);
+                return advance_error(error, mm);
             }
             advance_resize_state_machine(mm, WMRZ_SERVER_MONITOR_RESIZE);
             break;
+
         case WMRZ_SERVER_MONITOR_RESIZE:
             error = module->mod_server_monitor_resize(
                         module, desc_width, desc_height,
@@ -1904,10 +1895,23 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
         // Not processed here. Processed in client_monitor_resize
         // case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSING:
         case WMRZ_SERVER_MONITOR_MESSAGE_PROCESSED:
-            advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESET);
-            break;
-        case WMRZ_XRDP_CORE_RESET:
+            // Update the wm with the layout from the description
+            // we're processing
             sync_dynamic_monitor_data(wm, &(description->description));
+            if (!mm->egfx_up)
+            {
+                // Need to resize the client using deactivation-reactivation
+                // sequence
+                advance_resize_state_machine(mm, WMRZ_XRDP_CORE_RESET);
+            }
+            else
+            {
+                // Client is already resized
+                advance_resize_state_machine(mm, WMRZ_ENCODER_CREATE);
+            }
+            break;
+
+        case WMRZ_XRDP_CORE_RESET:
             error = libxrdp_reset(wm->session);
             if (error != 0)
             {
@@ -1949,7 +1953,11 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " xrdp_wm_load_static_pointers failed %d", error);
                 return advance_error(error, mm);
             }
-            /* resize the main window */
+            advance_resize_state_machine(mm, WMRZ_ENCODER_CREATE);
+            break;
+
+        case WMRZ_ENCODER_CREATE:
+            // Resize the screen to the target size
             error = xrdp_bitmap_resize(
                         wm->screen, desc_width, desc_height);
             if (error != 0)
@@ -1959,42 +1967,20 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
                           " xrdp_bitmap_resize failed %d", error);
                 return advance_error(error, mm);
             }
-            advance_resize_state_machine(mm, WMRZ_EGFX_INITIALIZE);
-            break;
-        case WMRZ_EGFX_INITIALIZE:
-            if (mm->resize_data->using_egfx)
+
+            // Create the encoder and surfaces
+            if (mm->egfx_up)
             {
-                egfx_initialize(mm);
-                advance_resize_state_machine(mm, WMRZ_EGFX_INITALIZING);
+                xrdp_mm_egfx_create_surfaces(mm);
             }
-            else
-            {
-                advance_resize_state_machine(mm, WMRZ_EGFX_INITIALIZED);
-            }
-            break;
-        // Not processed here. Processed in xrdp_mm_egfx_caps_advertise
-        // case WMRZ_EGFX_INITALIZING:
-        case WMRZ_EGFX_INITIALIZED:
-            advance_resize_state_machine(mm, WMRZ_ENCODER_CREATE);
-            break;
-        case WMRZ_ENCODER_CREATE:
-            if (mm->encoder == NULL)
-            {
-                mm->encoder = xrdp_encoder_create(mm);
-            }
-            advance_resize_state_machine(mm, WMRZ_SERVER_INVALIDATE);
-            break;
-        case WMRZ_SERVER_INVALIDATE:
-            if (module != 0)
-            {
-                // Ack all frames to speed up resize.
-                module->mod_frame_ack(module, 0, INT_MAX);
-            }
-            // Restart module output after invalidating
-            // the screen. This causes an automatic redraw.
+            mm->encoder = xrdp_encoder_create(mm);
+
+            // Ack all frames to speed up resize.
+            module->mod_frame_ack(module, 0, INT_MAX);
+
+            // Redraw the screen
             xrdp_bitmap_invalidate(wm->screen, 0);
-            rdp = (struct xrdp_rdp *) (wm->session->rdp);
-            xrdp_rdp_suppress_output(rdp,
+            xrdp_rdp_suppress_output((struct xrdp_rdp *)wm->session->rdp,
                                      0, XSO_REASON_DYNAMIC_RESIZE,
                                      0, 0, desc_width, desc_height);
             advance_resize_state_machine(mm, WMRZ_COMPLETE);
@@ -2091,7 +2077,6 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
             const int time = g_time3();
             self->resize_data->start_time = time;
             self->resize_data->last_state_update_timestamp = time;
-            self->resize_data->using_egfx = (self->egfx != NULL);
             advance_resize_state_machine(self, WMRZ_ENCODER_DELETE);
         }
         else
