@@ -41,20 +41,59 @@ bin_to_hex(const char *input, int length)
     return result;
 }
 
+static int
+run_suite(const char *test_name)
+{
+    const char *env = getenv("TEST_NAME");
+    return (env == NULL || strcmp(env, test_name) == 0);
+}
+
 int main (void)
 {
     int number_failed;
     SRunner *sr;
 
-    sr = srunner_create (make_suite_test_fifo());
-    srunner_add_suite(sr, make_suite_test_list());
-    srunner_add_suite(sr, make_suite_test_parse());
-    srunner_add_suite(sr, make_suite_test_string());
-    srunner_add_suite(sr, make_suite_test_string_unicode());
-    srunner_add_suite(sr, make_suite_test_os_calls());
-    srunner_add_suite(sr, make_suite_test_ssl_calls());
-    srunner_add_suite(sr, make_suite_test_base64());
-    srunner_add_suite(sr, make_suite_test_guid());
+    sr = srunner_create (NULL);
+    if (run_suite("dechunker"))
+    {
+        srunner_add_suite(sr, make_suite_test_dechunker());
+    }
+    if (run_suite("fifo"))
+    {
+        srunner_add_suite(sr, make_suite_test_fifo());
+    }
+    if (run_suite("list"))
+    {
+        srunner_add_suite(sr, make_suite_test_list());
+    }
+    if (run_suite("parse"))
+    {
+        srunner_add_suite(sr, make_suite_test_parse());
+    }
+    if (run_suite("string"))
+    {
+        srunner_add_suite(sr, make_suite_test_string());
+    }
+    if (run_suite("unicode"))
+    {
+        srunner_add_suite(sr, make_suite_test_string_unicode());
+    }
+    if (run_suite("os_calls"))
+    {
+        srunner_add_suite(sr, make_suite_test_os_calls());
+    }
+    if (run_suite("ssl_calls"))
+    {
+        srunner_add_suite(sr, make_suite_test_ssl_calls());
+    }
+    if (run_suite("base64"))
+    {
+        srunner_add_suite(sr, make_suite_test_base64());
+    }
+    if (run_suite("guid"))
+    {
+        srunner_add_suite(sr, make_suite_test_guid());
+    }
 
     srunner_set_tap(sr, "-");
     /*

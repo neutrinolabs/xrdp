@@ -23,7 +23,7 @@
 #endif
 
 #include "libxrdp.h"
-#include "parse.h"
+#include "dechunker.h"
 #include "string_calls.h"
 #include "xrdp_channel.h"
 
@@ -78,7 +78,7 @@ xrdp_channel_delete(struct xrdp_channel *self)
     {
         return;
     }
-    free_stream(self->s);
+    vc_dechunker_free(self->drdynvc_dc);
     g_memset(self, 0, sizeof(struct xrdp_channel));
     g_free(self);
 }
@@ -550,11 +550,12 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
                              struct stream *s)
 {
     int total_length;
-    int length;
     int flags;
     int cmd;
     int rv;
-    struct stream *ls;
+    struct stream *ls = NULL;
+    int free_ls = 0;
+    enum vc_dechunker_status dechunker_status;
 
     if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] CHANNEL_PDU_HEADER"))
     {
@@ -564,65 +565,32 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
     in_uint32_le(s, flags);        /* flags */
     LOG_DEVEL(LOG_LEVEL_TRACE, "Received header [MS-RDPBCGR] CHANNEL_PDU_HEADER "
               "length %d, flags 0x%8.8x", total_length, flags);
-    ls = NULL;
-    switch (flags & 3)
+    dechunker_status = vc_dechunker_process_chunk(
+                           self->drdynvc_dc,
+                           s, flags, total_length);
+    switch (dechunker_status)
     {
-        case 0: /* not first chunk and not last chunk */
-            length = (int) (s->end - s->p);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (middle) "
-                      "length %d", length);
-            if (length > s_rem_out(self->s))
-            {
-                LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Data chunk length is bigger than "
-                    "the remaining chunk buffer size. length %d, remaining %d",
-                    length, s_rem_out(self->s));
-                return 1;
-            }
-            out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
-            in_uint8s(s, length);              /* virtualChannelData */
-            return 0;
-        case 1: /* CHANNEL_FLAG_FIRST */
-            free_stream(self->s);
-            make_stream(self->s);
-            init_stream(self->s, total_length);
-            length = (int) (s->end - s->p);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (first) "
-                      "length %d", length);
-            if (length > s_rem_out(self->s))
-            {
-                LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Data chunk length is bigger than "
-                    "the remaining chunk buffer size. length %d, remaining %d",
-                    length, s_rem_out(self->s));
-                return 1;
-            }
-            out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
-            in_uint8s(s, length);              /* virtualChannelData */
-            return 0;
-        case 2: /* CHANNEL_FLAG_LAST */
-            length = (int) (s->end - s->p);
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (last) "
-                      "length %d", length);
-            if (length > s_rem_out(self->s))
-            {
-                LOG(LOG_LEVEL_ERROR, "[MS-RDPBCGR] Data chunk length is bigger than "
-                    "the remaining chunk buffer size. length %d, remaining %d",
-                    length, s_rem_out(self->s));
-                return 1;
-            }
-            out_uint8a(self->s, s->p, length); /* append data to chunk buffer */
-            in_uint8s(s, length);              /* virtualChannelData */
-            s_mark_end(self->s);
-            self->s->p = self->s->data;
-            ls = self->s;
-            break;
-        case 3: /* CHANNEL_FLAG_FIRST and CHANNEL_FLAG_LAST */
-            LOG_DEVEL(LOG_LEVEL_TRACE, "Received [MS-RDPBCGR] data chunk (first and last) "
-                      "length %d", total_length);
+        case E_VC_INLINE_CHUNK:
             ls = s;
             break;
+
+        case E_VC_IN_PROGRESS:
+            return 0;
+            break;
+
+        case E_VC_READY:
+            ls = vc_dechunker_get_stream(self->drdynvc_dc);
+            // We now own the stream, so must delete it
+            free_ls = 1;
+            break;
+
+        case E_VC_ERROR:
+            // Error has been logged
+            return 1;
+
         default:
-            LOG(LOG_LEVEL_ERROR, "Received [MS-RDPBCGR] data chunk with "
-                "unknown flag 0x%8.8x", (int) (flags & 3));
+            LOG(LOG_LEVEL_ERROR, "Dechunker returned unknown error %d",
+                (int)dechunker_status);
             return 1;
     }
     if (ls == NULL)
@@ -656,6 +624,10 @@ xrdp_channel_process_drdynvc(struct xrdp_channel *self,
             LOG(LOG_LEVEL_ERROR, "Received header [MS-RDPEDYC] with "
                 "unknown command 0x%2.2x", cmd);
             break;
+    }
+    if (free_ls)
+    {
+        free_stream(ls);
     }
     return rv;
 }
@@ -804,6 +776,13 @@ xrdp_channel_drdynvc_start(struct xrdp_channel *self)
         {
             LOG(LOG_LEVEL_WARNING, "Static channel '%s' is disabled.",
                 DRDYNVC_SVC_CHANNEL_NAME);
+            rv = -1;
+        }
+        else if ((self->drdynvc_dc =
+                      vc_dechunker_init(DRDYNVC_SVC_CHANNEL_NAME,
+                                        CHANNEL_CHUNK_LENGTH)) == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR, "No memory");
             rv = -1;
         }
         else
