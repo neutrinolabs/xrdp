@@ -49,6 +49,8 @@ libcommon_la_SOURCES = \
   base64.c \
   channel_defs.h \
   defines.h \
+  dechunker.c \
+  dechunker.h \
   fifo.c \
   fifo.h \
   file.c \
