@@ -34,11 +34,12 @@
 
 struct stream;
 
-/* Private type */
-struct vc_dechunker;
+/* Private types */
+struct vc_dechunker;   // static virtual channel dechunker
+struct dyn_dechunker;  // dynamic channel dechunker
 
 /**
- * Returned from dechunker_process_vc_chunk()
+ * Returned from vc_dechunker_process_chunk()
  */
 enum vc_dechunker_status
 {
@@ -49,7 +50,19 @@ enum vc_dechunker_status
 };
 
 /**
- * Initialise a virtual channel dechunker
+ * Returned from dyn_dechunker_process_chunk() and
+ * Returned from dyn_dechunker_process_first_chunk()
+ */
+enum dyn_dechunker_status
+{
+    E_DYN_INLINE_CHUNK = 0, ///< This chunk is complete in itself
+    E_DYN_IN_PROGRESS,      ///< The dechunker is processing chunks
+    E_DYN_READY,            ///< A dechunked stream is now complete
+    E_DYN_ERROR             ///< An error occurred (logged)
+};
+
+/**
+ * Initialise a static virtual channel dechunker
  *
  * @param chan_name - Name of channel
  * @param max_chunk_size - Max size of chunks allowed on channel
@@ -59,14 +72,14 @@ struct vc_dechunker *
 vc_dechunker_init(const char *chan_name, int max_chunk_size);
 
 /**
- * Free a virtual channel dechunker
+ * Free a static virtual channel dechunker
  * @param self vc dechunker to free
  */
 void
 vc_dechunker_free(struct vc_dechunker *self);
 
 /**
- * Process a virtual channel chunk
+ * Process a static virtual channel chunk
  *
  * @param self dechunker
  * @param s Stream for chunk, positioned at start of chunk
@@ -84,9 +97,9 @@ enum vc_dechunker_status
 vc_dechunker_process_chunk(struct vc_dechunker *self,
                            struct stream *s, int flags, int total_size);
 /**
- * Get the stream from a ready dechunker
+ * Get the stream from a ready static virtual dechunker
  *
- * @param self virtual channel dechunker
+ * @param self static virtual channel dechunker
  * @return input stream containing completed chunk
  *
  * Ownership of the stream passes to the caller
@@ -96,5 +109,81 @@ vc_dechunker_process_chunk(struct vc_dechunker *self,
 struct stream *
 vc_dechunker_get_stream(struct vc_dechunker *self);
 
+
+/**
+ * Initialise a dynamic virtual channel dechunker
+ *
+ * @param chan_name - Name of channel
+ * @return dyn_dechunker
+ */
+struct dyn_dechunker *
+dyn_dechunker_init(const char *chan_name);
+
+/**
+ * Free a dynamic channel dechunker
+ * @param self dynamic dechunker to free
+ */
+void
+dyn_dechunker_free(struct dyn_dechunker *self);
+
+/**
+ * Process a dynamic channel DYNVC_DATA_FIRST PDU ([MS-RDPEDYC] 2.2.3.1)
+ *
+ * @param self dechunker
+ * @param s Stream for chunk, positioned at start of data
+ * @param total_size length from DYNVC_DATA_FIRST header
+ * @return status of dechunker
+ *
+ * For PDUs of size > 1590 bytes, but < 1600, it is possible for the
+ * status E_DYN_INLINE_CHUNK to be returned, as the first chunk
+ * is complete in itself. This follows from [MS-RDPEDYC] 1.3.3.2.1 and
+ * 2.2.3.1
+ *
+ * E_DYN_READY will not be returned by this call.
+ *
+ * On error, it is not possible to recover the stream, because of the
+ * impossibility of distinguishing self-contained DATA PDUs, and
+ * DATA PDUs which are part of a larger PDU.
+ */
+enum dyn_dechunker_status
+dyn_dechunker_process_first_chunk(struct dyn_dechunker *self,
+                                  struct stream *s, int total_size);
+
+/**
+ * Process a dynamic channel DYNVC_DATA PDU ([MS-RDPEDYC] 2.2.3.2)
+ *
+ * @param self dechunker
+ * @param s Stream for chunk, positioned at start of data
+ * @return status of dechunker
+ *
+ * On error, it is not possible to recover the stream, because of the
+ * impossibility of distinguishing self-contained DATA PDUs, and
+ * DATA PDUs which are part of a larger PDU.
+ */
+enum dyn_dechunker_status
+dyn_dechunker_process_data_chunk(struct dyn_dechunker *self,
+                                 struct stream *s);
+
+/**
+ * Get the stream from a ready dynamic dechunker
+ *
+ * @param self dynamic channel dechunker
+ * @return input stream containing completed chunk
+ *
+ * Ownership of the stream passes to the caller
+ *
+ * Resets the dechunker state so that further chunks can be processed.
+ */
+struct stream *
+dyn_dechunker_get_stream(struct dyn_dechunker *self);
+
+/**
+ * Queries a dynamic dechunker for pending data
+ *
+ * @param self dynamic channel dechunker
+ * @return != 0 if data is stored in the dechunker
+ */
+int
+dyn_dechunker_pending(struct dyn_dechunker *self);
 
 #endif // DECHUNKER_H
