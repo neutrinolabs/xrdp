@@ -947,11 +947,12 @@ xrdp_egfx_close_response(intptr_t id, int chan_id)
 /******************************************************************************/
 /* from client */
 static int
-xrdp_egfx_data_first(intptr_t id, int chan_id, char *data, int bytes,
-                     int total_bytes)
+xrdp_egfx_data_first(intptr_t id, int chan_id,
+                     struct stream *s, int total_bytes)
 {
     struct xrdp_process *process;
     struct xrdp_egfx *egfx;
+    int bytes = s_rem(s);
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_data_first: bytes %d"
         " total_bytes %d", bytes, total_bytes);
@@ -966,17 +967,16 @@ xrdp_egfx_data_first(intptr_t id, int chan_id, char *data, int bytes,
     make_stream(egfx->s);
     // Caller has checked total_bytes is >= 0  and bytes is < total_bytes
     init_stream(egfx->s, total_bytes);
-    out_uint8a(egfx->s, data, bytes);
+    out_uint8a(egfx->s, s->p, bytes);
     return 0;
 }
 
 /******************************************************************************/
 /* from client */
 static int
-xrdp_egfx_data(intptr_t id, int chan_id, char *data, int bytes)
+xrdp_egfx_data(intptr_t id, int chan_id, struct stream *s)
 {
     int error;
-    struct stream ls;
     struct xrdp_process *process;
     struct xrdp_wm *wm;
     struct xrdp_mm *mm;
@@ -1010,20 +1010,17 @@ xrdp_egfx_data(intptr_t id, int chan_id, char *data, int bytes)
 
     if (egfx->s == NULL)
     {
-        g_memset(&ls, 0, sizeof(ls));
-        ls.data = data;
-        ls.size = bytes;
-        ls.p = data;
-        ls.end = data + bytes;
-        return xrdp_egfx_process(egfx, &ls);
+        return xrdp_egfx_process(egfx, s);
     }
+    int bytes = s_rem(s);
+
     if (!s_check_rem_out(egfx->s, bytes))
     {
         LOG(LOG_LEVEL_ERROR, "DYNVC_DATA PDU data overflow on channel %d",
             chan_id);
         return 1;
     }
-    out_uint8a(egfx->s, data, bytes);
+    out_uint8a(egfx->s, s->p, bytes);
     if (!s_check_rem_out(egfx->s, 1))
     {
         s_mark_end(egfx->s);

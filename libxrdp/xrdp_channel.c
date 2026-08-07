@@ -488,8 +488,7 @@ drdynvc_process_data_first(struct xrdp_channel *self,
     drdynvc = self->drdynvcs + chan_id;
     if (drdynvc->data_first != NULL)
     {
-        return drdynvc->data_first(session->id, chan_id, s->p,
-                                   bytes, total_bytes);
+        return drdynvc->data_first(session->id, chan_id, s, total_bytes);
     }
     LOG_DEVEL(LOG_LEVEL_WARNING, "Dynamic Virtual Channel %s (%d): "
               "callback 'data_first' is NULL",
@@ -530,7 +529,7 @@ drdynvc_process_data(struct xrdp_channel *self,
     drdynvc = self->drdynvcs + chan_id;
     if (drdynvc->data != NULL)
     {
-        return drdynvc->data(session->id, chan_id, s->p, bytes);
+        return drdynvc->data(session->id, chan_id, s);
     }
     LOG_DEVEL(LOG_LEVEL_WARNING, "Dynamic Virtual Channel %s (%d): "
               "callback 'data' is NULL",
