@@ -143,6 +143,7 @@ struct xrdp_drdynvc
     int status; /* see XRDP_DRDYNVC_STATUS_* */
     int flags;
     int pad0;
+    struct dyn_dechunker *dc; // Use to dechunk fragments
     int (*open_response)(struct xrdp_process *id, int chan_id,
                          int creation_status);
     int (*close_response)(struct xrdp_process *id, int chan_id);
@@ -161,7 +162,7 @@ struct xrdp_channel
     int drdynvc_channel_id;
     int drdynvc_state;
     struct vc_dechunker *drdynvc_dc;
-    struct xrdp_drdynvc drdynvcs[256];
+    struct xrdp_drdynvc drdynvcs[DRDYNVC_CHANNEL_COUNT];
 };
 
 /* rdp */

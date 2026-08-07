@@ -91,6 +91,9 @@ struct xrdp_drdynvc_procs
     int (*open_response)(struct xrdp_process *id, int chan_id,
                          int creation_status);
     int (*close_response)(struct xrdp_process *id, int chan_id);
+    // Only set data_first if you want to be responsible for
+    // defragging your own PDUs. Otherwise the channel
+    // process will do it for you.
     int (*data_first)(struct xrdp_process *id, int chan_id, struct stream *s,
                       int total_bytes);
     int (*data)(struct xrdp_process *id, int chan_id, struct stream *s);
