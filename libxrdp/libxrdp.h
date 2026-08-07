@@ -146,9 +146,9 @@ struct xrdp_drdynvc
     int (*open_response)(struct xrdp_process *id, int chan_id,
                          int creation_status);
     int (*close_response)(struct xrdp_process *id, int chan_id);
-    int (*data_first)(struct xrdp_process *id, int chan_id, char *data,
-                      int bytes, int total_bytes);
-    int (*data)(struct xrdp_process *id, int chan_id, char *data, int bytes);
+    int (*data_first)(struct xrdp_process *id, int chan_id, struct stream *s,
+                      int total_bytes);
+    int (*data)(struct xrdp_process *id, int chan_id, struct stream *s);
 };
 
 struct vc_dechunker; // Forward declaration
