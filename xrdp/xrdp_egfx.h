@@ -127,7 +127,6 @@ struct xrdp_egfx
     int channel_id;
     int surface_id;
     int frame_id;
-    struct stream *s;
     void *user;
     struct xrdp_egfx_bulk *bulk;
     int (*caps_advertise)(void *user, int num_caps, int *version, int *flags);

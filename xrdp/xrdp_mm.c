@@ -1207,15 +1207,6 @@ dynamic_monitor_close_response(intptr_t id, int chan_id)
 }
 
 /******************************************************************************/
-static int
-dynamic_monitor_data_first(intptr_t id, int chan_id,
-                           struct stream *s, int total_bytes)
-{
-    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_data_first:");
-    return 0;
-}
-
-/******************************************************************************/
 int
 advance_resize_state_machine(struct xrdp_mm *mm,
                              enum display_resize_state new_state)
@@ -2129,7 +2120,7 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
     g_memset(&d_procs, 0, sizeof(d_procs));
     d_procs.open_response = dynamic_monitor_open_response;
     d_procs.close_response = dynamic_monitor_close_response;
-    d_procs.data_first = dynamic_monitor_data_first;
+    d_procs.data_first = NULL; // Defragging handled elsewhere
     d_procs.data = dynamic_monitor_data;
     flags = 0;
     error = libxrdp_drdynvc_open(self->wm->session,

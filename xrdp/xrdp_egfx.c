@@ -947,36 +947,8 @@ xrdp_egfx_close_response(intptr_t id, int chan_id)
 /******************************************************************************/
 /* from client */
 static int
-xrdp_egfx_data_first(intptr_t id, int chan_id,
-                     struct stream *s, int total_bytes)
-{
-    struct xrdp_process *process;
-    struct xrdp_egfx *egfx;
-    int bytes = s_rem(s);
-
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_data_first: bytes %d"
-        " total_bytes %d", bytes, total_bytes);
-    process = (struct xrdp_process *) id;
-    egfx = process->wm->mm->egfx;
-    if (egfx->s != NULL)
-    {
-        LOG(LOG_LEVEL_ERROR, "DYNVC_DATA_FIRST PDU received while"
-            " another stream is active on channel %d", chan_id);
-        return 1;
-    }
-    make_stream(egfx->s);
-    // Caller has checked total_bytes is >= 0  and bytes is < total_bytes
-    init_stream(egfx->s, total_bytes);
-    out_uint8a(egfx->s, s->p, bytes);
-    return 0;
-}
-
-/******************************************************************************/
-/* from client */
-static int
 xrdp_egfx_data(intptr_t id, int chan_id, struct stream *s)
 {
-    int error;
     struct xrdp_process *process;
     struct xrdp_wm *wm;
     struct xrdp_mm *mm;
@@ -1008,29 +980,7 @@ xrdp_egfx_data(intptr_t id, int chan_id, struct stream *s)
         return 0;
     }
 
-    if (egfx->s == NULL)
-    {
-        return xrdp_egfx_process(egfx, s);
-    }
-    int bytes = s_rem(s);
-
-    if (!s_check_rem_out(egfx->s, bytes))
-    {
-        LOG(LOG_LEVEL_ERROR, "DYNVC_DATA PDU data overflow on channel %d",
-            chan_id);
-        return 1;
-    }
-    out_uint8a(egfx->s, s->p, bytes);
-    if (!s_check_rem_out(egfx->s, 1))
-    {
-        s_mark_end(egfx->s);
-        egfx->s->p = egfx->s->data;
-        error = xrdp_egfx_process(egfx, egfx->s);
-        free_stream(egfx->s);
-        egfx->s = NULL;
-        return error;
-    }
-    return 0;
+    return xrdp_egfx_process(egfx, s);
 }
 
 /******************************************************************************/
@@ -1051,7 +1001,7 @@ xrdp_egfx_create(struct xrdp_mm *mm, struct xrdp_egfx **egfx)
     }
     procs.open_response = xrdp_egfx_open_response;
     procs.close_response = xrdp_egfx_close_response;
-    procs.data_first = xrdp_egfx_data_first;
+    procs.data_first = NULL; // Defragging handled elsewere
     procs.data = xrdp_egfx_data;
     process = mm->wm->pro_layer;
     error = libxrdp_drdynvc_open(process->session,
