@@ -57,6 +57,12 @@ AM_CPPFLAGS += $(LVGL_CFLAGS) $(FONTCONFIG_CFLAGS)
 XRDP_EXTRA_LIBS += $(LVGL_LIBS) $(FONTCONFIG_LIBS)
 endif
 
+if XRDP_BULK
+AM_CPPFLAGS += -DXRDP_BULK
+AM_CPPFLAGS += -I$(top_srcdir)/libbulk/include
+XRDP_EXTRA_LIBS += $(top_builddir)/libbulk/src/.libs/libbulkrdp8compress.a
+endif
+
 sbin_PROGRAMS = \
   xrdp
 

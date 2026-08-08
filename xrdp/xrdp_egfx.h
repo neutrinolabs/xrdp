@@ -136,7 +136,7 @@ struct xrdp_egfx
 
 struct xrdp_egfx_bulk
 {
-    int id;
+    void *handle;
 };
 
 int

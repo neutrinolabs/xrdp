@@ -482,6 +482,19 @@ static int tconfig_load_gfx_order(toml_table_t *tfile, struct xrdp_tconfig_gfx *
     return 0;
 }
 
+static int tconfig_load_gfx_bulk(toml_table_t *tfile, struct xrdp_tconfig_gfx *config)
+{
+    toml_table_t *codec;
+    toml_datum_t datum;
+
+    if ((codec = toml_table_in(tfile, "codec")) != NULL)
+    {
+        datum = toml_bool_in(codec, "bulk");
+        config->bulk = datum.ok ? datum.u.b : 0;
+    }
+    return 0;
+}
+
 /**
  * Determines whether a codec is enabled
  * @param co Ordered codec list
@@ -557,6 +570,8 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
 
     /* Load GFX codec order */
     tconfig_load_gfx_order(tfile, config);
+    /* Load GFX codec bulk */
+    tconfig_load_gfx_bulk(tfile, config);
     /* Load H.264 encoder */
     tconfig_load_gfx_h264_encoder(tfile, config);
 
