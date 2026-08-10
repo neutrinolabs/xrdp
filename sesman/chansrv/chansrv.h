@@ -62,6 +62,8 @@ struct chansrv_drdynvc_procs
 {
     int (*open_response)(int chan_id, int creation_status);
     int (*close_response)(int chan_id);
+    // Set data_first to NULL to have the dechunker automatically
+    // handle channel fragments
     int (*data_first)(int chan_id, struct stream *s, int total_bytes);
     int (*data)(int chan_id, struct stream *s);
 };
