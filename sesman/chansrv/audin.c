@@ -428,10 +428,10 @@ audin_close_response(int chan_id)
 
 /*****************************************************************************/
 static int
-audin_data_fragment(int chan_id, char *data, int bytes)
+audin_data_fragment(int chan_id, struct stream *s)
 {
     int rv;
-
+    int bytes = s_rem(s);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_fragment:");
     if (!s_check_rem(g_in_s, bytes))
     {
@@ -439,7 +439,7 @@ audin_data_fragment(int chan_id, char *data, int bytes)
                   bytes, (int) (g_in_s->end - g_in_s->p));
         return 1;
     }
-    out_uint8a(g_in_s, data, bytes);
+    out_uint8a(g_in_s, s->p, bytes);
     if (g_in_s->p == g_in_s->end)
     {
         g_in_s->p = g_in_s->data;
@@ -453,7 +453,7 @@ audin_data_fragment(int chan_id, char *data, int bytes)
 
 /*****************************************************************************/
 static int
-audin_data_first(int chan_id, char *data, int bytes, int total_bytes)
+audin_data_first(int chan_id, struct stream *s, int total_bytes)
 {
     LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_first:");
     if (g_in_s != NULL)
@@ -464,25 +464,19 @@ audin_data_first(int chan_id, char *data, int bytes, int total_bytes)
     make_stream(g_in_s);
     init_stream(g_in_s, total_bytes);
     g_in_s->end = g_in_s->data + total_bytes;
-    return audin_data_fragment(chan_id, data, bytes);
+    return audin_data_fragment(chan_id, s);
 }
 
 /*****************************************************************************/
 static int
-audin_data(int chan_id, char *data, int bytes)
+audin_data(int chan_id, struct stream *s)
 {
-    struct stream ls;
-
-    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "audin_data:", data, bytes);
+    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "audin_data:", s->p, s_rem(s));
     if (g_in_s == NULL)
     {
-        g_memset(&ls, 0, sizeof(ls));
-        ls.data = data;
-        ls.p = ls.data;
-        ls.end = ls.p + bytes;
-        return audin_process_msg(chan_id, &ls);
+        return audin_process_msg(chan_id, s);
     }
-    return audin_data_fragment(chan_id, data, bytes);
+    return audin_data_fragment(chan_id, s);
 }
 
 /*****************************************************************************/

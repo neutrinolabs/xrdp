@@ -62,8 +62,8 @@ struct chansrv_drdynvc_procs
 {
     int (*open_response)(int chan_id, int creation_status);
     int (*close_response)(int chan_id);
-    int (*data_first)(int chan_id, char *data, int bytes, int total_bytes);
-    int (*data)(int chan_id, char *data, int bytes);
+    int (*data_first)(int chan_id, struct stream *s, int total_bytes);
+    int (*data)(int chan_id, struct stream *s);
 };
 
 int

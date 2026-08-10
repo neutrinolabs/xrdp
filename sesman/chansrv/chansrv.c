@@ -94,8 +94,8 @@ struct chansrv_drdynvc
     int pad0;
     int (*open_response)(int chan_id, int creation_status);
     int (*close_response)(int chan_id);
-    int (*data_first)(int chan_id, char *data, int bytes, int total_bytes);
-    int (*data)(int chan_id, char *data, int bytes);
+    int (*data_first)(int chan_id, struct stream *s, int total_bytes);
+    int (*data)(int chan_id, struct stream *s);
     struct trans *xrdp_api_trans;
 };
 
@@ -651,32 +651,24 @@ static int
 process_message_drdynvc_data_first(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
-    int bytes;
+    uint32_t chan_id;
     int total_bytes;
-    char *data;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_drdynvc_data_first:");
-    if (!s_check_rem(s, 12))
+    if (!s_check_rem(s, 8))
     {
         return 1;
     }
     in_uint32_le(s, chan_id);
-    in_uint32_le(s, bytes);
     in_uint32_le(s, total_bytes);
-    if (!s_check_rem(s, bytes))
-    {
-        return 1;
-    }
-    in_uint8p(s, data, bytes);
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id > 255)
     {
         return 1;
     }
     drdynvc = g_drdynvcs + chan_id;
     if (drdynvc->data_first != NULL)
     {
-        if (drdynvc->data_first(chan_id, data, bytes, total_bytes) != 0)
+        if (drdynvc->data_first(chan_id, s, total_bytes) != 0)
         {
             return 1;
         }
@@ -691,9 +683,7 @@ static int
 process_message_drdynvc_data(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
-    int bytes;
-    char *data;
+    uint32_t chan_id;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_drdynvc_data:");
     if (!s_check_rem(s, 8))
@@ -701,16 +691,10 @@ process_message_drdynvc_data(struct stream *s)
         return 1;
     }
     in_uint32_le(s, chan_id);
-    in_uint32_le(s, bytes);
-    if (!s_check_rem(s, bytes))
-    {
-        return 1;
-    }
-    in_uint8p(s, data, bytes);
     drdynvc = g_drdynvcs + chan_id;
     if (drdynvc->data != NULL)
     {
-        if (drdynvc->data(chan_id, data, bytes) != 0)
+        if (drdynvc->data(chan_id, s) != 0)
         {
             return 1;
         }
@@ -1035,24 +1019,24 @@ my_api_close_response(int chan_id)
 
 /*****************************************************************************/
 static int
-my_api_data_first(int chan_id, char *data, int bytes, int total_bytes)
+my_api_data_first(int chan_id, struct stream *s, int total_bytes)
 {
     struct trans *trans;
-    struct stream *s;
-
+    struct stream *out_s;
+    int bytes = s_rem(s);
     //g_writeln("my_api_data_first: bytes %d total_bytes %d", bytes, total_bytes);
     trans = get_api_trans_from_chan_id(chan_id);
     if (trans == NULL)
     {
         return 1;
     }
-    s = trans_get_out_s(trans, bytes);
-    if (s == NULL)
+    out_s = trans_get_out_s(trans, bytes);
+    if (out_s == NULL)
     {
         return 1;
     }
-    out_uint8a(s, data, bytes);
-    s_mark_end(s);
+    out_uint8a(out_s, s->p, bytes);
+    s_mark_end(out_s);
     if (trans_write_copy(trans) != 0)
     {
         return 1;
@@ -1062,24 +1046,24 @@ my_api_data_first(int chan_id, char *data, int bytes, int total_bytes)
 
 /*****************************************************************************/
 static int
-my_api_data(int chan_id, char *data, int bytes)
+my_api_data(int chan_id, struct stream *s)
 {
     struct trans *trans;
-    struct stream *s;
+    struct stream *out_s;
+    int bytes = s_rem(s);
 
-    //g_writeln("my_api_data: bytes %d", bytes);
     trans = get_api_trans_from_chan_id(chan_id);
     if (trans == NULL)
     {
         return 1;
     }
-    s = trans_get_out_s(trans, bytes);
-    if (s == NULL)
+    out_s = trans_get_out_s(trans, bytes);
+    if (out_s == NULL)
     {
         return 1;
     }
-    out_uint8a(s, data, bytes);
-    s_mark_end(s);
+    out_uint8a(out_s, s->p, bytes);
+    s_mark_end(out_s);
     if (trans_write_copy(trans) != 0)
     {
         return 1;
