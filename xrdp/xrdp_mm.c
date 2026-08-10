@@ -2148,7 +2148,7 @@ xrdp_mm_drdynvc_data_first(struct xrdp_process *id, int chan_id,
     int bytes = s_rem(s);
 
     // Size of PDU sent to chansrv
-    int pdu_size = 8 + 8 + 4 + 4 + 4 + bytes;
+    int pdu_size = 8 + 8 + 4 + 4 + bytes;
     wm = id->wm;
     trans = wm->mm->chan_trans;
     out_s = trans_get_out_s(trans, pdu_size);
@@ -2162,8 +2162,8 @@ xrdp_mm_drdynvc_data_first(struct xrdp_process *id, int chan_id,
     out_uint32_le(out_s, pdu_size - 8);
     chansrv_chan_id = wm->mm->xr2cr_cid_map[chan_id];
     out_uint32_le(out_s, chansrv_chan_id);
-    out_uint32_le(out_s, bytes);
     out_uint32_le(out_s, total_bytes);
+    // Caller works out 'bytes' value from incoming stream length
     out_uint8p(out_s, s->p, bytes);
     s_mark_end(out_s);
     return trans_write_copy(trans);
@@ -2181,7 +2181,7 @@ xrdp_mm_drdynvc_data(struct xrdp_process *id, int chan_id, struct stream *s)
     int bytes = s_rem(s);
 
     // Size of PDU sent to chansrv
-    int pdu_size = 8 + 8 + 4 + 4 + bytes;
+    int pdu_size = 8 + 8 + 4 + bytes;
     wm = id->wm;
     trans = wm->mm->chan_trans;
     out_s = trans_get_out_s(trans, pdu_size);
@@ -2195,7 +2195,7 @@ xrdp_mm_drdynvc_data(struct xrdp_process *id, int chan_id, struct stream *s)
     out_uint32_le(out_s, pdu_size - 8);
     chansrv_chan_id = wm->mm->xr2cr_cid_map[chan_id];
     out_uint32_le(out_s, chansrv_chan_id);
-    out_uint32_le(out_s, bytes);
+    // Caller works out 'bytes' value from incoming stream length
     out_uint8p(out_s, s->p, bytes);
     s_mark_end(out_s);
     return trans_write_copy(trans);
