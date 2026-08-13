@@ -997,7 +997,7 @@ xrdp_egfx_create(struct xrdp_mm *mm, struct xrdp_egfx **egfx)
     }
     procs.open_response = xrdp_egfx_open_response;
     procs.close_response = xrdp_egfx_close_response;
-    procs.data_first = NULL; // Defragging handled elsewere
+    procs.data_first = NULL; // Defragging handled elsewhere
     procs.data = xrdp_egfx_data;
     process = mm->wm->pro_layer;
     error = libxrdp_drdynvc_open(process->session,

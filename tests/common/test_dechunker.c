@@ -152,7 +152,7 @@ static const char frankenstein[] =
 // The dynamic dechunker works on total data block sizes of 1600 bytes,
 // including the block header as well.
 // The FIRST block header is 6-12 bytes long, and the DATA block header
-// is 5-8 bytes long. For simplicity we're assume a header size of 8
+// is 5-8 bytes long. For simplicity we assume a header size of 8
 // bytes, and hence a data size of 1592 bytes.
 #define FRANKENSTEIN_DYN_CHUNK_SIZE 1592
 
@@ -202,10 +202,10 @@ START_TEST(test_vc_dechunker_bad_params)
     ck_assert_ptr_ne(dc, NULL);
 
     // vc_dechunker_free
-    vc_dechunker_free(NULL);   // Musn't crash!
+    vc_dechunker_free(NULL);   // Must not crash!
 
     // vc_dechunker_get_stream
-    vc_dechunker_get_stream(NULL);   // Musn't crash!
+    vc_dechunker_get_stream(NULL);   // Must not crash!
 
     // vc_dechunker_process_chunk
     stat = vc_dechunker_process_chunk(NULL, s, 0, 1600); // No dechunker
@@ -629,10 +629,10 @@ START_TEST(test_dyn_dechunker_bad_params)
     ck_assert_ptr_ne(dc, NULL);
 
     // dyn_dechunker_free
-    dyn_dechunker_free(NULL);   // Musn't crash!
+    dyn_dechunker_free(NULL);   // Must not crash!
 
     // dyn_dechunker_get_stream
-    dyn_dechunker_get_stream(NULL);   // Musn't crash!
+    dyn_dechunker_get_stream(NULL);   // Must not crash!
 
     // dyn_dechunker_process_first_chunk
     stat = dyn_dechunker_process_first_chunk(NULL, s, 1600); // No dechunker
