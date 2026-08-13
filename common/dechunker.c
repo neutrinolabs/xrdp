@@ -439,7 +439,7 @@ dyn_dechunker_process_first_chunk(struct dyn_dechunker *self,
     }
     else if (frag_size == total_size)
     {
-        // This chunk ccontains all the data
+        // This chunk contains all the data
         status = E_DYN_INLINE_CHUNK;
     }
     else

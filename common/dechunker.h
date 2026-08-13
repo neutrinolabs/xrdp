@@ -50,7 +50,7 @@ enum vc_dechunker_status
 };
 
 /**
- * Returned from dyn_dechunker_process_chunk() and
+ * Returned from dyn_dechunker_process_data_chunk() and
  * Returned from dyn_dechunker_process_first_chunk()
  */
 enum dyn_dechunker_status

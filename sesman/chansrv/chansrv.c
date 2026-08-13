@@ -39,6 +39,7 @@
 #include "chansrv_fuse.h"
 #include "chansrv_config.h"
 #include "xrdp_sockets.h"
+#include "xrdp_constants.h"
 #include "audin.h"
 #include "channel_defs.h"
 #include "dechunker.h"
@@ -77,7 +78,6 @@ tbus g_exec_mutex;
 tbus g_exec_sem;
 int g_exec_pid = 0;
 
-#define ARRAYSIZE(x) (sizeof(x)/sizeof(*(x)))
 /* max total channel bytes size */
 #define MAX_CHANNEL_BYTES (1 * 1024 * 1024 * 1024) /* 1 GB */
 #define MAX_CHANNEL_FRAG_BYTES 1600
@@ -718,7 +718,7 @@ static int
 process_message_drdynvc_data(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
+    uint32_t chan_id;
     struct stream *ls = NULL; // Set if the application to be called
     int free_ls = 0;    // Set if we need to clear ls when we're done
     int rv = 0;
@@ -864,6 +864,10 @@ chansrv_drdynvc_close(int chan_id)
     struct stream *s;
     int error;
 
+    if (chan_id < 0 || chan_id >= DRDYNVC_CHANNEL_COUNT)
+    {
+        return 1;
+    }
     s = trans_get_out_s(g_con_trans, 8192);
     if (s == NULL)
     {
@@ -1078,9 +1082,10 @@ my_trans_data_in(struct trans *trans)
 
 /*****************************************************************************/
 struct trans *
-get_api_trans_from_chan_id(int chan_id)
+get_api_trans_from_chan_id(uint32_t chan_id)
 {
-    return g_drdynvcs[chan_id].xrdp_api_trans;
+    return (chan_id >= DRDYNVC_CHANNEL_COUNT)
+           ? NULL : g_drdynvcs[chan_id].xrdp_api_trans;
 }
 
 /*****************************************************************************/
@@ -1502,7 +1507,7 @@ api_con_trans_list_check_wait_objs(void)
                     chansrv_drdynvc_close(ad->chan_id);
                 }
                 for (drdynvc_index = 0;
-                        drdynvc_index < (int) ARRAYSIZE(g_drdynvcs);
+                        drdynvc_index < DRDYNVC_CHANNEL_COUNT;
                         drdynvc_index++)
                 {
                     if (g_drdynvcs[drdynvc_index].xrdp_api_trans == ltran)
