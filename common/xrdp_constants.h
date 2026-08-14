@@ -87,6 +87,9 @@
 #define XRDP_MAX_BITMAP_CACHE_IDX 2000
 #define XRDP_BITMAP_CACHE_ENTRIES 2048
 
+/* Max number of dynamic channels we support */
+#define DRDYNVC_CHANNEL_COUNT 256
+
 /*
  * Constants come from ITU-T Recommendations
  */

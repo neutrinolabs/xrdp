@@ -143,13 +143,24 @@ static const char frankenstein[] =
     "all your love and kindness.\n\n"
     "Your affectionate brother,\nR. Walton ";
 
-// Number of CHANNEL_CHUNK_LENGTH chunks required to send the
-// above text into the dechunker
-#define FRANKENSTEIN_CHUNK_COUNT \
-    ((sizeof(frankenstein) + (CHANNEL_CHUNK_LENGTH -1)) \
+// Number of CHANNEL_CHUNK_LENGTH (1600) chunks required to send the
+// above text into the vc dechunker
+#define FRANKENSTEIN_VC_CHUNK_COUNT \
+    ((sizeof(frankenstein) + (CHANNEL_CHUNK_LENGTH - 1)) \
      / CHANNEL_CHUNK_LENGTH)
 
-// See the private E_MAX_CHUNK_SIZE_LOWER_LIMIT in dechunker.c
+// The dynamic dechunker works on total data block sizes of 1600 bytes,
+// including the block header as well.
+// The FIRST block header is 6-12 bytes long, and the DATA block header
+// is 5-8 bytes long. For simplicity we assume a header size of 8
+// bytes, and hence a data size of 1592 bytes.
+#define FRANKENSTEIN_DYN_CHUNK_SIZE 1592
+
+#define FRANKENSTEIN_DYN_CHUNK_COUNT \
+    ((sizeof(frankenstein) + (FRANKENSTEIN_DYN_CHUNK_SIZE - 1)) \
+     / FRANKENSTEIN_DYN_CHUNK_SIZE)
+
+// See the private E_MAX_VC_CHUNK_SIZE_LOWER_LIMIT in dechunker.c
 #define PAD50 "                                                  "
 
 /******************************************************************************/
@@ -175,7 +186,7 @@ make_stream_from_data(const char *data, int data_len)
 /*
  * Check bad parameters passed to the dechunker functions
  */
-START_TEST(test_dechunker_bad_params)
+START_TEST(test_vc_dechunker_bad_params)
 {
     struct vc_dechunker *dc;
     const char data[] = "Some stream data";
@@ -191,10 +202,10 @@ START_TEST(test_dechunker_bad_params)
     ck_assert_ptr_ne(dc, NULL);
 
     // vc_dechunker_free
-    vc_dechunker_free(NULL);   // Musn't crash!
+    vc_dechunker_free(NULL);   // Must not crash!
 
     // vc_dechunker_get_stream
-    vc_dechunker_get_stream(NULL);   // Musn't crash!
+    vc_dechunker_get_stream(NULL);   // Must not crash!
 
     // vc_dechunker_process_chunk
     stat = vc_dechunker_process_chunk(NULL, s, 0, 1600); // No dechunker
@@ -216,7 +227,7 @@ START_TEST(test_dechunker_bad_params)
  * immediately returned to the caller with E_VC_INLINE_CHUNK. If
  * however, we are currently dechunking, a passthrough chunk is not allowed
  */
-START_TEST(test_dechunker_passthrough)
+START_TEST(test_vc_dechunker_passthrough)
 {
     const char data[] = "Some data to dechunk";
     struct stream *s = make_stream_from_data(data, sizeof(data));
@@ -272,7 +283,7 @@ END_TEST
  * An intermediate chunk (neither first of last) must be rejected if we
  * are not dechunking
  */
-START_TEST(test_dechunker_intermediate)
+START_TEST(test_vc_dechunker_intermediate)
 {
     const char data[] = PAD50 "Some data to dechunk";
     struct stream *s = make_stream_from_data(data, sizeof(data));
@@ -297,7 +308,7 @@ END_TEST
 /*
  * A LAST chunk must be rejected if we are not dechunking
  */
-START_TEST(test_dechunker_last)
+START_TEST(test_vc_dechunker_last)
 {
     const char data[] = PAD50 "Some data to dechunk";
     struct stream *s = make_stream_from_data(data, sizeof(data));
@@ -322,7 +333,7 @@ END_TEST
 /**
  * Two consecutive FIRST chunks are not allowed
  */
-START_TEST(test_dechunker_first_first)
+START_TEST(test_vc_dechunker_first_first)
 {
     const char data[] = PAD50 "Some data to dechunk";
     struct stream *s = make_stream_from_data(data, sizeof(data));
@@ -367,7 +378,7 @@ END_TEST
 *  > Virtual channel data that fits in a single Virtual Channel PDU MUST
 *  > specify both flags
  */
-START_TEST(test_dechunker_chunk_overflow)
+START_TEST(test_vc_dechunker_chunk_overflow)
 {
     const char data[] = PAD50 "Some data to dechunk";
     struct stream *s = make_stream_from_data(data, sizeof(data));
@@ -408,15 +419,15 @@ END_TEST
 // up to CHANNEL_CHUNK_LENGTH bytes from Frankenstein chapter 1
 // The stream pointer will be positioned at the start of the text.
 static struct stream *
-make_bigtest_chunk(unsigned int chunk_num, int *flags)
+make_vc_bigtest_chunk(unsigned int chunk_num, int *flags)
 {
     struct stream *s = NULL;
 
-    if (chunk_num < FRANKENSTEIN_CHUNK_COUNT)
+    if (chunk_num < FRANKENSTEIN_VC_CHUNK_COUNT)
     {
         int chunk_size;
         // Work out the size of this chunk
-        if (chunk_num == (FRANKENSTEIN_CHUNK_COUNT - 1))
+        if (chunk_num == (FRANKENSTEIN_VC_CHUNK_COUNT - 1))
         {
             chunk_size = sizeof(frankenstein) % CHANNEL_CHUNK_LENGTH;
             if (chunk_size == 0)
@@ -456,7 +467,7 @@ make_bigtest_chunk(unsigned int chunk_num, int *flags)
         // Sort out the flags
         *flags =
             (chunk_num == 0) ? XR_CHANNEL_FLAG_FIRST :
-            (chunk_num == (FRANKENSTEIN_CHUNK_COUNT - 1)) ? XR_CHANNEL_FLAG_LAST :
+            (chunk_num == (FRANKENSTEIN_VC_CHUNK_COUNT - 1)) ? XR_CHANNEL_FLAG_LAST :
             0;
     }
 
@@ -468,7 +479,7 @@ make_bigtest_chunk(unsigned int chunk_num, int *flags)
  * Streams a lot of data through the dechunker and checks it's all
  * assembled correctly at the end
  */
-START_TEST(test_dechunker_big_test)
+START_TEST(test_vc_dechunker_big_test)
 {
     enum vc_dechunker_status stat;
     struct vc_dechunker *dc = vc_dechunker_init("test", CHANNEL_CHUNK_LENGTH);
@@ -476,15 +487,15 @@ START_TEST(test_dechunker_big_test)
     struct stream *s;
 
     int i;
-    for (i = 0 ; i < FRANKENSTEIN_CHUNK_COUNT; ++i)
+    for (i = 0 ; i < FRANKENSTEIN_VC_CHUNK_COUNT; ++i)
     {
         int flags;
-        s = make_bigtest_chunk(i, &flags);
+        s = make_vc_bigtest_chunk(i, &flags);
         stat = vc_dechunker_process_chunk(
                    dc, s,
                    flags,
                    sizeof(frankenstein));
-        if (i < FRANKENSTEIN_CHUNK_COUNT - 1)
+        if (i < FRANKENSTEIN_VC_CHUNK_COUNT - 1)
         {
             ck_assert_int_eq(stat, E_VC_IN_PROGRESS);
         }
@@ -513,8 +524,8 @@ START_TEST(test_dechunker_big_test)
 }
 
 /******************************************************************************/
-// Like test_dechunker_big_test, but the last chunk is oversized
-START_TEST(test_dechunker_big_test_oversize_fail)
+// Like test_vc_dechunker_big_test, but the last chunk is oversized
+START_TEST(test_vc_dechunker_big_test_oversize_fail)
 {
     enum vc_dechunker_status stat;
     struct vc_dechunker *dc = vc_dechunker_init("test", CHANNEL_CHUNK_LENGTH);
@@ -522,11 +533,11 @@ START_TEST(test_dechunker_big_test_oversize_fail)
     struct stream *s;
 
     int i;
-    for (i = 0 ; i < FRANKENSTEIN_CHUNK_COUNT; ++i)
+    for (i = 0 ; i < FRANKENSTEIN_VC_CHUNK_COUNT; ++i)
     {
         int flags;
-        s = make_bigtest_chunk(i, &flags);
-        if (i == (FRANKENSTEIN_CHUNK_COUNT - 1))
+        s = make_vc_bigtest_chunk(i, &flags);
+        if (i == (FRANKENSTEIN_VC_CHUNK_COUNT - 1))
         {
             // Add a byte to the end of the text in the chunk
             struct stream *s2;
@@ -546,7 +557,7 @@ START_TEST(test_dechunker_big_test_oversize_fail)
                    dc, s,
                    flags,
                    sizeof(frankenstein));
-        if (i < FRANKENSTEIN_CHUNK_COUNT - 1)
+        if (i < FRANKENSTEIN_VC_CHUNK_COUNT - 1)
         {
             ck_assert_int_eq(stat, E_VC_IN_PROGRESS);
         }
@@ -561,8 +572,8 @@ START_TEST(test_dechunker_big_test_oversize_fail)
 }
 
 /******************************************************************************/
-// Like test_dechunker_big_test, but the last chunk is undersized
-START_TEST(test_dechunker_big_test_undersize_fail)
+// Like test_vc_dechunker_big_test, but the last chunk is undersized
+START_TEST(test_vc_dechunker_big_test_undersize_fail)
 {
     enum vc_dechunker_status stat;
     struct vc_dechunker *dc = vc_dechunker_init("test", CHANNEL_CHUNK_LENGTH);
@@ -570,11 +581,11 @@ START_TEST(test_dechunker_big_test_undersize_fail)
     struct stream *s;
 
     int i;
-    for (i = 0 ; i < FRANKENSTEIN_CHUNK_COUNT; ++i)
+    for (i = 0 ; i < FRANKENSTEIN_VC_CHUNK_COUNT; ++i)
     {
         int flags;
-        s = make_bigtest_chunk(i, &flags);
-        if (i == (FRANKENSTEIN_CHUNK_COUNT - 1))
+        s = make_vc_bigtest_chunk(i, &flags);
+        if (i == (FRANKENSTEIN_VC_CHUNK_COUNT - 1))
         {
             // Skip a byte in the stream, so there is one
             // less byte than expected
@@ -584,7 +595,7 @@ START_TEST(test_dechunker_big_test_undersize_fail)
                    dc, s,
                    flags,
                    sizeof(frankenstein));
-        if (i < FRANKENSTEIN_CHUNK_COUNT - 1)
+        if (i < FRANKENSTEIN_VC_CHUNK_COUNT - 1)
         {
             ck_assert_int_eq(stat, E_VC_IN_PROGRESS);
         }
@@ -596,6 +607,344 @@ START_TEST(test_dechunker_big_test_undersize_fail)
     }
 
     vc_dechunker_free(dc);
+}
+
+/******************************************************************************/
+
+/******************************************************************************/
+/*
+ * Check bad parameters passed to the dechunker functions
+ */
+START_TEST(test_dyn_dechunker_bad_params)
+{
+    struct dyn_dechunker *dc;
+    const char data[] = "Some stream data";
+    struct stream *s = make_stream_from_data(data, sizeof(data));
+    enum dyn_dechunker_status stat;
+
+    // dyn_dechunker_init
+    dc = dyn_dechunker_init(NULL); // No channel name
+    ck_assert_ptr_eq(dc, NULL);
+    dc = dyn_dechunker_init("test"); // Should be OK
+    ck_assert_ptr_ne(dc, NULL);
+
+    // dyn_dechunker_free
+    dyn_dechunker_free(NULL);   // Must not crash!
+
+    // dyn_dechunker_get_stream
+    dyn_dechunker_get_stream(NULL);   // Must not crash!
+
+    // dyn_dechunker_process_first_chunk
+    stat = dyn_dechunker_process_first_chunk(NULL, s, 1600); // No dechunker
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+    stat = dyn_dechunker_process_first_chunk(dc, NULL, 1600); // No stream
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+    stat = dyn_dechunker_process_first_chunk(dc, s, -1); // bad total_size
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+
+    // dyn_dechunker_process_data_chunk
+    stat = dyn_dechunker_process_data_chunk(NULL, s); // No dechunker
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+    stat = dyn_dechunker_process_data_chunk(dc, NULL); // No stream
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+
+    free_stream(s);
+    dyn_dechunker_free(dc);
+}
+
+/******************************************************************************/
+/*
+ * Check passthrough DATA chunks (i.e. those not following a FIRST)
+ *
+ * When the dechunker is in normal operation, these chunks are
+ * immediately returned to the caller with E_DYN_INLINE_CHUNK.
+ */
+START_TEST(test_dyn_dechunker_passthrough)
+{
+    const char data[] = "Some data to dechunk";
+    struct stream *s = make_stream_from_data(data, sizeof(data));
+    enum dyn_dechunker_status stat;
+
+    struct dyn_dechunker *dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+
+    // Save the stream pointer so we can reset the stream in between calls
+    s_push_layer(s, iso_hdr, 0);
+
+    // Check a DATA chunk is normally recognised immediately
+    stat = dyn_dechunker_process_data_chunk(
+               dc, s);
+    ck_assert_int_eq(stat, E_DYN_INLINE_CHUNK);
+
+    dyn_dechunker_free(dc);
+    free_stream(s);
+}
+END_TEST
+
+
+/******************************************************************************/
+/**
+ * Two consecutive FIRST chunks are not allowed
+ */
+START_TEST(test_dyn_dechunker_first_first)
+{
+    const char data[] = PAD50 "Some data to dechunk";
+    struct stream *s = make_stream_from_data(data, sizeof(data));
+    enum dyn_dechunker_status stat;
+
+    struct dyn_dechunker *dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+
+    // Save the stream pointer so we can reset the stream in between calls
+    s_push_layer(s, iso_hdr, 0);
+
+    // Check a FIRST chunk is accepted...
+    stat = dyn_dechunker_process_first_chunk(
+               dc, s, 1600);
+    ck_assert_int_eq(stat, E_DYN_IN_PROGRESS);
+
+    // ... and another FIRST chunk is an error
+    s_pop_layer(s, iso_hdr);
+    stat = dyn_dechunker_process_first_chunk(
+               dc, s, 1600);
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+
+    dyn_dechunker_free(dc);
+    free_stream(s);
+}
+END_TEST
+
+
+/******************************************************************************/
+/**
+ * A FIRST chunk bigger than 1590 bytes but less than 1600 is passed
+ * through to the application, if it is the total length
+ */
+START_TEST(test_dyn_dechunker_first_inline)
+{
+    const char data[1591] = {0};
+
+    enum dyn_dechunker_status stat;
+    struct dyn_dechunker *dc;
+    struct stream *s;
+
+    // Check a FIRST chunk of 1590 bytes with a total of 1590 is rejected
+    // (too small to fragment)
+    dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+    s = make_stream_from_data(data, 1590);
+    ck_assert_ptr_ne(s, NULL);
+    stat = dyn_dechunker_process_first_chunk( dc, s, 1590);
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+    dyn_dechunker_free(dc);
+    free_stream(s);
+
+    // Check a FIRST chunk of 1591 bytes with a total size of 1591 is
+    // accepted as inline
+    dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+    s = make_stream_from_data(data, 1591);
+    ck_assert_ptr_ne(s, NULL);
+    stat = dyn_dechunker_process_first_chunk( dc, s, 1591);
+    ck_assert_int_eq(stat, E_DYN_INLINE_CHUNK);
+    dyn_dechunker_free(dc);
+    free_stream(s);
+}
+END_TEST
+
+
+/******************************************************************************/
+/**
+ * Checks that a FIRST chunk cannot be bigger than the total size
+ */
+START_TEST(test_dyn_dechunker_chunk_overflow)
+{
+    const char data[1592] = {0};
+
+    enum dyn_dechunker_status stat;
+    struct dyn_dechunker *dc;
+    struct stream *s;
+
+    // We know a FIRST chunk of size 1591 for a total of 1591 is
+    // inline (see test_dyn_dechunker_first_inline()). Check if the
+    // first chunk is 1592, it is rejected
+    dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+    s = make_stream_from_data(data, 1592);
+    ck_assert_ptr_ne(s, NULL);
+    stat = dyn_dechunker_process_first_chunk( dc, s, 1591);
+    ck_assert_int_eq(stat, E_DYN_ERROR);
+    dyn_dechunker_free(dc);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+// Returns a stream with some random data, then a chunk of
+// up to FRANKENSTEIN_DYN_CHUNK_COUNT bytes from Frankenstein chapter 1
+// The stream pointer will be positioned at the start of the text.
+static struct stream *
+make_dyn_bigtest_chunk(unsigned int chunk_num)
+{
+    struct stream *s = NULL;
+
+    if (chunk_num < FRANKENSTEIN_DYN_CHUNK_COUNT)
+    {
+        int chunk_size;
+        // Work out the size of this chunk
+        if (chunk_num == (FRANKENSTEIN_DYN_CHUNK_COUNT - 1))
+        {
+            chunk_size = sizeof(frankenstein) % FRANKENSTEIN_DYN_CHUNK_SIZE;
+            if (chunk_size == 0)
+            {
+                chunk_size = FRANKENSTEIN_DYN_CHUNK_SIZE;
+            }
+        }
+        else
+        {
+            chunk_size = FRANKENSTEIN_DYN_CHUNK_SIZE;
+        }
+
+        // Add some random data at the start of the stream, so we
+        // can check the dechunker works for non-zero positioned
+        // streams
+        int rand_size = 4 * 4 * chunk_num;
+
+        make_stream(s);
+        init_stream(s, rand_size + chunk_size);
+
+        // Write the random data
+        int i;
+        for (i = 0 ; i < rand_size; ++i)
+        {
+            out_uint8(s, rand() & 255);
+        }
+        s_push_layer(s, iso_hdr, 0);
+
+        // Copy the chapter data
+        out_uint8a(s, &frankenstein[chunk_num * FRANKENSTEIN_DYN_CHUNK_SIZE],
+                   chunk_size);
+
+        // Get the stream ready for reading from the Frankenstein text
+        s_mark_end(s);
+        s_pop_layer(s, iso_hdr);
+    }
+
+    return s;
+}
+
+/******************************************************************************/
+/*
+ * Streams a lot of data through the dechunker and checks it's all
+ * assembled correctly at the end
+ */
+START_TEST(test_dyn_dechunker_big_test)
+{
+    enum dyn_dechunker_status stat;
+    struct dyn_dechunker *dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+    struct stream *s;
+    int pending;
+
+    int i;
+    for (i = 0 ; i < FRANKENSTEIN_DYN_CHUNK_COUNT; ++i)
+    {
+        s = make_dyn_bigtest_chunk(i);
+        if (i == 0)
+        {
+            stat = dyn_dechunker_process_first_chunk(
+                       dc, s, sizeof(frankenstein));
+        }
+        else
+        {
+            stat = dyn_dechunker_process_data_chunk( dc, s);
+        }
+        pending = dyn_dechunker_pending(dc);
+        ck_assert_int_ne(pending, 0);
+        if (i < FRANKENSTEIN_DYN_CHUNK_COUNT - 1)
+        {
+            ck_assert_int_eq(stat, E_DYN_IN_PROGRESS);
+        }
+        else
+        {
+            ck_assert_int_eq(stat, E_DYN_READY);
+        }
+        free_stream(s);
+    }
+
+    // Check we have a result
+    s = dyn_dechunker_get_stream(dc);
+    ck_assert_ptr_ne(s, NULL);
+    pending = dyn_dechunker_pending(dc);
+    ck_assert_int_eq(pending, 0);
+
+    // Is it the right size?
+    int stream_size = s_rem(s);
+    ck_assert_int_eq(stream_size, sizeof(frankenstein));
+
+    // Check the data
+    const char *p;
+    in_uint8p(s, p, stream_size);
+    ck_assert_mem_eq(frankenstein, p, stream_size);
+
+    free_stream(s);
+    dyn_dechunker_free(dc);
+}
+
+/******************************************************************************/
+// Like test_dyn_dechunker_big_test, but the last chunk is oversized
+START_TEST(test_dyn_dechunker_big_test_oversize_fail)
+{
+    enum dyn_dechunker_status stat;
+    struct dyn_dechunker *dc = dyn_dechunker_init("test");
+    ck_assert_ptr_ne(dc, NULL);
+    struct stream *s;
+
+    int i;
+    for (i = 0 ; i < FRANKENSTEIN_DYN_CHUNK_COUNT; ++i)
+    {
+        s = make_dyn_bigtest_chunk(i);
+        if (i == 0)
+        {
+            stat = dyn_dechunker_process_first_chunk(
+                       dc, s, sizeof(frankenstein));
+        }
+        else
+        {
+            if (i == (FRANKENSTEIN_DYN_CHUNK_COUNT - 1))
+            {
+                // Add a byte to the end of the text in the chunk
+                struct stream *s2;
+                make_stream(s2);
+                init_stream(s2, s_rem(s) + 1);
+                s_push_layer(s2, iso_hdr, 0);
+                out_uint8p(s2, s->p, s_rem(s));
+                out_uint8(s2, 'x');
+                s_mark_end(s2);
+                s_pop_layer(s2, iso_hdr); // Rewind for reading
+                // Swap s2 and s and delete the original stream
+                struct stream *tmp = s;
+                s = s2;
+                free_stream(tmp);
+            }
+            stat = dyn_dechunker_process_data_chunk( dc, s);
+        }
+        if (i < FRANKENSTEIN_DYN_CHUNK_COUNT - 1)
+        {
+            ck_assert_int_eq(stat, E_DYN_IN_PROGRESS);
+        }
+        else
+        {
+            ck_assert_int_eq(stat, E_DYN_ERROR);
+        }
+        free_stream(s);
+    }
+
+    // Check we do not have a result
+    s = dyn_dechunker_get_stream(dc);
+    ck_assert_ptr_eq(s, NULL);
+
+    dyn_dechunker_free(dc);
 }
 
 /******************************************************************************/
@@ -608,17 +957,27 @@ make_suite_test_dechunker(void)
 
     s = suite_create("dechunker");
 
-    rc_dechunker = tcase_create("dechunker_basic");
+    rc_dechunker = tcase_create("vc_dechunker");
     suite_add_tcase(s, rc_dechunker);
-    tcase_add_test(rc_dechunker, test_dechunker_bad_params);
-    tcase_add_test(rc_dechunker, test_dechunker_passthrough);
-    tcase_add_test(rc_dechunker, test_dechunker_intermediate);
-    tcase_add_test(rc_dechunker, test_dechunker_last);
-    tcase_add_test(rc_dechunker, test_dechunker_first_first);
-    tcase_add_test(rc_dechunker, test_dechunker_chunk_overflow);
-    tcase_add_test(rc_dechunker, test_dechunker_big_test);
-    tcase_add_test(rc_dechunker, test_dechunker_big_test_oversize_fail);
-    tcase_add_test(rc_dechunker, test_dechunker_big_test_undersize_fail);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_bad_params);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_passthrough);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_intermediate);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_last);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_first_first);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_chunk_overflow);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_big_test);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_big_test_oversize_fail);
+    tcase_add_test(rc_dechunker, test_vc_dechunker_big_test_undersize_fail);
+
+    rc_dechunker = tcase_create("dyn_dechunker");
+    suite_add_tcase(s, rc_dechunker);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_bad_params);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_passthrough);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_first_first);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_first_inline);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_chunk_overflow);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_big_test);
+    tcase_add_test(rc_dechunker, test_dyn_dechunker_big_test_oversize_fail);
 
     return s;
 }

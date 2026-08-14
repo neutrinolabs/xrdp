@@ -1045,15 +1045,6 @@ dynamic_monitor_close_response(struct xrdp_process *id, int chan_id)
 }
 
 /******************************************************************************/
-static int
-dynamic_monitor_data_first(struct xrdp_process *id, int chan_id,
-                           char *data, int bytes, int total_bytes)
-{
-    LOG_DEVEL(LOG_LEVEL_TRACE, "dynamic_monitor_data_first:");
-    return 0;
-}
-
-/******************************************************************************/
 int
 advance_resize_state_machine(struct xrdp_mm *mm,
                              enum display_resize_state new_state)
@@ -1529,12 +1520,9 @@ add_resize_request_to_queue(struct xrdp_mm *self,
 
 /******************************************************************************/
 static int
-dynamic_monitor_data(struct xrdp_process *id, int chan_id,
-                     char *data, int bytes)
+dynamic_monitor_data(struct xrdp_process *id, int chan_id, struct stream *s)
 {
     int error = 0;
-    struct stream ls;
-    struct stream *s;
     int msg_type;
     int msg_length;
     struct xrdp_wm *wm;
@@ -1552,12 +1540,6 @@ dynamic_monitor_data(struct xrdp_process *id, int chan_id,
         return error;
     }
 
-    g_memset(&ls, 0, sizeof(ls));
-    ls.data = data;
-    ls.p = ls.data;
-    ls.size = bytes;
-    ls.end = ls.data + bytes;
-    s = &ls;
     in_uint32_le(s, msg_type);
     in_uint32_le(s, msg_length);
     LOG_DEVEL(LOG_LEVEL_DEBUG,
@@ -1976,7 +1958,7 @@ dynamic_monitor_initialize(struct xrdp_mm *self)
     g_memset(&d_procs, 0, sizeof(d_procs));
     d_procs.open_response = dynamic_monitor_open_response;
     d_procs.close_response = dynamic_monitor_close_response;
-    d_procs.data_first = dynamic_monitor_data_first;
+    d_procs.data_first = NULL; // Defragging handled elsewhere
     d_procs.data = dynamic_monitor_data;
     flags = 0;
     error = libxrdp_drdynvc_open(self->wm->session,
@@ -2156,65 +2138,66 @@ xrdp_mm_drdynvc_close_response(struct xrdp_process *id, int chan_id)
 /*****************************************************************************/
 /* part data from client going to channel server */
 static int
-xrdp_mm_drdynvc_data_first(struct xrdp_process *id, int chan_id, char *data,
-                           int bytes, int total_bytes)
+xrdp_mm_drdynvc_data_first(struct xrdp_process *id, int chan_id,
+                           struct stream *s, int total_bytes)
 {
     struct trans *trans;
-    struct stream *s;
+    struct stream *out_s;
     struct xrdp_wm *wm;
     int chansrv_chan_id;
+    int bytes = s_rem(s);
 
     // Size of PDU sent to chansrv
-    int pdu_size = 8 + 8 + 4 + 4 + 4 + bytes;
+    int pdu_size = 8 + 8 + 4 + 4 + bytes;
     wm = id->wm;
     trans = wm->mm->chan_trans;
-    s = trans_get_out_s(trans, pdu_size);
-    if (s == NULL)
+    out_s = trans_get_out_s(trans, pdu_size);
+    if (out_s == NULL)
     {
         return 1;
     }
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, pdu_size);
-    out_uint32_le(s, 17); /* msg id */
-    out_uint32_le(s, pdu_size - 8);
+    out_uint32_le(out_s, 0); /* version */
+    out_uint32_le(out_s, pdu_size);
+    out_uint32_le(out_s, 17); /* msg id */
+    out_uint32_le(out_s, pdu_size - 8);
     chansrv_chan_id = wm->mm->xr2cr_cid_map[chan_id];
-    out_uint32_le(s, chansrv_chan_id);
-    out_uint32_le(s, bytes);
-    out_uint32_le(s, total_bytes);
-    out_uint8a(s, data, bytes);
-    s_mark_end(s);
+    out_uint32_le(out_s, chansrv_chan_id);
+    out_uint32_le(out_s, total_bytes);
+    // Caller works out 'bytes' value from incoming stream length
+    out_uint8p(out_s, s->p, bytes);
+    s_mark_end(out_s);
     return trans_write_copy(trans);
 }
 
 /*****************************************************************************/
 /* data from client going to channel server */
 static int
-xrdp_mm_drdynvc_data(struct xrdp_process *id, int chan_id,
-                     char *data, int bytes)
+xrdp_mm_drdynvc_data(struct xrdp_process *id, int chan_id, struct stream *s)
 {
     struct trans *trans;
-    struct stream *s;
+    struct stream *out_s;
     struct xrdp_wm *wm;
     int chansrv_chan_id;
+    int bytes = s_rem(s);
 
     // Size of PDU sent to chansrv
-    int pdu_size = 8 + 8 + 4 + 4 + bytes;
+    int pdu_size = 8 + 8 + 4 + bytes;
     wm = id->wm;
     trans = wm->mm->chan_trans;
-    s = trans_get_out_s(trans, pdu_size);
-    if (s == NULL)
+    out_s = trans_get_out_s(trans, pdu_size);
+    if (out_s == NULL)
     {
         return 1;
     }
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, pdu_size);
-    out_uint32_le(s, 19); /* msg id */
-    out_uint32_le(s, pdu_size - 8);
+    out_uint32_le(out_s, 0); /* version */
+    out_uint32_le(out_s, pdu_size);
+    out_uint32_le(out_s, 19); /* msg id */
+    out_uint32_le(out_s, pdu_size - 8);
     chansrv_chan_id = wm->mm->xr2cr_cid_map[chan_id];
-    out_uint32_le(s, chansrv_chan_id);
-    out_uint32_le(s, bytes);
-    out_uint8a(s, data, bytes);
-    s_mark_end(s);
+    out_uint32_le(out_s, chansrv_chan_id);
+    // Caller works out 'bytes' value from incoming stream length
+    out_uint8p(out_s, s->p, bytes);
+    s_mark_end(out_s);
     return trans_write_copy(trans);
 }
 
