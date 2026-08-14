@@ -76,7 +76,6 @@ static struct xr_wave_format_ex g_pcm_44100 =
 
 static struct chansrv_drdynvc_procs g_audin_info;
 static int g_audin_chanid;
-static struct stream *g_in_s;
 
 static struct xr_wave_format_ex *g_server_formats[] =
 {
@@ -421,68 +420,7 @@ audin_close_response(int chan_id)
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_close_response:");
     g_audin_chanid = 0;
     cleanup_client_formats();
-    free_stream(g_in_s);
-    g_in_s = NULL;
     return 0;
-}
-
-/*****************************************************************************/
-static int
-audin_data_fragment(int chan_id, char *data, int bytes)
-{
-    int rv;
-
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_fragment:");
-    if (!s_check_rem(g_in_s, bytes))
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_data_fragment: error bytes %d left %d",
-                  bytes, (int) (g_in_s->end - g_in_s->p));
-        return 1;
-    }
-    out_uint8a(g_in_s, data, bytes);
-    if (g_in_s->p == g_in_s->end)
-    {
-        g_in_s->p = g_in_s->data;
-        rv = audin_process_msg(chan_id, g_in_s);
-        free_stream(g_in_s);
-        g_in_s = NULL;
-        return rv;
-    }
-    return 0;
-}
-
-/*****************************************************************************/
-static int
-audin_data_first(int chan_id, char *data, int bytes, int total_bytes)
-{
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_data_first:");
-    if (g_in_s != NULL)
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "audin_data_first: warning g_in_s is not nil");
-        free_stream(g_in_s);
-    }
-    make_stream(g_in_s);
-    init_stream(g_in_s, total_bytes);
-    g_in_s->end = g_in_s->data + total_bytes;
-    return audin_data_fragment(chan_id, data, bytes);
-}
-
-/*****************************************************************************/
-static int
-audin_data(int chan_id, char *data, int bytes)
-{
-    struct stream ls;
-
-    LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "audin_data:", data, bytes);
-    if (g_in_s == NULL)
-    {
-        g_memset(&ls, 0, sizeof(ls));
-        ls.data = data;
-        ls.p = ls.data;
-        ls.end = ls.p + bytes;
-        return audin_process_msg(chan_id, &ls);
-    }
-    return audin_data_fragment(chan_id, data, bytes);
 }
 
 /*****************************************************************************/
@@ -493,10 +431,9 @@ audin_init(void)
     g_memset(&g_audin_info, 0, sizeof(g_audin_info));
     g_audin_info.open_response = audin_open_response;
     g_audin_info.close_response = audin_close_response;
-    g_audin_info.data_first = audin_data_first;
-    g_audin_info.data = audin_data;
+    g_audin_info.data_first = NULL;
+    g_audin_info.data = audin_process_msg;
     g_audin_chanid = 0;
-    g_in_s = NULL;
     return 0;
 }
 

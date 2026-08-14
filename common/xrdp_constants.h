@@ -66,6 +66,9 @@
 #define XR_MIN_KEY_CODE 8
 #define XR_MAX_KEY_CODE 256
 
+/* Max number of dynamic channels we support */
+#define DRDYNVC_CHANNEL_COUNT 256
+
 /*
  * Constants come from ITU-T Recommendations
  */

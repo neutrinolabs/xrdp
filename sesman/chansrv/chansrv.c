@@ -39,8 +39,10 @@
 #include "chansrv_fuse.h"
 #include "chansrv_config.h"
 #include "xrdp_sockets.h"
+#include "xrdp_constants.h"
 #include "audin.h"
 #include "channel_defs.h"
+#include "dechunker.h"
 
 #include "scp.h"
 #include "scp_sync.h"
@@ -76,7 +78,6 @@ tbus g_exec_mutex;
 tbus g_exec_sem;
 int g_exec_pid = 0;
 
-#define ARRAYSIZE(x) (sizeof(x)/sizeof(*(x)))
 /* max total channel bytes size */
 #define MAX_CHANNEL_BYTES (1 * 1024 * 1024 * 1024) /* 1 GB */
 #define MAX_CHANNEL_FRAG_BYTES 1600
@@ -92,14 +93,15 @@ struct chansrv_drdynvc
     int status; /* see CHANSRV_DRDYNVC_STATUS_* */
     int flags;
     int pad0;
+    struct dyn_dechunker *dc; // Use to dechunk fragments
     int (*open_response)(int chan_id, int creation_status);
     int (*close_response)(int chan_id);
-    int (*data_first)(int chan_id, char *data, int bytes, int total_bytes);
-    int (*data)(int chan_id, char *data, int bytes);
+    int (*data_first)(int chan_id, struct stream *s, int total_bytes);
+    int (*data)(int chan_id, struct stream *s);
     struct trans *xrdp_api_trans;
 };
 
-static struct chansrv_drdynvc g_drdynvcs[256];
+static struct chansrv_drdynvc g_drdynvcs[DRDYNVC_CHANNEL_COUNT];
 
 /* data in struct trans::callback_data */
 struct xrdp_api_data
@@ -570,7 +572,7 @@ static int
 process_message_drdynvc_open_response(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
+    uint32_t chan_id;
     int creation_status;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_drdynvc_open_response:");
@@ -580,7 +582,7 @@ process_message_drdynvc_open_response(struct stream *s)
     }
     in_uint32_le(s, chan_id);
     in_uint32_le(s, creation_status);
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id >= DRDYNVC_CHANNEL_COUNT)
     {
         return 1;
     }
@@ -597,6 +599,8 @@ process_message_drdynvc_open_response(struct stream *s)
     else
     {
         drdynvc->status = CHANSRV_DRDYNVC_STATUS_CLOSED;
+        dyn_dechunker_free(drdynvc->dc);
+        drdynvc->dc = NULL;
     }
     if (drdynvc->open_response != NULL)
     {
@@ -615,7 +619,7 @@ static int
 process_message_drdynvc_close_response(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
+    uint32_t chan_id;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_drdynvc_close_response:");
     if (!s_check_rem(s, 4))
@@ -623,7 +627,7 @@ process_message_drdynvc_close_response(struct stream *s)
         return 1;
     }
     in_uint32_le(s, chan_id);
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id >= DRDYNVC_CHANNEL_COUNT)
     {
         return 1;
     }
@@ -634,6 +638,8 @@ process_message_drdynvc_close_response(struct stream *s)
         return 0;
     }
     drdynvc->status = CHANSRV_DRDYNVC_STATUS_CLOSED;
+    dyn_dechunker_free(drdynvc->dc);
+    drdynvc->dc = NULL;
     if (drdynvc->close_response != NULL)
     {
         if (drdynvc->close_response(chan_id) != 0)
@@ -651,37 +657,58 @@ static int
 process_message_drdynvc_data_first(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
-    int bytes;
+    uint32_t chan_id;
     int total_bytes;
-    char *data;
+    int rv = 0;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_drdynvc_data_first:");
-    if (!s_check_rem(s, 12))
+    if (!s_check_rem(s, 8))
     {
         return 1;
     }
     in_uint32_le(s, chan_id);
-    in_uint32_le(s, bytes);
     in_uint32_le(s, total_bytes);
-    if (!s_check_rem(s, bytes))
-    {
-        return 1;
-    }
-    in_uint8p(s, data, bytes);
-    if ((chan_id < 0) || (chan_id > 255))
+    if (chan_id >= DRDYNVC_CHANNEL_COUNT)
     {
         return 1;
     }
     drdynvc = g_drdynvcs + chan_id;
     if (drdynvc->data_first != NULL)
     {
-        if (drdynvc->data_first(chan_id, data, bytes, total_bytes) != 0)
+        // Caller has requested to defragment PDUs themself
+        rv = drdynvc->data_first(chan_id, s, total_bytes);
+    }
+    else
+    {
+        // Get the dechunker working on the stream
+        enum dyn_dechunker_status status;
+        status = dyn_dechunker_process_first_chunk(drdynvc->dc,
+                 s, total_bytes);
+        switch (status)
         {
-            return 1;
+            case E_DYN_INLINE_CHUNK:
+                // Pass through as data PDU
+                if (drdynvc->data != NULL)
+                {
+                    rv = drdynvc->data(chan_id, s);
+                }
+                break;
+
+            case E_DYN_IN_PROGRESS:
+                break;
+
+            case E_DYN_ERROR:
+                rv = 1;
+                break;
+
+            default:
+                LOG(LOG_LEVEL_ERROR,
+                    "Dechunker returned unknown error %d",
+                    (int)status);
+                rv = 1;
         }
     }
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -691,31 +718,73 @@ static int
 process_message_drdynvc_data(struct stream *s)
 {
     struct chansrv_drdynvc *drdynvc;
-    int chan_id;
-    int bytes;
-    char *data;
+    uint32_t chan_id;
+    struct stream *ls = NULL; // Set if the application to be called
+    int free_ls = 0;    // Set if we need to clear ls when we're done
+    int rv = 0;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "process_message_drdynvc_data:");
-    if (!s_check_rem(s, 8))
+    if (!s_check_rem(s, 4))
     {
         return 1;
     }
     in_uint32_le(s, chan_id);
-    in_uint32_le(s, bytes);
-    if (!s_check_rem(s, bytes))
+    if (chan_id >= DRDYNVC_CHANNEL_COUNT)
     {
         return 1;
     }
-    in_uint8p(s, data, bytes);
     drdynvc = g_drdynvcs + chan_id;
-    if (drdynvc->data != NULL)
+    if (drdynvc->data_first != NULL)
     {
-        if (drdynvc->data(chan_id, data, bytes) != 0)
+        // Caller is processing all PDUs directly
+        ls = s;
+    }
+    else
+    {
+        // Pass the PDU to the dechunker
+        enum dyn_dechunker_status dechunker_status =
+            dyn_dechunker_process_data_chunk(drdynvc->dc, s);
+        switch (dechunker_status)
         {
-            return 1;
+            case E_DYN_INLINE_CHUNK:
+                ls = s;
+                break;
+
+            case E_DYN_IN_PROGRESS:
+                rv = 0;
+                break;
+
+            case E_DYN_READY:
+                ls = dyn_dechunker_get_stream(drdynvc->dc);
+                // We now own the stream, so must delete it
+                free_ls = 1;
+                break;
+
+            case E_DYN_ERROR:
+                // Error has been logged
+                rv = 1;
+                break;
+
+            default:
+                LOG(LOG_LEVEL_ERROR,
+                    "Dechunker returned unknown error %d",
+                    (int)dechunker_status);
+                rv = 1;
         }
     }
-    return 0;
+
+    if (ls != NULL)
+    {
+        if (drdynvc->data != NULL)
+        {
+            rv = drdynvc->data(chan_id, ls);
+        }
+        if (free_ls)
+        {
+            free_stream(ls);
+        }
+    }
+    return rv;
 }
 
 /*****************************************************************************/
@@ -728,12 +797,13 @@ chansrv_drdynvc_open(const char *name, int flags,
     int name_bytes;
     int lchan_id;
     int error;
+    struct dyn_dechunker *dc = NULL;
 
     lchan_id = 1;
     while (g_drdynvcs[lchan_id].status != CHANSRV_DRDYNVC_STATUS_CLOSED)
     {
         lchan_id++;
-        if (lchan_id > 255)
+        if (lchan_id >= DRDYNVC_CHANNEL_COUNT)
         {
             return 1;
         }
@@ -743,6 +813,18 @@ chansrv_drdynvc_open(const char *name, int flags,
     {
         return 1;
     }
+
+    // If there's no 'data_first' proc, we need a dechunker for the
+    // channel
+    if (procs->data_first == NULL)
+    {
+        if ((dc = dyn_dechunker_init(name)) == NULL)
+        {
+            // Error logged
+            return 1;
+        }
+    }
+
     name_bytes = g_strlen(name);
     out_uint32_le(s, 0); /* version */
     out_uint32_le(s, 8 + 8 + 4 + name_bytes + 4 + 4);
@@ -759,13 +841,17 @@ chansrv_drdynvc_open(const char *name, int flags,
         if (chan_id != NULL)
         {
             *chan_id = lchan_id;
-            g_drdynvcs[lchan_id].open_response = procs->open_response;
-            g_drdynvcs[lchan_id].close_response = procs->close_response;
-            g_drdynvcs[lchan_id].data_first = procs->data_first;
-            g_drdynvcs[lchan_id].data = procs->data;
-            g_drdynvcs[lchan_id].status = CHANSRV_DRDYNVC_STATUS_OPEN_SENT;
-
         }
+        g_drdynvcs[lchan_id].open_response = procs->open_response;
+        g_drdynvcs[lchan_id].close_response = procs->close_response;
+        g_drdynvcs[lchan_id].data_first = procs->data_first;
+        g_drdynvcs[lchan_id].data = procs->data;
+        g_drdynvcs[lchan_id].status = CHANSRV_DRDYNVC_STATUS_OPEN_SENT;
+        g_drdynvcs[lchan_id].dc = dc;
+    }
+    else
+    {
+        dyn_dechunker_free(dc);
     }
     return error;
 }
@@ -778,6 +864,10 @@ chansrv_drdynvc_close(int chan_id)
     struct stream *s;
     int error;
 
+    if (chan_id < 0 || chan_id >= DRDYNVC_CHANNEL_COUNT)
+    {
+        return 1;
+    }
     s = trans_get_out_s(g_con_trans, 8192);
     if (s == NULL)
     {
@@ -992,9 +1082,10 @@ my_trans_data_in(struct trans *trans)
 
 /*****************************************************************************/
 struct trans *
-get_api_trans_from_chan_id(int chan_id)
+get_api_trans_from_chan_id(uint32_t chan_id)
 {
-    return g_drdynvcs[chan_id].xrdp_api_trans;
+    return (chan_id >= DRDYNVC_CHANNEL_COUNT)
+           ? NULL : g_drdynvcs[chan_id].xrdp_api_trans;
 }
 
 /*****************************************************************************/
@@ -1035,24 +1126,24 @@ my_api_close_response(int chan_id)
 
 /*****************************************************************************/
 static int
-my_api_data_first(int chan_id, char *data, int bytes, int total_bytes)
+my_api_data_first(int chan_id, struct stream *s, int total_bytes)
 {
     struct trans *trans;
-    struct stream *s;
-
+    struct stream *out_s;
+    int bytes = s_rem(s);
     //g_writeln("my_api_data_first: bytes %d total_bytes %d", bytes, total_bytes);
     trans = get_api_trans_from_chan_id(chan_id);
     if (trans == NULL)
     {
         return 1;
     }
-    s = trans_get_out_s(trans, bytes);
-    if (s == NULL)
+    out_s = trans_get_out_s(trans, bytes);
+    if (out_s == NULL)
     {
         return 1;
     }
-    out_uint8a(s, data, bytes);
-    s_mark_end(s);
+    out_uint8a(out_s, s->p, bytes);
+    s_mark_end(out_s);
     if (trans_write_copy(trans) != 0)
     {
         return 1;
@@ -1062,24 +1153,24 @@ my_api_data_first(int chan_id, char *data, int bytes, int total_bytes)
 
 /*****************************************************************************/
 static int
-my_api_data(int chan_id, char *data, int bytes)
+my_api_data(int chan_id, struct stream *s)
 {
     struct trans *trans;
-    struct stream *s;
+    struct stream *out_s;
+    int bytes = s_rem(s);
 
-    //g_writeln("my_api_data: bytes %d", bytes);
     trans = get_api_trans_from_chan_id(chan_id);
     if (trans == NULL)
     {
         return 1;
     }
-    s = trans_get_out_s(trans, bytes);
-    if (s == NULL)
+    out_s = trans_get_out_s(trans, bytes);
+    if (out_s == NULL)
     {
         return 1;
     }
-    out_uint8a(s, data, bytes);
-    s_mark_end(s);
+    out_uint8a(out_s, s->p, bytes);
+    s_mark_end(out_s);
     if (trans_write_copy(trans) != 0)
     {
         return 1;
@@ -1416,7 +1507,7 @@ api_con_trans_list_check_wait_objs(void)
                     chansrv_drdynvc_close(ad->chan_id);
                 }
                 for (drdynvc_index = 0;
-                        drdynvc_index < (int) ARRAYSIZE(g_drdynvcs);
+                        drdynvc_index < DRDYNVC_CHANNEL_COUNT;
                         drdynvc_index++)
                 {
                     if (g_drdynvcs[drdynvc_index].xrdp_api_trans == ltran)
@@ -1651,6 +1742,8 @@ x_server_fatal_handler(void)
 int
 main_cleanup(void)
 {
+    int i;
+
     if (g_term_event != 0)
     {
         g_delete_wait_obj(g_term_event);
@@ -1668,6 +1761,10 @@ main_cleanup(void)
         g_delete_wait_obj(g_exec_event);
         tc_mutex_delete(g_exec_mutex);
         tc_sem_delete(g_exec_sem);
+    }
+    for (i = 0 ; i < DRDYNVC_CHANNEL_COUNT; ++i)
+    {
+        dyn_dechunker_free(g_drdynvcs[i].dc);
     }
     log_end();
     config_free(g_cfg);

@@ -141,10 +141,13 @@ struct xrdp_drdynvc
     int status; /* see XRDP_DRDYNVC_STATUS_* */
     int flags;
     int pad0;
-    int (*open_response)(intptr_t id, int chan_id, int creation_status);
+    struct dyn_dechunker *dc; // Use to dechunk fragments
+    int (*open_response)(intptr_t id, int chan_id,
+                         int creation_status);
     int (*close_response)(intptr_t id, int chan_id);
-    int (*data_first)(intptr_t id, int chan_id, char *data, int bytes, int total_bytes);
-    int (*data)(intptr_t id, int chan_id, char *data, int bytes);
+    int (*data_first)(intptr_t id, int chan_id, struct stream *s,
+                      int total_bytes);
+    int (*data)(intptr_t id, int chan_id, struct stream *s);
 };
 
 struct vc_dechunker; // Forward declaration
@@ -157,7 +160,7 @@ struct xrdp_channel
     int drdynvc_channel_id;
     int drdynvc_state;
     struct vc_dechunker *drdynvc_dc;
-    struct xrdp_drdynvc drdynvcs[256];
+    struct xrdp_drdynvc drdynvcs[DRDYNVC_CHANNEL_COUNT];
 };
 
 /* rdp */

@@ -57,11 +57,17 @@ struct vc_dechunker
     struct stream *reassembly_s;
 };
 
+struct dyn_dechunker
+{
+    char name[64];
+    struct stream *reassembly_s;
+};
+
 enum
 {
     // This is a rather arbitrary figure, but one we are unlikely to
     // go below.  It's a sanity check for vc_dechunker_init()
-    E_MAX_CHUNK_SIZE_LOWER_LIMIT = 50
+    E_MAX_VC_CHUNK_SIZE_LOWER_LIMIT = 50
 };
 /*****************************************************************************/
 struct vc_dechunker *
@@ -72,7 +78,7 @@ vc_dechunker_init(const char *chan_name, int max_chunk_size)
     {
         LOG(LOG_LEVEL_ERROR, "vc_dechunker_init() called with no channel name");
     }
-    else if (max_chunk_size < E_MAX_CHUNK_SIZE_LOWER_LIMIT)
+    else if (max_chunk_size < E_MAX_VC_CHUNK_SIZE_LOWER_LIMIT)
     {
         LOG(LOG_LEVEL_ERROR, "Dechunker: Max chunk size for %s is too small",
             chan_name);
@@ -237,6 +243,9 @@ handle_reading_state(struct vc_dechunker *self,
                     // Tell the caller the stream is available.
                     self->state = E_DATA;
                     rv = E_VC_READY;
+                    LOG_DEVEL(LOG_LEVEL_INFO,
+                              "Dechunker: Reassembled PDU of size %d on %s",
+                              self->reassembly_s->size, self->name);
                 }
                 else
                 {
@@ -368,4 +377,173 @@ vc_dechunker_get_stream(struct vc_dechunker *self)
     }
 
     return s;
+}
+/*****************************************************************************/
+struct dyn_dechunker *
+dyn_dechunker_init(const char *chan_name)
+{
+    struct dyn_dechunker *self = NULL;
+    if (chan_name == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "dyn_dechunker_init() called with no channel name");
+    }
+    else if ((self = g_new(struct dyn_dechunker, 1)) == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Dechunker: no memory for %s", chan_name);
+    }
+    else
+    {
+        strlcpy(self->name, chan_name, sizeof(self->name));
+        self->reassembly_s = NULL;
+    }
+
+    return self;
+}
+
+/*****************************************************************************/
+void
+dyn_dechunker_free(struct dyn_dechunker *self)
+{
+    if (self != NULL)
+    {
+        free_stream(self->reassembly_s);
+        free(self);
+    }
+}
+
+/*****************************************************************************/
+enum dyn_dechunker_status
+dyn_dechunker_process_first_chunk(struct dyn_dechunker *self,
+                                  struct stream *s, int total_size)
+{
+    enum dyn_dechunker_status status = E_DYN_ERROR;
+
+    int frag_size = s ? s_rem(s) : 0;
+    if (self == NULL || s == NULL)
+    {
+        ; // Nothing to be done
+    }
+    else if (total_size <= 1590 || frag_size > total_size)
+    {
+        // See [MS-RDPEDYC] 2.2.3
+        LOG(LOG_LEVEL_ERROR,
+            "Badly sized DYNVC_DATA_FIRST PDU received on dynamic channel %s",
+            self->name);
+    }
+    else if (self->reassembly_s != NULL)
+    {
+        LOG(LOG_LEVEL_ERROR,
+            "unexpected DYNVC_DATA_FIRST received on dynamic channel %s",
+            self->name);
+    }
+    else if (frag_size == total_size)
+    {
+        // This chunk contains all the data
+        status = E_DYN_INLINE_CHUNK;
+    }
+    else
+    {
+        make_stream(self->reassembly_s);
+        if (self->reassembly_s)
+        {
+            init_stream(self->reassembly_s, total_size);
+        }
+        if (self->reassembly_s == NULL || self->reassembly_s->data == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Out of memory for dynamic PDU reassembly on %s",
+                self->name);
+        }
+        else
+        {
+            out_uint8p(self->reassembly_s, s->p, frag_size);
+            in_uint8s(s, frag_size);
+            status = E_DYN_IN_PROGRESS;
+        }
+    }
+
+    return status;
+}
+
+/*****************************************************************************/
+enum dyn_dechunker_status
+dyn_dechunker_process_data_chunk(struct dyn_dechunker *self,
+                                 struct stream *s)
+{
+    enum dyn_dechunker_status rv;
+
+    if (self == NULL || s == NULL)
+    {
+        rv = E_DYN_ERROR;
+    }
+    else if (self->reassembly_s == NULL)
+    {
+        rv = E_DYN_INLINE_CHUNK;
+    }
+    else
+    {
+        int frag_size = s_rem(s);
+        // We're currently reconstructing a data PDU from fragments
+        if (!s_check_rem_out(self-> reassembly_s, frag_size))
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Oversized DYNVC_DATA when reconstructing PDU on %s",
+                self->name);
+            rv = E_DYN_ERROR;
+        }
+        else
+        {
+            out_uint8p(self->reassembly_s, s->p, frag_size);
+            in_uint8s(s, frag_size);
+
+            if (s_rem_out(self->reassembly_s) == 0)
+            {
+                // Finished defragging
+                s_mark_end(self->reassembly_s);
+                self->reassembly_s->p = self->reassembly_s->data;
+                rv = E_DYN_READY;
+                LOG_DEVEL(LOG_LEVEL_INFO,
+                          "Dechunker: Reassembled PDU of size %d on %s",
+                          self->reassembly_s->size, self->name);
+            }
+            else
+            {
+                rv = E_DYN_IN_PROGRESS;
+            }
+        }
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+struct stream *
+dyn_dechunker_get_stream(struct dyn_dechunker *self)
+{
+    struct stream *s;
+    const char *name = (self != NULL) ? self->name : "<unknown>";
+    if (self == NULL || self->reassembly_s == NULL ||
+            self->reassembly_s->end == self->reassembly_s->data)
+    {
+        LOG (LOG_LEVEL_ERROR,
+             "Dechunker: get stream called for %s with no data available",
+             name);
+        s = NULL;
+    }
+    else
+    {
+        // Pass ownership of the stream to the caller
+        s = self->reassembly_s;
+        self->reassembly_s = NULL; // So we don't free it ourselves!
+    }
+
+    return s;
+}
+
+/*****************************************************************************/
+int
+dyn_dechunker_pending(struct dyn_dechunker *self)
+{
+    return (self != NULL && self->reassembly_s != NULL);
 }
