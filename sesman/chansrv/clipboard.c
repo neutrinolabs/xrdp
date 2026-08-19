@@ -412,6 +412,18 @@ clipboard_init(void)
                                    XFixesSetSelectionOwnerNotifyMask |
                                    XFixesSelectionWindowDestroyNotifyMask |
                                    XFixesSelectionClientCloseNotifyMask);
+        /* Also watch PRIMARY, the selection filled by dragging the mouse over
+         * text and pasted with the middle button or shift+insert. RDP has a
+         * single clipboard, so it maps onto CLIPBOARD and PRIMARY was left
+         * unhandled -- g_primary_atom was interned and then never used. A
+         * user selecting text in an RDP session had nothing to paste with the
+         * middle button, and text copied on the client could not be pasted
+         * that way either. */
+        XFixesSelectSelectionInput(g_display, g_wnd,
+                                   g_primary_atom,
+                                   XFixesSetSelectionOwnerNotifyMask |
+                                   XFixesSelectionWindowDestroyNotifyMask |
+                                   XFixesSelectionClientCloseNotifyMask);
     }
 
     make_stream(s);
@@ -806,6 +818,16 @@ clipboard_send_data_response(int xrdp_clip_type, const char *data, int data_size
 }
 
 /*****************************************************************************/
+/* Which X selection the pending server-to-client data came from. Set when the
+ * TARGETS reply arrives; falls back to CLIPBOARD so a request that somehow
+ * arrives first behaves exactly as it did before PRIMARY was handled. */
+static Atom
+clipboard_s2c_selection(void)
+{
+    return (g_clip_s2c.selection != 0) ? g_clip_s2c.selection : g_clipboard_atom;
+}
+
+/*****************************************************************************/
 static int
 clipboard_set_selection_owner(void)
 {
@@ -820,6 +842,19 @@ clipboard_set_selection_owner(void)
     {
         g_got_selection = 0;
         return 1;
+    }
+
+    /* Take PRIMARY as well, so data coming from the client can be pasted with
+     * the middle button or shift+insert, not only with ctrl+v.
+     * clipboard_event_selection_request() answers whatever selection is asked
+     * for, so no separate serving path is needed.
+     * Failure here is not fatal: CLIPBOARD is already ours and remains
+     * usable, which is the behaviour that existed before. */
+    XSetSelectionOwner(g_display, g_primary_atom, g_wnd, g_selection_time);
+    if (XGetSelectionOwner(g_display, g_primary_atom) != g_wnd)
+    {
+        LOG(LOG_LEVEL_WARNING, "clipboard_set_selection_owner: "
+            "could not take PRIMARY, middle-click paste will not work");
     }
 
     g_got_selection = 1;
@@ -1068,7 +1103,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_request: CB_FORMAT_FILE_GROUP_DESCRIPTOR, "
                           "calling XConvertSelection to g_utf8_atom");
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
-                XConvertSelection(g_display, g_clipboard_atom, g_clip_s2c.type,
+                XConvertSelection(g_display, clipboard_s2c_selection(), g_clip_s2c.type,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
             break;
@@ -1084,7 +1119,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_request: CF_DIB, "
                           "calling XConvertSelection to g_image_bmp_atom");
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
-                XConvertSelection(g_display, g_clipboard_atom, g_image_bmp_atom,
+                XConvertSelection(g_display, clipboard_s2c_selection(), g_image_bmp_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
             break;
@@ -1100,7 +1135,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_request: CF_UNICODETEXT, "
                           "calling XConvertSelection to g_utf8_atom");
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
-                XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
+                XConvertSelection(g_display, clipboard_s2c_selection(), g_utf8_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
             break;
@@ -1564,8 +1599,12 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     g_got_selection = 0;
     if (lxevent->owner != 0) /* nil owner comes when selection */
     {
+        /* Ask the new owner what it can offer, for whichever selection
+         * changed hands. Previously this was hardcoded to CLIPBOARD, so
+         * selecting text with the mouse -- which only sets PRIMARY -- was
+         * seen and then dropped, and nothing reached the client. */
         /* window is closed */
-        XConvertSelection(g_display, g_clipboard_atom, g_targets_atom,
+        XConvertSelection(g_display, lxevent->selection, g_targets_atom,
                           g_clip_property_atom, g_wnd, lxevent->timestamp);
     }
     return 0;
@@ -1760,7 +1799,13 @@ clipboard_event_selection_notify(XEvent *xevent)
 
     if (rv == 0)
     {
-        if (lxevent->selection == g_clipboard_atom)
+        /* PRIMARY is handled on the same path as CLIPBOARD: the data reaching
+         * the client is the same, only the X selection it came from differs.
+         * Remember which one, so the follow-up conversion asks that owner. */
+        g_clip_s2c.selection = lxevent->selection;
+
+        if (lxevent->selection == g_clipboard_atom
+                || lxevent->selection == g_primary_atom)
         {
             if (lxevent->target == g_targets_atom)
             {
