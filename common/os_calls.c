@@ -587,11 +587,11 @@ g_sck_vsock_socket(void)
     LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: returning FreeBSD Hyper-V socket");
     return socket(AF_HYPERV, SOCK_STREAM, 0); // docs say to use AF_HYPERV here - PF_HYPERV does not exist
 #else
-    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: vsock enabled at compile time, but platform is unsupported");
+    LOG(LOG_LEVEL_ERROR, "g_sck_vsock_socket: vsock enabled at compile time, but platform is unsupported");
     return -1;
 #endif
 #else
-    LOG(LOG_LEVEL_DEBUG, "g_sck_vsock_socket: vsock disabled at compile time");
+    LOG(LOG_LEVEL_ERROR, "g_sck_vsock_socket: vsock disabled at compile time");
     return -1;
 #endif
 }
