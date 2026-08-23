@@ -546,6 +546,11 @@ tconfig_load_gfx(const char *filename, struct xrdp_tconfig_gfx *config)
     toml_table_t *tfile;
     int rv = 0;
 
+    if (filename == NULL || config == NULL)
+    {
+        TCLOG(LOG_LEVEL_ERROR, "Error loading GFX config, bad params");
+        return 1;
+    }
     /* Default to just RFX support. in case we can't load anything */
     config->codec.codec_count = 1;
     config->codec.codecs[0] = XTC_RFX;
