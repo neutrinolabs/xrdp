@@ -151,7 +151,7 @@ handle_create_session_request(struct trans *self)
                  self, &sp.x11_display,
                  &sp.type, &sp.width, &sp.height,
                  &sp.bpp, &sp.shell, &sp.directory,
-                 &sp.instance_name);
+                 &sp.instance_name, &sp.client_name);
     if (status == 0)
     {
         enum scp_screate_status scp_status = E_SCP_SCREATE_OK;
@@ -193,7 +193,8 @@ handle_create_session_request(struct trans *self)
                               &sp.guid,
                               g_login_info->ip_addr,
                               session_get_start_time(g_session_data),
-                              sp.instance_name)) != 0)
+                              sp.instance_name,
+                              sp.client_name)) != 0)
             {
                 // We failed to tell sesman about the new session. This
                 // probably means sesman has exited in the time between

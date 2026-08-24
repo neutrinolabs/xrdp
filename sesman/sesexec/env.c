@@ -42,7 +42,8 @@
 /******************************************************************************/
 void
 env_set_user(int uid,
-             const struct list *env_names, const struct list *env_values)
+             const struct list *env_names, const struct list *env_values,
+             const char *client_name)
 {
     int error;
     int pw_gid;
@@ -106,6 +107,14 @@ env_set_user(int uid,
      * xorgxrdp and the pulseaudio plugin */
     g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH, uid);
     g_setenv_log("XRDP_SOCKET_PATH", text, 1);
+
+    // Set CLIENTNAME to the name reported by the RDP client, for
+    // compatibility with Microsoft RDP session hosts. This is fixed for
+    // the lifetime of the session, as on Microsoft RDP session hosts.
+    if (client_name != NULL && client_name[0] != '\0')
+    {
+        g_setenv_log("CLIENTNAME", client_name, 1);
+    }
 
     // Set the passed-in variables. This may include a DISPLAY,
     // or WAYLAND_DISPLAY

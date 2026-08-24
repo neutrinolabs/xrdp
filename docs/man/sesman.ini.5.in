@@ -213,7 +213,7 @@ If set to \fI0\fR, idle sessions will never be disconnected by timeout.
 This works only with xorgxrdp sessions. Moreover, xorgxrdp must be v0.2.9 or later.
 
 .TP
-\fBPolicy\fR=\fI[Default|Separate|{UBDI}]\fR
+\fBPolicy\fR=\fI[Default|Separate|{UBDINH}]\fR
 Session allocation policy. Used to decide when to allocate a
 new session. Set to one of the following values:
 .br
@@ -237,12 +237,21 @@ Alternatively combine one-or-more of the following options
 \fBI\fR - Sessions are separated by IP address
 .HP 4
 \fBN\fR - Sessions are separated by an instance name specified on startup
+.HP 4
+\fBH\fR - Sessions are separated by the RDP client's reported hostname
+(see \fBCLIENTNAME\fR below)
 .RE
 
 .IP
 Note that the \fBU\fR and \fBB\fR criteria cannot be turned
 off. \fBDisplaySize\fR refers to the initial geometry of a connection,
 as actual display sizes can change dynamically.
+.IP
+The \fBH\fR criterion is matched against the RDP client's reported
+computer name (equivalent to the client-side \fBCLIENTNAME\fR
+environment variable found on Microsoft RDP clients), as reported once
+at session creation time. If the client does not report a name, an
+empty string is used for matching purposes.
 
 .TP
 \fBStartupWaitTime\fR=\fInumber\fR

@@ -46,6 +46,10 @@ env_check_password_file(const char *filename, const char *password);
  * @param uid user ID
  * @param env_names List of session environment variables to set
  * @param env_values List of session environment values to set
+ * @param client_name Name of the RDP client which started the session, or
+ *  NULL/"" if not known. Used to set $CLIENTNAME, for compatibility with
+ *  the environment variable of the same name found on Microsoft RDP
+ *  session hosts.
  *
  * On error, the calling process exits, to prevent privilege
  * escalations.
@@ -53,6 +57,7 @@ env_check_password_file(const char *filename, const char *password);
  */
 void
 env_set_user(int uid,
-             const struct list *env_names, const struct list *env_values);
+             const struct list *env_names, const struct list *env_values,
+             const char *client_name);
 
 #endif

@@ -101,7 +101,8 @@ discover_trans_conn_in(struct trans *trans, struct trans *new_trans)
                 &sp->guid,
                 g_login_info->ip_addr,
                 session_get_start_time(g_session_data),
-                sp->instance_name);
+                sp->instance_name,
+                sp->client_name);
 
             // Tell semsan about the last client connect or disconnect
             if (g_ccp_trans != NULL)
