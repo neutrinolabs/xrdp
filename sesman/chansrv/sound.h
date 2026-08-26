@@ -38,13 +38,6 @@
 #define SNDC_UDPWAVELAST    0x0B
 #define SNDC_QUALITYMODE    0x0C
 
-/* used for sound input (mic) */
-#define SNDC_REC_NEGOTIATE  39
-#define SNDC_REC_START      40
-#define SNDC_REC_STOP       41
-#define SNDC_REC_DATA       42
-#define SNDC_REC_SET_VOLUME 43
-
 /* commands recvd from pulseaudio source */
 #define PA_CMD_START_REC    1
 #define PA_CMD_STOP_REC     2
