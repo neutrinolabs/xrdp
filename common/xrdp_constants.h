@@ -287,6 +287,7 @@
 #define WM_KEYDOWN     15
 #define WM_KEYUP       16
 #define WM_KEYBRD_SYNC 17
+#define WM_UNICODE_INPUT 19
 #define WM_MOUSEMOVE   100
 #define WM_LBUTTONUP   101
 #define WM_LBUTTONDOWN 102
