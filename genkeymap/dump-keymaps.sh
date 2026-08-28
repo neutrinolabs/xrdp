@@ -104,6 +104,8 @@ kbgen 19360409 "en-US"    "$os" -model pc105 -layout us -variant dvp \
     -option "" -option compose:102 -option caps:shift -option numpad:sg \
     -option numpad:shift3 -option keypad:hex -option keypad:atm \
     -option kpdl:semi -option lv3:ralt_alt
+kbgen e0010412 "ko-KR"    "$os" -model pc105 -layout kr -variant kr106 \
+    -option "" -option korean:ralt_hangul -option korean:rctrl_hanja
 # set back to entry settings
 # shellcheck disable=SC2086
 setxkbmap ${OLD_SETTINGS}
