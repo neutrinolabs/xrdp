@@ -922,3 +922,45 @@ scp_send_close_connection_request(struct trans *trans)
                (int)E_SCP_CLOSE_CONNECTION_REQUEST,
                NULL);
 }
+
+/*****************************************************************************/
+
+int
+scp_send_prompt_request(struct trans *trans, const char *prompt,
+                        enum scp_prompt_type prompt_type)
+{
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_PROMPT_REQUEST,
+               "si", prompt, prompt_type);
+}
+
+/*****************************************************************************/
+
+int
+scp_get_prompt_request(struct trans *trans, char **prompt,
+                       enum scp_prompt_type *prompt_type)
+{
+    int rv = libipm_msg_in_parse(trans, "si", prompt, prompt_type);
+    return rv;
+}
+
+/*****************************************************************************/
+
+int
+scp_send_prompt_response(struct trans *trans, const char *response)
+{
+    return libipm_msg_out_simple_send(
+               trans,
+               (int)E_SCP_PROMPT_RESPONSE,
+               "s", response);
+}
+
+/*****************************************************************************/
+
+int
+scp_get_prompt_response(struct trans *trans, char **response)
+{
+    int rv = libipm_msg_in_parse(trans, "s", response);
+    return rv;
+}

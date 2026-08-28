@@ -2849,6 +2849,35 @@ xrdp_mm_process_connect_session_response(struct xrdp_mm *self)
 }
 
 /*****************************************************************************/
+static int
+xrdp_mm_process_prompt_request(struct xrdp_mm *self)
+{
+    char *prompt;
+    enum scp_prompt_type prompt_type;
+    int error;
+
+    LOG(LOG_LEVEL_INFO, "xrdp_mm_process_prompt_request");
+    error = scp_get_prompt_request(self->sesman_trans,
+                                   &prompt, &prompt_type);
+    LOG(LOG_LEVEL_INFO, "scp_get_prompt_request rv %d prompt [%s] "
+        "prompt_type [%d]", error, prompt, prompt_type);
+    if (error == 0)
+    {
+        if (self->wm->prompt_wnd == NULL)
+        {
+            xrdp_prompt_create(self->wm->screen, &self->wm->prompt_wnd);
+        }
+        if (self->wm->prompt_wnd != NULL)
+        {
+            xrdp_prompt_add_prompt(self->wm->prompt_wnd, prompt,
+                                   prompt_type == SCP_PROMPT_ECHO_OFF);
+        }
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
 /* This is the callback registered for sesman communication replies over SCP */
 static int
 xrdp_mm_scp_data_in(struct trans *trans)
@@ -2874,6 +2903,10 @@ xrdp_mm_scp_data_in(struct trans *trans)
 
             case E_SCP_CONNECT_SESSION_RESPONSE:
                 rv = xrdp_mm_process_connect_session_response(self);
+                break;
+
+            case E_SCP_PROMPT_REQUEST:
+                rv = xrdp_mm_process_prompt_request(self);
                 break;
 
             default:
