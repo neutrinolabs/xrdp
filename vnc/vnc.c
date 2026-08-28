@@ -1910,12 +1910,21 @@ negotiate_protocol_version(struct vnc *v, unsigned char *next_char)
     }
     else if (major == 3)
     {
-        /* RFC6143 section 6 states that unknown 3.x versions should
-         * be treated as 3.3 */
+        /* Apple Screen Sharing uses 3.889. Treat versions >= 3.8 as 3.8
+         * to enable better security negotiation */
         LOG(LOG_LEVEL_INFO, "RFB server reports version %d.%d.",
             major, minor);
 
-        minor = 3;
+        if (minor >= 8)
+        {
+            minor = 8;
+        }
+        else
+        {
+            /* RFC6143 section 6 states that unknown 3.x versions < 3.8
+             * should be treated as 3.3 */
+            minor = 3;
+        }
         version = MAKE_RFBPROTO_VER(major, minor);
         LOG(LOG_LEVEL_INFO, "Proposing RFB version %d.%d to server",
             major, minor);
@@ -2139,6 +2148,192 @@ negotiate_security_type(struct vnc *v, unsigned int rfbproto_version,
                 LOG(LOG_LEVEL_ERROR, "Can't send VNC auth response to server");
                 goto fail;
             }
+            break;
+        }
+        case SEC_TYPE_APPLE_ARD:
+        {
+            /* Apple Remote Desktop authentication (security type 30)
+             * Uses Diffie-Hellman key exchange + AES encrypted credentials
+             * Protocol:
+             * 1. Server sends: generator (2 bytes) + key length (2 bytes) +
+             *                  prime (key_length bytes) + server public key (key_length bytes)
+             * 2. Client generates DH key pair, computes shared secret
+             * 3. Client sends: client public key (key_length bytes) +
+             *                  AES128-encrypted credentials (128 bytes)
+             */
+            unsigned char generator[2];
+            unsigned char key_len_bytes[2];
+            int key_len;
+            unsigned char *prime = NULL;
+            unsigned char *server_pubkey = NULL;
+            unsigned char *client_pubkey = NULL;
+            unsigned char *shared_secret = NULL;
+            unsigned char credentials[128];
+            unsigned char encrypted_creds[128];
+
+            LOG(LOG_LEVEL_INFO, "Starting Apple ARD authentication");
+
+            /* Read generator (2 bytes) */
+            init_stream(s, 4);
+            if (trans_force_read_s(v->trans, s, 2) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't read ARD generator");
+                goto fail;
+            }
+            in_uint8a(s, generator, 2);
+
+            /* Read key length (2 bytes, big endian) */
+            init_stream(s, 4);
+            if (trans_force_read_s(v->trans, s, 2) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't read ARD key length");
+                goto fail;
+            }
+            in_uint8a(s, key_len_bytes, 2);
+            key_len = (key_len_bytes[0] << 8) | key_len_bytes[1];
+
+            LOG(LOG_LEVEL_INFO, "ARD key length: %d bytes", key_len);
+
+            if (key_len <= 0 || key_len > 1024)
+            {
+                LOG(LOG_LEVEL_ERROR, "Invalid ARD key length: %d", key_len);
+                goto fail;
+            }
+
+            prime = (unsigned char *)g_malloc(key_len, 1);
+            server_pubkey = (unsigned char *)g_malloc(key_len, 1);
+            client_pubkey = (unsigned char *)g_malloc(key_len, 1);
+            shared_secret = (unsigned char *)g_malloc(key_len, 1);
+
+            if (!prime || !server_pubkey || !client_pubkey || !shared_secret)
+            {
+                LOG(LOG_LEVEL_ERROR, "Memory allocation failed for ARD");
+                g_free(prime);
+                g_free(server_pubkey);
+                g_free(client_pubkey);
+                g_free(shared_secret);
+                goto fail;
+            }
+
+            /* Read prime (key_len bytes) */
+            init_stream(s, key_len + 16);
+            if (trans_force_read_s(v->trans, s, key_len) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't read ARD prime");
+                g_free(prime);
+                g_free(server_pubkey);
+                g_free(client_pubkey);
+                g_free(shared_secret);
+                goto fail;
+            }
+            in_uint8a(s, prime, key_len);
+
+            /* Read server public key (key_len bytes) */
+            init_stream(s, key_len + 16);
+            if (trans_force_read_s(v->trans, s, key_len) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't read ARD server public key");
+                g_free(prime);
+                g_free(server_pubkey);
+                g_free(client_pubkey);
+                g_free(shared_secret);
+                goto fail;
+            }
+            in_uint8a(s, server_pubkey, key_len);
+
+            /* Generate client DH key pair and compute shared secret */
+            {
+                /* Use OpenSSL for DH key generation */
+                void *dh = ssl_dh_create(key_len, generator, prime, server_pubkey,
+                                         client_pubkey, shared_secret);
+                if (dh == NULL)
+                {
+                    LOG(LOG_LEVEL_ERROR, "Failed to generate DH keys for ARD");
+                    g_free(prime);
+                    g_free(server_pubkey);
+                    g_free(client_pubkey);
+                    g_free(shared_secret);
+                    goto fail;
+                }
+                ssl_dh_delete(dh);
+            }
+
+            /* Prepare credentials: 64 bytes username + 64 bytes password
+             * Both are null-terminated, unused bytes filled with random data */
+
+            /* Fill entire buffer with random data first */
+            g_random((char *)credentials, 128);
+
+            /* Copy username (first 64 bytes), null-terminated */
+            {
+                int ulen = g_strlen(v->username);
+                if (ulen > 63) ulen = 63;
+                g_memcpy(credentials, v->username, ulen);
+                credentials[ulen] = '\0';  /* Null terminator after username */
+            }
+
+            /* Copy password (next 64 bytes), null-terminated */
+            {
+                int plen = g_strlen(v->password);
+                if (plen > 63) plen = 63;
+                g_memcpy(credentials + 64, v->password, plen);
+                credentials[64 + plen] = '\0';  /* Null terminator after password */
+            }
+
+            LOG(LOG_LEVEL_DEBUG, "ARD credentials prepared: username len=%d, password len=%d",
+                (int)g_strlen(v->username), (int)g_strlen(v->password));
+
+            /* Derive AES key from shared secret using MD5 hash */
+            {
+                void *md5 = ssl_md5_info_create();
+                unsigned char aes_key_bytes[16];
+                void *aes_ctx;
+
+                ssl_md5_clear(md5);
+                ssl_md5_transform(md5, (char *)shared_secret, key_len);
+                ssl_md5_complete(md5, (char *)aes_key_bytes);
+                ssl_md5_info_delete(md5);
+
+                /* Encrypt credentials with AES-128-ECB */
+                aes_ctx = ssl_aes128_ecb_encrypt_info_create(aes_key_bytes);
+                if (aes_ctx)
+                {
+                    ssl_aes128_ecb_encrypt(aes_ctx, credentials, encrypted_creds, 128);
+                    ssl_aes128_info_delete(aes_ctx);
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_ERROR, "Failed to create AES context for ARD");
+                    g_free(prime);
+                    g_free(server_pubkey);
+                    g_free(client_pubkey);
+                    g_free(shared_secret);
+                    goto fail;
+                }
+            }
+
+            /* Send encrypted credentials + client public key (order matters!) */
+            init_stream(s, key_len + 128 + 16);
+            out_uint8a(s, encrypted_creds, 128);
+            out_uint8a(s, client_pubkey, key_len);
+            s_mark_end(s);
+
+            if (trans_force_write_s(v->trans, s) != 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "Can't send ARD authentication response");
+                g_free(prime);
+                g_free(server_pubkey);
+                g_free(client_pubkey);
+                g_free(shared_secret);
+                goto fail;
+            }
+
+            g_free(prime);
+            g_free(server_pubkey);
+            g_free(client_pubkey);
+            g_free(shared_secret);
+
+            LOG(LOG_LEVEL_INFO, "ARD authentication response sent");
             break;
         }
         default:
