@@ -622,7 +622,7 @@ xrdp_rdp_send_data_from_channel(struct xrdp_rdp *self, struct stream *s,
     pdulen = len;
     dlen = len;
     ctype = 0;
-    clen = len;
+    clen = 0;    /* When not using compression: the compressed length is 0 */
     tocomplen = pdulen - 18;
 
     if (compress && self->client_info.rdp_compression &&
@@ -1690,11 +1690,15 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
 
     out_uint8a(s, data, data_bytes);
     s_mark_end(s);
-    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_SAVE_SESSION_INFO_PDU_DATA "
-              "infoType 0x%8.8x, infoData <omitted from log>",
-              *((unsigned int *) data));
+    LOG(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_SAVE_SESSION_INFO_PDU_DATA "
+        "infoType 0x%8.8x, infoData <omitted from log> (%u bytes)",
+        *((unsigned int *) data),
+        data_bytes);
 
-    if (xrdp_rdp_send_data(self, s, PDUTYPE2_SAVE_SESSION_INFO) != 0)
+    /* [MS-RDPBCGR] sect 3.3.5.10.1 - Sending Save Session Info PDU:
+     * "The contents of this PDU SHOULD NOT be compressed." */
+    if (xrdp_rdp_send_data_from_channel(self, s, PDUTYPE2_SAVE_SESSION_INFO,
+                                        self->mcs_channel, 0) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPBCGR] TS_SAVE_SESSION_INFO_PDU_DATA failed");
         free_stream(s);

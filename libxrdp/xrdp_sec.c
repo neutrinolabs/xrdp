@@ -450,6 +450,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
     }
 
+    if (flags & INFO_LOGONNOTIFY)
+    {
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "[MS-RDPBCGR] TS_INFO_PACKET flag INFO_LOGONNOTIFY found");
+        self->rdp_layer->client_info.rdp_logonnotify = 1;
+    }
+
     if (flags & INFO_COMPRESSION)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "[MS-RDPBCGR] TS_INFO_PACKET flag INFO_COMPRESSION found, "
