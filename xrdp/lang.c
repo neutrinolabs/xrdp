@@ -223,7 +223,7 @@ static int
 km_read_section(toml_table_t *tfile, const char *section_name,
                 struct xrdp_key_info *keymap)
 {
-    toml_table_t *section = toml_table_in(tfile, section_name);
+    const toml_table_t *section = toml_table_in(tfile, section_name);
 
     if (section == NULL)
     {
@@ -338,7 +338,7 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 static void
 parse_km_general(toml_table_t *tfile, struct km_general *general)
 {
-    toml_table_t *section;
+    const toml_table_t *section;
 
     if (tfile != NULL && (section = toml_table_in(tfile, "General")) != NULL)
     {
@@ -512,7 +512,7 @@ lookup_keylayout(int keylayout,
     int i;
     const char *key;
     toml_datum_t datum;
-    toml_array_t *arr;
+    const toml_array_t *arr;
 
     for (i = 0 ; (key = toml_key_in(table, i)) != NULL ; ++i)
     {
@@ -702,9 +702,9 @@ read_toml_config(struct xrdp_client_info *client_info,
     char layout_name[64];
 
     toml_table_t *defaults;
-    toml_table_t *overrides;
+    const toml_table_t *overrides;
     toml_table_t *layouts_table;
-    toml_table_t *map_table;
+    const toml_table_t *map_table;
 
 
     /* Step 1 - Parse the [defaults] table looking for the

@@ -1202,7 +1202,7 @@ gfx_solidfill(struct xrdp_encoder *self,
     int pixel;
     int num_rects;
     char *ptr8;
-    struct xrdp_egfx_rect *rects;
+    const struct xrdp_egfx_rect *rects;
 
     if (!s_check_rem(in_s, 8))
     {
@@ -1229,8 +1229,8 @@ gfx_surfacetosurface(struct xrdp_encoder *self,
     int surface_id_dst;
     char *ptr8;
     int num_pts;
-    struct xrdp_egfx_rect *rects;
-    struct xrdp_egfx_point *pts;
+    const struct xrdp_egfx_rect *rects;
+    const struct xrdp_egfx_point *pts;
 
     if (!s_check_rem(in_s, 14))
     {

@@ -842,7 +842,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     int channel;
     int gcc_size;
     char *gcc_size_ptr;
-    char *ud_ptr;
+    const char *ud_ptr;
     int header_length;
     int server_cert_len;
     int public_key_blob_len;

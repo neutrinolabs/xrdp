@@ -624,7 +624,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
     struct xrdp_rect r2;
     struct xrdp_painter *painter;
     unsigned int font_height;
-    char *p;
+    const char *p;
 
     if (self == 0) /* if no bitmap */
     {

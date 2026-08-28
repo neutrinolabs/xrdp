@@ -278,7 +278,7 @@ internal_config_read_logging(int file,
                              const char *section_prefix)
 {
     int i;
-    char *buf;
+    const char *buf;
     char *temp_buf;
     char section_name[512];
     struct log_config *lc;
@@ -1149,7 +1149,7 @@ getFormattedDateTime(char *replybuf, int bufsize)
     char buf_millisec[4];  /* 357 */
     char buf_timezone[6];  /* +0900 */
 
-    struct tm *now;
+    const struct tm *now;
     struct timeval tv;
     int millisec;
 

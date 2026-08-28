@@ -1361,11 +1361,11 @@ scard_send_GetStatusChange(IRP *irp, char *context, int context_bytes,
      * ??       String names pointed to in the above array.
      */
 
-    READER_STATE  *rs;
-    struct stream *s;
-    tui32          ioctl;
-    int            bytes;
-    unsigned int   i;
+    const READER_STATE  *rs;
+    struct stream       *s;
+    tui32                ioctl;
+    int                  bytes;
+    unsigned int         i;
 
     if (smartcards[irp->scard_index] == NULL)
     {

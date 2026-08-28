@@ -66,7 +66,7 @@ auth_userpass(const char *user, const char *pass,
               const char *client_ip, enum scp_login_status *errorcode)
 {
     const char *encr = NULL;
-    struct passwd *spw;
+    const struct passwd *spw;
 
     /* Need a non-NULL pointer to return to indicate success */
     static struct auth_info success = {0};
@@ -131,7 +131,7 @@ auth_userpass(const char *user, const char *pass,
 struct auth_info *
 auth_uds(const char *user, enum scp_login_status *errorcode)
 {
-    struct passwd *spw;
+    const struct passwd *spw;
 
     /* Need a non-NULL pointer to return to indicate success */
     static struct auth_info success = {0};
@@ -198,8 +198,8 @@ auth_set_env(struct auth_info *auth_info)
 int
 auth_check_pwd_chg(const char *user)
 {
-    struct passwd *spw;
-    struct spwd *stp;
+    const struct passwd *spw;
+    const struct spwd *stp;
     int now;
     long today;
 
