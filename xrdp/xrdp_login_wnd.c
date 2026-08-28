@@ -22,6 +22,8 @@
 #include <config_ac.h>
 #endif
 
+#include <stdio.h>
+
 #include "base64.h"
 #include "xrdp.h"
 #include "log.h"
@@ -1068,11 +1070,14 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     int   fd;
     int   i;
 
+    LOG(LOG_LEVEL_INFO, "got to config function");
+
     if (!config)
     {
         return -1;
     }
 
+    LOG(LOG_LEVEL_INFO, "and continuing");
     globals = &config->cfg_globals;
 
     /* set default values in case we can't get them from xrdp.ini file */
@@ -1139,6 +1144,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     {
         n = (char *) list_get_item(names, i);
         v = (char *) list_get_item(values, i);
+
+	LOG(LOG_LEVEL_INFO, "config: %s -> %s", n, v);
 
         /*
          * parse globals section
@@ -1267,6 +1274,12 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         else if (g_strncmp(n, "autorun", 255) == 0)
         {
             g_strncpy(globals->autorun, v, 255);
+        }
+
+        else if (g_strncmp(n, "enable_auto_login", 64) == 0)
+        {
+        	LOG(LOG_LEVEL_INFO, "enable auto login: %s", v);
+            globals->enable_auto_login = g_text2bool(v);
         }
 
         else if (g_strncmp(n, "hidelogwindow", 64) == 0)

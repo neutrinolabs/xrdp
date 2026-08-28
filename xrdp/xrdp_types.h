@@ -815,6 +815,7 @@ struct xrdp_cfg_globals
     int  tcp_send_buffer_bytes;
     int  tcp_recv_buffer_bytes;
     char autorun[256];
+    int  enable_auto_login;
     int  hidelogwindow;
     int  require_credentials;
     int  bulk_compression;
