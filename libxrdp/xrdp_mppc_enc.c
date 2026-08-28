@@ -81,12 +81,17 @@ static const tui16 g_crc_table[256] =
 };
 
 /*****************************************************************************
+ * The insert_${x}_bits() macros have the same pre and post conditions:
+ *
+ * 1 <= bits_left <= 8
+ */
+/*****************************************************************************
                      insert 2 bits into outputBuffer
 ******************************************************************************/
 #define insert_2_bits(_data) \
     do \
     { \
-        if ((bits_left >= 3) && (bits_left <= 8)) \
+        if (bits_left >= 3) \
         { \
             i = bits_left - 2; \
             outputBuffer[opb_index] |= _data << i; \
@@ -108,7 +113,7 @@ static const tui16 g_crc_table[256] =
 #define insert_3_bits(_data) \
     do \
     { \
-        if ((bits_left >= 4) && (bits_left <= 8)) \
+        if (bits_left >= 4) \
         { \
             i = bits_left - 3; \
             outputBuffer[opb_index] |= _data << i; \
@@ -130,7 +135,7 @@ static const tui16 g_crc_table[256] =
 #define insert_4_bits(_data) \
     do \
     { \
-        if ((bits_left >= 5) && (bits_left <= 8)) \
+        if (bits_left >= 5) \
         { \
             i = bits_left - 4; \
             outputBuffer[opb_index] |= _data << i; \
@@ -152,7 +157,7 @@ static const tui16 g_crc_table[256] =
 #define insert_5_bits(_data) \
     do \
     { \
-        if ((bits_left >= 6) && (bits_left <= 8)) \
+        if (bits_left >= 6) \
         { \
             i = bits_left - 5; \
             outputBuffer[opb_index] |= _data << i; \
@@ -174,7 +179,7 @@ static const tui16 g_crc_table[256] =
 #define insert_6_bits(_data) \
     do \
     { \
-        if ((bits_left >= 7) && (bits_left <= 8)) \
+        if (bits_left >= 7) \
         { \
             i = bits_left - 6; \
             outputBuffer[opb_index] |= (_data << i); \
@@ -257,7 +262,7 @@ static const tui16 g_crc_table[256] =
     do \
     { \
         i = 10 - bits_left; \
-        if ((bits_left >= 3) && (bits_left <= 8)) \
+        if (bits_left >= 3)  \
         { \
             j = 8 - i; \
             outputBuffer[opb_index++] |= (char) (_data16 >> i); \
@@ -282,7 +287,7 @@ static const tui16 g_crc_table[256] =
     do \
     { \
         i = 11 - bits_left; \
-        if ((bits_left >= 4) && (bits_left <= 8)) \
+        if (bits_left >= 4) \
         { \
             j = 8 - i; \
             outputBuffer[opb_index++] |= (char) (_data16 >> i); \
@@ -307,7 +312,7 @@ static const tui16 g_crc_table[256] =
     do \
     { \
         i = 12 - bits_left; \
-        if ((bits_left >= 5) && (bits_left <= 8)) \
+        if (bits_left >= 5) \
         { \
             j = 8 - i; \
             outputBuffer[opb_index++] |= (char) (_data16 >> i); \
@@ -332,7 +337,7 @@ static const tui16 g_crc_table[256] =
     do \
     { \
         i = 13 - bits_left; \
-        if ((bits_left >= 6) && (bits_left <= 8)) \
+        if (bits_left >= 6) \
         { \
             j = 8 - i; \
             outputBuffer[opb_index++] |= (char) (_data16 >> i); \
@@ -357,7 +362,7 @@ static const tui16 g_crc_table[256] =
     do \
     { \
         i = 14 - bits_left; \
-        if ((bits_left >= 7) && (bits_left <= 8)) \
+        if (bits_left >= 7) \
         { \
             j = 8 - i; \
             outputBuffer[opb_index++] |= (char) (_data16 >> i); \
@@ -541,7 +546,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     char *cptr1;
     char *cptr2;
     int opb_index;          /* index into outputBuffer */
-    int bits_left;          /* unused bits in current byte in outputBuffer */
+    unsigned int bits_left; /* unused bits in current byte in outputBuffer */
     tui32 copy_offset;      /* pattern match starts here... */
     tui32 lom;              /* ...and matches this many bytes */
     int last_crc_index;     /* don't compute CRC beyond this index */
