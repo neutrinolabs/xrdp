@@ -187,11 +187,6 @@ AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
               [], [enable_rfxcodec=yes])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 
-AC_ARG_ENABLE(rdpsndaudin, AS_HELP_STRING([--enable-rdpsndaudin],
-              [Use rdpsnd audio in (default: no)]),
-              [], [enable_rdpsndaudin=no])
-AM_CONDITIONAL(XRDP_RDPSNDAUDIN, [test x$enable_rdpsndaudin = xyes])
-
 AC_ARG_ENABLE(utmp, AS_HELP_STRING([--enable-utmp],
               [Update utmp (default: no)]),
               [], [enable_utmp=no])
