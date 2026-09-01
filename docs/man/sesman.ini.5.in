@@ -239,7 +239,6 @@ Alternatively combine one-or-more of the following options
 \fBN\fR - Sessions are separated by an instance name specified on startup
 .HP 4
 \fBH\fR - Sessions are separated by the RDP client's reported hostname
-(see \fBCLIENTNAME\fR below)
 .RE
 
 .IP
@@ -248,10 +247,10 @@ off. \fBDisplaySize\fR refers to the initial geometry of a connection,
 as actual display sizes can change dynamically.
 .IP
 The \fBH\fR criterion is matched against the RDP client's reported
-computer name (equivalent to the client-side \fBCLIENTNAME\fR
-environment variable found on Microsoft RDP clients), as reported once
-at session creation time. If the client does not report a name, an
-empty string is used for matching purposes.
+computer name (the same value shown as \fBCOMPUTERNAME\fR on the client
+machine itself), as reported once at session creation time. If the
+client does not report a name, an empty string is used for matching
+purposes.
 
 .TP
 \fBStartupWaitTime\fR=\fInumber\fR

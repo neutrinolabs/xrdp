@@ -217,8 +217,7 @@ start_chansrv(const struct login_info *login_info,
     {
         env_set_user(login_info->uid,
                      g_cfg->env_names,
-                     g_cfg->env_values,
-                     sd->params.client_name);
+                     g_cfg->env_values);
 
         LOG_DEVEL_LEAKING_FDS("chansrv", 3, -1);
 
@@ -241,8 +240,7 @@ start_window_manager(const struct login_info *login_info,
 
     env_set_user(login_info->uid,
                  g_cfg->env_names,
-                 g_cfg->env_values,
-                 sp->client_name);
+                 g_cfg->env_values);
 
     auth_set_env(login_info->auth_info);
     LOG_DEVEL_LEAKING_FDS("window manager", 3, -1);
@@ -685,8 +683,7 @@ start_x_server(const struct login_info *login_info,
 
     env_set_user(login_info->uid,
                  g_cfg->env_names,
-                 g_cfg->env_values,
-                 sp->client_name);
+                 g_cfg->env_values);
 
     /* Allocate the passwd_file if required */
     if (sp->type == SCP_SESSION_TYPE_XVNC &&
@@ -1369,8 +1366,7 @@ start_reconnect_script(const struct login_info *login_info,
 {
     env_set_user(login_info->uid,
                  g_cfg->env_names,
-                 g_cfg->env_values,
-                 sd->params.client_name);
+                 g_cfg->env_values);
 
     auth_set_env(login_info->auth_info);
 

@@ -43,6 +43,11 @@ List active sessions for the current user.  Members of the
 .BI kill: sid
 Kills the session specified the given \fIsession id\fP.
 (not yet implemented).
+.TP
+.BI clientname: sid
+Prints the computer name of the client currently connected to the
+given \fIsession id\fP. Empty if the session is currently
+disconnected.
 .RE
 
 .SH FILES

@@ -118,8 +118,7 @@ wait_for_xserver(uid_t uid,
             /* Move to the user context... */
             env_set_user(uid,
                          env_names,
-                         env_values,
-                         NULL);
+                         env_values);
 
             /* ...and run the program */
             g_execvp_list((const char *)cmd->items[0], cmd);
