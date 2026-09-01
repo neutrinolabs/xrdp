@@ -60,6 +60,10 @@ is a secure way to pass the password in to the utility.
 .B -c <sesman-ini>
 Specify a different sesman.ini file. This file is used to find out how to
 connect to \fBxrdp\-sesman\fR.
+.TP
+.B -H <client-name>
+Simulate the computer name reported by an RDP client. Useful for testing
+the 'H' session allocation policy - see \fBsesman.ini\fR(5).
 
 .SH "ENVIRONMENT"
 .TP
