@@ -907,6 +907,50 @@ START_TEST(test_state__data_response_inserts_into_focused_edit)
 END_TEST
 
 /******************************************************************************/
+/* focused_control can outlive the widget it once pointed to: nothing
+ * clears it when a widget is deleted from the login window's children.
+ * The pre-auth code closes this by confirming focused_control is still
+ * a member of child_list before writing pasted bytes through it. Here
+ * child_list is populated but does not contain the widget
+ * focused_control points at - the same shape a stale/reused pointer
+ * would produce - and the response must be dropped, not inserted */
+START_TEST(test_state__data_response_dropped_when_focused_control_not_a_child)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    struct xrdp_bitmap other;
+    struct list *child_list;
+    char caption[256];
+    char other_caption[256];
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char text[10];
+    unsigned int len;
+    static const unsigned short words[] = { 's', 'e', 'c' };
+
+    setup_edit(&edit, caption, "");
+    setup_edit(&other, other_caption, "");
+    child_list = list_create();
+    list_add_item(child_list, (long)&other);
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    login_window.child_list = child_list;
+    wm.login_window = &login_window;
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+    len = make_utf16(text, words, 3);
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, (int)len);
+
+    ck_assert_str_eq(caption, "");
+    ck_assert_str_eq(other_caption, "");
+
+    xrdp_login_clip_delete(lc);
+    list_delete(child_list);
+}
+END_TEST
+
+/******************************************************************************/
 /* A covering window means the user cannot see where the text would land */
 START_TEST(test_state__data_response_dropped_when_popup_is_up)
 {
@@ -1268,6 +1312,8 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_state__paste_with_no_text_format_sends_nothing);
     tcase_add_test(tc, test_state__unsolicited_data_response_is_ignored);
     tcase_add_test(tc, test_state__data_response_inserts_into_focused_edit);
+    tcase_add_test(tc,
+                   test_state__data_response_dropped_when_focused_control_not_a_child);
     tcase_add_test(tc, test_state__data_response_dropped_when_popup_is_up);
     tcase_add_test(tc, test_state__failed_data_response_is_absorbed);
     tcase_add_test(tc, test_state__oversized_pdu_is_discarded);
