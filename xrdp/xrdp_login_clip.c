@@ -284,7 +284,6 @@ struct xrdp_login_clip
     /* PDU reassembly */
     char *frag;                 /* LC_MAX_PDU_SIZE bytes */
     int frag_len;
-    int frag_total;
     int frag_dropping;
 };
 
@@ -376,9 +375,12 @@ lc_handle_caps(struct xrdp_login_clip *self, struct stream *s)
 /*****************************************************************************/
 /* Inserts pasted text into the focused login screen edit field.
  *
- * The target is re-derived here rather than remembered at request time:
- * a response arrives asynchronously, and a stored widget pointer could
- * outlive the widget. */
+ * The target is re-derived here rather than remembered at request time,
+ * which avoids holding a pointer across the request/response gap. That
+ * alone is not a safety guarantee: wm->login_window->focused_control is
+ * itself a stored pointer that nothing clears when a widget is deleted,
+ * so it is validated - not trusted - by confirming it is still one of
+ * the login window's children before it is touched at all. */
 static void
 lc_insert_text(struct xrdp_login_clip *self, struct stream *s)
 {
@@ -397,7 +399,20 @@ lc_insert_text(struct xrdp_login_clip *self, struct stream *s)
     }
 
     edit = wm->login_window->focused_control;
-    if (edit == NULL || edit->type != WND_TYPE_EDIT)
+    if (edit == NULL)
+    {
+        return;
+    }
+
+    /* focused_control can outlive the widget it once pointed to - see
+     * the comment above. Check membership before dereferencing edit at
+     * all, so a stale pointer is never read, let alone written through */
+    if (list_index_of(wm->login_window->child_list, (long)edit) < 0)
+    {
+        return;
+    }
+
+    if (edit->type != WND_TYPE_EDIT)
     {
         return;
     }
@@ -469,6 +484,14 @@ lc_handle_pdu(struct xrdp_login_clip *self, struct stream *s)
 
     LOG(LOG_LEVEL_DEBUG, "Login clipboard: received %s, flags %d, %d bytes",
         CB_PDUTYPE_TO_STR(msg_type), msg_flags, data_len);
+
+    if (data_len >= 0 && data_len <= s_rem(s))
+    {
+        /* Bring the PDU framing (dataLen) into agreement with the
+         * transport framing (the reassembled length), so trailing bytes
+         * beyond the advertised length are never parsed as more data */
+        s->end = s->p + data_len;
+    }
 
     switch (msg_type)
     {
@@ -597,7 +620,6 @@ xrdp_login_clip_process_channel_data(struct xrdp_login_clip *self,
     if ((flags & XR_CHANNEL_FLAG_FIRST) != 0)
     {
         self->frag_len = 0;
-        self->frag_total = total_len;
         self->frag_dropping = 0;
 
         if (total_len > LC_MAX_PDU_SIZE || total_len < 0)
@@ -610,14 +632,22 @@ xrdp_login_clip_process_channel_data(struct xrdp_login_clip *self,
 
     if (self->frag_dropping)
     {
+        if ((flags & XR_CHANNEL_FLAG_LAST) != 0)
+        {
+            /* The dropped PDU has ended - a drop is strictly per-PDU */
+            self->frag_dropping = 0;
+        }
         return 0;
     }
 
     if (self->frag_len + len > LC_MAX_PDU_SIZE)
     {
-        LOG(LOG_LEVEL_WARNING, "Login clipboard: PDU longer than advertised, "
-            "discarding");
-        self->frag_dropping = 1;
+        LOG(LOG_LEVEL_WARNING, "Login clipboard: PDU over the %d byte limit, "
+            "discarding", LC_MAX_PDU_SIZE);
+        /* Do not leave clipboard content already copied for this PDU
+         * lying in the buffer */
+        g_memset(self->frag, 0, self->frag_len);
+        self->frag_dropping = (flags & XR_CHANNEL_FLAG_LAST) == 0;
         return 0;
     }
 
