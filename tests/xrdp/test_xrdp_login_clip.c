@@ -25,6 +25,7 @@
 #include "xrdp.h"
 #include "xrdp_login_clip.h"
 #include "scancode.h"
+#include "ms-rdpeclip.h"
 
 #include "test_xrdp.h"
 
@@ -331,6 +332,148 @@ START_TEST(test_insert__rejects_wrong_widget_type)
 END_TEST
 
 /******************************************************************************/
+START_TEST(test_format_list__long_names)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    /* CF_UNICODETEXT with an empty long (UTF-16) name */
+    out_uint32_le(s, CF_UNICODETEXT);
+    out_uint16_le(s, 0);
+    /* CF_LOCALE with an empty long name */
+    out_uint32_le(s, CF_LOCALE);
+    out_uint16_le(s, 0);
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 1,
+                     &have_unicode, &have_text), 0);
+    ck_assert_int_eq(have_unicode, 1);
+    ck_assert_int_eq(have_text, 0);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_format_list__short_unicode_names)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    /* CF_TEXT with a 32-byte name field */
+    out_uint32_le(s, CF_TEXT);
+    out_uint8s(s, 32);
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 0,
+                     &have_unicode, &have_text), 0);
+    ck_assert_int_eq(have_unicode, 0);
+    ck_assert_int_eq(have_text, 1);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+/* CB_ASCII_NAMES uses the same 32-byte width, so both ids must be found */
+START_TEST(test_format_list__short_ascii_names)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    out_uint32_le(s, CF_TEXT);
+    out_uint8s(s, 32);
+    out_uint32_le(s, CF_UNICODETEXT);
+    out_uint8s(s, 32);
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, CB_ASCII_NAMES, 0,
+                     &have_unicode, &have_text), 0);
+    ck_assert_int_eq(have_unicode, 1);
+    ck_assert_int_eq(have_text, 1);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+/* A long name with real content must be skipped to its terminator */
+START_TEST(test_format_list__long_name_with_content)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    out_uint32_le(s, 0xc0de);       /* private format */
+    out_uint16_le(s, 'H');
+    out_uint16_le(s, 'i');
+    out_uint16_le(s, 0);            /* terminator */
+    out_uint32_le(s, CF_UNICODETEXT);
+    out_uint16_le(s, 0);
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 1,
+                     &have_unicode, &have_text), 0);
+    ck_assert_int_eq(have_unicode, 1);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+/* Truncated PDUs must be reported, not read past */
+START_TEST(test_format_list__truncated)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    out_uint16_le(s, CF_UNICODETEXT);   /* only half a format id */
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 1,
+                     &have_unicode, &have_text), 1);
+    ck_assert_int_eq(have_unicode, 0);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+/* An empty format list is legal - the client has an empty clipboard */
+START_TEST(test_format_list__empty)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 1,
+                     &have_unicode, &have_text), 0);
+    ck_assert_int_eq(have_unicode, 0);
+    ck_assert_int_eq(have_text, 0);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_login_clip(void)
 {
@@ -358,6 +501,12 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_insert__non_ascii);
     tcase_add_test(tc, test_insert__stops_when_field_full);
     tcase_add_test(tc, test_insert__rejects_wrong_widget_type);
+    tcase_add_test(tc, test_format_list__long_names);
+    tcase_add_test(tc, test_format_list__short_unicode_names);
+    tcase_add_test(tc, test_format_list__short_ascii_names);
+    tcase_add_test(tc, test_format_list__long_name_with_content);
+    tcase_add_test(tc, test_format_list__truncated);
+    tcase_add_test(tc, test_format_list__empty);
 
     suite_add_tcase(s, tc);
 

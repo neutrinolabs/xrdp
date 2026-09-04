@@ -87,4 +87,22 @@ unsigned int
 xrdp_login_clip_insert_codepoints(struct xrdp_bitmap *edit,
                                   const char32_t *cp, unsigned int count);
 
+/**
+ * Parse a CB_FORMAT_LIST PDU body for the text formats we can use
+ *
+ * @param s Stream positioned at the start of the PDU body
+ * @param msg_flags msgFlags from the cliprdr header
+ * @param use_long_names Non-zero if the client negotiated long format names
+ * @param have_unicode_text Set to 1 if CF_UNICODETEXT is offered
+ * @param have_text Set to 1 if CF_TEXT is offered
+ * @return 0 on success, 1 if the PDU is malformed
+ *
+ * See [MS-RDPECLIP] 2.2.3.1. Format names are skipped, but must be
+ * skipped by the right width for the negotiated framing.
+ */
+int
+xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
+                                  int use_long_names,
+                                  int *have_unicode_text, int *have_text);
+
 #endif /* XRDP_LOGIN_CLIP_H */

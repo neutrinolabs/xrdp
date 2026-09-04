@@ -170,3 +170,79 @@ xrdp_login_clip_insert_codepoints(struct xrdp_bitmap *edit,
 
     return index;
 }
+
+/* Width of a short format name field - [MS-RDPECLIP] 2.2.3.1.1 */
+#define LC_SHORT_FORMAT_NAME_LEN 32
+
+/*****************************************************************************/
+/* Note: CB_ASCII_NAMES in msg_flags changes the encoding of short format
+ * names but not the width of the field, and we never read the names, so
+ * the flag does not affect parsing. The parameter is kept so the call
+ * site reads correctly against [MS-RDPECLIP] 2.2.3.1. */
+int
+xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
+                                  int use_long_names,
+                                  int *have_unicode_text, int *have_text)
+{
+    if (s == NULL || have_unicode_text == NULL || have_text == NULL)
+    {
+        return 1;
+    }
+
+    *have_unicode_text = 0;
+    *have_text = 0;
+
+    while (s_rem(s) > 0)
+    {
+        int format_id;
+
+        if (!s_check_rem(s, 4))
+        {
+            LOG(LOG_LEVEL_WARNING, "Login clipboard: truncated format list");
+            return 1;
+        }
+        in_uint32_le(s, format_id);
+
+        if (format_id == CF_UNICODETEXT)
+        {
+            *have_unicode_text = 1;
+        }
+        else if (format_id == CF_TEXT)
+        {
+            *have_text = 1;
+        }
+
+        /* Skip the format name. We never use it, but it has to be
+         * stepped over by exactly the right width */
+        if (use_long_names)
+        {
+            /* NUL-terminated UTF-16 string */
+            int word = -1;
+
+            while (word != 0)
+            {
+                if (!s_check_rem(s, 2))
+                {
+                    LOG(LOG_LEVEL_WARNING, "Login clipboard: unterminated "
+                        "format name in format list");
+                    return 1;
+                }
+                in_uint16_le(s, word);
+            }
+        }
+        else
+        {
+            /* Fixed-width field, the same width whether the names are
+             * ASCII or UTF-16 */
+            if (!s_check_rem(s, LC_SHORT_FORMAT_NAME_LEN))
+            {
+                LOG(LOG_LEVEL_WARNING, "Login clipboard: truncated short "
+                    "format name in format list");
+                return 1;
+            }
+            in_uint8s(s, LC_SHORT_FORMAT_NAME_LEN);
+        }
+    }
+
+    return 0;
+}
