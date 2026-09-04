@@ -32,8 +32,10 @@
 #include "string_calls.h"
 #include "xrdp_constants.h"
 
-/* Keysym for 'v'. Defined locally, as xrdp_bitmap.c does for XK_BackSpace */
+/* Keysyms for 'v' and 'V'. Defined locally, as xrdp_bitmap.c does for
+ * XK_BackSpace */
 #define XK_v 0x0076
+#define XK_V 0x0056
 
 /*****************************************************************************/
 int
@@ -53,8 +55,14 @@ xrdp_login_clip_is_paste_key(const int *keys, int scan_code,
     shift = keys[SCANCODE_INDEX_LSHIFT_KEY] || keys[SCANCODE_INDEX_RSHIFT_KEY];
     altgr = keys[SCANCODE_INDEX_RALT_KEY];
 
-    /* Ctrl+V. AltGr is LCTRL + RALT on Windows clients, so exclude it */
-    if (ctrl && !altgr && ki != NULL && ki->sym == XK_v)
+    /* Ctrl+V. AltGr is LCTRL + RALT on Windows clients, so exclude it.
+     * V is matched on the keysym in both case foldings, since Caps Lock
+     * and Shift select the uppercase keymap table, and on the physical
+     * key as a fallback for layouts that never produce a Latin V at all
+     * (Cyrillic, Greek, Hebrew, Arabic, Thai, ...) */
+    if (ctrl && !altgr &&
+            ((ki != NULL && (ki->sym == XK_v || ki->sym == XK_V)) ||
+             scan_code == SCANCODE_V_KEY))
     {
         return 1;
     }

@@ -42,8 +42,12 @@ struct xrdp_login_clip;
  * @param ki Key info for the keypress, may be NULL
  * @return 1 if the keypress means "paste", 0 otherwise
  *
- * Recognises Ctrl+V and Shift+Insert. V is matched on the keysym rather
- * than the scancode so the binding is correct on non-QWERTY layouts.
+ * Recognises Ctrl+V and Shift+Insert. V is matched on the keysym, in
+ * both the lowercase and uppercase (Caps Lock / Shift) foldings, so the
+ * binding is correct on non-QWERTY Latin layouts such as Dvorak; it is
+ * also matched on the physical key as a fallback, so layouts that never
+ * produce a Latin V - Cyrillic, Greek, Hebrew, Arabic, Thai, and so on -
+ * can still paste.
  *
  * AltGr is excluded deliberately: Windows clients send AltGr as
  * LCTRL-down plus RALT-down, so without that check AltGr+V would look

@@ -45,6 +45,7 @@ enum
     SCANCODE_ENTER_KEY = 0x1c,
     SCANCODE_TAB_KEY = 0x0f,
     SCANCODE_PAUSE_KEY = 0x21d,
+    SCANCODE_V_KEY = 0x2f, // Physical V key, for layout-independent Ctrl+V
 
     SCANCODE_KP_ENTER_KEY = 0x11c,
     SCANCODE_KP_DEL_KEY = 0x53,
