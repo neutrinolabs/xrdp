@@ -111,6 +111,11 @@ use_fastpath=both
 #require_credentials=true
 ; when true, the userid will be used to try to authenticate
 #enable_token_login=true
+; when true, the login screen accepts Ctrl+V / Shift+Insert to paste text
+; from the client's clipboard. Requires cliprdr=true in [Channels].
+; This makes xrdp parse clipboard data from the client before the user has
+; authenticated, so it is disabled by default.
+#enable_login_clipboard=true
 ; You can set the PAM error text in a gateway setup (MAX 256 chars)
 #pamerrortxt=change your password according to policy at http://url
 
