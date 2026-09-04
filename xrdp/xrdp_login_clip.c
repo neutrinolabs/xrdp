@@ -139,3 +139,34 @@ xrdp_login_clip_utf16_to_codepoints(const char *utf16le, unsigned int bytes,
 
     return out_pos;
 }
+
+/* Edit widget caption buffer size. Matches the allocation at
+ * xrdp_login_wnd.c:457 and the hardcoded limit at xrdp_bitmap.c:1260 */
+#define LC_EDIT_CAPTION_SIZE 256
+
+/*****************************************************************************/
+unsigned int
+xrdp_login_clip_insert_codepoints(struct xrdp_bitmap *edit,
+                                  const char32_t *cp, unsigned int count)
+{
+    unsigned int index;
+
+    if (edit == NULL || cp == NULL || edit->caption1 == NULL ||
+            edit->type != WND_TYPE_EDIT)
+    {
+        return 0;
+    }
+
+    for (index = 0; index < count; index++)
+    {
+        if (!utf8_add_char_at(edit->caption1, LC_EDIT_CAPTION_SIZE,
+                              cp[index], edit->edit_pos))
+        {
+            /* Field is full */
+            break;
+        }
+        edit->edit_pos++;
+    }
+
+    return index;
+}
