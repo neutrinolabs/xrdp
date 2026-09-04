@@ -474,6 +474,52 @@ START_TEST(test_format_list__empty)
 END_TEST
 
 /******************************************************************************/
+/* Valid format id followed by unterminated long name must fail cleanly */
+START_TEST(test_format_list__valid_id_unterminated_long_name)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    out_uint32_le(s, CF_UNICODETEXT);
+    out_uint16_le(s, 'H');      /* start of name, but no terminator */
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 1,
+                     &have_unicode, &have_text), 1);
+    ck_assert_int_eq(have_unicode, 0);
+    ck_assert_int_eq(have_text, 0);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
+/* Valid format id followed by truncated short name must fail cleanly */
+START_TEST(test_format_list__valid_id_truncated_short_name)
+{
+    struct stream *s;
+    int have_unicode = 0;
+    int have_text = 0;
+
+    make_stream(s);
+    init_stream(s, 1024);
+    out_uint32_le(s, CF_TEXT);
+    out_uint8s(s, 16);          /* only half a 32-byte name field */
+    s_mark_end(s);
+    s->p = s->data;
+
+    ck_assert_int_eq(xrdp_login_clip_parse_format_list(s, 0, 0,
+                     &have_unicode, &have_text), 1);
+    ck_assert_int_eq(have_unicode, 0);
+    ck_assert_int_eq(have_text, 0);
+    free_stream(s);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_login_clip(void)
 {
@@ -507,6 +553,8 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_format_list__long_name_with_content);
     tcase_add_test(tc, test_format_list__truncated);
     tcase_add_test(tc, test_format_list__empty);
+    tcase_add_test(tc, test_format_list__valid_id_unterminated_long_name);
+    tcase_add_test(tc, test_format_list__valid_id_truncated_short_name);
 
     suite_add_tcase(s, tc);
 

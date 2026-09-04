@@ -184,13 +184,19 @@ xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
                                   int use_long_names,
                                   int *have_unicode_text, int *have_text)
 {
+    if (have_unicode_text != NULL)
+    {
+        *have_unicode_text = 0;
+    }
+    if (have_text != NULL)
+    {
+        *have_text = 0;
+    }
+
     if (s == NULL || have_unicode_text == NULL || have_text == NULL)
     {
         return 1;
     }
-
-    *have_unicode_text = 0;
-    *have_text = 0;
 
     while (s_rem(s) > 0)
     {
@@ -202,15 +208,6 @@ xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
             return 1;
         }
         in_uint32_le(s, format_id);
-
-        if (format_id == CF_UNICODETEXT)
-        {
-            *have_unicode_text = 1;
-        }
-        else if (format_id == CF_TEXT)
-        {
-            *have_text = 1;
-        }
 
         /* Skip the format name. We never use it, but it has to be
          * stepped over by exactly the right width */
@@ -241,6 +238,16 @@ xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
                 return 1;
             }
             in_uint8s(s, LC_SHORT_FORMAT_NAME_LEN);
+        }
+
+        /* Only set the flag after the entry has been fully validated */
+        if (format_id == CF_UNICODETEXT)
+        {
+            *have_unicode_text = 1;
+        }
+        else if (format_id == CF_TEXT)
+        {
+            *have_text = 1;
         }
     }
 
