@@ -103,6 +103,13 @@ xrdp_login_clip_insert_codepoints(struct xrdp_bitmap *edit,
  *
  * See [MS-RDPECLIP] 2.2.3.1. Format names are skipped, but must be
  * skipped by the right width for the negotiated framing.
+ *
+ * have_unicode_text and have_text are updated entry by entry as the
+ * list is walked, so on a return of 1 they reflect every well-formed
+ * entry seen before the malformed one that stopped parsing, not
+ * nothing. That is deliberate: the client did genuinely advertise
+ * those formats. Callers that only want fully-validated results should
+ * check the return value first.
  */
 int
 xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,

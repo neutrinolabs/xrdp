@@ -415,7 +415,8 @@ lc_insert_text(struct xrdp_login_clip *self, struct stream *s)
     /* focused_control can outlive the widget it once pointed to - see
      * the comment above. Check membership before dereferencing edit at
      * all, so a stale pointer is never read, let alone written through */
-    if (list_index_of(wm->login_window->child_list, (long)edit) < 0)
+    if (wm->login_window->child_list == NULL ||
+            list_index_of(wm->login_window->child_list, (long)edit) < 0)
     {
         return;
     }
@@ -539,11 +540,29 @@ lc_handle_pdu(struct xrdp_login_clip *self, struct stream *s)
                     "format data response");
                 break;
             }
-            self->state = LC_READY;
-            self->request_ms = 0;
-            if ((msg_flags & CB_RESPONSE_OK) != 0)
+
             {
-                lc_insert_text(self, s);
+                /* LC_REQUEST_TIMEOUT_MS already bounds how long a request
+                 * is left outstanding on the send side (see
+                 * xrdp_login_clip_request_paste()). Apply it here too, so
+                 * a response that arrives long after the keypress that
+                 * asked for it cannot be spliced into whatever field
+                 * happens to be focused by then */
+                unsigned int elapsed = g_get_elapsed_ms() - self->request_ms;
+
+                self->state = LC_READY;
+                self->request_ms = 0;
+
+                if (elapsed >= LC_REQUEST_TIMEOUT_MS)
+                {
+                    LOG(LOG_LEVEL_DEBUG, "Login clipboard: ignoring format "
+                        "data response %u ms after the request, past the "
+                        "%d ms timeout", elapsed, LC_REQUEST_TIMEOUT_MS);
+                }
+                else if ((msg_flags & CB_RESPONSE_OK) != 0)
+                {
+                    lc_insert_text(self, s);
+                }
             }
             break;
 
@@ -655,6 +674,7 @@ xrdp_login_clip_process_channel_data(struct xrdp_login_clip *self,
         /* Do not leave clipboard content already copied for this PDU
          * lying in the buffer */
         g_memset(self->frag, 0, self->frag_len);
+        self->frag_len = 0;
         self->frag_dropping = (flags & XR_CHANNEL_FLAG_LAST) == 0;
         return 0;
     }
