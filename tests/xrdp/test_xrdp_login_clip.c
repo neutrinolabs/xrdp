@@ -230,6 +230,107 @@ START_TEST(test_utf16__odd_length_and_empty)
 END_TEST
 
 /******************************************************************************/
+/* Builds a minimal edit widget, as xrdp_login_wnd.c:457 does */
+static void
+setup_edit(struct xrdp_bitmap *edit, char *caption, const char *initial)
+{
+    g_memset(edit, 0, sizeof(*edit));
+    g_memset(caption, 0, 256);
+    g_strncpy(caption, initial, 255);
+    edit->type = WND_TYPE_EDIT;
+    edit->caption1 = caption;
+    edit->edit_pos = utf8_char_count(caption);
+}
+
+/******************************************************************************/
+START_TEST(test_insert__appends_at_caret)
+{
+    struct xrdp_bitmap edit;
+    char caption[256];
+    static const char32_t cp[] = { 'p', 'w', 'd' };
+
+    setup_edit(&edit, caption, "");
+    ck_assert_uint_eq(xrdp_login_clip_insert_codepoints(&edit, cp, 3), 3);
+    ck_assert_str_eq(caption, "pwd");
+    ck_assert_int_eq(edit.edit_pos, 3);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_insert__inserts_mid_string)
+{
+    struct xrdp_bitmap edit;
+    char caption[256];
+    static const char32_t cp[] = { 'X' };
+
+    setup_edit(&edit, caption, "ab");
+    edit.edit_pos = 1;
+    ck_assert_uint_eq(xrdp_login_clip_insert_codepoints(&edit, cp, 1), 1);
+    ck_assert_str_eq(caption, "aXb");
+    ck_assert_int_eq(edit.edit_pos, 2);
+}
+END_TEST
+
+/******************************************************************************/
+/* Non-ASCII must survive as UTF-8 */
+START_TEST(test_insert__non_ascii)
+{
+    struct xrdp_bitmap edit;
+    char caption[256];
+    static const char32_t cp[] = { 0x00e9 }; /* e-acute */
+
+    setup_edit(&edit, caption, "");
+    ck_assert_uint_eq(xrdp_login_clip_insert_codepoints(&edit, cp, 1), 1);
+    ck_assert_str_eq(caption, "\xc3\xa9");
+    ck_assert_int_eq(edit.edit_pos, 1);
+}
+END_TEST
+
+/******************************************************************************/
+/* A paste bigger than the field must fill it and stop, not overflow */
+START_TEST(test_insert__stops_when_field_full)
+{
+    struct xrdp_bitmap edit;
+    char caption[256];
+    char32_t cp[300];
+    unsigned int i;
+    unsigned int n;
+
+    for (i = 0; i < 300; i++)
+    {
+        cp[i] = 'x';
+    }
+
+    setup_edit(&edit, caption, "");
+    n = xrdp_login_clip_insert_codepoints(&edit, cp, 300);
+
+    ck_assert_uint_lt(n, 300);
+    ck_assert_uint_eq(g_strlen(caption), n);
+    ck_assert_uint_lt(g_strlen(caption), 256);
+    ck_assert_int_eq(edit.edit_pos, (int)n);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_insert__rejects_wrong_widget_type)
+{
+    struct xrdp_bitmap edit;
+    char caption[256];
+    static const char32_t cp[] = { 'a' };
+
+    setup_edit(&edit, caption, "");
+    edit.type = WND_TYPE_BUTTON;
+    ck_assert_uint_eq(xrdp_login_clip_insert_codepoints(&edit, cp, 1), 0);
+
+    setup_edit(&edit, caption, "");
+    edit.caption1 = NULL;
+    ck_assert_uint_eq(xrdp_login_clip_insert_codepoints(&edit, cp, 1), 0);
+
+    ck_assert_uint_eq(xrdp_login_clip_insert_codepoints(NULL, cp, 1), 0);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_login_clip(void)
 {
@@ -252,6 +353,11 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_utf16__drops_unpaired_surrogates);
     tcase_add_test(tc, test_utf16__respects_out_capacity);
     tcase_add_test(tc, test_utf16__odd_length_and_empty);
+    tcase_add_test(tc, test_insert__appends_at_caret);
+    tcase_add_test(tc, test_insert__inserts_mid_string);
+    tcase_add_test(tc, test_insert__non_ascii);
+    tcase_add_test(tc, test_insert__stops_when_field_full);
+    tcase_add_test(tc, test_insert__rejects_wrong_widget_type);
 
     suite_add_tcase(s, tc);
 

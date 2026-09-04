@@ -71,4 +71,20 @@ unsigned int
 xrdp_login_clip_utf16_to_codepoints(const char *utf16le, unsigned int bytes,
                                     char32_t *out, unsigned int out_count);
 
+/**
+ * Insert codepoints into an edit widget at its current caret position
+ *
+ * @param edit Edit widget, must be of type WND_TYPE_EDIT
+ * @param cp Codepoints to insert
+ * @param count Number of codepoints
+ * @return Number of codepoints actually inserted
+ *
+ * Insertion stops silently when the widget's 256-byte caption fills up.
+ * The caller is responsible for calling xrdp_bitmap_invalidate() once
+ * afterwards if the return value is non-zero.
+ */
+unsigned int
+xrdp_login_clip_insert_codepoints(struct xrdp_bitmap *edit,
+                                  const char32_t *cp, unsigned int count);
+
 #endif /* XRDP_LOGIN_CLIP_H */
