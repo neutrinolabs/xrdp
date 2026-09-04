@@ -478,7 +478,7 @@ struct xrdp_keymap
     struct xrdp_key_info keys_shiftcapslockaltgr[SCANCODE_MAX_INDEX + 1];
     // NumLock is restricted to a much smaller set of keys
     struct xrdp_key_info keys_numlock[SCANCODE_MAX_NUMLOCK -
-                                                               SCANCODE_MIN_NUMLOCK + 1];
+                                          SCANCODE_MIN_NUMLOCK + 1];
 };
 
 /* the window manager */
