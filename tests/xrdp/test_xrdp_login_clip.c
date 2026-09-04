@@ -31,6 +31,7 @@
 #include "test_xrdp.h"
 
 #define XK_v 0x0076
+#define XK_V 0x0056
 
 /* Key state array as held by struct xrdp_wm */
 static int g_keys[SCANCODE_MAX_INDEX + 1];
@@ -70,6 +71,50 @@ START_TEST(test_is_paste_key__altgr_v_is_not_paste)
 END_TEST
 
 /******************************************************************************/
+/* Caps Lock and Shift select the uppercase keymap table, so V comes
+ * through as keysym XK_V (0x0056), not XK_v. That must still paste */
+START_TEST(test_is_paste_key__ctrl_v_uppercase_keysym)
+{
+    struct xrdp_key_info ki = { XK_V, 'V' };
+
+    clear_keys();
+    g_keys[SCANCODE_INDEX_LCTRL_KEY] = 1;
+    ck_assert_int_eq(xrdp_login_clip_is_paste_key(g_keys, SCANCODE_V_KEY,
+                     &ki), 1);
+}
+END_TEST
+
+/******************************************************************************/
+/* On a non-Latin layout (here, Russian) the V key never produces a Latin
+ * v/V keysym at all - scancode 0x2f maps to Cyrillic em on every one of
+ * that layout's tables. The physical-key fallback must still paste */
+START_TEST(test_is_paste_key__ctrl_v_non_latin_layout)
+{
+    /* Cyrillic_em, as instfiles/km-00000419.toml maps scancode 0x2f */
+    struct xrdp_key_info ki = { 0x6cd, 0x043c };
+
+    clear_keys();
+    g_keys[SCANCODE_INDEX_LCTRL_KEY] = 1;
+    ck_assert_int_eq(xrdp_login_clip_is_paste_key(g_keys, SCANCODE_V_KEY,
+                     &ki), 1);
+}
+END_TEST
+
+/******************************************************************************/
+/* The AltGr guard must not be bypassed by the new uppercase keysym arm */
+START_TEST(test_is_paste_key__altgr_v_uppercase_is_not_paste)
+{
+    struct xrdp_key_info ki = { XK_V, 'V' };
+
+    clear_keys();
+    g_keys[SCANCODE_INDEX_LCTRL_KEY] = 1;
+    g_keys[SCANCODE_INDEX_RALT_KEY] = 1;
+    ck_assert_int_eq(xrdp_login_clip_is_paste_key(g_keys, SCANCODE_V_KEY,
+                     &ki), 0);
+}
+END_TEST
+
+/******************************************************************************/
 START_TEST(test_is_paste_key__plain_v_is_not_paste)
 {
     struct xrdp_key_info ki = { XK_v, 'v' };
@@ -105,12 +150,27 @@ START_TEST(test_is_paste_key__shift_insert)
 END_TEST
 
 /******************************************************************************/
-/* A NULL key info must never be dereferenced */
+/* A NULL key info must never be dereferenced. Uses a scan code other than
+ * SCANCODE_V_KEY, since that one is now legitimately a paste on its own
+ * via the physical-key fallback, NULL key info or not - see
+ * test_is_paste_key__ctrl_v_non_latin_layout for that case */
 START_TEST(test_is_paste_key__null_key_info)
 {
     clear_keys();
     g_keys[SCANCODE_INDEX_LCTRL_KEY] = 1;
-    ck_assert_int_eq(xrdp_login_clip_is_paste_key(g_keys, 0x2f, NULL), 0);
+    ck_assert_int_eq(xrdp_login_clip_is_paste_key(g_keys, 0x2e, NULL), 0);
+}
+END_TEST
+
+/******************************************************************************/
+/* The physical-key fallback does not need key info at all - it must
+ * neither dereference a NULL ki nor fail to recognise the paste */
+START_TEST(test_is_paste_key__scancode_fallback_with_null_key_info)
+{
+    clear_keys();
+    g_keys[SCANCODE_INDEX_LCTRL_KEY] = 1;
+    ck_assert_int_eq(xrdp_login_clip_is_paste_key(g_keys, SCANCODE_V_KEY,
+                     NULL), 1);
 }
 END_TEST
 
@@ -1172,10 +1232,14 @@ make_suite_login_clip(void)
     tc = tcase_create("xrdp_login_clip");
     tcase_add_test(tc, test_is_paste_key__ctrl_v);
     tcase_add_test(tc, test_is_paste_key__altgr_v_is_not_paste);
+    tcase_add_test(tc, test_is_paste_key__ctrl_v_uppercase_keysym);
+    tcase_add_test(tc, test_is_paste_key__ctrl_v_non_latin_layout);
+    tcase_add_test(tc, test_is_paste_key__altgr_v_uppercase_is_not_paste);
     tcase_add_test(tc, test_is_paste_key__plain_v_is_not_paste);
     tcase_add_test(tc, test_is_paste_key__ctrl_other_key_is_not_paste);
     tcase_add_test(tc, test_is_paste_key__shift_insert);
     tcase_add_test(tc, test_is_paste_key__null_key_info);
+    tcase_add_test(tc, test_is_paste_key__scancode_fallback_with_null_key_info);
     tcase_add_test(tc, test_utf16__plain_ascii);
     tcase_add_test(tc, test_utf16__stops_at_crlf);
     tcase_add_test(tc, test_utf16__drops_control_chars);
