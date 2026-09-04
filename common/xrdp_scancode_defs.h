@@ -63,6 +63,7 @@ enum
     SCANCODE_HOME_KEY = 0x147,
     SCANCODE_DEL_KEY = 0x153,
     SCANCODE_END_KEY = 0x14f,
+    SCANCODE_INSERT_KEY = 0x152,
 
     /**
      * Keys affected by numlock

@@ -44,7 +44,8 @@ test_xrdp_SOURCES = \
     test_xrdp_keymap.c \
     test_xrdp_region.c \
     test_tconfig.c \
-    test_bitmap_load.c
+    test_bitmap_load.c \
+    test_xrdp_login_clip.c
 
 test_xrdp_CFLAGS = \
     -D IMAGEDIR=\"$(srcdir)\" \
@@ -68,6 +69,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_cache.o \
     $(top_builddir)/xrdp/xrdp_region.o \
     $(top_builddir)/xrdp/xrdp_listen.o \
+    $(top_builddir)/xrdp/xrdp_login_clip.o \
     $(top_builddir)/xrdp/xrdp_bitmap.o \
     $(top_builddir)/xrdp/xrdp_painter.o \
     $(top_builddir)/xrdp/xrdp_encoder.o \
