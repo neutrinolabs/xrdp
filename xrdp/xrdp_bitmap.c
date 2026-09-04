@@ -1259,7 +1259,10 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
                 /* Swallowing the keypress matters even when the clipboard
                  * module is absent: without it, Ctrl+V falls through to
                  * the printing-character case and inserts a literal 'v'.
-                 * xrdp_login_clip_request_paste() is NULL-safe. */
+                 * xrdp_login_clip_request_paste() is NULL-safe. Its
+                 * return value (whether a request was actually sent) is
+                 * deliberately ignored - there is nothing useful to do
+                 * with a 0 here. */
                 xrdp_login_clip_request_paste(self->wm->login_clip);
             }
             else

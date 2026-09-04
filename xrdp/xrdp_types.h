@@ -579,6 +579,9 @@ struct xrdp_wm
     struct xrdp_mm *mm;
     /* Login screen clipboard paste, NULL unless enabled and in use */
     struct xrdp_login_clip *login_clip;
+    /* cliprdr channel id, if present and not disabled in [Channels];
+     * -1 otherwise. Set in xrdp_wm_load_channel_config() */
+    int clip_chan_id;
     struct xrdp_font *default_font;
     struct xrdp_keymap keymap;
     int hide_log_window;

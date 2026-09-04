@@ -40,6 +40,14 @@ xrdp_wm_load_channel_config(struct xrdp_wm *self)
     struct list *values = list_create();
     values->auto_free = 1;
 
+    /* Look this up unconditionally, independently of whether the
+     * [Channels] section below is present: an absent section leaves
+     * every channel enabled, and libxrdp_get_channel_id() already
+     * returns -1 if the client has no cliprdr channel at all. The loop
+     * below overwrites this with -1 if [Channels] disables cliprdr. */
+    self->clip_chan_id =
+        libxrdp_get_channel_id(self->session, CLIPRDR_SVC_CHANNEL_NAME);
+
     if (file_by_name_read_section(self->session->xrdp_ini,
                                   "Channels", names, values) == 0)
     {
@@ -81,6 +89,11 @@ xrdp_wm_load_channel_config(struct xrdp_wm *self)
                     chan_name, chan_id, disabled_str);
 
                 libxrdp_disable_channel(self->session, chan_id, disabled);
+
+                if (disabled && chan_id == self->clip_chan_id)
+                {
+                    self->clip_chan_id = -1;
+                }
             }
         }
     }
@@ -143,6 +156,7 @@ xrdp_wm_create(struct xrdp_process *owner,
 
     /* Load the channel config so libxrdp can check whether
        drdynvc is enabled or not */
+    self->clip_chan_id = -1;
     xrdp_wm_load_channel_config(self);
 
     // Start drdynvc if available.
@@ -838,18 +852,16 @@ xrdp_wm_init(struct xrdp_wm *self)
 
         if (self->xrdp_config->cfg_globals.enable_login_clipboard)
         {
-            int clip_chan_id =
-                libxrdp_get_channel_id(self->session,
-                                       CLIPRDR_SVC_CHANNEL_NAME);
-
-            if (clip_chan_id >= 0)
+            if (self->clip_chan_id >= 0)
             {
-                self->login_clip = xrdp_login_clip_create(self, clip_chan_id);
+                self->login_clip = xrdp_login_clip_create(self,
+                                   self->clip_chan_id);
             }
             else
             {
                 LOG(LOG_LEVEL_INFO, "Login screen clipboard paste is enabled "
-                    "but the client has no cliprdr channel");
+                    "but the cliprdr channel is unavailable (absent from "
+                    "the client, or disabled in the [Channels] section)");
             }
         }
 
@@ -2137,14 +2149,13 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
                                   param1, param2, param3, param4);
             }
             else if (self->login_clip != 0 &&
-                     LOWORD(param1) == libxrdp_get_channel_id(
-                         self->session, CLIPRDR_SVC_CHANNEL_NAME))
+                     LOWORD(param1) == self->clip_chan_id)
             {
                 /* No backend module yet - we are still on the login
                  * screen and this is clipboard data we asked for */
                 rv = xrdp_login_clip_process_channel_data(self->login_clip,
-                        HIWORD(param1), (const char *)param3,
-                        param2, param4);
+                     HIWORD(param1), (const char *)param3,
+                     param2, param4);
             }
         }
     }
