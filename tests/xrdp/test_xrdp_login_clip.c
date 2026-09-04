@@ -812,6 +812,7 @@ START_TEST(test_state__data_response_inserts_into_focused_edit)
     struct xrdp_wm wm;
     struct xrdp_bitmap login_window;
     struct xrdp_bitmap edit;
+    struct list *child_list;
     char caption[256];
     struct xrdp_login_clip *lc = make_ready_lc(&wm);
     char text[10];
@@ -819,9 +820,12 @@ START_TEST(test_state__data_response_inserts_into_focused_edit)
     static const unsigned short words[] = { 's', 'e', 'c', 0x000d, 0x000a };
 
     setup_edit(&edit, caption, "");
+    child_list = list_create();
+    list_add_item(child_list, (long)&edit);
     g_memset(&login_window, 0, sizeof(login_window));
     login_window.type = WND_TYPE_WND;
     login_window.focused_control = &edit;
+    login_window.child_list = child_list;
     wm.login_window = &login_window;
 
     ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
@@ -838,6 +842,7 @@ START_TEST(test_state__data_response_inserts_into_focused_edit)
     ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
 
     xrdp_login_clip_delete(lc);
+    list_delete(child_list);
 }
 END_TEST
 
@@ -953,15 +958,19 @@ START_TEST(test_state__reassembles_split_pdu)
     struct xrdp_wm wm;
     struct xrdp_bitmap login_window;
     struct xrdp_bitmap edit;
+    struct list *child_list;
     char caption[256];
     struct xrdp_login_clip *lc = make_ready_lc(&wm);
     char buf[16];
     int total;
 
     setup_edit(&edit, caption, "");
+    child_list = list_create();
+    list_add_item(child_list, (long)&edit);
     g_memset(&login_window, 0, sizeof(login_window));
     login_window.type = WND_TYPE_WND;
     login_window.focused_control = &edit;
+    login_window.child_list = child_list;
     wm.login_window = &login_window;
 
     xrdp_login_clip_request_paste(lc);
@@ -983,6 +992,171 @@ START_TEST(test_state__reassembles_split_pdu)
     ck_assert_str_eq(caption, "hi");
 
     xrdp_login_clip_delete(lc);
+    list_delete(child_list);
+}
+END_TEST
+
+/******************************************************************************/
+/* A malformed CB_CLIP_CAPS body must not stop the handshake or crash;
+ * the object must still be usable afterwards */
+START_TEST(test_state__malformed_caps_pdu_still_advances_handshake)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc;
+    char body[2];
+    /* Short-name framing (32-byte fixed name field): client_long_names
+     * stays at its default of 0 because the malformed caps body below
+     * is never parsed */
+    char format_body[36];
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    clear_sent();
+
+    /* Too short to hold even cCapabilitiesSets + pad1 */
+    g_memset(body, 0, sizeof(body));
+    feed_pdu(lc, CB_CLIP_CAPS, 0, body, 2);
+
+    g_memset(format_body, 0, sizeof(format_body));
+    format_body[0] = CF_UNICODETEXT;
+    feed_pdu(lc, CB_FORMAT_LIST, 0, format_body, 36);
+    clear_sent();
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* A capability set claiming a length below its own 4-byte header must be
+ * rejected outright, not underflow */
+START_TEST(test_state__caps_length_below_header_is_rejected)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc;
+    char body[8];
+    /* Short-name framing: the malformed capability set below bails
+     * before general_flags is ever read, so client_long_names stays
+     * at its default of 0 */
+    char format_body[36];
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    clear_sent();
+
+    g_memset(body, 0, sizeof(body));
+    body[0] = 1;                    /* cCapabilitiesSets */
+    body[4] = CB_CAPSTYPE_GENERAL;  /* capabilitySetType */
+    body[6] = 3;                    /* lengthCapability - below its own
+                                      * 4-byte header */
+    feed_pdu(lc, CB_CLIP_CAPS, 0, body, 8);
+
+    g_memset(format_body, 0, sizeof(format_body));
+    format_body[0] = CF_UNICODETEXT;
+    feed_pdu(lc, CB_FORMAT_LIST, 0, format_body, 36);
+    clear_sent();
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* The CF_TEXT branch is only reachable when the client offers CF_TEXT and
+ * not CF_UNICODETEXT - drive it end to end */
+START_TEST(test_state__cf_text_paste_inserts_into_focused_edit)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    struct list *child_list;
+    char caption[256];
+    struct xrdp_login_clip *lc;
+    char format_body[6];
+    char text[4];
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    feed_client_caps(lc);
+
+    /* Format list offering only CF_TEXT */
+    g_memset(format_body, 0, sizeof(format_body));
+    format_body[0] = CF_TEXT;
+    feed_pdu(lc, CB_FORMAT_LIST, 0, format_body, 6);
+    clear_sent();
+
+    setup_edit(&edit, caption, "");
+    child_list = list_create();
+    list_add_item(child_list, (long)&edit);
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    login_window.child_list = child_list;
+    wm.login_window = &login_window;
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+    /* requestedFormatId is the first field of the body, at offset 8 */
+    ck_assert_int_eq((unsigned char)g_sent[0][8], CF_TEXT);
+
+    text[0] = 's';
+    text[1] = 'e';
+    text[2] = 'c';
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, 3);
+
+    ck_assert_str_eq(caption, "sec");
+
+    xrdp_login_clip_delete(lc);
+    list_delete(child_list);
+}
+END_TEST
+
+/******************************************************************************/
+/* Pins the CP-1252/ISO-8859-1 boundary: 0x9f is a C1 control byte in that
+ * range and must be dropped, not inserted */
+START_TEST(test_state__cf_text_drops_0x9f_byte)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    struct list *child_list;
+    char caption[256];
+    struct xrdp_login_clip *lc;
+    char format_body[6];
+    char text[4];
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    feed_client_caps(lc);
+
+    g_memset(format_body, 0, sizeof(format_body));
+    format_body[0] = CF_TEXT;
+    feed_pdu(lc, CB_FORMAT_LIST, 0, format_body, 6);
+    clear_sent();
+
+    setup_edit(&edit, caption, "");
+    child_list = list_create();
+    list_add_item(child_list, (long)&edit);
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    login_window.child_list = child_list;
+    wm.login_window = &login_window;
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    text[0] = 'a';
+    text[1] = (char)0x9f;
+    text[2] = 'b';
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, 3);
+
+    ck_assert_str_eq(caption, "ab");
+
+    xrdp_login_clip_delete(lc);
+    list_delete(child_list);
 }
 END_TEST
 
@@ -1035,6 +1209,10 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_state__oversized_pdu_is_discarded);
     tcase_add_test(tc, test_state__truncated_header_is_dropped);
     tcase_add_test(tc, test_state__reassembles_split_pdu);
+    tcase_add_test(tc, test_state__malformed_caps_pdu_still_advances_handshake);
+    tcase_add_test(tc, test_state__caps_length_below_header_is_rejected);
+    tcase_add_test(tc, test_state__cf_text_paste_inserts_into_focused_edit);
+    tcase_add_test(tc, test_state__cf_text_drops_0x9f_byte);
 
     suite_add_tcase(s, tc);
 
