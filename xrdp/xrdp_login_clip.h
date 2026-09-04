@@ -105,4 +105,53 @@ xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
                                   int use_long_names,
                                   int *have_unicode_text, int *have_text);
 
+/**
+ * Create the login screen clipboard handler and start the handshake
+ *
+ * @param wm Window manager, used for sending and for the target widget
+ * @param chan_id cliprdr static channel id, from libxrdp_get_channel_id()
+ * @return New object, or NULL on failure
+ *
+ * The caller is responsible for checking that the feature is enabled and
+ * that the channel exists. Creating this object sends CB_CLIP_CAPS and
+ * CB_MONITOR_READY to the client.
+ */
+struct xrdp_login_clip *
+xrdp_login_clip_create(struct xrdp_wm *wm, int chan_id);
+
+/**
+ * Destroy the handler, clearing any buffered clipboard content
+ *
+ * @param self Object to free, may be NULL
+ */
+void
+xrdp_login_clip_delete(struct xrdp_login_clip *self);
+
+/**
+ * Process cliprdr channel data from the client
+ *
+ * @param self Object, may be NULL
+ * @param flags Channel PDU flags, XR_CHANNEL_FLAG_*
+ * @param data Chunk data
+ * @param len Length of this chunk
+ * @param total_len Length of the whole PDU
+ * @return Always 0 - protocol failures are absorbed, never propagated
+ */
+int
+xrdp_login_clip_process_channel_data(struct xrdp_login_clip *self,
+                                     int flags, const char *data,
+                                     int len, int total_len);
+
+/**
+ * Ask the client for its clipboard text
+ *
+ * @param self Object, may be NULL
+ * @return 1 if a request was sent, 0 otherwise
+ *
+ * Called only from a paste keypress. This is the only path that asks the
+ * client for clipboard content.
+ */
+int
+xrdp_login_clip_request_paste(struct xrdp_login_clip *self);
+
 #endif /* XRDP_LOGIN_CLIP_H */

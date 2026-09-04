@@ -25,6 +25,7 @@
 #include "xrdp.h"
 #include "xrdp_login_clip.h"
 #include "scancode.h"
+#include "ms-rdpbcgr.h"
 #include "ms-rdpeclip.h"
 
 #include "test_xrdp.h"
@@ -520,6 +521,472 @@ START_TEST(test_format_list__valid_id_truncated_short_name)
 END_TEST
 
 /******************************************************************************/
+/* Captures PDUs the module sends, in place of libxrdp_send_to_channel() */
+
+#define LC_CAPTURE_MAX 8
+#define LC_CAPTURE_SIZE 1024
+
+static char g_sent[LC_CAPTURE_MAX][LC_CAPTURE_SIZE];
+static int g_sent_len[LC_CAPTURE_MAX];
+static int g_sent_count;
+
+int
+__wrap_libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
+                               char *data, int data_len,
+                               int total_data_len, int flags)
+{
+    if (g_sent_count < LC_CAPTURE_MAX && data_len <= LC_CAPTURE_SIZE)
+    {
+        g_memcpy(g_sent[g_sent_count], data, data_len);
+        g_sent_len[g_sent_count] = data_len;
+        g_sent_count++;
+    }
+    return 0;
+}
+
+/* Counts repaints, in place of xrdp_bitmap_invalidate() */
+static int g_invalidate_count;
+
+int
+__wrap_xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
+{
+    g_invalidate_count++;
+    return 0;
+}
+
+static void
+clear_sent(void)
+{
+    g_memset(g_sent, 0, sizeof(g_sent));
+    g_memset(g_sent_len, 0, sizeof(g_sent_len));
+    g_sent_count = 0;
+    g_invalidate_count = 0;
+}
+
+/* msgType of a captured PDU */
+static int
+sent_type(int index)
+{
+    if (index >= g_sent_count)
+    {
+        return -1;
+    }
+    return (unsigned char)g_sent[index][0] |
+           ((unsigned char)g_sent[index][1] << 8);
+}
+
+/* msgFlags of a captured PDU */
+static int
+sent_flags(int index)
+{
+    if (index >= g_sent_count)
+    {
+        return -1;
+    }
+    return (unsigned char)g_sent[index][2] |
+           ((unsigned char)g_sent[index][3] << 8);
+}
+
+/******************************************************************************/
+/* Feeds one complete cliprdr PDU to the module */
+static void
+feed_pdu(struct xrdp_login_clip *lc, int msg_type, int msg_flags,
+         const char *payload, int payload_len)
+{
+    char buf[LC_CAPTURE_SIZE];
+    int total = 8 + payload_len;
+
+    buf[0] = (char)(msg_type & 0xff);
+    buf[1] = (char)((msg_type >> 8) & 0xff);
+    buf[2] = (char)(msg_flags & 0xff);
+    buf[3] = (char)((msg_flags >> 8) & 0xff);
+    buf[4] = (char)(payload_len & 0xff);
+    buf[5] = (char)((payload_len >> 8) & 0xff);
+    buf[6] = (char)((payload_len >> 16) & 0xff);
+    buf[7] = (char)((payload_len >> 24) & 0xff);
+    if (payload_len > 0)
+    {
+        g_memcpy(buf + 8, payload, payload_len);
+    }
+
+    xrdp_login_clip_process_channel_data(lc,
+                                         XR_CHANNEL_FLAG_FIRST |
+                                         XR_CHANNEL_FLAG_LAST,
+                                         buf, total, total);
+}
+
+/* Client capabilities PDU body: 1 general capability set, version 2,
+ * long format names */
+static void
+feed_client_caps(struct xrdp_login_clip *lc)
+{
+    char body[16];
+
+    g_memset(body, 0, sizeof(body));
+    body[0] = 1;                                /* cCapabilitiesSets */
+    body[4] = CB_CAPSTYPE_GENERAL;              /* capabilitySetType */
+    body[6] = 12;                               /* lengthCapability */
+    body[8] = CB_CAPS_VERSION_2;                /* version */
+    body[12] = CB_USE_LONG_FORMAT_NAMES;        /* generalFlags */
+    feed_pdu(lc, CB_CLIP_CAPS, 0, body, 16);
+}
+
+/* Format list offering CF_UNICODETEXT with an empty long name */
+static void
+feed_format_list(struct xrdp_login_clip *lc)
+{
+    char body[6];
+
+    g_memset(body, 0, sizeof(body));
+    body[0] = CF_UNICODETEXT;
+    feed_pdu(lc, CB_FORMAT_LIST, 0, body, 6);
+}
+
+/* Drives a fresh object to the READY state */
+static struct xrdp_login_clip *
+make_ready_lc(struct xrdp_wm *wm)
+{
+    struct xrdp_login_clip *lc;
+
+    g_memset(wm, 0, sizeof(*wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(wm, 5);
+    feed_client_caps(lc);
+    feed_format_list(lc);
+    clear_sent();
+    return lc;
+}
+
+/******************************************************************************/
+START_TEST(test_state__create_sends_caps_then_monitor_ready)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc;
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+
+    lc = xrdp_login_clip_create(&wm, 5);
+    ck_assert_ptr_nonnull(lc);
+    ck_assert_int_eq(g_sent_count, 2);
+    ck_assert_int_eq(sent_type(0), CB_CLIP_CAPS);
+    ck_assert_int_eq(sent_type(1), CB_MONITOR_READY);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_state__format_list_is_acknowledged)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc;
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    feed_client_caps(lc);
+    clear_sent();
+
+    feed_format_list(lc);
+    ck_assert_int_eq(g_sent_count, 1);
+    ck_assert_int_eq(sent_type(0), CB_FORMAT_LIST_RESPONSE);
+    ck_assert_int_eq(sent_flags(0), CB_RESPONSE_OK);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_state__paste_requests_unicode_text)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+    ck_assert_int_eq(g_sent_count, 1);
+    ck_assert_int_eq(sent_type(0), CB_FORMAT_DATA_REQUEST);
+    /* requestedFormatId is the first field of the body, at offset 8 */
+    ck_assert_int_eq((unsigned char)g_sent[0][8], CF_UNICODETEXT);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* Before the handshake completes there is nothing to ask for */
+START_TEST(test_state__paste_before_ready_sends_nothing)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc;
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    clear_sent();
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 0);
+    ck_assert_int_eq(g_sent_count, 0);
+
+    /* And a NULL object must be safe, for the disabled case */
+    ck_assert_int_eq(xrdp_login_clip_request_paste(NULL), 0);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* Only one request in flight */
+START_TEST(test_state__second_paste_while_waiting_sends_nothing)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+    clear_sent();
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 0);
+    ck_assert_int_eq(g_sent_count, 0);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* A client with no text on its clipboard */
+START_TEST(test_state__paste_with_no_text_format_sends_nothing)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc;
+    char body[6];
+
+    g_memset(&wm, 0, sizeof(wm));
+    clear_sent();
+    lc = xrdp_login_clip_create(&wm, 5);
+    feed_client_caps(lc);
+
+    /* Format list offering only a private format */
+    g_memset(body, 0, sizeof(body));
+    body[0] = 0xde;
+    body[1] = 0xc0;
+    feed_pdu(lc, CB_FORMAT_LIST, 0, body, 6);
+    clear_sent();
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 0);
+    ck_assert_int_eq(g_sent_count, 0);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* A response we never asked for must be ignored, not inserted */
+START_TEST(test_state__unsolicited_data_response_is_ignored)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    char caption[256];
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char text[8];
+
+    setup_edit(&edit, caption, "");
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    wm.login_window = &login_window;
+
+    g_memset(text, 0, sizeof(text));
+    text[0] = 'a';
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, 4);
+
+    ck_assert_str_eq(caption, "");
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* The happy path, end to end through the module */
+START_TEST(test_state__data_response_inserts_into_focused_edit)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    char caption[256];
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char text[10];
+    unsigned int len;
+    static const unsigned short words[] = { 's', 'e', 'c', 0x000d, 0x000a };
+
+    setup_edit(&edit, caption, "");
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    wm.login_window = &login_window;
+
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+    len = make_utf16(text, words, 5);
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, (int)len);
+
+    ck_assert_str_eq(caption, "sec");
+    ck_assert_int_eq(edit.edit_pos, 3);
+    /* One repaint for the whole paste, not one per character */
+    ck_assert_int_eq(g_invalidate_count, 1);
+
+    /* A second paste is allowed once the first completed */
+    clear_sent();
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* A covering window means the user cannot see where the text would land */
+START_TEST(test_state__data_response_dropped_when_popup_is_up)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    struct xrdp_bitmap popup;
+    char caption[256];
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char text[10];
+    unsigned int len;
+    static const unsigned short words[] = { 'x', 0 };
+
+    setup_edit(&edit, caption, "");
+    g_memset(&login_window, 0, sizeof(login_window));
+    g_memset(&popup, 0, sizeof(popup));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    wm.login_window = &login_window;
+    wm.popup_wnd = &popup;
+
+    xrdp_login_clip_request_paste(lc);
+    len = make_utf16(text, words, 2);
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, (int)len);
+
+    ck_assert_str_eq(caption, "");
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_state__failed_data_response_is_absorbed)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    char caption[256];
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+
+    setup_edit(&edit, caption, "");
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    wm.login_window = &login_window;
+
+    xrdp_login_clip_request_paste(lc);
+    feed_pdu(lc, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_FAIL, NULL, 0);
+
+    ck_assert_str_eq(caption, "");
+    /* State returned to READY, so a retry is possible */
+    clear_sent();
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* An oversized PDU must be discarded without allocating for it */
+START_TEST(test_state__oversized_pdu_is_discarded)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char chunk[64];
+
+    g_memset(chunk, 0, sizeof(chunk));
+    xrdp_login_clip_process_channel_data(lc, XR_CHANNEL_FLAG_FIRST,
+                                         chunk, 64, 1024 * 1024);
+    xrdp_login_clip_process_channel_data(lc, XR_CHANNEL_FLAG_LAST,
+                                         chunk, 64, 1024 * 1024);
+
+    /* Still usable afterwards */
+    clear_sent();
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* A PDU too short to hold a cliprdr header must be dropped, not read past */
+START_TEST(test_state__truncated_header_is_dropped)
+{
+    struct xrdp_wm wm;
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char buf[4];
+
+    g_memset(buf, 0, sizeof(buf));
+    buf[0] = CB_FORMAT_DATA_RESPONSE;
+    xrdp_login_clip_process_channel_data(lc,
+                                         XR_CHANNEL_FLAG_FIRST |
+                                         XR_CHANNEL_FLAG_LAST,
+                                         buf, 4, 4);
+
+    ck_assert_int_eq(g_sent_count, 0);
+
+    /* Still usable afterwards */
+    ck_assert_int_eq(xrdp_login_clip_request_paste(lc), 1);
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
+/* A PDU split across two channel chunks must be reassembled */
+START_TEST(test_state__reassembles_split_pdu)
+{
+    struct xrdp_wm wm;
+    struct xrdp_bitmap login_window;
+    struct xrdp_bitmap edit;
+    char caption[256];
+    struct xrdp_login_clip *lc = make_ready_lc(&wm);
+    char buf[16];
+    int total;
+
+    setup_edit(&edit, caption, "");
+    g_memset(&login_window, 0, sizeof(login_window));
+    login_window.type = WND_TYPE_WND;
+    login_window.focused_control = &edit;
+    wm.login_window = &login_window;
+
+    xrdp_login_clip_request_paste(lc);
+
+    /* CB_FORMAT_DATA_RESPONSE carrying "hi" in UTF-16LE, split 6 + 6 */
+    g_memset(buf, 0, sizeof(buf));
+    buf[0] = CB_FORMAT_DATA_RESPONSE;
+    buf[2] = CB_RESPONSE_OK;
+    buf[4] = 4;                 /* dataLen */
+    buf[8] = 'h';
+    buf[10] = 'i';
+    total = 12;
+
+    xrdp_login_clip_process_channel_data(lc, XR_CHANNEL_FLAG_FIRST,
+                                         buf, 6, total);
+    xrdp_login_clip_process_channel_data(lc, XR_CHANNEL_FLAG_LAST,
+                                         buf + 6, 6, total);
+
+    ck_assert_str_eq(caption, "hi");
+
+    xrdp_login_clip_delete(lc);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_login_clip(void)
 {
@@ -555,6 +1022,19 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_format_list__empty);
     tcase_add_test(tc, test_format_list__valid_id_unterminated_long_name);
     tcase_add_test(tc, test_format_list__valid_id_truncated_short_name);
+    tcase_add_test(tc, test_state__create_sends_caps_then_monitor_ready);
+    tcase_add_test(tc, test_state__format_list_is_acknowledged);
+    tcase_add_test(tc, test_state__paste_requests_unicode_text);
+    tcase_add_test(tc, test_state__paste_before_ready_sends_nothing);
+    tcase_add_test(tc, test_state__second_paste_while_waiting_sends_nothing);
+    tcase_add_test(tc, test_state__paste_with_no_text_format_sends_nothing);
+    tcase_add_test(tc, test_state__unsolicited_data_response_is_ignored);
+    tcase_add_test(tc, test_state__data_response_inserts_into_focused_edit);
+    tcase_add_test(tc, test_state__data_response_dropped_when_popup_is_up);
+    tcase_add_test(tc, test_state__failed_data_response_is_absorbed);
+    tcase_add_test(tc, test_state__oversized_pdu_is_discarded);
+    tcase_add_test(tc, test_state__truncated_header_is_dropped);
+    tcase_add_test(tc, test_state__reassembles_split_pdu);
 
     suite_add_tcase(s, tc);
 

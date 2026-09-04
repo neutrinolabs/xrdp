@@ -53,7 +53,9 @@ test_xrdp_CFLAGS = \
     @CMOCKA_CFLAGS@
 
 test_xrdp_LDFLAGS = -Wl,--wrap=pixman_region_extents, \
-    -Wl,--wrap=pixman_region_not_empty
+    -Wl,--wrap=pixman_region_not_empty, \
+    -Wl,--wrap=libxrdp_send_to_channel, \
+    -Wl,--wrap=xrdp_bitmap_invalidate
 
 test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_load.o \
