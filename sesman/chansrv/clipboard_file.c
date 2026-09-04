@@ -346,6 +346,7 @@ clipboard_send_data_response_for_file(const char *data, int data_size)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_file: data_size %d",
               data_size);
     LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", data, data_size);
+    g_clip_s2c.in_request = 0;
     if (g_files_list == 0)
     {
         g_files_list = list_create();
