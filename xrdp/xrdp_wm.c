@@ -29,6 +29,7 @@
 #include "log.h"
 #include "string_calls.h"
 #include "unicode_defines.h"
+#include "xrdp_login_clip.h"
 #include "xrdp_login_lvgl.h"
 
 /*****************************************************************************/
@@ -173,6 +174,8 @@ xrdp_wm_delete(struct xrdp_wm *self)
     xrdp_login_lvgl_delete(self);
     xrdp_region_delete(self->screen_dirty_region);
     xrdp_mm_delete(self->mm);
+    xrdp_login_clip_delete(self->login_clip);
+    self->login_clip = NULL;
     xrdp_cache_delete(self->cache);
     xrdp_painter_delete(self->painter);
     xrdp_bitmap_delete(self->screen);
@@ -841,7 +844,28 @@ xrdp_wm_init(struct xrdp_wm *self)
         if (self->login_ui == NULL)
         {
             xrdp_login_wnd_create(self);
+
+            /* Paste targets the legacy login window's edit fields, so
+             * there is nothing for it to do under the LVGL UI */
+            if (self->xrdp_config->cfg_globals.enable_login_clipboard)
+            {
+                int clip_chan_id =
+                    libxrdp_get_channel_id(self->session,
+                                           CLIPRDR_SVC_CHANNEL_NAME);
+
+                if (clip_chan_id >= 0)
+                {
+                    self->login_clip = xrdp_login_clip_create(self,
+                                       clip_chan_id);
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_INFO, "Login screen clipboard paste is "
+                        "enabled but the client has no cliprdr channel");
+                }
+            }
         }
+
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
         xrdp_wm_set_focused(self, self->login_window);
@@ -2156,6 +2180,16 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
                 rv = m->mod_event(m, WM_CHANNEL_DATA,
                                   param1, param2, param3, param4);
             }
+            else if (self->login_clip != 0 &&
+                     LOWORD(param1) == libxrdp_get_channel_id(
+                         self->session, CLIPRDR_SVC_CHANNEL_NAME))
+            {
+                /* No backend module yet - we are still on the login
+                 * screen and this is clipboard data we asked for */
+                rv = xrdp_login_clip_process_channel_data(self->login_clip,
+                        HIWORD(param1), (const char *)param3,
+                        param2, param4);
+            }
         }
     }
 
@@ -2614,6 +2648,14 @@ xrdp_wm_login_state_to_str(enum wm_login_state login_state)
 int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
 {
+    if (login_state != WMLS_USER_PROMPT && self->login_clip != NULL)
+    {
+        /* The login screen is gone. From here on the clipboard belongs to
+         * chansrv or to the backend module */
+        xrdp_login_clip_delete(self->login_clip);
+        self->login_clip = NULL;
+    }
+
     LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
         xrdp_wm_login_state_to_str(self->login_state),
         xrdp_wm_login_state_to_str(login_state));
