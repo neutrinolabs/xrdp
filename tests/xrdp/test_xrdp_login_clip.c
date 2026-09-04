@@ -113,6 +113,123 @@ START_TEST(test_is_paste_key__null_key_info)
 END_TEST
 
 /******************************************************************************/
+/* Builds a UTF-16LE byte buffer from a list of 16-bit words */
+static unsigned int
+make_utf16(char *buf, const unsigned short *words, unsigned int count)
+{
+    unsigned int i;
+
+    for (i = 0; i < count; i++)
+    {
+        buf[i * 2] = (char)(words[i] & 0xff);
+        buf[i * 2 + 1] = (char)((words[i] >> 8) & 0xff);
+    }
+    return count * 2;
+}
+
+/******************************************************************************/
+START_TEST(test_utf16__plain_ascii)
+{
+    static const unsigned short words[] = { 'p', 'a', 's', 's', 0 };
+    char buf[32];
+    char32_t out[16];
+    unsigned int len = make_utf16(buf, words, 5);
+    unsigned int n = xrdp_login_clip_utf16_to_codepoints(buf, len, out, 16);
+
+    ck_assert_uint_eq(n, 4);
+    ck_assert_uint_eq(out[0], 'p');
+    ck_assert_uint_eq(out[3], 's');
+}
+END_TEST
+
+/******************************************************************************/
+/* A password manager typically appends a newline. Stop at the first one */
+START_TEST(test_utf16__stops_at_crlf)
+{
+    static const unsigned short words[] = { 'a', 'b', 0x000d, 0x000a, 'c', 0 };
+    char buf[32];
+    char32_t out[16];
+    unsigned int len = make_utf16(buf, words, 6);
+    unsigned int n = xrdp_login_clip_utf16_to_codepoints(buf, len, out, 16);
+
+    ck_assert_uint_eq(n, 2);
+    ck_assert_uint_eq(out[1], 'b');
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_utf16__drops_control_chars)
+{
+    static const unsigned short words[] = { 'a', 0x0009, 0x007f, 0x0085, 'b', 0 };
+    char buf[32];
+    char32_t out[16];
+    unsigned int len = make_utf16(buf, words, 6);
+    unsigned int n = xrdp_login_clip_utf16_to_codepoints(buf, len, out, 16);
+
+    ck_assert_uint_eq(n, 2);
+    ck_assert_uint_eq(out[0], 'a');
+    ck_assert_uint_eq(out[1], 'b');
+}
+END_TEST
+
+/******************************************************************************/
+/* U+1F600 GRINNING FACE, as a surrogate pair */
+START_TEST(test_utf16__decodes_surrogate_pair)
+{
+    static const unsigned short words[] = { 0xd83d, 0xde00, 0 };
+    char buf[32];
+    char32_t out[16];
+    unsigned int len = make_utf16(buf, words, 3);
+    unsigned int n = xrdp_login_clip_utf16_to_codepoints(buf, len, out, 16);
+
+    ck_assert_uint_eq(n, 1);
+    ck_assert_uint_eq(out[0], 0x1f600);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_utf16__drops_unpaired_surrogates)
+{
+    /* High surrogate with no low surrogate, then a low surrogate alone */
+    static const unsigned short words[] = { 0xd83d, 'a', 0xde00, 'b', 0 };
+    char buf[32];
+    char32_t out[16];
+    unsigned int len = make_utf16(buf, words, 5);
+    unsigned int n = xrdp_login_clip_utf16_to_codepoints(buf, len, out, 16);
+
+    ck_assert_uint_eq(n, 2);
+    ck_assert_uint_eq(out[0], 'a');
+    ck_assert_uint_eq(out[1], 'b');
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_utf16__respects_out_capacity)
+{
+    static const unsigned short words[] = { 'a', 'b', 'c', 'd', 0 };
+    char buf[32];
+    char32_t out[2];
+    unsigned int len = make_utf16(buf, words, 5);
+    unsigned int n = xrdp_login_clip_utf16_to_codepoints(buf, len, out, 2);
+
+    ck_assert_uint_eq(n, 2);
+}
+END_TEST
+
+/******************************************************************************/
+/* An odd trailing byte must not be read as half a word */
+START_TEST(test_utf16__odd_length_and_empty)
+{
+    char buf[4] = { 'a', 0, 'b' };
+    char32_t out[16];
+
+    ck_assert_uint_eq(xrdp_login_clip_utf16_to_codepoints(buf, 3, out, 16), 1);
+    ck_assert_uint_eq(xrdp_login_clip_utf16_to_codepoints(buf, 0, out, 16), 0);
+    ck_assert_uint_eq(xrdp_login_clip_utf16_to_codepoints(NULL, 8, out, 16), 0);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_login_clip(void)
 {
@@ -128,6 +245,13 @@ make_suite_login_clip(void)
     tcase_add_test(tc, test_is_paste_key__ctrl_other_key_is_not_paste);
     tcase_add_test(tc, test_is_paste_key__shift_insert);
     tcase_add_test(tc, test_is_paste_key__null_key_info);
+    tcase_add_test(tc, test_utf16__plain_ascii);
+    tcase_add_test(tc, test_utf16__stops_at_crlf);
+    tcase_add_test(tc, test_utf16__drops_control_chars);
+    tcase_add_test(tc, test_utf16__decodes_surrogate_pair);
+    tcase_add_test(tc, test_utf16__drops_unpaired_surrogates);
+    tcase_add_test(tc, test_utf16__respects_out_capacity);
+    tcase_add_test(tc, test_utf16__odd_length_and_empty);
 
     suite_add_tcase(s, tc);
 

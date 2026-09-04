@@ -53,4 +53,22 @@ int
 xrdp_login_clip_is_paste_key(const int *keys, int scan_code,
                              const struct xrdp_key_info *ki);
 
+/**
+ * Decode UTF-16LE clipboard text into sanitised Unicode codepoints
+ *
+ * @param utf16le UTF-16LE text from the client
+ * @param bytes Length of utf16le in bytes
+ * @param out Where to write codepoints
+ * @param out_count Capacity of out, in codepoints
+ * @return Number of codepoints written
+ *
+ * Decoding stops at a NUL word or at the first CR or LF, so a trailing
+ * newline is harmless and a multi-line clipboard cannot spill across
+ * fields. Control characters are dropped, surrogate pairs are combined,
+ * and unpaired surrogates are discarded.
+ */
+unsigned int
+xrdp_login_clip_utf16_to_codepoints(const char *utf16le, unsigned int bytes,
+                                    char32_t *out, unsigned int out_count);
+
 #endif /* XRDP_LOGIN_CLIP_H */
