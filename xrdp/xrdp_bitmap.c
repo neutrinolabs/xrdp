@@ -1256,10 +1256,11 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
             else if (xrdp_login_clip_is_paste_key(self->wm->keys,
                                                   scan_code, ki))
             {
-                /* Swallow the keypress. Without this, Ctrl+V falls through
-                 * to the printing-character case below and inserts a
-                 * literal 'v'. The paste itself is handled by the login
-                 * clipboard module, if it is enabled. */
+                /* Swallowing the keypress matters even when the clipboard
+                 * module is absent: without it, Ctrl+V falls through to
+                 * the printing-character case and inserts a literal 'v'.
+                 * xrdp_login_clip_request_paste() is NULL-safe. */
+                xrdp_login_clip_request_paste(self->wm->login_clip);
             }
             else
             {
