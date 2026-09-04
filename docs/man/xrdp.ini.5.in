@@ -192,6 +192,15 @@ separator as the password supplied by the user and treats it as autologon. If no
 defaults to \fBfalse\fP.
 
 .TP
+\fBenable_login_clipboard\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, the login screen accepts
+\fBCtrl+V\fP and \fBShift+Insert\fP to paste text from the client's clipboard
+into its input fields. This also requires \fBcliprdr\fP to be enabled in the
+\fB[Channels]\fP section. Enabling this makes \fBxrdp\fP parse clipboard data
+from the client before the user has authenticated, so if not specified it
+defaults to \fBfalse\fP.
+
+.TP
 \fBdomain_user_separator\fP=\fBseparator\fP
 If specified the domain name supplied by the client is appended to the username separated
 by \fBseparator\fP.

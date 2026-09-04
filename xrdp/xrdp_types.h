@@ -478,7 +478,7 @@ struct xrdp_keymap
     struct xrdp_key_info keys_shiftcapslockaltgr[SCANCODE_MAX_INDEX + 1];
     // NumLock is restricted to a much smaller set of keys
     struct xrdp_key_info keys_numlock[SCANCODE_MAX_NUMLOCK -
-                                          SCANCODE_MIN_NUMLOCK + 1];
+                                                               SCANCODE_MIN_NUMLOCK + 1];
 };
 
 /* the window manager */
@@ -822,6 +822,7 @@ struct xrdp_cfg_globals
     int  nego_sec_layer;
     int  allow_multimon;
     int  enable_token_login;
+    int  enable_login_clipboard;
 
     /* colors */
 
