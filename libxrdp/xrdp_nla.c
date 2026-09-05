@@ -53,12 +53,25 @@ typedef struct xrdp_nla_nego_token_st
 } XRDP_NLA_NEGO_TOKEN;
 
 DECLARE_ASN1_FUNCTIONS(XRDP_NLA_NEGO_TOKEN)
+#if defined(LIBRESSL_VERSION_NUMBER)
+DECLARE_STACK_OF(XRDP_NLA_NEGO_TOKEN)
+#define sk_XRDP_NLA_NEGO_TOKEN_new_null() \
+    SKM_sk_new_null(XRDP_NLA_NEGO_TOKEN)
+#define sk_XRDP_NLA_NEGO_TOKEN_push(stack, value) \
+    SKM_sk_push(XRDP_NLA_NEGO_TOKEN, stack, value)
+#define sk_XRDP_NLA_NEGO_TOKEN_num(stack) \
+    SKM_sk_num(XRDP_NLA_NEGO_TOKEN, stack)
+#define sk_XRDP_NLA_NEGO_TOKEN_value(stack, index) \
+    SKM_sk_value(XRDP_NLA_NEGO_TOKEN, stack, index)
+#else
 DEFINE_STACK_OF(XRDP_NLA_NEGO_TOKEN)
+#endif
 
 ASN1_SEQUENCE(XRDP_NLA_NEGO_TOKEN) =
 {
     ASN1_EXP(XRDP_NLA_NEGO_TOKEN, nego_token, ASN1_OCTET_STRING, 0)
 }
+// cppcheck-suppress unknownMacro
 ASN1_SEQUENCE_END(XRDP_NLA_NEGO_TOKEN)
 
 IMPLEMENT_ASN1_FUNCTIONS(XRDP_NLA_NEGO_TOKEN)
@@ -85,6 +98,7 @@ ASN1_SEQUENCE(XRDP_NLA_TS_REQUEST) =
     ASN1_EXP_OPT(XRDP_NLA_TS_REQUEST, error_code, ASN1_INTEGER, 4),
     ASN1_EXP_OPT(XRDP_NLA_TS_REQUEST, client_nonce, ASN1_OCTET_STRING, 5)
 }
+// cppcheck-suppress unknownMacro
 ASN1_SEQUENCE_END(XRDP_NLA_TS_REQUEST)
 
 IMPLEMENT_ASN1_FUNCTIONS(XRDP_NLA_TS_REQUEST)
@@ -102,6 +116,7 @@ ASN1_SEQUENCE(XRDP_NLA_TS_CREDENTIALS) =
     ASN1_EXP(XRDP_NLA_TS_CREDENTIALS, cred_type, ASN1_INTEGER, 0),
     ASN1_EXP(XRDP_NLA_TS_CREDENTIALS, credentials, ASN1_OCTET_STRING, 1)
 }
+// cppcheck-suppress unknownMacro
 ASN1_SEQUENCE_END(XRDP_NLA_TS_CREDENTIALS)
 
 IMPLEMENT_ASN1_FUNCTIONS(XRDP_NLA_TS_CREDENTIALS)
@@ -121,6 +136,7 @@ ASN1_SEQUENCE(XRDP_NLA_TS_PASSWORD_CREDS) =
     ASN1_EXP(XRDP_NLA_TS_PASSWORD_CREDS, user_name, ASN1_OCTET_STRING, 1),
     ASN1_EXP(XRDP_NLA_TS_PASSWORD_CREDS, password, ASN1_OCTET_STRING, 2)
 }
+// cppcheck-suppress unknownMacro
 ASN1_SEQUENCE_END(XRDP_NLA_TS_PASSWORD_CREDS)
 
 IMPLEMENT_ASN1_FUNCTIONS(XRDP_NLA_TS_PASSWORD_CREDS)
@@ -258,7 +274,8 @@ nla_set_octet_string(ASN1_OCTET_STRING **field,
     }
     *field = ASN1_OCTET_STRING_new();
     return *field == NULL ||
-           ASN1_OCTET_STRING_set(*field, data, length) != 1;
+           ASN1_OCTET_STRING_set(*field, (const unsigned char *)data,
+                                 length) != 1;
 }
 
 /*****************************************************************************/
@@ -290,7 +307,8 @@ nla_send_request(struct trans *trans, const gss_buffer_desc *nego_token,
         request->nego_tokens = sk_XRDP_NLA_NEGO_TOKEN_new_null();
         token = XRDP_NLA_NEGO_TOKEN_new();
         if (request->nego_tokens == NULL || token == NULL ||
-                ASN1_OCTET_STRING_set(token->nego_token, nego_token->value,
+                ASN1_OCTET_STRING_set(token->nego_token,
+                                      (const unsigned char *)nego_token->value,
                                       nego_token->length) != 1 ||
                 sk_XRDP_NLA_NEGO_TOKEN_push(request->nego_tokens, token) != 1)
         {
@@ -798,7 +816,8 @@ xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info)
                                   sizeof(CLIENT_TO_SERVER_MAGIC), nonce,
                                   public_key, public_key_length,
                                   expected_hash) != 0 ||
-            !nla_constant_time_equal(expected_hash, unwrapped.value,
+            !nla_constant_time_equal(expected_hash,
+                                     (const unsigned char *)unwrapped.value,
                                      XRDP_NLA_HASH_LENGTH))
     {
         if (GSS_ERROR(major))
@@ -834,7 +853,8 @@ xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info)
         goto cleanup;
     }
     if (wrapped.length > UINT_MAX ||
-            xrdp_nla_prepare_wrap_token(wrapped.value, wrapped.length,
+            xrdp_nla_prepare_wrap_token((unsigned char *)wrapped.value,
+                                        wrapped.length,
                                         input.length) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "NLA: invalid GSSAPI wrap token");
@@ -861,9 +881,10 @@ xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info)
     major = gss_unwrap(&minor, context, &input, &unwrapped,
                        &conf_state, &qop_state);
     if (GSS_ERROR(major) || !conf_state || unwrapped.length > UINT_MAX ||
-            xrdp_nla_decode_ts_credentials(unwrapped.value,
-                                           unwrapped.length,
-                                           client_info) != 0)
+            xrdp_nla_decode_ts_credentials(
+                (const unsigned char *)unwrapped.value,
+                unwrapped.length,
+                client_info) != 0)
     {
         if (GSS_ERROR(major))
         {
