@@ -230,6 +230,7 @@ The GSSAPI acceptor must have access to a Kerberos keytab containing the
 an installed GSSAPI NTLM mechanism such as \fBgss-ntlmssp\fP and its configured
 credential provider. CredSSP version 5 or later with password credentials is
 supported; smart cards, Restricted Admin and Remote Credential Guard are not.
+The \fBnegotiate\fP setting does not currently advertise NLA.
 
 .TP
 .B negotiate

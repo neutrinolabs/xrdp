@@ -21,6 +21,10 @@ Many of these work on some or all of Windows, Mac OS, iOS, and/or Android.
 
 RDP transport is encrypted using TLS by default.
 
+CredSSP Network Level Authentication is available as an opt-in feature. See
+[Network Level Authentication](docs/nla.md) for build, configuration and
+testing instructions, and the current limitations.
+
 ![demo](https://github.com/neutrinolabs/xrdp/raw/gh-pages/xrdp_demo.gif)
 
 ## Features
