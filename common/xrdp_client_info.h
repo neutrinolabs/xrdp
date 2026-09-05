@@ -72,6 +72,7 @@ struct display_size_description
 #define SECURITY_LAYER_NEGOTIATE 0
 #define SECURITY_LAYER_RDP 1
 #define SECURITY_LAYER_TLS 2
+#define SECURITY_LAYER_NLA 3
 
 enum client_resize_mode
 {
