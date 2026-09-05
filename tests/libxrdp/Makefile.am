@@ -17,6 +17,10 @@ test_libxrdp_SOURCES = \
     test_libxrdp_process_monitor_stream.c \
     test_xrdp_sec_process_mcs_data_monitors.c
 
+if XRDP_NLA
+test_libxrdp_SOURCES += test_xrdp_nla.c
+endif
+
 test_libxrdp_CFLAGS = \
     @CHECK_CFLAGS@
 

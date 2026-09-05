@@ -52,14 +52,18 @@ tcp_keepalive=true
 #tcp_send_buffer_bytes=32768
 #tcp_recv_buffer_bytes=32768
 
-; security layer can be 'tls', 'rdp' or 'negotiate':-
+; security layer can be 'tls', 'rdp', 'nla' or 'negotiate':-
 ;
 ; tls       - Insist on TLS for security (maximum security)
 ; rdp       - Insist on RDP for security (testing only)
+; nla       - Insist on TLS with CredSSP Network Level Authentication
 ; negotiate - Negotiate whatever can be supported by both client and
 ;             server (maximum compatibility)
 ;
 security_layer=negotiate
+
+; offer NLA when security_layer=negotiate. NLA must be built and configured
+enable_nla=false
 
 ; minimum security level allowed for client for classic RDP encryption
 ; use tls_ciphers to configure TLS encryption

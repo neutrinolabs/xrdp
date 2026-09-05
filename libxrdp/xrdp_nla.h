@@ -16,15 +16,24 @@
  * limitations under the License.
  */
 
-#ifndef TEST_LIBXRDP_H
-#define TEST_LIBXRDP_H
+#if !defined(XRDP_NLA_H)
+#define XRDP_NLA_H
 
-#include <check.h>
+struct trans;
+struct xrdp_client_info;
 
-Suite *make_suite_test_xrdp_sec_process_mcs_data_monitors(void);
-Suite *make_suite_test_monitor_processing(void);
-#if defined(XRDP_NLA)
-Suite *make_suite_test_xrdp_nla(void);
+int
+xrdp_nla_is_enabled(const struct xrdp_client_info *client_info);
+
+int
+xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info);
+
+int
+xrdp_nla_decode_ts_credentials(const unsigned char *data, unsigned int length,
+                               struct xrdp_client_info *client_info);
+
+int
+xrdp_nla_prepare_wrap_token(unsigned char *token, unsigned int token_length,
+                            unsigned int plaintext_length);
+
 #endif
-
-#endif /* TEST_LIBXRDP_H */

@@ -2,6 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2004-2014
+ * Copyright (C) Idan Freiberg 2013-2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -203,6 +204,10 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
             {
                 client_info->security_layer = SECURITY_LAYER_NEGOTIATE;
             }
+            else if (g_strcasecmp(value, "nla") == 0)
+            {
+                client_info->security_layer = SECURITY_LAYER_NLA;
+            }
             else
             {
                 LOG(LOG_LEVEL_WARNING, "security_layer=%s is not "
@@ -210,6 +215,10 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                     value);
                 client_info->security_layer = SECURITY_LAYER_NEGOTIATE;
             }
+        }
+        else if (g_strcasecmp(item, "enable_nla") == 0)
+        {
+            client_info->enable_nla = g_text2bool(value);
         }
         else if (g_strcasecmp(item, "vmconnect") == 0)
         {
@@ -1704,4 +1713,3 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
     free_stream(s);
     return 0;
 }
-

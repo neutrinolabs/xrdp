@@ -2,6 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2004-2014
+ * Copyright (C) Idan Freiberg 2013-2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +73,7 @@ struct display_size_description
 #define SECURITY_LAYER_NEGOTIATE 0
 #define SECURITY_LAYER_RDP 1
 #define SECURITY_LAYER_TLS 2
+#define SECURITY_LAYER_NLA 3
 
 enum client_resize_mode
 {
@@ -197,6 +199,7 @@ struct xrdp_client_info
     int require_credentials; /* when true, credentials *must* be passed on cmd line */
 
     int security_layer; /* SECURITY_LAYER_* */
+    int enable_nla; /* Offer NLA when security_layer is negotiate */
     int vmconnect; /* Used when used from inside Hyper-V */
 
     int multimon; /* 0 = deny , 1 = allow */
