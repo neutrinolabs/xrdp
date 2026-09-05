@@ -33,6 +33,9 @@
 #include "string_calls.h"
 #include "log.h"
 
+#if defined(XRDP_NLA)
+#include "xrdp_nla.h"
+#endif
 
 /*****************************************************************************/
 /**
@@ -146,6 +149,14 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
     else
     {
         security_type_mask = PROTOCOL_SSL;
+#if defined(XRDP_NLA)
+        if (xrdp_nla_is_enabled(client_info) &&
+                g_file_readable(client_info->certificate) &&
+                g_file_readable(client_info->key_file))
+        {
+            security_type_mask |= PROTOCOL_HYBRID;
+        }
+#endif
     }
     /* But VMConnect mode supports everything. */
     if (client_info->vmconnect)

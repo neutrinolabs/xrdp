@@ -230,12 +230,21 @@ The GSSAPI acceptor must have access to a Kerberos keytab containing the
 an installed GSSAPI NTLM mechanism such as \fBgss-ntlmssp\fP and its configured
 credential provider. CredSSP version 5 or later with password credentials is
 supported; smart cards, Restricted Admin and Remote Credential Guard are not.
-The \fBnegotiate\fP setting does not currently advertise NLA.
 
 .TP
 .B negotiate
-Negotiate these security methods with clients.
+Negotiate these security methods with clients. TLS is offered by default. If
+\fBenable_nla\fP is true, NLA is also offered and is preferred when supported
+by the client.
 .RE
+
+.TP
+\fBenable_nla\fP=\fI[true|false]\fP
+If true and \fBsecurity_layer\fP is \fBnegotiate\fP, advertise CredSSP NLA
+alongside TLS. This setting defaults to false and has no effect when xrdp is
+built without NLA support. If the client selects NLA, authentication failure
+ends that connection rather than falling back to TLS. The \fBnla\fP security
+layer always requires NLA regardless of this setting.
 
 .TP
 \fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2] [TLSv1.3]\fP

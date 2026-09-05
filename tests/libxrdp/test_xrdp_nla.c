@@ -8,6 +8,21 @@
 #include "xrdp_client_info.h"
 #include "xrdp_nla.h"
 
+START_TEST(test_nla_configuration)
+{
+    struct xrdp_client_info client_info = {0};
+
+    ck_assert_int_eq(xrdp_nla_is_enabled(&client_info), 0);
+    client_info.enable_nla = 1;
+    ck_assert_int_ne(xrdp_nla_is_enabled(&client_info), 0);
+    client_info.security_layer = SECURITY_LAYER_TLS;
+    ck_assert_int_eq(xrdp_nla_is_enabled(&client_info), 0);
+    client_info.security_layer = SECURITY_LAYER_NLA;
+    client_info.enable_nla = 0;
+    ck_assert_int_ne(xrdp_nla_is_enabled(&client_info), 0);
+}
+END_TEST
+
 START_TEST(test_decode_password_credentials)
 {
     static const unsigned char credentials[] =
@@ -87,6 +102,7 @@ make_suite_test_xrdp_nla(void)
     Suite *suite = suite_create("xrdp_nla");
     TCase *test_case = tcase_create("CredSSP credentials");
 
+    tcase_add_test(test_case, test_nla_configuration);
     tcase_add_test(test_case, test_decode_password_credentials);
     tcase_add_test(test_case, test_reject_noncanonical_credentials);
     tcase_add_test(test_case, test_prepare_kerberos_wrap_token_for_sspi);

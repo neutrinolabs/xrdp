@@ -37,6 +37,16 @@
 #define ASN1_STRING_get0_data ASN1_STRING_data
 #endif
 
+/*****************************************************************************/
+int
+xrdp_nla_is_enabled(const struct xrdp_client_info *client_info)
+{
+    return client_info != NULL &&
+           (client_info->security_layer == SECURITY_LAYER_NLA ||
+            (client_info->security_layer == SECURITY_LAYER_NEGOTIATE &&
+             client_info->enable_nla));
+}
+
 typedef struct xrdp_nla_nego_token_st
 {
     ASN1_OCTET_STRING *nego_token;

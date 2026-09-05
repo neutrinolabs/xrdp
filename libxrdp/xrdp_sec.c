@@ -408,7 +408,13 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     const char *sep;
     char nla_ignored[INFO_CLIENT_MAX_CB_LEN];
     struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
-    int nla_authenticated = client_info->security_layer == SECURITY_LAYER_NLA;
+    int nla_authenticated = 0;
+
+#if defined(XRDP_NLA)
+    nla_authenticated =
+        self->mcs_layer->iso_layer->selectedProtocol == PROTOCOL_HYBRID &&
+        xrdp_nla_is_enabled(client_info);
+#endif
 
     if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_INFO_PACKET"))
     {
@@ -2437,7 +2443,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
 
 #if defined(XRDP_NLA)
         if (iso->selectedProtocol == PROTOCOL_HYBRID &&
-                self->rdp_layer->client_info.security_layer == SECURITY_LAYER_NLA &&
+                xrdp_nla_is_enabled(&self->rdp_layer->client_info) &&
                 xrdp_nla_accept(iso->trans,
                                 &self->rdp_layer->client_info) != 0)
         {

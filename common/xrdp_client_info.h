@@ -198,6 +198,7 @@ struct xrdp_client_info
     int require_credentials; /* when true, credentials *must* be passed on cmd line */
 
     int security_layer; /* SECURITY_LAYER_* */
+    int enable_nla; /* Offer NLA when security_layer is negotiate */
     int vmconnect; /* Used when used from inside Hyper-V */
 
     int multimon; /* 0 = deny , 1 = allow */

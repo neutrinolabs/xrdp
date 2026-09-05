@@ -11,6 +11,9 @@ struct trans;
 struct xrdp_client_info;
 
 int
+xrdp_nla_is_enabled(const struct xrdp_client_info *client_info);
+
+int
 xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info);
 
 int
