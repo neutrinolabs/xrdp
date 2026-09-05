@@ -1065,6 +1065,13 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
 
     if (result == 0)
     {
+        if (transform == XBLT_SCALE || transform == XBLT_ZOOM)
+        {
+            /* Keep filtered scaling from sampling beyond the image edges */
+            Imlib_Border border = {1, 1, 1, 1};
+            imlib_image_set_border(&border);
+        }
+
         switch (transform)
         {
             case XBLT_NONE:
