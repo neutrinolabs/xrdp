@@ -4,9 +4,8 @@ xrdp can require CredSSP Network Level Authentication (NLA) before starting
 the RDP session. CredSSP runs over TLS and uses SPNEGO to authenticate the
 client before the graphical login is created.
 
-NLA is disabled by default at runtime. The default `security_layer=negotiate`
-continues to offer TLS without NLA. Set `security_layer=nla` explicitly to
-enable it.
+NLA is disabled by default at runtime. Set `security_layer=nla` to require it,
+or set `enable_nla=true` with `security_layer=negotiate` to offer NLA and TLS.
 
 ## Requirements
 
@@ -86,7 +85,7 @@ installed and configured; xrdp does not include an NTLM implementation.
 
 ### xrdp.ini
 
-Configure the global security layer and TLS files:
+To require NLA, configure the global security layer and TLS files:
 
 ```ini
 [Globals]
@@ -95,8 +94,22 @@ certificate=/etc/xrdp/cert.pem
 key_file=/etc/xrdp/key.pem
 ```
 
-Restart xrdp after changing the service environment or `xrdp.ini`. A client
-which does not offer NLA is rejected before an RDP session is created.
+To prefer NLA while retaining TLS compatibility for clients which do not offer
+it, use:
+
+```ini
+[Globals]
+security_layer=negotiate
+enable_nla=true
+certificate=/etc/xrdp/cert.pem
+key_file=/etc/xrdp/key.pem
+```
+
+`enable_nla` defaults to `false` and only affects `security_layer=negotiate`.
+If the client selects NLA, an authentication failure ends that connection; it
+does not retry with TLS. Restart xrdp after changing the service environment or
+`xrdp.ini`. With `security_layer=nla`, a client which does not offer NLA is
+rejected before an RDP session is created.
 
 NLA supplies the delegated username, domain and password to the normal xrdp
 login flow. The session manager still applies its configured PAM and account
@@ -157,6 +170,14 @@ for an end-to-end desktop test. A ticket-only client may complete CredSSP
 without delegating a usable password; the later PAM login will then fail, as
 credential-less session logon is not supported.
 
+The NTLM path was tested end-to-end with Debian 12, `gss-ntlmssp` 1.2.0 and
+FreeRDP 2.11.7, both with required NLA and with `security_layer=negotiate` plus
+`enable_nla=true`. A valid password completed CredSSP and delegated password
+decoding; an invalid password returned `STATUS_LOGON_FAILURE` without falling
+back to TLS. With `enable_nla=false`, the same negotiation selected TLS and did
+not invoke GSSAPI. The `+auth-only` test does not create a graphical desktop or
+exercise the later PAM session login.
+
 Use a CA-trusted certificate for normal tests. For a disposable lab server
 with a self-signed certificate, `/cert:ignore` can be added temporarily; it
 must not be used as a production configuration.
@@ -199,7 +220,6 @@ a real GSSAPI acceptor.
 
 ## Not supported yet
 
-- enabling NLA as one choice under `security_layer=negotiate`;
 - CredSSP versions 2, 3 and 4;
 - CredSSP smart-card credentials (`TSSmartCardCreds`);
 - Restricted Admin mode and credential-less logon;
@@ -210,8 +230,9 @@ a real GSSAPI acceptor.
   GSSAPI configuration and `KRB5_KTNAME` environment variable instead.
 
 NTLM interoperability depends on the installed GSSAPI mechanism and still
-needs broader client and distribution coverage. Kerberos is the primary
-interoperability path for this initial implementation.
+needs broader client and distribution coverage beyond the tested combination
+above. Kerberos remains the primary interoperability path for this initial
+implementation.
 
 ## Protocol references
 

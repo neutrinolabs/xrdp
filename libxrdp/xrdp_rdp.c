@@ -215,6 +215,10 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
                 client_info->security_layer = SECURITY_LAYER_NEGOTIATE;
             }
         }
+        else if (g_strcasecmp(item, "enable_nla") == 0)
+        {
+            client_info->enable_nla = g_text2bool(value);
+        }
         else if (g_strcasecmp(item, "vmconnect") == 0)
         {
             client_info->vmconnect = g_text2bool(value);
