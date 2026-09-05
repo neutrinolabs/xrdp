@@ -21,6 +21,10 @@ Many of these work on some or all of Windows, Mac OS, iOS, and/or Android.
 
 RDP transport is encrypted using TLS by default.
 
+CredSSP Network Level Authentication is available as an opt-in feature. See
+[Network Level Authentication](docs/nla.md) for build, configuration and
+testing instructions, and the current limitations.
+
 ![Modern xrdp login followed by a successful connection to an Xfce desktop](docs/images/lvgl-demo.gif)
 
 The demo shows the [optional LVGL login interface](docs/lvgl.md).
