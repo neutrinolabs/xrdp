@@ -29,6 +29,10 @@
 #include "log.h"
 #include "string_calls.h"
 
+#if defined(XRDP_NLA)
+#include "xrdp_nla.h"
+#endif
+
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
 {
@@ -402,6 +406,9 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     unsigned int len_clnt_addr = 0;
     unsigned int len_clnt_dir = 0;
     const char *sep;
+    char nla_ignored[INFO_CLIENT_MAX_CB_LEN];
+    struct xrdp_client_info *client_info = &self->rdp_layer->client_info;
+    int nla_authenticated = client_info->security_layer == SECURITY_LAYER_NLA;
 
     if (!s_check_rem_and_log(s, 8, "Parsing [MS-RDPBCGR] TS_INFO_PACKET"))
     {
@@ -494,7 +501,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
      * always sends autologon credentials, even when user has not
      * configured any
      */
-    if (len_user == 0 && self->rdp_layer->client_info.rdp_autologin)
+    if (len_user == 0 && client_info->rdp_autologin && !nla_authenticated)
     {
         LOG(LOG_LEVEL_DEBUG, "Client supplied user name is empty, disabling autologin");
         self->rdp_layer->client_info.rdp_autologin = 0;
@@ -518,7 +525,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
      * Ignore autologin requests if the password is empty. System managers
      * who really want to allow empty passwords can do this with a
      * special session type */
-    if (len_password == 0 && self->rdp_layer->client_info.rdp_autologin)
+    if (len_password == 0 && client_info->rdp_autologin && !nla_authenticated)
     {
         LOG(LOG_LEVEL_DEBUG,
             "Client supplied password is empty, disabling autologin");
@@ -561,20 +568,24 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-    if (ts_info_utf16_in(s, len_domain, self->rdp_layer->client_info.domain, sizeof(self->rdp_layer->client_info.domain)) != 0)
+    if (ts_info_utf16_in(s, len_domain,
+                         nla_authenticated ? nla_ignored : client_info->domain,
+                         nla_authenticated ? sizeof(nla_ignored) : sizeof(client_info->domain)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "ERROR reading domain");
         return 1;
     }
 
-    if (ts_info_utf16_in(s, len_user, self->rdp_layer->client_info.username, sizeof(self->rdp_layer->client_info.username)) != 0)
+    if (ts_info_utf16_in(s, len_user,
+                         nla_authenticated ? nla_ignored : client_info->username,
+                         nla_authenticated ? sizeof(nla_ignored) : sizeof(client_info->username)) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "ERROR reading user name");
         return 1;
     }
 
     // If we require credentials, don't continue if they're not provided
-    if (self->rdp_layer->client_info.require_credentials)
+    if (client_info->require_credentials && !nla_authenticated)
     {
         if ((flags & INFO_AUTOLOGON) == 0)
         {
@@ -594,7 +605,9 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (flags & INFO_AUTOLOGON)
     {
-        if (ts_info_utf16_in(s, len_password, self->rdp_layer->client_info.password, sizeof(self->rdp_layer->client_info.password)) != 0)
+        if (ts_info_utf16_in(s, len_password,
+                             nla_authenticated ? nla_ignored : client_info->password,
+                             nla_authenticated ? sizeof(nla_ignored) : sizeof(client_info->password)) != 0)
         {
             LOG(LOG_LEVEL_ERROR, "ERROR reading password");
             return 1;
@@ -609,7 +622,8 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
         in_uint8s(s, len_password + 2);
     }
-    if (self->rdp_layer->client_info.enable_token_login
+    if (!nla_authenticated
+            && self->rdp_layer->client_info.enable_token_login
             && len_user > 0
             && len_password == 0
             && (sep = g_strchr(self->rdp_layer->client_info.username, '\x1f')) != NULL)
@@ -2420,6 +2434,17 @@ xrdp_sec_incoming(struct xrdp_sec *self)
         self->crypt_level = CRYPT_LEVEL_NONE;
         self->crypt_method = CRYPT_METHOD_NONE;
         self->rsa_key_bytes = 0;
+
+#if defined(XRDP_NLA)
+        if (iso->selectedProtocol == PROTOCOL_HYBRID &&
+                self->rdp_layer->client_info.security_layer == SECURITY_LAYER_NLA &&
+                xrdp_nla_accept(iso->trans,
+                                &self->rdp_layer->client_info) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "xrdp_sec_incoming: NLA failed");
+            return 1;
+        }
+#endif
 
     }
     else

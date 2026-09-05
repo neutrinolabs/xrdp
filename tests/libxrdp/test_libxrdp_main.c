@@ -14,6 +14,9 @@ int main (void)
 
     sr = srunner_create(make_suite_test_xrdp_sec_process_mcs_data_monitors());
     srunner_add_suite(sr, make_suite_test_monitor_processing());
+#if defined(XRDP_NLA)
+    srunner_add_suite(sr, make_suite_test_xrdp_nla());
+#endif
 
     srunner_set_tap(sr, "-");
 

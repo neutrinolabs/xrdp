@@ -1329,6 +1329,53 @@ ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
 }
 
 /*****************************************************************************/
+int
+ssl_tls_get_public_key(struct ssl_tls *self, unsigned char **data,
+                       unsigned int *length)
+{
+    X509 *cert;
+    EVP_PKEY *pkey;
+    unsigned char *p;
+    int len;
+
+    if (self == NULL || self->ssl == NULL || data == NULL || length == NULL)
+    {
+        return 1;
+    }
+
+    cert = SSL_get_certificate(self->ssl);
+    pkey = cert == NULL ? NULL : X509_get_pubkey(cert);
+    if (pkey == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to obtain the TLS certificate public key");
+        return 1;
+    }
+
+    len = i2d_PublicKey(pkey, NULL);
+    if (len <= 0)
+    {
+        EVP_PKEY_free(pkey);
+        LOG(LOG_LEVEL_ERROR, "Unable to encode the TLS certificate public key");
+        return 1;
+    }
+
+    *data = (unsigned char *)g_malloc(len, 0);
+    p = *data;
+    if (*data == NULL || i2d_PublicKey(pkey, &p) != len)
+    {
+        g_free(*data);
+        *data = NULL;
+        EVP_PKEY_free(pkey);
+        LOG(LOG_LEVEL_ERROR, "Unable to encode the TLS certificate public key");
+        return 1;
+    }
+
+    *length = len;
+    EVP_PKEY_free(pkey);
+    return 0;
+}
+
+/*****************************************************************************/
 /* returns error, */
 int
 ssl_tls_disconnect(struct ssl_tls *self)
@@ -1634,4 +1681,3 @@ const char
 #endif
 
 }
-

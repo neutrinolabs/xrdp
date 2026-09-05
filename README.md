@@ -91,6 +91,9 @@ you would need **openssl-devel**, **pam-devel**, **libX11-devel**,
 **libXfixes-devel**, **libXrandr-devel**. More additional software would
 be needed depending on your configuration.
 
+Network Level Authentication additionally requires the GSSAPI development
+files (**libkrb5-dev** on Debian/Ubuntu or **krb5-devel** on Fedora/RHEL).
+
 To compile xrdp from a checked out git repository, you would additionally
 need **autoconf**, **automake**, **libtool** and **pkg-config**.
 

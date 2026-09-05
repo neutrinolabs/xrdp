@@ -84,6 +84,7 @@ in
     amd64)
         PACKAGES_AMD64_MIN=" \
             libpam0g-dev \
+            libkrb5-dev \
             libssl-dev \
             libx11-dev \
             libxrandr-dev \
@@ -137,6 +138,7 @@ in
             libmp3lame-dev:i386 \
             libopus-dev:i386 \
             libpam0g-dev:i386 \
+            libkrb5-dev:i386 \
             libssl-dev:i386 \
             libx11-dev:i386 \
             libxext-dev:i386 \

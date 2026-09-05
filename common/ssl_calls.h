@@ -110,6 +110,9 @@ int
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length);
 int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis);
+int
+ssl_tls_get_public_key(struct ssl_tls *tls, unsigned char **data,
+                       unsigned int *length);
 const char *
 ssl_get_version(const struct ssl_tls *ssl);
 const char *
