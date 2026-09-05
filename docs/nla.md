@@ -106,10 +106,11 @@ key_file=/etc/xrdp/key.pem
 ```
 
 `enable_nla` defaults to `false` and only affects `security_layer=negotiate`.
-If the client selects NLA, an authentication failure ends that connection; it
-does not retry with TLS. Restart xrdp after changing the service environment or
-`xrdp.ini`. With `security_layer=nla`, a client which does not offer NLA is
-rejected before an RDP session is created.
+When a client offers both NLA and TLS, xrdp selects NLA. If the client selects
+NLA, an authentication failure ends that connection; it does not retry with
+TLS. Restart xrdp after changing the service environment or `xrdp.ini`. With
+`security_layer=nla`, a client which does not offer NLA is rejected before an
+RDP session is created.
 
 NLA supplies the delegated username, domain and password to the normal xrdp
 login flow. The session manager still applies its configured PAM and account
@@ -175,14 +176,18 @@ FreeRDP 2.11.7, both with required NLA and with `security_layer=negotiate` plus
 `enable_nla=true`. A valid password completed CredSSP and delegated password
 decoding; an invalid password returned `STATUS_LOGON_FAILURE` without falling
 back to TLS. With `enable_nla=false`, the same negotiation selected TLS and did
-not invoke GSSAPI. The `+auth-only` test does not create a graphical desktop or
-exercise the later PAM session login.
+not invoke GSSAPI. A FreeRDP Kerberos/CredSSP handshake was also exercised. The
+`+auth-only` test does not create a graphical desktop or exercise the later PAM
+session login.
 
 Use a CA-trusted certificate for normal tests. For a disposable lab server
 with a self-signed certificate, `/cert:ignore` can be added temporarily; it
 must not be used as a production configuration.
 
 ## Test with Windows MSTSC
+
+This procedure has not yet been exercised against this implementation and
+remains an interoperability test gap.
 
 Test from a Windows client which can resolve the server name and reach the
 domain controller:
@@ -217,6 +222,10 @@ make -C tests/libxrdp check
 
 These tests do not replace an interoperability test with FreeRDP or MSTSC and
 a real GSSAPI acceptor.
+
+The initial implementation also passed the full project CI matrix, including
+GCC, G++, Clang, 32-bit builds, ASan, UBSan, cppcheck, and FreeBSD 14.4 and 15.0
+with both OpenSSL and LibreSSL.
 
 ## Not supported yet
 
