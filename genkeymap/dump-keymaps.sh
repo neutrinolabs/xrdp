@@ -86,6 +86,7 @@ kbgen 0415 "pl-PL"        "$os" -model pc104 -layout pl
 kbgen 0416 "pt-BR"        "$os" -model pc105 -layout br
 kbgen 0419 "ru-RU"        "$os" -model pc104 -layout ru
 kbgen 041d "sv-SE"        "$os" -model pc104 -layout se
+kbgen 041f "tr-TR"        "$os" -model pc105 -layout se
 kbgen 0424 "sl-SI"        "$os" -model pc104 -layout si
 kbgen 0426 "lv-LV"        "$os" -model pc104 -layout lv -variant ergonomic
 kbgen 10426 "lv-LV"       "$os" -model pc104 -layout lv
