@@ -580,4 +580,10 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
 int
 xrdp_mm_ccp_data_in(struct trans *trans);
 
+int
+xrdp_prompt_create(struct xrdp_bitmap *wnd, struct xrdp_bitmap **prompt_wnd);
+int
+xrdp_prompt_add_prompt(struct xrdp_bitmap *prompt_wnd, const char *prompt,
+                       int hide_chars);
+
 #endif

@@ -227,6 +227,11 @@ xrdp_bitmap_delete(struct xrdp_bitmap *self)
         {
             self->wm->log_wnd = 0;
         }
+
+        if (self->wm->prompt_wnd == self)
+        {
+            self->wm->prompt_wnd = NULL;
+        }
     }
 
     if (self->child_list != 0)

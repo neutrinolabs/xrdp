@@ -31,7 +31,9 @@
  * Opaque type used to represent an authentication handle
  */
 struct auth_info;
+
 #include "scp_application_types.h"
+#include "trans.h"
 
 /**
  *
@@ -45,7 +47,8 @@ struct auth_info;
  */
 struct auth_info *
 auth_userpass(const char *user, const char *pass,
-              const char *client_ip, enum scp_login_status *errorcode);
+              const char *client_ip, enum scp_login_status *errorcode,
+              struct trans *scp_trans);
 
 /**
  *

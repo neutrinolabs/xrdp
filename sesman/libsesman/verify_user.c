@@ -63,7 +63,8 @@ struct auth_info
 /* returns non-NULL for success */
 struct auth_info *
 auth_userpass(const char *user, const char *pass,
-              const char *client_ip, enum scp_login_status *errorcode)
+              const char *client_ip, enum scp_login_status *errorcode,
+              struct trans *scp_trans)
 {
     const char *encr = NULL;
     struct passwd *spw;
