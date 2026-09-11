@@ -1785,6 +1785,139 @@ fake_kbd_event_from_scancode_index(struct xrdp_wm *self, int device_flags,
 }
 
 /*****************************************************************************/
+#define BRACKETED_PASTE_SEQ_LEN 6
+
+/* Guacamole and mobile RDP clients may deliver pasted text as Unicode input
+ * events wrapped in terminal bracketed-paste delimiters. These markers are not
+ * user text, so strip them while preserving all other Unicode codepoints. */
+static const char32_t g_bracketed_paste_start[BRACKETED_PASTE_SEQ_LEN] =
+{ 0x1b, '[', '2', '0', '0', '~' };
+static const char32_t g_bracketed_paste_end[BRACKETED_PASTE_SEQ_LEN] =
+{ 0x1b, '[', '2', '0', '1', '~' };
+
+static int
+xrdp_wm_send_unicode_to_backend(struct xrdp_wm *self, char32_t unicode)
+{
+    if (self == NULL || self->mm == NULL || self->mm->mod == NULL ||
+            self->mm->mod->mod_event == NULL)
+    {
+        return 1;
+    }
+
+    /* Pass the codepoint over the normal Xorg backend input path. This avoids a
+     * separate channel and lets xorgxrdp inject text in the Xorg input driver. */
+    return self->mm->mod->mod_event(self->mm->mod, WM_UNICODE_INPUT,
+                                    unicode, 0, 0, 0);
+}
+
+/*****************************************************************************/
+static int
+unicode_pending_matches(struct xrdp_wm *self, const char32_t *sequence,
+                        unsigned int sequence_len)
+{
+    unsigned int index;
+
+    if (self->unicode_pending_chars_len > sequence_len)
+    {
+        return 0;
+    }
+
+    for (index = 0; index < self->unicode_pending_chars_len; ++index)
+    {
+        if (self->unicode_pending_chars[index] != sequence[index])
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/*****************************************************************************/
+static int
+unicode_pending_is_bracketed_paste_prefix(struct xrdp_wm *self)
+{
+    return unicode_pending_matches(self, g_bracketed_paste_start,
+                                   BRACKETED_PASTE_SEQ_LEN) ||
+           unicode_pending_matches(self, g_bracketed_paste_end,
+                                   BRACKETED_PASTE_SEQ_LEN);
+}
+
+/*****************************************************************************/
+static int
+unicode_pending_is_bracketed_paste_sequence(struct xrdp_wm *self)
+{
+    return self->unicode_pending_chars_len == BRACKETED_PASTE_SEQ_LEN &&
+           unicode_pending_is_bracketed_paste_prefix(self);
+}
+
+/*****************************************************************************/
+static int
+xrdp_wm_flush_pending_unicode_chars(struct xrdp_wm *self)
+{
+    unsigned int index;
+    int rv;
+
+    rv = 0;
+    for (index = 0; index < self->unicode_pending_chars_len; ++index)
+    {
+        if (xrdp_wm_send_unicode_to_backend(self,
+                                            self->unicode_pending_chars[index]) != 0)
+        {
+            rv = 1;
+        }
+    }
+    self->unicode_pending_chars_len = 0;
+
+    return rv;
+}
+
+/*****************************************************************************/
+static int
+xrdp_wm_send_unicode_filtered(struct xrdp_wm *self, char32_t unicode)
+{
+    int rv;
+
+    /* Fast path for normal text. Only ESC can start a bracketed-paste marker,
+     * so most mobile/Guacamole Unicode input is forwarded immediately. */
+    if (self->unicode_pending_chars_len == 0 && unicode != 0x1b)
+    {
+        return xrdp_wm_send_unicode_to_backend(self, unicode);
+    }
+
+    rv = 0;
+    if (self->unicode_pending_chars_len >= BRACKETED_PASTE_SEQ_LEN)
+    {
+        rv = xrdp_wm_flush_pending_unicode_chars(self);
+    }
+
+    if (self->unicode_pending_chars_len == 0 && unicode != 0x1b)
+    {
+        return xrdp_wm_send_unicode_to_backend(self, unicode) != 0 ? 1 : rv;
+    }
+
+    self->unicode_pending_chars[self->unicode_pending_chars_len++] = unicode;
+
+    if (unicode_pending_is_bracketed_paste_sequence(self))
+    {
+        self->unicode_pending_chars_len = 0;
+        return rv;
+    }
+
+    if (unicode_pending_is_bracketed_paste_prefix(self))
+    {
+        return rv;
+    }
+
+    if (xrdp_wm_flush_pending_unicode_chars(self) != 0)
+    {
+        rv = 1;
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
 static int
 xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
 {
@@ -1794,6 +1927,18 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
     if (c32 == 0)
     {
         return 0;
+    }
+
+    if (self->mm != NULL && self->mm->code == XORG_SESSION_CODE)
+    {
+        if ((device_flags & KBDFLAGS_RELEASE) != 0)
+        {
+            return 0;
+        }
+        if (xrdp_wm_send_unicode_filtered(self, c32) == 0)
+        {
+            return 0;
+        }
     }
 
     // See if we can find the character in the existing keymap,
