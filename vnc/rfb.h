@@ -64,13 +64,15 @@ enum sec_type
     SEC_TYPE_INVALID = 0,
     SEC_TYPE_NONE = 1,
     SEC_TYPE_VNC_AUTH = 2,
-    SEC_TYPE_MAX = SEC_TYPE_VNC_AUTH // Max supported security type
+    SEC_TYPE_APPLE_ARD = 30,  // Apple Remote Desktop authentication
+    SEC_TYPE_MAX = SEC_TYPE_APPLE_ARD // Max supported security type
 };
 
 #define SEC_TYPE_TO_STR(st) \
     (((st) == SEC_TYPE_INVALID) ? "Invalid" : \
      ((st) == SEC_TYPE_NONE) ? "None" : \
-     ((st) == SEC_TYPE_VNC_AUTH) ? "VNC Auth" : "Unknown")
+     ((st) == SEC_TYPE_VNC_AUTH) ? "VNC Auth" : \
+     ((st) == SEC_TYPE_APPLE_ARD) ? "Apple ARD" : "Unknown")
 
 /* Constructs an RFB version from a major and minor version */
 #define MAKE_RFBPROTO_VER(maj,min) ((maj * 1000) + (min))

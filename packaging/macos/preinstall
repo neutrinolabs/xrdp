@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# xrdp pre-installation script for macOS
+#
+
+set -e
+
+LAUNCHD_DIR="/Library/LaunchDaemons"
+
+echo "Preparing xrdp installation..."
+
+# Stop existing services if running
+echo "Stopping existing xrdp services..."
+launchctl unload "$LAUNCHD_DIR/com.xrdp.xrdp.plist" 2>/dev/null || true
+launchctl unload "$LAUNCHD_DIR/com.xrdp.sesman.plist" 2>/dev/null || true
+
+# Kill any running xrdp processes
+pkill -f xrdp-sesman 2>/dev/null || true
+pkill -f "xrdp " 2>/dev/null || true
+
+# Wait for processes to stop
+sleep 1
+
+echo "Ready to install xrdp."
+
+exit 0
