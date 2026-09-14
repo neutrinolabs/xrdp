@@ -205,6 +205,20 @@ xrdp_cache_reset(struct xrdp_cache *self,
     self->pointer_cache_entries = client_info->pointer_cache_entries;
     xrdp_cache_reset_lru(self);
     xrdp_cache_reset_crc(self);
+    /* The pointer cache is now empty on both sides. Invalidate the
+       window manager's pointer bookkeeping so a cached-pointer update
+       can never reference a slot that was discarded by this reset.
+       Without this, the first pointer change after a
+       deactivation-reactivation sends TS_FP_CACHEDPOINTERATTRIBUTE for
+       a stale slot index; clients which drop their pointer cache on
+       reactivation (FreeRDP >= 3.31.0) terminate the connection.
+       The next module pointer update is re-added to the cache and sent
+       as a new pointer */
+    wm->current_pointer = 0;
+    if (wm->screen != NULL)
+    {
+        wm->screen->pointer = 0;
+    }
     return 0;
 }
 
