@@ -2,6 +2,8 @@
 #include "config_ac.h"
 #endif
 
+#include <stdio.h>
+
 #include "xrdp.h"
 
 #include "test_xrdp.h"
@@ -56,6 +58,90 @@ static void teardown(void)
 {
 }
 
+// Name of last bitmap saved
+static char save_bitmap_name[128];
+
+// Puts a little-endian integer to a file.
+static void
+fput_int(unsigned int v, unsigned int bytes, FILE *fd)
+{
+    while (bytes > 0)
+    {
+        fputc(v % 256, fd);
+        v /= 256;
+        --bytes;
+    }
+}
+
+static void
+save_bitmap(struct xrdp_bitmap *bm)
+{
+    int i;
+    // Find a spare filename. We can't use a static variable for this, as if
+    // there are several failures, the static variable will always have
+    // the same value
+    for (i = 1 ; i < 100 ; ++i)
+    {
+        snprintf(save_bitmap_name, sizeof(save_bitmap_name),
+                 "/tmp/fail%d.bmp", i);
+        if (!g_file_exist(save_bitmap_name))
+        {
+            break;
+        }
+    }
+    int stride = bm->width * 3; // 24 bpp
+    int pad = 0;
+    // Round stride up to 4 bytes
+    if (stride % 4 != 0)
+    {
+        pad = 4 - (stride % 4);
+        stride += pad;
+    }
+    int data_size = stride * bm->height;
+    // Need BITMAPFILEHEADER and BITMAPINFOHEADER, in addition
+    // to the data
+    int file_size = 14 + 40 + data_size;
+    FILE *fd = fopen(save_bitmap_name, "w");
+    if (fd == NULL)
+    {
+        strlcpy(save_bitmap_name, "<none>", sizeof(save_bitmap_name));
+    }
+    else
+    {
+        int x;
+        int y;
+        /* BITMAPFILEHEADER (14 bytes) */
+        fputc('B', fd); // bfType
+        fputc('M', fd); // bfType
+        fput_int(file_size, 4, fd); // bfSize
+        fput_int(0, 4, fd); // bfReserved1 + bfReserved2
+        fput_int(14 + 40, 4, fd); // bfOffbits
+
+        /* BITMAPINFOHEADER (40 bytes) */
+        fput_int(40, 4, fd); // biSize
+        fput_int(bm->width, 4, fd); // biWidth
+        fput_int(bm->height, 4, fd); // biHeight
+        fput_int(1, 2, fd); // biPlanes
+        fput_int(24, 2, fd); // biBitCount
+        fput_int(0, 4, fd); // biCompression
+        fput_int(data_size, 4, fd); // biSizeImage
+        fput_int(0, 4, fd); // biXPelsPerMeter
+        fput_int(0, 4, fd); // biYPelsPerMeter
+        fput_int(0, 4, fd); // biClrUsed
+        fput_int(0, 4, fd); // biClrImportant
+        for (y = bm->height - 1 ; y >= 0 ; --y)
+        {
+            for (x = 0; x < bm->width ; ++x)
+            {
+                int pixel = xrdp_bitmap_get_pixel(bm, x, y);
+                fput_int(pixel, 3, fd);
+            }
+            fput_int(0, pad, fd);
+        }
+        fclose(fd);
+    }
+}
+
 /* Tests an error is returned for a non-existent file */
 START_TEST(test_bitmap_load__with_invalid_image__fail)
 {
@@ -81,8 +167,10 @@ check_pixel(struct xrdp_bitmap *bm, int i, int j, int expected)
     int pixel = xrdp_bitmap_get_pixel(bm, i, j);
     if (pixel != expected)
     {
-        ck_abort_msg("Pixmap (%d,%d) expected 0x%06x, got 0x%06x",
-                     i, j, expected, pixel);
+        save_bitmap(bm);
+        ck_abort_msg("Pixmap (%d,%d) expected 0x%06x, got 0x%06x."
+                     " Bitmap %s saved",
+                     i, j, expected, pixel, save_bitmap_name);
     }
 }
 
@@ -108,9 +196,12 @@ check_is_close_color(struct xrdp_bitmap *bm, int i, int j, int expected)
 
     if (variance > MAX_SIMILAR_COLOR_DISTANCE * MAX_SIMILAR_COLOR_DISTANCE)
     {
+        save_bitmap(bm);
         ck_abort_msg("Pixmap (%d,%d) expected 0x%06x, got 0x%06x"
-                     " which exceeds distance of %d",
-                     i, j, expected, pixel, MAX_SIMILAR_COLOR_DISTANCE);
+                     " which exceeds distance of %d."
+                     " Bitmap %s saved.",
+                     i, j, expected, pixel, MAX_SIMILAR_COLOR_DISTANCE,
+                     save_bitmap_name);
     }
 }
 
