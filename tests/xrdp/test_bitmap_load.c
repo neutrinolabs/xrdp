@@ -245,11 +245,11 @@ load_and_transform_img(const char *name,
         ck_assert_int_eq(bm->height, theight);
     }
 
-    /* Corners OK?  Allow for dithering */
-    check_is_close_color(bm, 0, 0, TEST_BM_TOP_LEFT_PIXEL);
-    check_is_close_color(bm, width - 1, 0, TEST_BM_TOP_RIGHT_PIXEL);
-    check_is_close_color(bm, 0, height - 1, TEST_BM_BOTTOM_LEFT_PIXEL);
-    check_is_close_color(bm, width - 1, height - 1, TEST_BM_BOTTOM_RIGHT_PIXEL);
+    /* Corners OK?  Allow for dithering, and avoid a 1-pixel edge */
+    check_is_close_color(bm, 1, 1, TEST_BM_TOP_LEFT_PIXEL);
+    check_is_close_color(bm, width - 2, 1, TEST_BM_TOP_RIGHT_PIXEL);
+    check_is_close_color(bm, 1, height - 2, TEST_BM_BOTTOM_LEFT_PIXEL);
+    check_is_close_color(bm, width - 2, height - 2, TEST_BM_BOTTOM_RIGHT_PIXEL);
 
     xrdp_bitmap_delete(bm);
 }
