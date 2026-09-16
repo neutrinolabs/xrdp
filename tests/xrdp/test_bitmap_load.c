@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "xrdp.h"
+#include "string_calls.h"
 
 #include "test_xrdp.h"
 
