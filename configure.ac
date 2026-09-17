@@ -124,6 +124,10 @@ AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [], [enable_neutrinordp=no])
 AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$enable_neutrinordp = xyes])
 
+AC_ARG_ENABLE(nla, AS_HELP_STRING([--enable-nla],
+              [Build Network Level Authentication support (default: auto)]),
+              [], [enable_nla=auto])
+
 AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
               [], [enable_jpeg=no])
@@ -438,6 +442,41 @@ fi
 
 AS_IF( [test "x$enable_neutrinordp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
+# Network Level Authentication uses the platform GSSAPI implementation for
+# SPNEGO, Kerberos and any installed NTLM mechanism.
+have_nla=no
+if test "x$enable_nla" != xno; then
+  AC_PATH_PROG([KRB5_CONFIG], [krb5-config], [no])
+  if test "x$KRB5_CONFIG" != xno; then
+    GSSAPI_CFLAGS=`$KRB5_CONFIG --cflags gssapi`
+    GSSAPI_LIBS=`$KRB5_CONFIG --libs gssapi`
+    save_CPPFLAGS="$CPPFLAGS"
+    save_LIBS="$LIBS"
+    CPPFLAGS="$CPPFLAGS $GSSAPI_CFLAGS"
+    LIBS="$GSSAPI_LIBS $LIBS"
+    AC_LINK_IFELSE(
+      [AC_LANG_PROGRAM([[#include <gssapi/gssapi.h>]],
+                       [[OM_uint32 minor;
+                         gss_ctx_id_t context = GSS_C_NO_CONTEXT;
+                         gss_delete_sec_context(&minor, &context,
+                                                GSS_C_NO_BUFFER);]])],
+      [have_nla=yes])
+    CPPFLAGS="$save_CPPFLAGS"
+    LIBS="$save_LIBS"
+  fi
+fi
+
+if test "x$have_nla" = xyes; then
+  AC_DEFINE([XRDP_NLA], [1], [Build Network Level Authentication support])
+  AC_SUBST([GSSAPI_CFLAGS])
+  AC_SUBST([GSSAPI_LIBS])
+elif test "x$enable_nla" = xyes; then
+  AC_MSG_ERROR([NLA requested but GSSAPI development files were not found])
+elif test "x$enable_nla" = xauto; then
+  AC_MSG_NOTICE([GSSAPI not found; NLA support will not be built])
+fi
+AM_CONDITIONAL(XRDP_NLA, [test x$have_nla = xyes])
+
 # checking for libjpeg
 if test "x$enable_jpeg" = "xyes"
 then
@@ -697,6 +736,7 @@ echo "  ipv6                            $enable_ipv6"
 echo "  ipv6only                        $enable_ipv6only"
 echo "  vsock                           $enable_vsock"
 echo "  ibus                            $enable_ibus"
+echo "  nla                             $have_nla"
 echo "  auth mechanism                  $auth_mech"
 echo "  rdpsndaudin                     $enable_rdpsndaudin"
 echo "  smartcard (not for production)  $enable_smartcard"

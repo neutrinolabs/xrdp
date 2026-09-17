@@ -2,7 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2004-2014
- * Copyright (C) Idan Freiberg 2013-2014
+ * Copyright (C) Idan Freiberg 2013-2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,6 +110,9 @@ int
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length);
 int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis);
+int
+ssl_tls_get_public_key(struct ssl_tls *tls, unsigned char **data,
+                       unsigned int *length);
 const char *
 ssl_get_version(const struct ssl_tls *ssl);
 const char *

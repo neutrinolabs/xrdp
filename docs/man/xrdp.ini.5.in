@@ -80,7 +80,8 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bu
 Set location of TLS certificate and private key. They must be written in PEM format.
 If not specified, defaults to \fB@sysconfdir@/@sysconfsubdir@/cert.pem\fP, \fB@sysconfdir@/@sysconfsubdir@/key.pem\fP.
 
-This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP,
+\fBnla\fP or \fBnegotiate\fP.
 
 .TP
 \fBtls_pms_log_file\fR=\fI<path-to-log-file>\fR
@@ -206,7 +207,7 @@ fail without displaying the login screen.  If not specified, defaults
 to \fBfalse\fP.
 
 .TP
-\fBsecurity_layer\fP=\fI[tls|rdp|negotiate]\fP
+\fBsecurity_layer\fP=\fI[tls|rdp|nla|negotiate]\fP
 Regulate security methods. If not specified, defaults to \fBnegotiate\fP.
 .RS 8
 .TP
@@ -221,15 +222,36 @@ of Classic RDP Security is controlled by \fBcrypt_level\fP.
 Use this setting for testing only.
 
 .TP
+.B nla
+TLS security with CredSSP Network Level Authentication is required.
+This option is available only when xrdp is built with GSSAPI support.
+The GSSAPI acceptor must have access to a Kerberos keytab containing the
+\fBTERMSRV/hostname\fP service principal. NTLM fallback additionally requires
+an installed GSSAPI NTLM mechanism such as \fBgss-ntlmssp\fP and its configured
+credential provider. CredSSP version 5 or later with password credentials is
+supported; smart cards, Restricted Admin and Remote Credential Guard are not.
+
+.TP
 .B negotiate
-Negotiate these security methods with clients.
+Negotiate these security methods with clients. TLS is offered by default. If
+\fBenable_nla\fP is true, NLA is also offered and is preferred when supported
+by the client.
 .RE
+
+.TP
+\fBenable_nla\fP=\fI[true|false]\fP
+If true and \fBsecurity_layer\fP is \fBnegotiate\fP, advertise CredSSP NLA
+alongside TLS. This setting defaults to false and has no effect when xrdp is
+built without NLA support. If the client selects NLA, authentication failure
+ends that connection rather than falling back to TLS. The \fBnla\fP security
+layer always requires NLA regardless of this setting.
 
 .TP
 \fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2] [TLSv1.3]\fP
 Enables the specified SSL/TLS protocols. Each value should be separated by comma.
 SSLv2 is always disabled. At least one protocol should be given to accept TLS connections.
-This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP,
+\fBnla\fP or \fBnegotiate\fP.
 
 .TP
 \fBtcp_keepalive\fP=\fI[true|false]\fP
@@ -257,7 +279,8 @@ to which \fBopenssl\fP(1) ciphers subcommand accepts.
 
 (ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
 
-This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP,
+\fBnla\fP or \fBnegotiate\fP.
 
 .TP
 \fBuse_fastpath\fP=\fI[input|output|both|none]\fP
