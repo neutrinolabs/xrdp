@@ -28,6 +28,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include "xrdp_login_clip.h"
 
 // For a very few key functions, using the keysym is preferable to the
 // raw scancode. Here are defines to avoid pulling an X11 dependency
@@ -1250,6 +1251,19 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
                     self->edit_pos = 0;
                     xrdp_bitmap_invalidate(self, 0);
                 }
+            }
+            /* paste - Ctrl+V or Shift+Insert */
+            else if (xrdp_login_clip_is_paste_key(self->wm->keys,
+                                                  scan_code, ki))
+            {
+                /* Swallowing the keypress matters even when the clipboard
+                 * module is absent: without it, Ctrl+V falls through to
+                 * the printing-character case and inserts a literal 'v'.
+                 * xrdp_login_clip_request_paste() is NULL-safe. Its
+                 * return value (whether a request was actually sent) is
+                 * deliberately ignored - there is nothing useful to do
+                 * with a 0 here. */
+                xrdp_login_clip_request_paste(self->wm->login_clip);
             }
             else
             {
