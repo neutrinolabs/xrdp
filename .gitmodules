@@ -8,3 +8,8 @@
 	url = https://github.com/neutrinolabs/libpainter.git
 	branch = .
 	ignore = untracked
+[submodule "libbulk"]
+	path = libbulk
+	url = https://github.com/neutrinolabs/libbulk.git
+        branch = .
+        ignore = untracked

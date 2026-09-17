@@ -98,3 +98,9 @@ test_xrdp_LDADD += \
     $(top_builddir)/xrdp/xrdp_encoder_openh264.o \
     $(XRDP_OPENH264_LIBS)
 endif
+
+if XRDP_BULK
+AM_CPPFLAGS += -DXRDP_BULK
+test_xrdp_LDADD += \
+    $(top_builddir)/libbulk/src/.libs/libbulkrdp8compress.a
+endif

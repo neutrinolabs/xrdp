@@ -17,7 +17,7 @@ if test "x$PKG_CONFIG" = "x"; then
   AC_MSG_ERROR([please install pkg-config])
 fi
 
-AC_CONFIG_SUBDIRS([libpainter librfxcodec])
+AC_CONFIG_SUBDIRS([libpainter librfxcodec libbulk])
 
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -181,6 +181,10 @@ AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
               [Do not use included painter library (default: no)]),
               [], [enable_painter=yes])
 AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
+AC_ARG_ENABLE(bulk, AS_HELP_STRING([--disable-bulk],
+              [Do not use included bulk library (default: no)]),
+              [], [enable_bulk=yes])
+AM_CONDITIONAL(XRDP_BULK, [test x$enable_bulk = xyes])
 
 AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
               [Do not use included librfxcodec library (default: no)]),
@@ -691,6 +695,7 @@ echo "  openh264                        $enable_openh264"
 echo "  nvenc                           $enable_nvenc"
 echo "  accel                           $enable_accel"
 echo "  painter                         $enable_painter"
+echo "  bulk.                           $enable_bulk"
 echo "  pixman                          $enable_pixman"
 echo "  fuse                            $enable_fuse"
 echo "  ipv6                            $enable_ipv6"

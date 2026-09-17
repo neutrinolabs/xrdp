@@ -34,6 +34,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(XRDP_BULK)
+#include "bulk_rdp8_compress.h"
+#endif
+
 #include "arch.h"
 #include "os_calls.h"
 #include "parse.h"
@@ -45,6 +49,61 @@
 
 #define MAX_PART_SIZE 0xFFFF
 #define PACKET_COMPR_TYPE_RDP8 0x04 /* MS-RDPEGFX 2.2.5.3 */
+
+/* if you want to dump the uncompressed and compressed data for debugging */
+#if 0
+
+#define SAVE_UDATA(_data, _data_bytes) save_udata(_data, _data_bytes)
+#define SAVE_CDATA(_data, _data_bytes) save_cdata(_data, _data_bytes)
+
+static int g_udata_index = 0;
+
+/******************************************************************************/
+static int
+save_udata(const char *udata, int udata_bytes)
+{
+    char filename[256];
+    int fd;
+    int rv;
+
+    g_snprintf(filename, 256, "/tmp/udata%4.4X.bin", g_udata_index++);
+    fd = g_file_open_ex(filename, 1, 1, 1, 1);
+    if (fd == -1)
+    {
+        return 1;
+    }
+    rv = g_file_write(fd, udata, udata_bytes) == udata_bytes;
+    g_file_close(fd);
+    return rv;
+}
+
+static int g_cdata_index = 0;
+
+/******************************************************************************/
+static int
+save_cdata(const char *cdata, int cdata_bytes)
+{
+    char filename[256];
+    int fd;
+    int rv;
+
+    g_snprintf(filename, 256, "/tmp/cdata%4.4X.bin", g_cdata_index++);
+    fd = g_file_open_ex(filename, 1, 1, 1, 1);
+    if (fd == -1)
+    {
+        return 1;
+    }
+    rv = g_file_write(fd, cdata, cdata_bytes) == cdata_bytes;
+    g_file_close(fd);
+    return rv;
+}
+
+#else
+
+#define SAVE_UDATA(_data, _data_bytes)
+#define SAVE_CDATA(_data, _data_bytes)
+
+#endif
 
 /******************************************************************************/
 int
@@ -105,6 +164,12 @@ xrdp_egfx_create_surface(struct xrdp_egfx_bulk *bulk, int surface_id,
 {
     int bytes;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_create_surface:");
     make_stream(s);
@@ -112,19 +177,36 @@ xrdp_egfx_create_surface(struct xrdp_egfx_bulk *bulk, int surface_id,
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_CREATESURFACE); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint16_le(s, surface_id);
     out_uint16_le(s, width);
     out_uint16_le(s, height);
     out_uint8(s, pixel_format);
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_CREATESURFACE); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_create_surface: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -152,23 +234,46 @@ xrdp_egfx_delete_surface(struct xrdp_egfx_bulk *bulk, int surface_id)
 {
     int bytes;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_delete_surface:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_delete_surface:");
     make_stream(s);
     init_stream(s, 8192);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_DELETESURFACE); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint16_le(s, surface_id);
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_DELETESURFACE); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_delete_surface: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -195,26 +300,49 @@ xrdp_egfx_map_surface(struct xrdp_egfx_bulk *bulk, int surface_id,
 {
     int bytes;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface:");
     make_stream(s);
     init_stream(s, 8192);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_MAPSURFACETOOUTPUT); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint16_le(s, surface_id);
     out_uint16_le(s, 0);
     out_uint32_le(s, x);
     out_uint32_le(s, y);
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_MAPSURFACETOOUTPUT); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -244,18 +372,22 @@ xrdp_egfx_fill_surface(struct xrdp_egfx_bulk *bulk, int surface_id,
     int bytes;
     int index;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_fill_surface:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_fill_surface:");
     make_stream(s);
     init_stream(s, 1024 + num_rects * 8);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_SOLIDFILL); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint16_le(s, surface_id);
     out_uint32_le(s, fill_color);
     out_uint16_le(s, num_rects);
@@ -267,9 +399,28 @@ xrdp_egfx_fill_surface(struct xrdp_egfx_bulk *bulk, int surface_id,
         out_uint16_le(s, rects[index].y2);
     }
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_SOLIDFILL); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_fill_surface: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -303,18 +454,22 @@ xrdp_egfx_surface_to_surface(struct xrdp_egfx_bulk *bulk, int src_surface_id,
     int bytes;
     int index;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_surface_to_surface:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_surface_to_surface:");
     make_stream(s);
     init_stream(s, 1024 + num_dst_points * 4);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_SURFACETOSURFACE); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint16_le(s, src_surface_id);
     out_uint16_le(s, dst_surface_id);
     out_uint16_le(s, src_rect->x1);
@@ -328,9 +483,28 @@ xrdp_egfx_surface_to_surface(struct xrdp_egfx_bulk *bulk, int src_surface_id,
         out_uint16_le(s, dst_points[index].y);
     }
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_SURFACETOSURFACE); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_surface_to_surface: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -362,24 +536,47 @@ xrdp_egfx_frame_start(struct xrdp_egfx_bulk *bulk, int frame_id, int timestamp)
 {
     int bytes;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_frame_start:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_frame_start:");
     make_stream(s);
     init_stream(s, 8192);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_STARTFRAME); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint32_le(s, timestamp);
     out_uint32_le(s, frame_id);
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_STARTFRAME); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_frame_start: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -408,23 +605,46 @@ xrdp_egfx_frame_end(struct xrdp_egfx_bulk *bulk, int frame_id)
 {
     int bytes;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_frame_end:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_frame_end:");
     make_stream(s);
     init_stream(s, 8192);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_ENDFRAME); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint32_le(s, frame_id);
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_ENDFRAME); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_frame_end: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -449,29 +669,52 @@ xrdp_egfx_send_frame_end(struct xrdp_egfx *egfx, int frame_id)
 
 /******************************************************************************/
 struct stream *
-xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int flags)
+xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int lflags)
 {
     int bytes;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_capsconfirm:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_capsconfirm:");
     make_stream(s);
     init_stream(s, 8192);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-    /* RDPGFX_HEADER */
-    out_uint16_le(s, XR_RDPGFX_CMDID_CAPSCONFIRM); /* cmdId */
-    out_uint16_le(s, 0); /* flags = 0 */
-    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
+    s_push_layer(s, iso_hdr, 8); /* RDPGFX_HEADER, pduLength, set later */
     out_uint32_le(s, version); /* version */
     out_uint32_le(s, 4); /* capsDataLength */
-    out_uint32_le(s, flags);
+    out_uint32_le(s, lflags);
     s_mark_end(s);
-    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    bytes = (int) (s->end - s->iso_hdr);
     s_pop_layer(s, iso_hdr);
+    out_uint16_le(s, XR_RDPGFX_CMDID_CAPSCONFIRM); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, bytes);
+#if defined(XRDP_BULK)
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_capsconfirm: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -501,24 +744,34 @@ xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
     int bytes;
     int index;
     int segment_size;
+    int calc_segment_count;
     int segment_count;
     struct stream *s;
     char *bitmap_data8;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface1:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface1:");
     make_stream(s);
+    calc_segment_count = bitmap_data_length / MAX_PART_SIZE + 2;
     bytes = bitmap_data_length + 8192;
     bytes += 5 * (bitmap_data_length / MAX_PART_SIZE);
     init_stream(s, bytes);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE1); /* descriptor = MULTIPART */
-    s_push_layer(s, iso_hdr, 2); /* segmentCount, set later */
+    out_uint16_le(s, calc_segment_count); /* segmentCount */
     out_uint32_le(s, 25 + bitmap_data_length); /* uncompressedSize */
     /* RDP_DATA_SEGMENT */
-    out_uint32_le(s, 1 + 25); /* segmentArray size */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint32_le(s, 1 + 25); /* segmentArray size, may be replaced later */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
     /* RDPGFX_HEADER */
+    s_push_layer(s, sec_hdr, 0);
     out_uint16_le(s, XR_RDPGFX_CMDID_WIRETOSURFACE_1); /* cmdId */
     out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, 25 + bitmap_data_length); /* pduLength */
@@ -530,6 +783,24 @@ xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
     out_uint16_le(s, dest_rect->x2);
     out_uint16_le(s, dest_rect->y2);
     out_uint32_le(s, bitmap_data_length);
+#if defined(XRDP_BULK)
+    bytes = (int) (s->p - s->sec_hdr);
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->sec_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->sec_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface1: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        s_pop_layer(s, mcs_hdr);
+        out_uint32_le(s, 1 + cdata_bytes); /* segmentArray size */
+        out_uint8(s, cflags);
+        s_pop_layer(s, sec_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+    }
+#endif
     segment_count = 1;
     index = 0;
     bitmap_data8 = (char *) bitmap_data;
@@ -540,21 +811,45 @@ xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
         {
             segment_size = MAX_PART_SIZE;
         }
-        /* RDP_DATA_SEGMENT */
-        out_uint32_le(s, 1 + segment_size); /* segmentArray size */
-        /* RDP8_BULK_ENCODED_DATA */
-        out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-        out_uint8a(s, bitmap_data8 + index, segment_size);
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "  segment index %d segment_size %d",
-                  segment_count, segment_size);
+#if defined(XRDP_BULK)
+        cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+        SAVE_UDATA(bitmap_data8 + index, segment_size);
+        error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                              bitmap_data8 + index, segment_size);
+        if (error == RDP8_ERROR_NONE)
+        {
+            SAVE_CDATA(cdata, cdata_bytes);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface1: bytes %d "
+                      "cdata_bytes %d cflags 0x%2.2X",
+                      segment_size, cdata_bytes, cflags);
+            /* RDP_DATA_SEGMENT */
+            out_uint32_le(s, 1 + cdata_bytes); /* segmentArray size */
+            /* RDP8_BULK_ENCODED_DATA */
+            out_uint8(s, cflags);
+            out_uint8a(s, cdata, cdata_bytes);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "  segment index %d segment_size %d "
+                      "cdata_bytes %d", segment_count, segment_size,
+                      cdata_bytes);
+        }
+        else
+#endif
+        {
+            /* RDP_DATA_SEGMENT */
+            out_uint32_le(s, 1 + segment_size); /* segmentArray size */
+            /* RDP8_BULK_ENCODED_DATA */
+            out_uint8(s, PACKET_COMPR_TYPE_RDP8);
+            out_uint8a(s, bitmap_data8 + index, segment_size);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "  segment index %d segment_size %d",
+                      segment_count, segment_size);
+        }
         index += segment_size;
         segment_count++;
     }
     s_mark_end(s);
-    s_pop_layer(s, iso_hdr);
-    out_uint16_le(s, segment_count);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_egfx_wire_to_surface1: segment_count %d",
-              segment_count);
+    if (calc_segment_count != segment_count)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_wire_to_surface1: segment_count mismatch");
+    }
     return s;
 }
 
@@ -589,24 +884,34 @@ xrdp_egfx_wire_to_surface2(struct xrdp_egfx_bulk *bulk, int surface_id,
     int bytes;
     int index;
     int segment_size;
+    int calc_segment_count;
     int segment_count;
     struct stream *s;
     char *bitmap_data8;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface2:");
     make_stream(s);
+    calc_segment_count = bitmap_data_length / MAX_PART_SIZE + 2;
     bytes = bitmap_data_length + 8192;
     bytes += 5 * (bitmap_data_length / MAX_PART_SIZE);
     init_stream(s, bytes);
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE1); /* descriptor = MULTIPART */
-    s_push_layer(s, iso_hdr, 2); /* segmentCount, set later */
+    out_uint16_le(s, calc_segment_count); /* segmentCount */
     out_uint32_le(s, 21 + bitmap_data_length); /* uncompressedSize */
     /* RDP_DATA_SEGMENT */
-    out_uint32_le(s, 1 + 21); /* segmentArray size */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint32_le(s, 1 + 21); /* segmentArray size, may be replaced later */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
     /* RDPGFX_HEADER */
+    s_push_layer(s, sec_hdr, 0);
     out_uint16_le(s, XR_RDPGFX_CMDID_WIRETOSURFACE_2); /* cmdId */
     out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, 21 + bitmap_data_length); /* pduLength */
@@ -615,6 +920,22 @@ xrdp_egfx_wire_to_surface2(struct xrdp_egfx_bulk *bulk, int surface_id,
     out_uint32_le(s, codec_context_id);
     out_uint8(s, pixel_format);
     out_uint32_le(s, bitmap_data_length);
+#if defined(XRDP_BULK)
+    bytes = (int) (s->p - s->sec_hdr);
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->sec_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->sec_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        s_pop_layer(s, mcs_hdr);
+        out_uint32_le(s, 1 + cdata_bytes); /* segmentArray size */
+        out_uint8(s, cflags);
+        s_pop_layer(s, sec_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+    }
+#endif
     segment_count = 1;
     index = 0;
     bitmap_data8 = (char *) bitmap_data;
@@ -625,21 +946,45 @@ xrdp_egfx_wire_to_surface2(struct xrdp_egfx_bulk *bulk, int surface_id,
         {
             segment_size = MAX_PART_SIZE;
         }
-        /* RDP_DATA_SEGMENT */
-        out_uint32_le(s, 1 + segment_size); /* segmentArray size */
-        /* RDP8_BULK_ENCODED_DATA */
-        out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
-        out_uint8a(s, bitmap_data8 + index, segment_size);
-        LOG_DEVEL(LOG_LEVEL_DEBUG, "  segment index %d segment_size %d",
-                  segment_count, segment_size);
+#if defined(XRDP_BULK)
+        cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+        SAVE_UDATA(bitmap_data8 + index, segment_size);
+        error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                              bitmap_data8 + index, segment_size);
+        if (error == RDP8_ERROR_NONE)
+        {
+            SAVE_CDATA(cdata, cdata_bytes);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface2: bytes %d "
+                      "cdata_bytes %d cflags 0x%2.2X",
+                      segment_size, cdata_bytes, cflags);
+            /* RDP_DATA_SEGMENT */
+            out_uint32_le(s, 1 + cdata_bytes); /* segmentArray size */
+            /* RDP8_BULK_ENCODED_DATA */
+            out_uint8(s, cflags);
+            out_uint8a(s, cdata, cdata_bytes);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "  segment index %d segment_size %d "
+                      "cdata_bytes %d", segment_count, segment_size,
+                      cdata_bytes);
+        }
+        else
+#endif
+        {
+            /* RDP_DATA_SEGMENT */
+            out_uint32_le(s, 1 + segment_size); /* segmentArray size */
+            /* RDP8_BULK_ENCODED_DATA */
+            out_uint8(s, PACKET_COMPR_TYPE_RDP8);
+            out_uint8a(s, bitmap_data8 + index, segment_size);
+            LOG_DEVEL(LOG_LEVEL_TRACE, "  segment index %d segment_size %d",
+                      segment_count, segment_size);
+        }
         index += segment_size;
         segment_count++;
     }
     s_mark_end(s);
-    s_pop_layer(s, iso_hdr);
-    out_uint16_le(s, segment_count);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "xrdp_egfx_wire_to_surface2: segment_count %d",
-              segment_count);
+    if (calc_segment_count != segment_count)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_wire_to_surface2: segment_count mismatch");
+    }
     return s;
 }
 
@@ -672,8 +1017,14 @@ xrdp_egfx_reset_graphics(struct xrdp_egfx_bulk *bulk, int width, int height,
     int bytes;
     int index;
     struct stream *s;
+#if defined(XRDP_BULK)
+    char *cdata;
+    int cdata_bytes;
+    int error;
+    int cflags;
+#endif
 
-    LOG(LOG_LEVEL_INFO, "xrdp_egfx_reset_graphics:");
+    LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_reset_graphics:");
     if (monitor_count > 16)
     {
         return NULL;
@@ -685,8 +1036,10 @@ xrdp_egfx_reset_graphics(struct xrdp_egfx_bulk *bulk, int width, int height,
     /* RDP_SEGMENTED_DATA */
     out_uint8(s, 0xE0); /* descriptor = SINGLE */
     /* RDP8_BULK_ENCODED_DATA */
-    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
+    s_push_layer(s, mcs_hdr, 0);
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* may be replaced later */
     /* RDPGFX_HEADER */
+    s_push_layer(s, iso_hdr, 0);
     out_uint16_le(s, XR_RDPGFX_CMDID_RESETGRAPHICS); /* cmdId */
     out_uint16_le(s, 0); /* flags = 0 */
     out_uint32_le(s, 340); /* pduLength */
@@ -739,6 +1092,24 @@ xrdp_egfx_reset_graphics(struct xrdp_egfx_bulk *bulk, int width, int height,
         out_uint8s(s, bytes);
     }
     s_mark_end(s);
+#if defined(XRDP_BULK)
+    bytes = (int) (s->end - s->iso_hdr);
+    cflags = BULK_PACKET_COMPR_TYPE_RDP8 | BULK_PACKET_COMPRESSED;
+    SAVE_UDATA(s->iso_hdr, bytes);
+    error = rdp8_compress(bulk->handle, &cdata, &cdata_bytes, &cflags,
+                          s->iso_hdr, bytes);
+    if (error == RDP8_ERROR_NONE)
+    {
+        SAVE_CDATA(cdata, cdata_bytes);
+        LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_reset_graphics: bytes %d "
+                  "cdata_bytes %d", bytes, cdata_bytes);
+        /* replace flags and data */
+        s->mcs_hdr[0] = cflags;
+        s_pop_layer(s, iso_hdr);
+        out_uint8a(s, cdata, cdata_bytes);
+        s_mark_end(s);
+    }
+#endif
     return s;
 }
 
@@ -987,6 +1358,9 @@ xrdp_egfx_create(struct xrdp_mm *mm, struct xrdp_egfx **egfx)
     struct xrdp_drdynvc_procs procs;
     struct xrdp_egfx *self;
     struct xrdp_process *process;
+#if defined(XRDP_BULK)
+    struct xrdp_tconfig_gfx *config;
+#endif
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_create:");
 
@@ -995,6 +1369,33 @@ xrdp_egfx_create(struct xrdp_mm *mm, struct xrdp_egfx **egfx)
     {
         return 1;
     }
+    self->bulk = g_new0(struct xrdp_egfx_bulk, 1);
+    if (self->bulk == NULL)
+    {
+        g_free(self);
+        return 1;
+    }
+#if defined(XRDP_BULK)
+    config = mm->wm->gfx_config;
+    if (config->bulk)
+    {
+        self->bulk->handle = rdp8_compress_create(BULK_PACKET_COMPR_TYPE_RDP8);
+        if (self->bulk->handle == NULL)
+        {
+            /* ok if handle = nil, no bulk compresson */
+            LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create failed");
+        }
+        else
+        {
+            LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create ok");
+        }
+    }
+    else
+    {
+        /* ok if handle = nil, no bulk compresson */
+        LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create disabled in config");
+    }
+#endif
     procs.open_response = xrdp_egfx_open_response;
     procs.close_response = xrdp_egfx_close_response;
     procs.data_first = NULL; // Defragging handled elsewhere
@@ -1071,6 +1472,9 @@ int
 xrdp_egfx_shutdown_delete(struct xrdp_egfx *egfx)
 {
     int error = 0;
+#if defined(XRDP_BULK)
+    struct rdp8_stats stats;
+#endif
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_delete:");
 
@@ -1079,7 +1483,21 @@ xrdp_egfx_shutdown_delete(struct xrdp_egfx *egfx)
         LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_delete: EGFX is already null!");
         return 0;
     }
-
+#if defined(XRDP_BULK)
+    if (rdp8_get_stats(egfx->bulk->handle, &stats) == RDP8_ERROR_NONE)
+    {
+        float ratio = stats.ubytes;
+        ratio /= stats.cbytes;
+        LOG(LOG_LEVEL_INFO, "xrdp_egfx_delete: bulk stats ubytes %lld "
+            "cbytes %lld cbytes_count %d ratio %f",
+            stats.ubytes, stats.cbytes, stats.cbytes_count, ratio);
+        LOG(LOG_LEVEL_INFO, "xrdp_egfx_delete: bulk stats nbytes %lld "
+            "nbytes_count %d",
+            stats.nbytes, stats.nbytes_count);
+    }
+    rdp8_compress_destroy(egfx->bulk->handle);
+#endif
+    g_free(egfx->bulk);
     g_free(egfx);
 
     return error;
@@ -1104,6 +1522,7 @@ xrdp_egfx_shutdown_full(struct xrdp_egfx *egfx)
     {
         LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_shutdown_full:"
             " xrdp_egfx_shutdown_delete_surface failed %d", error);
+        xrdp_egfx_shutdown_delete(egfx);
         return error;
     }
 
@@ -1112,6 +1531,7 @@ xrdp_egfx_shutdown_full(struct xrdp_egfx *egfx)
     {
         LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_shutdown_full:"
             " xrdp_egfx_shutdown_close_connection failed %d", error);
+        xrdp_egfx_shutdown_delete(egfx);
         return error;
     }
 
