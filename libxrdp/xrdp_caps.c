@@ -107,6 +107,8 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
     self->client_info.op1 = extraFlags & NO_BITMAP_COMPRESSION_HDR;
     /* use_compact_packets is pretty much 'use rdp5' */
     self->client_info.use_compact_packets = (extraFlags != 0);
+    /* LONG_CREDENTIALS_SUPPORTED is used when sending session info */
+    self->client_info.long_credentials_supported = (extraFlags & LONG_CREDENTIALS_SUPPORTED) != 0;
     /* op2 is a boolean to use compact bitmap headers in bitmap cache */
     /* set it to same as 'use rdp5' boolean */
     self->client_info.op2 = self->client_info.use_compact_packets;
