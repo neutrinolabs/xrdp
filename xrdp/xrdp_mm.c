@@ -351,7 +351,8 @@ xrdp_mm_create_session(struct xrdp_mm *self)
                  xserverbpp,
                  self->wm->client_info->program,
                  self->wm->client_info->directory,
-                 self->wm->pro_layer->lis_layer->startup_params->instance_name);
+                 self->wm->pro_layer->lis_layer->startup_params->instance_name,
+                 self->wm->client_info->client_name);
     }
 
     return rv;
