@@ -353,7 +353,7 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
 
     in_uint8s(s, len); /* skip all fields */
 
-    return !s_check_rem_and_log(s, 0, "Parsing [ITU-T T.125] DomainParameters");
+    return 0;
 }
 
 /*****************************************************************************/
