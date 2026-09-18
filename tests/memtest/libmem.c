@@ -269,7 +269,7 @@ libmem_add_free_item(struct mem_info *self, unsigned int addr, int bytes)
 static int
 libmem_print(struct mem_info *self)
 {
-    struct mem_item *mi;
+    const struct mem_item *mi;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "libmem_print:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  used_head %p", self->used_head);
@@ -406,7 +406,7 @@ libmem_clear_flags(void *obj, int flags)
 int
 libmem_get_alloced_bytes(void *obj)
 {
-    struct mem_info *self;
+    const struct mem_info *self;
 
     self = (struct mem_info *)obj;
     return self->total_bytes;

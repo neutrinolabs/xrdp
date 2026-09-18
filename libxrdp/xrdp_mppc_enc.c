@@ -534,7 +534,7 @@ static int
 compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 {
     char *outputBuffer;     /* points to enc->outputBuffer */
-    char *hptr_end;         /* points to end of history data */
+    const char *hptr_end;   /* points to end of history data */
     char *historyPointer;   /* points to first byte of srcData in
                              * historyBuffer */
     char *hbuf_start;       /* points to start of history buffer */

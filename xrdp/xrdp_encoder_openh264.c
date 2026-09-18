@@ -143,7 +143,7 @@ xrdp_encoder_openh264_encode(void *handle, int session, int left, int top,
     int status;
     int layer_position;
     char *write_location;
-    unsigned char *payload;
+    const unsigned char *payload;
     int size;
     int lcdata_bytes;
 

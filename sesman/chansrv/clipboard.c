@@ -571,7 +571,7 @@ unsigned int
 clipboard_in_utf16_le_as_utf8(struct stream *s, char *text,
                               unsigned int num_chars)
 {
-    char *orig_p = s->p;
+    const char *orig_p = s->p;
     unsigned int needed_chars;
 
     if ((num_chars < 1) || (text == 0))
@@ -1698,7 +1698,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     int send_format_announce;
     Atom got_file_atom;
     Atom atom;
-    Atom *atoms;
+    const Atom *atoms;
     Atom type;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify:");

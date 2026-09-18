@@ -468,7 +468,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
 
     int fd;
     int index;
-    char *val;
+    const char *val;
     struct list *names;
     struct list *values;
 
@@ -851,7 +851,7 @@ xrdp_wm_get_vis_region(struct xrdp_wm *self, struct xrdp_bitmap *bitmap,
                        struct xrdp_region *region, int clip_children)
 {
     int i;
-    struct xrdp_bitmap *p;
+    const struct xrdp_bitmap *p;
     struct xrdp_rect a;
     struct xrdp_rect b;
 
@@ -976,7 +976,7 @@ xrdp_wm_is_rect_vis(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
                     struct xrdp_rect *rect)
 {
     struct xrdp_rect wnd_rect;
-    struct xrdp_bitmap *b;
+    const struct xrdp_bitmap *b;
     int i;;
 
     /* if rect is part off screen */
@@ -2278,7 +2278,7 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
     struct xrdp_wm *wm;
     struct xrdp_rect rect;
     int index;
-    char *text;
+    const char *text;
 
     if (wnd == 0)
     {

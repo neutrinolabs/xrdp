@@ -168,8 +168,8 @@ connect_to_chansrv(void)
     int bytes;
     char disstr[MAX_DISPLAY_NAME_SIZE];
     int error;
-    char *xrdp_session;
-    char *home_str;
+    const char *xrdp_session;
+    const char *home_str;
     struct sockaddr_un saddr;
     struct sockaddr *psaddr;
 

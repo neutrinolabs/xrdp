@@ -47,8 +47,8 @@ env_set_user(int uid,
     int error;
     int pw_gid;
     int index;
-    char *name;
-    char *value;
+    const char *name;
+    const char *value;
     char *pw_username = NULL;
     char *pw_shell = NULL;
     char *pw_dir = NULL;

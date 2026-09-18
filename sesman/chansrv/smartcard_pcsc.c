@@ -474,7 +474,7 @@ scard_function_establish_context_return(void *user_data,
     struct stream *out_s;
     struct pcsc_uds_client *uds_client;
     struct trans *con;
-    struct pcsc_context *lcontext;
+    const struct pcsc_context *lcontext;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_function_establish_context_return:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  status 0x%8.8x", status);
@@ -876,7 +876,7 @@ scard_function_connect_return(void *user_data,
     struct trans *con;
     char *card;
     int card_bytes;
-    struct pcsc_card *lcard;
+    const struct pcsc_card *lcard;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "scard_function_connect_return:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  status 0x%8.8x", status);
@@ -1230,7 +1230,7 @@ scard_function_transmit_return(void *user_data,
     int bytes;
     int val;
     int cbRecvLength;
-    char *recvBuf;
+    const char *recvBuf;
     struct xrdp_scard_io_request recv_ior;
     struct pcsc_uds_client *uds_client;
     struct trans *con;
@@ -1353,7 +1353,7 @@ scard_function_control_return(void *user_data,
     struct stream *out_s;
     int bytes;
     int cbRecvLength;
-    char *recvBuf;
+    const char *recvBuf;
     int uds_client_id;
     struct pcsc_uds_client *uds_client;
     struct trans *con;

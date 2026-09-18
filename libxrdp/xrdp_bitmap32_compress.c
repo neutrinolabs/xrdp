@@ -50,7 +50,7 @@ fsplit3(char *in_data, int start_line, int width, int e,
     int out_index;
     int pixel;
     int cy;
-    int *ptr32;
+    const int *ptr32;
 
     cy = 0;
     out_index = 0;
@@ -131,7 +131,7 @@ fsplit4(char *in_data, int start_line, int width, int e,
     int out_index;
     int pixel;
     int cy;
-    int *ptr32;
+    const int *ptr32;
 
     cy = 0;
     out_index = 0;
@@ -221,7 +221,7 @@ fdelta(char *in_plane, char *out_plane, int cx, int cy)
     char is_neg;
     char *src8;
     char *dst8;
-    char *src8_end;
+    const char *src8_end;
 
     g_memcpy(out_plane, in_plane, cx);
     src8 = in_plane;
@@ -316,8 +316,8 @@ fpack(char *plane, int cx, int cy, struct stream *s)
 {
     char *ptr8;
     char *colptr;
-    char *lend;
-    char *holdp;
+    const char *lend;
+    const char *holdp;
     int jndex;
     int collen;
     int replen;

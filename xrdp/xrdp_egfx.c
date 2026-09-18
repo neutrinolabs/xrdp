@@ -503,7 +503,7 @@ xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
     int segment_size;
     int segment_count;
     struct stream *s;
-    char *bitmap_data8;
+    const char *bitmap_data8;
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface1:");
     make_stream(s);
@@ -591,7 +591,7 @@ xrdp_egfx_wire_to_surface2(struct xrdp_egfx_bulk *bulk, int surface_id,
     int segment_size;
     int segment_count;
     struct stream *s;
-    char *bitmap_data8;
+    const char *bitmap_data8;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface2:");
     make_stream(s);

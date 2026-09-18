@@ -130,7 +130,7 @@ session_list_get_count_by_state(enum session_state state)
     int i;
     for (i = 0 ; i < g_session_list->count ; ++i)
     {
-        struct session_item *si;
+        const struct session_item *si;
         si = (struct session_item *)list_get_item(g_session_list, i);
         if (si->state == state)
         {
@@ -167,7 +167,7 @@ session_list_get_session_x11_displays(struct set_int *alloc_displays)
     int i = 0;
     for (i = 0 ; i < count ; ++i)
     {
-        struct session_item *si;
+        const struct session_item *si;
         si = (struct session_item *)list_get_item(g_session_list, i);
 
         if (SESSION_IN_USE(si) && SCP_SESSION_TYPE_IS_X11(si->type))

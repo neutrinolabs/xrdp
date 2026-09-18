@@ -585,7 +585,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     int index;
     int codec_properties_length;
     int i1;
-    char *codec_guid;
+    const char *codec_guid;
     char *next_guid;
     struct guid guid;
     char codec_guid_str[GUID_STR_SIZE];
@@ -1142,7 +1142,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     int flags;
     char *caps_count_ptr;
     char *caps_size_ptr;
-    char *caps_ptr;
+    const char *caps_ptr;
     char *codec_caps_count_ptr;
     char *codec_caps_size_ptr;
 

@@ -404,7 +404,7 @@ save_all(const char *e_data, int e_len, const char *n_data, int n_len,
 static int
 key_gen(const char *path_and_file_name)
 {
-    char *e_data = NULL;
+    const char *e_data = NULL;
     char n_data[256] = {0};
     char d_data[256] = {0};
     char sign_data[64] = {0};

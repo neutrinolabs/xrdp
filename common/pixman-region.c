@@ -508,7 +508,7 @@ pixman_coalesce (region_type_t *region,       /* Region to coalesce             
                  int             cur_start)   /* Index of start of current band  */
 {
     box_type_t *prev_box;       /* Current box in previous band      */
-    box_type_t *cur_box;        /* Current box in current band       */
+    const box_type_t *cur_box;  /* Current box in current band       */
     int numRects;               /* Number rectangles in both bands   */
     int y2;                     /* Bottom of current band            */
 
@@ -1008,7 +1008,7 @@ bail:
 static void
 pixman_set_extents (region_type_t *region)
 {
-    box_type_t *box, *box_end;
+    const box_type_t *box, *box_end;
 
     if (!region->data)
     {

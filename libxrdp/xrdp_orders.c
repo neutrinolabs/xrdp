@@ -2366,7 +2366,7 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     int e = 0;
     struct stream *s = NULL;
     struct stream *temp_s = NULL;
-    char *p = NULL;
+    const char *p = NULL;
     int max_order_size;
     struct xrdp_client_info *ci;
 
@@ -2794,7 +2794,7 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
     int e = 0;
     struct stream *s = NULL;
     struct stream *temp_s = NULL;
-    char *p = NULL;
+    const char *p = NULL;
     int max_order_size;
     struct xrdp_client_info *ci;
 
@@ -2974,7 +2974,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
                          int width, int height, int bpp, char *data,
                          int cache_id, int cache_idx, int hints)
 {
-    struct xrdp_client_info *ci;
+    const struct xrdp_client_info *ci;
 #if defined(XRDP_JPEG) || defined(XRDP_NEUTRINORDP)
     int bufsize;
     struct stream *xr_s; /* xrdp stream */

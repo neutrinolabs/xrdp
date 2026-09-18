@@ -159,7 +159,7 @@ audin_send_formats(int chan_id)
     int num_formats;
     int index;
     struct stream *s;
-    struct xr_wave_format_ex *wf;
+    const struct xr_wave_format_ex *wf;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_formats:");
     num_formats = sizeof(g_server_formats) /
@@ -201,7 +201,7 @@ audin_send_open(int chan_id)
     int error;
     int bytes;
     struct stream *s;
-    struct xr_wave_format_ex *wf = g_client_formats[g_current_format];
+    const struct xr_wave_format_ex *wf = g_client_formats[g_current_format];
 
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_open:");
     make_stream(s);

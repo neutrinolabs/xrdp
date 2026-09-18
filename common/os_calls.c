@@ -3793,7 +3793,7 @@ g_getuser_info_by_name(const char *username, int *uid, int *gid,
     }
     else
     {
-        struct passwd *pwd_1 = getpwnam(username);
+        const struct passwd *pwd_1 = getpwnam(username);
 
         if (pwd_1 != 0)
         {
@@ -3841,7 +3841,7 @@ g_getuser_info_by_uid(int uid, char **username, int *gid,
 #if defined(_WIN32)
     return 1;
 #else
-    struct passwd *pwd_1;
+    const struct passwd *pwd_1;
 
     pwd_1 = getpwuid(uid);
 
@@ -3888,7 +3888,7 @@ g_getgroup_info(const char *groupname, int *gid)
 #if defined(_WIN32)
     return 1;
 #else
-    struct group *g;
+    const struct group *g;
 
     g = getgrnam(groupname);
 
@@ -4427,7 +4427,7 @@ g_readdir(const char *dir)
 {
     DIR *handle;
     struct list *result = NULL;
-    struct dirent *dent;
+    const struct dirent *dent;
     int saved_errno;
 
     errno = 0; // See readdir(3)
