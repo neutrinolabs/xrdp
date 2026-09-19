@@ -3,7 +3,7 @@ EXTRA_DIST = \
   rdp-scan-codes.txt \
   xrdpwin.c
 
-AM_CPPFLAGS = \
+AM_CPPFLAGS = $(OPENSSL_CFLAGS) \
   -DXRDP_CFG_PATH=\"${sysconfdir}/${sysconfsubdir}\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
@@ -17,7 +17,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/third_party \
   -I$(top_srcdir)/third_party/tomlc99
 
-XRDP_EXTRA_LIBS =
+XRDP_EXTRA_LIBS = $(OPENSSL_LIBS)
 XRDP_EXTRA_SOURCES =
 
 if XRDP_RFXCODEC
@@ -52,6 +52,11 @@ AM_CPPFLAGS += -I$(top_srcdir)/libpainter/include
 XRDP_EXTRA_LIBS += $(top_builddir)/libpainter/src/.libs/libpainter.a
 endif
 
+if XRDP_LVGL
+AM_CPPFLAGS += $(LVGL_CFLAGS) $(FONTCONFIG_CFLAGS)
+XRDP_EXTRA_LIBS += $(LVGL_LIBS) $(FONTCONFIG_LIBS)
+endif
+
 sbin_PROGRAMS = \
   xrdp
 
@@ -70,6 +75,9 @@ xrdp_SOURCES = \
   xrdp_font.c \
   xrdp_listen.c \
   xrdp_login_wnd.c \
+  xrdp_login.h \
+  xrdp_login_lvgl.c \
+  xrdp_login_lvgl.h \
   xrdp_mm.c \
   xrdp_mm_ccp.c \
   xrdp_mm.h \

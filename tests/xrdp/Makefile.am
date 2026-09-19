@@ -1,4 +1,5 @@
-AM_CPPFLAGS = \
+AM_CPPFLAGS = $(OPENSSL_CFLAGS) \
+  -DXRDP_SHARE_PATH=\"$(abs_top_srcdir)/xrdp\" \
   -DXRDP_TOP_SRCDIR=\"$(top_srcdir)\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/xrdp \
@@ -40,6 +41,7 @@ check_PROGRAMS = test_xrdp
 test_xrdp_SOURCES = \
     test_xrdp.h \
     test_xrdp_main.c \
+    test_login.c \
     test_xrdp_egfx.c \
     test_xrdp_keymap.c \
     test_xrdp_region.c \
@@ -82,6 +84,7 @@ test_xrdp_LDADD = \
     $(top_builddir)/third_party/tomlc99/libtoml.la \
     $(PIXMAN_LIBS) \
     $(IMLIB2_LIBS) \
+    $(OPENSSL_LIBS) \
     @CHECK_LIBS@ \
     @CMOCKA_LIBS@
 
@@ -97,4 +100,9 @@ AM_CPPFLAGS += -DXRDP_X264 $(XRDP_OPENH264_CFLAGS)
 test_xrdp_LDADD += \
     $(top_builddir)/xrdp/xrdp_encoder_openh264.o \
     $(XRDP_OPENH264_LIBS)
+endif
+
+if XRDP_LVGL
+AM_CPPFLAGS += $(LVGL_CFLAGS) $(FONTCONFIG_CFLAGS)
+test_xrdp_LDADD += $(LVGL_LIBS) $(FONTCONFIG_LIBS)
 endif

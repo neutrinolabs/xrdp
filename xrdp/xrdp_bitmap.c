@@ -28,6 +28,7 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include "xrdp_login_lvgl.h"
 
 // For a very few key functions, using the keysym is preferable to the
 // raw scancode. Here are defines to avoid pulling an X11 dependency
@@ -628,6 +629,12 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap *self, struct xrdp_rect *rect)
 
     if (self == 0) /* if no bitmap */
     {
+        return 0;
+    }
+
+    if (self == self->wm->screen && self->wm->login_ui != NULL)
+    {
+        xrdp_login_lvgl_invalidate(self->wm, rect);
         return 0;
     }
 

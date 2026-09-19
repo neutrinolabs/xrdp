@@ -52,7 +52,7 @@ test_rfc4648_to_b64(const char *plaintext, size_t len, const char *b64)
     char buff[256];
     size_t result;
 
-    result = base64_encode(plaintext, len, buff, sizeof(buff));
+    result = xrdp_base64_encode(plaintext, len, buff, sizeof(buff));
     ck_assert_int_eq(result, len);
     ck_assert_str_eq(buff, b64);
 
@@ -73,7 +73,7 @@ test_rfc4648_from_b64_text(const char *b64, const char *text)
     size_t actual_len;
     int result;
 
-    result = base64_decode(b64, buff, sizeof(buff), &actual_len);
+    result = xrdp_base64_decode(b64, buff, sizeof(buff), &actual_len);
     ck_assert_int_eq(result, 0);
     ck_assert_int_lt(actual_len, sizeof(buff));
     buff[actual_len] = '\0';
@@ -187,7 +187,7 @@ START_TEST(test_b64_all_valid_from)
     char *str_result;
     char *str_expected;
 
-    result = base64_decode(all_b64, buff, sizeof(buff), &actual_len);
+    result = xrdp_base64_decode(all_b64, buff, sizeof(buff), &actual_len);
     ck_assert_int_eq(result, 0);
     ck_assert_int_eq(actual_len, sizeof(all_b64_decoded));
     str_result = bin_to_hex(buff, actual_len);
@@ -204,8 +204,8 @@ START_TEST(test_b64_all_valid_to)
     char buff[256];
     size_t result;
 
-    result = base64_encode(all_b64_decoded, sizeof(all_b64_decoded),
-                           buff, sizeof(buff));
+    result = xrdp_base64_encode(all_b64_decoded, sizeof(all_b64_decoded),
+                                buff, sizeof(buff));
     ck_assert_int_eq(result, sizeof(all_b64_decoded));
     ck_assert_str_eq(buff, all_b64);
 }
@@ -230,7 +230,7 @@ START_TEST(test_b64_all_invalid)
     }
 
     /* Check the decoder's working on a simple string...*/
-    result = base64_decode(encoded, buff, sizeof(buff), &actual_len);
+    result = xrdp_base64_decode(encoded, buff, sizeof(buff), &actual_len);
     ck_assert_int_eq(result, 0);
     ck_assert_int_eq(actual_len, 3);
     buff[actual_len] = '\0';
@@ -243,7 +243,7 @@ START_TEST(test_b64_all_invalid)
         if (i != '\0' && !valid[i]) /* Don't try the string terminator char! */
         {
             encoded[0] = i;
-            result = base64_decode(encoded, buff, sizeof(buff), &actual_len);
+            result = xrdp_base64_decode(encoded, buff, sizeof(buff), &actual_len);
             if (result == 0)
             {
                 ck_abort_msg("Character 0x%02x was not rejected", i);
@@ -260,8 +260,8 @@ START_TEST(test_b64_small_buffer_encode)
 
     size_t result;
 
-    result = base64_encode(all_b64_decoded, sizeof(all_b64_decoded),
-                           buff, sizeof(buff));
+    result = xrdp_base64_encode(all_b64_decoded, sizeof(all_b64_decoded),
+                                buff, sizeof(buff));
     /* Should have read 10 lots of 24 bits from the input */
     ck_assert_int_eq(result, 10 * 3);
     ck_assert_str_eq(buff, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn");
@@ -278,7 +278,7 @@ START_TEST(test_b64_small_buffer_decode)
     char *str_result;
     char *str_expected;
 
-    result = base64_decode(all_b64, buff, sizeof(buff), &actual_len);
+    result = xrdp_base64_decode(all_b64, buff, sizeof(buff), &actual_len);
     ck_assert_int_eq(result, 0);
     ck_assert_int_eq(actual_len, sizeof(all_b64_decoded));
     str_result = bin_to_hex(buff, sizeof(buff));
@@ -330,7 +330,7 @@ START_TEST(test_b64_bad_pad)
 
     for (p = bad_pad ; *p != NULL ; ++p)
     {
-        int result = base64_decode(*p, buff, sizeof(buff), &actual_len);
+        int result = xrdp_base64_decode(*p, buff, sizeof(buff), &actual_len);
         if (result == 0)
         {
             ck_abort_msg("Padding '%s' was not rejected", *p);
@@ -353,7 +353,7 @@ START_TEST(test_b64_concat_pad)
     size_t actual_len;
     int result;
 
-    result = base64_decode(src, buff, sizeof(buff), &actual_len);
+    result = xrdp_base64_decode(src, buff, sizeof(buff), &actual_len);
     ck_assert_int_eq(result, 0);
     ck_assert_int_eq(actual_len, g_strlen(expected));
     buff[actual_len] = '\0';

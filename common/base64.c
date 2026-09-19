@@ -88,7 +88,7 @@ const unsigned char charmap[] =
 /*****************************************************************************/
 
 int
-base64_decode(const char *src, char *dst, size_t dst_len, size_t *actual_len)
+xrdp_base64_decode(const char *src, char *dst, size_t dst_len, size_t *actual_len)
 {
     *actual_len = 0;
     size_t src_len;
@@ -187,7 +187,7 @@ base64_decode(const char *src, char *dst, size_t dst_len, size_t *actual_len)
 
 /*****************************************************************************/
 size_t
-base64_encode(const char *src, size_t src_len, char *dst, size_t dst_len)
+xrdp_base64_encode(const char *src, size_t src_len, char *dst, size_t dst_len)
 {
     char *p = dst;
     size_t src_i = 0;

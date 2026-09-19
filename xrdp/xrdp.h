@@ -293,6 +293,7 @@ xrdp_bitmap_get_screen_clip(struct xrdp_bitmap *self,
                             int *dx, int *dy);
 
 /* xrdp_bitmap_load.c */
+#define XRDP_BITMAP_BACKGROUND_TRANSPARENT (-1)
 /**
  * Loads a bitmap from a file and (optionally) transforms it
  *
@@ -308,6 +309,8 @@ xrdp_bitmap_get_screen_clip(struct xrdp_bitmap *self,
  * The background color is only used if the specified image contains
  * an alpha layer. It is in HCOLOR format, and the bpp must correspond to
  * the bpp used to create 'self'.
+ * XRDP_BITMAP_BACKGROUND_TRANSPARENT preserves straight alpha in a 32-bpp
+ * bitmap instead of blending. Images without alpha are made opaque.
  *
  * After a successful call, the bitmap is resized to the image file size.
  *

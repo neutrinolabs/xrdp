@@ -26,6 +26,8 @@
 #include "xrdp.h"
 #include "log.h"
 #include "string_calls.h"
+#include "xrdp_login.h"
+#include <openssl/crypto.h>
 
 #define ASK "ask"
 #define ASK_LEN g_strlen(ASK)
@@ -137,8 +139,8 @@ xrdp_wm_delete_all_children(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-static int
-set_mod_data_item(struct xrdp_mod_data *mod, char *name, char *value)
+int
+xrdp_login_set_value(struct xrdp_mod_data *mod, const char *name, const char *value)
 {
     int index;
 
@@ -146,6 +148,8 @@ set_mod_data_item(struct xrdp_mod_data *mod, char *name, char *value)
     {
         if (g_strncmp(name, (char *)list_get_item(mod->names, index), 255) == 0)
         {
+            char *old = (char *)list_get_item(mod->values, index);
+            OPENSSL_cleanse(old, g_strlen(old));
             list_remove_item(mod->values, index);
             list_insert_item(mod->values, index, (long)g_strdup(value));
         }
@@ -255,22 +259,13 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 
             while (label != 0 && edit != 0)
             {
-                set_mod_data_item(mod_data, label->caption1, edit->caption1);
+                xrdp_login_set_value(mod_data, label->caption1, edit->caption1);
                 i += 2;
                 label = xrdp_bitmap_get_child_by_id(wnd, i);
                 edit = xrdp_bitmap_get_child_by_id(wnd, i + 1);
             }
 
-            list_delete(wm->mm->login_names);
-            list_delete(wm->mm->login_values);
-            wm->mm->login_names = list_create();
-            wm->mm->login_names->auto_free = 1;
-            wm->mm->login_values = list_create();
-            wm->mm->login_values->auto_free = 1;
-            /* will copy these cause dialog gets freed */
-            list_append_list_strdup(mod_data->names, wm->mm->login_names, 0);
-            list_append_list_strdup(mod_data->values, wm->mm->login_values, 0);
-            xrdp_wm_set_login_state(wm, WMLS_START_CONNECT);
+            xrdp_login_submit(wm, mod_data);
         }
     }
     else
@@ -304,10 +299,10 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 * @return the index number of the combobox that the user prefer.
 * 0 if the user does not prefer any choice.
 */
-static int
-xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
-                                 int decode,
-                                 char *resultBuffer, unsigned int resultSize)
+int
+xrdp_login_parse_domain(char *originalDomainInfo, int comboMax,
+                        int decode,
+                        char *resultBuffer, unsigned int resultSize)
 {
     int ret;
     int pos;
@@ -360,6 +355,114 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
     return ret;
 }
 
+/* Shared login data operations. Neither UI owns authentication policy. */
+void
+xrdp_login_submit(struct xrdp_wm *wm, struct xrdp_mod_data *mod)
+{
+    if (wm->login_state != WMLS_USER_PROMPT)
+    {
+        return;
+    }
+    list_clear(wm->mm->login_names);
+    list_clear(wm->mm->login_values);
+    list_append_list_strdup(mod->names, wm->mm->login_names, 0);
+    list_append_list_strdup(mod->values, wm->mm->login_values, 0);
+    xrdp_wm_set_login_state(wm, WMLS_START_CONNECT);
+}
+
+int
+xrdp_login_is_secret(const char *name)
+{
+    return g_strcasecmp(name, "password") == 0 ||
+           g_strcasecmp(name, "pampassword") == 0;
+}
+
+/* Returns true for an editable field. Fixed encoded values are decoded once. */
+int
+xrdp_login_get_field(struct xrdp_wm *wm, struct xrdp_mod_data *mod,
+                     int index, int module_count, char value[256])
+{
+    const char *name = (const char *)list_get_item(mod->names, index);
+    const char *src = (const char *)list_get_item(mod->values, index);
+    int editable = g_strncmp(src, ASK, ASK_LEN) == 0;
+    size_t length;
+    char host[256];
+
+    if (editable)
+    {
+        src += ASK_LEN;
+    }
+    if (g_strncmp(src, BASE64PREFIX, BASE64PREFIX_LEN) == 0)
+    {
+        if (!editable)
+        {
+            size_t size = g_strlen(src + BASE64PREFIX_LEN) + 1;
+            char *decoded = (char *)g_malloc(size, 0);
+            if (xrdp_base64_decode(src + BASE64PREFIX_LEN, decoded, size - 1, &length) != 0)
+            {
+                decoded[0] = '\0';
+                LOG(LOG_LEVEL_WARNING, "Invalid encoded login default for '%s'", name);
+            }
+            else
+            {
+                decoded[length] = '\0';
+            }
+            xrdp_login_set_value(mod, name, decoded);
+            g_strncpy(value, decoded, 255);
+            OPENSSL_cleanse(decoded, size);
+            g_free(decoded);
+            return 0;
+        }
+        if (xrdp_base64_decode(src + BASE64PREFIX_LEN, value, 255, &length) != 0 ||
+                length > 255)
+        {
+            value[0] = '\0';
+            LOG(LOG_LEVEL_WARNING, "Invalid encoded login default for '%s'", name);
+        }
+        else
+        {
+            value[length] = '\0';
+        }
+    }
+    else
+    {
+        g_strncpy(value, src, 255);
+    }
+    if (editable && g_strcasecmp(name, "ip") == 0 &&
+            wm->client_info->domain[0] == '_')
+    {
+        xrdp_login_parse_domain(wm->client_info->domain, module_count, 0,
+                                host, sizeof(host));
+        g_strncpy(value, host, 255);
+    }
+    if (editable && g_strcasecmp(name, "username") == 0 &&
+            wm->client_info->username[0] != '\0')
+    {
+        g_strncpy(value, wm->client_info->username, 255);
+    }
+    return editable;
+}
+
+void
+xrdp_login_free_modules(struct list *modules)
+{
+    int i;
+    int j;
+    for (i = 0; i < modules->count; ++i)
+    {
+        struct xrdp_mod_data *mod = (struct xrdp_mod_data *)list_get_item(modules, i);
+        for (j = 0; j < mod->values->count; ++j)
+        {
+            char *value = (char *)list_get_item(mod->values, j);
+            OPENSSL_cleanse(value, g_strlen(value));
+        }
+        list_delete(mod->names);
+        list_delete(mod->values);
+        g_free(mod);
+    }
+    list_delete(modules);
+}
+
 /******************************************************************************/
 static int
 xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
@@ -369,14 +472,10 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     int insert_index;
     int username_set;
     char *name;
-    char *value;
     struct xrdp_mod_data *mod;
     struct xrdp_bitmap *b;
     struct xrdp_cfg_globals *globals;
-    char resultIP[256];
-    char *plain; /* base64 decoded string */
-    size_t plain_length; /* length of decoded base64 string */
-    size_t base64_length; /* length of base64 string */
+    char field_value[256];
 
     globals = &self->xrdp_config->cfg_globals;
 
@@ -402,19 +501,8 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
         for (index = 0; index < mod->names->count; index++)
         {
-            value = (char *)list_get_item(mod->values, index);
-
-            /* if the value begins with "{base64}", decode the string following it */
-            if (g_strncmp(BASE64PREFIX, value, BASE64PREFIX_LEN) == 0)
-            {
-                base64_length = g_strlen(value + BASE64PREFIX_LEN);
-                plain = (char *)g_malloc(base64_length, 0);
-                base64_decode(value + BASE64PREFIX_LEN,
-                              plain, base64_length, &plain_length);
-                g_strncpy(value, plain, plain_length);
-                g_free(plain);
-            }
-            else if (g_strncmp(ASK, value, ASK_LEN) == 0)
+            if (xrdp_login_get_field(self, mod, index,
+                                     combo->data_list->count, field_value))
             {
                 const int combo_height =
                     self->xrdp_config->cfg_globals.ls_scaled.combo_height;
@@ -455,52 +543,16 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 b->pointer = 1;
                 b->tab_stop = 1;
                 b->caption1 = (char *)g_malloc(256, 1);
-                /* ask{base64}... 3 for "ask", 8 for "{base64}" */
-                if (g_strncmp(BASE64PREFIX, value + ASK_LEN, BASE64PREFIX_LEN) == 0)
-                {
-                    base64_length = g_strlen(value + ASK_LEN + BASE64PREFIX_LEN);
-                    plain = (char *)g_malloc(base64_length, 0);
-                    base64_decode(value + ASK_LEN + BASE64PREFIX_LEN,
-                                  plain, base64_length, &plain_length);
-                    plain[plain_length] = '\0';
-                    g_strncpy(b->caption1, plain, 255);
-                    g_free(plain);
-                }
-                else
-                {
-                    g_strncpy(b->caption1, value + ASK_LEN, 255);
-                }
+                g_strncpy(b->caption1, field_value, 255);
                 b->edit_pos = utf8_char_count(b->caption1);
-
                 if (self->login_window->focused_control == 0)
                 {
                     self->login_window->focused_control = b;
                 }
 
-                /* Use the domain name as the destination IP/DNS
-                   This is useful in a gateway setup. */
-                if (g_strncasecmp(name, "ip", 255) == 0)
-                {
-                    /* If the first char in the domain name is '_' we use the
-                       domain name as IP */
-                    if (self->session->client_info->domain[0] == '_')
-                    {
-                        xrdp_wm_parse_domain_information(
-                            self->session->client_info->domain,
-                            combo->data_list->count, 0,
-                            resultIP, sizeof(resultIP));
-                        g_strncpy(b->caption1, resultIP, 255);
-                        b->edit_pos = utf8_char_count(b->caption1);
-                    }
-
-                }
-
                 if (g_strncasecmp(name, "username", 255) == 0 &&
                         self->session->client_info->username[0])
                 {
-                    g_strncpy(b->caption1, self->session->client_info->username, 255);
-                    b->edit_pos = utf8_char_count(b->caption1);
-
                     if (b->edit_pos > 0)
                     {
                         username_set = 1;
@@ -523,6 +575,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
                 count++;
             }
+            OPENSSL_cleanse(field_value, sizeof(field_value));
         }
     }
 
@@ -589,8 +642,9 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
 }
 
 /******************************************************************************/
-static int
-xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
+int
+xrdp_login_load_modules(struct xrdp_wm *self, struct list *display_names,
+                        struct list *modules)
 {
     struct list *sections;
     struct list *section_names;
@@ -660,8 +714,8 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
                 list_add_strdup(mod_data->values, r);
             }
 
-            list_add_strdup(b->string_list, name);
-            list_add_item(b->data_list, (long)mod_data);
+            list_add_strdup(display_names, name);
+            list_add_item(modules, (long)mod_data);
         }
     }
 
@@ -965,7 +1019,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     combo->top = globals->ls_scaled.input_y_pos;
     combo->id = 6;
     combo->tab_stop = 1;
-    xrdp_wm_login_fill_in_combo(self, combo);
+    xrdp_login_load_modules(self, combo->string_list, combo->data_list);
 
     /* OK button */
     but = xrdp_bitmap_create(globals->ls_scaled.btn_ok_width,
@@ -1000,7 +1054,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     * parameter: 1 = decode domain field index information from client.
     * We only perform this the first time for each connection.
     */
-    combo->item_index = xrdp_wm_parse_domain_information(
+    combo->item_index = xrdp_login_parse_domain(
                             self->session->client_info->domain,
                             combo->data_list->count, 1,
                             resultIP,/* just a dummy place holder, we ignore */
@@ -1078,6 +1132,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     /* set default values in case we can't get them from xrdp.ini file */
     globals->ini_version = 1;
     globals->default_dpi = 96;
+    globals->ls_ui = 0;
+    globals->ls_font_file[0] = '\0';
 
     globals->ls_top_window_bg_color = HCOLOR(bpp, g_htoi("009cb5"));
     globals->ls_bg_color = HCOLOR(bpp, g_htoi("dedede"));
@@ -1303,6 +1359,19 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         {
             LOG(LOG_LEVEL_DEBUG, "Token login detection enabled x");
             globals->enable_token_login = g_text2bool(v);
+        }
+
+        else if (g_strcmp(n, "ls_ui") == 0)
+        {
+            globals->ls_ui = (g_strcasecmp(v, "lvgl") == 0);
+            if (!globals->ls_ui && g_strcasecmp(v, "legacy") != 0)
+            {
+                LOG(LOG_LEVEL_WARNING, "Unknown ls_ui '%s'; using legacy", v);
+            }
+        }
+        else if (g_strcmp(n, "ls_font_file") == 0)
+        {
+            g_strncpy(globals->ls_font_file, v, sizeof(globals->ls_font_file) - 1);
         }
 
         /* login screen values */

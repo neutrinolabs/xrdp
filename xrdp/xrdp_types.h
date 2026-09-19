@@ -527,6 +527,8 @@ struct xrdp_wm
     struct xrdp_cache *cache;
     int palette[256];
     struct xrdp_bitmap *login_window;
+    struct xrdp_login_lvgl *login_ui;
+    int login_ui_failed;
     /* generic colors */
     int black;
     int grey;
@@ -836,6 +838,8 @@ struct xrdp_cfg_globals
     int  background;
 
     /* login screen */
+    int ls_ui;                  /* 0 = legacy, 1 = LVGL */
+    char ls_font_file[256];
     unsigned int  default_dpi;   /* Default DPI to use if nothing from client */
     char fv1_select[256];        /* Selection string for fv1 font */
     int  ls_top_window_bg_color; /* top level window background color */

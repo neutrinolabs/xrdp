@@ -182,6 +182,50 @@ AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
               [], [enable_painter=yes])
 AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
 
+AC_ARG_ENABLE([lvgl], AS_HELP_STRING([--enable-lvgl],
+              [Build optional LVGL login UI (default: no)]),
+              [], [enable_lvgl=no])
+AS_CASE([$enable_lvgl], [yes|no], [], [AC_MSG_ERROR([--enable-lvgl expects yes or no])])
+AM_CONDITIONAL([XRDP_LVGL], [test x$enable_lvgl = xyes])
+AS_IF([test x$enable_lvgl = xyes], [
+    PKG_CHECK_MODULES([LVGL], [lvgl >= 9.3 lvgl < 10])
+    PKG_CHECK_MODULES([FONTCONFIG], [fontconfig])
+    saved_CPPFLAGS=$CPPFLAGS
+    saved_LIBS=$LIBS
+    CPPFLAGS="$CPPFLAGS $LVGL_CFLAGS"
+    LIBS="$LVGL_LIBS $LIBS"
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <lvgl.h>
+#if LVGL_VERSION_MAJOR != 9 || LVGL_VERSION_MINOR < 3
+#error LVGL 9.3 or newer in major version 9 is required
+#endif
+#if !LV_USE_DRAW_SW || !LV_DRAW_SW_COMPLEX || !LV_DRAW_SW_SUPPORT_XRGB8888
+#error LVGL needs the complex XRGB8888 software renderer
+#endif
+#if !LV_USE_LABEL || !LV_USE_BUTTON || !LV_USE_TEXTAREA || !LV_USE_DROPDOWN || !LV_USE_IMAGE || !LV_USE_FLEX || !LV_USE_FREETYPE
+#error LVGL needs labels, buttons, textareas, dropdowns, images, flex and FreeType
+#endif
+#if LV_USE_STDLIB_MALLOC != LV_STDLIB_CLIB
+#error LVGL must use the system heap, not a fixed embedded memory pool
+#endif
+#if LV_TXT_ENC != LV_TXT_ENC_UTF8 || LV_DRAW_SW_DRAW_UNIT_CNT != 1 || LV_ENABLE_GLOBAL_CUSTOM
+#error LVGL needs UTF-8, one software draw unit and its standard global runtime
+#endif
+]], [[
+    lv_init();
+    lv_display_t *d = lv_display_create(320, 240);
+    lv_display_set_color_format(d, LV_COLOR_FORMAT_XRGB8888);
+    lv_indev_set_mode(lv_indev_create(), LV_INDEV_MODE_EVENT);
+    lv_font_t *f = lv_freetype_font_create("font.ttf",
+        LV_FREETYPE_FONT_RENDER_MODE_BITMAP, 16, LV_FREETYPE_FONT_STYLE_NORMAL);
+    lv_freetype_font_delete(f);
+    lv_display_delete(d);
+    lv_deinit();
+]])], [], [AC_MSG_ERROR([System LVGL lacks required login UI features; see docs/lvgl.md])])
+    CPPFLAGS=$saved_CPPFLAGS
+    LIBS=$saved_LIBS
+    AC_DEFINE([XRDP_LVGL], [1], [Build the optional LVGL login UI])
+])
+
 AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
               [Do not use included librfxcodec library (default: no)]),
               [], [enable_rfxcodec=yes])

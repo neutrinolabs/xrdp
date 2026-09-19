@@ -29,6 +29,7 @@
 #include "log.h"
 #include "string_calls.h"
 #include "unicode_defines.h"
+#include "xrdp_login_lvgl.h"
 
 /*****************************************************************************/
 static void
@@ -169,6 +170,7 @@ xrdp_wm_delete(struct xrdp_wm *self)
         return;
     }
 
+    xrdp_login_lvgl_delete(self);
     xrdp_region_delete(self->screen_dirty_region);
     xrdp_mm_delete(self->mm);
     xrdp_cache_delete(self->cache);
@@ -665,6 +667,11 @@ xrdp_wm_init(struct xrdp_wm *self)
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
+    if (self->xrdp_config->cfg_globals.ls_ui && !self->login_ui_failed)
+    {
+        xrdp_login_lvgl_create(self, !self->session->client_info->rdp_autologin);
+    }
+
     if (self->session->client_info->rdp_autologin)
     {
         /*
@@ -831,7 +838,10 @@ xrdp_wm_init(struct xrdp_wm *self)
     else
     {
         LOG(LOG_LEVEL_DEBUG, "   xrdp_wm_init: no autologin / auto run detected, draw login window");
-        xrdp_login_wnd_create(self);
+        if (self->login_ui == NULL)
+        {
+            xrdp_login_wnd_create(self);
+        }
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
         xrdp_wm_set_focused(self, self->login_window);
@@ -1180,6 +1190,11 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 
     self->mouse_x = x;
     self->mouse_y = y;
+    if (self->login_ui != NULL)
+    {
+        xrdp_login_lvgl_mouse(self, x, y, 0, 0);
+        return 0;
+    }
 
     if (self->dragging)
     {
@@ -1349,6 +1364,12 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
     if (y >= self->screen->height)
     {
         y = self->screen->height;
+    }
+
+    if (self->login_ui != NULL)
+    {
+        xrdp_login_lvgl_mouse(self, x, y, but, down);
+        return 0;
     }
 
     if (self->dragging && but == 1 && !down && self->dragging_window != 0)
@@ -1646,6 +1667,20 @@ xrdp_wm_key(struct xrdp_wm *self, int keyboard_flags, int key_code)
         }
     }
 
+    if (self->login_ui != NULL)
+    {
+        ki = get_key_info_from_kbd_event(keyboard_flags, key_code, self->keys,
+                                         self->caps_lock, self->num_lock,
+                                         self->scroll_lock, &self->keymap);
+        if (ki != NULL)
+        {
+            xrdp_login_lvgl_key(self, ki->sym, ki->chr, !keyup,
+                                self->keys[SCANCODE_INDEX_LSHIFT_KEY] ||
+                                self->keys[SCANCODE_INDEX_RSHIFT_KEY]);
+        }
+        return 0;
+    }
+
     m = (self->mm != 0) ? self->mm->mod : 0;
     if (m != 0 && m->mod_event != 0)
     {
@@ -1793,6 +1828,12 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, char32_t c16)
 
     if (c32 == 0)
     {
+        return 0;
+    }
+
+    if (self->login_ui != NULL)
+    {
+        xrdp_login_lvgl_key(self, 0, c32, !(device_flags & KBDFLAGS_RELEASE), 0);
         return 0;
     }
 
@@ -2210,6 +2251,7 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
         xrdp_wm_login_state_to_str(self->login_state));
     if (self->login_state == WMLS_RESET)
     {
+        xrdp_login_lvgl_delete(self);
         list_clear(self->log);
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
@@ -2229,6 +2271,7 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     }
     else if (self->login_state == WMLS_START_CONNECT)
     {
+        xrdp_login_lvgl_progress(self);
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_set_login_state(self, WMLS_CONNECT_IN_PROGRESS);
@@ -2239,6 +2282,7 @@ xrdp_wm_login_state_changed(struct xrdp_wm *self)
     }
     else if (self->login_state == WMLS_CLEANUP)
     {
+        xrdp_login_lvgl_delete(self);
         xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_set_login_state(self, WMLS_INACTIVE);
@@ -2257,6 +2301,8 @@ xrdp_wm_mod_connect_done(struct xrdp_wm *self, int status)
     LOG(LOG_LEVEL_DEBUG, "status from xrdp_mm_connect() : %d", status);
     if (status == 0)
     {
+        /* The module may paint before the next login-state event is handled. */
+        xrdp_login_lvgl_delete(self);
         xrdp_wm_set_login_state(self, WMLS_CLEANUP);
         self->dragging = 0;
     }
@@ -2375,6 +2421,12 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         return 0;
     }
 
+    if (self->login_ui != NULL)
+    {
+        xrdp_login_lvgl_log(self, 1);
+        return 0;
+    }
+
     if (self->log_wnd == 0)
     {
         w = self->xrdp_config->cfg_globals.ls_scaled.log_wnd_width;
@@ -2463,7 +2515,15 @@ xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
     va_end(ap);
 
     LOG(loglevel, "xrdp_wm_log_msg: %s", msg);
-    add_string_to_logwindow(msg, self->log);
+    if (self->login_ui != NULL)
+    {
+        list_add_strdup(self->log, msg);
+        xrdp_login_lvgl_log_message(self, loglevel, msg);
+    }
+    else
+    {
+        add_string_to_logwindow(msg, self->log);
+    }
     return 0;
 }
 
@@ -2482,7 +2542,9 @@ xrdp_wm_get_wait_objs(struct xrdp_wm *self, tbus *robjs, int *rc,
     i = *rc;
     robjs[i++] = self->login_state_event;
     *rc = i;
-    return xrdp_mm_get_wait_objs(self->mm, robjs, rc, wobjs, wc, timeout);
+    int rv = xrdp_mm_get_wait_objs(self->mm, robjs, rc, wobjs, wc, timeout);
+    xrdp_login_lvgl_wait(self, robjs, rc, timeout);
+    return rv;
 }
 
 /******************************************************************************/
@@ -2507,6 +2569,11 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
     if (rv == 0)
     {
         rv = xrdp_mm_check_wait_objs(self->mm);
+    }
+
+    if (rv == 0)
+    {
+        rv = xrdp_login_lvgl_check(self);
     }
 
     return rv;
