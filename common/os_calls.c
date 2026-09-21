@@ -127,6 +127,13 @@ struct sockaddr_hvs
 #    define GETGROUPLIST_T GETGROUPS_T
 #endif
 
+/** Max port length for listening port in tcp connnect attempts */
+#define MAX_PORT_STR 6
+/** Time between polls of is_term when connecting */
+#define CONNECT_TERM_POLL_MS 3000
+/** Time we wait before another connect() attempt if one fails immediately */
+#define CONNECT_DELAY_ON_FAIL_MS 2000
+
 /**
  * Type big enough to hold socket address information for any connecting type
  */
@@ -460,6 +467,100 @@ g_tcp_socket(void)
     }
 #endif
     return rv;
+}
+
+/*****************************************************************************/
+/* returns a newly created socket or -1 on error, and sets fam value */
+static int
+mk_tcp_socket(int *fam, int async)
+{
+    int rv;
+
+#if defined(XRDP_ENABLE_IPV6)
+    *fam = AF_INET6;
+    rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
+    if (rv < 0)
+    {
+        switch (errno)
+        {
+            case EPROTONOSUPPORT: /* if IPv6 is supported, but don't have an IPv6 address */
+            case EAFNOSUPPORT: /* if IPv6 not supported, retry IPv4 */
+                LOG(LOG_LEVEL_INFO, "IPv6 not supported, falling back to IPv4");
+                *fam = AF_INET;
+                rv = (int)socket(AF_INET, SOCK_STREAM, 0);
+                break;
+
+            default:
+                LOG(LOG_LEVEL_ERROR, "mk_tcp_socket: %s", g_get_strerror());
+                return -1;
+        }
+    }
+#else
+    *fam = AF_INET;
+    rv = (int)socket(AF_INET, SOCK_STREAM, 0);
+#endif
+    if (rv < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "mk_tcp_socket: %s", g_get_strerror());
+        return -1;
+    }
+#if defined(XRDP_ENABLE_IPV6)
+    int option_value;
+    socklen_t option_len = sizeof(option_value);
+    if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&option_value,
+                   &option_len) == 0)
+    {
+        if (option_value != 0)
+        {
+#if defined(XRDP_ENABLE_IPV6ONLY)
+            option_value = 1;
+#else
+            option_value = 0;
+#endif
+            option_len = sizeof(option_value);
+            if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&option_value,
+                           option_len) < 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "mk_tcp_socket: setsockopt() failed");
+            }
+        }
+    }
+#endif
+
+    if (async != 0 && rv >= 0)
+    {
+        g_file_set_cloexec(rv, 1);
+        g_tcp_set_non_blocking(rv);
+    }
+
+    return rv;
+}
+
+/*****************************************************************************/
+/**
+ * Helper for g_tcp_connect and local connect
+ * closes a sck connection and opens a new one
+*/
+static int
+sck_redo(int sck, int *fam, int async)
+{
+    g_sck_close(sck);
+
+    if (*fam == PF_LOCAL)
+    {
+        sck = g_sck_local_socket();
+        if (async != 0)
+        {
+            g_file_set_cloexec(sck, 1);
+            g_tcp_set_non_blocking(sck);
+        }
+    }
+    else
+    {
+        sck = mk_tcp_socket(fam, async);
+    }
+
+    return sck;
 }
 
 /*****************************************************************************/
@@ -827,58 +928,140 @@ addr_is_ipv6(const char *address)
     /* inet_pton returns 1 on success */
     return inet_pton(AF_INET6, address, &addr) == 1;
 }
+#endif
 
 /*****************************************************************************/
 /**
- * Another helper for g_tcp_connect
- * Get the family/domain for a socket
- *
- * This is a little awkward, as POSIX does not yet offer a
- * standardized way to do this
- */
+ * Polls for a sucessful connection within a time limit
+*/
 static int
-get_socket_family(int sck, int *family)
+poll_for_async_connect(int sck, int (*is_term)(void), unsigned int start_time, int timeout)
 {
-    int error;
-#ifdef SO_DOMAIN
-    socklen_t len = sizeof(*family);
-    // SO_DOMAIN is widely used but not defined by POSIX
-    error = getsockopt(sck, SOL_SOCKET, SO_DOMAIN, family, &len);
-    if (error != 0)
-    {
-        LOG(LOG_LEVEL_WARNING, "getsockopt() failed on socket %d: %s",
-            sck, g_get_strerror());
-    }
-#else
-    union sock_info sock_info;
-    socklen_t sock_len = sizeof(sock_info);
+    int rv = 1;
+    int ms_remaining = timeout - (int)(g_get_elapsed_ms() - start_time);
 
-    /* Use getsockname() as a fallback. This is not guaranteed to work
-    on an unbound socket, according to POSIX */
-    error = getsockname(sck, &sock_info.sa, &sock_len);
-    if (error != 0)
+    while (ms_remaining > 0)
     {
-        LOG(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
-            sck, g_get_strerror());
+        int poll_time = ms_remaining;
+        /* Lower bound for waiting for a result */
+        if (poll_time < 100)
+        {
+            poll_time = 100;
+        }
+        /* Limit the wait time if we need to poll for termination */
+        if (is_term != NULL && poll_time > CONNECT_TERM_POLL_MS)
+        {
+            poll_time = CONNECT_TERM_POLL_MS;
+        }
+
+        if (g_sck_can_send(sck, poll_time))
+        {
+            /* Connect has finished - return the socket status */
+            rv = g_sck_socket_ok(sck) ? 0 : 1;
+            break;
+        }
+
+        /* Check for program termination */
+        if (is_term != NULL && is_term())
+        {
+            break;
+        }
+
+        ms_remaining = timeout - (int)(g_get_elapsed_ms() - start_time);
     }
-    else
-    {
-        *family = sock_info.sa.sa_family;
-    }
-#endif
-    return error;
+    return rv;
 }
-#endif
 
 /*****************************************************************************/
-/* returns error, zero is good                                               */
-/* The connection might get to be in progress, if so -1 is returned.         */
-/* The caller needs to call again to check if succeed.                       */
+/**
+ * Waits for an asynchronous connect to complete.
+*/
+static int
+async_connect(int *sck, int *fam, struct sockaddr *saddr, socklen_t saddr_len, int (*is_term)(void), int timeout)
+{
+    int error;
+    unsigned int start_time = g_get_elapsed_ms();
+    int ms_before_next_connect;
+    int ms_left;
+
+    while (1)
+    {
+        /* Check the program isn't terminating */
+        if (is_term != NULL && is_term())
+        {
+            error = 1;
+            break;
+        }
+
+        error = connect(*sck, saddr, saddr_len);
+        if (error == 0)
+        {
+            /* Connect was immediately successful */
+            break;
+        }
+        if (g_sck_last_error_would_block(*sck))
+        {
+            /* Async connect is in progress */
+            error = poll_for_async_connect(*sck, is_term, start_time, timeout);
+            if (error == 0)
+            {
+                /* connect was successful */
+                break;
+            }
+            /* No need to wait any more before the next connect attempt */
+            ms_before_next_connect = 0;
+        }
+        else
+        {
+            /* Connect failed immediately. Wait a bit before the next
+             * attempt, and get a new socket per POSIX standard */
+            ms_before_next_connect = CONNECT_DELAY_ON_FAIL_MS;
+            error = -1;
+            *sck = sck_redo(*sck, fam, 1);
+            if (*sck == -1)
+            {
+                error = -1;
+                break;
+            }
+        }
+
+        /* Have we reached the total timeout yet? */
+        ms_left = timeout - (int)(g_get_elapsed_ms() - start_time);
+        if (ms_left <= 0)
+        {
+            error = -1;
+            break;
+        }
+
+        /* Sleep a bit before trying again */
+        if (ms_before_next_connect > 0)
+        {
+            if (ms_before_next_connect > ms_left)
+            {
+                ms_before_next_connect = ms_left;
+            }
+            g_sleep(ms_before_next_connect);
+        }
+    }
+
+    return error;
+}
+
+/**************************************************************************//**
+ * Tries to connect to a given address and port and sets the sck value to the
+ * handle for the connection. Returns error, zero is good
+ * @param sck - Handle for socket (socket will be created in function)
+ * @param address - Hostname or IP address to attempt to connect to
+ * @param port - Port to attempt to connect on
+ * @param is_term - Function to check if a caller wants to abort
+ * @param async_to - Async timeout (0 = do not use async)
+ * @return 0 - connect succeeded, anything else = failed
+ * The sck passed in should be usable after function clears
+ */
 #if defined(XRDP_ENABLE_IPV6)
 int
-g_tcp_connect(int sck, const char *address, const char *port)
+g_tcp_connect(int *sck, const char *address, const char *port, int (*is_term)(void), int async_to)
 {
-#define MAX_PORT_STR 6
     int res = 0;
     struct addrinfo p;
     struct addrinfo *h = (struct addrinfo *)NULL;
@@ -890,15 +1073,15 @@ g_tcp_connect(int sck, const char *address, const char *port)
 
     g_memset(&p, 0, sizeof(struct addrinfo));
 
-    p.ai_socktype = SOCK_STREAM;
-    p.ai_protocol = IPPROTO_TCP;
-
-    if (get_socket_family(sck, &p.ai_family) != 0)
+    /* setup initial socket */
+    *sck = mk_tcp_socket(&p.ai_family, async_to);
+    if (*sck == -1)
     {
-        LOG(LOG_LEVEL_ERROR, "get_socket_family() failed on socket %d: %s",
-            sck, g_get_strerror());
         return -1;
     }
+
+    p.ai_socktype = SOCK_STREAM;
+    p.ai_protocol = IPPROTO_TCP;
 
     switch (p.ai_family)
     {
@@ -913,8 +1096,18 @@ g_tcp_connect(int sck, const char *address, const char *port)
             break;
 
         case AF_INET6:
-            // AI_ALL + MAPPED ensures we will get the v4 mapped addr back later
-            // no ADDRCONFIG because v4 can still be mapped on v6, so is still worth attempting
+#if defined(XRDP_ENABLE_IPV6ONLY)
+            /* only return IPv6 addresses */
+            p.ai_flags = AI_ADDRCONFIG;
+            if (addr_is_ipv4(address))
+            {
+                LOG(LOG_LEVEL_ERROR, "g_tcp_connect: socket is IPv6, but address is IPv4: %s",
+                    address);
+                return -1;
+            }
+#else
+            /* AI_ALL + MAPPED ensures we will get the v4 mapped addr back later, no
+            ADDRCONFIG because v4 can still be mapped on v6, so is still worth attempting */
             p.ai_flags = AI_V4MAPPED | AI_ALL;
             if (addr_is_ipv4(address))
             {
@@ -923,6 +1116,7 @@ g_tcp_connect(int sck, const char *address, const char *port)
                 g_snprintf(mapped_address, sizeof(mapped_address), "::FFFF:%s", address);
                 addr_arg = mapped_address;
             }
+#endif
             break;
 
         default:
@@ -937,39 +1131,52 @@ g_tcp_connect(int sck, const char *address, const char *port)
     if (res != 0)
     {
         LOG(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getaddrinfo() failed: %s",
-            sck, address, port, gai_strerror(res));
+            *sck, address, port, gai_strerror(res));
     }
-    if (res == 0)
+    else
     {
         if (h != NULL)
         {
             for (rp = h; rp != NULL; rp = rp->ai_next)
             {
-                // NI_NUMERICHOST and NI_NUMERICSERV are POSIX, so they should be safe to use
+                /* NI_NUMERICHOST and NI_NUMERICSERV are POSIX, so they should be safe to use */
                 res = getnameinfo(rp->ai_addr, rp->ai_addrlen, host, INET6_ADDRSTRLEN,
                                   service, MAX_PORT_STR, NI_NUMERICHOST | NI_NUMERICSERV);
                 if (res != 0)
                 {
-                    // can't really count on host/service being accurate if getnameinfo fails
+                    /* can't really count on host/service being accurate if getnameinfo fails */
                     LOG(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getnameinfo failed",
-                        sck, address, port);
+                        *sck, address, port);
                     res = -1;
                     break;
                 }
-                LOG(LOG_LEVEL_DEBUG, "g_tcp_connect(%d, %s, %s): trying address: %s:%s",
-                    sck, address, port, host, service);
 
-                res = connect(sck, (struct sockaddr *)(rp->ai_addr),
-                              rp->ai_addrlen);
-                if (res == -1 && errno == EINPROGRESS)
+                LOG(LOG_LEVEL_DEBUG, "g_tcp_connect(%d, %s, %s): trying address: %s:%s",
+                    *sck, address, port, host, service);
+
+
+                if (async_to > 0)
                 {
-                    break; /* Return -1 */
+                    res = async_connect(sck, &p.ai_family, (struct sockaddr *)(rp->ai_addr), rp->ai_addrlen, is_term, async_to);
                 }
+                else
+                {
+                    res = connect(*sck, (struct sockaddr *)(rp->ai_addr), rp->ai_addrlen);
+                }
+
                 /* Mac OSX connect() returns -1 for already established connections */
                 if (res == 0 || (res == -1 && errno == EISCONN))
                 {
                     res = 0;
                     break; /* Success */
+                }
+
+                /* get new socket for each attempt - posix standard to not reuse */
+                *sck = sck_redo(*sck, &p.ai_family, async_to);
+                if (*sck == -1)
+                {
+                    res = -1;
+                    break;
                 }
             }
             freeaddrinfo(h);
@@ -980,39 +1187,80 @@ g_tcp_connect(int sck, const char *address, const char *port)
 }
 #else
 int
-g_tcp_connect(int sck, const char *address, const char *port)
+g_tcp_connect(int *sck, const char *address, const char *port, int (*is_term)(void), int async_to)
 {
-    struct sockaddr_in s;
-    struct hostent *h;
-    int res;
+    int res = 0;
+    struct addrinfo p;
+    struct addrinfo *h = (struct addrinfo *)NULL;
+    struct addrinfo *rp = (struct addrinfo *)NULL;
+    char host[INET6_ADDRSTRLEN];
+    char service[MAX_PORT_STR];
 
-    g_memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = inet_addr(address);
-    if (s.sin_addr.s_addr == INADDR_NONE)
+    g_memset(&p, 0, sizeof(struct addrinfo));
+    p.ai_family = AF_INET;
+    p.ai_socktype = SOCK_STREAM;
+    p.ai_protocol = IPPROTO_TCP;
+    p.ai_flags = AI_ADDRCONFIG;
+
+    /* setup inital socket */
+    *sck = mk_tcp_socket(&p.ai_family, async_to);
+    if (*sck == -1)
     {
-        h = gethostbyname(address);
-        if (h != 0)
+        return -1;
+    }
+
+    res = getaddrinfo(address, port, &p, &h);
+    if (res != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getaddrinfo() failed: %s",
+            *sck, address, port, gai_strerror(res));
+    }
+    else
+    {
+        if (h != NULL)
         {
-            if (h->h_name != 0)
+            for (rp = h; rp != NULL; rp = rp->ai_next)
             {
-                if (h->h_addr_list != 0)
+                res = getnameinfo(rp->ai_addr, rp->ai_addrlen, host, INET6_ADDRSTRLEN,
+                                  service, MAX_PORT_STR, NI_NUMERICHOST | NI_NUMERICSERV);
+                if (res != 0)
                 {
-                    if ((*(h->h_addr_list)) != 0)
-                    {
-                        s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
-                    }
+                    LOG(LOG_LEVEL_ERROR, "g_tcp_connect(%d, %s, %s): getnameinfo failed",
+                        *sck, address, port);
+                    res = -1;
+                    break;
+                }
+
+                LOG(LOG_LEVEL_DEBUG, "g_tcp_connect(%d, %s, %s): trying address: %s:%s",
+                    *sck, address, port, host, service);
+
+                if (async_to > 0)
+                {
+                    res = async_connect(sck, &p.ai_family, (struct sockaddr *)(rp->ai_addr), rp->ai_addrlen, is_term, async_to);
+                }
+                else
+                {
+                    res = connect(*sck, (struct sockaddr *)(rp->ai_addr), rp->ai_addrlen);
+                }
+
+                /* Mac OSX connect() returns -1 for already established connections */
+                if (res == 0 || (res == -1 && errno == EISCONN))
+                {
+                    res = 0;
+                    break; /* Success */
+                }
+
+                /* get new socket for each attempt - posix standard to not reuse */
+                *sck = sck_redo(*sck, &p.ai_family, async_to);
+                if (*sck == -1)
+                {
+                    res = -1;
+                    break;
                 }
             }
-        }
-    }
-    res = connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
 
-    /* Mac OSX connect() returns -1 for already established connections */
-    if (res == -1 && errno == EISCONN)
-    {
-        res = 0;
+            freeaddrinfo(h);
+        }
     }
 
     return res;
@@ -1022,19 +1270,32 @@ g_tcp_connect(int sck, const char *address, const char *port)
 /*****************************************************************************/
 /* returns error, zero is good */
 int
-g_sck_local_connect(int sck, const char *port)
+g_sck_local_connect(int *sck, const char *port, int (*is_term)(void), int async_to)
 {
 #if defined(_WIN32)
     return -1;
 #else
     struct sockaddr_un s;
+    int fam = PF_LOCAL;
 
+    int res;
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
     strncpy(s.sun_path, port, sizeof(s.sun_path));
     s.sun_path[sizeof(s.sun_path) - 1] = 0;
 
-    return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
+    if (async_to > 0)
+    {
+        g_file_set_cloexec(*sck, 1);
+        g_tcp_set_non_blocking(*sck);
+        res = async_connect(sck, &fam, (struct sockaddr *)&s, sizeof(struct sockaddr_un), is_term, async_to);
+    }
+    else
+    {
+        res = connect(*sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
+    }
+
+    return res;
 #endif
 }
 

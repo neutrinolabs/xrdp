@@ -117,7 +117,7 @@ open_display(const char *display)
                    sock_name, n, wait);
             if ((local_fd = g_sck_local_socket()) >= 0)
             {
-                if  (g_sck_local_connect(local_fd, sock_name) == 0)
+                if  (g_sck_local_connect(&local_fd, sock_name, NULL, 0) == 0)
                 {
                     printf("<D>Socket '%s' open succeeded.\n", sock_name);
                     break;
