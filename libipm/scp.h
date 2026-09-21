@@ -65,8 +65,21 @@ enum scp_msg_code
     E_SCP_CREATE_SOCKDIR_REQUEST,
     E_SCP_CREATE_SOCKDIR_RESPONSE,
 
-    E_SCP_CLOSE_CONNECTION_REQUEST
-    // No E_SCP_CLOSE_CONNECTION_RESPONSE
+    E_SCP_CLOSE_CONNECTION_REQUEST,
+    // No E_SCP_CLOSE_CONNECTION_RESPONSE,
+
+    E_SCP_PROMPT_REQUEST,
+    E_SCP_PROMPT_RESPONSE,
+
+    E_SCP_END
+};
+
+enum scp_prompt_type
+{
+    SCP_PROMPT_ECHO_OFF = 1,
+    SCP_PROMPT_ECHO_ON,
+    SCP_PROMPT_ERROR_MSG,
+    SCP_PROMPT_TEXT_INFO
 };
 
 /* Common facilities */
@@ -586,5 +599,17 @@ scp_get_create_sockdir_response(struct trans *trans,
 int
 scp_send_close_connection_request(struct trans *trans);
 
+int
+scp_send_prompt_request(struct trans *trans, const char *prompt,
+                        enum scp_prompt_type prompt_type);
+
+int
+scp_get_prompt_request(struct trans *trans, char **prompt,
+                       enum scp_prompt_type *prompt_type);
+int
+scp_send_prompt_response(struct trans *trans, const char *response);
+
+int
+scp_get_prompt_response(struct trans *trans, char **response);
 
 #endif /* SCP_H */

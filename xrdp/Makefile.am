@@ -70,6 +70,7 @@ xrdp_SOURCES = \
   xrdp_font.c \
   xrdp_listen.c \
   xrdp_login_wnd.c \
+  xrdp_prompt.c \
   xrdp_mm.c \
   xrdp_mm_ccp.c \
   xrdp_mm.h \

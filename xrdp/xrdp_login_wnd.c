@@ -1110,6 +1110,8 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
         DEFAULT_FONT_PIXEL_SIZE + DEFAULT_COMBO_MARGIN_H;
     globals->ls_unscaled.help_wnd_width = DEFAULT_WND_HELP_W;
     globals->ls_unscaled.help_wnd_height = DEFAULT_WND_HELP_H;
+    globals->ls_unscaled.prompt_wnd_width = DEFAULT_WND_PROMPT_W;
+    globals->ls_unscaled.prompt_wnd_height = DEFAULT_WND_PROMPT_H;
 
     /* open xrdp.ini file */
     if ((fd = g_file_open_ro(xrdp_ini)) < 0)
@@ -1573,6 +1575,8 @@ xrdp_login_wnd_scale_config_values(struct xrdp_wm *self)
         scaled->combo_height = fheight + DEFAULT_COMBO_MARGIN_H;
         scaled->help_wnd_width = SCALE_AND_ROUND(unscaled->help_wnd_width);
         scaled->help_wnd_height = SCALE_AND_ROUND(unscaled->help_wnd_height);
+        scaled->prompt_wnd_width = SCALE_AND_ROUND(unscaled->prompt_wnd_width);
+        scaled->prompt_wnd_height = SCALE_AND_ROUND(unscaled->prompt_wnd_height);
 #undef SCALE_AND_ROUND
     }
 }

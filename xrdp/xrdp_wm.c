@@ -2365,7 +2365,7 @@ xrdp_wm_show_log(struct xrdp_wm *self)
     uint32_t index;
     int primary_x_offset;
     int primary_y_offset;
-
+    struct xrdp_rect prompt_rect;
 
     if (self->hide_log_window)
     {
@@ -2373,6 +2373,16 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         self->session->client_info->rdp_autologin = 0;
         xrdp_wm_set_login_state(self, WMLS_RESET); /* reset session */
         return 0;
+    }
+
+    g_memset(&prompt_rect, 0, sizeof(prompt_rect));
+    if (self->prompt_wnd != NULL)
+    {
+        prompt_rect.left = self->prompt_wnd->left;
+        prompt_rect.top = self->prompt_wnd->top;
+        prompt_rect.right = prompt_rect.left + self->prompt_wnd->width;
+        prompt_rect.bottom = prompt_rect.top + self->prompt_wnd->height;
+        xrdp_bitmap_delete(self->prompt_wnd);
     }
 
     if (self->log_wnd == 0)
@@ -2446,6 +2456,12 @@ xrdp_wm_show_log(struct xrdp_wm *self)
 
     xrdp_wm_set_focused(self, self->log_wnd);
     xrdp_bitmap_invalidate(self->log_wnd, 0);
+
+    if ((prompt_rect.right > prompt_rect.left) &&
+            (prompt_rect.bottom > prompt_rect.top))
+    {
+        xrdp_bitmap_invalidate(self->screen, &prompt_rect);
+    }
 
     return 0;
 }
