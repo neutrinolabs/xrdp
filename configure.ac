@@ -230,6 +230,12 @@ AM_COND_IF([DEVEL_DEBUG],
   [AX_APPEND_COMPILE_FLAGS([-g -O0])],
   [AX_APPEND_COMPILE_FLAGS([-O2])])
 
+# fuzzing flags
+AX_APPEND_COMPILE_FLAGS([-g])
+AX_APPEND_COMPILE_FLAGS([-gline-tables-only])
+AX_APPEND_COMPILE_FLAGS([-fsanitize=fuzzer])
+AX_APPEND_COMPILE_FLAGS([-fsanitize=memory])
+
 # Function setusercontext() is in BSD -lutil but N/A on Solaris or GNU systems
 AC_SEARCH_LIBS([setusercontext], [util])
 
@@ -631,6 +637,7 @@ AC_CONFIG_FILES([
   docs/Makefile
   docs/man/Makefile
   fontutils/Makefile
+  fuzz/Makefile
   genkeymap/Makefile
   instfiles/default/Makefile
   instfiles/init.d/Makefile
