@@ -24,6 +24,7 @@
 #endif
 
 #include <stdlib.h> /* needed for openssl headers */
+#include <string.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rc4.h>
@@ -34,6 +35,12 @@
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
 #include <openssl/crypto.h>
+#include <openssl/evp.h>
+#include <openssl/aes.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/param_build.h>
+#include <openssl/core_names.h>
+#endif
 
 #include "os_calls.h"
 #include "string_calls.h"
@@ -1633,5 +1640,321 @@ const char
     return OpenSSL_version(OPENSSL_VERSION);
 #endif
 
+}
+
+/*****************************************************************************/
+/* DH key exchange for Apple ARD authentication */
+void *
+ssl_dh_create(int key_len, const unsigned char *generator,
+              const unsigned char *prime, const unsigned char *server_pubkey,
+              unsigned char *client_pubkey, unsigned char *shared_secret)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    /* OpenSSL 3.x uses EVP API for DH */
+    EVP_PKEY_CTX *pctx = NULL;
+    EVP_PKEY *params = NULL;
+    EVP_PKEY *dh_key = NULL;
+    EVP_PKEY *peer_key = NULL;
+    OSSL_PARAM_BLD *param_bld = NULL;
+    OSSL_PARAM *params_array = NULL;
+    BIGNUM *p = NULL;
+    BIGNUM *g = NULL;
+    BIGNUM *pub_key = NULL;
+    BIGNUM *peer_pub = NULL;
+    size_t shared_len = key_len;
+    int gen_value;
+
+    /* Convert generator (2 bytes big endian) to int */
+    gen_value = (generator[0] << 8) | generator[1];
+
+    /* Create BIGNUMs */
+    p = BN_bin2bn(prime, key_len, NULL);
+    g = BN_new();
+    BN_set_word(g, gen_value);
+    peer_pub = BN_bin2bn(server_pubkey, key_len, NULL);
+
+    if (!p || !g || !peer_pub)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: BN_bin2bn failed");
+        goto cleanup;
+    }
+
+    /* Build DH parameters */
+    param_bld = OSSL_PARAM_BLD_new();
+    if (!param_bld)
+    {
+        goto cleanup;
+    }
+
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, p);
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, g);
+    params_array = OSSL_PARAM_BLD_to_param(param_bld);
+
+    /* Create parameter key */
+    pctx = EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL);
+    if (!pctx)
+    {
+        goto cleanup;
+    }
+
+    if (EVP_PKEY_fromdata_init(pctx) <= 0 ||
+        EVP_PKEY_fromdata(pctx, &params, EVP_PKEY_KEY_PARAMETERS, params_array) <= 0)
+    {
+        goto cleanup;
+    }
+    EVP_PKEY_CTX_free(pctx);
+    pctx = NULL;
+
+    /* Generate key pair */
+    pctx = EVP_PKEY_CTX_new(params, NULL);
+    if (!pctx || EVP_PKEY_keygen_init(pctx) <= 0 ||
+        EVP_PKEY_generate(pctx, &dh_key) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* Extract our public key */
+    if (EVP_PKEY_get_bn_param(dh_key, OSSL_PKEY_PARAM_PUB_KEY, &pub_key) <= 0)
+    {
+        goto cleanup;
+    }
+    BN_bn2binpad(pub_key, client_pubkey, key_len);
+
+    /* Create peer key for deriving shared secret */
+    OSSL_PARAM_BLD_free(param_bld);
+    param_bld = OSSL_PARAM_BLD_new();
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, p);
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, g);
+    OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_PUB_KEY, peer_pub);
+    OSSL_PARAM_free(params_array);
+    params_array = OSSL_PARAM_BLD_to_param(param_bld);
+
+    EVP_PKEY_CTX_free(pctx);
+    pctx = EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL);
+    if (EVP_PKEY_fromdata_init(pctx) <= 0 ||
+        EVP_PKEY_fromdata(pctx, &peer_key, EVP_PKEY_PUBLIC_KEY, params_array) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* Derive shared secret */
+    EVP_PKEY_CTX_free(pctx);
+    pctx = EVP_PKEY_CTX_new(dh_key, NULL);
+    if (!pctx || EVP_PKEY_derive_init(pctx) <= 0 ||
+        EVP_PKEY_derive_set_peer(pctx, peer_key) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* First get the required size */
+    if (EVP_PKEY_derive(pctx, NULL, &shared_len) <= 0)
+    {
+        goto cleanup;
+    }
+
+    /* Derive into temp buffer to handle padding */
+    {
+        unsigned char *temp_secret = g_new(unsigned char, shared_len);
+        if (!temp_secret)
+        {
+            goto cleanup;
+        }
+        if (EVP_PKEY_derive(pctx, temp_secret, &shared_len) <= 0)
+        {
+            g_free(temp_secret);
+            goto cleanup;
+        }
+
+        /* Left-pad with zeros if needed (ARD requires exact key_len) */
+        g_memset(shared_secret, 0, key_len);
+        if ((int)shared_len >= key_len)
+        {
+            g_memcpy(shared_secret, temp_secret + (shared_len - key_len), key_len);
+        }
+        else
+        {
+            g_memcpy(shared_secret + (key_len - shared_len), temp_secret, shared_len);
+        }
+        g_free(temp_secret);
+    }
+
+    /* Success - return non-NULL */
+    EVP_PKEY_CTX_free(pctx);
+    EVP_PKEY_free(params);
+    EVP_PKEY_free(dh_key);
+    EVP_PKEY_free(peer_key);
+    OSSL_PARAM_BLD_free(param_bld);
+    OSSL_PARAM_free(params_array);
+    BN_free(p);
+    BN_free(g);
+    BN_free(pub_key);
+    BN_free(peer_pub);
+    return (void *)1; /* Return non-NULL to indicate success */
+
+cleanup:
+    if (pctx) EVP_PKEY_CTX_free(pctx);
+    if (params) EVP_PKEY_free(params);
+    if (dh_key) EVP_PKEY_free(dh_key);
+    if (peer_key) EVP_PKEY_free(peer_key);
+    if (param_bld) OSSL_PARAM_BLD_free(param_bld);
+    if (params_array) OSSL_PARAM_free(params_array);
+    if (p) BN_free(p);
+    if (g) BN_free(g);
+    if (pub_key) BN_free(pub_key);
+    if (peer_pub) BN_free(peer_pub);
+    return NULL;
+
+#else
+    /* OpenSSL 1.x - use deprecated DH API */
+    DH *dh = NULL;
+    BIGNUM *p_bn = NULL;
+    BIGNUM *g_bn = NULL;
+    BIGNUM *peer_pub_bn = NULL;
+    const BIGNUM *pub_key = NULL;
+    int gen_value;
+    int secret_len;
+
+    /* Convert generator (2 bytes big endian) to int */
+    gen_value = (generator[0] << 8) | generator[1];
+
+    dh = DH_new();
+    if (!dh)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_new failed");
+        return NULL;
+    }
+
+    p_bn = BN_bin2bn(prime, key_len, NULL);
+    g_bn = BN_new();
+    BN_set_word(g_bn, gen_value);
+
+    if (!p_bn || !g_bn)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: BN creation failed");
+        DH_free(dh);
+        BN_free(p_bn);
+        BN_free(g_bn);
+        return NULL;
+    }
+
+    if (!DH_set0_pqg(dh, p_bn, NULL, g_bn))
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_set0_pqg failed");
+        DH_free(dh);
+        return NULL;
+    }
+
+    /* Generate key pair */
+    if (!DH_generate_key(dh))
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_generate_key failed");
+        DH_free(dh);
+        return NULL;
+    }
+
+    /* Get our public key */
+    DH_get0_key(dh, &pub_key, NULL);
+    BN_bn2binpad(pub_key, client_pubkey, key_len);
+
+    /* Compute shared secret */
+    peer_pub_bn = BN_bin2bn(server_pubkey, key_len, NULL);
+    secret_len = DH_compute_key(shared_secret, peer_pub_bn, dh);
+    BN_free(peer_pub_bn);
+
+    if (secret_len < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "ssl_dh_create: DH_compute_key failed");
+        DH_free(dh);
+        return NULL;
+    }
+
+    /* Pad shared secret with leading zeros if needed */
+    if (secret_len < key_len)
+    {
+        memmove(shared_secret + (key_len - secret_len), shared_secret, secret_len);
+        memset(shared_secret, 0, key_len - secret_len);
+    }
+
+    DH_free(dh);
+    return (void *)1; /* Return non-NULL to indicate success */
+#endif
+}
+
+/*****************************************************************************/
+void
+ssl_dh_delete(void *dh_info)
+{
+    /* Nothing to free - we return a dummy pointer */
+    (void)dh_info;
+}
+
+/*****************************************************************************/
+/* AES-128-ECB encryption for Apple ARD authentication */
+void *
+ssl_aes128_ecb_encrypt_info_create(const unsigned char *key)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        return NULL;
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key, NULL) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return NULL;
+    }
+
+    /* Disable padding - Apple ARD uses exact block sizes */
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+    return ctx;
+#else
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        return NULL;
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key, NULL) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return NULL;
+    }
+
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+    return ctx;
+#endif
+}
+
+/*****************************************************************************/
+void
+ssl_aes128_ecb_encrypt(void *aes_info, const unsigned char *in_data,
+                       unsigned char *out_data, int len)
+{
+    EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)aes_info;
+    int out_len = 0;
+    int final_len = 0;
+
+    if (!ctx)
+    {
+        return;
+    }
+
+    EVP_EncryptUpdate(ctx, out_data, &out_len, in_data, len);
+    EVP_EncryptFinal_ex(ctx, out_data + out_len, &final_len);
+}
+
+/*****************************************************************************/
+void
+ssl_aes128_info_delete(void *aes_info)
+{
+    EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)aes_info;
+    if (ctx)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+    }
 }
 

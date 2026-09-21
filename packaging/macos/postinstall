@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# xrdp post-installation script for macOS
+#
+
+set -e
+
+INSTALL_PREFIX="/usr/local"
+LAUNCHD_DIR="/Library/LaunchDaemons"
+CONFIG_DIR="/etc/xrdp"
+
+echo "xrdp post-installation setup..."
+
+# Create xrdp user/group if needed (optional, xrdp can run as root)
+# dscl . -read /Groups/xrdp >/dev/null 2>&1 || dscl . -create /Groups/xrdp
+
+# Fix library paths for all xrdp binaries
+echo "Fixing library paths..."
+for binary in xrdp xrdp-sesman xrdp-chansrv; do
+    if [ -f "$INSTALL_PREFIX/sbin/$binary" ]; then
+        # Fix common library references
+        for lib in libcommon libxrdp libipm libsesman libtoml; do
+            install_name_tool -change \
+                "$lib.0.dylib" \
+                "$INSTALL_PREFIX/lib/xrdp/$lib.0.dylib" \
+                "$INSTALL_PREFIX/sbin/$binary" 2>/dev/null || true
+        done
+    fi
+done
+
+# Configure sesman.ini for macOS (wheel group instead of root)
+if [ -f "$CONFIG_DIR/sesman.ini" ]; then
+    echo "Configuring sesman.ini for macOS..."
+    sed -i '' 's/^SessionSockdirGroup=root/SessionSockdirGroup=wheel/' "$CONFIG_DIR/sesman.ini" 2>/dev/null || true
+fi
+
+# Add macOS session to xrdp.ini if not present
+if [ -f "$CONFIG_DIR/xrdp.ini" ]; then
+    if ! grep -q "\[macos\]" "$CONFIG_DIR/xrdp.ini"; then
+        echo "Adding macOS session to xrdp.ini..."
+        cat >> "$CONFIG_DIR/xrdp.ini" << 'EOF'
+
+[macos]
+name=macOS Desktop
+lib=libvnc.dylib
+ip=127.0.0.1
+port=5900
+username=ask
+password=ask
+EOF
+    fi
+fi
+
+# Install launchd plists
+echo "Installing launchd services..."
+cp "$INSTALL_PREFIX/share/xrdp/com.xrdp.xrdp.plist" "$LAUNCHD_DIR/" 2>/dev/null || true
+cp "$INSTALL_PREFIX/share/xrdp/com.xrdp.sesman.plist" "$LAUNCHD_DIR/" 2>/dev/null || true
+
+# Set correct permissions
+chmod 644 "$LAUNCHD_DIR/com.xrdp.xrdp.plist" 2>/dev/null || true
+chmod 644 "$LAUNCHD_DIR/com.xrdp.sesman.plist" 2>/dev/null || true
+chown root:wheel "$LAUNCHD_DIR/com.xrdp.xrdp.plist" 2>/dev/null || true
+chown root:wheel "$LAUNCHD_DIR/com.xrdp.sesman.plist" 2>/dev/null || true
+
+# Create log directory
+mkdir -p /var/log
+touch /var/log/xrdp.log /var/log/xrdp.err
+touch /var/log/xrdp-sesman.log /var/log/xrdp-sesman.err
+
+# Load services
+echo "Starting xrdp services..."
+launchctl load "$LAUNCHD_DIR/com.xrdp.xrdp.plist" 2>/dev/null || true
+launchctl load "$LAUNCHD_DIR/com.xrdp.sesman.plist" 2>/dev/null || true
+
+echo ""
+echo "============================================"
+echo "xrdp installation complete!"
+echo "============================================"
+echo ""
+echo "IMPORTANT: To connect to macOS Screen Sharing, you need to:"
+echo ""
+echo "1. Enable Screen Sharing:"
+echo "   System Settings → General → Sharing → Screen Sharing"
+echo ""
+echo "2. Grant TCC permissions (requires SIP disabled):"
+echo "   - Boot to Recovery Mode and run: csrutil disable"
+echo "   - Reboot and run: sudo $INSTALL_PREFIX/share/xrdp/fix-screen-recording.sh"
+echo "   - Reboot again"
+echo ""
+echo "3. Enable full control:"
+echo "   sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -allowAccessFor -allUsers -privs -all -restart -agent"
+echo ""
+echo "Connect using any RDP client to port 3389."
+echo ""
+
+exit 0
