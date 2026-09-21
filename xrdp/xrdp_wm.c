@@ -126,11 +126,16 @@ xrdp_wm_create(struct xrdp_process *owner,
             client_info->keylayout,
             client_info->xrdp_keyboard_overrides.layout);
         get_keymaps(client_info->xrdp_keyboard_overrides.layout,
+                    client_info->keyboard_type,
+                    client_info->keyboard_subtype,
                     &(self->keymap));
     }
     else
     {
-        get_keymaps(client_info->keylayout, &(self->keymap));
+        get_keymaps(client_info->keylayout,
+                    client_info->keyboard_type,
+                    client_info->keyboard_subtype,
+                    &(self->keymap));
     }
     xrdp_wm_set_login_state(self, WMLS_RESET);
     self->target_surface = self->screen;
