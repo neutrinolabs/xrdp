@@ -8,6 +8,7 @@ char *
 bin_to_hex(const char *input, int length);
 
 Suite *make_suite_test_dechunker(void);
+Suite *make_suite_test_explicit_bzero(void);
 Suite *make_suite_test_fifo(void);
 Suite *make_suite_test_list(void);
 Suite *make_suite_test_list16(void);

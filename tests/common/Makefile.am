@@ -15,6 +15,7 @@ test_common_SOURCES = \
     test_common.h \
     test_common_main.c \
     test_dechunker.c \
+    test_explicit_bzero.c \
     test_fifo_calls.c \
     test_list_calls.c \
     test_list16_calls.c \
