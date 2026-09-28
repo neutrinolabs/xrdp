@@ -94,6 +94,7 @@ START_TEST(test_list16__stack)
     ck_assert_int_eq(lst.count, TEST_LIST16_SIZE);
     list16_deinit(&lst);
 }
+END_TEST
 
 /******************************************************************************/
 Suite *

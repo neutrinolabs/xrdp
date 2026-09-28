@@ -57,6 +57,7 @@ START_TEST(test_scancode__scancode_to_index)
         }
     }
 }
+END_TEST
 
 // Checks all returned evdev scancodes are mapped to a keycode
 START_TEST(test_scancode__keycode_sets)
