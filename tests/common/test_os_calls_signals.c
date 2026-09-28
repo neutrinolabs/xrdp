@@ -193,6 +193,7 @@ START_TEST(test_g_signal_hang_up)
 
     g_signal_hang_up(NULL);
 }
+END_TEST
 
 /******************************************************************************/
 START_TEST(test_g_signal_user_interrupt)
@@ -203,6 +204,7 @@ START_TEST(test_g_signal_user_interrupt)
 
     g_signal_user_interrupt(NULL);
 }
+END_TEST
 
 /******************************************************************************/
 START_TEST(test_g_signal_terminate)
@@ -213,6 +215,7 @@ START_TEST(test_g_signal_terminate)
 
     g_signal_terminate(NULL);
 }
+END_TEST
 
 /******************************************************************************/
 START_TEST(test_g_signal_pipe)
@@ -223,6 +226,7 @@ START_TEST(test_g_signal_pipe)
 
     g_signal_pipe(NULL);
 }
+END_TEST
 
 /******************************************************************************/
 START_TEST(test_g_signal_usr1)
@@ -233,6 +237,7 @@ START_TEST(test_g_signal_usr1)
 
     g_signal_usr1(NULL);
 }
+END_TEST
 
 /******************************************************************************/
 START_TEST(test_waitpid_not_interrupted_by_sig)
@@ -260,6 +265,7 @@ START_TEST(test_waitpid_not_interrupted_by_sig)
     // Clean up
     g_set_alarm(NULL, 0);
 }
+END_TEST
 
 /******************************************************************************/
 TCase *

@@ -218,6 +218,7 @@ START_TEST(test_vc_dechunker_bad_params)
     free_stream(s);
     vc_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 /*
@@ -522,6 +523,7 @@ START_TEST(test_vc_dechunker_big_test)
     free_stream(s);
     vc_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 // Like test_vc_dechunker_big_test, but the last chunk is oversized
@@ -570,6 +572,7 @@ START_TEST(test_vc_dechunker_big_test_oversize_fail)
 
     vc_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 // Like test_vc_dechunker_big_test, but the last chunk is undersized
@@ -608,6 +611,7 @@ START_TEST(test_vc_dechunker_big_test_undersize_fail)
 
     vc_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 
@@ -651,6 +655,7 @@ START_TEST(test_dyn_dechunker_bad_params)
     free_stream(s);
     dyn_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 /*
@@ -890,6 +895,7 @@ START_TEST(test_dyn_dechunker_big_test)
     free_stream(s);
     dyn_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 // Like test_dyn_dechunker_big_test, but the last chunk is oversized
@@ -946,6 +952,7 @@ START_TEST(test_dyn_dechunker_big_test_oversize_fail)
 
     dyn_dechunker_free(dc);
 }
+END_TEST
 
 /******************************************************************************/
 
