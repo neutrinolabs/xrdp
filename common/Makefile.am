@@ -45,6 +45,8 @@ libcommon_la_SOURCES = \
   defines.h \
   dechunker.c \
   dechunker.h \
+  explicit_bzero.c \
+  explicit_bzero.h \
   fifo.c \
   fifo.h \
   file.c \
