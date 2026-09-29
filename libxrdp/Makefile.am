@@ -19,6 +19,14 @@ AM_CPPFLAGS += -DXRDP_NEUTRINORDP
 LIBXRDP_EXTRA_LIBS += $(FREERDP_LIBS)
 endif
 
+if XRDP_NLA
+AM_CFLAGS += $(GSSAPI_CFLAGS)
+LIBXRDP_EXTRA_LIBS += $(GSSAPI_LIBS)
+NLA_SOURCES = xrdp_nla.c xrdp_nla.h
+else
+NLA_SOURCES =
+endif
+
 if XRDP_RFXCODEC
 AM_CPPFLAGS += -DXRDP_RFXCODEC
 endif
@@ -55,7 +63,8 @@ libxrdp_la_SOURCES = \
   xrdp_orders_rail.c \
   xrdp_orders_rail.h \
   xrdp_rdp.c \
-  xrdp_sec.c
+  xrdp_sec.c \
+  $(NLA_SOURCES)
 
 libxrdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
