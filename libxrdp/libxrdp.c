@@ -101,11 +101,12 @@ libxrdp_disconnect(struct xrdp_session *session, int errinfo)
             rv = xrdp_rdp_send_set_error(rdp, errinfo);
         }
 
-        if (rv == 0)
-        {
-            rv = xrdp_rdp_send_deactivate(rdp);
-        }
-
+        /* [MS-RDPBCGR] 1.3.1.4.2 and 1.3.1.4.3 make the Deactivate All PDU
+         * optional on a server-initiated disconnect. Windows (10, Server 2025)
+         * does not send it, and after it some clients (e.g. FreeRDP) expect a
+         * capability re-exchange and report the disconnect as an error.
+         * So, as Windows does, go straight to the MCS Disconnect Provider
+         * Ultimatum. */
         if (rv == 0)
         {
             rv = xrdp_rdp_disconnect(rdp);
