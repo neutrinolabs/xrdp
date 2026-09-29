@@ -1403,7 +1403,11 @@ xrdp_rdp_send_set_error(struct xrdp_rdp *self, int reason)
     LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] TS_SET_ERROR_INFO_PDU "
               "errorInfo 0x%8.8x", reason);
 
-    if (xrdp_rdp_send_data(self, s, PDUTYPE2_SET_ERROR_INFO_PDU) != 0)
+    // [MS-RDPBCGR] 2.2.5.1.1 - the pduSource field in the
+    // PDU shareDataHeader must be set to zero.
+    if (xrdp_rdp_send_data_from_channel(self, s,
+                                        PDUTYPE2_SET_ERROR_INFO_PDU,
+                                        0, 0) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "Sending [MS-RDPBCGR] TS_SET_ERROR_INFO_PDU failed");
