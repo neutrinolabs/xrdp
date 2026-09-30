@@ -568,6 +568,11 @@ struct xrdp_wm
     /* Unicode input */
     int last_high_surrogate_key_up;
     int last_high_surrogate_key_down;
+    /* Some clients wrap pasted Unicode text in terminal bracketed-paste
+     * delimiters. Keep a short pending buffer so these markers can be removed
+     * before committed text is forwarded to the backend. */
+    char32_t unicode_pending_chars[6];
+    unsigned int unicode_pending_chars_len;
     /* client info */
     struct xrdp_client_info *client_info;
     /* session log */
