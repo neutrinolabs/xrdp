@@ -1079,6 +1079,10 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     globals->ini_version = 1;
     globals->default_dpi = 96;
 
+    /* Clipboard support on the login screen adds pre-authentication
+     * parsing of client data, so it is opt-in */
+    globals->enable_login_clipboard = 0;
+
     globals->ls_top_window_bg_color = HCOLOR(bpp, g_htoi("009cb5"));
     globals->ls_bg_color = HCOLOR(bpp, g_htoi("dedede"));
     globals->ls_unscaled.width = 350;
@@ -1305,6 +1309,11 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             globals->enable_token_login = g_text2bool(v);
         }
 
+        else if (g_strncmp(n, "enable_login_clipboard", 64) == 0)
+        {
+            globals->enable_login_clipboard = g_text2bool(v);
+        }
+
         /* login screen values */
         else if (g_strcmp(n, "default_dpi") == 0)
         {
@@ -1482,6 +1491,7 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     LOG(LOG_LEVEL_DEBUG, "nego_sec_layer:          %d", globals->nego_sec_layer);
     LOG(LOG_LEVEL_DEBUG, "allow_multimon:          %d", globals->allow_multimon);
     LOG(LOG_LEVEL_DEBUG, "enable_token_login:      %d", globals->enable_token_login);
+    LOG(LOG_LEVEL_DEBUG, "enable_login_clipboard:  %d", globals->enable_login_clipboard);
 
     LOG(LOG_LEVEL_DEBUG, "ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
     LOG(LOG_LEVEL_DEBUG, "ls_width (unscaled):     %d", globals->ls_unscaled.width);
