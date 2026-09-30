@@ -23,6 +23,7 @@
 #include <config_ac.h>
 #endif
 
+#include "explicit_bzero.h"
 #include "libipm.h"
 #include "libipm_private.h"
 #include "libipm_facilities.h"
@@ -140,8 +141,8 @@ libipm_trans_destructor(struct trans *trans)
         if ((priv->flags & LIBIPM_E_MSG_IN_ERASE_AFTER_USE) != 0 &&
                 trans->in_s->data != NULL)
         {
-            g_memset(trans->in_s->data, '\0',
-                     trans->in_s->end - trans->in_s->data);
+            explicit_bzero(trans->in_s->data,
+                           trans->in_s->end - trans->in_s->data);
         }
 
         g_free(priv);

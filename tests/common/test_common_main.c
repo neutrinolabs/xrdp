@@ -58,6 +58,10 @@ int main (void)
     {
         srunner_add_suite(sr, make_suite_test_dechunker());
     }
+    if (run_suite("explicit_bzero"))
+    {
+        srunner_add_suite(sr, make_suite_test_explicit_bzero());
+    }
     if (run_suite("fifo"))
     {
         srunner_add_suite(sr, make_suite_test_fifo());
