@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "explicit_bzero.h"
 #include "libipm.h"
 #include "libipm_private.h"
 #include "libipm_facilities.h"
@@ -679,7 +680,7 @@ libipm_msg_in_reset(struct trans *trans)
         if ((priv->flags & LIBIPM_E_MSG_IN_ERASE_AFTER_USE) != 0)
         {
             struct stream *s = trans->in_s;
-            g_memset(s->data, '\0', s->end - s->data);
+            explicit_bzero(s->data, s->end - s->data);
             priv->flags &= ~LIBIPM_E_MSG_IN_ERASE_AFTER_USE;
         }
         priv->in_msgno = 0;

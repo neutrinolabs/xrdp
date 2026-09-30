@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "explicit_bzero.h"
 #include "libipm.h"
 #include "libipm_private.h"
 #include "libipm_facilities.h"
@@ -611,6 +612,6 @@ libipm_msg_out_erase(struct trans *trans)
     struct stream *s = trans->out_s;
     if (s->size > 0 && s->data != 0)
     {
-        g_memset(s->data, '\0', s->p - s->data);
+        explicit_bzero(s->data, s->p - s->data);
     }
 }
