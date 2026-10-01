@@ -67,6 +67,10 @@ struct session_item
     unsigned char bpp;
     struct guid guid;
     char start_ip_addr[MAX_PEER_ADDRSTRLEN];
+    /** Name of the client which requested this session, used for the
+     * 'H' session allocation policy. Unlike client_name below, this is
+     * not cleared on disconnect. */
+    char start_client_name[INFO_CLIENT_NAME_BYTES_UTF8];
     time_t start_time;
     char client_ip[MAX_PEER_ADDRSTRLEN];
     char client_name[INFO_CLIENT_NAME_BYTES_UTF8];
@@ -143,7 +147,8 @@ session_list_get_bydata(uid_t uid,
                         unsigned short height,
                         unsigned char  bpp,
                         const char *ip_addr,
-                        const char *instance_name);
+                        const char *instance_name,
+                        const char *client_name);
 
 /**
  * @brief retrieves session descriptions

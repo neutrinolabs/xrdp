@@ -39,6 +39,7 @@ char port[257];
 
 static int cmndList(struct trans *t);
 static int cmndKill(struct trans *t);
+static int cmndClientName(struct trans *t);
 static void cmndHelp(void);
 
 
@@ -106,6 +107,10 @@ int main(int argc, char **argv)
         {
             rv = cmndKill(t);
         }
+        else if (0 == g_strncmp(cmnd, "clientname:", 11))
+        {
+            rv = cmndClientName(t);
+        }
     }
 
     if (rv == 0)
@@ -128,6 +133,7 @@ cmndHelp(void)
     fprintf(stderr, "               it can be one of those:\n");
     fprintf(stderr, "               list\n");
     fprintf(stderr, "               kill:<sid>\n");
+    fprintf(stderr, "               clientname:<sid>\n");
 }
 
 static void
@@ -204,4 +210,35 @@ cmndKill(struct trans *t)
 {
     fprintf(stderr, "not yet implemented\n");
     return 1;
+}
+
+static int
+cmndClientName(struct trans *t)
+{
+    int rv = 1;
+    int sid = g_atoi(cmnd + 11);
+    struct list *sessions = scp_sync_list_sessions_request(t);
+
+    if (sessions != NULL)
+    {
+        int i;
+        for (i = 0 ; i < sessions->count; ++i)
+        {
+            const struct scp_session_info *s =
+                (const struct scp_session_info *)sessions->items[i];
+            if (s->sid == sid)
+            {
+                printf("%s\n", s->client_name);
+                rv = 0;
+                break;
+            }
+        }
+        if (rv != 0)
+        {
+            fprintf(stderr, "No such session ID: %d\n", sid);
+        }
+        list_delete(sessions);
+    }
+
+    return rv;
 }

@@ -189,7 +189,8 @@ session_list_get_bydata(uid_t uid,
                         unsigned short height,
                         unsigned char  bpp,
                         const char *ip_addr,
-                        const char *instance_name)
+                        const char *instance_name,
+                        const char *client_name)
 {
     char policy_str[64];
     int policy = g_cfg->sess.policy;
@@ -205,6 +206,11 @@ session_list_get_bydata(uid_t uid,
         instance_name = "";
     }
 
+    if (client_name == NULL)
+    {
+        client_name = "";
+    }
+
     if ((policy & SESMAN_CFG_SESS_POLICY_DEFAULT) != 0)
     {
         /* Before xrdp v0.9.14, the default
@@ -216,11 +222,11 @@ session_list_get_bydata(uid_t uid,
     config_output_policy_string(policy, policy_str, sizeof(policy_str));
 
     LOG(LOG_LEVEL_DEBUG,
-        "%s: search policy=%s type=%s U=%d B=%d D=(%dx%d) I=%s P=%s",
+        "%s: search policy=%s type=%s U=%d B=%d D=(%dx%d) I=%s P=%s H=%s",
         __func__,
         policy_str, SCP_SESSION_TYPE_TO_STR(type),
         uid, bpp, width, height,
-        ip_addr, instance_name);
+        ip_addr, instance_name, client_name);
 
     /* 'Separate' policy never matches */
     if (policy & SESMAN_CFG_SESS_POLICY_SEPARATE)
@@ -239,13 +245,14 @@ session_list_get_bydata(uid_t uid,
         }
 
         LOG(LOG_LEVEL_DEBUG,
-            "%s: try %p type=%s U=%d B=%d D=(%dx%d) I=%s N=%s",
+            "%s: try %p type=%s U=%d B=%d D=(%dx%d) I=%s N=%s H=%s",
             __func__,
             si,
             SCP_SESSION_TYPE_TO_STR(si->type),
             si->uid, si->bpp,
             si->start_width, si->start_height,
-            si->start_ip_addr, si->xrdp_instance_name);
+            si->start_ip_addr, si->xrdp_instance_name,
+            si->start_client_name);
 
         if (si->type != type)
         {
@@ -289,6 +296,14 @@ session_list_get_bydata(uid_t uid,
         {
             LOG(LOG_LEVEL_DEBUG,
                 "%s: Instance names don't match for 'N' policy", __func__);
+            continue;
+        }
+
+        if ((policy & SESMAN_CFG_SESS_POLICY_H) &&
+                g_strcmp(si->start_client_name, client_name) != 0)
+        {
+            LOG(LOG_LEVEL_DEBUG,
+                "%s: Client names don't match for 'H' policy", __func__);
             continue;
         }
 

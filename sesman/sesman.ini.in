@@ -113,7 +113,7 @@ IdleTimeLimit=0
 
 ;; Policy - session allocation policy
 ;
-;  Type: enum [ "Default" | "Separate" | Combination from {UBDI} ]
+;  Type: enum [ "Default" | "Separate" | Combination from {UBDINH} ]
 ;  "Default"    Currently same as "UB"
 ;  "Separate"   All sessions are separate. Sessions can never be rejoined,
 ;               and will need to be cleaned up manually, or automatically
@@ -125,6 +125,8 @@ IdleTimeLimit=0
 ;      D        Sessions are separated by initial display size
 ;      I        Sessions are separated by IP address
 ;      N        Sessions are separated by xrdp instance name
+;      H        Sessions are separated by the RDP client's reported
+;               hostname (exposed to the session as $CLIENTNAME)
 ;
 ;   The options U and B are always active, and cannot be de-selected.
 ;

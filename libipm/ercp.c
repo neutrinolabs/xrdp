@@ -156,14 +156,15 @@ ercp_send_session_announce_event(struct trans *trans,
                                  const struct guid *guid,
                                  const char *start_ip_addr,
                                  time_t start_time,
-                                 const char *instance_name)
+                                 const char *instance_name,
+                                 const char *start_client_name)
 {
     struct libipm_fsb guid_descriptor = { (void *)guid, sizeof(*guid) };
 
     return libipm_msg_out_simple_send(
                trans,
                (int)E_ERCP_SESSION_ANNOUNCE_EVENT,
-               "siyqqyBsxs",
+               "siyqqyBsxss",
                display,
                uid,
                type,
@@ -173,7 +174,8 @@ ercp_send_session_announce_event(struct trans *trans,
                &guid_descriptor,
                start_ip_addr,
                (int64_t)start_time,
-               instance_name);
+               instance_name,
+               start_client_name);
 }
 
 /*****************************************************************************/
@@ -189,7 +191,8 @@ ercp_get_session_announce_event(struct trans *trans,
                                 struct guid *guid,
                                 const char **start_ip_addr,
                                 time_t *start_time,
-                                const char **instance_name)
+                                const char **instance_name,
+                                const char **start_client_name)
 {
     /* Intermediate values */
     int32_t i_uid;
@@ -203,7 +206,7 @@ ercp_get_session_announce_event(struct trans *trans,
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "siyqqyBsxs",
+                 "siyqqyBsxss",
                  display,
                  &i_uid,
                  &i_type,
@@ -213,7 +216,8 @@ ercp_get_session_announce_event(struct trans *trans,
                  &guid_descriptor,
                  start_ip_addr,
                  &i_start_time,
-                 instance_name);
+                 instance_name,
+                 start_client_name);
 
     if (rv == 0)
     {

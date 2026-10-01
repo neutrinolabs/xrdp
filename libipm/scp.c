@@ -420,19 +420,21 @@ scp_send_create_session_request(struct trans *trans,
                                 unsigned char bpp,
                                 const char *shell,
                                 const char *directory,
-                                const char *instance_name)
+                                const char *instance_name,
+                                const char *client_name)
 {
     return libipm_msg_out_simple_send(
                trans,
                (int)E_SCP_CREATE_SESSION_REQUEST,
-               "yqqysss",
+               "yqqyssss",
                type,
                width,
                height,
                bpp,
                shell,
                directory,
-               instance_name);
+               instance_name,
+               client_name);
 }
 
 /*****************************************************************************/
@@ -445,7 +447,8 @@ scp_get_create_session_request(struct trans *trans,
                                unsigned char *bpp,
                                const char **shell,
                                const char **directory,
-                               const char **instance_name)
+                               const char **instance_name,
+                               const char **client_name)
 {
     /* Intermediate values */
     uint8_t i_type;
@@ -455,14 +458,15 @@ scp_get_create_session_request(struct trans *trans,
 
     int rv = libipm_msg_in_parse(
                  trans,
-                 "yqqysss",
+                 "yqqyssss",
                  &i_type,
                  &i_width,
                  &i_height,
                  &i_bpp,
                  shell,
                  directory,
-                 instance_name);
+                 instance_name,
+                 client_name);
 
     if (rv == 0)
     {

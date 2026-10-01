@@ -50,6 +50,7 @@ struct session_parameters
     const char *shell;  // Must not be NULL
     const char *directory;  // Must not be NULL
     const char *instance_name;  //Must not be NULL
+    const char *client_name;  // Name of connecting RDP client. Must not be NULL
 };
 
 
