@@ -24,6 +24,22 @@ All options and values (except for file names and paths) are case insensitive, a
 The options to be specified in the \fB[Globals]\fR section are the following:
 
 .TP
+\fBls_ui\fR=\fI[legacy|lvgl]\fR
+Select the pre-session user interface. The default is \fBlegacy\fR.
+The \fBlvgl\fR interface requires a build configured with \fB--enable-lvgl\fR
+and a compatible system LVGL library. Both process and threaded connection
+modes are supported. If initialization fails, or the client uses 8-bit color,
+the legacy interface is used. Desktop session and authentication settings
+are unchanged.
+
+.TP
+\fBls_font_file\fR=\fIpath\fR
+Optional TrueType/OpenType font file for the LVGL interface. By default,
+Fontconfig prefers Quicksand, then Nunito Sans, then the system sans-serif font.
+The legacy interface ignores this setting. The font must be readable by the
+xrdp runtime user.
+
+.TP
 \fBport\fR=\fIport_specification [ port_specification ... ]\fR
 Specify the port(s) that xrdp should listen on. More instructions and
 examples can be found within xrdp.ini itself.

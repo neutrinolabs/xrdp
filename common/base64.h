@@ -52,8 +52,9 @@
  * a correct result. This may be more than dst_len, and enables the caller
  * to detect a potential buffer overflow
  */
+/* Namespace these helpers to avoid Heimdal/libroken's incompatible symbols. */
 int
-base64_decode(const char *src, char *dst, size_t dst_len, size_t *actual_len);
+xrdp_base64_decode(const char *src, char *dst, size_t dst_len, size_t *actual_len);
 
 /*
  * Encodes a buffer as base64
@@ -77,6 +78,6 @@ base64_decode(const char *src, char *dst, size_t dst_len, size_t *actual_len);
  * this procedure.
  */
 size_t
-base64_encode(const char *src, size_t src_len, char *dst, size_t dst_len);
+xrdp_base64_encode(const char *src, size_t src_len, char *dst, size_t dst_len);
 
 #endif /* BASE64_CALLS_H */

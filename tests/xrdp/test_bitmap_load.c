@@ -174,6 +174,33 @@ check_pixel(struct xrdp_bitmap *bm, int i, int j, int expected)
     }
 }
 
+/* Alpha output is explicit; ordinary bitmap loads keep their old semantics. */
+START_TEST(test_bitmap_load_preserve_alpha)
+{
+    struct xrdp_bitmap *bm = xrdp_bitmap_create(4, 4, 32, WND_TYPE_IMAGE, NULL);
+    ck_assert_int_eq(xrdp_bitmap_load(bm, IMAGEDIR "/test_24bit.bmp", NULL,
+                                      XRDP_BITMAP_BACKGROUND_TRANSPARENT,
+                                      XBLT_SCALE, 64, 64), 0);
+    check_pixel(bm, 0, 0, RED | 0xff000000);
+    check_pixel(bm, 63, 63, WHITE | 0xff000000);
+#ifdef USE_IMLIB2
+    ck_assert_int_eq(xrdp_bitmap_load(bm, IMAGEDIR "/test_alpha_blend.png", NULL,
+                                      XRDP_BITMAP_BACKGROUND_TRANSPARENT,
+                                      XBLT_SCALE, 64, 64), 0);
+    check_pixel(bm, 0, 0, RED | 0xff000000);
+    check_pixel(bm, 63, 0, GREEN | 0xff000000);
+    check_pixel(bm, 0, 63, BLUE | 0xff000000);
+    ck_assert_uint_eq((unsigned int)xrdp_bitmap_get_pixel(bm, 63, 63) >> 24, 0);
+#endif
+    xrdp_bitmap_delete(bm);
+    bm = xrdp_bitmap_create(4, 4, 24, WND_TYPE_IMAGE, NULL);
+    ck_assert_int_ne(xrdp_bitmap_load(bm, IMAGEDIR "/test_24bit.bmp", NULL,
+                                      XRDP_BITMAP_BACKGROUND_TRANSPARENT,
+                                      XBLT_NONE, 0, 0), 0);
+    xrdp_bitmap_delete(bm);
+}
+END_TEST
+
 /* Calculates whether two colors are close enough to be considered the same */
 static void
 check_is_close_color(struct xrdp_bitmap *bm, int i, int j, int expected)
@@ -403,6 +430,7 @@ make_suite_test_bitmap_load(void)
     suite_add_tcase(s, tc);
     tcase_add_checked_fixture(tc, setup, teardown);
     tcase_add_test(tc, test_bitmap_load__with_invalid_image__fail);
+    tcase_add_test(tc, test_bitmap_load_preserve_alpha);
     tcase_add_test(tc, test_bitmap_load__4_bit__ok);
     tcase_add_test(tc, test_bitmap_load__8_bit__ok);
     tcase_add_test(tc, test_bitmap_load__24_bit__ok);

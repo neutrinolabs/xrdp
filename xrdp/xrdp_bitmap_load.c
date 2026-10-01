@@ -683,7 +683,12 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
     /* this is the default bmp-only implementation if a graphics library
      * isn't built in */
 
-    int result = xrdp_bitmap_load_bmp(self, filename, palette);
+    int result;
+    if (background == XRDP_BITMAP_BACKGROUND_TRANSPARENT && self->bpp != 32)
+    {
+        return 1;
+    }
+    result = xrdp_bitmap_load_bmp(self, filename, palette);
     if (result == 0)
     {
         switch (transform)
@@ -705,6 +710,19 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
         }
     }
 
+    if (result == 0 && background == XRDP_BITMAP_BACKGROUND_TRANSPARENT)
+    {
+        int x;
+        int y;
+        for (y = 0; y < self->height; ++y)
+        {
+            for (x = 0; x < self->width; ++x)
+            {
+                xrdp_bitmap_set_pixel(self, x, y,
+                                      xrdp_bitmap_get_pixel(self, x, y) | 0xff000000);
+            }
+        }
+    }
     return result;
 }
 #endif /* USE_BUILTIN_LOADER */
@@ -934,7 +952,7 @@ zoom_imlib_image(const char *filename, int twidth, int theight)
  */
 static int
 copy_imlib_data_to_bitmap(struct xrdp_bitmap *self,
-                          const int *out_palette)
+                          const int *out_palette, int preserve_alpha)
 {
     int result = 0;
     Imlib_Image img = imlib_context_get_image();
@@ -952,6 +970,7 @@ copy_imlib_data_to_bitmap(struct xrdp_bitmap *self,
         int j;
         DATA32 *bdata;
         int color;
+        int has_alpha = imlib_image_has_alpha();
         xrdp_bitmap_resize(self, width, height);
 
         bdata = imlib_image_get_data_for_reading_only();
@@ -960,6 +979,10 @@ copy_imlib_data_to_bitmap(struct xrdp_bitmap *self,
             for (i = 0 ; i < width ; ++i)
             {
                 color = (*bdata++ & 0xffffff);
+                if (preserve_alpha)
+                {
+                    color |= has_alpha ? (bdata[-1] & 0xff000000) : 0xff000000;
+                }
 
                 if (self->bpp == 8)
                 {
@@ -1038,7 +1061,13 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
     int result = 0;
     Imlib_Load_Error lerr;
     int free_context_image = 0; /* Set if we've got an image loaded */
-    Imlib_Image img = imlib_load_image_with_error_return(filename, &lerr);
+    Imlib_Image img;
+    int preserve_alpha = background == XRDP_BITMAP_BACKGROUND_TRANSPARENT;
+    if (preserve_alpha && self->bpp != 32)
+    {
+        return 1;
+    }
+    img = imlib_load_image_with_error_return(filename, &lerr);
 
     /* Load the image */
     if (img == NULL)
@@ -1053,7 +1082,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
     }
 
     /* Sort out the background */
-    if (result == 0 && imlib_image_has_alpha())
+    if (result == 0 && !preserve_alpha && imlib_image_has_alpha())
     {
         int r;
         int g;
@@ -1065,6 +1094,13 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
 
     if (result == 0)
     {
+        if (transform == XBLT_SCALE || transform == XBLT_ZOOM)
+        {
+            /* Keep filtered scaling from sampling beyond the image edges */
+            Imlib_Border border = {1, 1, 1, 1};
+            imlib_image_set_border(&border);
+        }
+
         switch (transform)
         {
             case XBLT_NONE:
@@ -1086,7 +1122,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename,
 
     if (result == 0)
     {
-        result = copy_imlib_data_to_bitmap(self, palette);
+        result = copy_imlib_data_to_bitmap(self, palette, preserve_alpha);
     }
 
     if (free_context_image)

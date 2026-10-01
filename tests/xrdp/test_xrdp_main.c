@@ -60,6 +60,8 @@ int main (void)
     srunner_add_suite(sr, make_suite_region());
     srunner_add_suite(sr, make_suite_tconfig_load_gfx());
 
+    srunner_add_suite(sr, make_suite_login());
+
     srunner_set_tap(sr, "-");
     srunner_run_all (sr, CK_ENV);
     number_failed = srunner_ntests_failed(sr);
