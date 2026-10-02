@@ -349,6 +349,32 @@ start_window_manager(const struct login_info *login_info,
 }
 
 /******************************************************************************/
+/**
+ * Replaces the value of the -config parameter in an X server parameter
+ * list, or appends -config if the list has none
+ *
+ * @param params X server parameters (with auto_free set)
+ * @param config xorg.conf to use
+ */
+static void
+set_xorg_config_param(struct list *params, const char *config)
+{
+    int i;
+
+    for (i = 1; i < params->count - 1; ++i)
+    {
+        if (g_strcmp((const char *)list_get_item(params, i), "-config") == 0)
+        {
+            list_remove_item(params, i + 1);
+            list_insert_item(params, i + 1, (tintptr)g_strdup(config));
+            return;
+        }
+    }
+
+    list_add_strdup_multi(params, "-config", config, LIST_ADD_STRDUP_TERM);
+}
+
+/******************************************************************************/
 static struct list *
 prepare_xorg_xserver_params(const struct session_data *sd,
                             const char *authfile)
@@ -411,6 +437,17 @@ prepare_xorg_xserver_params(const struct session_data *sd,
 
         /* additional parameters from sesman.ini file */
         list_append_list_strdup(g_cfg->xorg_params, params, 1);
+
+        /* A PAM session module can choose the xorg.conf for this
+         * session, for example one per GPU on a multi-GPU server */
+        const char *config = g_getenv("XRDP_XORG_CONFIG");
+        if (config != NULL && config[0] != '\0')
+        {
+            LOG(LOG_LEVEL_INFO,
+                "[session start] (display :%d): using the xorg.conf %s "
+                "from XRDP_XORG_CONFIG", sd->params.x11_display, config);
+            set_xorg_config_param(params, config);
+        }
     }
 
     return params;
@@ -682,6 +719,11 @@ start_x_server(const struct login_info *login_info,
     env_set_user(login_info->uid,
                  g_cfg->env_names,
                  g_cfg->env_values);
+
+    /* The PAM session modules have run by now. Their environment
+     * reaches the X server too, so that a module can adjust it for this
+     * session (see XRDP_XORG_CONFIG) */
+    auth_set_env(login_info->auth_info);
 
     /* Allocate the passwd_file if required */
     if (sp->type == SCP_SESSION_TYPE_XVNC &&
