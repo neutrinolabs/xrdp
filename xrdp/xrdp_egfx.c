@@ -757,7 +757,12 @@ xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface1:");
     make_stream(s);
-    calc_segment_count = bitmap_data_length / MAX_PART_SIZE + 2;
+    calc_segment_count = bitmap_data_length / MAX_PART_SIZE;
+    if ((bitmap_data_length % MAX_PART_SIZE) != 0)
+    {
+        calc_segment_count++; /* one for the remainder */
+    }
+    calc_segment_count++; /* one for the first segment */
     bytes = bitmap_data_length + 8192;
     bytes += 5 * (bitmap_data_length / MAX_PART_SIZE);
     init_stream(s, bytes);
@@ -897,7 +902,12 @@ xrdp_egfx_wire_to_surface2(struct xrdp_egfx_bulk *bulk, int surface_id,
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_egfx_wire_to_surface2:");
     make_stream(s);
-    calc_segment_count = bitmap_data_length / MAX_PART_SIZE + 2;
+    calc_segment_count = bitmap_data_length / MAX_PART_SIZE;
+    if ((bitmap_data_length % MAX_PART_SIZE) != 0)
+    {
+        calc_segment_count++; /* one for the remainder */
+    }
+    calc_segment_count++; /* one for the first segment */
     bytes = bitmap_data_length + 8192;
     bytes += 5 * (bitmap_data_length / MAX_PART_SIZE);
     init_stream(s, bytes);
@@ -1379,21 +1389,25 @@ xrdp_egfx_create(struct xrdp_mm *mm, struct xrdp_egfx **egfx)
     config = mm->wm->gfx_config;
     if (config->bulk)
     {
-        self->bulk->handle = rdp8_compress_create(BULK_PACKET_COMPR_TYPE_RDP8);
-        if (self->bulk->handle == NULL)
+        error = rdp8_compress_create_ex(BULK_PACKET_COMPR_TYPE_RDP8,
+                                        &(self->bulk->handle));
+        if (error == RDP8_ERROR_NONE)
         {
-            /* ok if handle = nil, no bulk compresson */
-            LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create failed");
+            LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: "
+                "rdp8_compress_create_ex ok");
         }
         else
         {
-            LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create ok");
+            LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: "
+                "rdp8_compress_create_ex failed error %d", error);
+            self->bulk->handle = NULL;
         }
     }
     else
     {
         /* ok if handle = nil, no bulk compresson */
-        LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create disabled in config");
+        LOG(LOG_LEVEL_INFO, "xrdp_egfx_create: rdp8_compress_create disabled "
+            "in config");
     }
 #endif
     procs.open_response = xrdp_egfx_open_response;
