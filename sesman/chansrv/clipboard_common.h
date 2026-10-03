@@ -37,6 +37,9 @@ struct clip_s2c /* server to client, pasting from linux app to mstsc */
     int xrdp_clip_type; /* XRDP_CB_TEXT, XRDP_CB_BITMAP, XRDP_CB_FILE, ... */
     int converted;
     Time clip_time;
+    int in_request; /* a data request has been received from client */
+    int request_serial; /* ties a pending request to its timeout */
+    int incr_rearm_count; /* times the timeout was extended for INCR */
 };
 
 struct clip_c2s /* client to server, pasting from mstsc to linux app */

@@ -224,6 +224,16 @@ static XSelectionRequestEvent g_saved_selection_req_event;
 /* xserver maximum request size in bytes */
 static int g_incr_max_req_size = 0;
 
+/* How long to wait for the X selection owner to answer a conversion started
+   for a client CB_FORMAT_DATA_REQUEST. This has to stay well below the
+   timeout used by the client, otherwise the client gives up first. Remmina
+   waits 6 seconds and does not recover from its own timeout. */
+#define CLIP_S2C_REQUEST_TIMEOUT_MS 3000
+
+/* How many times that timeout may be extended while an INCR transfer is
+   still running, so a large paste is not cut short. */
+#define CLIP_S2C_MAX_INCR_REARM 10
+
 /* server to client, pasting from linux app to mstsc */
 struct clip_s2c g_clip_s2c;
 /* client to server, pasting from mstsc to linux app */
@@ -726,6 +736,7 @@ clipboard_send_data_response_for_image(const char *data, int data_size)
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_image: data_size %d",
               data_size);
+    g_clip_s2c.in_request = 0;
     make_stream(s);
     init_stream(s, 64 + data_size);
     out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
@@ -752,6 +763,7 @@ clipboard_send_data_response_for_text(const char *data, int data_size)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data_size %d",
               data_size);
     LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "clipboard send data response:", data, data_size);
+    g_clip_s2c.in_request = 0;
     num_words = utf8_as_utf16_word_count(data, data_size);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data_size %d "
               "num_words %d", data_size, num_words);
@@ -1027,6 +1039,7 @@ clipboard_send_data_response_failed(void)
     int rv;
 
     LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_data_response_failed:");
+    g_clip_s2c.in_request = 0;
     make_stream(s);
     init_stream(s, 64);
     out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
@@ -1037,6 +1050,61 @@ clipboard_send_data_response_failed(void)
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
+}
+
+/*****************************************************************************/
+/* A data request from the client is outstanding and cannot be satisfied.
+   Always send something back. A client left waiting for a response it never
+   gets may stop asking for the rest of the session: Remmina keeps
+   rfClipboard.srv_clip_data_wait at SCDW_BUSY_WAIT after its own timeout,
+   which kills the server to client clipboard until it reconnects. */
+static void
+clipboard_fail_pending_request(const char *why)
+{
+    if (g_clip_s2c.in_request)
+    {
+        LOG(LOG_LEVEL_WARNING, "clipboard: failing a pending client data "
+            "request, %s", why);
+        clipboard_send_data_response_failed();
+    }
+}
+
+/*****************************************************************************/
+/* the X selection owner has not answered in time */
+static void
+clipboard_request_timeout(void *data)
+{
+    int serial;
+
+    serial = (int)(long)data;
+    if ((g_clip_s2c.in_request == 0) || (g_clip_s2c.request_serial != serial))
+    {
+        /* already answered, or superseded by a newer request */
+        return;
+    }
+    if (g_clip_s2c.incr_in_progress &&
+            (g_clip_s2c.incr_rearm_count < CLIP_S2C_MAX_INCR_REARM))
+    {
+        /* data is still arriving over INCR, give it more time */
+        g_clip_s2c.incr_rearm_count++;
+        add_timeout(CLIP_S2C_REQUEST_TIMEOUT_MS, clipboard_request_timeout,
+                    data);
+        return;
+    }
+    clipboard_fail_pending_request("the X selection owner did not respond");
+}
+
+/*****************************************************************************/
+/* Record that a client data request is now waiting on an X selection
+   conversion, and arm the timeout that guarantees it gets an answer. */
+static void
+clipboard_arm_request(void)
+{
+    g_clip_s2c.in_request = 1;
+    g_clip_s2c.request_serial++;
+    g_clip_s2c.incr_rearm_count = 0;
+    add_timeout(CLIP_S2C_REQUEST_TIMEOUT_MS, clipboard_request_timeout,
+                (void *)(long)g_clip_s2c.request_serial);
 }
 
 /*****************************************************************************/
@@ -1070,6 +1138,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
                 XConvertSelection(g_display, g_clipboard_atom, g_clip_s2c.type,
                                   g_clip_property_atom, g_wnd, CurrentTime);
+                clipboard_arm_request();
             }
             break;
         case CF_DIB:
@@ -1086,6 +1155,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
                 XConvertSelection(g_display, g_clipboard_atom, g_image_bmp_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
+                clipboard_arm_request();
             }
             break;
         case CF_UNICODETEXT:
@@ -1102,6 +1172,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
                 XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
+                clipboard_arm_request();
             }
             break;
         default:
@@ -1669,6 +1740,50 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
 }
 
 /*****************************************************************************/
+/* Name of a selection target for logging. Uses our own table first:
+   get_atom_text() refuses atoms above 512 and most interned atoms are
+   above that, so it would usually just print a hex id. */
+static const char *
+clipboard_target_name(Atom target)
+{
+    if (target == g_utf8_atom)
+    {
+        return "UTF8_STRING";
+    }
+    if (target == XA_STRING)
+    {
+        return "STRING";
+    }
+    if (target == g_image_bmp_atom)
+    {
+        return "image/bmp";
+    }
+    if (target == g_file_atom1)
+    {
+        return "text/uri-list";
+    }
+    if (target == g_file_atom2)
+    {
+        return "x-special/gnome-copied-files";
+    }
+    if (target == g_targets_atom)
+    {
+        return "TARGETS";
+    }
+    return get_atom_text(target);
+}
+
+/*****************************************************************************/
+/* can clipboard_event_selection_notify() turn this target into a reply? */
+static int
+clipboard_is_known_target(Atom target)
+{
+    return (target == g_utf8_atom) || (target == XA_STRING) ||
+           (target == g_image_bmp_atom) || (target == g_file_atom1) ||
+           (target == g_file_atom2);
+}
+
+/*****************************************************************************/
 /* returns error
    process the SelectionNotify X event, uses XSelectionEvent
    typedef struct {
@@ -1700,6 +1815,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     Atom atom;
     Atom *atoms;
     Atom type;
+    char reason[256];
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify:");
     data_size = 0;
@@ -1734,6 +1850,14 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_event_selection_notify: "
                       "clipboard_get_window_property failed error %d", rv);
+            if (lxevent->target != g_targets_atom)
+            {
+                g_snprintf(reason, sizeof(reason),
+                           "the property holding the %s reply could not be "
+                           "read back (error %d)",
+                           clipboard_target_name(lxevent->target), rv);
+                clipboard_fail_pending_request(reason);
+            }
             return 0;
         }
         //LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", data, data_size);
@@ -2047,6 +2171,49 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             rv = 4;
         }
+    }
+
+    /* This conversion may have been started for a client data request. If
+       none of the branches above sent a response, answer now instead of
+       leaving the client waiting forever. Name the specific reason: it is
+       the only way to tell a refusing owner from an unsupported target
+       when reading a log after the fact. */
+    if ((lxevent->target != g_targets_atom) &&
+            (g_clip_s2c.incr_in_progress == 0) &&
+            g_clip_s2c.in_request)
+    {
+        if (lxevent->property == None)
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the owner refused to convert the selection to %s",
+                       clipboard_target_name(lxevent->target));
+        }
+        else if (lxevent->selection != g_clipboard_atom)
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the reply was for selection %s, not CLIPBOARD",
+                       clipboard_target_name(lxevent->selection));
+        }
+        else if (!clipboard_is_known_target(lxevent->target))
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "target %s is not one chansrv can convert",
+                       clipboard_target_name(lxevent->target));
+        }
+        else if (g_cfg->restrict_outbound_clipboard != 0)
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the %s reply was dropped, restrict_outbound_clipboard "
+                       "is set to %d", clipboard_target_name(lxevent->target),
+                       g_cfg->restrict_outbound_clipboard);
+        }
+        else
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the %s reply carried no usable data (%d bytes)",
+                       clipboard_target_name(lxevent->target), data_size);
+        }
+        clipboard_fail_pending_request(reason);
     }
 
     g_free(data);
