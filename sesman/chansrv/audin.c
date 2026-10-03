@@ -411,6 +411,15 @@ audin_open_response(int chan_id, int creation_status)
     {
         return audin_send_version(chan_id);
     }
+
+    /* The client refused the channel, e.g. because microphone redirection
+     * is not enabled for this connection. The channel is not open, so
+     * forget it: otherwise every later start is ignored and a stop tries
+     * to close a channel which does not exist */
+    LOG(LOG_LEVEL_INFO, "The client refused microphone redirection "
+        "(creation status 0x%8.8x)", creation_status);
+    g_audin_chanid = 0;
+    cleanup_client_formats();
     return 0;
 }
 
@@ -474,6 +483,11 @@ int
 audin_stop(void)
 {
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_stop:");
+    if (g_audin_chanid == 0)
+    {
+        /* never opened, or refused by the client */
+        return 0;
+    }
     chansrv_drdynvc_close(g_audin_chanid);
     return 0;
 }
