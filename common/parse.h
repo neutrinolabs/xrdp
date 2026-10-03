@@ -186,7 +186,7 @@ unsigned int
 in_utf16_le_terminated_as_utf8_length(struct stream *s);
 
 /******************************************************************************/
-#define s_check_rem(s, n) ((s)->p + (n) <= (s)->end)
+#define s_check_rem(s, n) ((size_t)(n) <= (size_t)((s)->end - (s)->p))
 
 /******************************************************************************/
 /**
@@ -202,7 +202,7 @@ in_utf16_le_terminated_as_utf8_length(struct stream *s);
       && 0 )
 
 /******************************************************************************/
-#define s_check_rem_out(s, n) ((s)->p + (n) <= (s)->data + (s)->size)
+#define s_check_rem_out(s, n) ((size_t)(n) <= (size_t)((s)->size - ((s)->p - (s)->data)))
 
 /******************************************************************************/
 /**
