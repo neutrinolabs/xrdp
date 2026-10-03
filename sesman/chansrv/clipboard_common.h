@@ -37,6 +37,10 @@ struct clip_s2c /* server to client, pasting from linux app to mstsc */
     int xrdp_clip_type; /* XRDP_CB_TEXT, XRDP_CB_BITMAP, XRDP_CB_FILE, ... */
     int converted;
     Time clip_time;
+    Atom selection; /* CLIPBOARD or PRIMARY -- which one offered this data,
+                     * so the follow-up XConvertSelection asks the same owner.
+                     * Requesting from CLIPBOARD data that PRIMARY advertised
+                     * returns whatever CLIPBOARD happens to hold, or nothing. */
 };
 
 struct clip_c2s /* client to server, pasting from mstsc to linux app */
