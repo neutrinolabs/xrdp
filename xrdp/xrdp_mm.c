@@ -4530,6 +4530,41 @@ server_set_pointer_position(struct xrdp_mod *mod, int x, int y)
 }
 
 /*****************************************************************************/
+/* The session's keyboard LEDs changed - pass it on to the client so the
+ * lamps on the keyboard in front of the user agree with the session.
+ *
+ * Only the module knows this; xrdp's own caps_lock/num_lock/scroll_lock are
+ * its bookkeeping for the login screen and for backends that need xrdp to
+ * translate scancodes itself.
+ */
+static int
+server_set_keyboard_indicators(struct xrdp_mod *mod, int led_flags)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    if (wm == 0 || wm->session == 0 || wm->mm == 0)
+    {
+        return 1;
+    }
+
+    /* A resize renegotiates the whole connection: surfaces are torn down,
+     * the core is reset, capabilities are exchanged again. Drop rather than
+     * queue - the client reported its lock state when it connected, so its
+     * lamps are already right, and the next change carries the state again. */
+    if (wm->mm->resize_data != NULL ||
+            (wm->mm->resize_queue != NULL && wm->mm->resize_queue->count > 0))
+    {
+        LOG_DEVEL(LOG_LEVEL_DEBUG, "server_set_keyboard_indicators: "
+                  "connection is being renegotiated, dropping ledFlags "
+                  "0x%2.2x", led_flags & 0x0f);
+        return 0;
+    }
+
+    return libxrdp_send_set_keyboard_indicators(wm->session, led_flags);
+}
+
+/*****************************************************************************/
 static int
 server_set_pointer(struct xrdp_mod *mod, int x, int y,
                    char *data, char *mask)
@@ -5409,6 +5444,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_paint_rects_ex = server_paint_rects_ex;
             self->mod->server_set_pointer_system = server_set_pointer_system;
             self->mod->server_set_pointer_position = server_set_pointer_position;
+            self->mod->server_set_keyboard_indicators =
+                server_set_keyboard_indicators;
             self->mod->si = &(self->wm->session->si);
         }
     }

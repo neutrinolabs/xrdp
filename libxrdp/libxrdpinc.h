@@ -140,6 +140,9 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette);
 int
 libxrdp_send_bell(struct xrdp_session *session);
 int
+libxrdp_send_set_keyboard_indicators(struct xrdp_session *session,
+                                     int led_flags);
+int
 libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     int bpp, char *data, int x, int y, int cx, int cy);
 int

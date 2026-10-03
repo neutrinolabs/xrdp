@@ -1640,6 +1640,34 @@ process_server_set_pointer_position(struct mod *amod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
+/* Order 67: the session's keyboard LEDs changed.
+ *
+ * ledFlags uses the TS_SYNC_* bits of [MS-RDPBCGR] 2.2.8.2.1.1, which are
+ * also the ones the client sends in its Synchronize event: scroll 0x01,
+ * num 0x02, caps 0x04, kana 0x08.
+ */
+static int
+process_server_set_keyboard_indicators(struct mod *amod, struct stream *s)
+{
+    int led_flags;
+    int reserved;
+
+    if (!s_check_rem(s, 4))
+    {
+        return 1;
+    }
+    in_uint16_le(s, led_flags);
+    in_uint16_le(s, reserved);
+    (void)reserved;
+    if (amod->server_set_keyboard_indicators == 0)
+    {
+        return 0;
+    }
+    return amod->server_set_keyboard_indicators(amod, led_flags);
+}
+
+/******************************************************************************/
+/* return error */
 static int
 send_server_version_message(struct mod *mod, struct stream *s)
 {
@@ -1878,6 +1906,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 66: /* server_set_pointer_position */
             rv = process_server_set_pointer_position(mod, s);
+            break;
+        case 67: /* server_set_keyboard_indicators */
+            rv = process_server_set_keyboard_indicators(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,
