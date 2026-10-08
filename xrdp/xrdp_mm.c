@@ -2679,7 +2679,6 @@ static int
 xrdp_mm_get_sesman_port(char *port, int port_bytes)
 {
     int fd;
-    int error;
     int index;
     char *val;
     char cfg_file[256];
@@ -2687,8 +2686,8 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
     struct list *values;
 
     g_memset(cfg_file, 0, sizeof(char) * 256);
-    /* default to port 3350 */
-    g_strncpy(port, "3350", port_bytes - 1);
+    /* An empty port selects sesman's default socket */
+    port[0] = '\0';
     /* see if port is in sesman.ini file */
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
     fd = g_file_open_ro(cfg_file);
@@ -2710,14 +2709,11 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
                 {
                     if (g_strcasecmp(val, "ListenPort") == 0)
                     {
+                        /* Pass the value on as sesman reads it: a socket
+                         * name or path, or an obsolete TCP port number that
+                         * the SCP layer ignores */
                         val = (char *)list_get_item(values, index);
-                        error = g_atoi(val);
-
-                        if ((error > 0) && (error < 65000))
-                        {
-                            g_strncpy(port, val, port_bytes - 1);
-                        }
-
+                        strlcpy(port, val, port_bytes);
                         break;
                     }
                 }
