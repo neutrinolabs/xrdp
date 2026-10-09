@@ -46,6 +46,12 @@ wlup_mutter_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
 int
 wlup_mutter_check_wait_objs(struct wlup *v);
 
+/* Asks Mutter to resize the virtual monitor. On success, the resize is
+ * finished when the new stream format arrives.
+ * return 1 if the request was made, 0 if not */
+int
+wlup_mutter_resize(struct wlup *v, int width, int height);
+
 /* evdev_code: Linux input event code of the key */
 void
 wlup_mutter_key(struct wlup *v, int evdev_code, int down);

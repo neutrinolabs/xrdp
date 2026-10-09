@@ -233,4 +233,8 @@ struct wlup
 int
 wlup_paint_region(struct wlup *v, int x, int y, int cx, int cy);
 
+/* Tells xrdp the resize it is waiting for is complete */
+void
+wlup_resize_finished(struct wlup *v);
+
 #endif

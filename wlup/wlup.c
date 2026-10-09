@@ -72,7 +72,6 @@
 #define WLUP_WHEEL_STEP 15.0
 
 static int start_capture(struct wlup *v);
-static void resize_finished(struct wlup *v);
 
 /******************************************************************************/
 static uint32_t
@@ -456,7 +455,7 @@ session_done(void *data, struct ext_image_copy_capture_session_v1 *s)
             v->buffer_width == v->resize_width &&
             v->buffer_height == v->resize_height)
     {
-        resize_finished(v);
+        wlup_resize_finished(v);
     }
     start_capture(v);
 }
@@ -712,8 +711,8 @@ static const struct zwlr_output_manager_v1_listener manager_listener =
 
 /******************************************************************************/
 /* Tells xrdp the resize it is waiting for is complete */
-static void
-resize_finished(struct wlup *v)
+void
+wlup_resize_finished(struct wlup *v)
 {
     if (v->resize_pending)
     {
@@ -744,7 +743,7 @@ config_failed(void *data, struct zwlr_output_configuration_v1 *config)
         "the picture will be clipped or padded",
         v->resize_width, v->resize_height);
     zwlr_output_configuration_v1_destroy(config);
-    resize_finished(v);
+    wlup_resize_finished(v);
 }
 
 static void
@@ -1535,8 +1534,17 @@ lib_mod_server_monitor_resize(struct wlup *v, int width, int height,
     *in_progress = 0;
     if (v->backend == WLUP_BACKEND_MUTTER)
     {
-        /* Spike: the virtual monitor keeps its size. Renegotiating the
-         * PipeWire stream size would resize it */
+#if defined(XRDP_WLUP_MUTTER)
+        if ((width != v->buffer_width || height != v->buffer_height) &&
+                wlup_mutter_resize(v, width, height))
+        {
+            /* xrdp waits for server_monitor_resize_done() */
+            v->resize_width = width;
+            v->resize_height = height;
+            v->resize_pending = 1;
+            *in_progress = 1;
+        }
+#endif
         return 0;
     }
     if ((width != v->buffer_width || height != v->buffer_height) &&
