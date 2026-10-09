@@ -195,6 +195,13 @@ param=-localhost
 param=-dpi
 param=96
 
+[Wayland]
+; Experimental: compositor for Wayland sessions (xrdp.ini code=30, using
+; the wlup module). The command must exec the compositor, which must
+; offer the wlroots capture and virtual input protocols. sesman connects
+; to the compositor's socket and passes the connection to xrdp.
+param=@sesmansysconfdir@/startwayland.sh
+
 [Chansrv]
 ; drive redirection
 ; See sesman.ini(5) for the format of this parameter

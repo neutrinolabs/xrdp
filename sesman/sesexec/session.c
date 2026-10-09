@@ -35,6 +35,8 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "arch.h"
 #include "session.h"
@@ -53,6 +55,7 @@
 #include "string_calls.h"
 #include "trans.h"
 #include "xauth.h"
+#include "wlwait.h"
 #include "xwait.h"
 #include "xrdp_sockets.h"
 
@@ -64,6 +67,7 @@ struct session_data
     time_t start_time;
     unsigned int connect_count;
     char display[MAX_DISPLAY_NAME_SIZE]; // Set by session_start()
+    char wayland_socket[XRDP_SOCKETS_MAXPATH]; // Wayland sessions only
     struct session_parameters params;
     // Flexible array member used to store strings in params and ip_addr;
 #ifdef __cplusplus
@@ -103,6 +107,8 @@ session_data_new(const struct session_parameters *sp)
         sd->chansrv = -1;
         sd->start_time = 0;
         sd->connect_count = 0;
+        sd->display[0] = '\0';
+        sd->wayland_socket[0] = '\0';
 
         /* Copy all the non-string session parameters... */
         sd->params = *sp;
@@ -813,6 +819,66 @@ start_x_server(const struct login_info *login_info,
 }
 
 /******************************************************************************/
+/* Either execs the Wayland compositor, or returns */
+static void
+start_wayland_compositor(const struct login_info *login_info,
+                         const struct session_data *sd,
+                         void *closure)
+{
+    int report_fd = *(int *)closure;
+    const char *runtime_dir;
+    char text[XRDP_SOCKETS_MAXPATH];
+    char execvpparams[2048];
+    const struct session_parameters *sp = &sd->params;
+
+    env_set_user(login_info->uid,
+                 g_cfg->env_names,
+                 g_cfg->env_values);
+    auth_set_env(login_info->auth_info);
+
+    /* Normally set by pam_systemd. The compositor creates its socket
+     * here, so fall back to the per-user xrdp socket directory */
+    if (g_getenv("XDG_RUNTIME_DIR") == NULL)
+    {
+        g_snprintf(text, sizeof(text), XRDP_SOCKET_PATH,
+                   (int)login_info->uid);
+        g_setenv_log("XDG_RUNTIME_DIR", text, 1);
+    }
+
+    /* Tell sesexec where the compositor will create its socket */
+    runtime_dir = g_getenv("XDG_RUNTIME_DIR");
+    if (g_file_write(report_fd, runtime_dir, g_strlen(runtime_dir)) < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't report XDG_RUNTIME_DIR to sesexec");
+    }
+    g_file_close(report_fd);
+
+    /* Start-up scripts can use these to size the compositor output */
+    g_snprintf(text, sizeof(text), "%d", sp->width);
+    g_setenv_log("XRDP_START_WIDTH", text, 1);
+    g_snprintf(text, sizeof(text), "%d", sp->height);
+    g_setenv_log("XRDP_START_HEIGHT", text, 1);
+
+    if (g_cfg->wayland_params == NULL || g_cfg->wayland_params->count == 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "No compositor in the [Wayland] section of "
+            "sesman.ini");
+    }
+    else
+    {
+        LOG(LOG_LEVEL_INFO, "Starting Wayland compositor: %s",
+            dumpItemsToString(g_cfg->wayland_params, execvpparams,
+                              sizeof(execvpparams)));
+        LOG_DEVEL_LEAKING_FDS("Wayland compositor", 3, -1);
+        g_execvp_list((const char *)g_cfg->wayland_params->items[0],
+                      g_cfg->wayland_params);
+    }
+
+    LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
+        "to start the Wayland compositor, aborting connection");
+}
+
+/******************************************************************************/
 /*
  * Simple helper process to fork a child and log errors */
 static int
@@ -905,6 +971,88 @@ process_startup_wait_time(struct session_data *sd)
 }
 
 /******************************************************************************/
+/**
+ * Starts a Wayland session
+ *
+ * The compositor is the only process of the session, and plays the
+ * part of the window manager: the session ends when it exits. Its
+ * clients are started from its own configuration.
+ */
+static enum scp_screate_status
+session_start_wayland(struct login_info *login_info,
+                      struct session_data *sd)
+{
+    enum scp_screate_status status = E_SCP_SCREATE_GENERAL_ERROR;
+    char runtime_dir[XRDP_SOCKETS_MAXPATH] = {0};
+    const char *base;
+    int fds[2];
+    int pid;
+    int len;
+
+    /* The compositor child reports its XDG_RUNTIME_DIR, which comes from
+     * the PAM environment, over a pipe */
+    if (pipe2(fds, O_CLOEXEC) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't create pipe [%s]", g_get_strerror());
+        return status;
+    }
+    pid = fork_child(start_wayland_compositor, login_info, sd, 0, &fds[1]);
+    g_file_close(fds[1]);
+    len = (pid < 0) ? -1 : g_file_read(fds[0], runtime_dir,
+                                       sizeof(runtime_dir) - 1);
+    g_file_close(fds[0]);
+    if (pid < 0)
+    {
+        return status;
+    }
+    if (len <= 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Wayland compositor process did not report "
+            "its XDG_RUNTIME_DIR");
+        g_sigterm(pid);
+        g_waitpid(pid);
+        return E_SCP_SCREATE_X_SERVER_FAIL;
+    }
+    runtime_dir[len] = '\0';
+
+    if (wait_for_wayland_socket(pid, runtime_dir, 10 * 1000,
+                                sd->wayland_socket,
+                                sizeof(sd->wayland_socket)) != 0)
+    {
+        g_sigterm(pid);
+        g_waitpid(pid);
+        return E_SCP_SCREATE_X_SERVER_FAIL;
+    }
+
+    /* The display name is the socket name, e.g. "wayland-1" */
+    base = g_strrchr(sd->wayland_socket, '/');
+    g_strncpy(sd->display, base != NULL ? base + 1 : sd->wayland_socket,
+              sizeof(sd->display) - 1);
+    LOG(LOG_LEVEL_INFO, "Wayland compositor (pid %d) is listening on %s",
+        pid, sd->wayland_socket);
+
+    utmp_login(pid, sd->display, login_info);
+    sd->win_mgr = pid;
+    sd->start_time = time(NULL);
+
+    if (process_startup_wait_time(sd) == 0)
+    {
+        LOG(LOG_LEVEL_INFO,
+            "Session in progress on display %s. Waiting until the "
+            "compositor (pid %d) exits to end the session",
+            sd->display, pid);
+        status = E_SCP_SCREATE_OK;
+    }
+    else
+    {
+        LOG(LOG_LEVEL_ERROR, "Session failed during startup wait time");
+        status = E_SCP_SCREATE_SESSION_FAIL;
+    }
+
+    return status;
+}
+
+/******************************************************************************/
 static enum scp_screate_status
 session_start_wrapped(struct login_info *login_info,
                       const struct session_parameters *s,
@@ -962,6 +1110,11 @@ session_start_wrapped(struct login_info *login_info,
             sd->display, login_info->username, g_getpid());
     }
 #endif
+
+    if (s->type == SCP_SESSION_TYPE_WAYLAND)
+    {
+        return session_start_wayland(login_info, sd);
+    }
 
     /* start the X server in a new process group.
      *
@@ -1478,13 +1631,25 @@ session_get_display_server_fd(const struct login_info *login_info,
 
     int rv = -1;
 
-    if (sd->x_server <= 0)
+    if (sd->params.type == SCP_SESSION_TYPE_WAYLAND)
+    {
+        /* The compositor plays the part of both the display server and
+         * the window manager */
+        if (sd->win_mgr <= 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Request to connect to Wayland compositor"
+                " %s which has exited", sd->display);
+            return -1;
+        }
+    }
+    else if (sd->x_server <= 0)
     {
         LOG(LOG_LEVEL_ERROR,
             "Request to connect to display server %s"
             " which has exited", sd->display);
+        return -1;
     }
-    else
+
     {
         switch (sd->params.type)
         {
@@ -1500,6 +1665,14 @@ session_get_display_server_fd(const struct login_info *login_info,
                 snprintf(portname, sizeof(portname), XRDP_X11RDP_STR,
                          login_info->uid, sd->display);
 
+                break;
+
+            case SCP_SESSION_TYPE_WAYLAND:
+                /* We are privileged, so can connect to the socket in
+                 * the user's runtime directory. The connection is
+                 * handed to the wlup module as a Wayland client */
+                socket_mode = TRANS_MODE_UNIX;
+                g_strncpy(portname, sd->wayland_socket, sizeof(portname) - 1);
                 break;
 
             default:
