@@ -50,10 +50,9 @@ ldconfig
 
 # --- the test user -------------------------------------------------------------
 echo "tester:$PASSWORD" | chpasswd
-# GNOME's pointer starts at (0,0), the hot corner, and the first motion
-# then opens the Activities overview, which takes the keyboard
-su -l tester -c "dbus-run-session -- gsettings set \
-    org.gnome.desktop.interface enable-hot-corners false"
+# Hot corners stay enabled: GNOME's pointer starts at (0,0), the hot
+# corner, and wlup must move it away before the first motion opens the
+# Activities overview
 
 # --- xrdp and sesman, as root --------------------------------------------------
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=wlup-test \
@@ -81,7 +80,7 @@ export DISPLAY=:99
 sleep 1
 connect() {
     xfreerdp3 /v:127.0.0.1 /u:tester /p:$PASSWORD /cert:ignore /size:${W}x${H} \
-        /bpp:24 -grab-keyboard > "$OUT/client$1.log" 2>&1 &
+        /bpp:24 /dynamic-resolution -grab-keyboard > "$OUT/client$1.log" 2>&1 &
     CLIENT=$!
 }
 connect ""
@@ -136,6 +135,23 @@ sleep 1
 import -window root "$OUT/client-4-pointer.png"
 cp /tmp/wev.log "$OUT/wev.log"
 in_session "pkill -x wev" || true
+
+# --- resize: make the client window bigger ------------------------------------
+WID=$(xdotool search --pid $CLIENT | tail -1)
+xdotool windowsize "$WID" 1600 900
+sleep 6
+import -window root "$OUT/client-5a-resized.png"
+in_session "nohup foot > /tmp/foot.log 2>&1 &"
+sleep 3
+# New windows are centred on the larger monitor
+xdotool mousemove 800 450 click 1
+sleep 1
+xdotool type --delay 80 'echo resized-$((6*7)) > /tmp/typed-resized.txt'
+xdotool key Return
+sleep 2
+import -window root "$OUT/client-5b-typed-after-resize.png"
+in_session "pkill -x foot" || true
+sleep 1
 
 # --- reconnect: a new connection must reach the same GNOME session ----------
 kill $CLIENT 2>/dev/null || true
@@ -196,6 +212,13 @@ check "wheel: vertical axis events" 'grep -a -q "axis: 0" /tmp/wev.log'
 check "wheel: both directions" \
     'grep -a "axis: 0" /tmp/wev.log | grep -q -- "value: -" &&
      grep -a "axis: 0" /tmp/wev.log | grep -v -q -- "value: -"'
+check "hot corner: typing was not taken by the Activities overview" \
+    '[ "$(cat /tmp/typed.txt 2>/dev/null)" = mutter-typed-42 ]'
+check "resize: virtual monitor follows client window 1600x900" \
+    'grep -q "virtual monitor resized to 1600x900" /var/log/xrdp.log &&
+     grep -q "stream format BGR[xA] 1600x900" /var/log/xrdp.log'
+check "resize: input still works after resize" \
+    '[ "$(cat /tmp/typed-resized.txt 2>/dev/null)" = resized-42 ]'
 check "reconnect: same gnome-shell process" \
     '[ -n "$SHELL_PID" ] && [ "$SHELL_PID" = "$SHELL_PID_AFTER" ]'
 check "reconnect: input works in the reconnected session" \
