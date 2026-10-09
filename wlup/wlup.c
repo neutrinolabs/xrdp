@@ -59,6 +59,7 @@
 #include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
 
 #include "wlup.h"
+#include "wlup_clip.h"
 #if defined(XRDP_WLUP_MUTTER)
 #include "wlup_mutter.h"
 #endif
@@ -886,6 +887,10 @@ registry_global(void *data, struct wl_registry *registry, uint32_t name,
         v->keyboard_manager = wl_registry_bind(registry, name,
                                                &zwp_virtual_keyboard_manager_v1_interface, 1);
     }
+    else if (v->wlr_clip == NULL)
+    {
+        wlup_wlr_clip_bind(v, registry, name, interface);
+    }
 }
 
 /******************************************************************************/
@@ -1115,6 +1120,16 @@ lib_mod_event(struct wlup *v, int msg, long param1, long param2,
             error = process_key(v, (int)param3, (int)param4,
                                 msg == WM_KEYDOWN);
             break;
+        case WM_CHANNEL_DATA:
+            /* param1: channel id and flags, param2: size, param3: data,
+             * param4: total size */
+            if (LOWORD(param1) == v->clip_chanid && v->clip_chanid >= 0)
+            {
+                error = wlup_clip_process_channel_data(v, (char *)param3,
+                                                       (int)param2, (int)param4,
+                                                       HIWORD(param1));
+            }
+            break;
         case WM_INVALIDATE:
             v->server_begin_update(v);
             error = paint_region(v, (param1 >> 16) & 0xffff, param1 & 0xffff,
@@ -1177,7 +1192,11 @@ lib_mod_connect(struct wlup *v, int fd)
     {
 #if defined(XRDP_WLUP_MUTTER)
         /* With sesman, fd is a connection to the session bus */
-        return wlup_mutter_connect(v, fd);
+        if (wlup_mutter_connect(v, fd) != 0)
+        {
+            return 1;
+        }
+        return wlup_clip_open_channel(v);
 #else
         v->server_msg(v, "wlup error - built without the Mutter backend "
                       "(--enable-wlup-mutter)", 0);
@@ -1279,6 +1298,10 @@ lib_mod_connect(struct wlup *v, int fd)
         }
     }
 
+    /* Text clipboard: session side, then the RDP channel */
+    wlup_wlr_clip_start(v);
+    wlup_clip_open_channel(v);
+
     g_snprintf(text, sizeof(text), "wlup: connected to Wayland display %s",
                name != NULL ? name : "$WAYLAND_DISPLAY");
     v->server_msg(v, text, 0);
@@ -1298,6 +1321,7 @@ disconnect(struct wlup *v)
         close(v->pipewire_fd);
         v->pipewire_fd = -1;
     }
+    wlup_wlr_clip_destroy(v);
     if (v->frame != NULL)
     {
         ext_image_copy_capture_frame_v1_destroy(v->frame);
@@ -1471,6 +1495,8 @@ lib_mod_check_wait_objs(struct wlup *v)
         wl_display_cancel_read(v->display);
     }
     wl_display_dispatch_pending(v->display);
+    /* A new selection is read once all events are dispatched */
+    wlup_wlr_clip_process(v);
     wl_display_flush(v->display);
 
     if (wl_display_get_error(v->display) != 0)
@@ -1595,6 +1621,7 @@ mod_init(void)
         lib_mod_server_monitor_full_invalidate;
     v->mod_server_version_message = lib_mod_server_version_message;
     v->pipewire_fd = -1;
+    wlup_clip_init(v);
     return (tintptr) v;
 }
 
@@ -1609,6 +1636,7 @@ mod_exit(tintptr handle)
         return 0;
     }
     disconnect(v);
+    wlup_clip_exit(v);
     g_free(v);
     return 0;
 }
