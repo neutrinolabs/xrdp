@@ -8,7 +8,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         libjpeg-dev libimlib2-dev libfreetype-dev libopus-dev \
         libwayland-dev wayland-protocols libxkbcommon-dev \
         sway foot grim fonts-dejavu-core xkb-data openssl procps \
-        freerdp3-x11 xvfb xdotool imagemagick wev jq \
+        freerdp3-x11 xvfb xdotool imagemagick wev jq xclip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 tester
