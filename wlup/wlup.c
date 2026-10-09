@@ -657,12 +657,17 @@ process_mouse(struct wlup *v, int msg, int x, int y)
     {
         return 0;
     }
-
-    x = MAX(0, MIN(x, width - 1));
-    y = MAX(0, MIN(y, height - 1));
-    zwlr_virtual_pointer_v1_motion_absolute(v->pointer, now_ms(), x, y,
-                                            width, height);
-    zwlr_virtual_pointer_v1_frame(v->pointer);
+    /* Scroll goes to the surface under the pointer, so wheel events must
+     * not move it. xrdp passes its last stored position with them, which
+     * is only updated by move events, not by clicks, and can be stale */
+    if (msg < WM_BUTTON4UP || msg > WM_BUTTON7DOWN)
+    {
+        x = MAX(0, MIN(x, width - 1));
+        y = MAX(0, MIN(y, height - 1));
+        zwlr_virtual_pointer_v1_motion_absolute(v->pointer, now_ms(), x, y,
+                                                width, height);
+        zwlr_virtual_pointer_v1_frame(v->pointer);
+    }
 
     switch (msg)
     {
