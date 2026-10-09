@@ -3,10 +3,14 @@
 #
 #   xfreerdp3 (in Xvfb) --RDP--> xrdp + libwlup --Wayland--> headless sway
 #
-# 1. starts sway headless at 1024x768 with foot (terminal) and wev (prints
+# 1. starts xrdp-sesman and xrdp with a [Wayland] session (code=30) that
+#    loads libwlup
+# 2. connects xfreerdp3 at 1280x800 as user 'tester' with a password:
+#    sesman authenticates the user with PAM, starts sway headless at the
+#    client's size through startwayland.sh, and passes xrdp a connection
+#    to it. The user's sway config runs foot (terminal) and wev (prints
 #    every input event it gets) side by side
-# 2. starts xrdp with a [Wayland] session that loads libwlup
-# 3. connects xfreerdp3 at 1280x800: sway's output must follow
+# 3. checks sway's output has the client's size
 # 4. types a command into foot and checks that it ran in the sway session
 # 5. clicks and scrolls over wev and checks the events wev received
 # 6. resizes the client window to 1600x900: sway's output must follow,
@@ -31,32 +35,22 @@ make -j"$(nproc)" > "$OUT/make.log" 2>&1
 make install > "$OUT/install.log" 2>&1
 ldconfig
 
-# --- headless sway as an ordinary user ---------------------------------------
-export XDG_RUNTIME_DIR=/tmp/xdg
-mkdir -p $XDG_RUNTIME_DIR
-chown tester $XDG_RUNTIME_DIR
-chmod 700 $XDG_RUNTIME_DIR
+# --- the test user and their sway config -------------------------------------
+echo 'tester:wlup-test-pw' | chpasswd
 # Focus only changes on a click, so the click test cannot pass by pointer
 # motion alone
-cat > /tmp/sway.conf <<EOF
-output HEADLESS-1 mode 1024x768 bg #204a87 solid_color
+mkdir -p /home/tester/.config/sway
+cat > /home/tester/.config/sway/config <<'SWAYCONF'
+output * bg #204a87 solid_color
 focus_follows_mouse no
 exec foot
 exec sh -c 'sleep 1; exec stdbuf -oL wev > /tmp/wev.log 2>&1'
-EOF
-su tester -c "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR WLR_BACKENDS=headless \
-    WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 \
-    sway -c /tmp/sway.conf > $OUT/sway.log 2>&1 &"
-for _ in $(seq 50); do
-    [ -S $XDG_RUNTIME_DIR/wayland-1 ] && break
-    sleep 0.2
-done
-sleep 2   # let the windows map
-# xrdp runs as root here; the prototype just needs access to the socket
-chmod 755 $XDG_RUNTIME_DIR
+SWAYCONF
+chown -R tester /home/tester/.config
 
-# sway's IPC: swaymsg talks to sway over this socket
-SWAYSOCK=$(ls $XDG_RUNTIME_DIR/sway-ipc.*.sock)
+# sway's IPC: swaymsg talks to sway over this socket, which is found once
+# sesman has started the session
+SWAYSOCK=
 swaymsg_() {
     su tester -c "swaymsg -s $SWAYSOCK $*"
 }
@@ -68,7 +62,6 @@ centre() {
         jq -r --arg id "$1" '.. | objects | select(.app_id? == $id) |
             "\(.rect.x + .rect.width / 2 | floor) \(.rect.y + .rect.height / 2 | floor)"'
 }
-SIZE_BEFORE=$(output_size)
 
 # --- xrdp ---------------------------------------------------------------------
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=wlup-test \
@@ -78,12 +71,17 @@ cat >> /etc/xrdp/xrdp.ini <<EOF
 [Wayland]
 name=Wayland (wlup prototype)
 lib=libwlup.so
-wayland_display=$XDG_RUNTIME_DIR/wayland-1
+username=ask
+password=ask
+port=-1
+code=30
 xkb_layout=us
 EOF
 # Skip the login screen and go straight to the Wayland session
 sed -i 's/^#\?autorun=.*/autorun=Wayland/' /etc/xrdp/xrdp.ini
 sed -i 's/^LogLevel=.*/LogLevel=DEBUG/' /etc/xrdp/xrdp.ini
+sed -i 's/^LogLevel=.*/LogLevel=DEBUG/' /etc/xrdp/sesman.ini
+xrdp-sesman --nodaemon > "$OUT/sesman.log" 2>&1 &
 xrdp --nodaemon > "$OUT/xrdp.log" 2>&1 &
 sleep 2
 
@@ -98,10 +96,12 @@ sleep 1
 # 1600"). 24 bpp uses interleaved RLE, which is not affected
 BPP=${BPP:-24}
 # XFREERDP: client binary, e.g. a FreeRDP built from source
-${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:x /cert:ignore /size:1280x800 \
+${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:wlup-test-pw /cert:ignore /size:1280x800 \
     /bpp:$BPP /dynamic-resolution -grab-keyboard > "$OUT/client.log" 2>&1 &
 CLIENT=$!
-sleep 6
+sleep 8
+SWAYSOCK=$(find /run /tmp -name 'sway-ipc.*.sock' 2>/dev/null | head -1)
+echo "sway IPC socket: $SWAYSOCK"
 SIZE_CONNECTED=$(output_size)
 import -window root "$OUT/client-1-connected.png"
 
@@ -144,8 +144,25 @@ xdotool key Return
 sleep 2
 import -window root "$OUT/client-4-typed-after-resize.png"
 
+# --- reconnect: a new connection must reach the same session ---------------
+SWAY_PID=$(pgrep -u tester -x sway)
+kill $CLIENT 2>/dev/null || true
+sleep 3
+${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:wlup-test-pw /cert:ignore \
+    /size:1600x900 /bpp:$BPP -grab-keyboard > "$OUT/client-reconnect.log" 2>&1 &
+CLIENT=$!
+sleep 8
+SWAY_PID_AFTER=$(pgrep -u tester -x sway)
+import -window root "$OUT/client-5-reconnected.png"
+read -r FOOT_X FOOT_Y < <(centre foot)
+xdotool mousemove "$FOOT_X" "$FOOT_Y" click 1
+sleep 0.5
+xdotool type --delay 80 'echo again-$((6*7)) > /tmp/typed3.txt'
+xdotool key Return
+sleep 2
+
 echo "=== result ==="
-echo "sway output: start $SIZE_BEFORE, connected $SIZE_CONNECTED, resized $SIZE_RESIZED"
+echo "sway output: connected $SIZE_CONNECTED, resized $SIZE_RESIZED"
 pass=0
 fail=0
 check() {
@@ -155,7 +172,9 @@ check() {
         echo "FAIL  $1"; fail=$((fail + 1))
     fi
 }
-check "connect: output follows client size 1280x800" \
+check "sesman: sway runs as the logged-in user" \
+    'pgrep -u tester -x sway > /dev/null'
+check "connect: output has the client size 1280x800" \
     '[ "$SIZE_CONNECTED" = 1280x800 ]'
 check "keyboard: typed command ran in sway" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = wlup-typed-42 ]'
@@ -171,9 +190,15 @@ check "resize: output follows client window 1600x900" \
     '[ "$SIZE_RESIZED" = 1600x900 ]'
 check "resize: input still works after resize" \
     '[ "$(cat /tmp/typed2.txt 2>/dev/null)" = resized-42 ]'
+check "reconnect: same sway process" \
+    '[ -n "$SWAY_PID" ] && [ "$SWAY_PID" = "$SWAY_PID_AFTER" ]'
+check "reconnect: input works in the reconnected session" \
+    '[ "$(cat /tmp/typed3.txt 2>/dev/null)" = again-42 ]'
 echo "passed $pass, failed $fail"
 
 kill $CLIENT 2>/dev/null || true
 cp /var/log/xrdp.log "$OUT/xrdp-file.log" 2>/dev/null || true
+cp /var/log/xrdp-sesman.log "$OUT/sesman-file.log" 2>/dev/null || true
 chmod -R a+r "$OUT"
 grep -h -E 'wlup|resize_done|Advancing' "$OUT"/xrdp*.log | head -30 || true
+grep -h -i -E 'wayland|compositor' "$OUT"/sesman*.log | head -20 || true
