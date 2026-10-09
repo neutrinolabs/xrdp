@@ -78,6 +78,10 @@
 /* Time allowed for Mutter to announce the PipeWire stream */
 #define STREAM_TIMEOUT_USEC (5 * 1000 * 1000)
 
+/* Time allowed for GNOME Shell to come up in a session sesman has just
+ * started, and offer its remote desktop API */
+#define MUTTER_TIMEOUT_USEC (60 * 1000 * 1000)
+
 struct wlup_mutter
 {
     /* D-Bus */
@@ -377,8 +381,18 @@ connect_stream(struct wlup *v)
         LOG(LOG_LEVEL_ERROR, "wlup/mutter: pw_context_new failed");
         return 1;
     }
-    /* The session's PipeWire daemon, found through XDG_RUNTIME_DIR */
-    m->core = pw_context_connect(m->context, NULL, 0);
+    if (v->pipewire_fd >= 0)
+    {
+        /* Connection to the session's PipeWire daemon from sesman, made
+         * as the session user. PipeWire takes ownership of it */
+        m->core = pw_context_connect_fd(m->context, v->pipewire_fd, NULL, 0);
+        v->pipewire_fd = -1;
+    }
+    else
+    {
+        /* The session's PipeWire daemon, found through XDG_RUNTIME_DIR */
+        m->core = pw_context_connect(m->context, NULL, 0);
+    }
     if (m->core == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "wlup/mutter: cannot connect to PipeWire: %s",
@@ -754,8 +768,49 @@ setup_sessions(struct wlup *v)
 /******************************************************************************/
 /* Module side                                                                */
 /******************************************************************************/
+/* Waits until GNOME Shell offers its remote desktop API.
+ * return error */
+static int
+wait_for_mutter(struct wlup_mutter *m)
+{
+    uint64_t start = monotonic_usec();
+    int logged = 0;
+    int has_owner = 0;
+    sd_bus_error err = SD_BUS_ERROR_NULL;
+    sd_bus_message *reply = NULL;
+
+    for (;;)
+    {
+        if (sd_bus_call_method(m->bus, "org.freedesktop.DBus",
+                               "/org/freedesktop/DBus", "org.freedesktop.DBus",
+                               "NameHasOwner", &err, &reply, "s",
+                               RD_NAME) >= 0 &&
+                sd_bus_message_read(reply, "b", &has_owner) >= 0 &&
+                has_owner)
+        {
+            sd_bus_message_unref(reply);
+            return 0;
+        }
+        reply = sd_bus_message_unref(reply);
+        sd_bus_error_free(&err);
+        if (monotonic_usec() - start > MUTTER_TIMEOUT_USEC)
+        {
+            LOG(LOG_LEVEL_ERROR, "wlup/mutter: %s did not appear on the "
+                "session bus", RD_NAME);
+            return 1;
+        }
+        if (!logged)
+        {
+            LOG(LOG_LEVEL_INFO, "wlup/mutter: waiting for GNOME Shell");
+            logged = 1;
+        }
+        usleep(200 * 1000);
+    }
+}
+
+/******************************************************************************/
 int
-wlup_mutter_connect(struct wlup *v)
+wlup_mutter_connect(struct wlup *v, int bus_fd)
 {
     struct wlup_mutter *m;
     char text[512];
@@ -764,7 +819,29 @@ wlup_mutter_connect(struct wlup *v)
     m = (struct wlup_mutter *)g_malloc(sizeof(struct wlup_mutter), 1);
     v->mutter = m;
 
-    if (v->dbus_address[0] != '\0')
+    if (bus_fd >= 0)
+    {
+        /* sesman connected to the session bus as the user. sd-bus
+         * authenticates with EXTERNAL without claiming a uid, so the bus
+         * takes the identity of the process that connected. sd-bus gets
+         * a copy: xrdp closes bus_fd itself if we fail */
+        int fd = fcntl(bus_fd, F_DUPFD_CLOEXEC, 3);
+        r = sd_bus_new(&m->bus);
+        if (r >= 0)
+        {
+            r = sd_bus_set_fd(m->bus, fd, fd);
+        }
+        if (r < 0)
+        {
+            close(fd);
+        }
+        if (r >= 0)
+        {
+            sd_bus_set_bus_client(m->bus, 1);
+            r = sd_bus_start(m->bus);
+        }
+    }
+    else if (v->dbus_address[0] != '\0')
     {
         sd_bus_new(&m->bus);
         sd_bus_set_address(m->bus, v->dbus_address);
@@ -783,6 +860,12 @@ wlup_mutter_connect(struct wlup *v)
         return 1;
     }
 
+    if (wait_for_mutter(m) != 0)
+    {
+        v->server_msg(v, "wlup error - GNOME Shell does not offer its "
+                      "remote desktop API", 0);
+        return 1;
+    }
     if (setup_sessions(v) != 0)
     {
         v->server_msg(v, "wlup error - cannot start a Mutter remote desktop "
@@ -796,6 +879,11 @@ wlup_mutter_connect(struct wlup *v)
         return 1;
     }
 
+    /* Success: the connection from sesman is ours to close */
+    if (bus_fd >= 0)
+    {
+        close(bus_fd);
+    }
     scancode_set_keycode_set("evdev");
     g_snprintf(text, sizeof(text), "wlup: connected to Mutter, PipeWire "
                "node %u%s", m->node_id, m->ei != NULL ? ", EIS input" : "");

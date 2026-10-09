@@ -30,9 +30,10 @@
 
 struct wlup;
 
-/* return error */
+/* bus_fd: connection to the session bus made for us by sesman, or -1
+ * to connect ourselves. return error */
 int
-wlup_mutter_connect(struct wlup *v);
+wlup_mutter_connect(struct wlup *v, int bus_fd);
 
 void
 wlup_mutter_disconnect(struct wlup *v);
