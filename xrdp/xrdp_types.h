@@ -39,6 +39,7 @@
 #define XVNC_SESSION_CODE 0
 #define XVNC_UDS_SESSION_CODE 1
 #define XORG_SESSION_CODE 20
+#define WAYLAND_SESSION_CODE 30
 
 /* To check whether touch events has been implemented on session type 'mm' */
 #define XRDP_MM_IMPLEMENTS_TOUCH(mm) \

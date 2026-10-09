@@ -356,6 +356,10 @@ xrdp_mm_create_session(struct xrdp_mm *self)
             type = SCP_SESSION_TYPE_XORG;
             break;
 
+        case WAYLAND_SESSION_CODE:
+            type = SCP_SESSION_TYPE_WAYLAND;
+            break;
+
         default:
             xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
                             "Unrecognised session code %d", self->code);
@@ -5541,6 +5545,11 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         {
             g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
                        self->uid, self->display);
+        }
+        else if (self->code == WAYLAND_SESSION_CODE)
+        {
+            // The module is passed a connection to the compositor by
+            // sesman, so no port is needed
         }
         else
         {
