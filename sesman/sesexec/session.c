@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include "arch.h"
@@ -68,6 +69,7 @@ struct session_data
     unsigned int connect_count;
     char display[MAX_DISPLAY_NAME_SIZE]; // Set by session_start()
     char wayland_socket[XRDP_SOCKETS_MAXPATH]; // Wayland sessions only
+    char runtime_dir[XRDP_SOCKETS_MAXPATH]; // Wayland and GNOME sessions
     struct session_parameters params;
     // Flexible array member used to store strings in params and ip_addr;
 #ifdef __cplusplus
@@ -109,6 +111,7 @@ session_data_new(const struct session_parameters *sp)
         sd->connect_count = 0;
         sd->display[0] = '\0';
         sd->wayland_socket[0] = '\0';
+        sd->runtime_dir[0] = '\0';
 
         /* Copy all the non-string session parameters... */
         sd->params = *sp;
@@ -819,7 +822,8 @@ start_x_server(const struct login_info *login_info,
 }
 
 /******************************************************************************/
-/* Either execs the Wayland compositor, or returns */
+/* Either execs the program leading a Wayland or GNOME session (the
+ * [Wayland] or [GNOME] command of sesman.ini), or returns */
 static void
 start_wayland_compositor(const struct login_info *login_info,
                          const struct session_data *sd,
@@ -830,6 +834,9 @@ start_wayland_compositor(const struct login_info *login_info,
     char text[XRDP_SOCKETS_MAXPATH];
     char execvpparams[2048];
     const struct session_parameters *sp = &sd->params;
+    int gnome = (sp->type == SCP_SESSION_TYPE_GNOME);
+    struct list *params = gnome ? g_cfg->gnome_params
+                          : g_cfg->wayland_params;
 
     env_set_user(login_info->uid,
                  g_cfg->env_names,
@@ -859,23 +866,23 @@ start_wayland_compositor(const struct login_info *login_info,
     g_snprintf(text, sizeof(text), "%d", sp->height);
     g_setenv_log("XRDP_START_HEIGHT", text, 1);
 
-    if (g_cfg->wayland_params == NULL || g_cfg->wayland_params->count == 0)
+    if (params == NULL || params->count == 0)
     {
-        LOG(LOG_LEVEL_ERROR, "No compositor in the [Wayland] section of "
-            "sesman.ini");
+        LOG(LOG_LEVEL_ERROR, "No command in the [%s] section of "
+            "sesman.ini", gnome ? "GNOME" : "Wayland");
     }
     else
     {
-        LOG(LOG_LEVEL_INFO, "Starting Wayland compositor: %s",
-            dumpItemsToString(g_cfg->wayland_params, execvpparams,
-                              sizeof(execvpparams)));
+        LOG(LOG_LEVEL_INFO, "Starting %s: %s",
+            gnome ? "GNOME session" : "Wayland compositor",
+            dumpItemsToString(params, execvpparams, sizeof(execvpparams)));
         LOG_DEVEL_LEAKING_FDS("Wayland compositor", 3, -1);
-        g_execvp_list((const char *)g_cfg->wayland_params->items[0],
-                      g_cfg->wayland_params);
+        g_execvp_list((const char *)params->items[0], params);
     }
 
     LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
-        "to start the Wayland compositor, aborting connection");
+        "to start the %s, aborting connection",
+        gnome ? "GNOME session" : "Wayland compositor");
 }
 
 /******************************************************************************/
@@ -972,6 +979,56 @@ process_startup_wait_time(struct session_data *sd)
 
 /******************************************************************************/
 /**
+ * Second half of starting a GNOME session, once gnome-session runs
+ *
+ * gnome-session leads the session: it starts GNOME Shell and the other
+ * services through the user's systemd instance, and the session ends
+ * when it exits. xrdp is later given connections to the session bus
+ * and to PipeWire in the user's runtime directory, so wait for the bus.
+ * GNOME Shell itself may still be starting; the wlup module waits for
+ * Mutter's D-Bus API.
+ */
+static enum scp_screate_status
+session_start_gnome_wait(struct login_info *login_info,
+                         struct session_data *sd, int pid)
+{
+    char bus[XRDP_SOCKETS_MAXPATH];
+    int i;
+
+    g_snprintf(bus, sizeof(bus), "%s/bus", sd->runtime_dir);
+    for (i = 0; i < 100 && !g_file_exist(bus); ++i)
+    {
+        g_sleep(100);
+    }
+    if (!g_file_exist(bus))
+    {
+        LOG(LOG_LEVEL_ERROR, "No session bus at %s for the GNOME session",
+            bus);
+        g_sigterm(pid);
+        g_waitpid(pid);
+        return E_SCP_SCREATE_X_SERVER_FAIL;
+    }
+
+    g_snprintf(sd->display, sizeof(sd->display), "gnome-%d", pid);
+    LOG(LOG_LEVEL_INFO, "GNOME session (pid %d) started, session bus %s",
+        pid, bus);
+
+    utmp_login(pid, sd->display, login_info);
+    sd->win_mgr = pid;
+    sd->start_time = time(NULL);
+
+    if (process_startup_wait_time(sd) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Session failed during startup wait time");
+        return E_SCP_SCREATE_SESSION_FAIL;
+    }
+    LOG(LOG_LEVEL_INFO, "Session in progress on %s. Waiting until "
+        "gnome-session (pid %d) exits to end the session", sd->display, pid);
+    return E_SCP_SCREATE_OK;
+}
+
+/******************************************************************************/
+/**
  * Starts a Wayland session
  *
  * The compositor is the only process of the session, and plays the
@@ -1014,6 +1071,12 @@ session_start_wayland(struct login_info *login_info,
         return E_SCP_SCREATE_X_SERVER_FAIL;
     }
     runtime_dir[len] = '\0';
+    g_strncpy(sd->runtime_dir, runtime_dir, sizeof(sd->runtime_dir) - 1);
+
+    if (sd->params.type == SCP_SESSION_TYPE_GNOME)
+    {
+        return session_start_gnome_wait(login_info, sd, pid);
+    }
 
     if (wait_for_wayland_socket(pid, runtime_dir, 10 * 1000,
                                 sd->wayland_socket,
@@ -1111,7 +1174,8 @@ session_start_wrapped(struct login_info *login_info,
     }
 #endif
 
-    if (s->type == SCP_SESSION_TYPE_WAYLAND)
+    if (s->type == SCP_SESSION_TYPE_WAYLAND ||
+            s->type == SCP_SESSION_TYPE_GNOME)
     {
         return session_start_wayland(login_info, sd);
     }
@@ -1621,6 +1685,90 @@ session_run_reconnect_script(const struct login_info *login_info,
 }
 
 /******************************************************************************/
+/**
+ * Connects to a Unix socket as the session user
+ *
+ * The connection is made by a child process running as the user, and
+ * handed back to us. A Unix socket records the credentials of the
+ * process calling connect(), so servers in the user's session (the
+ * D-Bus daemon, PipeWire) see the user, wherever the file descriptor
+ * is used later. We, and xrdp, stay privileged and never need access
+ * to the user's runtime directory.
+ *
+ * @return connected file descriptor, or -1
+ */
+static int
+connect_as_user(const struct login_info *login_info, const char *path)
+{
+    int sv[2];
+    int pid;
+    int fd = -1;
+    unsigned int count = 0;
+    char c = 0;
+
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sv) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "socketpair failed [%s]", g_get_strerror());
+        return -1;
+    }
+    pid = g_fork();
+    if (pid == 0)
+    {
+        char *username = NULL;
+        int gid;
+        int error = 1;
+        struct trans *t = NULL;
+
+        g_file_close(sv[0]);
+        if (g_getuser_info_by_uid(login_info->uid, &username, &gid,
+                                  NULL, NULL, NULL) == 0 &&
+                g_initgroups(username) == 0 &&
+                g_setgid(gid) == 0 &&
+                g_setuid(login_info->uid) == 0 &&
+                (t = trans_create(TRANS_MODE_UNIX, 8192, 8192)) != NULL &&
+                trans_connect(t, "localhost", path, 3000) == 0)
+        {
+            int sck = (int)t->sck;
+            error = g_sck_send_fd_set(sv[1], &c, 1, &sck, 1) != 1;
+        }
+        _exit(error);
+    }
+    g_file_close(sv[1]);
+    if (pid > 0)
+    {
+        if (g_sck_recv_fd_set(sv[0], &c, 1, &fd, 1, &count) != 1 ||
+                count != 1)
+        {
+            fd = -1;
+        }
+        g_waitpid(pid);
+    }
+    g_file_close(sv[0]);
+    if (fd < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Can't connect to %s as user %s",
+            path, login_info->username);
+    }
+    return fd;
+}
+
+/******************************************************************************/
+int
+session_get_display_server_aux_fd(const struct login_info *login_info,
+                                  const struct session_data *sd)
+{
+    char path[XRDP_SOCKETS_MAXPATH];
+
+    if (sd->params.type != SCP_SESSION_TYPE_GNOME || sd->win_mgr <= 0)
+    {
+        return -1;
+    }
+    /* GNOME Shell's screen cast streams are on the user's PipeWire */
+    g_snprintf(path, sizeof(path), "%s/pipewire-0", sd->runtime_dir);
+    return connect_as_user(login_info, path);
+}
+
+/******************************************************************************/
 int
 session_get_display_server_fd(const struct login_info *login_info,
                               const struct session_data *sd)
@@ -1631,15 +1779,23 @@ session_get_display_server_fd(const struct login_info *login_info,
 
     int rv = -1;
 
-    if (sd->params.type == SCP_SESSION_TYPE_WAYLAND)
+    if (sd->params.type == SCP_SESSION_TYPE_WAYLAND ||
+            sd->params.type == SCP_SESSION_TYPE_GNOME)
     {
-        /* The compositor plays the part of both the display server and
-         * the window manager */
+        /* The compositor, or gnome-session, plays the part of both the
+         * display server and the window manager */
         if (sd->win_mgr <= 0)
         {
-            LOG(LOG_LEVEL_ERROR, "Request to connect to Wayland compositor"
-                " %s which has exited", sd->display);
+            LOG(LOG_LEVEL_ERROR, "Request to connect to session %s "
+                "which has exited", sd->display);
             return -1;
+        }
+        if (sd->params.type == SCP_SESSION_TYPE_GNOME)
+        {
+            /* GNOME's remote desktop API is on the session bus */
+            g_snprintf(portname, sizeof(portname), "%s/bus",
+                       sd->runtime_dir);
+            return connect_as_user(login_info, portname);
         }
     }
     else if (sd->x_server <= 0)

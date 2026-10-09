@@ -45,19 +45,29 @@
 /******************************************************************************/
 static enum scp_sconnect_status
 get_session_fds(struct session_data *sd, unsigned int scp_flags,
-                int *display_fd, int *chan_fd)
+                int *display_fd, int *chan_fd, int *aux_fd)
 {
     enum scp_sconnect_status result = E_SCP_SCONNECT_OK;
+    enum scp_session_type type = session_get_parameters(sd)->type;
 
+    *chan_fd = -1;
+    *aux_fd = -1;
     if ((*display_fd = session_get_display_server_fd(g_login_info, sd)) < 0)
     {
         result = E_SCP_SCONNECT_SERVER_FAIL;
     }
+    else if (type == SCP_SESSION_TYPE_GNOME &&
+             (*aux_fd = session_get_display_server_aux_fd(g_login_info,
+                        sd)) < 0)
+    {
+        result = E_SCP_SCONNECT_SERVER_FAIL;
+    }
     else if ((scp_flags & E_SCP_SCONNECT_FLAG_NEED_CHANSRV) == 0 ||
-             session_get_parameters(sd)->type == SCP_SESSION_TYPE_WAYLAND)
+             type == SCP_SESSION_TYPE_WAYLAND ||
+             type == SCP_SESSION_TYPE_GNOME)
     {
         // Don't need to try to connect to chansrv (not started for
-        // Wayland sessions yet)
+        // Wayland and GNOME sessions yet)
         *chan_fd = -1;
     }
     else
@@ -101,6 +111,7 @@ handle_connect_session_request(struct trans *self)
             enum scp_sconnect_status scp_status;
             int display_fd = -1;
             int chan_fd = -1;
+            int aux_fd = -1;
 
             // Terminate any existing xrdp process to sesexec
             if (g_ccp_trans != NULL)
@@ -110,7 +121,7 @@ handle_connect_session_request(struct trans *self)
                 g_sleep(500);
             }
             scp_status = get_session_fds(g_session_data, scp_flags,
-                                         &display_fd, &chan_fd);
+                                         &display_fd, &chan_fd, &aux_fd);
 
             if (scp_status == E_SCP_SCONNECT_OK)
             {
@@ -130,7 +141,8 @@ handle_connect_session_request(struct trans *self)
 
             // Pass the session file descriptors to the client
             rv = scp_send_connect_session_response(scp_trans, scp_status,
-                                                   display_fd, chan_fd);
+                                                   display_fd, chan_fd,
+                                                   aux_fd);
 
             if (rv == 0 && scp_status == E_SCP_SCONNECT_OK)
             {
@@ -178,6 +190,10 @@ handle_connect_session_request(struct trans *self)
             if (chan_fd >= 0)
             {
                 g_file_close(chan_fd);
+            }
+            if (aux_fd >= 0)
+            {
+                g_file_close(aux_fd);
             }
             if (scp_trans != NULL)
             {

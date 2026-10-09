@@ -202,6 +202,14 @@ param=96
 ; to the compositor's socket and passes the connection to xrdp.
 param=@sesmansysconfdir@/startwayland.sh
 
+[GNOME]
+; Experimental: GNOME sessions (xrdp.ini code=31, using the wlup module
+; with backend=mutter). The command must exec gnome-session, which then
+; leads the session. GNOME Shell runs headless by itself, as the session
+; has no seat. sesman passes xrdp connections to the session bus and to
+; PipeWire, opened as the user.
+param=@sesmansysconfdir@/startgnome.sh
+
 [Chansrv]
 ; drive redirection
 ; See sesman.ini(5) for the format of this parameter

@@ -253,6 +253,11 @@ struct config_sesman
      */
     struct list *wayland_params;
     /**
+     * @var gnome_params
+     * @brief Command line starting a GNOME session
+     */
+    struct list *gnome_params;
+    /**
      * @var log
      * @brief Log configuration struct
      */

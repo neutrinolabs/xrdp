@@ -53,6 +53,7 @@
 #define SESMAN_CFG_XORG_PARAMS       "Xorg"
 #define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 #define SESMAN_CFG_WAYLAND_PARAMS    "Wayland"
+#define SESMAN_CFG_GNOME_PARAMS      "GNOME"
 
 #define SESMAN_CFG_SESSION_VARIABLES "SessionVariables"
 
@@ -586,35 +587,36 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
 
 /***************************************************************************//**
  *
- * @brief Reads sesman [Wayland] configuration section
+ * @brief Reads a section holding a command line, one 'param' per word,
+ *        such as [Wayland] and [GNOME]
  * @param file configuration file descriptor
- * @param cs pointer to a config_sesman struct
+ * @param section section name
  * @param param_n parameter name list
  * @param param_v parameter value list
- * @return 0 on success, 1 on failure
+ * @return the command line, possibly empty
  *
  */
-static int
-config_read_wayland_params(int file, struct config_sesman *cs,
+static struct list *
+config_read_command_params(int file, const char *section,
                            struct list *param_n, struct list *param_v)
 {
     int i;
+    struct list *params;
 
     list_clear(param_v);
     list_clear(param_n);
 
-    cs->wayland_params = list_create();
-    cs->wayland_params->auto_free = 1;
+    params = list_create();
+    params->auto_free = 1;
 
-    file_read_section(file, SESMAN_CFG_WAYLAND_PARAMS, param_n, param_v);
+    file_read_section(file, section, param_n, param_v);
 
     for (i = 0; i < param_n->count; i++)
     {
-        list_add_strdup(cs->wayland_params,
-                        (const char *)list_get_item(param_v, i));
+        list_add_strdup(params, (const char *)list_get_item(param_v, i));
     }
 
-    return 0;
+    return params;
 }
 
 /******************************************************************************/
@@ -677,7 +679,10 @@ config_read(const char *sesman_ini)
                 /* read Xvnc/Xorg/Wayland parameter list */
                 config_read_vnc_params(fd, cfg, param_n, param_v);
                 config_read_xorg_params(fd, cfg, param_n, param_v);
-                config_read_wayland_params(fd, cfg, param_n, param_v);
+                cfg->wayland_params = config_read_command_params(
+                                          fd, SESMAN_CFG_WAYLAND_PARAMS, param_n, param_v);
+                cfg->gnome_params = config_read_command_params(
+                                        fd, SESMAN_CFG_GNOME_PARAMS, param_n, param_v);
 
                 /* read security config */
                 config_read_security(fd, &(cfg->sec), param_n, param_v);
@@ -800,6 +805,18 @@ config_dump(struct config_sesman *config)
                   i, (char *)list_get_item(config->wayland_params, i));
     }
 
+    /* GNOME */
+    if (config->gnome_params->count)
+    {
+        g_writeln("GNOME parameters:");
+    }
+
+    for (i = 0; i < config->gnome_params->count; i++)
+    {
+        g_writeln("    Parameter %02d              %s",
+                  i, (char *)list_get_item(config->gnome_params, i));
+    }
+
     /* SessionVariables */
     if (config->env_names->count)
     {
@@ -828,6 +845,7 @@ config_free(struct config_sesman *cs)
         list_delete(cs->vnc_params);
         list_delete(cs->xorg_params);
         list_delete(cs->wayland_params);
+        list_delete(cs->gnome_params);
         list_delete(cs->env_names);
         list_delete(cs->env_values);
         g_free(cs->sec.pass_shell_as_env);
