@@ -178,6 +178,11 @@ struct wlup
     int pipewire_fd;        /* Mutter backend: PipeWire connection from
                                sesman (display_aux_fd), or -1 */
 
+    /* clipboard */
+    void *clip;             /* RDP side (wlup_clip.c) */
+    int clip_chanid;        /* clipboard channel, or -1 */
+    void *wlr_clip;         /* session side for wlroots (wlup_wlr_clip.c) */
+
     /* Wayland globals */
     struct wl_display *display;
     struct wl_registry *registry;

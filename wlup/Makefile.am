@@ -21,6 +21,7 @@ endif
 # ext-foreign-toplevel-list-v1 is only needed because
 # ext-image-capture-source-v1 refers to one of its interfaces
 PROTOCOLS = \
+  ext-data-control-v1 \
   ext-foreign-toplevel-list-v1 \
   ext-image-capture-source-v1 \
   ext-image-copy-capture-v1 \
@@ -48,6 +49,9 @@ module_LTLIBRARIES = \
 libwlup_la_SOURCES = \
   wlup.c \
   wlup.h \
+  wlup_clip.c \
+  wlup_clip.h \
+  wlup_wlr_clip.c \
   $(MUTTER_SOURCES)
 
 EXTRA_libwlup_la_SOURCES = wlup_mutter.c wlup_mutter.h

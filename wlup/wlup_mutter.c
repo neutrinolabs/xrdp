@@ -39,6 +39,7 @@
 #endif
 
 #include <errno.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <string.h>
@@ -56,6 +57,7 @@
 
 #include "wlup.h"
 #include "wlup_mutter.h"
+#include "wlup_clip.h"
 #include "log.h"
 #include "string_calls.h"
 #include "xrdp_constants.h"
@@ -71,6 +73,9 @@
 
 /* ScreenCast cursor modes */
 #define CURSOR_MODE_EMBEDDED 1
+
+/* Clipboard transfers to the session queued between two polls */
+#define MAX_TRANSFERS 16
 
 /* Damage rectangles kept per PipeWire buffer */
 #define MAX_DAMAGE 16
@@ -117,6 +122,27 @@ struct wlup_mutter
     int pointer_placed; /* pointer moved away from the hot corner */
 
     uint64_t resize_start; /* when the pending resize was requested */
+
+    /* clipboard */
+    sd_bus_slot *owner_changed_slot;
+    sd_bus_slot *transfer_slot;
+    int clipboard_enabled;
+    const char *read_mime;  /* session selection to read, or NULL */
+    uint32_t transfers[MAX_TRANSFERS]; /* SelectionTransfer serials */
+    int num_transfers;
+    char *client_text;      /* the RDP client's clipboard text */
+    int client_text_len;
+};
+
+/* MIME types accepted and offered for text, best first */
+static const char *const g_text_mime_types[] =
+{
+    "text/plain;charset=utf-8",
+    "text/plain",
+    "UTF8_STRING",
+    "STRING",
+    "TEXT",
+    NULL
 };
 
 static int pw_initialised;
@@ -830,6 +856,242 @@ setup_sessions(struct wlup *v)
 }
 
 /******************************************************************************/
+/* Clipboard                                                                  */
+/******************************************************************************/
+static int
+on_selection_owner_changed(sd_bus_message *msg, void *data, sd_bus_error *err)
+{
+    struct wlup *v = (struct wlup *)data;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    const char *key;
+    const char *mime;
+    const char *contents;
+    const char *best = NULL;
+    int best_index = -1;
+    int session_is_owner = 0;
+    int i;
+
+    if (sd_bus_message_enter_container(msg, 'a', "{sv}") <= 0)
+    {
+        return 0;
+    }
+    while (sd_bus_message_enter_container(msg, 'e', "sv") > 0)
+    {
+        if (sd_bus_message_read(msg, "s", &key) < 0)
+        {
+            break;
+        }
+        if (strcmp(key, "mime-types") == 0 &&
+                sd_bus_message_peek_type(msg, NULL, &contents) > 0 &&
+                (strcmp(contents, "as") == 0 || strcmp(contents, "(as)") == 0))
+        {
+            /* Documented as "as"; GNOME Shell 50 sends "(as)" */
+            int in_struct = (contents[0] == '(');
+            sd_bus_message_enter_container(msg, 'v', contents);
+            if (in_struct)
+            {
+                sd_bus_message_enter_container(msg, 'r', "as");
+            }
+            sd_bus_message_enter_container(msg, 'a', "s");
+            while (sd_bus_message_read(msg, "s", &mime) > 0)
+            {
+                for (i = 0; g_text_mime_types[i] != NULL; ++i)
+                {
+                    if (strcmp(mime, g_text_mime_types[i]) == 0 &&
+                            (best_index < 0 || i < best_index))
+                    {
+                        best_index = i;
+                        best = g_text_mime_types[i];
+                    }
+                }
+            }
+            sd_bus_message_exit_container(msg);
+            if (in_struct)
+            {
+                sd_bus_message_exit_container(msg);
+            }
+            sd_bus_message_exit_container(msg);
+        }
+        else if (strcmp(key, "session-is-owner") == 0)
+        {
+            sd_bus_message_read(msg, "v", "b", &session_is_owner);
+        }
+        else
+        {
+            sd_bus_message_skip(msg, "v");
+        }
+        sd_bus_message_exit_container(msg);
+    }
+
+    LOG(LOG_LEVEL_DEBUG, "wlup/mutter: selection owner changed, text %s, "
+        "session is owner %d", best != NULL ? best : "none", session_is_owner);
+    /* When we are the owner, the selection holds the client's text */
+    m->read_mime = session_is_owner ? NULL : best;
+    return 0;
+}
+
+/******************************************************************************/
+static int
+on_selection_transfer(sd_bus_message *msg, void *data, sd_bus_error *err)
+{
+    struct wlup *v = (struct wlup *)data;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    const char *mime;
+    uint32_t serial;
+
+    if (sd_bus_message_read(msg, "su", &mime, &serial) >= 0 &&
+            m->num_transfers < MAX_TRANSFERS)
+    {
+        m->transfers[m->num_transfers++] = serial;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+/* Calls a method returning an fd; returns our own copy or -1 */
+static int
+call_for_fd(struct wlup_mutter *m, const char *method, const char *types,
+            ...)
+{
+    sd_bus_error err = SD_BUS_ERROR_NULL;
+    sd_bus_message *msg = NULL;
+    sd_bus_message *reply = NULL;
+    int fd = -1;
+    va_list ap;
+
+    sd_bus_message_new_method_call(m->bus, &msg, RD_NAME, m->rd_session_path,
+                                   RD_SESSION_IFACE, method);
+    va_start(ap, types);
+    sd_bus_message_appendv(msg, types, ap);
+    va_end(ap);
+    if (sd_bus_call(m->bus, msg, 0, &err, &reply) >= 0 &&
+            sd_bus_message_read(reply, "h", &fd) >= 0)
+    {
+        /* The reply owns the fd */
+        fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
+    }
+    else
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup/mutter: %s failed: %s", method,
+            err.message != NULL ? err.message : "bad reply");
+        fd = -1;
+    }
+    sd_bus_error_free(&err);
+    sd_bus_message_unref(reply);
+    sd_bus_message_unref(msg);
+    return fd;
+}
+
+/******************************************************************************/
+/* Work queued by the clipboard signals, done outside sd-bus callbacks */
+static void
+process_clipboard(struct wlup *v)
+{
+    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    int fd;
+    int i;
+    int done;
+    int n;
+    int ok;
+    char *text;
+    int len;
+
+    if (m->read_mime != NULL)
+    {
+        fd = call_for_fd(m, "SelectionRead", "s", m->read_mime);
+        m->read_mime = NULL;
+        if (fd >= 0)
+        {
+            text = wlup_clip_read_fd(fd, &len);
+            wlup_clip_session_text(v, text != NULL ? text : "", len);
+            g_free(text);
+        }
+    }
+
+    for (i = 0; i < m->num_transfers; ++i)
+    {
+        ok = 0;
+        fd = call_for_fd(m, "SelectionWrite", "u", m->transfers[i]);
+        if (fd >= 0)
+        {
+            fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK);
+            for (done = 0; m->client_text != NULL &&
+                    done < m->client_text_len; done += n)
+            {
+                n = write(fd, m->client_text + done, m->client_text_len - done);
+                if (n <= 0 && errno != EINTR)
+                {
+                    break;
+                }
+                n = MAX(n, 0);
+            }
+            ok = (m->client_text != NULL && done == m->client_text_len);
+            close(fd);
+        }
+        sd_bus_call_method(m->bus, RD_NAME, m->rd_session_path,
+                           RD_SESSION_IFACE, "SelectionWriteDone", NULL, NULL,
+                           "ub", m->transfers[i], ok);
+    }
+    m->num_transfers = 0;
+}
+
+/******************************************************************************/
+void
+wlup_mutter_set_clipboard_text(struct wlup *v, const char *text, int len)
+{
+    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    sd_bus_error err = SD_BUS_ERROR_NULL;
+
+    if (m == NULL || !m->clipboard_enabled)
+    {
+        return;
+    }
+    g_free(m->client_text);
+    m->client_text = (char *)g_malloc(len + 1, 0);
+    memcpy(m->client_text, text, len);
+    m->client_text_len = len;
+
+    /* Mutter asks for the data with SelectionTransfer when it is pasted */
+    if (sd_bus_call_method(m->bus, RD_NAME, m->rd_session_path,
+                           RD_SESSION_IFACE, "SetSelection", &err, NULL,
+                           "a{sv}", 1, "mime-types", "as", 2,
+                           g_text_mime_types[0], g_text_mime_types[1]) < 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup/mutter: SetSelection failed: %s",
+            err.message);
+    }
+    sd_bus_error_free(&err);
+}
+
+/******************************************************************************/
+static void
+enable_clipboard(struct wlup *v)
+{
+    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    sd_bus_error err = SD_BUS_ERROR_NULL;
+
+    sd_bus_match_signal(m->bus, &m->owner_changed_slot, RD_NAME,
+                        m->rd_session_path, RD_SESSION_IFACE,
+                        "SelectionOwnerChanged", on_selection_owner_changed, v);
+    sd_bus_match_signal(m->bus, &m->transfer_slot, RD_NAME,
+                        m->rd_session_path, RD_SESSION_IFACE,
+                        "SelectionTransfer", on_selection_transfer, v);
+    if (sd_bus_call_method(m->bus, RD_NAME, m->rd_session_path,
+                           RD_SESSION_IFACE, "EnableClipboard", &err, NULL,
+                           "a{sv}", 0) < 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup/mutter: EnableClipboard failed: %s",
+            err.message);
+    }
+    else
+    {
+        m->clipboard_enabled = 1;
+        LOG(LOG_LEVEL_INFO, "wlup/mutter: clipboard enabled");
+    }
+    sd_bus_error_free(&err);
+}
+
+/******************************************************************************/
 /* Module side                                                                */
 /******************************************************************************/
 /* Waits until GNOME Shell offers its remote desktop API.
@@ -942,6 +1204,7 @@ wlup_mutter_connect(struct wlup *v, int bus_fd)
                       0);
         return 1;
     }
+    enable_clipboard(v);
 
     /* Success: the connection from sesman is ours to close */
     if (bus_fd >= 0)
@@ -1003,8 +1266,11 @@ wlup_mutter_disconnect(struct wlup *v)
         }
         sd_bus_slot_unref(m->stream_added_slot);
         sd_bus_slot_unref(m->closed_slot);
+        sd_bus_slot_unref(m->owner_changed_slot);
+        sd_bus_slot_unref(m->transfer_slot);
         sd_bus_flush_close_unref(m->bus);
     }
+    g_free(m->client_text);
     g_free(m->rd_session_path);
     g_free(m->sc_session_path);
     g_free(m->stream_path);
@@ -1061,6 +1327,7 @@ wlup_mutter_check_wait_objs(struct wlup *v)
         while (sd_bus_process(m->bus, NULL) > 0)
         {
         }
+        process_clipboard(v);
     }
     if (m->loop != NULL)
     {
