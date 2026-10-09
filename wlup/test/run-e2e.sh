@@ -3,21 +3,20 @@
 #
 #   xfreerdp3 (in Xvfb) --RDP--> xrdp + libwlup --Wayland--> headless sway
 #
-# 1. starts sway headless with a foot terminal
+# 1. starts sway headless at 1024x768 with foot (terminal) and wev (prints
+#    every input event it gets) side by side
 # 2. starts xrdp with a [Wayland] session that loads libwlup
-# 3. connects xfreerdp3 and takes a screenshot of what the client shows
-# 4. types a command into the remote terminal with xdotool and checks
-#    that it ran inside the sway session
-# 5. clicks and scrolls over a wev window and checks which pointer events
-#    wev received inside the sway session
+# 3. connects xfreerdp3 at 1280x800: sway's output must follow
+# 4. types a command into foot and checks that it ran in the sway session
+# 5. clicks and scrolls over wev and checks the events wev received
+# 6. resizes the client window to 1600x900: sway's output must follow,
+#    and input must still land where the client points
 #
 # Usage: run-e2e.sh <xrdp source dir> <output dir>
 set -eu
 
 SRC=$1
 OUT=$2
-W=1280
-H=800
 
 mkdir -p "$OUT"
 
@@ -37,11 +36,10 @@ export XDG_RUNTIME_DIR=/tmp/xdg
 mkdir -p $XDG_RUNTIME_DIR
 chown tester $XDG_RUNTIME_DIR
 chmod 700 $XDG_RUNTIME_DIR
-# Two tiled windows: foot on the left, wev (prints every input event it
-# gets) on the right. Focus only changes on a click, so the click test
-# cannot pass by pointer motion alone
+# Focus only changes on a click, so the click test cannot pass by pointer
+# motion alone
 cat > /tmp/sway.conf <<EOF
-output HEADLESS-1 mode ${W}x${H} bg #204a87 solid_color
+output HEADLESS-1 mode 1024x768 bg #204a87 solid_color
 focus_follows_mouse no
 exec foot
 exec sh -c 'sleep 1; exec stdbuf -oL wev > /tmp/wev.log 2>&1'
@@ -53,23 +51,24 @@ for _ in $(seq 50); do
     [ -S $XDG_RUNTIME_DIR/wayland-1 ] && break
     sleep 0.2
 done
-sleep 2   # let foot map its window
-WAYLAND_SOCKET_PATH=$XDG_RUNTIME_DIR/wayland-1
+sleep 2   # let the windows map
 # xrdp runs as root here; the prototype just needs access to the socket
 chmod 755 $XDG_RUNTIME_DIR
-su tester -c "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR WAYLAND_DISPLAY=wayland-1 \
-    grim $OUT/sway-direct.png" || true
 
-# Window centres, from sway's IPC (swaymsg talks to sway over $SWAYSOCK)
+# sway's IPC: swaymsg talks to sway over this socket
 SWAYSOCK=$(ls $XDG_RUNTIME_DIR/sway-ipc.*.sock)
+swaymsg_() {
+    su tester -c "swaymsg -s $SWAYSOCK $*"
+}
+output_size() {
+    swaymsg_ -t get_outputs | jq -r '.[0].current_mode | "\(.width)x\(.height)"'
+}
 centre() {
-    su tester -c "swaymsg -s $SWAYSOCK -t get_tree" |
+    swaymsg_ -t get_tree |
         jq -r --arg id "$1" '.. | objects | select(.app_id? == $id) |
             "\(.rect.x + .rect.width / 2 | floor) \(.rect.y + .rect.height / 2 | floor)"'
 }
-read -r FOOT_X FOOT_Y < <(centre foot)
-read -r WEV_X WEV_Y < <(centre wev)
-echo "foot at $FOOT_X,$FOOT_Y  wev at $WEV_X,$WEV_Y"
+SIZE_BEFORE=$(output_size)
 
 # --- xrdp ---------------------------------------------------------------------
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=wlup-test \
@@ -79,26 +78,36 @@ cat >> /etc/xrdp/xrdp.ini <<EOF
 [Wayland]
 name=Wayland (wlup prototype)
 lib=libwlup.so
-wayland_display=$WAYLAND_SOCKET_PATH
+wayland_display=$XDG_RUNTIME_DIR/wayland-1
 xkb_layout=us
 EOF
 # Skip the login screen and go straight to the Wayland session
 sed -i 's/^#\?autorun=.*/autorun=Wayland/' /etc/xrdp/xrdp.ini
-sed -i 's/^LogLevel=.*/LogLevel=DEBUG/; s/^EnableConsole=.*/EnableConsole=true/' /etc/xrdp/xrdp.ini
+sed -i 's/^LogLevel=.*/LogLevel=DEBUG/' /etc/xrdp/xrdp.ini
 xrdp --nodaemon > "$OUT/xrdp.log" 2>&1 &
 sleep 2
 
 # --- RDP client in Xvfb -------------------------------------------------------
-Xvfb :99 -screen 0 ${W}x${H}x24 > /dev/null 2>&1 &
+Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
 export DISPLAY=:99
 sleep 1
-xfreerdp3 /v:127.0.0.1 /u:tester /p:x /cert:ignore /size:${W}x${H} \
-    /bpp:32 -grab-keyboard > "$OUT/client.log" 2>&1 &
+# BPP=32 makes xrdp compress bitmaps with planar. FreeRDP's client does
+# not resize its planar decoder on a deactivate-reactivate resize
+# (connection.c only calls DesktopResize and cache_resize), so growing
+# the desktop then disconnects it ("planar->maxWidth 1280 < nSrcWidth
+# 1600"). 24 bpp uses interleaved RLE, which is not affected
+BPP=${BPP:-24}
+xfreerdp3 /v:127.0.0.1 /u:tester /p:x /cert:ignore /size:1280x800 \
+    /bpp:$BPP /dynamic-resolution -grab-keyboard > "$OUT/client.log" 2>&1 &
 CLIENT=$!
 sleep 6
+SIZE_CONNECTED=$(output_size)
 import -window root "$OUT/client-1-connected.png"
 
-# --- input: type a command into the remote foot terminal ---------------------
+# --- keyboard: type a command into foot ---------------------------------------
+read -r FOOT_X FOOT_Y < <(centre foot)
+read -r WEV_X WEV_Y < <(centre wev)
+echo "foot at $FOOT_X,$FOOT_Y  wev at $WEV_X,$WEV_Y"
 xdotool mousemove "$FOOT_X" "$FOOT_Y" click 1
 sleep 0.5
 xdotool type --delay 80 'echo wlup-typed-$((6*7)) > /tmp/typed.txt'
@@ -116,10 +125,26 @@ xdotool click 2; sleep 0.3   # middle -> BTN_MIDDLE 274
 xdotool click 4; sleep 0.3   # wheel up
 xdotool click 5; sleep 0.3   # wheel down
 sleep 1
-import -window root "$OUT/client-3-pointer.png"
 cp /tmp/wev.log "$OUT/wev.log"
 
+# --- resize: make the client window bigger ------------------------------------
+WID=$(xdotool search --pid $CLIENT | tail -1)
+xdotool windowsize "$WID" 1600 900
+sleep 6
+SIZE_RESIZED=$(output_size)
+import -window root "$OUT/client-3-resized.png"
+
+# Input after the resize: the pointer extent must follow the new size
+read -r FOOT_X FOOT_Y < <(centre foot)
+xdotool mousemove "$FOOT_X" "$FOOT_Y" click 1
+sleep 0.5
+xdotool type --delay 80 'echo resized-$((6*7)) > /tmp/typed2.txt'
+xdotool key Return
+sleep 2
+import -window root "$OUT/client-4-typed-after-resize.png"
+
 echo "=== result ==="
+echo "sway output: start $SIZE_BEFORE, connected $SIZE_CONNECTED, resized $SIZE_RESIZED"
 pass=0
 fail=0
 check() {
@@ -129,6 +154,8 @@ check() {
         echo "FAIL  $1"; fail=$((fail + 1))
     fi
 }
+check "connect: output follows client size 1280x800" \
+    '[ "$SIZE_CONNECTED" = 1280x800 ]'
 check "keyboard: typed command ran in sway" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = wlup-typed-42 ]'
 check "left button press"   'grep -a -q "button: 272.*state: 1" /tmp/wev.log'
@@ -139,7 +166,13 @@ check "wheel: vertical axis events" 'grep -a -q "axis: 0" /tmp/wev.log'
 check "wheel: both directions" \
     'grep -a "axis: 0" /tmp/wev.log | grep -q -- "value: -" &&
      grep -a "axis: 0" /tmp/wev.log | grep -v -q -- "value: -"'
+check "resize: output follows client window 1600x900" \
+    '[ "$SIZE_RESIZED" = 1600x900 ]'
+check "resize: input still works after resize" \
+    '[ "$(cat /tmp/typed2.txt 2>/dev/null)" = resized-42 ]'
 echo "passed $pass, failed $fail"
+
 kill $CLIENT 2>/dev/null || true
 cp /var/log/xrdp.log "$OUT/xrdp-file.log" 2>/dev/null || true
-grep -h -E 'wlup' "$OUT"/xrdp*.log | head -20 || true
+chmod -R a+r "$OUT"
+grep -h -E 'wlup|resize_done|Advancing' "$OUT"/xrdp*.log | head -30 || true

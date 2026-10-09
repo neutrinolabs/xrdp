@@ -23,6 +23,12 @@
  *   answered once the screen has changed, so an idle desktop costs
  *   nothing.
  *
+ * Resize path
+ *   When the RDP client asks for a new desktop size, the captured output
+ *   is given a custom mode through wlr-output-management. xrdp is told
+ *   the resize is done once the capture session reports a buffer of the
+ *   new size.
+ *
  * Input path
  *   RDP scancodes are turned into evdev keycodes with the existing
  *   scancode tables, and sent through zwp_virtual_keyboard_v1 with an
@@ -48,6 +54,7 @@
 #include "ext-image-capture-source-v1-client-protocol.h"
 #include "ext-image-copy-capture-v1-client-protocol.h"
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
+#include "wlr-output-management-unstable-v1-client-protocol.h"
 #include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
 
 #include "wlup.h"
@@ -61,6 +68,7 @@
 #define WLUP_WHEEL_STEP 15.0
 
 static int start_capture(struct wlup *v);
+static void resize_finished(struct wlup *v);
 
 /******************************************************************************/
 static uint32_t
@@ -433,6 +441,12 @@ session_done(void *data, struct ext_image_copy_capture_session_v1 *s)
     v->constraints_done = 1;
     /* The constraints are re-sent from scratch next time */
     v->constraint_xrgb8888 = 0;
+    if (v->resize_pending &&
+            v->buffer_width == v->resize_width &&
+            v->buffer_height == v->resize_height)
+    {
+        resize_finished(v);
+    }
     start_capture(v);
 }
 
@@ -459,6 +473,350 @@ static const struct ext_image_copy_capture_session_v1_listener
 };
 
 /******************************************************************************/
+/* wl_output: only its name is needed, to find the matching head              */
+/******************************************************************************/
+static void
+output_geometry(void *data, struct wl_output *output, int32_t x, int32_t y,
+                int32_t physical_width, int32_t physical_height,
+                int32_t subpixel, const char *make, const char *model,
+                int32_t transform)
+{
+}
+
+static void
+output_mode(void *data, struct wl_output *output, uint32_t flags,
+            int32_t width, int32_t height, int32_t refresh)
+{
+}
+
+static void
+output_done(void *data, struct wl_output *output)
+{
+}
+
+static void
+output_scale(void *data, struct wl_output *output, int32_t factor)
+{
+}
+
+static void
+output_name(void *data, struct wl_output *output, const char *name)
+{
+    struct wlup *v = (struct wlup *)data;
+    g_strncpy(v->output_name, name, sizeof(v->output_name) - 1);
+}
+
+static void
+output_description(void *data, struct wl_output *output,
+                   const char *description)
+{
+}
+
+static const struct wl_output_listener output_listener =
+{
+    .geometry = output_geometry,
+    .mode = output_mode,
+    .done = output_done,
+    .scale = output_scale,
+    .name = output_name,
+    .description = output_description,
+};
+
+/******************************************************************************/
+/* wlr-output-management (version 1)                                          */
+/******************************************************************************/
+static struct wlup_head *
+find_head(struct wlup *v, struct zwlr_output_head_v1 *head)
+{
+    int i;
+    for (i = 0; i < v->num_heads; ++i)
+    {
+        if (v->heads[i].head == head)
+        {
+            return &v->heads[i];
+        }
+    }
+    return NULL;
+}
+
+static void
+head_name(void *data, struct zwlr_output_head_v1 *head, const char *name)
+{
+    struct wlup_head *h = find_head((struct wlup *)data, head);
+    if (h != NULL)
+    {
+        g_strncpy(h->name, name, sizeof(h->name) - 1);
+    }
+}
+
+static void
+head_description(void *data, struct zwlr_output_head_v1 *head,
+                 const char *description)
+{
+}
+
+static void
+head_physical_size(void *data, struct zwlr_output_head_v1 *head,
+                   int32_t width, int32_t height)
+{
+}
+
+static void
+mode_size(void *data, struct zwlr_output_mode_v1 *mode,
+          int32_t width, int32_t height)
+{
+}
+
+static void
+mode_refresh(void *data, struct zwlr_output_mode_v1 *mode, int32_t refresh)
+{
+}
+
+static void
+mode_preferred(void *data, struct zwlr_output_mode_v1 *mode)
+{
+}
+
+static void
+mode_finished(void *data, struct zwlr_output_mode_v1 *mode)
+{
+    zwlr_output_mode_v1_destroy(mode);
+}
+
+static const struct zwlr_output_mode_v1_listener mode_listener =
+{
+    .size = mode_size,
+    .refresh = mode_refresh,
+    .preferred = mode_preferred,
+    .finished = mode_finished,
+};
+
+static void
+head_mode(void *data, struct zwlr_output_head_v1 *head,
+          struct zwlr_output_mode_v1 *mode)
+{
+    /* Modes are not used: resizing always sets a custom mode */
+    zwlr_output_mode_v1_add_listener(mode, &mode_listener, data);
+}
+
+static void
+head_enabled(void *data, struct zwlr_output_head_v1 *head, int32_t enabled)
+{
+    struct wlup_head *h = find_head((struct wlup *)data, head);
+    if (h != NULL)
+    {
+        h->enabled = enabled;
+    }
+}
+
+static void
+head_current_mode(void *data, struct zwlr_output_head_v1 *head,
+                  struct zwlr_output_mode_v1 *mode)
+{
+}
+
+static void
+head_position(void *data, struct zwlr_output_head_v1 *head,
+              int32_t x, int32_t y)
+{
+}
+
+static void
+head_transform(void *data, struct zwlr_output_head_v1 *head,
+               int32_t transform)
+{
+}
+
+static void
+head_scale(void *data, struct zwlr_output_head_v1 *head, wl_fixed_t scale)
+{
+}
+
+static void
+head_finished(void *data, struct zwlr_output_head_v1 *head)
+{
+    struct wlup *v = (struct wlup *)data;
+    struct wlup_head *h = find_head(v, head);
+
+    zwlr_output_head_v1_destroy(head);
+    if (h != NULL)
+    {
+        *h = v->heads[--v->num_heads];
+    }
+}
+
+static const struct zwlr_output_head_v1_listener head_listener =
+{
+    .name = head_name,
+    .description = head_description,
+    .physical_size = head_physical_size,
+    .mode = head_mode,
+    .enabled = head_enabled,
+    .current_mode = head_current_mode,
+    .position = head_position,
+    .transform = head_transform,
+    .scale = head_scale,
+    .finished = head_finished,
+};
+
+static void
+manager_head(void *data, struct zwlr_output_manager_v1 *manager,
+             struct zwlr_output_head_v1 *head)
+{
+    struct wlup *v = (struct wlup *)data;
+
+    if (v->num_heads >= WLUP_MAX_HEADS)
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup: too many outputs, ignoring one");
+        zwlr_output_head_v1_destroy(head);
+        return;
+    }
+    g_memset(&v->heads[v->num_heads], 0, sizeof(v->heads[0]));
+    v->heads[v->num_heads++].head = head;
+    zwlr_output_head_v1_add_listener(head, &head_listener, v);
+}
+
+static void
+manager_done(void *data, struct zwlr_output_manager_v1 *manager,
+             uint32_t serial)
+{
+    struct wlup *v = (struct wlup *)data;
+    v->output_manager_serial = serial;
+}
+
+static void
+manager_finished(void *data, struct zwlr_output_manager_v1 *manager)
+{
+    struct wlup *v = (struct wlup *)data;
+    zwlr_output_manager_v1_destroy(manager);
+    v->output_manager = NULL;
+}
+
+static const struct zwlr_output_manager_v1_listener manager_listener =
+{
+    .head = manager_head,
+    .done = manager_done,
+    .finished = manager_finished,
+};
+
+/******************************************************************************/
+/* Tells xrdp the resize it is waiting for is complete */
+static void
+resize_finished(struct wlup *v)
+{
+    if (v->resize_pending)
+    {
+        v->resize_pending = 0;
+        v->need_full_paint = 1;
+        v->server_monitor_resize_done(v);
+    }
+}
+
+static void
+config_succeeded(void *data, struct zwlr_output_configuration_v1 *config)
+{
+    struct wlup *v = (struct wlup *)data;
+
+    LOG(LOG_LEVEL_INFO, "wlup: output resized to %dx%d",
+        v->resize_width, v->resize_height);
+    zwlr_output_configuration_v1_destroy(config);
+    /* The resize completes in session_done(), when the capture buffer
+     * has the new size */
+}
+
+static void
+config_failed(void *data, struct zwlr_output_configuration_v1 *config)
+{
+    struct wlup *v = (struct wlup *)data;
+
+    LOG(LOG_LEVEL_WARNING, "wlup: compositor refused output size %dx%d, "
+        "the picture will be clipped or padded",
+        v->resize_width, v->resize_height);
+    zwlr_output_configuration_v1_destroy(config);
+    resize_finished(v);
+}
+
+static void
+config_cancelled(void *data, struct zwlr_output_configuration_v1 *config)
+{
+    /* The output layout changed while the request was in flight */
+    config_failed(data, config);
+}
+
+static const struct zwlr_output_configuration_v1_listener config_listener =
+{
+    .succeeded = config_succeeded,
+    .failed = config_failed,
+    .cancelled = config_cancelled,
+};
+
+/******************************************************************************/
+/* Asks the compositor to give the captured output a new size.
+ * return 1 if a request was sent, 0 if not */
+static int
+request_output_size(struct wlup *v, int width, int height)
+{
+    struct zwlr_output_configuration_v1 *config;
+    struct zwlr_output_configuration_head_v1 *config_head;
+    struct wlup_head *target = NULL;
+    int i;
+
+    if (v->output_manager == NULL)
+    {
+        return 0;
+    }
+    for (i = 0; i < v->num_heads; ++i)
+    {
+        if (strcmp(v->heads[i].name, v->output_name) == 0)
+        {
+            target = &v->heads[i];
+        }
+    }
+    if (target == NULL && v->num_heads == 1)
+    {
+        target = &v->heads[0];
+    }
+    if (target == NULL)
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup: cannot find output '%s' to resize",
+            v->output_name);
+        return 0;
+    }
+
+    LOG(LOG_LEVEL_INFO, "wlup: requesting output %s size %dx%d",
+        target->name, width, height);
+    v->resize_width = width;
+    v->resize_height = height;
+
+    /* Every head must appear in a configuration, the other ones are
+     * passed through unchanged */
+    config = zwlr_output_manager_v1_create_configuration(
+                 v->output_manager, v->output_manager_serial);
+    zwlr_output_configuration_v1_add_listener(config, &config_listener, v);
+    for (i = 0; i < v->num_heads; ++i)
+    {
+        if (&v->heads[i] == target)
+        {
+            config_head = zwlr_output_configuration_v1_enable_head(
+                              config, target->head);
+            zwlr_output_configuration_head_v1_set_custom_mode(
+                config_head, width, height, 0);
+        }
+        else if (v->heads[i].enabled)
+        {
+            zwlr_output_configuration_v1_enable_head(config, v->heads[i].head);
+        }
+        else
+        {
+            zwlr_output_configuration_v1_disable_head(config,
+                    v->heads[i].head);
+        }
+    }
+    zwlr_output_configuration_v1_apply(config);
+    return 1;
+}
+
+/******************************************************************************/
 /* Registry                                                                   */
 /******************************************************************************/
 static void
@@ -478,8 +836,11 @@ registry_global(void *data, struct wl_registry *registry, uint32_t name,
     else if (strcmp(interface, wl_output_interface.name) == 0 &&
              v->output == NULL)
     {
-        /* Prototype: the first output is the RDP desktop */
-        v->output = wl_registry_bind(registry, name, &wl_output_interface, 1);
+        /* Prototype: the first output is the RDP desktop. Version 4 has
+         * the output name, used to find it in wlr-output-management */
+        v->output = wl_registry_bind(registry, name, &wl_output_interface,
+                                     MIN(version, 4));
+        wl_output_add_listener(v->output, &output_listener, v);
     }
     else if (strcmp(interface,
                     ext_output_image_capture_source_manager_v1_interface.name)
@@ -501,6 +862,13 @@ registry_global(void *data, struct wl_registry *registry, uint32_t name,
         v->pointer_manager = wl_registry_bind(registry, name,
                                               &zwlr_virtual_pointer_manager_v1_interface,
                                               v->pointer_manager_version);
+    }
+    else if (strcmp(interface, zwlr_output_manager_v1_interface.name) == 0)
+    {
+        v->output_manager = wl_registry_bind(registry, name,
+                                             &zwlr_output_manager_v1_interface, 1);
+        zwlr_output_manager_v1_add_listener(v->output_manager,
+                                            &manager_listener, v);
     }
     else if (strcmp(interface,
                     zwp_virtual_keyboard_manager_v1_interface.name) == 0)
@@ -794,6 +1162,8 @@ lib_mod_connect(struct wlup *v, int fd)
     v->registry = wl_display_get_registry(v->display);
     wl_registry_add_listener(v->registry, &registry_listener, v);
     wl_display_roundtrip(v->display);
+    /* Events of the globals just bound: output name, output heads */
+    wl_display_roundtrip(v->display);
 
     if (v->shm == NULL || v->output == NULL || v->source_manager == NULL ||
             v->copy_manager == NULL)
@@ -853,6 +1223,17 @@ lib_mod_connect(struct wlup *v, int fd)
         return 1;
     }
 
+    /* Match the output to the size the RDP client asked for */
+    if (v->buffer_width != v->server_width ||
+            v->buffer_height != v->server_height)
+    {
+        if (!request_output_size(v, v->server_width, v->server_height))
+        {
+            LOG(LOG_LEVEL_WARNING, "wlup: the compositor cannot resize its "
+                "output (no wlr-output-management)");
+        }
+    }
+
     g_snprintf(text, sizeof(text), "wlup: connected to Wayland display %s",
                name != NULL ? name : "$WAYLAND_DISPLAY");
     v->server_msg(v, text, 0);
@@ -880,6 +1261,17 @@ disconnect(struct wlup *v)
         v->source = NULL;
     }
     free_buffer(v);
+    if (v->output_manager != NULL)
+    {
+        int i;
+        for (i = 0; i < v->num_heads; ++i)
+        {
+            zwlr_output_head_v1_destroy(v->heads[i].head);
+        }
+        v->num_heads = 0;
+        zwlr_output_manager_v1_destroy(v->output_manager);
+        v->output_manager = NULL;
+    }
     if (v->pointer != NULL)
     {
         zwlr_virtual_pointer_v1_destroy(v->pointer);
@@ -1050,12 +1442,19 @@ lib_mod_server_monitor_resize(struct wlup *v, int width, int height,
                               const struct monitor_info *monitors,
                               int *in_progress)
 {
-    /* Prototype: the compositor output keeps its size. Resizing it needs
-     * a compositor-specific call (e.g. 'swaymsg output ... mode') */
+    /* Prototype: all monitors become one output of the total size */
     v->server_width = width;
     v->server_height = height;
-    *in_progress = 0;
     v->need_full_paint = 1;
+    *in_progress = 0;
+    if ((width != v->buffer_width || height != v->buffer_height) &&
+            request_output_size(v, width, height))
+    {
+        /* xrdp waits for server_monitor_resize_done() */
+        v->resize_pending = 1;
+        *in_progress = 1;
+        wl_display_flush(v->display);
+    }
     return 0;
 }
 

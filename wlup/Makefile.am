@@ -15,6 +15,7 @@ PROTOCOLS = \
   ext-image-capture-source-v1 \
   ext-image-copy-capture-v1 \
   virtual-keyboard-unstable-v1 \
+  wlr-output-management-unstable-v1 \
   wlr-virtual-pointer-unstable-v1
 
 PROTOCOL_H_FILES = $(PROTOCOLS:=-client-protocol.h)
