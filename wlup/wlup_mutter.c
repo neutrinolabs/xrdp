@@ -114,6 +114,7 @@ struct wlup_mutter
     struct ei_device *keyboard;
     struct ei_device *pointer; /* absolute pointer, also buttons/scroll */
     uint32_t sequence;
+    int pointer_placed; /* pointer moved away from the hot corner */
 
     uint64_t resize_start; /* when the pending resize was requested */
 };
@@ -525,6 +526,21 @@ process_ei_events(struct wlup *v)
                 break;
             case EI_EVENT_DEVICE_RESUMED:
                 ei_device_start_emulating(dev, ++m->sequence);
+                if (dev == m->pointer && !m->pointer_placed)
+                {
+                    /* GNOME's pointer starts at (0,0), its hot corner,
+                     * where the first motion opens the Activities
+                     * overview. Start in the middle of the screen */
+                    struct ei_region *r = ei_device_get_region(dev, 0);
+                    if (r != NULL)
+                    {
+                        ei_device_pointer_motion_absolute(dev,
+                                                          ei_region_get_x(r) + ei_region_get_width(r) / 2.0,
+                                                          ei_region_get_y(r) + ei_region_get_height(r) / 2.0);
+                        ei_device_frame(dev, ei_now(m->ei));
+                        m->pointer_placed = 1;
+                    }
+                }
                 break;
             case EI_EVENT_DEVICE_REMOVED:
                 if (dev == m->keyboard)
