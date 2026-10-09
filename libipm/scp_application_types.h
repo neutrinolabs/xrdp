@@ -36,7 +36,8 @@ enum scp_session_type
     SCP_SESSION_TYPE_XVNC = 0,  ///< Session used Xvnc
     SCP_SESSION_TYPE_XVNC_UDS,  ///< Session used Xvnc with UDS connection
     SCP_SESSION_TYPE_XORG,  ///< Session used Xorg + xorgxrdp
-    SCP_SESSION_TYPE_WAYLAND  ///< Session uses a Wayland compositor (wlup)
+    SCP_SESSION_TYPE_WAYLAND,  ///< Session uses a Wayland compositor (wlup)
+    SCP_SESSION_TYPE_GNOME  ///< Session uses GNOME (wlup Mutter backend)
 };
 
 #define SCP_SESSION_TYPE_TO_STR(t) \
@@ -44,6 +45,7 @@ enum scp_session_type
      (t) == SCP_SESSION_TYPE_XVNC_UDS ? "Xvnc-UDS" : \
      (t) == SCP_SESSION_TYPE_XORG ? "Xorg" : \
      (t) == SCP_SESSION_TYPE_WAYLAND ? "Wayland" : \
+     (t) == SCP_SESSION_TYPE_GNOME ? "GNOME" : \
      "unknown" \
     )
 

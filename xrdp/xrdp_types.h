@@ -40,6 +40,7 @@
 #define XVNC_UDS_SESSION_CODE 1
 #define XORG_SESSION_CODE 20
 #define WAYLAND_SESSION_CODE 30
+#define GNOME_SESSION_CODE 31
 
 /* To check whether touch events has been implemented on session type 'mm' */
 #define XRDP_MM_IMPLEMENTS_TOUCH(mm) \
@@ -412,6 +413,7 @@ struct xrdp_mm
 
     int sesman_display_fd; // Session file descriptor (if use_sesman is set)
     int sesman_chansrv_fd; // chansrv file descriptor (if use_sesman is set)
+    int sesman_aux_fd; // Second session file descriptor, or -1
 
     /* We can't delete transports while we're in a callback for that
      * transport, as this causes trans.c to reference undefined memory.
