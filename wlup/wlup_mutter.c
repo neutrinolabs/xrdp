@@ -82,6 +82,10 @@
  * started, and offer its remote desktop API */
 #define MUTTER_TIMEOUT_USEC (60 * 1000 * 1000)
 
+/* Time allowed for Mutter to resize the virtual monitor. xrdp waits for
+ * the resize, so give up after this and let the picture be clipped */
+#define RESIZE_TIMEOUT_USEC (5 * 1000 * 1000)
+
 struct wlup_mutter
 {
     /* D-Bus */
@@ -110,6 +114,8 @@ struct wlup_mutter
     struct ei_device *keyboard;
     struct ei_device *pointer; /* absolute pointer, also buttons/scroll */
     uint32_t sequence;
+
+    uint64_t resize_start; /* when the pending resize was requested */
 };
 
 static int pw_initialised;
@@ -295,6 +301,13 @@ on_param_changed(void *data, uint32_t id, const struct spa_pod *param)
         LOG(LOG_LEVEL_ERROR, "wlup/mutter: out of memory");
         return;
     }
+    if (v->resize_pending && m->width == v->resize_width &&
+            m->height == v->resize_height)
+    {
+        LOG(LOG_LEVEL_INFO, "wlup/mutter: virtual monitor resized to %dx%d",
+            m->width, m->height);
+        wlup_resize_finished(v);
+    }
 
     /* Shared memory only (no dma-buf), plus damage regions */
     params[0] = spa_pod_builder_add_object(&b,
@@ -353,6 +366,34 @@ static const struct pw_core_events core_events =
 };
 
 /******************************************************************************/
+/* The formats we accept. For a virtual monitor, the preferred size here
+ * becomes the size of the monitor. No modifier is offered, so buffers
+ * are shared memory */
+static const struct spa_pod *
+build_enum_format(struct spa_pod_builder *b, int width, int height)
+{
+    struct spa_rectangle size = SPA_RECTANGLE(width, height);
+    struct spa_rectangle min_size = SPA_RECTANGLE(1, 1);
+    struct spa_rectangle max_size = SPA_RECTANGLE(8192, 8192);
+    struct spa_fraction rate = SPA_FRACTION(0, 1);
+    struct spa_fraction max_rate = SPA_FRACTION(60, 1);
+    struct spa_fraction min_rate = SPA_FRACTION(1, 1);
+
+    return spa_pod_builder_add_object(b,
+                                      SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
+                                      SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
+                                      SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw),
+                                      SPA_FORMAT_VIDEO_format,
+                                      SPA_POD_CHOICE_ENUM_Id(3, SPA_VIDEO_FORMAT_BGRx,
+                                              SPA_VIDEO_FORMAT_BGRx, SPA_VIDEO_FORMAT_BGRA),
+                                      SPA_FORMAT_VIDEO_size,
+                                      SPA_POD_CHOICE_RANGE_Rectangle(&size, &min_size, &max_size),
+                                      SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction(&rate),
+                                      SPA_FORMAT_VIDEO_maxFramerate,
+                                      SPA_POD_CHOICE_RANGE_Fraction(&max_rate, &min_rate, &max_rate));
+}
+
+/******************************************************************************/
 /* return error */
 static int
 connect_stream(struct wlup *v)
@@ -361,13 +402,6 @@ connect_stream(struct wlup *v)
     uint8_t pod_buf[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(pod_buf, sizeof(pod_buf));
     const struct spa_pod *params[1];
-    struct spa_rectangle size = SPA_RECTANGLE(v->server_width,
-                                v->server_height);
-    struct spa_rectangle min_size = SPA_RECTANGLE(1, 1);
-    struct spa_rectangle max_size = SPA_RECTANGLE(8192, 8192);
-    struct spa_fraction rate = SPA_FRACTION(0, 1);
-    struct spa_fraction max_rate = SPA_FRACTION(60, 1);
-    struct spa_fraction min_rate = SPA_FRACTION(1, 1);
 
     if (!pw_initialised)
     {
@@ -408,20 +442,7 @@ connect_stream(struct wlup *v)
                                       NULL));
     pw_stream_add_listener(m->stream, &m->stream_listener, &stream_events, v);
 
-    /* For a virtual monitor the size we prefer here becomes the size of
-     * the monitor. No modifier is offered, so buffers are shared memory */
-    params[0] = spa_pod_builder_add_object(&b,
-                                           SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
-                                           SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
-                                           SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw),
-                                           SPA_FORMAT_VIDEO_format,
-                                           SPA_POD_CHOICE_ENUM_Id(3, SPA_VIDEO_FORMAT_BGRx,
-                                                   SPA_VIDEO_FORMAT_BGRx, SPA_VIDEO_FORMAT_BGRA),
-                                           SPA_FORMAT_VIDEO_size,
-                                           SPA_POD_CHOICE_RANGE_Rectangle(&size, &min_size, &max_size),
-                                           SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction(&rate),
-                                           SPA_FORMAT_VIDEO_maxFramerate,
-                                           SPA_POD_CHOICE_RANGE_Fraction(&max_rate, &min_rate, &max_rate));
+    params[0] = build_enum_format(&b, v->server_width, v->server_height);
 
     if (pw_stream_connect(m->stream, PW_DIRECTION_INPUT, m->node_id,
                           PW_STREAM_FLAG_AUTOCONNECT |
@@ -432,6 +453,33 @@ connect_stream(struct wlup *v)
         return 1;
     }
     return 0;
+}
+
+/******************************************************************************/
+int
+wlup_mutter_resize(struct wlup *v, int width, int height)
+{
+    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    uint8_t pod_buf[1024];
+    struct spa_pod_builder b = SPA_POD_BUILDER_INIT(pod_buf, sizeof(pod_buf));
+    const struct spa_pod *params[1];
+
+    if (m == NULL || m->stream == NULL)
+    {
+        return 0;
+    }
+    /* Offering a new preferred size renegotiates the stream format, and
+     * Mutter resizes the virtual monitor to match */
+    LOG(LOG_LEVEL_INFO, "wlup/mutter: requesting virtual monitor size %dx%d",
+        width, height);
+    params[0] = build_enum_format(&b, width, height);
+    if (pw_stream_update_params(m->stream, params, 1) < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "wlup/mutter: cannot renegotiate the stream");
+        return 0;
+    }
+    m->resize_start = monotonic_usec();
+    return 1;
 }
 
 /******************************************************************************/
@@ -975,6 +1023,11 @@ wlup_mutter_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
     {
         read_objs[(*rcount)++] = ei_get_fd(m->ei);
     }
+    if (v->resize_pending && (*timeout < 0 || *timeout > 200))
+    {
+        /* Wake up to check the resize timeout */
+        *timeout = 200;
+    }
 }
 
 /******************************************************************************/
@@ -1002,6 +1055,13 @@ wlup_mutter_check_wait_objs(struct wlup *v)
     if (m->ei != NULL)
     {
         process_ei_events(v);
+    }
+    if (v->resize_pending &&
+            monotonic_usec() - m->resize_start > RESIZE_TIMEOUT_USEC)
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup/mutter: the virtual monitor was not "
+            "resized, the picture will be clipped or padded");
+        wlup_resize_finished(v);
     }
     return m->closed;
 }
