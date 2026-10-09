@@ -127,6 +127,10 @@ AC_ARG_ENABLE(wlup, AS_HELP_STRING([--enable-wlup],
               [Build experimental Wayland backend module (default: no)]),
               [], [enable_wlup=no])
 AM_CONDITIONAL(XRDP_WLUP, [test x$enable_wlup = xyes])
+AC_ARG_ENABLE(wlup-mutter, AS_HELP_STRING([--enable-wlup-mutter],
+              [Build the GNOME (Mutter) backend of the wlup module (default: no)]),
+              [], [enable_wlup_mutter=no])
+AM_CONDITIONAL(XRDP_WLUP_MUTTER, [test x$enable_wlup_mutter = xyes])
 
 AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
@@ -494,6 +498,10 @@ then
   if test "x$WAYLAND_SCANNER" = "x"
   then
     AC_MSG_ERROR([wayland-scanner is required for --enable-wlup])
+  fi
+  if test "x$enable_wlup_mutter" = "xyes"
+  then
+    PKG_CHECK_MODULES([WLUP_MUTTER], [libsystemd libpipewire-0.3 libei-1.0])
   fi
 fi
 

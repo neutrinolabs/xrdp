@@ -58,6 +58,9 @@
 #include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
 
 #include "wlup.h"
+#if defined(XRDP_WLUP_MUTTER)
+#include "wlup_mutter.h"
+#endif
 #include "log.h"
 #include "string_calls.h"
 #include "scancode.h"
@@ -176,6 +179,13 @@ paint_region(struct wlup *v, int x, int y, int cx, int cy)
     return v->server_paint_rect(v, x, y, right - x, bottom - y,
                                 v->pixels, v->buffer_width, v->buffer_height,
                                 x, y);
+}
+
+/******************************************************************************/
+int
+wlup_paint_region(struct wlup *v, int x, int y, int cx, int cy)
+{
+    return paint_region(v, x, y, cx, cy);
 }
 
 /******************************************************************************/
@@ -958,14 +968,21 @@ process_key(struct wlup *v, int key_code, int keyboard_flags, int down)
     int scancode = SCANCODE_FROM_KBD_EVENT(key_code, keyboard_flags);
     int x11_keycode = scancode_to_x11_keycode(scancode);
 
-    if (v->keyboard == NULL || v->xkb_state == NULL)
-    {
-        return 0;
-    }
     if (x11_keycode < 8)
     {
         LOG_DEVEL(LOG_LEVEL_DEBUG, "wlup: no keycode for scancode 0x%x",
                   scancode);
+        return 0;
+    }
+#if defined(XRDP_WLUP_MUTTER)
+    if (v->backend == WLUP_BACKEND_MUTTER)
+    {
+        wlup_mutter_key(v, x11_keycode - 8, down);
+        return 0;
+    }
+#endif
+    if (v->keyboard == NULL || v->xkb_state == NULL)
+    {
         return 0;
     }
     /* X11 keycodes are evdev codes plus 8 */
@@ -1107,6 +1124,13 @@ lib_mod_event(struct wlup *v, int msg, long param1, long param2,
         default:
             if (msg >= WM_MOUSEMOVE && msg <= WM_BUTTON9DOWN)
             {
+#if defined(XRDP_WLUP_MUTTER)
+                if (v->backend == WLUP_BACKEND_MUTTER)
+                {
+                    wlup_mutter_mouse(v, msg, (int)param1, (int)param2);
+                    break;
+                }
+#endif
                 error = process_mouse(v, msg, (int)param1, (int)param2);
             }
             break;
@@ -1148,6 +1172,17 @@ lib_mod_connect(struct wlup *v, int fd)
 {
     char text[512];
     const char *name = v->display_name[0] != '\0' ? v->display_name : NULL;
+
+    if (v->backend == WLUP_BACKEND_MUTTER)
+    {
+#if defined(XRDP_WLUP_MUTTER)
+        return wlup_mutter_connect(v);
+#else
+        v->server_msg(v, "wlup error - built without the Mutter backend "
+                      "(--enable-wlup-mutter)", 0);
+        return 1;
+#endif
+    }
 
     if (fd >= 0)
     {
@@ -1254,6 +1289,9 @@ lib_mod_connect(struct wlup *v, int fd)
 static void
 disconnect(struct wlup *v)
 {
+#if defined(XRDP_WLUP_MUTTER)
+    wlup_mutter_disconnect(v);
+#endif
     if (v->frame != NULL)
     {
         ext_image_copy_capture_frame_v1_destroy(v->frame);
@@ -1336,6 +1374,15 @@ lib_mod_set_param(struct wlup *v, const char *name, const char *value)
     {
         g_strncpy(v->xkb_variant, value, sizeof(v->xkb_variant) - 1);
     }
+    else if (g_strcasecmp(name, "backend") == 0)
+    {
+        v->backend = g_strcasecmp(value, "mutter") == 0 ?
+                     WLUP_BACKEND_MUTTER : WLUP_BACKEND_WLROOTS;
+    }
+    else if (g_strcasecmp(name, "dbus_address") == 0)
+    {
+        g_strncpy(v->dbus_address, value, sizeof(v->dbus_address) - 1);
+    }
     return 0;
 }
 
@@ -1358,6 +1405,13 @@ lib_mod_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
         wl_display_flush(v->display);
         read_objs[(*rcount)++] = wl_display_get_fd(v->display);
     }
+#if defined(XRDP_WLUP_MUTTER)
+    if (v != NULL && v->mutter != NULL)
+    {
+        wlup_mutter_get_wait_objs(v, read_objs, rcount, write_objs, wcount,
+                                  timeout);
+    }
+#endif
     return 0;
 }
 
@@ -1368,6 +1422,12 @@ lib_mod_check_wait_objs(struct wlup *v)
 {
     struct pollfd pfd;
 
+#if defined(XRDP_WLUP_MUTTER)
+    if (v != NULL && v->mutter != NULL)
+    {
+        return wlup_mutter_check_wait_objs(v);
+    }
+#endif
     if (v == NULL || v->display == NULL)
     {
         return 0;
@@ -1456,6 +1516,12 @@ lib_mod_server_monitor_resize(struct wlup *v, int width, int height,
     v->server_height = height;
     v->need_full_paint = 1;
     *in_progress = 0;
+    if (v->backend == WLUP_BACKEND_MUTTER)
+    {
+        /* Spike: the virtual monitor keeps its size. Renegotiating the
+         * PipeWire stream size would resize it */
+        return 0;
+    }
     if ((width != v->buffer_width || height != v->buffer_height) &&
             request_output_size(v, width, height))
     {
