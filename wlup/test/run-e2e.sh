@@ -97,7 +97,8 @@ sleep 1
 # the desktop then disconnects it ("planar->maxWidth 1280 < nSrcWidth
 # 1600"). 24 bpp uses interleaved RLE, which is not affected
 BPP=${BPP:-24}
-xfreerdp3 /v:127.0.0.1 /u:tester /p:x /cert:ignore /size:1280x800 \
+# XFREERDP: client binary, e.g. a FreeRDP built from source
+${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:x /cert:ignore /size:1280x800 \
     /bpp:$BPP /dynamic-resolution -grab-keyboard > "$OUT/client.log" 2>&1 &
 CLIENT=$!
 sleep 6
