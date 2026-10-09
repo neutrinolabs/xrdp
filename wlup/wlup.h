@@ -39,6 +39,9 @@
  * more, the bounding box of all of them is painted instead */
 #define WLUP_MAX_DAMAGE 64
 
+/* Largest number of compositor outputs (heads) tracked for resizing */
+#define WLUP_MAX_HEADS 8
+
 struct wl_display;
 struct wl_registry;
 struct wl_shm;
@@ -55,6 +58,16 @@ struct zwlr_virtual_pointer_v1;
 struct zwp_virtual_keyboard_manager_v1;
 struct zwp_virtual_keyboard_v1;
 struct xkb_keymap;
+struct zwlr_output_manager_v1;
+struct zwlr_output_head_v1;
+
+/* An output as seen through wlr-output-management */
+struct wlup_head
+{
+    struct zwlr_output_head_v1 *head;
+    char name[64];
+    int enabled;
+};
 struct xkb_state;
 
 struct wlup
@@ -164,6 +177,16 @@ struct wlup
     struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
     uint32_t pointer_manager_version;
     struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
+    char output_name[64]; /* wl_output name of the captured output */
+
+    /* resizing the captured output (wlr-output-management) */
+    struct zwlr_output_manager_v1 *output_manager;
+    uint32_t output_manager_serial;
+    struct wlup_head heads[WLUP_MAX_HEADS];
+    int num_heads;
+    int resize_pending; /* xrdp waits for server_monitor_resize_done() */
+    int resize_width;
+    int resize_height;
 
     /* capture */
     struct ext_image_capture_source_v1 *source;
