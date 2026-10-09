@@ -30,6 +30,7 @@
 
 #include "arch.h"
 #include "sesman_auth.h"
+#include "os_calls.h"
 
 #define _XOPEN_SOURCE
 #include <stdio.h>
@@ -115,6 +116,14 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
     }
 
     return &success;
+}
+
+/******************************************************************************/
+int
+auth_put_env(struct auth_info *auth_info, const char *name,
+             const char *value)
+{
+    return g_setenv(name, value, 1) != 0;
 }
 
 /******************************************************************************/

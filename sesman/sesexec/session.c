@@ -88,6 +88,7 @@ session_data_new(const struct session_parameters *sp)
     string_length += g_strlen(sp->shell) + 1;
     string_length += g_strlen(sp->directory) + 1;
     string_length += g_strlen(sp->instance_name) + 1;
+    string_length += g_strlen(sp->codec) + 1;
 
     struct session_data *sd = (struct session_data *)g_malloc(sizeof(*sd) + string_length, 0);
 
@@ -117,6 +118,7 @@ session_data_new(const struct session_parameters *sp)
         COPY_STRING(sd->params.shell, sp->shell);
         COPY_STRING(sd->params.directory, sp->directory);
         COPY_STRING(sd->params.instance_name, sp->instance_name);
+        COPY_STRING(sd->params.codec, sp->codec);
 
 #undef COPY_STRING
     }
@@ -883,6 +885,15 @@ session_start_wrapped(struct login_info *login_info,
         return E_SCP_SCREATE_GENERAL_ERROR;
     }
 #endif
+
+    /* Session modules may want to know how the session will be
+       displayed, e.g. to choose a GPU (or none) for it */
+    if (s->codec[0] != '\0' &&
+            auth_put_env(login_info->auth_info, "XRDP_SESSION_CODEC",
+                         s->codec) != 0)
+    {
+        return E_SCP_SCREATE_GENERAL_ERROR;
+    }
 
     if (auth_start_session(login_info->auth_info, sd->display) != 0)
     {
