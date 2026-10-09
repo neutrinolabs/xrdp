@@ -3340,10 +3340,13 @@ xrdp_mm_connect(struct xrdp_mm *self)
     }
 
     /* Will we need chansrv ? We use it unconditionally for a
-     * sesman session, but the user can also request it separately */
+     * sesman session, but the user can also request it separately.
+     * Wayland and GNOME sessions have no chansrv: the module handles
+     * the channels it supports itself */
     if (self->use_sesman)
     {
-        self->use_chansrv = 1;
+        self->use_chansrv = (self->code != WAYLAND_SESSION_CODE &&
+                             self->code != GNOME_SESSION_CODE);
     }
     else
     {
