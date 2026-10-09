@@ -8,6 +8,16 @@ AM_CPPFLAGS = \
 
 AM_CFLAGS = $(WAYLAND_CLIENT_CFLAGS) $(XKBCOMMON_CFLAGS)
 
+if XRDP_WLUP_MUTTER
+AM_CPPFLAGS += -DXRDP_WLUP_MUTTER
+AM_CFLAGS += $(WLUP_MUTTER_CFLAGS)
+MUTTER_SOURCES = wlup_mutter.c wlup_mutter.h
+MUTTER_LIBS = $(WLUP_MUTTER_LIBS)
+else
+MUTTER_SOURCES =
+MUTTER_LIBS =
+endif
+
 # ext-foreign-toplevel-list-v1 is only needed because
 # ext-image-capture-source-v1 refers to one of its interfaces
 PROTOCOLS = \
@@ -37,13 +47,17 @@ module_LTLIBRARIES = \
 
 libwlup_la_SOURCES = \
   wlup.c \
-  wlup.h
+  wlup.h \
+  $(MUTTER_SOURCES)
+
+EXTRA_libwlup_la_SOURCES = wlup_mutter.c wlup_mutter.h
 
 nodist_libwlup_la_SOURCES = $(PROTOCOL_C_FILES) $(PROTOCOL_H_FILES)
 
 libwlup_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
   $(WAYLAND_CLIENT_LIBS) \
-  $(XKBCOMMON_LIBS)
+  $(XKBCOMMON_LIBS) \
+  $(MUTTER_LIBS)
 
 libwlup_la_LDFLAGS = -avoid-version -module

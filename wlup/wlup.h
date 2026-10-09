@@ -42,6 +42,13 @@
 /* Largest number of compositor outputs (heads) tracked for resizing */
 #define WLUP_MAX_HEADS 8
 
+/* Where frames and input come from */
+enum wlup_backend
+{
+    WLUP_BACKEND_WLROOTS, /* Wayland protocols of wlroots compositors */
+    WLUP_BACKEND_MUTTER   /* GNOME: Mutter D-Bus APIs, PipeWire, libei */
+};
+
 struct wl_display;
 struct wl_registry;
 struct wl_shm;
@@ -165,6 +172,9 @@ struct wlup
     char display_name[256]; /* WAYLAND_DISPLAY name or absolute path */
     char xkb_layout[64];
     char xkb_variant[64];
+    enum wlup_backend backend;
+    char dbus_address[256]; /* Mutter backend: session bus, if not default */
+    void *mutter;           /* Mutter backend state */
 
     /* Wayland globals */
     struct wl_display *display;
@@ -216,5 +226,9 @@ struct wlup
     struct xkb_keymap *xkb_keymap; /* the keymap the compositor was given */
     struct xkb_state *xkb_state;   /* to compute the modifier state */
 };
+
+/* Paints a rectangle of the desktop copy to the RDP client */
+int
+wlup_paint_region(struct wlup *v, int x, int y, int cx, int cy);
 
 #endif
