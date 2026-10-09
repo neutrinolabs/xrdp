@@ -88,6 +88,7 @@ xrdp_mm_create(struct xrdp_wm *owner)
 
     self->sesman_display_fd = -1;
     self->sesman_chansrv_fd = -1;
+    self->sesman_aux_fd = -1;
     self->uid = -1; /* Never good to default UIDs to 0 */
 
     // Resize queue support. The resize queue is available early on,
@@ -205,6 +206,11 @@ close_sesman_file_descriptors(struct xrdp_mm *self)
     {
         g_file_close(self->sesman_chansrv_fd);
         self->sesman_chansrv_fd = -1;
+    }
+    if (self->sesman_aux_fd >= 0)
+    {
+        g_file_close(self->sesman_aux_fd);
+        self->sesman_aux_fd = -1;
     }
 }
 
@@ -358,6 +364,10 @@ xrdp_mm_create_session(struct xrdp_mm *self)
 
         case WAYLAND_SESSION_CODE:
             type = SCP_SESSION_TYPE_WAYLAND;
+            break;
+
+        case GNOME_SESSION_CODE:
+            type = SCP_SESSION_TYPE_GNOME;
             break;
 
         default:
@@ -2863,7 +2873,8 @@ xrdp_mm_process_connect_session_response(struct xrdp_mm *self)
 
     rv = scp_get_connect_session_response(self->sesman_trans, &status,
                                           &self->sesman_display_fd,
-                                          &self->sesman_chansrv_fd);
+                                          &self->sesman_chansrv_fd,
+                                          &self->sesman_aux_fd);
     if (rv != 0)
     {
         self->delete_sesman_trans = 1;
@@ -5546,9 +5557,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
                        self->uid, self->display);
         }
-        else if (self->code == WAYLAND_SESSION_CODE)
+        else if (self->code == WAYLAND_SESSION_CODE ||
+                 self->code == GNOME_SESSION_CODE)
         {
-            // The module is passed a connection to the compositor by
+            // The module is passed connections to the session by
             // sesman, so no port is needed
         }
         else
@@ -5591,6 +5603,14 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             mod->mod_set_param(mod, name, value);
         }
 
+        /* A second connection to the session from sesman. The module
+         * makes its own copy, ours is closed with the others */
+        if (self->sesman_aux_fd >= 0)
+        {
+            g_snprintf(text, 255, "%d", self->sesman_aux_fd);
+            mod->mod_set_param(mod, "display_aux_fd", text);
+        }
+
         /* connect
         *
          * If we got an fd for the display server from sesman, this
@@ -5602,6 +5622,12 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             // Ownership of the file descriptor has been
             // passed to the module
             self->sesman_display_fd = -1;
+            // The module has its own copy of this one
+            if (self->sesman_aux_fd >= 0)
+            {
+                g_file_close(self->sesman_aux_fd);
+                self->sesman_aux_fd = -1;
+            }
 
             // If we've received a recent TS_SYNC_EVENT, pass it on to
             // the module so (e.g.) NumLock starts in the right state.

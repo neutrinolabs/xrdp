@@ -86,6 +86,7 @@ static struct
     { "Xvnc-UDS", SCP_SESSION_TYPE_XVNC_UDS},
     { "Xorg", SCP_SESSION_TYPE_XORG},
     { "Wayland", SCP_SESSION_TYPE_WAYLAND},
+    { "GNOME", SCP_SESSION_TYPE_GNOME},
     { NULL, (enum scp_session_type) - 1}
 };
 
