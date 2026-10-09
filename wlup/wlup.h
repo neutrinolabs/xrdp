@@ -175,6 +175,8 @@ struct wlup
     enum wlup_backend backend;
     char dbus_address[256]; /* Mutter backend: session bus, if not default */
     void *mutter;           /* Mutter backend state */
+    int pipewire_fd;        /* Mutter backend: PipeWire connection from
+                               sesman (display_aux_fd), or -1 */
 
     /* Wayland globals */
     struct wl_display *display;

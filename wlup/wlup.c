@@ -45,6 +45,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <time.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <linux/input-event-codes.h>
@@ -1176,7 +1177,8 @@ lib_mod_connect(struct wlup *v, int fd)
     if (v->backend == WLUP_BACKEND_MUTTER)
     {
 #if defined(XRDP_WLUP_MUTTER)
-        return wlup_mutter_connect(v);
+        /* With sesman, fd is a connection to the session bus */
+        return wlup_mutter_connect(v, fd);
 #else
         v->server_msg(v, "wlup error - built without the Mutter backend "
                       "(--enable-wlup-mutter)", 0);
@@ -1292,6 +1294,11 @@ disconnect(struct wlup *v)
 #if defined(XRDP_WLUP_MUTTER)
     wlup_mutter_disconnect(v);
 #endif
+    if (v->pipewire_fd >= 0)
+    {
+        close(v->pipewire_fd);
+        v->pipewire_fd = -1;
+    }
     if (v->frame != NULL)
     {
         ext_image_copy_capture_frame_v1_destroy(v->frame);
@@ -1382,6 +1389,16 @@ lib_mod_set_param(struct wlup *v, const char *name, const char *value)
     else if (g_strcasecmp(name, "dbus_address") == 0)
     {
         g_strncpy(v->dbus_address, value, sizeof(v->dbus_address) - 1);
+    }
+    else if (g_strcasecmp(name, "display_aux_fd") == 0)
+    {
+        /* A second connection to the session from sesman; xrdp keeps
+         * ownership of value, so take a copy */
+        if (v->pipewire_fd >= 0)
+        {
+            close(v->pipewire_fd);
+        }
+        v->pipewire_fd = fcntl(g_atoi(value), F_DUPFD_CLOEXEC, 3);
     }
     return 0;
 }
@@ -1569,6 +1586,7 @@ mod_init(void)
     v->mod_server_monitor_full_invalidate =
         lib_mod_server_monitor_full_invalidate;
     v->mod_server_version_message = lib_mod_server_version_message;
+    v->pipewire_fd = -1;
     return (tintptr) v;
 }
 
