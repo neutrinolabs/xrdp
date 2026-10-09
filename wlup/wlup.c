@@ -1149,7 +1149,16 @@ lib_mod_connect(struct wlup *v, int fd)
     char text[512];
     const char *name = v->display_name[0] != '\0' ? v->display_name : NULL;
 
-    v->display = wl_display_connect(name);
+    if (fd >= 0)
+    {
+        /* sesman started the compositor and connected to it for us */
+        name = "(connection from sesman)";
+        v->display = wl_display_connect_to_fd(fd);
+    }
+    else
+    {
+        v->display = wl_display_connect(name);
+    }
     if (v->display == NULL)
     {
         g_snprintf(text, sizeof(text), "wlup error - cannot connect to the "
