@@ -117,6 +117,10 @@ xdotool type --delay 80 'echo mutter-typed-$((6*7)) > /tmp/typed.txt'
 xdotool key Return
 sleep 2
 import -window root "$OUT/client-3-typed.png"
+
+# --- clipboard, both ways, while foot has the focus -------------------------
+. "$SRC/wlup/test/clipboard-tests.sh"
+clipboard_tests
 in_session "pkill -x foot" || true
 sleep 1
 
@@ -204,6 +208,7 @@ check "picture: client shows more than a flat screen" \
     '[ "$(convert "$OUT/client-2-desktop.png" -format %k info:)" -gt 50 ]'
 check "keyboard: typed command ran in the GNOME session" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = mutter-typed-42 ]'
+clipboard_checks
 check "left button press"   'grep -a -q "button: 272.*state: 1" /tmp/wev.log'
 check "left button release" 'grep -a -q "button: 272.*state: 0" /tmp/wev.log'
 check "right button"        'grep -a -q "button: 273" /tmp/wev.log'

@@ -116,6 +116,10 @@ xdotool key Return
 sleep 2
 import -window root "$OUT/client-2-typed.png"
 
+# --- clipboard, both ways, while foot has the focus -------------------------
+. "$SRC/wlup/test/clipboard-tests.sh"
+clipboard_tests
+
 # --- pointer: buttons and wheel over wev ------------------------------------
 xdotool mousemove "$WEV_X" "$WEV_Y"
 sleep 0.5
@@ -178,6 +182,7 @@ check "connect: output has the client size 1280x800" \
     '[ "$SIZE_CONNECTED" = 1280x800 ]'
 check "keyboard: typed command ran in sway" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = wlup-typed-42 ]'
+clipboard_checks
 check "left button press"   'grep -a -q "button: 272.*state: 1" /tmp/wev.log'
 check "left button release" 'grep -a -q "button: 272.*state: 0" /tmp/wev.log'
 check "right button"        'grep -a -q "button: 273" /tmp/wev.log'
