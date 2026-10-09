@@ -194,6 +194,28 @@ check "reconnect: same sway process" \
     '[ -n "$SWAY_PID" ] && [ "$SWAY_PID" = "$SWAY_PID_AFTER" ]'
 check "reconnect: input works in the reconnected session" \
     '[ "$(cat /tmp/typed3.txt 2>/dev/null)" = again-42 ]'
+
+# With systemd as PID 1 (wlup/test/systemd), sesman's PAM login goes
+# through pam_systemd: the session must be a real logind session
+if [ "$(cat /proc/1/comm)" = systemd ]; then
+    SWAY_ENV=$(tr '\0' '\n' < /proc/"$SWAY_PID_AFTER"/environ)
+    SWAY_RUNTIME=$(echo "$SWAY_ENV" | sed -n 's/^XDG_RUNTIME_DIR=//p')
+    SWAY_SESSION=$(echo "$SWAY_ENV" | sed -n 's/^XDG_SESSION_ID=//p')
+    loginctl list-sessions --no-legend > "$OUT/loginctl-sessions.txt" 2>&1 || true
+    [ -n "$SWAY_SESSION" ] &&
+        loginctl show-session "$SWAY_SESSION" > "$OUT/loginctl-session.txt" 2>&1
+    echo "sway: XDG_RUNTIME_DIR=$SWAY_RUNTIME XDG_SESSION_ID=$SWAY_SESSION"
+    check "logind: sway's runtime dir is /run/user/<uid>" \
+        '[ "$SWAY_RUNTIME" = "/run/user/$(id -u tester)" ]'
+    check "logind: sway is in a logind session of tester" \
+        'grep -q "^Name=tester$" "$OUT/loginctl-session.txt" &&
+         grep -q "^State=active$\|^State=online$" "$OUT/loginctl-session.txt"'
+    check "logind: sway's process belongs to that session" \
+        '[ "$(cat /proc/$SWAY_PID_AFTER/sessionid)" = "$SWAY_SESSION" ] ||
+         grep -q "session-$SWAY_SESSION.scope" /proc/$SWAY_PID_AFTER/cgroup'
+    check "logind: Wayland socket in /run/user/<uid>" \
+        'ls /run/user/$(id -u tester)/wayland-* > /dev/null 2>&1'
+fi
 echo "passed $pass, failed $fail"
 
 kill $CLIENT 2>/dev/null || true
