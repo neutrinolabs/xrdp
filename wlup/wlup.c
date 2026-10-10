@@ -1428,6 +1428,12 @@ lib_mod_set_param(struct wlup *v, const char *name, const char *value)
         }
         v->pipewire_fd = fcntl(g_atoi(value), F_DUPFD_CLOEXEC, 3);
     }
+    else if (g_strcasecmp(name, "client_info") == 0)
+    {
+        const struct xrdp_client_info *ci =
+            (const struct xrdp_client_info *)value;
+        v->large_pointer_flags = ci->large_pointer_support_flags;
+    }
     return 0;
 }
 

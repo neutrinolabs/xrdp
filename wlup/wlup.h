@@ -154,7 +154,13 @@ struct wlup
     int (*server_chansrv_in_use)(struct wlup *v);
     void (*server_init_xkb_layout)(struct wlup *v,
                                    struct xrdp_client_info *client_info);
-    tintptr server_dumby[100 - 29]; /* align, 100 minus the number of server
+    tintptr server_unused1[48 - 29]; /* server functions 30 to 48 */
+    int (*server_set_pointer_large)(struct wlup *v, int x, int y,
+                                    char *data, char *mask, int bpp,
+                                    int width, int height);
+    tintptr server_unused2[51 - 49]; /* server functions 50 and 51 */
+    int (*server_set_pointer_system)(struct wlup *v, int pointer_type);
+    tintptr server_dumby[100 - 52]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -167,6 +173,7 @@ struct wlup
     int server_width;  /* size of the RDP desktop */
     int server_height;
     int suppress_output;
+    int large_pointer_flags; /* LARGE_POINTER_FLAG_* the client supports */
 
     /* settings from xrdp.ini */
     char display_name[256]; /* WAYLAND_DISPLAY name or absolute path */
