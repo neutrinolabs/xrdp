@@ -42,7 +42,7 @@ in_session() {
 cp -a "$SRC" /build
 cd /build
 ./bootstrap > "$OUT/bootstrap.log" 2>&1
-./configure --enable-wlup --enable-wlup-mutter --enable-fuse --prefix=/usr --sysconfdir=/etc \
+./configure --enable-wlup --enable-wlup-mutter --enable-fuse --enable-x264 --prefix=/usr --sysconfdir=/etc \
     --localstatedir=/var CFLAGS="-O2 -g -Wno-error=nonnull" > "$OUT/configure.log" 2>&1
 make -j"$(nproc)" > "$OUT/make.log" 2>&1
 make install > "$OUT/install.log" 2>&1
@@ -84,7 +84,7 @@ sleep 1
 drive_mic_setup
 connect() {
     xfreerdp3 /v:127.0.0.1 /u:tester /p:$PASSWORD /cert:ignore /size:${W}x${H} \
-        /bpp:24 /dynamic-resolution -grab-keyboard /sound:sys:fake ${2:-} \
+        /bpp:${BPP:-24} /dynamic-resolution -grab-keyboard /sound:sys:fake ${2:-} \
         /log-filters:com.freerdp.channels.rdpsnd.client:DEBUG \
         > "$OUT/client$1.log" 2>&1 &
     CLIENT=$!
@@ -198,6 +198,25 @@ xdotool key Return
 sleep 2
 import -window root "$OUT/client-6-typed-after-reconnect.png"
 
+# --- GFX H.264: a 32 bpp AVC420 client gets wlup's frames through the
+# encoder, paced by frame acks -----------------------------------------------
+kill $CLIENT 2>/dev/null || true
+sleep 3
+BPP=32 connect "-h264" "/gfx:AVC420"
+for _ in $(seq 30); do
+    [ "$(grep -c "wlup: connected to Mutter" /var/log/xrdp.log)" -ge 3 ] && break
+    sleep 1
+done
+sleep 4
+SHELL_PID_H264=$(pgrep -u tester -x gnome-shell || true)
+import -window root "$OUT/client-7-h264.png"
+xdotool mousemove $((W / 2)) $((H / 2)) click 1
+sleep 1
+xdotool type --delay 80 'echo h264-$((6*7)) > /tmp/typed4.txt'
+xdotool key Return
+sleep 2
+import -window root "$OUT/client-8-h264-typed.png"
+
 echo "=== result ==="
 pass=0
 fail=0
@@ -258,6 +277,27 @@ check "reconnect: same gnome-shell process" \
     '[ -n "$SHELL_PID" ] && [ "$SHELL_PID" = "$SHELL_PID_AFTER" ]'
 check "reconnect: input works in the reconnected session" \
     '[ "$(cat /tmp/typed2.txt 2>/dev/null)" = again-42 ]'
+check "h264: the 32 bpp client reaches the same session" \
+    '[ -n "$SHELL_PID" ] && [ "$SHELL_PID" = "$SHELL_PID_H264" ]'
+check "h264: frames go to the GFX H.264 encoder" \
+    'grep -q "wlup: frames go to the GFX H.264 encoder" /var/log/xrdp.log &&
+     grep -q "wlup: first H.264 frame sent" /var/log/xrdp.log'
+check "h264: every frame acknowledged in time (no ack timeout)" \
+    '! grep -q "wlup: no ack for frame" /var/log/xrdp.log'
+check "h264: client shows more than a flat screen" \
+    '[ "$(convert "$OUT/client-7-h264.png" -format %k info:)" -gt 50 ]'
+# Same desktop through planar (after the reconnect) and through H.264: a
+# band at the bottom of the desktop that no window covers must match, so
+# a wrong colour matrix or chroma layout shows up
+band="${W}x$((H / 6))+0+$((H - H / 6))"
+convert "$OUT/client-6-typed-after-reconnect.png" -crop "$band" /tmp/band-planar.png
+convert "$OUT/client-8-h264-typed.png" -crop "$band" /tmp/band-h264.png
+H264_PSNR=$(compare -metric PSNR /tmp/band-planar.png /tmp/band-h264.png null: 2>&1 | cut -d' ' -f1)
+echo "H.264 vs planar, desktop band: $H264_PSNR dB PSNR"
+check "h264: colours match the planar picture (PSNR > 35 dB)" \
+    'awk -v p="$H264_PSNR" "BEGIN { exit !(p == \"inf\" || p + 0 > 35) }"'
+check "h264: input works" \
+    '[ "$(cat /tmp/typed4.txt 2>/dev/null)" = h264-42 ]'
 echo "passed $pass, failed $fail"
 
 kill $CLIENT 2>/dev/null || true
