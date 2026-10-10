@@ -62,12 +62,9 @@ get_session_fds(struct session_data *sd, unsigned int scp_flags,
     {
         result = E_SCP_SCONNECT_SERVER_FAIL;
     }
-    else if ((scp_flags & E_SCP_SCONNECT_FLAG_NEED_CHANSRV) == 0 ||
-             type == SCP_SESSION_TYPE_WAYLAND ||
-             type == SCP_SESSION_TYPE_GNOME)
+    else if ((scp_flags & E_SCP_SCONNECT_FLAG_NEED_CHANSRV) == 0)
     {
-        // Don't need to try to connect to chansrv (not started for
-        // Wayland and GNOME sessions yet)
+        // Don't need to try to connect to chansrv
         *chan_fd = -1;
     }
     else

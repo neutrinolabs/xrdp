@@ -200,6 +200,21 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 }
 
 /******************************************************************************/
+/**
+ * Display name of a Wayland or GNOME session, from the PID of the
+ * process leading it. chansrv names its sockets after it, and the
+ * session's audio module finds them through it.
+ */
+static void
+wayland_display_label(const struct session_data *sd, int pid,
+                      char *buf, unsigned int bufsize)
+{
+    g_snprintf(buf, bufsize, "%s-%d",
+               sd->params.type == SCP_SESSION_TYPE_GNOME ? "gnome" : "wlup",
+               pid);
+}
+
+/******************************************************************************/
 static void
 start_chansrv(const struct login_info *login_info,
               const struct session_data *sd,
@@ -227,6 +242,14 @@ start_chansrv(const struct login_info *login_info,
         env_set_user(login_info->uid,
                      g_cfg->env_names,
                      g_cfg->env_values);
+
+        /* Without an X display, chansrv takes its display name from
+         * WAYLAND_DISPLAY; it does not connect to it */
+        if (sd->params.type == SCP_SESSION_TYPE_WAYLAND ||
+                sd->params.type == SCP_SESSION_TYPE_GNOME)
+        {
+            g_setenv_log("WAYLAND_DISPLAY", sd->display, 1);
+        }
 
         LOG_DEVEL_LEAKING_FDS("chansrv", 3, -1);
 
@@ -866,6 +889,19 @@ start_wayland_compositor(const struct login_info *login_info,
     g_snprintf(text, sizeof(text), "%d", sp->height);
     g_setenv_log("XRDP_START_HEIGHT", text, 1);
 
+    /* The audio module of the session (pipewire-module-xrdp or
+     * pulseaudio-module-xrdp) finds chansrv's sockets through these.
+     * This process becomes the session leader, so its PID names the
+     * session */
+    {
+        char label[MAX_DISPLAY_NAME_SIZE];
+        wayland_display_label(sd, g_getpid(), label, sizeof(label));
+        g_snprintf(text, sizeof(text), CHANSRV_PORT_OUT_BASE_STR, label);
+        g_setenv_log("XRDP_PULSE_SINK_SOCKET", text, 1);
+        g_snprintf(text, sizeof(text), CHANSRV_PORT_IN_BASE_STR, label);
+        g_setenv_log("XRDP_PULSE_SOURCE_SOCKET", text, 1);
+    }
+
     if (params == NULL || params->count == 0)
     {
         LOG(LOG_LEVEL_ERROR, "No command in the [%s] section of "
@@ -1009,13 +1045,19 @@ session_start_gnome_wait(struct login_info *login_info,
         return E_SCP_SCREATE_X_SERVER_FAIL;
     }
 
-    g_snprintf(sd->display, sizeof(sd->display), "gnome-%d", pid);
+    wayland_display_label(sd, pid, sd->display, sizeof(sd->display));
     LOG(LOG_LEVEL_INFO, "GNOME session (pid %d) started, session bus %s",
         pid, bus);
 
     utmp_login(pid, sd->display, login_info);
     sd->win_mgr = pid;
     sd->start_time = time(NULL);
+
+    /* chansrv provides audio, drives and the other channels; wlup does
+     * the clipboard */
+    LOG(LOG_LEVEL_INFO, "Starting the xrdp channel server for %s",
+        sd->display);
+    sd->chansrv = fork_child(start_chansrv, login_info, sd, -1, NULL);
 
     if (process_startup_wait_time(sd) != 0)
     {
@@ -1041,7 +1083,6 @@ session_start_wayland(struct login_info *login_info,
 {
     enum scp_screate_status status = E_SCP_SCREATE_GENERAL_ERROR;
     char runtime_dir[XRDP_SOCKETS_MAXPATH] = {0};
-    const char *base;
     int fds[2];
     int pid;
     int len;
@@ -1087,16 +1128,19 @@ session_start_wayland(struct login_info *login_info,
         return E_SCP_SCREATE_X_SERVER_FAIL;
     }
 
-    /* The display name is the socket name, e.g. "wayland-1" */
-    base = g_strrchr(sd->wayland_socket, '/');
-    g_strncpy(sd->display, base != NULL ? base + 1 : sd->wayland_socket,
-              sizeof(sd->display) - 1);
+    wayland_display_label(sd, pid, sd->display, sizeof(sd->display));
     LOG(LOG_LEVEL_INFO, "Wayland compositor (pid %d) is listening on %s",
         pid, sd->wayland_socket);
 
     utmp_login(pid, sd->display, login_info);
     sd->win_mgr = pid;
     sd->start_time = time(NULL);
+
+    /* chansrv provides audio, drives and the other channels; wlup does
+     * the clipboard */
+    LOG(LOG_LEVEL_INFO, "Starting the xrdp channel server for %s",
+        sd->display);
+    sd->chansrv = fork_child(start_chansrv, login_info, sd, -1, NULL);
 
     if (process_startup_wait_time(sd) == 0)
     {
