@@ -2,9 +2,12 @@
 # Builds the test images and runs every wlup end-to-end suite, in
 # parallel, each in its own container:
 #
-#   sway      plain container, with /dev/fuse for the drive test
-#   systemd   systemd as PID 1: real PAM -> logind session, microphone
-#   gnome     systemd as PID 1, headless GNOME through the Mutter backend
+#   sway-no-systemd  sway in a plain container (no init system, no
+#                    logind, no PipeWire), with /dev/fuse for the drive test
+#   sway-systemd     sway with systemd as PID 1: real PAM -> logind
+#                    session, microphone
+#   gnome-systemd    headless GNOME through the Mutter backend, with
+#                    systemd as PID 1 (GNOME needs it)
 #
 # Usage: wlup/test/run-all.sh [-n] [output dir]
 #   -n  do not rebuild the images
@@ -42,7 +45,7 @@ if [ $BUILD = 1 ]; then
 fi
 
 cleanup() {
-    docker rm -f "$TAG-systemd" "$TAG-gnome" > /dev/null 2>&1
+    docker rm -f "$TAG-sway-systemd" "$TAG-gnome-systemd" > /dev/null 2>&1
 }
 trap cleanup EXIT
 
@@ -59,25 +62,25 @@ run_systemd() {
     docker rm -f "$TAG-$1" > /dev/null 2>&1
 }
 
-mkdir -p "$OUT/sway" "$OUT/systemd" "$OUT/gnome"
+mkdir -p "$OUT/sway-no-systemd" "$OUT/sway-systemd" "$OUT/gnome-systemd"
 echo "running the suites in parallel, output in $OUT"
 
 docker run --rm --device /dev/fuse --cap-add SYS_ADMIN \
     --security-opt apparmor:unconfined \
-    -v "$SRC":/src:ro -v "$OUT/sway":/out xrdp-wlup-dev \
+    -v "$SRC":/src:ro -v "$OUT/sway-no-systemd":/out xrdp-wlup-dev \
     bash -c 'bash /src/wlup/test/run-e2e.sh /src /out > /out/run.log 2>&1;
              chmod -R a+r /out' &
-run_systemd systemd xrdp-wlup-systemd /src/wlup/test/run-e2e.sh &
-run_systemd gnome xrdp-wlup-mutter /src/wlup/test/mutter/run-e2e-mutter.sh &
+run_systemd sway-systemd xrdp-wlup-systemd /src/wlup/test/run-e2e.sh &
+run_systemd gnome-systemd xrdp-wlup-mutter /src/wlup/test/mutter/run-e2e-mutter.sh &
 wait
 
 # --- summary --------------------------------------------------------------
 status=0
-for suite in sway systemd gnome; do
+for suite in sway-no-systemd sway-systemd gnome-systemd; do
     log="$OUT/$suite/run.log"
     result=$(grep -E '^passed [0-9]+, failed [0-9]+' "$log" 2>/dev/null | tail -1)
-    printf '%-8s %s\n' "$suite" "${result:-did not finish, see $log}"
-    grep -E '^FAIL' "$log" 2>/dev/null | sed 's/^/         /'
+    printf '%-16s %s\n' "$suite" "${result:-did not finish, see $log}"
+    grep -E '^FAIL' "$log" 2>/dev/null | sed 's/^/                 /'
     case "$result" in
         *"failed 0") ;;
         *) status=1 ;;
