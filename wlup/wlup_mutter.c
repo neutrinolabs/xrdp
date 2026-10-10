@@ -345,7 +345,7 @@ on_param_changed(void *data, uint32_t id, const struct spa_pod *param)
                                            SPA_PARAM_BUFFERS_stride, SPA_POD_Int(stride),
                                            SPA_PARAM_BUFFERS_dataType,
                                            SPA_POD_CHOICE_FLAGS_Int((1 << SPA_DATA_MemFd) |
-                                                   (1 << SPA_DATA_MemPtr)));
+                                               (1 << SPA_DATA_MemPtr)));
     params[1] = spa_pod_builder_add_object(&b,
                                            SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
                                            SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header),
@@ -464,9 +464,9 @@ connect_stream(struct wlup *v)
 
     m->stream = pw_stream_new(m->core, "xrdp",
                               pw_properties_new(PW_KEY_MEDIA_TYPE, "Video",
-                                      PW_KEY_MEDIA_CATEGORY, "Capture",
-                                      PW_KEY_MEDIA_ROLE, "Screen",
-                                      NULL));
+                                  PW_KEY_MEDIA_CATEGORY, "Capture",
+                                  PW_KEY_MEDIA_ROLE, "Screen",
+                                  NULL));
     pw_stream_add_listener(m->stream, &m->stream_listener, &stream_events, v);
 
     params[0] = build_enum_format(&b, v->server_width, v->server_height);
@@ -625,19 +625,39 @@ wlup_mutter_mouse(struct wlup *v, int msg, int x, int y)
 
     switch (msg)
     {
-        case WM_LBUTTONDOWN: down = 1; /* fall through */
-        case WM_LBUTTONUP: button = BTN_LEFT; break;
-        case WM_RBUTTONDOWN: down = 1; /* fall through */
-        case WM_RBUTTONUP: button = BTN_RIGHT; break;
-        case WM_BUTTON3DOWN: down = 1; /* fall through */
-        case WM_BUTTON3UP: button = BTN_MIDDLE; break;
-        case WM_BUTTON8DOWN: down = 1; /* fall through */
-        case WM_BUTTON8UP: button = BTN_SIDE; break;
-        case WM_BUTTON9DOWN: down = 1; /* fall through */
-        case WM_BUTTON9UP: button = BTN_EXTRA; break;
-        case WM_BUTTON4DOWN: scroll = -1; break;
-        case WM_BUTTON5DOWN: scroll = 1; break;
-        default: break;
+        case WM_LBUTTONDOWN:
+            down = 1; /* fall through */
+        case WM_LBUTTONUP:
+            button = BTN_LEFT;
+            break;
+        case WM_RBUTTONDOWN:
+            down = 1; /* fall through */
+        case WM_RBUTTONUP:
+            button = BTN_RIGHT;
+            break;
+        case WM_BUTTON3DOWN:
+            down = 1; /* fall through */
+        case WM_BUTTON3UP:
+            button = BTN_MIDDLE;
+            break;
+        case WM_BUTTON8DOWN:
+            down = 1; /* fall through */
+        case WM_BUTTON8UP:
+            button = BTN_SIDE;
+            break;
+        case WM_BUTTON9DOWN:
+            down = 1; /* fall through */
+        case WM_BUTTON9UP:
+            button = BTN_EXTRA;
+            break;
+        case WM_BUTTON4DOWN:
+            scroll = -1;
+            break;
+        case WM_BUTTON5DOWN:
+            scroll = 1;
+            break;
+        default:
+            break;
     }
 
     /* Scroll goes where the pointer is; see the note in wlup.c */

@@ -1007,11 +1007,11 @@ process_key(struct wlup *v, int key_code, int keyboard_flags, int down)
                              down ? XKB_KEY_DOWN : XKB_KEY_UP) != 0)
     {
         zwp_virtual_keyboard_v1_modifiers(v->keyboard,
-            xkb_state_serialize_mods(v->xkb_state, XKB_STATE_MODS_DEPRESSED),
-            xkb_state_serialize_mods(v->xkb_state, XKB_STATE_MODS_LATCHED),
-            xkb_state_serialize_mods(v->xkb_state, XKB_STATE_MODS_LOCKED),
-            xkb_state_serialize_layout(v->xkb_state,
-                                       XKB_STATE_LAYOUT_EFFECTIVE));
+                                          xkb_state_serialize_mods(v->xkb_state, XKB_STATE_MODS_DEPRESSED),
+                                          xkb_state_serialize_mods(v->xkb_state, XKB_STATE_MODS_LATCHED),
+                                          xkb_state_serialize_mods(v->xkb_state, XKB_STATE_MODS_LOCKED),
+                                          xkb_state_serialize_layout(v->xkb_state,
+                                                  XKB_STATE_LAYOUT_EFFECTIVE));
     }
     return 0;
 }
