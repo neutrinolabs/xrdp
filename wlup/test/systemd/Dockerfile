@@ -7,6 +7,7 @@ FROM xrdp-wlup-dev
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         systemd systemd-sysv libpam-systemd dbus dbus-user-session \
+        pipewire wireplumber pipewire-bin pipewire-module-xrdp \
     && rm -rf /var/lib/apt/lists/*
 
 CMD ["/usr/lib/systemd/systemd"]
