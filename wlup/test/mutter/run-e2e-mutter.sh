@@ -225,6 +225,8 @@ check "mutter: PipeWire stream at the client size" \
 check "mutter: EIS keyboard and pointer" \
     'grep -q "EIS keyboard" /var/log/xrdp.log &&
      grep -q "EIS pointer" /var/log/xrdp.log'
+check "cursor: Mutter's pointer shape sent as an RDP pointer" \
+    'grep -q "wlup/mutter: pointer [0-9]*x[0-9]* sent as" /var/log/xrdp.log'
 check "picture: client shows more than a flat screen" \
     '[ "$(convert "$OUT/client-2-desktop.png" -format %k info:)" -gt 50 ]'
 check "keyboard: typed command ran in the GNOME session" \

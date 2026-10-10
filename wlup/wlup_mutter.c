@@ -61,6 +61,7 @@
 #include "log.h"
 #include "string_calls.h"
 #include "xrdp_constants.h"
+#include "ms-rdpbcgr.h"
 #include "scancode.h"
 
 #define RD_NAME "org.gnome.Mutter.RemoteDesktop"
@@ -71,8 +72,21 @@
 #define SC_SESSION_IFACE "org.gnome.Mutter.ScreenCast.Session"
 #define SC_STREAM_IFACE "org.gnome.Mutter.ScreenCast.Stream"
 
-/* ScreenCast cursor modes */
-#define CURSOR_MODE_EMBEDDED 1
+/* ScreenCast cursor mode: the cursor is sent as buffer metadata, not
+ * painted into the frames, so the RDP client can draw it locally */
+#define CURSOR_MODE_METADATA 2
+
+/* Cursor metadata of a buffer: position, hotspot and, when the shape
+ * changes, a bitmap. Mutter offers bitmaps of up to 384x384 */
+#define CURSOR_META_SIZE(width, height) \
+    (sizeof(struct spa_meta_cursor) + sizeof(struct spa_meta_bitmap) + \
+     (width) * (height) * 4)
+#define CURSOR_META_MAX 384
+
+/* Largest pointer xrdp can send (struct xrdp_pointer_item), and the
+ * largest every RDP client takes */
+#define POINTER_MAX 96
+#define POINTER_MAX_SMALL 32
 
 /* Clipboard transfers to the session queued between two polls */
 #define MAX_TRANSFERS 16
@@ -180,6 +194,110 @@ copy_region(struct wlup *v, const uint8_t *src, int src_stride,
 }
 
 /******************************************************************************/
+/* Sends the pointer shape in a buffer's cursor metadata to the client,
+ * which then draws the pointer itself, so it follows the mouse at once
+ * rather than a round trip later in the frames */
+static void
+update_pointer(struct wlup *v, struct spa_buffer *buf)
+{
+    struct spa_meta *meta;
+    struct spa_meta_cursor *mc;
+    struct spa_meta_bitmap *mb;
+    const uint8_t *src;
+    char data[POINTER_MAX * POINTER_MAX * 4];
+    char mask[POINTER_MAX * POINTER_MAX / 8];
+    int width;
+    int height;
+    int stride;
+    int side;   /* longer side of Mutter's bitmap */
+    int scaled; /* that side once it fits the client */
+    int size;   /* the RDP pointer is size x size */
+    int hot_x;
+    int hot_y;
+    int x;
+    int y;
+
+    meta = spa_buffer_find_meta(buf, SPA_META_Cursor);
+    if (meta == NULL || meta->size < sizeof(*mc))
+    {
+        return;
+    }
+    mc = (struct spa_meta_cursor *)meta->data;
+    if (mc->id == 0 || mc->bitmap_offset == 0)
+    {
+        /* No cursor, or only its position changed */
+        return;
+    }
+    if ((size_t)mc->bitmap_offset + sizeof(*mb) > meta->size)
+    {
+        return;
+    }
+    mb = SPA_PTROFF(mc, mc->bitmap_offset, struct spa_meta_bitmap);
+    if (mb->format == 0 || mb->offset == 0 ||
+            mb->size.width == 0 || mb->size.height == 0)
+    {
+        /* Mutter sends an empty bitmap for a hidden pointer */
+        v->server_set_pointer_system(v, SYSPTR_NULL);
+        return;
+    }
+    width = mb->size.width;
+    height = mb->size.height;
+    stride = mb->stride != 0 ? mb->stride : width * 4;
+    if (mb->format != SPA_VIDEO_FORMAT_RGBA ||
+            width > CURSOR_META_MAX || height > CURSOR_META_MAX ||
+            stride < width * 4 ||
+            (size_t)mc->bitmap_offset + mb->offset +
+            (size_t)stride * height > meta->size)
+    {
+        LOG(LOG_LEVEL_WARNING, "wlup/mutter: unusable pointer bitmap "
+            "(format %u, %dx%d)", mb->format, width, height);
+        return;
+    }
+    src = SPA_PTROFF(mb, mb->offset, const uint8_t);
+
+    /* Shrink a pointer larger than the client takes. The size stays a
+     * multiple of 16, as the rows of the AND mask are 16-bit aligned */
+    side = MAX(width, height);
+    scaled = MIN(side, (v->large_pointer_flags & LARGE_POINTER_FLAG_96x96) ?
+                 POINTER_MAX : POINTER_MAX_SMALL);
+    size = (scaled + 15) & ~15;
+    hot_x = MIN(MAX(mc->hotspot.x, 0) * scaled / side, size - 1);
+    hot_y = MIN(MAX(mc->hotspot.y, 0) * scaled / side, size - 1);
+
+    /* RDP pointers are bottom-up BGRA. Mutter's bitmap is premultiplied
+     * RGBA, which RDP clients take as it is. The AND mask stays empty,
+     * so the alpha channel alone decides what shows through */
+    for (y = 0; y < size; ++y)
+    {
+        char *dst = data + (size_t)(size - 1 - y) * size * 4;
+        int sy = y * side / scaled;
+
+        for (x = 0; x < size; ++x, dst += 4)
+        {
+            int sx = x * side / scaled;
+
+            if (sx < width && sy < height)
+            {
+                const uint8_t *p = src + (size_t)sy * stride + sx * 4;
+
+                dst[0] = p[2];
+                dst[1] = p[1];
+                dst[2] = p[0];
+                dst[3] = p[3];
+            }
+            else
+            {
+                memset(dst, 0, 4);
+            }
+        }
+    }
+    memset(mask, 0, sizeof(mask));
+    LOG(LOG_LEVEL_DEBUG, "wlup/mutter: pointer %dx%d sent as %dx%d, "
+        "hotspot %d,%d", width, height, size, size, hot_x, hot_y);
+    v->server_set_pointer_large(v, hot_x, hot_y, data, mask, 32, size, size);
+}
+
+/******************************************************************************/
 static void
 on_process(void *data)
 {
@@ -202,11 +320,12 @@ on_process(void *data)
         const uint8_t *src;
         int stride;
 
+        update_pointer(v, buf);
         h = spa_buffer_find_meta_data(buf, SPA_META_Header, sizeof(*h));
         if ((h != NULL && (h->flags & SPA_META_HEADER_FLAG_CORRUPTED)) ||
                 d->data == NULL || d->chunk->size == 0 || v->pixels == NULL)
         {
-            /* No picture in this buffer (e.g. only the cursor moved) */
+            /* No picture in this buffer (e.g. only the cursor changed) */
             pw_stream_queue_buffer(m->stream, pb);
             continue;
         }
@@ -304,7 +423,7 @@ on_param_changed(void *data, uint32_t id, const struct spa_pod *param)
     struct spa_video_info_raw info;
     uint8_t pod_buf[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(pod_buf, sizeof(pod_buf));
-    const struct spa_pod *params[3];
+    const struct spa_pod *params[4];
     int stride;
 
     if (param == NULL || id != SPA_PARAM_Format)
@@ -336,7 +455,7 @@ on_param_changed(void *data, uint32_t id, const struct spa_pod *param)
         wlup_resize_finished(v);
     }
 
-    /* Shared memory only (no dma-buf), plus damage regions */
+    /* Shared memory only (no dma-buf), plus damage regions and cursor */
     params[0] = spa_pod_builder_add_object(&b,
                                            SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers,
                                            SPA_PARAM_BUFFERS_buffers, SPA_POD_CHOICE_RANGE_Int(4, 2, 16),
@@ -358,7 +477,15 @@ on_param_changed(void *data, uint32_t id, const struct spa_pod *param)
                                                    sizeof(struct spa_meta_region) * MAX_DAMAGE,
                                                    sizeof(struct spa_meta_region),
                                                    sizeof(struct spa_meta_region) * MAX_DAMAGE));
-    pw_stream_update_params(m->stream, params, 3);
+    params[3] = spa_pod_builder_add_object(&b,
+                                           SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
+                                           SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Cursor),
+                                           SPA_PARAM_META_size, SPA_POD_CHOICE_RANGE_Int(
+                                                   CURSOR_META_SIZE(64, 64),
+                                                   CURSOR_META_SIZE(1, 1),
+                                                   CURSOR_META_SIZE(CURSOR_META_MAX,
+                                                       CURSOR_META_MAX)));
+    pw_stream_update_params(m->stream, params, 4);
 }
 
 /******************************************************************************/
@@ -805,11 +932,11 @@ setup_sessions(struct wlup *v)
         return 1;
     }
 
-    /* 3. a virtual monitor; cursor painted into the frames for now */
+    /* 3. a virtual monitor; the cursor comes as metadata, not painted */
     sd_bus_message_new_method_call(m->bus, &msg, SC_NAME, m->sc_session_path,
                                    SC_SESSION_IFACE, "RecordVirtual");
     sd_bus_message_append(msg, "a{sv}", 2,
-                          "cursor-mode", "u", (uint32_t)CURSOR_MODE_EMBEDDED,
+                          "cursor-mode", "u", (uint32_t)CURSOR_MODE_METADATA,
                           "is-platform", "b", 1);
     r = call_for_path(m, SC_NAME, m->sc_session_path, SC_SESSION_IFACE,
                       "RecordVirtual", &m->stream_path, msg);
