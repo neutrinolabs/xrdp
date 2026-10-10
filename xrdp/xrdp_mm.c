@@ -422,6 +422,30 @@ xrdp_mm_get_session_fds(struct xrdp_mm *self)
 }
 
 /*****************************************************************************/
+/* In Wayland and GNOME sessions, the module provides the clipboard
+ * itself (chansrv's clipboard needs X11), and chansrv the other
+ * channels */
+int
+xrdp_mm_module_owns_channel(struct xrdp_mm *self, const char *name)
+{
+    return (self->code == WAYLAND_SESSION_CODE ||
+            self->code == GNOME_SESSION_CODE) &&
+           g_strcasecmp(name, CLIPRDR_SVC_CHANNEL_NAME) == 0;
+}
+
+/*****************************************************************************/
+int
+xrdp_mm_module_owns_channel_id(struct xrdp_mm *self, int chan_id)
+{
+    char name[CHANNEL_NAME_LEN + 1];
+    int flags;
+
+    return libxrdp_query_channel(self->wm->session, chan_id, name,
+                                 &flags) == 0 &&
+           xrdp_mm_module_owns_channel(self, name);
+}
+
+/*****************************************************************************/
 /* returns error
    send a list of channels to the channel handler */
 static int
@@ -453,7 +477,8 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
     for (chan_id = 0 ; chan_id < chan_count; ++chan_id)
     {
         if (libxrdp_query_channel(self->wm->session, chan_id, chan_name,
-                                  &chan_flags) == 0)
+                                  &chan_flags) == 0 &&
+                !xrdp_mm_module_owns_channel(self, chan_name))
         {
             out_uint8a(s, chan_name, CHANNEL_NAME_LEN + 1);
             out_uint16_le(s, chan_id);
@@ -3340,13 +3365,10 @@ xrdp_mm_connect(struct xrdp_mm *self)
     }
 
     /* Will we need chansrv ? We use it unconditionally for a
-     * sesman session, but the user can also request it separately.
-     * Wayland and GNOME sessions have no chansrv: the module handles
-     * the channels it supports itself */
+     * sesman session, but the user can also request it separately */
     if (self->use_sesman)
     {
-        self->use_chansrv = (self->code != WAYLAND_SESSION_CODE &&
-                             self->code != GNOME_SESSION_CODE);
+        self->use_chansrv = 1;
     }
     else
     {
@@ -5017,7 +5039,7 @@ server_get_channel_id(struct xrdp_mod *mod, const char *name)
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->use_chansrv)
+    if (wm->mm->use_chansrv && !xrdp_mm_module_owns_channel(wm->mm, name))
     {
         return -1;
     }
@@ -5035,7 +5057,8 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->use_chansrv)
+    if (wm->mm->use_chansrv &&
+            !xrdp_mm_module_owns_channel_id(wm->mm, channel_id))
     {
         /* Modules should not be calling this if chansrv is running -
          * they can use server_chansrv_in_use() to avoid doing this */

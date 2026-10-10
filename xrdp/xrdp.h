@@ -519,6 +519,11 @@ xrdp_mm_suppress_output(struct xrdp_mm *self, int suppress,
                         int left, int top, int right, int bottom);
 int
 xrdp_mm_up_and_running(struct xrdp_mm *self);
+/* Does the module, rather than chansrv, handle this channel? */
+int
+xrdp_mm_module_owns_channel(struct xrdp_mm *self, const char *name);
+int
+xrdp_mm_module_owns_channel_id(struct xrdp_mm *self, int chan_id);
 
 /**
  * Ask the xrdp process (or thread) to terminate

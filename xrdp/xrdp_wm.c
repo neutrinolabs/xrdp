@@ -2143,7 +2143,8 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 
     if (self->mm != 0)
     {
-        if (self->mm->use_chansrv)
+        if (self->mm->use_chansrv &&
+                !xrdp_mm_module_owns_channel_id(self->mm, LOWORD(param1)))
         {
             rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
                                               param3, param4);
