@@ -32,8 +32,12 @@ PROTOCOLS = \
 PROTOCOL_H_FILES = $(PROTOCOLS:=-client-protocol.h)
 PROTOCOL_C_FILES = $(PROTOCOLS:=-protocol.c)
 
+# Generated only when wlup is built: "make dist" also visits this
+# directory, where WAYLAND_SCANNER may not be set
+if XRDP_WLUP
 BUILT_SOURCES = $(PROTOCOL_H_FILES) $(PROTOCOL_C_FILES)
-CLEANFILES = $(BUILT_SOURCES)
+endif
+CLEANFILES = $(PROTOCOL_H_FILES) $(PROTOCOL_C_FILES)
 
 EXTRA_DIST = $(PROTOCOLS:%=protocols/%.xml)
 

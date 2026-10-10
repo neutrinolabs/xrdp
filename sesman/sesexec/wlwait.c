@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/sysmacros.h>
+#if defined(__linux__)
+#include <sys/sysmacros.h> /* major(), minor() */
+#endif
 
 #include "log.h"
 #include "os_calls.h"
