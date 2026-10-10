@@ -37,7 +37,7 @@ cp -a "$SRC" /build
 cd /build
 ./bootstrap > "$OUT/bootstrap.log" 2>&1
 # -Wno-error=nonnull: GCC 16 flags existing code in xrdp/xrdp_mm.c
-./configure --enable-wlup --enable-fuse --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+./configure --enable-wlup --enable-fuse --enable-x264 --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     CFLAGS="-O2 -g -Wno-error=nonnull" > "$OUT/configure.log" 2>&1
 make -j"$(nproc)" > "$OUT/make.log" 2>&1
 make install > "$OUT/install.log" 2>&1
@@ -197,6 +197,24 @@ xdotool type --delay 80 'echo again-$((6*7)) > /tmp/typed3.txt'
 xdotool key Return
 sleep 2
 
+# --- GFX H.264: a 32 bpp AVC420 client gets wlup's frames through the
+# encoder, paced by frame acks -----------------------------------------------
+kill $CLIENT 2>/dev/null || true
+sleep 3
+${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:wlup-test-pw /cert:ignore \
+    /size:1600x900 /bpp:32 /gfx:AVC420 -grab-keyboard > "$OUT/client-h264.log" 2>&1 &
+CLIENT=$!
+sleep 8
+SWAY_PID_H264=$(pgrep -u tester -x sway)
+import -window root "$OUT/client-6-h264.png"
+read -r FOOT_X FOOT_Y < <(centre foot)
+xdotool mousemove "$FOOT_X" "$FOOT_Y" click 1
+sleep 0.5
+xdotool type --delay 80 'echo h264-$((6*7)) > /tmp/typed4.txt'
+xdotool key Return
+sleep 2
+import -window root "$OUT/client-7-h264-typed.png"
+
 echo "=== result ==="
 echo "sway output: connected $SIZE_CONNECTED, resized $SIZE_RESIZED"
 pass=0
@@ -232,6 +250,17 @@ check "reconnect: same sway process" \
     '[ -n "$SWAY_PID" ] && [ "$SWAY_PID" = "$SWAY_PID_AFTER" ]'
 check "reconnect: input works in the reconnected session" \
     '[ "$(cat /tmp/typed3.txt 2>/dev/null)" = again-42 ]'
+check "h264: the 32 bpp client reaches the same session" \
+    '[ -n "$SWAY_PID" ] && [ "$SWAY_PID" = "$SWAY_PID_H264" ]'
+check "h264: frames go to the GFX H.264 encoder" \
+    'grep -q "wlup: frames go to the GFX H.264 encoder" /var/log/xrdp.log &&
+     grep -q "wlup: first H.264 frame sent" /var/log/xrdp.log'
+check "h264: every frame acknowledged in time (no ack timeout)" \
+    '! grep -q "wlup: no ack for frame" /var/log/xrdp.log'
+check "h264: client shows more than a flat screen" \
+    '[ "$(convert "$OUT/client-6-h264.png" -format %k info:)" -gt 50 ]'
+check "h264: input works" \
+    '[ "$(cat /tmp/typed4.txt 2>/dev/null)" = h264-42 ]'
 
 # With systemd as PID 1 (wlup/test/systemd), sesman's PAM login goes
 # through pam_systemd: the session must be a real logind session
