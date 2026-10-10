@@ -8,6 +8,11 @@ FROM xrdp-wlup-dev
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         systemd systemd-sysv libpam-systemd dbus dbus-user-session \
         pipewire wireplumber pipewire-bin pipewire-module-xrdp \
+        pulseaudio pulseaudio-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# A PulseAudio daemon for the RDP client side only (the microphone test):
+# don't start it in users' sessions, they use PipeWire
+RUN systemctl --global disable pulseaudio.socket pulseaudio.service
 
 CMD ["/usr/lib/systemd/systemd"]
