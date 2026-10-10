@@ -859,7 +859,7 @@ start_wayland_compositor(const struct login_info *login_info,
     const struct session_parameters *sp = &sd->params;
     int gnome = (sp->type == SCP_SESSION_TYPE_GNOME);
     struct list *params = gnome ? g_cfg->gnome_params
-                          : g_cfg->wayland_params;
+                              : g_cfg->wayland_params;
 
     env_set_user(login_info->uid,
                  g_cfg->env_names,

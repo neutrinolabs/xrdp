@@ -58,7 +58,7 @@ get_session_fds(struct session_data *sd, unsigned int scp_flags,
     }
     else if (type == SCP_SESSION_TYPE_GNOME &&
              (*aux_fd = session_get_display_server_aux_fd(g_login_info,
-                        sd)) < 0)
+                 sd)) < 0)
     {
         result = E_SCP_SCONNECT_SERVER_FAIL;
     }
