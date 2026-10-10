@@ -55,6 +55,8 @@ libwlup_la_SOURCES = \
   wlup.h \
   wlup_clip.c \
   wlup_clip.h \
+  wlup_gfx.c \
+  wlup_gfx.h \
   wlup_wlr_clip.c \
   $(MUTTER_SOURCES)
 

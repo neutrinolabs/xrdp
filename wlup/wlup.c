@@ -65,6 +65,7 @@
 
 #include "wlup.h"
 #include "wlup_clip.h"
+#include "wlup_gfx.h"
 #if defined(XRDP_WLUP_MUTTER)
 #include "wlup_mutter.h"
 #endif
@@ -163,7 +164,8 @@ alloc_buffer(struct wlup *v, int width, int height, uint32_t format)
 /******************************************************************************/
 
 /* Paints a rectangle of our copy of the desktop to the RDP client,
- * clipped to both the capture buffer and the RDP desktop */
+ * clipped to both the capture buffer and the RDP desktop. With the GFX
+ * H.264 encoder the rectangle goes into the next frame instead */
 static int
 paint_region(struct wlup *v, int x, int y, int cx, int cy)
 {
@@ -180,6 +182,11 @@ paint_region(struct wlup *v, int x, int y, int cx, int cy)
     y = MAX(y, 0);
     if (right <= x || bottom <= y)
     {
+        return 0;
+    }
+    if (v->gfx_h264)
+    {
+        wlup_gfx_add_damage(v, x, y, right - x, bottom - y);
         return 0;
     }
     return v->server_paint_rect(v, x, y, right - x, bottom - y,
@@ -1433,6 +1440,7 @@ lib_mod_set_param(struct wlup *v, const char *name, const char *value)
         const struct xrdp_client_info *ci =
             (const struct xrdp_client_info *)value;
         v->large_pointer_flags = ci->large_pointer_support_flags;
+        wlup_gfx_init(v, ci);
     }
     return 0;
 }
@@ -1463,6 +1471,10 @@ lib_mod_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
                                   timeout);
     }
 #endif
+    if (v != NULL)
+    {
+        wlup_gfx_get_timeout(v, timeout);
+    }
     return 0;
 }
 
@@ -1476,7 +1488,11 @@ lib_mod_check_wait_objs(struct wlup *v)
 #if defined(XRDP_WLUP_MUTTER)
     if (v != NULL && v->mutter != NULL)
     {
-        return wlup_mutter_check_wait_objs(v);
+        if (wlup_mutter_check_wait_objs(v) != 0)
+        {
+            return 1;
+        }
+        return wlup_gfx_poll(v);
     }
 #endif
     if (v == NULL || v->display == NULL)
@@ -1521,7 +1537,7 @@ lib_mod_check_wait_objs(struct wlup *v)
         /* The compositor stopped the capture, e.g. the output went away */
         return 1;
     }
-    return 0;
+    return wlup_gfx_poll(v);
 }
 
 /******************************************************************************/
@@ -1529,6 +1545,7 @@ lib_mod_check_wait_objs(struct wlup *v)
 static int
 lib_mod_frame_ack(struct wlup *v, int flags, int frame_id)
 {
+    wlup_gfx_frame_ack(v, frame_id);
     return 0;
 }
 
@@ -1544,6 +1561,7 @@ lib_mod_suppress_output(struct wlup *v, int suppress,
         v->server_begin_update(v);
         paint_region(v, 0, 0, v->buffer_width, v->buffer_height);
         v->server_end_update(v);
+        wlup_gfx_poll(v);
     }
     return 0;
 }
@@ -1568,6 +1586,7 @@ lib_mod_server_monitor_resize(struct wlup *v, int width, int height,
     v->server_width = width;
     v->server_height = height;
     v->need_full_paint = 1;
+    wlup_gfx_reset(v);
     *in_progress = 0;
     if (v->backend == WLUP_BACKEND_MUTTER)
     {
@@ -1600,9 +1619,12 @@ lib_mod_server_monitor_resize(struct wlup *v, int width, int height,
 static int
 lib_mod_server_monitor_full_invalidate(struct wlup *v, int width, int height)
 {
+    /* xrdp has a new encoder after a resize: start over with a full frame */
+    wlup_gfx_reset(v);
     v->server_begin_update(v);
     paint_region(v, 0, 0, v->buffer_width, v->buffer_height);
     v->server_end_update(v);
+    wlup_gfx_poll(v);
     return 0;
 }
 
