@@ -158,7 +158,9 @@ struct wlup
     int (*server_set_pointer_large)(struct wlup *v, int x, int y,
                                     char *data, char *mask, int bpp,
                                     int width, int height);
-    tintptr server_unused2[51 - 49]; /* server functions 50 and 51 */
+    tintptr server_unused2[50 - 49]; /* server function 50 */
+    int (*server_egfx_cmd)(struct wlup *v, char *cmd, int cmd_bytes,
+                           char *data, int data_bytes);
     int (*server_set_pointer_system)(struct wlup *v, int pointer_type);
     tintptr server_dumby[100 - 52]; /* align, 100 minus the number of server
                                      functions above */
@@ -174,6 +176,15 @@ struct wlup
     int server_height;
     int suppress_output;
     int large_pointer_flags; /* LARGE_POINTER_FLAG_* the client supports */
+
+    /* frames to the GFX H.264 encoder (wlup_gfx.c) */
+    int gfx_h264;            /* else server_paint_rect() */
+    int gfx_frame_id;        /* last frame sent */
+    int gfx_frame_acked;     /* last frame xrdp acknowledged */
+    unsigned int gfx_sent_time; /* g_get_elapsed_ms() at the last frame */
+    short gfx_damage[WLUP_MAX_DAMAGE * 4]; /* for the next frame */
+    int gfx_num_damage;
+    int gfx_damage_overflow; /* gfx_damage[0..3] is a bounding box */
 
     /* settings from xrdp.ini */
     char display_name[256]; /* WAYLAND_DISPLAY name or absolute path */
