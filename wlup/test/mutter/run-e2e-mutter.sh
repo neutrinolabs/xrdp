@@ -42,7 +42,7 @@ in_session() {
 cp -a "$SRC" /build
 cd /build
 ./bootstrap > "$OUT/bootstrap.log" 2>&1
-./configure --enable-wlup --enable-wlup-mutter --prefix=/usr --sysconfdir=/etc \
+./configure --enable-wlup --enable-wlup-mutter --enable-fuse --prefix=/usr --sysconfdir=/etc \
     --localstatedir=/var CFLAGS="-O2 -g -Wno-error=nonnull" > "$OUT/configure.log" 2>&1
 make -j"$(nproc)" > "$OUT/make.log" 2>&1
 make install > "$OUT/install.log" 2>&1
@@ -78,14 +78,18 @@ sleep 2
 Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
 export DISPLAY=:99
 sleep 1
+# Drive redirection and the microphone (drive-mic-tests.sh), for the first
+# connection
+. "$SRC/wlup/test/drive-mic-tests.sh"
+drive_mic_setup
 connect() {
     xfreerdp3 /v:127.0.0.1 /u:tester /p:$PASSWORD /cert:ignore /size:${W}x${H} \
-        /bpp:24 /dynamic-resolution -grab-keyboard /sound:sys:fake \
+        /bpp:24 /dynamic-resolution -grab-keyboard /sound:sys:fake ${2:-} \
         /log-filters:com.freerdp.channels.rdpsnd.client:DEBUG \
         > "$OUT/client$1.log" 2>&1 &
     CLIENT=$!
 }
-connect ""
+connect "" "$DRIVE_MIC_OPTS"
 # sesman starts GNOME, then wlup waits for GNOME Shell
 for _ in $(seq 60); do
     grep -q "wlup: connected to Mutter" /var/log/xrdp.log 2>/dev/null && break
@@ -123,6 +127,7 @@ import -window root "$OUT/client-3-typed.png"
 # --- clipboard, both ways, while foot has the focus -------------------------
 . "$SRC/wlup/test/clipboard-tests.sh"
 clipboard_tests
+drive_test
 in_session "pkill -x foot" || true
 sleep 1
 
@@ -154,6 +159,7 @@ in_session "timeout 3 pw-cat --playback --raw --target xrdp-sink --format s16 \
     --rate 44100 --channels 2 - < /dev/urandom" > "$OUT/pw-cat.log" 2>&1 || true
 sleep 2
 cp "$OUT/client.log" "$OUT/client-audio.log"
+mic_test
 
 # --- resize: make the client window bigger ------------------------------------
 WID=$(xdotool search --pid $CLIENT | tail -1)
@@ -224,6 +230,7 @@ check "picture: client shows more than a flat screen" \
 check "keyboard: typed command ran in the GNOME session" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = mutter-typed-42 ]'
 clipboard_checks
+drive_mic_checks
 check "left button press"   'grep -a -q "button: 272.*state: 1" /tmp/wev.log'
 check "left button release" 'grep -a -q "button: 272.*state: 0" /tmp/wev.log'
 check "right button"        'grep -a -q "button: 273" /tmp/wev.log'

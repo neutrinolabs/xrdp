@@ -15,6 +15,14 @@
 # 5. clicks and scrolls over wev and checks the events wev received
 # 6. resizes the client window to 1600x900: sway's output must follow,
 #    and input must still land where the client points
+# Also the clipboard (clipboard-tests.sh), drive redirection and the
+# microphone (drive-mic-tests.sh), and audio, logind and the microphone
+# with systemd as PID 1 (wlup/test/systemd).
+#
+# Drive redirection needs /dev/fuse. Run the plain container with
+#   --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined
+# (the systemd one is privileged anyway); without it these checks are
+# skipped.
 #
 # Usage: run-e2e.sh <xrdp source dir> <output dir>
 set -eu
@@ -29,7 +37,7 @@ cp -a "$SRC" /build
 cd /build
 ./bootstrap > "$OUT/bootstrap.log" 2>&1
 # -Wno-error=nonnull: GCC 16 flags existing code in xrdp/xrdp_mm.c
-./configure --enable-wlup --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+./configure --enable-wlup --enable-fuse --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
     CFLAGS="-O2 -g -Wno-error=nonnull" > "$OUT/configure.log" 2>&1
 make -j"$(nproc)" > "$OUT/make.log" 2>&1
 make install > "$OUT/install.log" 2>&1
@@ -95,9 +103,11 @@ sleep 1
 # the desktop then disconnects it ("planar->maxWidth 1280 < nSrcWidth
 # 1600"). 24 bpp uses interleaved RLE, which is not affected
 BPP=${BPP:-24}
+. "$SRC/wlup/test/drive-mic-tests.sh"
+drive_mic_setup
 # XFREERDP: client binary, e.g. a FreeRDP built from source
 ${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:wlup-test-pw /cert:ignore /size:1280x800 \
-    /bpp:$BPP /dynamic-resolution -grab-keyboard /sound:sys:fake \
+    /bpp:$BPP /dynamic-resolution -grab-keyboard /sound:sys:fake $DRIVE_MIC_OPTS \
     /log-filters:com.freerdp.channels.rdpsnd.client:DEBUG > "$OUT/client.log" 2>&1 &
 CLIENT=$!
 sleep 8
@@ -121,6 +131,9 @@ import -window root "$OUT/client-2-typed.png"
 . "$SRC/wlup/test/clipboard-tests.sh"
 clipboard_tests
 
+# --- drive redirection, from the same terminal ------------------------------
+drive_test
+
 # --- audio, when the user has a PipeWire daemon (systemd as PID 1) ----------
 if [ "$(cat /proc/1/comm)" = systemd ] && command -v pw-cat > /dev/null; then
     as_session() {
@@ -136,6 +149,7 @@ if [ "$(cat /proc/1/comm)" = systemd ] && command -v pw-cat > /dev/null; then
         > "$OUT/pw-cat.log" 2>&1 || true
     sleep 2
     cp "$OUT/client.log" "$OUT/client-audio.log"
+    mic_test
 fi
 
 # --- pointer: buttons and wheel over wev ------------------------------------
@@ -201,6 +215,7 @@ check "connect: output has the client size 1280x800" \
 check "keyboard: typed command ran in sway" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = wlup-typed-42 ]'
 clipboard_checks
+drive_mic_checks
 check "left button press"   'grep -a -q "button: 272.*state: 1" /tmp/wev.log'
 check "left button release" 'grep -a -q "button: 272.*state: 0" /tmp/wev.log'
 check "right button"        'grep -a -q "button: 273" /tmp/wev.log'
