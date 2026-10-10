@@ -38,6 +38,7 @@
 
 #include <wayland-client.h>
 
+/* cppcheck-suppress missingInclude ; generated at build time */
 #include "ext-data-control-v1-client-protocol.h"
 
 #include "wlup.h"

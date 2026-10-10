@@ -52,10 +52,15 @@
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
+/* cppcheck-suppress missingInclude ; generated at build time */
 #include "ext-image-capture-source-v1-client-protocol.h"
+/* cppcheck-suppress missingInclude ; generated at build time */
 #include "ext-image-copy-capture-v1-client-protocol.h"
+/* cppcheck-suppress missingInclude ; generated at build time */
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
+/* cppcheck-suppress missingInclude ; generated at build time */
 #include "wlr-output-management-unstable-v1-client-protocol.h"
+/* cppcheck-suppress missingInclude ; generated at build time */
 #include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
 
 #include "wlup.h"
