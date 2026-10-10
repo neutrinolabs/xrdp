@@ -1,0 +1,48 @@
+name: wlup end-to-end tests
+
+# Builds xrdp with the wlup module and runs wlup/test/run-all.sh: headless
+# sway and GNOME sessions started by sesman, driven by xfreerdp3, each in
+# its own container (two of them with systemd as PID 1).
+on:
+  push:
+    paths:
+      - 'wlup/**'
+      - 'sesman/**'
+      - 'xrdp/**'
+      - 'libipm/**'
+      - 'common/**'
+      - 'configure.ac'
+      - '.github/workflows/wlup-e2e.yml'
+  pull_request:
+    paths:
+      - 'wlup/**'
+      - 'sesman/**'
+      - 'xrdp/**'
+      - 'libipm/**'
+      - 'common/**'
+      - 'configure.ac'
+      - '.github/workflows/wlup-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run all suites
+        run: wlup/test/run-all.sh "$RUNNER_TEMP/wlup-test"
+
+      - name: Keep logs and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wlup-e2e-logs
+          path: ${{ runner.temp }}/wlup-test
+          if-no-files-found: ignore
