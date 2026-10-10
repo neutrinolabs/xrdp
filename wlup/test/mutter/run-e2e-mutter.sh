@@ -80,7 +80,9 @@ export DISPLAY=:99
 sleep 1
 connect() {
     xfreerdp3 /v:127.0.0.1 /u:tester /p:$PASSWORD /cert:ignore /size:${W}x${H} \
-        /bpp:24 /dynamic-resolution -grab-keyboard > "$OUT/client$1.log" 2>&1 &
+        /bpp:24 /dynamic-resolution -grab-keyboard /sound:sys:fake \
+        /log-filters:com.freerdp.channels.rdpsnd.client:DEBUG \
+        > "$OUT/client$1.log" 2>&1 &
     CLIENT=$!
 }
 connect ""
@@ -139,6 +141,19 @@ sleep 1
 import -window root "$OUT/client-4-pointer.png"
 cp /tmp/wev.log "$OUT/wev.log"
 in_session "pkill -x wev" || true
+
+# --- audio: play into the xrdp sink of the session's PipeWire --------------
+# pipewire-module-xrdp is loaded by its XDG autostart entry, which GNOME
+# runs; it sends the audio to chansrv, which sends it to the client
+for _ in $(seq 20); do
+    in_session "pw-cli ls Node" 2>/dev/null | grep -q 'node.name = "xrdp-sink"' && break
+    sleep 1
+done
+in_session "pw-cli ls Node" > "$OUT/pw-nodes.txt" 2>&1 || true
+in_session "timeout 3 pw-cat --playback --raw --target xrdp-sink --format s16 \
+    --rate 44100 --channels 2 - < /dev/urandom" > "$OUT/pw-cat.log" 2>&1 || true
+sleep 2
+cp "$OUT/client.log" "$OUT/client-audio.log"
 
 # --- resize: make the client window bigger ------------------------------------
 WID=$(xdotool search --pid $CLIENT | tail -1)
@@ -217,6 +232,12 @@ check "wheel: vertical axis events" 'grep -a -q "axis: 0" /tmp/wev.log'
 check "wheel: both directions" \
     'grep -a "axis: 0" /tmp/wev.log | grep -q -- "value: -" &&
      grep -a "axis: 0" /tmp/wev.log | grep -v -q -- "value: -"'
+check "audio: chansrv runs in the session" \
+    'pgrep -u tester -x xrdp-chansrv > /dev/null'
+check "audio: the session's PipeWire has the xrdp sink" \
+    'grep -q "node.name = \"xrdp-sink\"" "$OUT/pw-nodes.txt"'
+check "audio: the client received sound (10+ Wave PDUs)" \
+    '[ "$(grep -c "WaveInfo:" "$OUT/client-audio.log")" -ge 10 ]'
 check "hot corner: typing was not taken by the Activities overview" \
     '[ "$(cat /tmp/typed.txt 2>/dev/null)" = mutter-typed-42 ]'
 check "resize: virtual monitor follows client window 1600x900" \

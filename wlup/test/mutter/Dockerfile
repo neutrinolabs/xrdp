@@ -5,4 +5,5 @@ FROM xrdp-wlup-gnome
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         libsystemd-dev libpipewire-0.3-dev libei-dev gnome-session xclip \
+        pipewire-module-xrdp pipewire-bin \
     && rm -rf /var/lib/apt/lists/*

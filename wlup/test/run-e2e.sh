@@ -97,7 +97,8 @@ sleep 1
 BPP=${BPP:-24}
 # XFREERDP: client binary, e.g. a FreeRDP built from source
 ${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:wlup-test-pw /cert:ignore /size:1280x800 \
-    /bpp:$BPP /dynamic-resolution -grab-keyboard > "$OUT/client.log" 2>&1 &
+    /bpp:$BPP /dynamic-resolution -grab-keyboard /sound:sys:fake \
+    /log-filters:com.freerdp.channels.rdpsnd.client:DEBUG > "$OUT/client.log" 2>&1 &
 CLIENT=$!
 sleep 8
 SWAYSOCK=$(find /run /tmp -name 'sway-ipc.*.sock' 2>/dev/null | head -1)
@@ -119,6 +120,23 @@ import -window root "$OUT/client-2-typed.png"
 # --- clipboard, both ways, while foot has the focus -------------------------
 . "$SRC/wlup/test/clipboard-tests.sh"
 clipboard_tests
+
+# --- audio, when the user has a PipeWire daemon (systemd as PID 1) ----------
+if [ "$(cat /proc/1/comm)" = systemd ] && command -v pw-cat > /dev/null; then
+    as_session() {
+        su tester -c "export XDG_RUNTIME_DIR=/run/user/$(id -u tester); $*"
+    }
+    for _ in $(seq 20); do
+        as_session "pw-cli ls Node" 2>/dev/null | grep -q 'node.name = "xrdp-sink"' && break
+        sleep 1
+    done
+    as_session "pw-cli ls Node" > "$OUT/pw-nodes.txt" 2>&1 || true
+    as_session "timeout 3 pw-cat --playback --raw --target xrdp-sink \
+        --format s16 --rate 44100 --channels 2 - < /dev/urandom" \
+        > "$OUT/pw-cat.log" 2>&1 || true
+    sleep 2
+    cp "$OUT/client.log" "$OUT/client-audio.log"
+fi
 
 # --- pointer: buttons and wheel over wev ------------------------------------
 xdotool mousemove "$WEV_X" "$WEV_Y"
@@ -220,6 +238,12 @@ if [ "$(cat /proc/1/comm)" = systemd ]; then
          grep -q "session-$SWAY_SESSION.scope" /proc/$SWAY_PID_AFTER/cgroup'
     check "logind: Wayland socket in /run/user/<uid>" \
         'ls /run/user/$(id -u tester)/wayland-* > /dev/null 2>&1'
+    check "audio: chansrv runs in the session" \
+        'pgrep -u tester -x xrdp-chansrv > /dev/null'
+    check "audio: the session's PipeWire has the xrdp sink" \
+        'grep -q "node.name = \"xrdp-sink\"" "$OUT/pw-nodes.txt"'
+    check "audio: the client received sound (10+ Wave PDUs)" \
+        '[ "$(grep -c "WaveInfo:" "$OUT/client-audio.log")" -ge 10 ]'
 fi
 echo "passed $pass, failed $fail"
 
