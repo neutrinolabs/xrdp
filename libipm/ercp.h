@@ -173,6 +173,7 @@ ercp_msg_in_reset(struct trans *trans);
  * @param start_ip_addr Starting IP address of client
  * @param start_time Session start time
  * @param instance_name Name of xrdp instance
+ * @param start_client_name Name of the client which requested the session
  * * @return != 0 for error
  */
 int
@@ -186,7 +187,8 @@ ercp_send_session_announce_event(struct trans *trans,
                                  const struct guid *guid,
                                  const char *start_ip_addr,
                                  time_t start_time,
-                                 const char *instance_name);
+                                 const char *instance_name,
+                                 const char *start_client_name);
 
 
 /**
@@ -205,6 +207,8 @@ ercp_send_session_announce_event(struct trans *trans,
  * @param[out] start_ip_addr Starting IP address of client
  * @param[out] start_time Session start time
  * @param[out] instance_name Name of xrdp instance
+ * @param[out] start_client_name Name of the client which requested the
+ *  session
  * @return != 0 for error
  */
 int
@@ -218,7 +222,8 @@ ercp_get_session_announce_event(struct trans *trans,
                                 struct guid *guid,
                                 const char **start_ip_addr,
                                 time_t *start_time,
-                                const char **instance_name);
+                                const char **instance_name,
+                                const char **start_client_name);
 
 
 /**

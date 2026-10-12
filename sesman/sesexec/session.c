@@ -88,6 +88,7 @@ session_data_new(const struct session_parameters *sp)
     string_length += g_strlen(sp->shell) + 1;
     string_length += g_strlen(sp->directory) + 1;
     string_length += g_strlen(sp->instance_name) + 1;
+    string_length += g_strlen(sp->client_name) + 1;
 
     struct session_data *sd = (struct session_data *)g_malloc(sizeof(*sd) + string_length, 0);
 
@@ -117,6 +118,7 @@ session_data_new(const struct session_parameters *sp)
         COPY_STRING(sd->params.shell, sp->shell);
         COPY_STRING(sd->params.directory, sp->directory);
         COPY_STRING(sd->params.instance_name, sp->instance_name);
+        COPY_STRING(sd->params.client_name, sp->client_name);
 
 #undef COPY_STRING
     }
