@@ -253,7 +253,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        freebsd-version: ["15.0", "14.4"]
+        freebsd-version: ["15.1", "14.4"]
         ssl: ["", "libressl"]
     name: FreeBSD ${{ matrix.freebsd-version }} Build with ${{ matrix.ssl || 'base openssl' }}
     env:
