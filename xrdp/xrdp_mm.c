@@ -3492,6 +3492,10 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
 
             case MMCS_CONNECT_TO_DISPLAY_SERVER:
             {
+                /* From here on, a backend can receive cliprdr data. If
+                 * this connect fails, the login prompt creates a new
+                 * handler, which handshakes again */
+                xrdp_wm_login_clip_handover(self->wm);
                 xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
                                 "Connecting to display server");
                 /* This is synchronous - no reply message expected */

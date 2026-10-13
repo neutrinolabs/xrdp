@@ -584,6 +584,9 @@ struct xrdp_wm
     /* cliprdr channel id, if present and not disabled in [Channels];
      * -1 otherwise. Set in xrdp_wm_load_channel_config() */
     int clip_chan_id;
+    /* Bumped whenever a login screen edit field is created or destroyed,
+     * so a pending paste can tell its target has been replaced */
+    unsigned int login_wnd_gen;
     struct xrdp_font *default_font;
     struct xrdp_keymap keymap;
     int hide_log_window;

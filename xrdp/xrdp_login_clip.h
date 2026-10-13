@@ -44,10 +44,11 @@ struct xrdp_login_clip;
  *
  * Recognises Ctrl+V and Shift+Insert. V is matched on the keysym, in
  * both the lowercase and uppercase (Caps Lock / Shift) foldings, so the
- * binding is correct on non-QWERTY Latin layouts such as Dvorak; it is
- * also matched on the physical key as a fallback, so layouts that never
- * produce a Latin V - Cyrillic, Greek, Hebrew, Arabic, Thai, and so on -
- * can still paste.
+ * binding is correct on non-QWERTY Latin layouts such as Dvorak. The
+ * physical V key is also accepted, but only when it does not produce a
+ * Latin letter, so layouts that never produce a Latin V - Cyrillic,
+ * Greek, Hebrew, Arabic, Thai, and so on - can still paste without
+ * turning Ctrl+K on Dvorak into a paste.
  *
  * AltGr is excluded deliberately: Windows clients send AltGr as
  * LCTRL-down plus RALT-down, so without that check AltGr+V would look
@@ -58,22 +59,22 @@ xrdp_login_clip_is_paste_key(const int *keys, int scan_code,
                              const struct xrdp_key_info *ki);
 
 /**
- * Decode UTF-16LE clipboard text into sanitised Unicode codepoints
+ * Decode CB_FORMAT_DATA_RESPONSE text into sanitised Unicode codepoints
  *
- * @param utf16le UTF-16LE text from the client
- * @param bytes Length of utf16le in bytes
+ * @param s Stream positioned at the start of the text
+ * @param format CF_UNICODETEXT (UTF-16LE) or CF_TEXT (treated as CP-1252)
  * @param out Where to write codepoints
  * @param out_count Capacity of out, in codepoints
  * @return Number of codepoints written
  *
- * Decoding stops at a NUL word or at the first CR or LF, so a trailing
+ * Decoding stops at a NUL or at the first CR or LF, so a trailing
  * newline is harmless and a multi-line clipboard cannot spill across
- * fields. Control characters are dropped, surrogate pairs are combined,
- * and unpaired surrogates are discarded.
+ * fields. Control characters and undecodable input (such as unpaired
+ * surrogates) are dropped.
  */
 unsigned int
-xrdp_login_clip_utf16_to_codepoints(const char *utf16le, unsigned int bytes,
-                                    char32_t *out, unsigned int out_count);
+xrdp_login_clip_decode_text(struct stream *s, int format,
+                            char32_t *out, unsigned int out_count);
 
 /**
  * Insert codepoints into an edit widget at its current caret position
@@ -95,25 +96,21 @@ xrdp_login_clip_insert_codepoints(struct xrdp_bitmap *edit,
  * Parse a CB_FORMAT_LIST PDU body for the text formats we can use
  *
  * @param s Stream positioned at the start of the PDU body
- * @param msg_flags msgFlags from the cliprdr header
  * @param use_long_names Non-zero if the client negotiated long format names
  * @param have_unicode_text Set to 1 if CF_UNICODETEXT is offered
  * @param have_text Set to 1 if CF_TEXT is offered
  * @return 0 on success, 1 if the PDU is malformed
  *
  * See [MS-RDPECLIP] 2.2.3.1. Format names are skipped, but must be
- * skipped by the right width for the negotiated framing.
+ * skipped by the right width for the negotiated framing. CB_ASCII_NAMES
+ * changes the encoding of short format names but not the width of the
+ * field, so msgFlags is not needed.
  *
- * have_unicode_text and have_text are updated entry by entry as the
- * list is walked, so on a return of 1 they reflect every well-formed
- * entry seen before the malformed one that stopped parsing, not
- * nothing. That is deliberate: the client did genuinely advertise
- * those formats. Callers that only want fully-validated results should
- * check the return value first.
+ * On a return of 1 both flags are cleared: a rejected list offers
+ * nothing.
  */
 int
-xrdp_login_clip_parse_format_list(struct stream *s, int msg_flags,
-                                  int use_long_names,
+xrdp_login_clip_parse_format_list(struct stream *s, int use_long_names,
                                   int *have_unicode_text, int *have_text);
 
 /**
@@ -160,9 +157,22 @@ xrdp_login_clip_process_channel_data(struct xrdp_login_clip *self,
  * @return 1 if a request was sent, 0 otherwise
  *
  * Called only from a paste keypress. This is the only path that asks the
- * client for clipboard content.
+ * client for clipboard content. The request is bound to the edit field
+ * focused at this moment; the response is only inserted if that same
+ * field is still focused when it arrives.
  */
 int
 xrdp_login_clip_request_paste(struct xrdp_login_clip *self);
+
+/**
+ * Abandon any paste request still waiting for its response
+ *
+ * @param self Object, may be NULL
+ *
+ * Used when the login prompt goes away. The response, when it arrives,
+ * is discarded rather than inserted.
+ */
+void
+xrdp_login_clip_abandon_paste(struct xrdp_login_clip *self);
 
 #endif /* XRDP_LOGIN_CLIP_H */

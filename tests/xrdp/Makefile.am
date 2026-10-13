@@ -57,7 +57,9 @@ test_xrdp_CFLAGS = \
 test_xrdp_LDFLAGS = -Wl,--wrap=pixman_region_extents, \
     -Wl,--wrap=pixman_region_not_empty, \
     -Wl,--wrap=libxrdp_send_to_channel, \
-    -Wl,--wrap=xrdp_bitmap_invalidate
+    -Wl,--wrap=xrdp_bitmap_invalidate, \
+    -Wl,--wrap=calloc, \
+    -Wl,--wrap=g_get_elapsed_ms
 
 test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_load.o \
