@@ -761,6 +761,7 @@ struct xrdp_startup_params
     int tcp_recv_buffer_bytes;
     int tcp_nodelay;
     int tcp_keepalive;
+    int tcp_notsent_lowat;
     int use_vsock;
     // These should be local users/groups, and so we shouldn't need
     // a lot of storage for them.
@@ -816,6 +817,7 @@ struct xrdp_cfg_globals
     int  tcp_keepalive;
     int  tcp_send_buffer_bytes;
     int  tcp_recv_buffer_bytes;
+    int  tcp_notsent_lowat;
     char autorun[256];
     int  hidelogwindow;
     int  require_credentials;

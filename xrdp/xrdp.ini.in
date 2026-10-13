@@ -57,6 +57,13 @@ tcp_keepalive=true
 #tcp_send_buffer_bytes=32768
 #tcp_recv_buffer_bytes=32768
 
+; limit the data the kernel holds for a client that it has not sent yet.
+; On a slow link the backlog then stays in xrdp, which can skip screen
+; updates that are out of date, instead of in the kernel, which has to
+; send all it holds. Not set, the operating system's default applies
+; (Linux: no limit)
+#tcp_notsent_lowat=131072
+
 ; security layer can be 'tls', 'rdp' or 'negotiate':-
 ;
 ; tls       - Insist on TLS for security (maximum security)
