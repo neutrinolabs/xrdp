@@ -1988,6 +1988,43 @@ resize_queue_source_to_str(enum resize_queue_source src)
 #endif
 
 /******************************************************************************/
+/* Is a queued layout the one the session already has? The bounding box alone
+   is not enough: one monitor can grow while another keeps the box the same
+   (monitor 1 going fullscreen from 1920x896 beside a 1920x1072 monitor 2),
+   and comparing only session_width/height dropped that resize. Compares the
+   non-negative minfo_wm, so a layout that only moves as a whole is the same,
+   and the scale factors, which a backend may apply per monitor. */
+static int
+display_size_description_equal(const struct display_size_description *a,
+                               const struct display_size_description *b)
+{
+    unsigned int index;
+
+    if (a->session_width != b->session_width ||
+            a->session_height != b->session_height ||
+            a->monitorCount != b->monitorCount)
+    {
+        return 0;
+    }
+    for (index = 0; index < a->monitorCount &&
+            index < CLIENT_MONITOR_DATA_MAXIMUM_MONITORS; index++)
+    {
+        const struct monitor_info *ma = &a->minfo_wm[index];
+        const struct monitor_info *mb = &b->minfo_wm[index];
+
+        if (ma->left != mb->left || ma->top != mb->top ||
+                ma->right != mb->right || ma->bottom != mb->bottom ||
+                ma->is_primary != mb->is_primary ||
+                ma->desktop_scale_factor != mb->desktop_scale_factor ||
+                ma->device_scale_factor != mb->device_scale_factor)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/******************************************************************************/
 static int
 dynamic_monitor_process_queue(struct xrdp_mm *self)
 {
@@ -2036,16 +2073,14 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
         const struct display_size_description *current_size
                 = &wm->client_info->display_sizes;
 
-        const int already_this_size = queued_size->session_width
-                                      == current_size->session_width
-                                      && queued_size->session_height
-                                      == current_size->session_height;
+        const int already_this_size =
+            display_size_description_equal(queued_size, current_size);
 
         if (already_this_size)
         {
             LOG(LOG_LEVEL_DEBUG,
                 "dynamic_monitor_process_queue: Not resizing."
-                " Already this size. (w: %d x h: %d)",
+                " Already this layout. (w: %d x h: %d)",
                 queued_size->session_width,
                 queued_size->session_height);
         }
