@@ -1555,6 +1555,8 @@ static int
 lib_mod_suppress_output(struct wlup *v, int suppress,
                         int left, int top, int right, int bottom)
 {
+    LOG(LOG_LEVEL_INFO, "wlup: output %s",
+        suppress ? "suppressed" : "resumed");
     v->suppress_output = suppress;
     if (!suppress)
     {
