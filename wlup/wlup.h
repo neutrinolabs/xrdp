@@ -185,6 +185,10 @@ struct wlup
     short gfx_damage[WLUP_MAX_DAMAGE * 4]; /* for the next frame */
     int gfx_num_damage;
     int gfx_damage_overflow; /* gfx_damage[0..3] is a bounding box */
+    /* wlroots: the frames are made from this copy of the capture buffer,
+     * as the compositor may write to the buffer during a capture */
+    char *gfx_shadow;
+    size_t gfx_shadow_size;
 
     /* settings from xrdp.ini */
     char display_name[256]; /* WAYLAND_DISPLAY name or absolute path */

@@ -31,6 +31,14 @@ wlup_gfx_init(struct wlup *v, const struct xrdp_client_info *ci);
 void
 wlup_gfx_add_damage(struct wlup *v, int x, int y, int cx, int cy);
 
+/* Copies a rectangle of the capture buffer to the frames' copy */
+void
+wlup_gfx_copy_damage(struct wlup *v, int x, int y, int cx, int cy);
+
+/* Frees the frames' copy */
+void
+wlup_gfx_free_shadow(struct wlup *v);
+
 /* Sends the collected damage as one frame, unless the frame before it
  * has not been acknowledged yet. return error */
 int
