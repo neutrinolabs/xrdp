@@ -4,6 +4,12 @@
 #   xfreerdp3 (in Xvfb) --RDP over lo, shaped by tc netem--> xrdp + libwlup
 #       --Wayland--> headless sway
 #
+# or, with BP_SESSION=xorg in the xrdp-wlup-xorgxrdp image, of xrdp's own
+# Xorg sessions, to compare with and to catch regressions in xrdp:
+#
+#   xfreerdp3 --RDP--> xrdp + libxup --> Xorg + xorgxrdp (built here
+#       against the xrdp under test), with xterms instead of foot
+#
 # Does wlup send data nobody needs, and does a busy screen on a slow link
 # pile up frames that delay everything after them? xrdp queues whatever
 # the socket does not take in user space (trans_write_copy_s(), no size
@@ -15,6 +21,9 @@
 #   h264     /bpp:32 /gfx:AVC420  wlup -> GFX H.264 encoder, paced by acks
 #   gfx-rfx  /bpp:32 /gfx:RFX     wlup -> server_paint_rect() -> GFX planar
 #   bitmap   /bpp:24 -gfx         wlup -> server_paint_rect() -> bitmap updates
+#
+# (with Xorg: the encoder with H.264, the encoder with RFX progressive, and
+# bitmap updates)
 #
 # Scenarios, on one connection per path:
 #
@@ -28,11 +37,12 @@
 #                is long if xrdp had a backlog queued
 #   S4 hidden    the client window is unmapped while the screen stays
 #                busy: xfreerdp sends Suppress Output; bytes per second and
-#                CPU (xrdp process, which runs wlup, and sway)
+#                CPU (xrdp process, which runs wlup, and the compositor:
+#                sway, or Xorg, which runs xorgxrdp)
 #   S5 resume    the probe colour changes while hidden, then the window is
 #                mapped again: time until the client shows the new colour
 #
-# A probe: typing 'pb1' .. 'pb5' in a foot terminal runs a script that sets
+# A probe: typing 'pb1' .. 'pb5' in a foot (or xterm) terminal runs a script that sets
 # the terminal background to one of five colours (OSC 11), the next one
 # each time, so a stale frame cannot pass for a new one, and writes a
 # timestamp.
@@ -45,6 +55,8 @@
 #
 #   docker run --rm --cap-add NET_ADMIN -v <xrdp src>:/src:ro -v <out>:/out \
 #       xrdp-wlup-dev bash /src/wlup/test/run-backpressure.sh /src /out
+#   docker run --rm --cap-add NET_ADMIN -e BP_SESSION=xorg ... \
+#       xrdp-wlup-xorgxrdp bash /src/wlup/test/run-backpressure.sh /src /out
 #
 # Results: <out>/summary.txt, and per path <out>/<path>-monitor.csv
 # (twice a second: bytes acknowledged, send queue, xrdp RSS and CPU) and
@@ -57,6 +69,7 @@ SRC=$1
 OUT=$2
 W=1280
 H=800
+BP_SESSION=${BP_SESSION:-sway}
 BP_PATHS=${BP_PATHS:-"h264 gfx-rfx bitmap"}
 BP_RATE=${BP_RATE:-4mbit}
 BP_DELAY=${BP_DELAY:-80ms}
@@ -76,6 +89,12 @@ cd /build
 make -j"$(nproc)" > "$OUT/make.log" 2>&1
 make install > "$OUT/install.log" 2>&1
 ldconfig
+if [ "$BP_SESSION" = xorg ]; then
+    # Against the xrdp just installed, so both speak the same protocol
+    (cd /usr/src/xorgxrdp && ./bootstrap && ./configure --prefix=/usr &&
+        make -j"$(nproc)" && make install) > "$OUT/xorgxrdp-build.log" 2>&1
+    echo "xorgxrdp $(cat /usr/src/xorgxrdp/SOURCE_COMMIT)"
+fi
 
 # --- the slow link -----------------------------------------------------------
 # netem on lo delays and rate-limits both directions. A real link has a
@@ -101,14 +120,26 @@ link_fast() {
 
 # --- the test user, their sway config and the probe ----------------------------
 echo 'tester:wlup-test-pw' | chpasswd
-mkdir -p /home/tester/.config/sway
-cat > /home/tester/.config/sway/config <<'SWAYCONF'
+if [ "$BP_SESSION" = xorg ]; then
+    # No window manager: the probe xterm on the left half, the busy one is
+    # put on the right half. Keys go to the window under the pointer
+    cat > /home/tester/.xsession <<'XSESSION'
+#!/bin/sh
+xterm -T probe -geometry 100x58+0+0 &
+exec sleep infinity
+XSESSION
+    chmod 755 /home/tester/.xsession
+    chown tester /home/tester/.xsession
+else
+    mkdir -p /home/tester/.config/sway
+    cat > /home/tester/.config/sway/config <<'SWAYCONF'
 output * bg #204a87 solid_color
 focus_follows_mouse no
 default_border none
 exec foot -a probe
 SWAYCONF
-chown -R tester /home/tester/.config
+    chown -R tester /home/tester/.config
+fi
 # Clears the screen, so the probed pixel never has text on it, and sets
 # the background colour
 for p in pb1:ff0000 pb2:00ff00 pb3:ffff00 pb4:ff00ff pb5:00ffff; do
@@ -128,7 +159,13 @@ swaymsg_() {
 # --- xrdp ---------------------------------------------------------------------
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=wlup-test \
     -keyout /etc/xrdp/key.pem -out /etc/xrdp/cert.pem > /dev/null 2>&1
-cat >> /etc/xrdp/xrdp.ini <<EOF
+if [ "$BP_SESSION" = xorg ]; then
+    sed -i 's/^#\?autorun=.*/autorun=Xorg/' /etc/xrdp/xrdp.ini
+    # Debian's Xorg wrapper only lets console users start X
+    sed -i '/^\[Xorg\]/,/^\[/ s|^param=Xorg$|param=/usr/lib/xorg/Xorg|' \
+        /etc/xrdp/sesman.ini
+else
+    cat >> /etc/xrdp/xrdp.ini <<EOF
 
 [Wayland]
 name=Wayland (wlup prototype)
@@ -139,7 +176,8 @@ port=-1
 code=30
 xkb_layout=us
 EOF
-sed -i 's/^#\?autorun=.*/autorun=Wayland/' /etc/xrdp/xrdp.ini
+    sed -i 's/^#\?autorun=.*/autorun=Wayland/' /etc/xrdp/xrdp.ini
+fi
 sed -i 's/^LogLevel=.*/LogLevel=DEBUG/' /etc/xrdp/xrdp.ini
 sed -i 's/^LogLevel=.*/LogLevel=DEBUG/' /etc/xrdp/sesman.ini
 xrdp-sesman --nodaemon > "$OUT/sesman.log" 2>&1 &
@@ -149,6 +187,9 @@ sleep 2
 Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
 export DISPLAY=:99
 sleep 1
+
+# xorgxrdp does not log Suppress Output, so S4 takes it as received
+[ "$BP_SESSION" = xorg ] && SUPPRESS_NOTE=" (Suppress Output assumed)"
 
 # Measuring goes on through failures
 set +e
@@ -177,23 +218,23 @@ rss_kb() {
 cpu_ticks() {
     awk '{ print $14 + $15 }' /proc/"$1"/stat 2> /dev/null || echo 0
 }
-# A point in time: ms, bytes acked, xrdp RSS, xrdp CPU ticks, sway CPU ticks
+# A point in time: ms, bytes acked, xrdp RSS, xrdp CPU ticks, compositor CPU ticks
 snap() {
     local acked rest
     read -r acked rest < <(tcp_stats)
-    echo "$(now_ms) ${acked:-0} $(rss_kb "$XPID") $(cpu_ticks "$XPID") $(cpu_ticks "$SWAY_PID")"
+    echo "$(now_ms) ${acked:-0} $(rss_kb "$XPID") $(cpu_ticks "$XPID") $(cpu_ticks "$COMP_PID")"
 }
-# Between two snaps: "KB/s xrdp-CPU% sway-CPU%"
+# Between two snaps: "KB/s xrdp-CPU% compositor-CPU%"
 rates() {
     echo "$1 $2" | awk -v hz="$CLK_TCK" '{ ms = $6 - $1; if (ms < 1) ms = 1
         printf "%.1f %.0f %.0f\n", ($7 - $2) / 1.024 / ms,
             ($9 - $4) * 100000 / hz / ms, ($10 - $5) * 100000 / hz / ms }'
 }
 monitor() {
-    echo "t_ms,bytes_acked,send_q,notsent,xrdp_rss_kb,xrdp_cpu_ticks,sway_cpu_ticks" > "$1"
+    echo "t_ms,bytes_acked,send_q,notsent,xrdp_rss_kb,xrdp_cpu_ticks,comp_cpu_ticks" > "$1"
     while :; do
         read -r acked sendq notsent < <(tcp_stats)
-        echo "$(now_ms),${acked:-0},${sendq:-0},${notsent:-0},$(rss_kb "$XPID"),$(cpu_ticks "$XPID"),$(cpu_ticks "$SWAY_PID")" >> "$1"
+        echo "$(now_ms),${acked:-0},${sendq:-0},${notsent:-0},$(rss_kb "$XPID"),$(cpu_ticks "$XPID"),$(cpu_ticks "$COMP_PID")" >> "$1"
         sleep 0.5
     done
 }
@@ -224,20 +265,64 @@ wait_colour() {
     done
     return 0
 }
+# --- what differs between the sessions ---------------------------------------
+# Runs a command as the user on the session's X display
+in_x() {
+    su tester -c "DISPLAY=$XDISPLAY XAUTHORITY=$XAUTH $*"
+}
+# After connecting: finds the compositor (COMP_PID) and its controls
+session_attach() {
+    if [ "$BP_SESSION" = xorg ]; then
+        COMP_PID=$(pgrep -u tester -x Xorg)
+        XDISPLAY=$(tr '\0' ' ' < /proc/"$COMP_PID"/cmdline | awk '{ print $2 }')
+        XAUTH=$(tr '\0' ' ' < /proc/"$COMP_PID"/cmdline |
+            sed -n 's/.*-auth \([^ ]*\).*/\1/p')
+    else
+        SWAYSOCK=$(find /run /tmp -name 'sway-ipc.*.sock' 2> /dev/null | head -1)
+        COMP_PID=$(pgrep -u tester -x sway)
+    fi
+}
 # The probed pixel: low in the probe terminal, below its text
 probe_point() {
-    read -r PX PY < <(swaymsg_ -t get_tree |
-        jq -r '.. | objects | select(.app_id? == "probe") |
-            "\(.rect.x + .rect.width * 3 / 4 | floor) \(.rect.y + .rect.height * 3 / 4 | floor)"')
+    if [ "$BP_SESSION" = xorg ]; then
+        local X Y WIDTH HEIGHT WINDOW SCREEN
+        eval "$(in_x "xdotool search --name '^probe\$' getwindowgeometry --shell" |
+            grep -E '^(X|Y|WIDTH|HEIGHT)=')"
+        PX=$((X + WIDTH * 3 / 4))
+        PY=$((Y + HEIGHT * 3 / 4))
+    else
+        read -r PX PY < <(swaymsg_ -t get_tree |
+            jq -r '.. | objects | select(.app_id? == "probe") |
+                "\(.rect.x + .rect.width * 3 / 4 | floor) \(.rect.y + .rect.height * 3 / 4 | floor)"')
+    fi
 }
-# Focuses the probe terminal in sway and points the client's pointer at
-# it, above the probed pixel
+# Focuses the probe terminal and points the client's pointer at it,
+# above the probed pixel
 focus_probe() {
-    swaymsg_ '[app_id=probe]' focus > /dev/null
-    sleep 0.3
+    if [ "$BP_SESSION" != xorg ]; then
+        swaymsg_ '[app_id=probe]' focus > /dev/null
+        sleep 0.3
+    fi
     probe_point
     xdotool mousemove "$PX" $((PY - 100)) click 1
     sleep 0.3
+}
+# The pid of the probe terminal, whose child is its shell
+probe_terminal_pid() {
+    if [ "$BP_SESSION" = xorg ]; then
+        pgrep -u tester -f '^xterm -T probe'
+    else
+        swaymsg_ -t get_tree |
+            jq -r '.. | objects | select(.app_id? == "probe") | .pid'
+    fi
+}
+# Whether the module logged Suppress Output since line <from> of the log.
+# xorgxrdp logs it only at TRACE level: assumed there
+suppress_seen() {
+    if [ "$BP_SESSION" = xorg ]; then
+        return 0
+    fi
+    tail -n +$(($1 + 1)) /var/log/xrdp.log | grep -q "wlup: output suppressed"
 }
 # probe: types the next probe command, appends "t_ms input_ms output_ms"
 # to $PROBES (-1: timed out) and echoes the output delay
@@ -279,12 +364,21 @@ pct() {
             i = int((NR - 1) * p / 100) + 1; print a[i] }'
 }
 busy_start() {
-    swaymsg_ exec "foot -a busy base64 -w 150 /dev/urandom" > /dev/null
+    if [ "$BP_SESSION" = xorg ]; then
+        in_x "xterm -T busy -geometry 100x58+640+0 -e base64 -w 150 /dev/urandom" \
+            > /dev/null 2>&1 &
+    else
+        swaymsg_ exec "foot -a busy base64 -w 150 /dev/urandom" > /dev/null
+    fi
     sleep 2
     focus_probe
 }
 busy_stop() {
-    swaymsg_ '[app_id=busy]' kill > /dev/null
+    if [ "$BP_SESSION" = xorg ]; then
+        pkill -u tester -f '^xterm -T busy'
+    else
+        swaymsg_ '[app_id=busy]' kill > /dev/null
+    fi
     sleep 1
 }
 
@@ -304,8 +398,7 @@ run_path() {
         /size:${W}x$H -grab-keyboard "$@" > "$OUT/$name-client.log" 2>&1 &
     CLIENT=$!
     sleep 8
-    SWAYSOCK=$(find /run /tmp -name 'sway-ipc.*.sock' 2> /dev/null | head -1)
-    SWAY_PID=$(pgrep -u tester -x sway)
+    session_attach
     XPID=$(xrdp_pid)
     wid=$(xdotool search --pid $CLIENT | tail -1)
     monitor "$OUT/$name-monitor.csv" &
@@ -318,7 +411,7 @@ run_path() {
     # S1: idle
     s0=$(snap); sleep 10; s1=$(snap)
     r_idle=$(rates "$s0" "$s1")
-    echo "S1 idle: KB/s xrdp% sway% = $r_idle"
+    echo "S1 idle: KB/s xrdp% comp% = $r_idle"
 
     # S2: busy, fast link
     busy_start
@@ -330,7 +423,7 @@ run_path() {
     r_busy=$(rates "$s0" "$s1")
     fast_p50=$(pct 50 < "$OUT/$name-s2.lat")
     import -window root "$OUT/$name-2-busy.png"
-    echo "S2 busy: KB/s xrdp% sway% = $r_busy, probe delay p50 $fast_p50 ms"
+    echo "S2 busy: KB/s xrdp% comp% = $r_busy, probe delay p50 $fast_p50 ms"
 
     # S3: busy, slow link
     if [ $SHAPE = 1 ]; then
@@ -368,7 +461,7 @@ run_path() {
         # S3r: the first probe on the restored link waits for any backlog
         probe > "$OUT/$name-s3r.lat"
         recover_ms=$(cat "$OUT/$name-s3r.lat")
-        echo "S3 slow: KB/s xrdp% sway% = $r_slow, probe delay p50 $slow_p50" \
+        echo "S3 slow: KB/s xrdp% comp% = $r_slow, probe delay p50 $slow_p50" \
              "p90 $slow_p90 max $slow_max ms (first third $first_med, last" \
              "third $last_med), RSS ${rss10:-?} -> $rss_end KB, send queue max" \
              "$sendq_max B, after the link is restored $recover_ms ms"
@@ -382,14 +475,12 @@ run_path() {
     s0=$(snap); sleep 10; s1=$(snap)
     r_hidden=$(rates "$s0" "$s1")
     suppressed=0
-    tail -n +$((sup_from + 1)) /var/log/xrdp.log | grep -q "wlup: output suppressed" &&
-        suppressed=1
-    echo "S4 hidden: Suppress Output received $suppressed, KB/s xrdp% sway% = $r_hidden"
+    suppress_seen "$sup_from" && suppressed=1
+    echo "S4 hidden: Suppress Output received $suppressed, KB/s xrdp% comp% = $r_hidden"
 
     # S5: resume, with a colour the client has not seen
     local fpid sh t0
-    fpid=$(swaymsg_ -t get_tree |
-        jq -r '.. | objects | select(.app_id? == "probe") | .pid')
+    fpid=$(probe_terminal_pid)
     sh=$(pgrep -P "$fpid" | head -1)
     # Written to the terminal's pty: /proc/<pid>/fd needs CAP_SYS_PTRACE
     printf '\033[H\033[2J\033]11;#0000ff\007' > /dev/"$(ps -o tty= -p "$sh" | tr -d ' ')"
@@ -409,13 +500,15 @@ run_path() {
     kill $CLIENT 2> /dev/null
     sleep 3
     tail -n +$log_from /var/log/xrdp.log > "$OUT/$name-xrdp.log"
-    if grep -q "frames go to the GFX H.264" "$OUT/$name-xrdp.log"; then
+    if grep -q "frames go to the GFX H.264\|x264_encoder_open" "$OUT/$name-xrdp.log"; then
         mode=h264
+    elif [ "$BP_SESSION" = xorg ]; then
+        mode=xorgxrdp
     else
         mode=paint_rect
     fi
 
-    # name mode idle busy slow hidden(KB/s xrdp% sway% each) fast_p50
+    # name mode idle busy slow hidden(KB/s xrdp% comp% each) fast_p50
     # slow_p50 slow_p90 slow_max first_med last_med rss10 rss_end sendq_max
     # recover suppressed resume
     echo "$name $mode $r_idle $r_busy ${r_slow:-- - -} $r_hidden $fast_p50" \
@@ -451,7 +544,7 @@ lt() { # lt <a> <b>: a < b, for decimals; n/a and - are false
 }
 {
 if [ $SHAPE = 1 ]; then
-    echo "slow link: $BP_RATE and $BP_DELAY each way (netem on lo)"
+    echo "session: $BP_SESSION; slow link: $BP_RATE and $BP_DELAY each way (netem on lo)"
 else
     echo "slow link: NOT AVAILABLE (tc netem failed, see tc.log)"
 fi
@@ -461,7 +554,7 @@ while read -r name mode i1 i2 i3 b1 b2 b3 s1 s2 s3 h1 h2 h3 rest; do
     printf '%-8s %-10s %8s %8s %8s %8s\n' "$name" "$mode" "$i1" "$b1" "$s1" "$h1"
 done < "$OUT/results.txt"
 echo
-printf '%-8s %8s %8s %8s  %s\n' path busy slow hidden "CPU % of the xrdp process (wlup) / sway"
+printf '%-8s %8s %8s %8s  %s\n' path busy slow hidden "CPU % of the xrdp process / compositor ($BP_SESSION)"
 while read -r name mode i1 i2 i3 b1 b2 b3 s1 s2 s3 h1 h2 h3 rest; do
     printf '%-8s %8s %8s %8s\n' "$name" "$b2/$b3" "$s2/$s3" "$h2/$h3"
 done < "$OUT/results.txt"
@@ -491,7 +584,7 @@ while read -r name mode i1 i2 i3 b1 b2 b3 s1 s2 s3 h1 h2 h3 fp sp50 sp90 smax fm
         check "$name: S3 slow link" skip
     fi
     if [ "$sup" = 1 ]; then
-        check "$name: S4 hidden client gets < 5 KB/s" 'lt "$h1" 5'
+        check "$name: S4 hidden client gets < 5 KB/s${SUPPRESS_NOTE:-}" 'lt "$h1" 5'
         check "$name: S4 hidden, wlup's process does < half its busy CPU work" \
             'lt "$h2" "$(awk -v b="$b2" "BEGIN { print b / 2 + 1 }")"'
     else
