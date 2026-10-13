@@ -108,6 +108,7 @@ free_buffer(struct wlup *v)
         wl_buffer_destroy(v->buffer);
         v->buffer = NULL;
     }
+    wlup_gfx_free_shadow(v);
     if (v->pixels != NULL)
     {
         munmap(v->pixels, v->pixels_size);
@@ -194,6 +195,14 @@ paint_region(struct wlup *v, int x, int y, int cx, int cy)
     }
     if (v->gfx_h264)
     {
+        /* wlroots: the buffer is ours between captures. During one, the
+         * copy is already up to date: every capture's damage is copied
+         * when it arrives, and none arrives while output is suppressed,
+         * as the capture stops then */
+        if (v->backend == WLUP_BACKEND_WLROOTS && v->frame == NULL)
+        {
+            wlup_gfx_copy_damage(v, x, y, right - x, bottom - y);
+        }
         wlup_gfx_add_damage(v, x, y, right - x, bottom - y);
         return 0;
     }
@@ -326,6 +335,9 @@ frame_ready(void *data, struct ext_image_copy_capture_frame_v1 *frame)
     ext_image_copy_capture_frame_v1_destroy(v->frame);
     v->frame = NULL;
     paint_damage(v);
+    /* With the H.264 encoder, the damage goes now if the last frame has
+     * been acknowledged */
+    wlup_gfx_poll(v);
     continue_capture(v);
 }
 

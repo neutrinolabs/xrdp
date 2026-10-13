@@ -114,6 +114,53 @@ wlup_gfx_add_damage(struct wlup *v, int x, int y, int cx, int cy)
 }
 
 /******************************************************************************/
+void
+wlup_gfx_copy_damage(struct wlup *v, int x, int y, int cx, int cy)
+{
+    size_t stride = (size_t)v->buffer_width * 4;
+    size_t size = stride * v->buffer_height;
+    int right;
+    int bottom;
+    char *src;
+    char *dst;
+
+    if (v->gfx_shadow_size != size)
+    {
+        /* A new buffer: the copy starts as all of it */
+        g_free(v->gfx_shadow);
+        v->gfx_shadow = (char *)g_malloc(size, 0);
+        v->gfx_shadow_size = v->gfx_shadow != NULL ? size : 0;
+        if (v->gfx_shadow != NULL)
+        {
+            g_memcpy(v->gfx_shadow, v->pixels, size);
+        }
+        return;
+    }
+    /* send_frame() widens the rectangles to even coordinates */
+    right = MIN((x + cx + 1) & ~1, v->buffer_width);
+    bottom = MIN((y + cy + 1) & ~1, v->buffer_height);
+    x &= ~1;
+    y &= ~1;
+    src = v->pixels + (size_t)y * stride + (size_t)x * 4;
+    dst = v->gfx_shadow + (size_t)y * stride + (size_t)x * 4;
+    for (; y < bottom; ++y)
+    {
+        g_memcpy(dst, src, (size_t)(right - x) * 4);
+        src += stride;
+        dst += stride;
+    }
+}
+
+/******************************************************************************/
+void
+wlup_gfx_free_shadow(struct wlup *v)
+{
+    g_free(v->gfx_shadow);
+    v->gfx_shadow = NULL;
+    v->gfx_shadow_size = 0;
+}
+
+/******************************************************************************/
 /* Converts a rectangle with even coordinates from 32-bit xRGB to NV12,
  * BT.709 full range: the format xrdp asks for with XRDP_nv12_709fr */
 static void
@@ -257,7 +304,9 @@ send_frame(struct wlup *v)
     }
     for (i = 0; i < num_c; ++i)
     {
-        xrgb_to_nv12_709fr((const uint8_t *)v->pixels, v->buffer_width * 4,
+        xrgb_to_nv12_709fr((const uint8_t *)(v->gfx_shadow != NULL ?
+                                             v->gfx_shadow : v->pixels),
+                           v->buffer_width * 4,
                            data, data + (size_t)width * height, width,
                            copy_rects[i * 4], copy_rects[i * 4 + 1],
                            copy_rects[i * 4 + 2], copy_rects[i * 4 + 3]);
