@@ -395,6 +395,39 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
 }
 
 /******************************************************************************/
+int
+auth_put_env(struct auth_info *auth_info, const char *name,
+             const char *value)
+{
+    int rv = 1;
+    unsigned int len = g_strlen(name) + 1 + g_strlen(value) + 1;
+    char *name_value = (char *)g_malloc(len, 0);
+
+    if (name_value == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "Out of memory setting %s", name);
+    }
+    else
+    {
+        g_snprintf(name_value, len, "%s=%s", name, value);
+        /* pam_putenv() copies the string */
+        int error = pam_putenv(auth_info->ph, name_value);
+        if (error != PAM_SUCCESS)
+        {
+            LOG(LOG_LEVEL_ERROR, "pam_putenv(%s) failed: %s", name,
+                pam_strerror(auth_info->ph, error));
+        }
+        else
+        {
+            rv = 0;
+        }
+        g_free(name_value);
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
 
 /* returns error */
 static int

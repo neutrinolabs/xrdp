@@ -62,6 +62,23 @@ auth_uds(const char *user, enum scp_login_status *errorcode);
 
 /**
  *
+ * @brief Adds a variable to the environment of a session to be started
+ * @param auth_info Auth handle created by auth_userpass
+ * @param name Variable name
+ * @param value Variable value
+ * @return 0 on success, 1 on failure
+ *
+ * Call before auth_start_session(). With PAM the variable goes into the
+ * PAM environment, so session modules can read it with pam_getenv() and
+ * the session inherits it via auth_set_env(). Otherwise it is set in the
+ * process environment.
+ */
+int
+auth_put_env(struct auth_info *auth_info, const char *name,
+             const char *value);
+
+/**
+ *
  * @brief Starts a session
  * @param auth_info Auth handle created by auth_userpass
  * @param display Display name

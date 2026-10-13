@@ -307,6 +307,32 @@ xrdp_mm_send_sys_login_request(struct xrdp_mm *self, const char *username,
 }
 
 /*****************************************************************************/
+/* The codec negotiated with the client, for the session manager. The
+   encoder exists by now: a GFX client has advertised its capabilities
+   before the login completes (gfx_delay_autologin covers autologin). */
+static const char *
+xrdp_mm_get_codec_name(struct xrdp_mm *self)
+{
+    if (self->encoder == NULL)
+    {
+        return "";
+    }
+    switch (self->wm->client_info->capture_code)
+    {
+        case CC_SUF_A2: /* FALLTHROUGH */
+        case CC_GFX_A2:
+            return "h264";
+        case CC_SUF_RFX: /* FALLTHROUGH */
+        case CC_GFX_PRO:
+            return "rfx";
+        case CC_SIMPLE:
+            return (self->wm->client_info->jpeg_codec_id != 0) ? "jpeg" : "";
+        default:
+            return "";
+    }
+}
+
+/*****************************************************************************/
 /* Send a create session request to sesman */
 static int
 xrdp_mm_create_session(struct xrdp_mm *self)
@@ -352,7 +378,8 @@ xrdp_mm_create_session(struct xrdp_mm *self)
                  xserverbpp,
                  self->wm->client_info->program,
                  self->wm->client_info->directory,
-                 self->wm->pro_layer->lis_layer->startup_params->instance_name);
+                 self->wm->pro_layer->lis_layer->startup_params->instance_name,
+                 xrdp_mm_get_codec_name(self));
     }
 
     return rv;
