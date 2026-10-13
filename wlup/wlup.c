@@ -72,13 +72,21 @@
 #include "log.h"
 #include "string_calls.h"
 #include "scancode.h"
+#include "trans.h"
 #include "xrdp_constants.h"
 #include "xrdp_scancode_defs.h"
+
+/* Output (bytes) xrdp may hold queued for the client while it waits for
+ * the network, from what wlup painted, before wlup stops capturing, as
+ * neutrinordp does. Frames that go through the H.264 encoder are paced
+ * by frame acks instead */
+#define MAX_QUEUED_MODULE_OUTPUT 50000
 
 /* Scroll distance for one wheel notch, matching libinput's default */
 #define WLUP_WHEEL_STEP 15.0
 
 static int start_capture(struct wlup *v);
+static void continue_capture(struct wlup *v);
 
 /******************************************************************************/
 static uint32_t
@@ -318,9 +326,7 @@ frame_ready(void *data, struct ext_image_copy_capture_frame_v1 *frame)
     ext_image_copy_capture_frame_v1_destroy(v->frame);
     v->frame = NULL;
     paint_damage(v);
-    /* Ask for the next frame straight away. The compositor holds it until
-     * the screen changes */
-    start_capture(v);
+    continue_capture(v);
 }
 
 /******************************************************************************/
@@ -381,6 +387,27 @@ start_capture(struct wlup *v)
     }
     ext_image_copy_capture_frame_v1_capture(v->frame);
     return 0;
+}
+
+/******************************************************************************/
+/* Asks for the next frame, which the compositor holds until the screen
+ * changes, unless nothing would use it yet:
+ * - output is suppressed. The compositor collects the damage meanwhile,
+ *   and the first capture after the resume carries it
+ * - xrdp still holds more than MAX_QUEUED_MODULE_OUTPUT of what wlup
+ *   painted. lib_mod_check_wait_objs() runs again as it is sent
+ * So a slow client or a hidden window also stops the copying, not just
+ * the sending */
+static void
+continue_capture(struct wlup *v)
+{
+    if (v->suppress_output ||
+            (v->si != NULL &&
+             v->si->source[XRDP_SOURCE_MOD] > MAX_QUEUED_MODULE_OUTPUT))
+    {
+        return;
+    }
+    start_capture(v);
 }
 
 /******************************************************************************/
@@ -1481,7 +1508,7 @@ lib_mod_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
 /******************************************************************************/
 /* return error */
 static int
-lib_mod_check_wait_objs(struct wlup *v)
+check_wait_objs(struct wlup *v)
 {
     struct pollfd pfd;
 
@@ -1537,7 +1564,35 @@ lib_mod_check_wait_objs(struct wlup *v)
         /* The compositor stopped the capture, e.g. the output went away */
         return 1;
     }
-    return wlup_gfx_poll(v);
+    /* With the H.264 encoder, sends the damage if the last frame has
+     * been acknowledged, or its ack has timed out */
+    if (wlup_gfx_poll(v) != 0)
+    {
+        return 1;
+    }
+    continue_capture(v);
+    return 0;
+}
+
+/******************************************************************************/
+/* return error */
+static int
+lib_mod_check_wait_objs(struct wlup *v)
+{
+    int rv;
+
+    /* What xrdp has to queue for the client from here on counts as
+     * wlup's, for continue_capture() */
+    if (v != NULL && v->si != NULL)
+    {
+        v->si->cur_source = XRDP_SOURCE_MOD;
+    }
+    rv = check_wait_objs(v);
+    if (v != NULL && v->si != NULL)
+    {
+        v->si->cur_source = XRDP_SOURCE_NONE;
+    }
+    return rv;
 }
 
 /******************************************************************************/
@@ -1546,6 +1601,7 @@ static int
 lib_mod_frame_ack(struct wlup *v, int flags, int frame_id)
 {
     wlup_gfx_frame_ack(v, frame_id);
+    continue_capture(v);
     return 0;
 }
 
@@ -1564,6 +1620,7 @@ lib_mod_suppress_output(struct wlup *v, int suppress,
         paint_region(v, 0, 0, v->buffer_width, v->buffer_height);
         v->server_end_update(v);
         wlup_gfx_poll(v);
+        continue_capture(v);
     }
     return 0;
 }
