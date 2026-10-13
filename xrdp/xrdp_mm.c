@@ -858,6 +858,11 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm *self, struct stream *s)
 
 #define GFX_PLANAR_BYTES (32 * 1024)
 
+/* Frames of the WM screen get ids from here up: modules number their own
+ * frames from 1, and the two kinds of frame acks must be told apart. At
+ * 25 frames a second this lasts more than a year */
+#define WM_GFX_FRAME_ID_BASE 0x40000000
+
 /******************************************************************************/
 int
 xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
@@ -880,6 +885,7 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
     int bheight;
     int cx;
     int cy;
+    int frame_id;
     int rv = 0;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_send_planar_bitmap:");
@@ -927,7 +933,8 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
     init_stream(comp_s, GFX_PLANAR_BYTES);
     make_stream(temp_s);
     init_stream(temp_s, GFX_PLANAR_BYTES);
-    if (xrdp_egfx_send_frame_start(self->egfx, 1, 0) != 0)
+    frame_id = WM_GFX_FRAME_ID_BASE + self->wm_gfx_frames_sent + 1;
+    if (xrdp_egfx_send_frame_start(self->egfx, frame_id, 0) != 0)
     {
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
             "xrdp_egfx_send_frame_start error");
@@ -989,11 +996,16 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
             }
         }
     }
-    if (xrdp_egfx_send_frame_end(self->egfx, 1) != 0)
+    if (xrdp_egfx_send_frame_end(self->egfx, frame_id) != 0)
     {
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_send_planar_bitmap: "
             "xrdp_egfx_send_frame_end error");
         rv = 1;
+    }
+    else
+    {
+        /* The client acknowledges it, see xrdp_mm_egfx_frame_ack() */
+        self->wm_gfx_frames_sent++;
     }
 cleanup:
     g_free(pixels);
@@ -1314,6 +1326,8 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
             "error %d monitorCount %d",
             error, self->wm->client_info->display_sizes.monitorCount);
         self->egfx_up = 1;
+        /* Frames the client had not acknowledged are gone */
+        self->wm_gfx_frames_acked = self->wm_gfx_frames_sent;
         xrdp_mm_egfx_create_surfaces(self);
         self->encoder = xrdp_encoder_create(self);
         xrdp_mm_egfx_invalidate_wm_screen(self);
@@ -1417,7 +1431,19 @@ xrdp_mm_egfx_frame_ack(void *user, uint32_t queue_depth, int frame_id,
             LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_frame_ack: "
                       "client request turn on frame acks");
             encoder->gfx_ack_off = 0;
+            /* Frames sent meanwhile will not be acknowledged */
+            self->wm_gfx_frames_acked = self->wm_gfx_frames_sent;
         }
+    }
+    if (frame_id >= WM_GFX_FRAME_ID_BASE)
+    {
+        /* A frame of the WM screen, see xrdp_mm_egfx_send_planar_bitmap().
+         * Acks can come out of order */
+        int frames = MIN(frame_id - WM_GFX_FRAME_ID_BASE,
+                         self->wm_gfx_frames_sent);
+
+        self->wm_gfx_frames_acked = MAX(self->wm_gfx_frames_acked, frames);
+        return 0;
     }
     LOG_DEVEL(LOG_LEVEL_TRACE, "xrdp_mm_egfx_frame_ack: "
               "incoming %d, client %d, server %d",
@@ -3616,6 +3642,32 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
 
 #define MIN_MS_BETWEEN_FRAMES 40
 #define MIN_MS_TO_WAIT_FOR_MORE_UPDATES 0
+
+/*****************************************************************************/
+/* Whether the dirty part of the WM screen may go to the client now. Not
+ * while output is queued on the client's transport, as it would only
+ * queue up behind it, and not while the client has more GFX frames to
+ * acknowledge than it allows, unless it has suspended frame acks. Either
+ * way the dirty region keeps growing meanwhile, and the client's socket
+ * wakes xrdp, as the queue drains or an ack arrives */
+static int
+xrdp_mm_wm_gfx_can_send(struct xrdp_mm *self)
+{
+    struct trans *client_trans = self->wm->session->trans;
+    struct xrdp_encoder *encoder = self->encoder;
+
+    if (client_trans != NULL && client_trans->wait_s != NULL)
+    {
+        return 0;
+    }
+    if (!self->egfx_up || encoder == NULL || encoder->gfx_ack_off)
+    {
+        return 1;
+    }
+    return self->wm_gfx_frames_sent - self->wm_gfx_frames_acked <
+           encoder->frames_in_flight;
+}
+
 /*****************************************************************************/
 int
 xrdp_mm_get_wait_objs(struct xrdp_mm *self,
@@ -3664,13 +3716,10 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
 
     if (self->wm->screen_dirty_region != NULL)
     {
-        /* While output is queued for the client, xrdp_mm_check_wait_objs()
-         * holds the dirty region back, and the client's socket wakes us
-         * as it drains: a timeout would only spin */
-        struct trans *client_trans = self->wm->session->trans;
-
+        /* While xrdp_mm_check_wait_objs() holds the dirty region back,
+         * the client's socket wakes us: a timeout would only spin */
         if (xrdp_region_not_empty(self->wm->screen_dirty_region) &&
-                (client_trans == NULL || client_trans->wait_s == NULL))
+                xrdp_mm_wm_gfx_can_send(self))
         {
             unsigned int now = g_get_elapsed_ms();
             unsigned int next_screen_draw_time =
@@ -4075,13 +4124,8 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 
     if (self->wm->screen_dirty_region != NULL)
     {
-        /* While the client's socket has output queued, the dirty region
-         * keeps growing instead: sending more would only queue up behind
-         * it. This runs again as the queue drains */
-        struct trans *client_trans = self->wm->session->trans;
-
         if (xrdp_region_not_empty(self->wm->screen_dirty_region) &&
-                (client_trans == NULL || client_trans->wait_s == NULL))
+                xrdp_mm_wm_gfx_can_send(self))
         {
             unsigned int now = g_get_elapsed_ms();
             int diff = now - self->wm->last_screen_draw_time;
