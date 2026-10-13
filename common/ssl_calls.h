@@ -93,6 +93,23 @@ int
 ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
                   char *mod, int mod_len, char *pri, int pri_len);
 
+/* DH key exchange for Apple ARD authentication */
+void *
+ssl_dh_create(int key_len, const unsigned char *generator,
+              const unsigned char *prime, const unsigned char *server_pubkey,
+              unsigned char *client_pubkey, unsigned char *shared_secret);
+void
+ssl_dh_delete(void *dh_info);
+
+/* AES encryption for Apple ARD authentication */
+void *
+ssl_aes128_ecb_encrypt_info_create(const unsigned char *key);
+void
+ssl_aes128_ecb_encrypt(void *aes_info, const unsigned char *in_data,
+                       unsigned char *out_data, int len);
+void
+ssl_aes128_info_delete(void *aes_info);
+
 /* xrdp_tls.c */
 struct ssl_tls *
 ssl_tls_create(struct trans *trans, const char *key, const char *cert);
