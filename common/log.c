@@ -967,11 +967,11 @@ log_message_with_location(const char *function_name,
 
     if (g_staticLogConfig == NULL)
     {
-        g_writeln("The log reference is NULL - log not initialized properly "
+        /*g_writeln("The log reference is NULL - log not initialized properly "
                   "when called from [%s(%s:%d)]",
                   (function_name != NULL ? function_name : "unknown_function"),
                   (file_name != NULL ? file_name : "unknown_file"),
-                  line_number);
+                  line_number);*/
         return LOG_ERROR_NO_CFG;
     }
 
@@ -1019,7 +1019,7 @@ internal_log_message(const enum logLevels lvl,
 
     if (g_staticLogConfig == NULL)
     {
-        g_writeln("The log reference is NULL - log not initialized properly");
+        //g_writeln("The log reference is NULL - log not initialized properly");
         return LOG_ERROR_NO_CFG;
     }
 
