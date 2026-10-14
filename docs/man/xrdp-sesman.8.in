@@ -70,7 +70,7 @@ Note that after a session is started, environment variables cannot be
 changed after a client disconnects from, and reconnects to a session.
 .br
 Some variables used in the internal implementation of \fBxrdp\fR are not
-documented below. These names or contents of these variables may change
+documented below. The names or contents of these variables may change
 between \fBxrdp\fR releases.
 .TP
 \fBXRDP_SESSION_CODEC\fR
@@ -79,7 +79,7 @@ Set before the session is opened, so PAM session modules can read it with
 \fBxrdp\fR negotiated with the client when the session was created:
 \fIh264\fR, \fIrfx\fR or \fIjpeg\fR. It is not set for other clients,
 or for sessions started with \fBxrdp\-sesrun\fR.
-A PAM module could, for example set \fBXRDP_XORG_CONFIG\fR to start the
+A PAM module could, for example, set \fBXRDP_XORG_CONFIG\fR to start the
 X server without a GPU for a client that only uses RemoteFX, which is
 encoded on the CPU.
 .SH "FILES"
