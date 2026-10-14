@@ -27,7 +27,7 @@ endif
 
 if XRDP_OPUS
 AM_CPPFLAGS += -DXRDP_OPUS
-CHANSRV_EXTRA_LIBS += -lopus
+CHANSRV_EXTRA_LIBS += -lopus -lm
 endif
 
 if XRDP_MP3LAME
