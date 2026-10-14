@@ -88,6 +88,7 @@ xrdp_mm_create(struct xrdp_wm *owner)
 
     self->sesman_display_fd = -1;
     self->sesman_chansrv_fd = -1;
+    self->sesman_aux_fd = -1;
     self->uid = -1; /* Never good to default UIDs to 0 */
 
     // Resize queue support. The resize queue is available early on,
@@ -205,6 +206,11 @@ close_sesman_file_descriptors(struct xrdp_mm *self)
     {
         g_file_close(self->sesman_chansrv_fd);
         self->sesman_chansrv_fd = -1;
+    }
+    if (self->sesman_aux_fd >= 0)
+    {
+        g_file_close(self->sesman_aux_fd);
+        self->sesman_aux_fd = -1;
     }
 }
 
@@ -356,6 +362,14 @@ xrdp_mm_create_session(struct xrdp_mm *self)
             type = SCP_SESSION_TYPE_XORG;
             break;
 
+        case WAYLAND_SESSION_CODE:
+            type = SCP_SESSION_TYPE_WAYLAND;
+            break;
+
+        case GNOME_SESSION_CODE:
+            type = SCP_SESSION_TYPE_GNOME;
+            break;
+
         default:
             xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
                             "Unrecognised session code %d", self->code);
@@ -408,6 +422,30 @@ xrdp_mm_get_session_fds(struct xrdp_mm *self)
 }
 
 /*****************************************************************************/
+/* In Wayland and GNOME sessions, the module provides the clipboard
+ * itself (chansrv's clipboard needs X11), and chansrv the other
+ * channels */
+int
+xrdp_mm_module_owns_channel(struct xrdp_mm *self, const char *name)
+{
+    return (self->code == WAYLAND_SESSION_CODE ||
+            self->code == GNOME_SESSION_CODE) &&
+           g_strcasecmp(name, CLIPRDR_SVC_CHANNEL_NAME) == 0;
+}
+
+/*****************************************************************************/
+int
+xrdp_mm_module_owns_channel_id(struct xrdp_mm *self, int chan_id)
+{
+    char name[CHANNEL_NAME_LEN + 1];
+    int flags;
+
+    return libxrdp_query_channel(self->wm->session, chan_id, name,
+                                 &flags) == 0 &&
+           xrdp_mm_module_owns_channel(self, name);
+}
+
+/*****************************************************************************/
 /* returns error
    send a list of channels to the channel handler */
 static int
@@ -439,7 +477,8 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm *self, struct trans *trans)
     for (chan_id = 0 ; chan_id < chan_count; ++chan_id)
     {
         if (libxrdp_query_channel(self->wm->session, chan_id, chan_name,
-                                  &chan_flags) == 0)
+                                  &chan_flags) == 0 &&
+                !xrdp_mm_module_owns_channel(self, chan_name))
         {
             out_uint8a(s, chan_name, CHANNEL_NAME_LEN + 1);
             out_uint16_le(s, chan_id);
@@ -2859,7 +2898,8 @@ xrdp_mm_process_connect_session_response(struct xrdp_mm *self)
 
     rv = scp_get_connect_session_response(self->sesman_trans, &status,
                                           &self->sesman_display_fd,
-                                          &self->sesman_chansrv_fd);
+                                          &self->sesman_chansrv_fd,
+                                          &self->sesman_aux_fd);
     if (rv != 0)
     {
         self->delete_sesman_trans = 1;
@@ -4999,7 +5039,7 @@ server_get_channel_id(struct xrdp_mod *mod, const char *name)
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->use_chansrv)
+    if (wm->mm->use_chansrv && !xrdp_mm_module_owns_channel(wm->mm, name))
     {
         return -1;
     }
@@ -5017,7 +5057,8 @@ server_send_to_channel(struct xrdp_mod *mod, int channel_id,
 
     wm = (struct xrdp_wm *)(mod->wm);
 
-    if (wm->mm->use_chansrv)
+    if (wm->mm->use_chansrv &&
+            !xrdp_mm_module_owns_channel_id(wm->mm, channel_id))
     {
         /* Modules should not be calling this if chansrv is running -
          * they can use server_chansrv_in_use() to avoid doing this */
@@ -5542,6 +5583,12 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             g_snprintf(text, sizeof(text), XRDP_X11RDP_STR,
                        self->uid, self->display);
         }
+        else if (self->code == WAYLAND_SESSION_CODE ||
+                 self->code == GNOME_SESSION_CODE)
+        {
+            // The module is passed connections to the session by
+            // sesman, so no port is needed
+        }
         else
         {
             LOG(LOG_LEVEL_ERROR,
@@ -5582,6 +5629,14 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             mod->mod_set_param(mod, name, value);
         }
 
+        /* A second connection to the session from sesman. The module
+         * makes its own copy, ours is closed with the others */
+        if (self->sesman_aux_fd >= 0)
+        {
+            g_snprintf(text, 255, "%d", self->sesman_aux_fd);
+            mod->mod_set_param(mod, "display_aux_fd", text);
+        }
+
         /* connect
         *
          * If we got an fd for the display server from sesman, this
@@ -5593,6 +5648,12 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             // Ownership of the file descriptor has been
             // passed to the module
             self->sesman_display_fd = -1;
+            // The module has its own copy of this one
+            if (self->sesman_aux_fd >= 0)
+            {
+                g_file_close(self->sesman_aux_fd);
+                self->sesman_aux_fd = -1;
+            }
 
             // If we've received a recent TS_SYNC_EVENT, pass it on to
             // the module so (e.g.) NumLock starts in the right state.
