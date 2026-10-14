@@ -291,6 +291,25 @@ send_frame(struct wlup *v)
     {
         return 0;
     }
+    {
+        const short *d = v->gfx_damage;
+        int x1 = d[0];
+        int y1 = d[1];
+        int x2 = d[0] + d[2];
+        int y2 = d[1] + d[3];
+        int i;
+
+        for (i = 1; i < v->gfx_num_damage; ++i)
+        {
+            x1 = MIN(x1, d[i * 4]);
+            y1 = MIN(y1, d[i * 4 + 1]);
+            x2 = MAX(x2, d[i * 4] + d[i * 4 + 2]);
+            y2 = MAX(y2, d[i * 4 + 1] + d[i * 4 + 3]);
+        }
+        LOG(LOG_LEVEL_DEBUG, "wlup: H.264 frame %d, %d damage rects%s in "
+            "%d,%d-%d,%d", v->gfx_frame_id + 1, num_d,
+            v->gfx_damage_overflow ? " (bounding box)" : "", x1, y1, x2, y2);
+    }
 
     /* NV12 of the whole surface; untouched pages are never allocated */
     data_bytes = width * height + width * ((height + 1) / 2);

@@ -367,6 +367,27 @@ on_process(void *data)
         pw_stream_queue_buffer(m->stream, pb);
     }
 
+    if (full)
+    {
+        LOG(LOG_LEVEL_DEBUG, "wlup: Mutter damage: all");
+    }
+    else if (num_rects > 0)
+    {
+        int x1 = rects[0];
+        int y1 = rects[1];
+        int x2 = rects[0] + rects[2];
+        int y2 = rects[1] + rects[3];
+
+        for (i = 1; i < num_rects; ++i)
+        {
+            x1 = MIN(x1, rects[i * 4]);
+            y1 = MIN(y1, rects[i * 4 + 1]);
+            x2 = MAX(x2, rects[i * 4] + rects[i * 4 + 2]);
+            y2 = MAX(y2, rects[i * 4 + 1] + rects[i * 4 + 3]);
+        }
+        LOG(LOG_LEVEL_DEBUG, "wlup: Mutter damage: %d rects in %d,%d-%d,%d",
+            num_rects, x1, y1, x2, y2);
+    }
     if (v->suppress_output || (!full && num_rects == 0))
     {
         return;
