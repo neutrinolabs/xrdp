@@ -31,14 +31,86 @@
 static struct wlup *v;
 static int frames_sent;
 
+/* The last frames sent: their commands and NV12 data */
+#define MAX_KEPT 4
+static struct kept_frame
+{
+    char cmd[512];
+    int cmd_bytes;
+    uint8_t data[4096];
+    int data_bytes;
+} kept[MAX_KEPT];
+
 /******************************************************************************/
 /* xrdp takes the frame's mapping and unmaps it once it is encoded */
 static int
 egfx_cmd(struct wlup *w, char *cmd, int cmd_bytes, char *data, int data_bytes)
 {
+    if (frames_sent < MAX_KEPT)
+    {
+        struct kept_frame *k = &kept[frames_sent];
+
+        k->cmd_bytes = MIN(cmd_bytes, (int)sizeof(k->cmd));
+        memcpy(k->cmd, cmd, k->cmd_bytes);
+        k->data_bytes = MIN(data_bytes, (int)sizeof(k->data));
+        memcpy(k->data, data, k->data_bytes);
+    }
     frames_sent++;
     munmap(data, data_bytes);
     return 0;
+}
+
+/* Little-endian fields of a kept command */
+static int
+u16_at(int frame, int offset)
+{
+    const uint8_t *p = (const uint8_t *)kept[frame].cmd + offset;
+
+    return p[0] | (p[1] << 8);
+}
+
+static unsigned int
+u32_at(int frame, int offset)
+{
+    return u16_at(frame, offset) | ((unsigned int)u16_at(frame, offset + 2) << 16);
+}
+
+/* Offsets in a frame: STARTFRAME is 16 bytes, then WIRETOSURFACE_1 */
+#define W2S_SURFACE 24
+#define W2S_FLAGS 29
+#define W2S_NUM_D 33
+#define W2S_RECT_D 35
+
+/* The monitor rect at the end of WIRETOSURFACE_1: left, top, cx, cy */
+static int
+w2s_monitor(int frame, int field)
+{
+    int num_d = u16_at(frame, W2S_NUM_D);
+    int num_c = u16_at(frame, W2S_RECT_D + num_d * 8);
+
+    return u16_at(frame, W2S_RECT_D + num_d * 8 + 2 + num_c * 8 + field * 2);
+}
+
+/* Two client monitors: left one 0..31, right one 32..63 (or from 40
+ * with a gap), both the full height of the 64x48 desktop */
+static struct xrdp_client_info two_monitors;
+
+static void
+use_two_monitors(int right_from)
+{
+    struct display_size_description *ds = &two_monitors.display_sizes;
+
+    memset(&two_monitors, 0, sizeof(two_monitors));
+    ds->monitorCount = 2;
+    ds->minfo_wm[0].left = 0;
+    ds->minfo_wm[0].top = 0;
+    ds->minfo_wm[0].right = 31;
+    ds->minfo_wm[0].bottom = 47;
+    ds->minfo_wm[1].left = right_from;
+    ds->minfo_wm[1].top = 0;
+    ds->minfo_wm[1].right = 63;
+    ds->minfo_wm[1].bottom = 47;
+    v->client_info = &two_monitors;
 }
 
 static void
@@ -49,6 +121,7 @@ setup(void)
     v->gfx_h264 = 1;
     v->server_egfx_cmd = egfx_cmd;
     frames_sent = 0;
+    memset(kept, 0, sizeof(kept));
 }
 
 static void
@@ -192,6 +265,97 @@ START_TEST(test_shadow_copy_widened)
 END_TEST
 
 /******************************************************************************/
+/* Damage across two monitors: a frame for each, on its own surface,
+ * with the damage relative to the monitor */
+START_TEST(test_frame_per_monitor)
+{
+    uint32_t *px = (uint32_t *)v->pixels;
+
+    use_two_monitors(32);
+    px[10 * 64 + 40] = 0xffffff; /* white at 40,10: 8,10 on the right one */
+    wlup_gfx_add_damage(v, 20, 4, 24, 10);
+    ck_assert_int_eq(wlup_gfx_poll(v), 0);
+    ck_assert_int_eq(frames_sent, 2);
+    ck_assert_int_eq(v->gfx_frame_id, 2);
+    ck_assert_int_eq(v->gfx_num_damage, 0);
+
+    /* left monitor: surface 0, x 20..31 */
+    ck_assert_int_eq(u32_at(0, 8), 1); /* frame id */
+    ck_assert_int_eq(u16_at(0, W2S_SURFACE), 0);
+    ck_assert_uint_eq(u32_at(0, W2S_FLAGS), 0);
+    ck_assert_int_eq(u16_at(0, W2S_NUM_D), 1);
+    ck_assert_int_eq(u16_at(0, W2S_RECT_D), 20);
+    ck_assert_int_eq(u16_at(0, W2S_RECT_D + 2), 4);
+    ck_assert_int_eq(u16_at(0, W2S_RECT_D + 4), 12);
+    ck_assert_int_eq(u16_at(0, W2S_RECT_D + 6), 10);
+    ck_assert_int_eq(w2s_monitor(0, 0), 0);
+    ck_assert_int_eq(w2s_monitor(0, 2), 32);
+    ck_assert_int_eq(w2s_monitor(0, 3), 48);
+    ck_assert_int_eq(kept[0].data_bytes, 32 * 48 * 3 / 2);
+
+    /* right monitor: surface 1, monitor 1 in the flags, x 0..11 */
+    ck_assert_int_eq(u32_at(1, 8), 2);
+    ck_assert_int_eq(u16_at(1, W2S_SURFACE), 1);
+    ck_assert_uint_eq(u32_at(1, W2S_FLAGS), 1u << 28);
+    ck_assert_int_eq(u16_at(1, W2S_RECT_D), 0);
+    ck_assert_int_eq(u16_at(1, W2S_RECT_D + 4), 12);
+    ck_assert_int_eq(w2s_monitor(1, 0), 32);
+    ck_assert_int_eq(w2s_monitor(1, 1), 0);
+    ck_assert_int_eq(w2s_monitor(1, 2), 32);
+
+    /* the white pixel is in the right monitor's picture, at 8,10 */
+    /* (BT.709 rounding makes white 254) */
+    ck_assert_int_ge(kept[1].data[10 * 32 + 8], 250);
+    ck_assert_int_eq(kept[1].data[10 * 32 + 9], 0);
+}
+END_TEST
+
+/******************************************************************************/
+/* The next update waits for the last frame of the one before */
+START_TEST(test_monitors_wait_for_last_ack)
+{
+    use_two_monitors(32);
+    wlup_gfx_add_damage(v, 0, 0, 64, 10);
+    wlup_gfx_poll(v);
+    ck_assert_int_eq(frames_sent, 2);
+
+    wlup_gfx_add_damage(v, 0, 20, 64, 10);
+    wlup_gfx_frame_ack(v, 1);
+    ck_assert_int_eq(frames_sent, 2);
+    wlup_gfx_frame_ack(v, 2);
+    ck_assert_int_eq(frames_sent, 4);
+}
+END_TEST
+
+/******************************************************************************/
+/* Damage on one monitor: only its surface gets a frame */
+START_TEST(test_only_damaged_monitor)
+{
+    use_two_monitors(32);
+    wlup_gfx_add_damage(v, 50, 30, 4, 4);
+    wlup_gfx_poll(v);
+    ck_assert_int_eq(frames_sent, 1);
+    ck_assert_int_eq(u16_at(0, W2S_SURFACE), 1);
+    ck_assert_int_eq(u16_at(0, W2S_RECT_D), 18);
+    ck_assert_int_eq(u16_at(0, W2S_RECT_D + 2), 30);
+}
+END_TEST
+
+/******************************************************************************/
+/* Damage between the monitors shows nowhere: no frame, and it does not
+ * stay behind to be tried again */
+START_TEST(test_damage_between_monitors)
+{
+    use_two_monitors(40);
+    wlup_gfx_add_damage(v, 33, 0, 6, 48);
+    ck_assert_int_eq(wlup_gfx_poll(v), 0);
+    ck_assert_int_eq(frames_sent, 0);
+    ck_assert_int_eq(v->gfx_frame_id, 0);
+    ck_assert_int_eq(v->gfx_num_damage, 0);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_wlup_gfx(void)
 {
@@ -207,6 +371,10 @@ make_suite_wlup_gfx(void)
     tcase_add_test(tc, test_ack_beyond_last_frame);
     tcase_add_test(tc, test_reset_forgets_frame);
     tcase_add_test(tc, test_shadow_copy_widened);
+    tcase_add_test(tc, test_frame_per_monitor);
+    tcase_add_test(tc, test_monitors_wait_for_last_ack);
+    tcase_add_test(tc, test_only_damaged_monitor);
+    tcase_add_test(tc, test_damage_between_monitors);
     suite_add_tcase(s, tc);
     return s;
 }

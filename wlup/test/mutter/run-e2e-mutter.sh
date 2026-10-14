@@ -281,7 +281,7 @@ check "h264: the 32 bpp client reaches the same session" \
     '[ -n "$SHELL_PID" ] && [ "$SHELL_PID" = "$SHELL_PID_H264" ]'
 check "h264: frames go to the GFX H.264 encoder" \
     'grep -q "wlup: frames go to the GFX H.264 encoder" /var/log/xrdp.log &&
-     grep -q "wlup: first H.264 frame sent" /var/log/xrdp.log'
+     grep -q "wlup: first H.264 frames sent" /var/log/xrdp.log'
 check "h264: every frame acknowledged in time (no ack timeout)" \
     '! grep -q "wlup: no ack for frame" /var/log/xrdp.log'
 check "h264: client shows more than a flat screen" \

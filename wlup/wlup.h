@@ -35,6 +35,7 @@
 /* Largest number of damage rectangles kept per frame. If a frame has
  * more, the bounding box of all of them is painted instead */
 #define WLUP_MAX_DAMAGE 64
+#define WLUP_MAX_MONITORS 16 /* GFX surfaces: 4 bits in xrdp's encoder */
 
 /* Where frames and input come from */
 enum wlup_backend
@@ -146,6 +147,8 @@ struct wlup
 
     /* frames to the GFX H.264 encoder (wlup_gfx.c) */
     int gfx_h264;            /* else server_paint_rect() */
+    /* xrdp's, for the client's monitors at the time of each frame */
+    const struct xrdp_client_info *client_info;
     int gfx_frame_id;        /* last frame sent */
     int gfx_frame_acked;     /* last frame xrdp acknowledged */
     unsigned int gfx_sent_time; /* g_get_elapsed_ms() at the last frame */

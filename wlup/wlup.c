@@ -371,6 +371,7 @@ lib_mod_set_param(struct wlup *v, const char *name, const char *value)
         const struct xrdp_client_info *ci =
             (const struct xrdp_client_info *)value;
         v->large_pointer_flags = ci->large_pointer_support_flags;
+        v->client_info = ci;
         wlup_gfx_init(v, ci);
     }
     return 0;
