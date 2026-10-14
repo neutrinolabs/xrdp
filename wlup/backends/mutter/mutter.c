@@ -56,7 +56,7 @@
 #include <libei.h>
 
 #include "wlup.h"
-#include "wlup_mutter.h"
+#include "mutter.h"
 #include "wlup_clip.h"
 #include "log.h"
 #include "string_calls.h"
@@ -1494,4 +1494,26 @@ wlup_mutter_check_wait_objs(struct wlup *v)
         wlup_resize_finished(v);
     }
     return m->closed;
+}
+
+/******************************************************************************/
+/* Frames arrive from PipeWire unasked: no frames_wanted() yet. The desktop
+ * image is wlup's own: no pixels_busy() */
+static const struct wlup_backend_ops mutter_ops =
+{
+    .name = "mutter",
+    .connect = wlup_mutter_connect,
+    .disconnect = wlup_mutter_disconnect,
+    .get_wait_objs = wlup_mutter_get_wait_objs,
+    .check_wait_objs = wlup_mutter_check_wait_objs,
+    .key = wlup_mutter_key,
+    .mouse = wlup_mutter_mouse,
+    .resize = wlup_mutter_resize
+};
+
+/******************************************************************************/
+const struct wlup_backend_ops *
+wlup_backend_mutter(void)
+{
+    return &mutter_ops;
 }

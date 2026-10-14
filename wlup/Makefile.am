@@ -1,9 +1,13 @@
+# Backends are in subdirectories, built into the same module
+AUTOMAKE_OPTIONS = subdir-objects
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/${sysconfsubdir}\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common \
+  -I$(srcdir) \
   -I$(builddir)
 
 AM_CFLAGS = $(WAYLAND_CLIENT_CFLAGS) $(XKBCOMMON_CFLAGS)
@@ -11,7 +15,7 @@ AM_CFLAGS = $(WAYLAND_CLIENT_CFLAGS) $(XKBCOMMON_CFLAGS)
 if XRDP_WLUP_MUTTER
 AM_CPPFLAGS += -DXRDP_WLUP_MUTTER
 AM_CFLAGS += $(WLUP_MUTTER_CFLAGS)
-MUTTER_SOURCES = wlup_mutter.c wlup_mutter.h
+MUTTER_SOURCES = backends/mutter/mutter.c backends/mutter/mutter.h
 MUTTER_LIBS = $(WLUP_MUTTER_LIBS)
 else
 MUTTER_SOURCES =
@@ -53,14 +57,16 @@ module_LTLIBRARIES = \
 libwlup_la_SOURCES = \
   wlup.c \
   wlup.h \
+  wlup_backend.h \
   wlup_clip.c \
   wlup_clip.h \
   wlup_gfx.c \
   wlup_gfx.h \
-  wlup_wlr_clip.c \
+  backends/wlroots/wlroots.c \
+  backends/wlroots/clip.c \
   $(MUTTER_SOURCES)
 
-EXTRA_libwlup_la_SOURCES = wlup_mutter.c wlup_mutter.h
+EXTRA_libwlup_la_SOURCES = backends/mutter/mutter.c backends/mutter/mutter.h
 
 nodist_libwlup_la_SOURCES = $(PROTOCOL_C_FILES) $(PROTOCOL_H_FILES)
 

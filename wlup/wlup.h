@@ -195,6 +195,7 @@ struct wlup
     char xkb_layout[64];
     char xkb_variant[64];
     enum wlup_backend backend;
+    const struct wlup_backend_ops *ops; /* the backend, set on connect */
     char dbus_address[256]; /* Mutter backend: session bus, if not default */
     void *mutter;           /* Mutter backend state */
     int pipewire_fd;        /* Mutter backend: PipeWire connection from
@@ -256,12 +257,6 @@ struct wlup
     struct xkb_state *xkb_state;   /* to compute the modifier state */
 };
 
-/* Paints a rectangle of the desktop copy to the RDP client */
-int
-wlup_paint_region(struct wlup *v, int x, int y, int cx, int cy);
-
-/* Tells xrdp the resize it is waiting for is complete */
-void
-wlup_resize_finished(struct wlup *v);
+#include "wlup_backend.h"
 
 #endif
