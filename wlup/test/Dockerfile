@@ -9,6 +9,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         libwayland-dev wayland-protocols libxkbcommon-dev \
         sway foot grim fonts-dejavu-core xkb-data openssl procps \
         freerdp3-x11 xvfb xdotool imagemagick wev jq xclip \
+        xserver-xorg-core xserver-xorg-video-dummy \
         libfuse3-dev fuse3 sox iproute2 check libcmocka-dev \
     && rm -rf /var/lib/apt/lists/*
 

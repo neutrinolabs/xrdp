@@ -215,6 +215,52 @@ xdotool key Return
 sleep 2
 import -window root "$OUT/client-7-h264-typed.png"
 
+# --- GFX H.264 on two monitors: a frame per monitor, each on its own GFX
+# surface. The client runs on an Xorg with two 800x600 monitors side by
+# side (xorg-2mon.conf), so the session is 1600x600, foot left on
+# monitor 0 and wev right on monitor 1. Clicking one of them moves the
+# focus, and both title bars change: each surface must show it --------------
+kill $CLIENT 2>/dev/null || true
+sleep 3
+Xorg :98 -noreset -extension RANDR -config "$SRC/wlup/test/xorg-2mon.conf" \
+    -logfile "$OUT/xorg-2mon.log" > /dev/null 2>&1 &
+XORG2=$!
+sleep 3
+DISPLAY=:98 ${XFREERDP:-xfreerdp3} /v:127.0.0.1 /u:tester /p:wlup-test-pw \
+    /cert:ignore /multimon /bpp:32 /gfx:AVC420 -grab-keyboard \
+    > "$OUT/client-2mon.log" 2>&1 &
+CLIENT=$!
+sleep 8
+SIZE_2MON=$(output_size)
+# title bar colour at x, 8: sway's focused one is #285577
+title_at() {
+    DISPLAY=:98 import -window root -crop "1x1+$1+8" -depth 8 txt:- 2> /dev/null |
+        grep -o '#[0-9A-F]\{6\}' | head -1
+}
+read -r WEV_X WEV_Y < <(centre wev)
+read -r FOOT_X FOOT_Y < <(centre foot)
+echo "two monitors: output $SIZE_2MON, foot at $FOOT_X,$FOOT_Y  wev at $WEV_X,$WEV_Y"
+DISPLAY=:98 xdotool mousemove "$WEV_X" "$WEV_Y" click 1
+sleep 2
+WEV_FOCUS_L=$(title_at 700)
+WEV_FOCUS_R=$(title_at 1500)
+DISPLAY=:98 import -window root "$OUT/client-8-2mon-wev.png"
+DISPLAY=:98 xdotool mousemove "$FOOT_X" "$FOOT_Y" click 1
+sleep 2
+FOOT_FOCUS_L=$(title_at 700)
+FOOT_FOCUS_R=$(title_at 1500)
+DISPLAY=:98 import -window root "$OUT/client-9-2mon-foot.png"
+echo "title bars, wev focused: $WEV_FOCUS_L $WEV_FOCUS_R;" \
+     "foot focused: $FOOT_FOCUS_L $FOOT_FOCUS_R"
+# focused <#RRGGBB>: near sway's focused title bar colour. H.264 is
+# lossy, so the client shows e.g. #275475 for #285577
+focused() {
+    [[ $1 =~ ^#[0-9A-Fa-f]{6}$ ]] || return 1
+    local r=$((16#${1:1:2})) g=$((16#${1:3:2})) b=$((16#${1:5:2}))
+    [ $(((r - 0x28) ** 2 + (g - 0x55) ** 2 + (b - 0x77) ** 2)) -le \
+        $((3 * 12 ** 2)) ]
+}
+
 echo "=== result ==="
 echo "sway output: connected $SIZE_CONNECTED, resized $SIZE_RESIZED"
 pass=0
@@ -261,6 +307,17 @@ check "h264: client shows more than a flat screen" \
     '[ "$(convert "$OUT/client-6-h264.png" -format %k info:)" -gt 50 ]'
 check "h264: input works" \
     '[ "$(cat /tmp/typed4.txt 2>/dev/null)" = h264-42 ]'
+check "h264 two monitors: the output spans both, 1600x600" \
+    '[ "$SIZE_2MON" = 1600x600 ]'
+check "h264 two monitors: xrdp maps a surface per monitor" \
+    'grep -q "map surface_id 1 left 800 top 0 width 800 height 600" /var/log/xrdp.log'
+check "h264 two monitors: wlup sends frames for both" \
+    'grep -q "wlup: first H.264 frames sent, 2 monitors" /var/log/xrdp.log ||
+     grep -q "wlup: H.264 frame [0-9]*, monitor 1 " /var/log/xrdp.log'
+check "h264 two monitors: right monitor shows wev focused" \
+    'focused "$WEV_FOCUS_R" && ! focused "$WEV_FOCUS_L"'
+check "h264 two monitors: left monitor shows foot focused" \
+    'focused "$FOOT_FOCUS_L" && ! focused "$FOOT_FOCUS_R"'
 
 # With systemd as PID 1 (wlup/test/systemd), sesman's PAM login goes
 # through pam_systemd: the session must be a real logind session
@@ -291,7 +348,7 @@ if [ "$(cat /proc/1/comm)" = systemd ]; then
 fi
 echo "passed $pass, failed $fail"
 
-kill $CLIENT 2>/dev/null || true
+kill $CLIENT $XORG2 2>/dev/null || true
 cp /var/log/xrdp.log "$OUT/xrdp-file.log" 2>/dev/null || true
 cp /var/log/xrdp-sesman.log "$OUT/sesman-file.log" 2>/dev/null || true
 chmod -R a+r "$OUT"
