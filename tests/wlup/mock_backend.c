@@ -113,6 +113,15 @@ mock_pixels_busy(struct wlup *v)
     return mock.pixels_busy;
 }
 
+static void
+mock_set_clipboard_text(struct wlup *v, const char *text, int len)
+{
+    len = MIN(len, (int)sizeof(mock.clip_text) - 1);
+    memcpy(mock.clip_text, text, len);
+    mock.clip_text[len] = '\0';
+    mock.clip_text_len = len;
+}
+
 const struct wlup_backend_ops wlup_backend_wlroots =
 {
     .name = "mock",
@@ -124,7 +133,8 @@ const struct wlup_backend_ops wlup_backend_wlroots =
     .mouse = mock_mouse,
     .resize = mock_resize,
     .frames_wanted = mock_frames_wanted,
-    .pixels_busy = mock_pixels_busy
+    .pixels_busy = mock_pixels_busy,
+    .set_clipboard_text = mock_set_clipboard_text
 };
 
 #if defined(XRDP_WLUP_MUTTER)
@@ -193,7 +203,34 @@ server_monitor_resize_done(struct wlup *v)
 static int
 server_get_channel_id(struct wlup *v, const char *name)
 {
-    return -1;
+    return server.channel_id;
+}
+
+static int
+server_send_to_channel(struct wlup *v, int channel_id, char *data,
+                       int data_len, int total_data_len, int flags)
+{
+    if (server.partial_len + data_len > (int)sizeof(server.partial))
+    {
+        return 1;
+    }
+    memcpy(server.partial + server.partial_len, data, data_len);
+    server.partial_len += data_len;
+    if (server.partial_len < total_data_len)
+    {
+        return 0;
+    }
+    memcpy(server.last_pdu, server.partial, server.partial_len);
+    server.last_pdu_len = server.partial_len;
+    if (server.pdus < 16)
+    {
+        /* msgType, little endian */
+        server.pdu_types[server.pdus] = (unsigned char)server.partial[0] |
+                                        (unsigned char)server.partial[1] << 8;
+    }
+    server.pdus++;
+    server.partial_len = 0;
+    return 0;
 }
 
 /******************************************************************************/
@@ -213,9 +250,11 @@ mock_module_create(int width, int height)
     v->server_msg = server_msg;
     v->server_monitor_resize_done = server_monitor_resize_done;
     v->server_get_channel_id = server_get_channel_id;
+    v->server_send_to_channel = server_send_to_channel;
     v->mod_start(v, width, height, 32);
     /* mod_start() painted the empty desktop */
     memset(&server, 0, sizeof(server));
+    server.channel_id = -1; /* no clipboard channel, unless a test sets one */
     return v;
 }
 

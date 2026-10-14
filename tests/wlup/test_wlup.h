@@ -43,6 +43,8 @@ struct mock_backend
     int resizes;
     int last_resize_width;
     int last_resize_height;
+    char clip_text[256];  /* last set_clipboard_text(), NUL-terminated */
+    int clip_text_len;
 };
 
 extern struct mock_backend mock;
@@ -58,6 +60,14 @@ struct mock_server
     int last_paint_cx;
     int last_paint_cy;
     int resize_dones;
+    int channel_id;       /* server_get_channel_id() returns this */
+    /* PDUs sent on a channel, after reassembling chunks */
+    int pdus;
+    int pdu_types[16];    /* CLIPRDR msgType of each */
+    char last_pdu[1024];
+    int last_pdu_len;
+    char partial[1024];   /* chunks of the PDU being sent */
+    int partial_len;
 };
 
 extern struct mock_server server;
@@ -72,5 +82,7 @@ Suite *
 make_suite_wlup_core(void);
 Suite *
 make_suite_wlup_gfx(void);
+Suite *
+make_suite_wlup_clip(void);
 
 #endif

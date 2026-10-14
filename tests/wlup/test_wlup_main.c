@@ -41,6 +41,7 @@ int main(void)
 
     sr = srunner_create(make_suite_wlup_core());
     srunner_add_suite(sr, make_suite_wlup_gfx());
+    srunner_add_suite(sr, make_suite_wlup_clip());
     srunner_set_tap(sr, "-");
     srunner_run_all(sr, CK_ENV);
     number_failed = srunner_ntests_failed(sr);
