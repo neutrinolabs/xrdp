@@ -79,6 +79,9 @@ struct wlup_backend_ops
     int (*pixels_busy)(struct wlup *v);
     /* Sends what is buffered for the compositor after input */
     void (*flush)(struct wlup *v);
+    /* The RDP client's clipboard now holds this UTF-8 text: make the
+     * session's clipboard offer it */
+    void (*set_clipboard_text)(struct wlup *v, const char *text, int len);
 };
 
 /* The backends that are built, NULL for one that is not */

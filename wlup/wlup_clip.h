@@ -55,30 +55,4 @@ wlup_clip_read_fd(int fd, int *len);
 void
 wlup_clip_session_text(struct wlup *v, const char *text, int len);
 
-/* Implemented by the backends: the RDP client's clipboard now holds
- * this UTF-8 text, make the session's clipboard offer it */
-void
-wlup_wlr_set_clipboard_text(struct wlup *v, const char *text, int len);
-void
-wlup_mutter_set_clipboard_text(struct wlup *v, const char *text, int len);
-
-/* wlroots backend (wlup_wlr_clip.c) */
-struct wl_registry;
-
-/* Binds ext-data-control-v1 if interface is it. return 1 if bound */
-int
-wlup_wlr_clip_bind(struct wlup *v, struct wl_registry *registry,
-                   unsigned int name, const char *interface);
-
-/* Starts following the selection, once the seat is known */
-void
-wlup_wlr_clip_start(struct wlup *v);
-
-/* Reads a new session selection; call after dispatching events */
-void
-wlup_wlr_clip_process(struct wlup *v);
-
-void
-wlup_wlr_clip_destroy(struct wlup *v);
-
 #endif

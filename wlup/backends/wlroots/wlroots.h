@@ -89,4 +89,29 @@ struct wlroots
 
 #define WLR(v) ((struct wlroots *)(v)->backend_data)
 
+struct wlup;
+
+/* Session clipboard (clip.c), through ext-data-control-v1 -------------- */
+
+/* Binds ext-data-control-v1 if interface is it. return 1 if bound */
+int
+wlup_wlr_clip_bind(struct wlup *v, struct wl_registry *registry,
+                   unsigned int name, const char *interface);
+
+/* Starts following the selection, once the seat is known */
+void
+wlup_wlr_clip_start(struct wlup *v);
+
+/* Reads a new session selection; call after dispatching events */
+void
+wlup_wlr_clip_process(struct wlup *v);
+
+void
+wlup_wlr_clip_destroy(struct wlup *v);
+
+/* The RDP client's clipboard now holds this UTF-8 text: make the
+ * session's clipboard offer it */
+void
+wlup_wlr_set_clipboard_text(struct wlup *v, const char *text, int len);
+
 #endif

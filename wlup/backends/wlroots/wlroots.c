@@ -1339,5 +1339,6 @@ const struct wlup_backend_ops wlup_backend_wlroots =
     .resize = wlroots_resize,
     .frames_wanted = continue_capture,
     .pixels_busy = wlroots_pixels_busy,
-    .flush = wlroots_flush
+    .flush = wlroots_flush,
+    .set_clipboard_text = wlup_wlr_set_clipboard_text
 };

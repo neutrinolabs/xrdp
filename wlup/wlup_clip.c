@@ -323,18 +323,10 @@ handle_format_data_response(struct wlup *v, struct stream *s)
     free_stream(c->text_s);
     c->text_s = text_s;
     text_s = NULL;
-    switch (v->backend)
+    if (v->ops != NULL && v->ops->set_clipboard_text != NULL)
     {
-        case WLUP_BACKEND_MUTTER:
-#if defined(XRDP_WLUP_MUTTER)
-            wlup_mutter_set_clipboard_text(v, c->text_s->data,
-                                           (int)(c->text_s->end - c->text_s->data));
-#endif
-            break;
-        default:
-            wlup_wlr_set_clipboard_text(v, c->text_s->data,
-                                        (int)(c->text_s->end - c->text_s->data));
-            break;
+        v->ops->set_clipboard_text(v, c->text_s->data,
+                                   (int)(c->text_s->end - c->text_s->data));
     }
     return 0;
 }

@@ -1508,7 +1508,8 @@ static const struct wlup_backend_ops mutter_ops =
     .check_wait_objs = wlup_mutter_check_wait_objs,
     .key = wlup_mutter_key,
     .mouse = wlup_mutter_mouse,
-    .resize = wlup_mutter_resize
+    .resize = wlup_mutter_resize,
+    .set_clipboard_text = wlup_mutter_set_clipboard_text
 };
 
 /******************************************************************************/

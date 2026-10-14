@@ -60,4 +60,9 @@ wlup_mutter_key(struct wlup *v, int evdev_code, int down);
 void
 wlup_mutter_mouse(struct wlup *v, int msg, int x, int y);
 
+/* The RDP client's clipboard now holds this UTF-8 text: make the
+ * session's clipboard offer it */
+void
+wlup_mutter_set_clipboard_text(struct wlup *v, const char *text, int len);
+
 #endif
