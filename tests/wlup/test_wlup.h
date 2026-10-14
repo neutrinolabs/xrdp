@@ -70,5 +70,7 @@ mock_module_destroy(struct wlup *v);
 
 Suite *
 make_suite_wlup_core(void);
+Suite *
+make_suite_wlup_gfx(void);
 
 #endif

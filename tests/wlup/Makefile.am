@@ -21,6 +21,7 @@ test_wlup_SOURCES = \
     test_wlup.h \
     test_wlup_main.c \
     test_wlup_core.c \
+    test_wlup_gfx.c \
     mock_backend.c
 
 test_wlup_CFLAGS = \
