@@ -1227,7 +1227,7 @@ wlroots_check_wait_objs(struct wlup *v)
     struct wlroots *w = WLR(v);
     struct pollfd pfd;
 
-    if (v == NULL || w->display == NULL)
+    if (w == NULL || w->display == NULL)
     {
         return 0;
     }
