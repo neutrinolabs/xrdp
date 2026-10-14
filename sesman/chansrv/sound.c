@@ -115,7 +115,7 @@ static char g_buffer[MAX_BBUF_SIZE];
 static int g_buf_index = 0;
 static unsigned int g_sent_time[256];
 
-static int g_bbuf_size = 1024 * 8; /* may change later */
+static int g_bbuf_size = 1024 * 8; /* set by sound_set_bbuf_size() */
 
 static struct list *g_ack_time_diff = 0;
 
@@ -411,6 +411,33 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
 }
 
 /*****************************************************************************/
+/* bytes of audio per wave PDU, for the format the client chose: the
+   encoders need whole frames of their own size, and a chunk cut at
+   another size would be padded with silence */
+static void
+sound_set_bbuf_size(void)
+{
+    if (g_client_does_fdk_aac)
+    {
+        g_bbuf_size = 4096;
+    }
+    else if (g_client_does_opus)
+    {
+        g_bbuf_size = OPUS_IN_FRAMES * 4;
+    }
+    else if (g_client_does_mp3lame)
+    {
+        g_bbuf_size = 11520;
+    }
+    else
+    {
+        g_bbuf_size = 1024 * 8;
+    }
+    /* drop what is buffered for a previous client */
+    g_buf_index = 0;
+}
+
+/*****************************************************************************/
 /*
     0000 07 02 26 00 03 00 80 00 ff ff ff ff 00 00 00 00 ..&.............
     0010 00 00 01 00 00 02 00 00 01 00 02 00 44 ac 00 00 ............D...
@@ -456,6 +483,7 @@ sound_process_output_formats(struct stream *s, int size)
                                         nAvgBytesPerSec, nBlockAlign, wBitsPerSample,
                                         cbSize, data);
         }
+        sound_set_bbuf_size();
         sound_send_training();
     }
 
@@ -974,17 +1002,14 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
 {
     if (g_client_does_fdk_aac)
     {
-        g_bbuf_size = 4096;
         return sound_wave_compress_fdk_aac(data, data_bytes, format_index);
     }
     else if (g_client_does_opus)
     {
-        g_bbuf_size = OPUS_IN_FRAMES * 4;
         return sound_wave_compress_opus(data, data_bytes, format_index);
     }
     else if (g_client_does_mp3lame)
     {
-        g_bbuf_size = 11520;
         return sound_wave_compress_mp3lame(data, data_bytes, format_index);
     }
     return data_bytes;
