@@ -61,6 +61,9 @@ static HANDLE_AACENCODER g_fdk_aac_encoder = 0;
 #define OPUS_RS_TAPS 32 /* filter taps per output frame */
 #define OPUS_IN_FRAMES 2646
 #define OPUS_OUT_FRAMES 2880
+/* input frames the encoder (6.5 ms look ahead) and the resampler
+   (16 frames) still hold when a stream ends */
+#define OPUS_TAIL_FRAMES 320
 
 #if defined(XRDP_OPUS)
 #include <math.h>
@@ -113,6 +116,8 @@ static struct stream *g_stream_incoming_packet = NULL;
 #define MAX_BBUF_SIZE (1024 * 16)
 static char g_buffer[MAX_BBUF_SIZE];
 static int g_buf_index = 0;
+/* audio went to g_buffer since the last close */
+static int g_buf_unflushed = 0;
 static unsigned int g_sent_time[256];
 
 static int g_bbuf_size = 1024 * 8; /* set by sound_set_bbuf_size() */
@@ -435,6 +440,7 @@ sound_set_bbuf_size(void)
     }
     /* drop what is buffered for a previous client */
     g_buf_index = 0;
+    g_buf_unflushed = 0;
 }
 
 /*****************************************************************************/
@@ -1104,6 +1110,10 @@ sound_send_wave_data(char *data, int data_bytes)
     }
     data_index = 0;
     error = 0;
+    if (data_bytes > 0)
+    {
+        g_buf_unflushed = 1;
+    }
     while (data_bytes > 0)
     {
         space_left = g_bbuf_size - g_buf_index;
@@ -1138,6 +1148,47 @@ sound_send_wave_data(char *data, int data_bytes)
     }
 
     return error;
+}
+
+/*****************************************************************************/
+/* the stream ends: send the audio that is still buffered, the last chunk
+   is rarely full */
+static int
+sound_send_wave_data_flush(void)
+{
+    int rv;
+#if defined(XRDP_OPUS)
+    int space_left;
+#endif
+
+    if (!g_buf_unflushed)
+    {
+        return 0;
+    }
+    g_buf_unflushed = 0;
+#if defined(XRDP_OPUS)
+    /* the silence the encoder adds after the end of the sound */
+    space_left = (g_buf_index > 0) ? g_bbuf_size - g_buf_index : 0;
+#endif
+    rv = 0;
+    if (g_buf_index > 0)
+    {
+        /* fill the chunk up with silence: the encoders size their output
+           by the chunk they get, and only take whole chunks */
+        g_memset(g_buffer + g_buf_index, 0, g_bbuf_size - g_buf_index);
+        g_buf_index = 0;
+        rv = sound_send_wave_data_chunk(g_buffer, g_bbuf_size);
+    }
+#if defined(XRDP_OPUS)
+    if (rv == 0 && g_client_does_opus && space_left < OPUS_TAIL_FRAMES * 4)
+    {
+        /* not enough silence to push the end out of the encoder: send a
+           chunk of silence */
+        g_memset(g_buffer, 0, g_bbuf_size);
+        rv = sound_send_wave_data_chunk(g_buffer, g_bbuf_size);
+    }
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1251,6 +1302,7 @@ process_pcm_message(int id, int size, struct stream *s)
             return sound_send_wave_data(s->p, size);
             break;
         case 1:
+            sound_send_wave_data_flush();
             if ((g_client_does_fdk_aac || g_client_does_mp3lame) && sending_silence == 0)
             {
                 /* workaround for mstsc.exe. send silence data before send close */
