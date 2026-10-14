@@ -302,7 +302,7 @@ static void
 on_process(void *data)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     struct pw_buffer *pb;
     short rects[MAX_DAMAGE * 4];
     int num_rects = 0;
@@ -419,7 +419,7 @@ static void
 on_param_changed(void *data, uint32_t id, const struct spa_pod *param)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     struct spa_video_info_raw info;
     uint8_t pod_buf[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(pod_buf, sizeof(pod_buf));
@@ -552,7 +552,7 @@ build_enum_format(struct spa_pod_builder *b, int width, int height)
 static int
 connect_stream(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     uint8_t pod_buf[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(pod_buf, sizeof(pod_buf));
     const struct spa_pod *params[1];
@@ -613,7 +613,7 @@ connect_stream(struct wlup *v)
 int
 wlup_mutter_resize(struct wlup *v, int width, int height)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     uint8_t pod_buf[1024];
     struct spa_pod_builder b = SPA_POD_BUILDER_INIT(pod_buf, sizeof(pod_buf));
     const struct spa_pod *params[1];
@@ -642,7 +642,7 @@ wlup_mutter_resize(struct wlup *v, int width, int height)
 static void
 process_ei_events(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     struct ei_event *e;
 
     ei_dispatch(m->ei);
@@ -722,7 +722,7 @@ process_ei_events(struct wlup *v)
 void
 wlup_mutter_key(struct wlup *v, int evdev_code, int down)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
 
     if (m == NULL || m->keyboard == NULL)
     {
@@ -737,7 +737,7 @@ wlup_mutter_key(struct wlup *v, int evdev_code, int down)
 void
 wlup_mutter_mouse(struct wlup *v, int msg, int x, int y)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     struct ei_device *dev;
     struct ei_region *region;
     uint32_t button = 0;
@@ -832,7 +832,7 @@ static int
 on_stream_added(sd_bus_message *msg, void *data, sd_bus_error *err)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
 
     if (sd_bus_message_read(msg, "u", &m->node_id) >= 0)
     {
@@ -847,7 +847,7 @@ static int
 on_closed(sd_bus_message *msg, void *data, sd_bus_error *err)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
 
     LOG(LOG_LEVEL_INFO, "wlup/mutter: remote desktop session closed");
     m->closed = 1;
@@ -889,7 +889,7 @@ call_for_path(struct wlup_mutter *m, const char *dest, const char *path,
 static int
 setup_sessions(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     sd_bus_error err = SD_BUS_ERROR_NULL;
     sd_bus_message *msg = NULL;
     sd_bus_message *reply = NULL;
@@ -1009,7 +1009,7 @@ static int
 on_selection_owner_changed(sd_bus_message *msg, void *data, sd_bus_error *err)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     const char *key;
     const char *mime;
     const char *contents;
@@ -1082,7 +1082,7 @@ static int
 on_selection_transfer(sd_bus_message *msg, void *data, sd_bus_error *err)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     const char *mime;
     uint32_t serial;
 
@@ -1134,7 +1134,7 @@ call_for_fd(struct wlup_mutter *m, const char *method, const char *types,
 static void
 process_clipboard(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     int fd;
     int i;
     int done;
@@ -1186,7 +1186,7 @@ process_clipboard(struct wlup *v)
 void
 wlup_mutter_set_clipboard_text(struct wlup *v, const char *text, int len)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     sd_bus_error err = SD_BUS_ERROR_NULL;
 
     if (m == NULL || !m->clipboard_enabled)
@@ -1214,7 +1214,7 @@ wlup_mutter_set_clipboard_text(struct wlup *v, const char *text, int len)
 static void
 enable_clipboard(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
     sd_bus_error err = SD_BUS_ERROR_NULL;
 
     sd_bus_match_signal(m->bus, &m->owner_changed_slot, RD_NAME,
@@ -1290,7 +1290,7 @@ wlup_mutter_connect(struct wlup *v, int bus_fd)
     int r;
 
     m = (struct wlup_mutter *)g_malloc(sizeof(struct wlup_mutter), 1);
-    v->mutter = m;
+    v->backend_data = m;
 
     if (bus_fd >= 0)
     {
@@ -1370,7 +1370,7 @@ wlup_mutter_connect(struct wlup *v, int bus_fd)
 void
 wlup_mutter_disconnect(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
 
     if (m == NULL)
     {
@@ -1422,7 +1422,7 @@ wlup_mutter_disconnect(struct wlup *v)
     g_free(m->sc_session_path);
     g_free(m->stream_path);
     g_free(m);
-    v->mutter = NULL;
+    v->backend_data = NULL;
 }
 
 /******************************************************************************/
@@ -1430,7 +1430,7 @@ void
 wlup_mutter_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
                           tbus *write_objs, int *wcount, int *timeout)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
 
     if (m == NULL)
     {
@@ -1463,7 +1463,7 @@ wlup_mutter_get_wait_objs(struct wlup *v, tbus *read_objs, int *rcount,
 int
 wlup_mutter_check_wait_objs(struct wlup *v)
 {
-    struct wlup_mutter *m = (struct wlup_mutter *)v->mutter;
+    struct wlup_mutter *m = (struct wlup_mutter *)v->backend_data;
 
     if (m == NULL)
     {

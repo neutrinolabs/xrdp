@@ -297,6 +297,9 @@ lib_mod_connect(struct wlup *v, int fd)
     }
     if (v->ops->connect(v, fd) != 0)
     {
+        /* Releases what was made; no other op runs on a failed backend */
+        v->ops->disconnect(v);
+        v->ops = NULL;
         return 1;
     }
     /* Text clipboard: the RDP channel */

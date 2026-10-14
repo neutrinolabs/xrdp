@@ -43,6 +43,7 @@
 
 #include "wlup.h"
 #include "wlup_clip.h"
+#include "wlroots.h"
 #include "log.h"
 #include "os_calls.h"
 
@@ -125,7 +126,8 @@ device_selection(void *data, struct ext_data_control_device_v1 *device,
                  struct ext_data_control_offer_v1 *offer)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
 
     destroy_offer(c->pending);
     c->pending = offer;
@@ -136,7 +138,8 @@ static void
 device_finished(void *data, struct ext_data_control_device_v1 *device)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
 
     LOG(LOG_LEVEL_WARNING, "wlup: clipboard data device finished");
     ext_data_control_device_v1_destroy(c->device);
@@ -166,7 +169,8 @@ source_send(void *data, struct ext_data_control_source_v1 *source,
             const char *mime_type, int32_t fd)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
     int done = 0;
     int n;
 
@@ -193,7 +197,8 @@ static void
 source_cancelled(void *data, struct ext_data_control_source_v1 *source)
 {
     struct wlup *v = (struct wlup *)data;
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
 
     /* Something else in the session took the selection */
     ext_data_control_source_v1_destroy(source);
@@ -213,7 +218,8 @@ static const struct ext_data_control_source_v1_listener source_listener =
 void
 wlup_wlr_set_clipboard_text(struct wlup *v, const char *text, int len)
 {
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
     int i;
 
     if (c == NULL || c->device == NULL)
@@ -236,7 +242,7 @@ wlup_wlr_set_clipboard_text(struct wlup *v, const char *text, int len)
         ext_data_control_source_v1_offer(c->source, g_text_mime_types[i]);
     }
     ext_data_control_device_v1_set_selection(c->device, c->source);
-    wl_display_flush(v->display);
+    wl_display_flush(w->display);
 }
 
 /******************************************************************************/
@@ -245,6 +251,7 @@ static char *
 read_offer(struct wlup *v, struct ext_data_control_offer_v1 *offer,
            const char *mime_type, int *len)
 {
+    struct wlroots *w = WLR(v);
     int fds[2];
 
     *len = 0;
@@ -254,7 +261,7 @@ read_offer(struct wlup *v, struct ext_data_control_offer_v1 *offer,
     }
     ext_data_control_offer_v1_receive(offer, mime_type, fds[1]);
     close(fds[1]);
-    wl_display_flush(v->display);
+    wl_display_flush(w->display);
     return wlup_clip_read_fd(fds[0], len);
 }
 
@@ -262,7 +269,8 @@ read_offer(struct wlup *v, struct ext_data_control_offer_v1 *offer,
 void
 wlup_wlr_clip_process(struct wlup *v)
 {
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
     struct ext_data_control_offer_v1 *offer;
     struct offer_info *info;
     char *text;
@@ -294,6 +302,7 @@ int
 wlup_wlr_clip_bind(struct wlup *v, struct wl_registry *registry,
                    unsigned int name, const char *interface)
 {
+    struct wlroots *w = WLR(v);
     struct wlup_wlr_clip *c;
 
     if (strcmp(interface, ext_data_control_manager_v1_interface.name) != 0)
@@ -303,7 +312,7 @@ wlup_wlr_clip_bind(struct wlup *v, struct wl_registry *registry,
     c = (struct wlup_wlr_clip *)g_malloc(sizeof(*c), 1);
     c->manager = wl_registry_bind(registry, name,
                                   &ext_data_control_manager_v1_interface, 1);
-    v->wlr_clip = c;
+    w->wlr_clip = c;
     return 1;
 }
 
@@ -311,15 +320,16 @@ wlup_wlr_clip_bind(struct wlup *v, struct wl_registry *registry,
 void
 wlup_wlr_clip_start(struct wlup *v)
 {
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
 
-    if (c == NULL || v->seat == NULL)
+    if (c == NULL || w->seat == NULL)
     {
         LOG(LOG_LEVEL_INFO, "wlup: no ext-data-control-v1, no clipboard");
         return;
     }
     c->device = ext_data_control_manager_v1_get_data_device(c->manager,
-                v->seat);
+                w->seat);
     ext_data_control_device_v1_add_listener(c->device, &device_listener, v);
 }
 
@@ -327,7 +337,8 @@ wlup_wlr_clip_start(struct wlup *v)
 void
 wlup_wlr_clip_destroy(struct wlup *v)
 {
-    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)v->wlr_clip;
+    struct wlroots *w = WLR(v);
+    struct wlup_wlr_clip *c = (struct wlup_wlr_clip *)w->wlr_clip;
 
     if (c == NULL)
     {
@@ -348,5 +359,5 @@ wlup_wlr_clip_destroy(struct wlup *v)
     }
     g_free(c->text);
     g_free(c);
-    v->wlr_clip = NULL;
+    w->wlr_clip = NULL;
 }

@@ -15,11 +15,8 @@
  *
  * wlup: experimental backend module connecting xrdp to a Wayland compositor
  *
- * The module is a plain Wayland client of the compositor:
- *   frames : ext-image-copy-capture-v1 into a wl_shm buffer
- *   input  : zwlr_virtual_pointer_v1 and zwp_virtual_keyboard_v1
- * This is the set of protocols offered by wlroots-based compositors
- * (sway, labwc, ...).
+ * The state of the module core. Where frames and input come from is a
+ * backend (wlup_backend.h), which keeps its own state in backend_data.
  */
 
 #ifndef WLUP_H
@@ -39,9 +36,6 @@
  * more, the bounding box of all of them is painted instead */
 #define WLUP_MAX_DAMAGE 64
 
-/* Largest number of compositor outputs (heads) tracked for resizing */
-#define WLUP_MAX_HEADS 8
-
 /* Where frames and input come from */
 enum wlup_backend
 {
@@ -49,33 +43,6 @@ enum wlup_backend
     WLUP_BACKEND_MUTTER   /* GNOME: Mutter D-Bus APIs, PipeWire, libei */
 };
 
-struct wl_display;
-struct wl_registry;
-struct wl_shm;
-struct wl_seat;
-struct wl_output;
-struct wl_buffer;
-struct ext_output_image_capture_source_manager_v1;
-struct ext_image_copy_capture_manager_v1;
-struct ext_image_capture_source_v1;
-struct ext_image_copy_capture_session_v1;
-struct ext_image_copy_capture_frame_v1;
-struct zwlr_virtual_pointer_manager_v1;
-struct zwlr_virtual_pointer_v1;
-struct zwp_virtual_keyboard_manager_v1;
-struct zwp_virtual_keyboard_v1;
-struct xkb_keymap;
-struct zwlr_output_manager_v1;
-struct zwlr_output_head_v1;
-
-/* An output as seen through wlr-output-management */
-struct wlup_head
-{
-    struct zwlr_output_head_v1 *head;
-    char name[64];
-    int enabled;
-};
-struct xkb_state;
 
 struct wlup
 {
@@ -185,8 +152,8 @@ struct wlup
     short gfx_damage[WLUP_MAX_DAMAGE * 4]; /* for the next frame */
     int gfx_num_damage;
     int gfx_damage_overflow; /* gfx_damage[0..3] is a bounding box */
-    /* wlroots: the frames are made from this copy of the capture buffer,
-     * as the compositor may write to the buffer during a capture */
+    /* frames are made from this copy of the desktop image, if the
+     * compositor may write to the image (the backend's pixels_busy()) */
     char *gfx_shadow;
     size_t gfx_shadow_size;
 
@@ -197,64 +164,32 @@ struct wlup
     enum wlup_backend backend;
     const struct wlup_backend_ops *ops; /* the backend, set on connect */
     char dbus_address[256]; /* Mutter backend: session bus, if not default */
-    void *mutter;           /* Mutter backend state */
+    void *backend_data;     /* the backend's own state */
     int pipewire_fd;        /* Mutter backend: PipeWire connection from
                                sesman (display_aux_fd), or -1 */
 
     /* clipboard */
     void *clip;             /* RDP side (wlup_clip.c) */
     int clip_chanid;        /* clipboard channel, or -1 */
-    void *wlr_clip;         /* session side for wlroots (wlup_wlr_clip.c) */
 
-    /* Wayland globals */
-    struct wl_display *display;
-    struct wl_registry *registry;
-    struct wl_shm *shm;
-    struct wl_seat *seat;
-    struct wl_output *output;
-    struct ext_output_image_capture_source_manager_v1 *source_manager;
-    struct ext_image_copy_capture_manager_v1 *copy_manager;
-    struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
-    uint32_t pointer_manager_version;
-    struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
-    char output_name[64]; /* wl_output name of the captured output */
-
-    /* resizing the captured output (wlr-output-management) */
-    struct zwlr_output_manager_v1 *output_manager;
-    uint32_t output_manager_serial;
-    struct wlup_head heads[WLUP_MAX_HEADS];
-    int num_heads;
-    int resize_pending; /* xrdp waits for server_monitor_resize_done() */
+    /* resizing: while resize_pending, xrdp waits for
+     * server_monitor_resize_done(), until the desktop image is
+     * resize_width x resize_height */
+    int resize_pending;
     int resize_width;
     int resize_height;
 
-    /* capture */
-    struct ext_image_capture_source_v1 *source;
-    struct ext_image_copy_capture_session_v1 *session;
-    struct ext_image_copy_capture_frame_v1 *frame;
-    uint32_t constraint_width; /* buffer constraints being received */
-    uint32_t constraint_height;
-    int constraint_xrgb8888; /* compositor offers XRGB8888 or ARGB8888 */
-    uint32_t constraint_format;
-    int constraints_done;
-
-    struct wl_buffer *buffer;
-    char *pixels;      /* mapping of the shm buffer, also our copy of the */
-    size_t pixels_size; /* desktop used to answer invalidate requests */
+    /* The desktop image, XRGB8888, filled by the backend
+     * (wlup_backend.h); also used to answer invalidate requests */
+    char *pixels;
+    size_t pixels_size;
     int buffer_width;
     int buffer_height;
-    int buffer_format;
     int need_full_paint;
-
+    /* damage of the last frame, painted by wlup_paint_damage() */
     short damage[WLUP_MAX_DAMAGE * 4]; /* x, y, cx, cy per rect */
     int num_damage;
     int damage_overflow;
-
-    /* input */
-    struct zwlr_virtual_pointer_v1 *pointer;
-    struct zwp_virtual_keyboard_v1 *keyboard;
-    struct xkb_keymap *xkb_keymap; /* the keymap the compositor was given */
-    struct xkb_state *xkb_state;   /* to compute the modifier state */
 };
 
 #include "wlup_backend.h"
