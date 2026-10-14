@@ -169,6 +169,7 @@ x-special/gnome-copied-files
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "fifo.h"
 #include "string_calls.h"
 #include "chansrv.h"
 #include "chansrv_common.h"
@@ -183,6 +184,7 @@ x-special/gnome-copied-files
 
 #define BMPFILEHEADER_LEN       14
 #define BMPINFOHEADER_LEN       40
+#define CLIPBOARD_INCR_IDLE_MS  5000
 
 extern int g_cliprdr_chan_id;   /* in chansrv.c */
 
@@ -220,6 +222,16 @@ static struct stream *g_ins = 0;
 
 /* for image data */
 static XSelectionRequestEvent g_saved_selection_req_event;
+static struct fifo *g_pending_selection_requests;
+static unsigned int g_clipboard_generation;
+static unsigned int g_incr_generation;
+static unsigned int g_incr_serial;
+static tui32 g_incr_progress_ms;
+
+static int clipboard_refuse_selection(XSelectionRequestEvent *req);
+static void clipboard_clear_pending_requests(void);
+static void clipboard_dispatch_pending_requests(void);
+static void clipboard_incr_timeout(void *data);
 
 /* xserver maximum request size in bytes */
 static int g_incr_max_req_size = 0;
@@ -485,6 +497,17 @@ int
 clipboard_deinit(void)
 {
     LOG_DEVEL(LOG_LEVEL_INFO, "clipboard_deinit:");
+    if (g_clip_c2s.in_request)
+    {
+        clipboard_refuse_selection(&g_saved_selection_req_event);
+    }
+    clipboard_clear_pending_requests();
+    fifo_delete(g_pending_selection_requests, NULL);
+    g_pending_selection_requests = NULL;
+    if (g_clip_c2s.incr_in_progress)
+    {
+        XSelectInput(g_display, g_clip_c2s.window, NoEventMask);
+    }
     if (g_wnd != 0)
     {
         XDestroyWindow(g_display, g_wnd);
@@ -494,13 +517,17 @@ clipboard_deinit(void)
     xfuse_deinit();
 
     g_free(g_clip_c2s.data);
-    g_clip_c2s.data = 0;
+    g_memset(&g_clip_c2s, 0, sizeof(g_clip_c2s));
     g_free(g_clip_s2c.data);
     g_clip_s2c.data = 0;
 
     free_stream(g_ins);
     g_ins = 0;
     g_clip_up = 0;
+    if (g_display != NULL)
+    {
+        XFlush(g_display);
+    }
     return 0;
 }
 
@@ -515,6 +542,7 @@ clipboard_send_data_request(int format_id)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_request:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_request: %d", format_id);
     g_clip_c2s.in_request = 1;
+    g_clip_c2s.converted = 0;
     make_stream(s);
     init_stream(s, 8192);
     out_uint16_le(s, CB_FORMAT_DATA_REQUEST); /* 4 CLIPRDR_DATA_REQUEST */
@@ -528,6 +556,12 @@ clipboard_send_data_request(int format_id)
               "CLIPRDR_DATA_REQUEST (clip_msg_id = 4)");
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
+    if (rv != 0)
+    {
+        g_clip_c2s.in_request = 0;
+        clipboard_refuse_selection(&g_saved_selection_req_event);
+        clipboard_clear_pending_requests();
+    }
     return rv;
 }
 
@@ -832,6 +866,7 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
 {
     XEvent xev;
     long val1[2];
+    XWindowAttributes attributes;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_provide_selection_c2s: bytes %d",
               g_clip_c2s.total_bytes);
@@ -854,7 +889,18 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
     else
     {
         /* start the INCR process */
+        XSelectInput(g_display, req->requestor,
+                     PropertyChangeMask | StructureNotifyMask);
+        if (!XGetWindowAttributes(g_display, req->requestor, &attributes))
+        {
+            return 0;
+        }
         g_clip_c2s.incr_in_progress = 1;
+        ++g_incr_serial;
+        g_incr_progress_ms = g_get_elapsed_ms();
+        add_timeout(CLIPBOARD_INCR_IDLE_MS, clipboard_incr_timeout,
+                    (void *)(long)g_incr_serial);
+        g_incr_generation = g_clipboard_generation;
         g_clip_c2s.incr_bytes_done = 0;
         g_clip_c2s.type = type;
         g_clip_c2s.property = req->property;
@@ -866,8 +912,6 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
         val1[1] = 0;
         XChangeProperty(g_display, req->requestor, req->property,
                         g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
-        /* we need events from that other window */
-        XSelectInput(g_display, req->requestor, PropertyChangeMask);
         g_memset(&xev, 0, sizeof(xev));
         xev.xselection.type = SelectionNotify;
         xev.xselection.send_event = True;
@@ -943,6 +987,8 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     int bytes;
     char desc[256];
 
+    clipboard_clear_pending_requests();
+    ++g_clipboard_generation;
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_format_announce: "
               "CLIPRDR_FORMAT_ANNOUNCE");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_format_announce %d", clip_msg_len);
@@ -1137,6 +1183,7 @@ clipboard_process_data_response_for_image(struct stream *s,
     len = (int)(s->end - s->p);
     if (len < 1)
     {
+        clipboard_refuse_selection(lxev);
         return 0;
     }
     if (g_clip_c2s.type != g_image_bmp_atom)
@@ -1149,6 +1196,7 @@ clipboard_process_data_response_for_image(struct stream *s,
     if (g_clip_c2s.data == 0)
     {
         g_clip_c2s.total_bytes = 0;
+        clipboard_refuse_selection(lxev);
         return 0;
     }
     g_clip_c2s.total_bytes = len + BMPFILEHEADER_LEN;
@@ -1162,7 +1210,9 @@ clipboard_process_data_response_for_image(struct stream *s,
     if (bmp_hs == 0)
     {
         g_free(g_clip_c2s.data);
+        g_clip_c2s.data = NULL;
         g_clip_c2s.total_bytes = 0;
+        clipboard_refuse_selection(lxev);
         return 0;
     }
     init_stream(bmp_hs, BMPFILEHEADER_LEN);
@@ -1334,6 +1384,10 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     XSelectionRequestEvent *lxev = &g_saved_selection_req_event;
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_response:");
+    if (!g_clip_c2s.in_request)
+    {
+        return 0;
+    }
     g_clip_c2s.in_request = 0;
 
     if ((clip_msg_status & CB_RESPONSE_FAIL) != 0)
@@ -1365,6 +1419,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
         clipboard_process_data_response_for_text(s, clip_msg_status,
                 clip_msg_len);
     }
+    clipboard_dispatch_pending_requests();
     return rv;
 }
 
@@ -1562,6 +1617,8 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     }
 
     g_got_selection = 0;
+    clipboard_clear_pending_requests();
+    ++g_clipboard_generation;
     if (lxevent->owner != 0) /* nil owner comes when selection */
     {
         /* window is closed */
@@ -2345,6 +2402,125 @@ clipboard_event_selection_request(XEvent *xevent)
 }
 
 /*****************************************************************************/
+static void
+clipboard_clear_pending_requests(void)
+{
+    XEvent *event;
+    if (g_pending_selection_requests != NULL)
+    {
+        while ((event = fifo_remove_item(g_pending_selection_requests)) != NULL)
+        {
+            clipboard_refuse_selection(&event->xselectionrequest);
+            g_free(event);
+        }
+    }
+}
+
+/*****************************************************************************/
+static void
+clipboard_dispatch_pending_requests(void)
+{
+    XEvent *event;
+    XWindowAttributes attributes;
+    while (g_pending_selection_requests != NULL &&
+            !g_clip_c2s.in_request && !g_clip_c2s.incr_in_progress &&
+            (event = fifo_remove_item(g_pending_selection_requests)) != NULL)
+    {
+        if (XGetWindowAttributes(g_display, event->xselectionrequest.requestor,
+                                 &attributes))
+        {
+            clipboard_event_selection_request(event);
+        }
+        g_free(event);
+    }
+}
+
+/*****************************************************************************/
+static void
+clipboard_incr_timeout(void *data)
+{
+    tui32 now;
+    tui32 idle_ms;
+    Atom type;
+    int format;
+    unsigned long items;
+    unsigned long remaining;
+    unsigned char *property_data = NULL;
+    int status;
+
+    if (!g_clip_up || !g_clip_c2s.incr_in_progress ||
+            g_incr_serial != (unsigned int)(long)data)
+    {
+        return;
+    }
+    now = g_get_elapsed_ms();
+    idle_ms = now - g_incr_progress_ms;
+    if (idle_ms >= CLIPBOARD_INCR_IDLE_MS)
+    {
+        /* Timers run before X events: an acknowledgement may already be pending. */
+        status = XGetWindowProperty(g_display, g_clip_c2s.window,
+                                   g_clip_c2s.property, 0, 0, False,
+                                   AnyPropertyType, &type, &format, &items,
+                                   &remaining, &property_data);
+        XFree(property_data);
+        if (status == Success && type == None)
+        {
+            g_incr_progress_ms = now;
+            idle_ms = 0;
+        }
+    }
+    if (idle_ms < CLIPBOARD_INCR_IDLE_MS)
+    {
+        add_timeout(CLIPBOARD_INCR_IDLE_MS - idle_ms, clipboard_incr_timeout, data);
+        return;
+    }
+    LOG(LOG_LEVEL_WARNING, "Clipboard INCR reader idle for %u ms; releasing transfer",
+        idle_ms);
+    XSelectInput(g_display, g_clip_c2s.window, NoEventMask);
+    g_clip_c2s.incr_in_progress = 0;
+    g_clip_c2s.converted = 0;
+    clipboard_dispatch_pending_requests();
+    XFlush(g_display);
+}
+
+/*****************************************************************************/
+static int
+clipboard_event_selection_request_or_queue(XEvent *xevent)
+{
+    XSelectionRequestEvent *req = &xevent->xselectionrequest;
+    XEvent *copy;
+    int data_target = req->target == XA_STRING || req->target == g_utf8_atom ||
+                      req->target == g_image_bmp_atom ||
+                      req->target == g_file_atom1 || req->target == g_file_atom2;
+    if (req->owner != g_wnd)
+    {
+        return clipboard_refuse_selection(req);
+    }
+    /* Keep the active Windows request and INCR buffer until their reader finishes. */
+    if (req->property != None && data_target &&
+            (g_clip_c2s.in_request || g_clip_c2s.incr_in_progress))
+    {
+        if (g_pending_selection_requests == NULL)
+        {
+            g_pending_selection_requests = fifo_create(NULL);
+        }
+        if (g_pending_selection_requests == NULL)
+        {
+            return clipboard_refuse_selection(req);
+        }
+        copy = g_malloc(sizeof(*copy), 0);
+        *copy = *xevent;
+        if (!fifo_add_item(g_pending_selection_requests, copy))
+        {
+            g_free(copy);
+            return clipboard_refuse_selection(req);
+        }
+        return 0;
+    }
+    return clipboard_event_selection_request(xevent);
+}
+
+/*****************************************************************************/
 /* returns error
    process the SelectionClear X event, uses XSelectionClearEvent
    typedef struct {
@@ -2359,6 +2535,8 @@ clipboard_event_selection_request(XEvent *xevent)
 static int
 clipboard_event_selection_clear(XEvent *xevent)
 {
+    clipboard_clear_pending_requests();
+    ++g_clipboard_generation;
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_clear:");
     return 0;
 }
@@ -2402,10 +2580,15 @@ clipboard_event_property_notify(XEvent *xevent)
         LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR PropertyDelete");
         /* this is used for when copying a large clipboard to the other app,
            it will delete the property so we know to send the next one */
+        g_incr_progress_ms = g_get_elapsed_ms();
 
         if ((g_clip_c2s.data == 0) || (g_clip_c2s.total_bytes < 1))
         {
             LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR error");
+            g_clip_c2s.incr_in_progress = 0;
+            g_clip_c2s.converted = 0;
+            XSelectInput(g_display, g_clip_c2s.window, NoEventMask);
+            clipboard_dispatch_pending_requests();
             return 0;
         }
         data = (tui8 *)(g_clip_c2s.data + g_clip_c2s.incr_bytes_done);
@@ -2414,6 +2597,9 @@ clipboard_event_property_notify(XEvent *xevent)
                 (g_clip_c2s.read_bytes_done < g_clip_c2s.total_bytes))
         {
             g_clip_c2s.incr_in_progress = 0;
+            g_clip_c2s.converted = 0;
+            XSelectInput(g_display, g_clip_c2s.window, NoEventMask);
+            clipboard_dispatch_pending_requests();
             return 0;
         }
         if (data_bytes > g_incr_max_req_size)
@@ -2432,7 +2618,8 @@ clipboard_event_property_notify(XEvent *xevent)
             /* we no longer need property notify */
             XSelectInput(xevent->xproperty.display, xevent->xproperty.window,
                          NoEventMask);
-            g_clip_c2s.converted = 1;
+            g_clip_c2s.converted = g_incr_generation == g_clipboard_generation;
+            clipboard_dispatch_pending_requests();
         }
     }
     if (g_clip_s2c.incr_in_progress &&
@@ -2552,11 +2739,20 @@ clipboard_xevent(void *xevent)
 
     switch (lxevent->type)
     {
+        case DestroyNotify:
+            if (g_clip_c2s.incr_in_progress &&
+                    lxevent->xdestroywindow.window == g_clip_c2s.window)
+            {
+                g_clip_c2s.incr_in_progress = 0;
+                g_clip_c2s.converted = 0;
+                clipboard_dispatch_pending_requests();
+            }
+            break;
         case SelectionNotify:
             clipboard_event_selection_notify(lxevent);
             break;
         case SelectionRequest:
-            clipboard_event_selection_request(lxevent);
+            clipboard_event_selection_request_or_queue(lxevent);
             break;
         case SelectionClear:
             clipboard_event_selection_clear(lxevent);
