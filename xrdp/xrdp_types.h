@@ -438,6 +438,10 @@ struct xrdp_mm
     enum xrdp_egfx_flags egfx_flags;
     int gfx_delay_autologin;
     int mod_uses_wm_screen_for_gfx;
+    /* Frames of the WM screen sent with GFX, and how many of them the
+     * client has acknowledged */
+    int wm_gfx_frames_sent;
+    int wm_gfx_frames_acked;
     /* Whether a working h.264 library is loaded.
      * We check this at run-time, so that we can fall-back to GFX if
      * the H.264 library is installed incorrectly */
