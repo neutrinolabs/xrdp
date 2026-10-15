@@ -2408,7 +2408,7 @@ clipboard_clear_pending_requests(void)
     XEvent *event;
     if (g_pending_selection_requests != NULL)
     {
-        while ((event = fifo_remove_item(g_pending_selection_requests)) != NULL)
+        while ((event = (XEvent *)fifo_remove_item(g_pending_selection_requests)) != NULL)
         {
             clipboard_refuse_selection(&event->xselectionrequest);
             g_free(event);
@@ -2424,7 +2424,7 @@ clipboard_dispatch_pending_requests(void)
     XWindowAttributes attributes;
     while (g_pending_selection_requests != NULL &&
             !g_clip_c2s.in_request && !g_clip_c2s.incr_in_progress &&
-            (event = fifo_remove_item(g_pending_selection_requests)) != NULL)
+            (event = (XEvent *)fifo_remove_item(g_pending_selection_requests)) != NULL)
     {
         if (XGetWindowAttributes(g_display, event->xselectionrequest.requestor,
                                  &attributes))
@@ -2459,9 +2459,9 @@ clipboard_incr_timeout(void *data)
     {
         /* Timers run before X events: an acknowledgement may already be pending. */
         status = XGetWindowProperty(g_display, g_clip_c2s.window,
-                                   g_clip_c2s.property, 0, 0, False,
-                                   AnyPropertyType, &type, &format, &items,
-                                   &remaining, &property_data);
+                                    g_clip_c2s.property, 0, 0, False,
+                                    AnyPropertyType, &type, &format, &items,
+                                    &remaining, &property_data);
         XFree(property_data);
         if (status == Success && type == None)
         {
@@ -2508,7 +2508,7 @@ clipboard_event_selection_request_or_queue(XEvent *xevent)
         {
             return clipboard_refuse_selection(req);
         }
-        copy = g_malloc(sizeof(*copy), 0);
+        copy = (XEvent *)g_malloc(sizeof(*copy), 0);
         *copy = *xevent;
         if (!fifo_add_item(g_pending_selection_requests, copy))
         {

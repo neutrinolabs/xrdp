@@ -405,7 +405,7 @@ main(int argc, char **argv)
     {
         XEvent event;
         int chunks = 0;
-        char assembled[4];
+        char assembled[4] = {0};
         unsigned long used = 0;
         if (strcmp(mode, "clock-wrap") == 0)
         {
@@ -468,7 +468,8 @@ main(int argc, char **argv)
                 used += size;
                 XFree(text);
             }
-            assert(++chunks <= 3);
+            ++chunks;
+            assert(chunks <= 3);
             if (chunks < 3)
             {
                 assert(requests == 1);
