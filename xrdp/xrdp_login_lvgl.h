@@ -32,6 +32,11 @@ void xrdp_login_lvgl_log_message(struct xrdp_wm *wm, int level, const char *mess
 void xrdp_login_lvgl_invalidate(struct xrdp_wm *wm, const struct xrdp_rect *rect);
 void xrdp_login_lvgl_mouse(struct xrdp_wm *wm, int x, int y, int button, int down);
 void xrdp_login_lvgl_key(struct xrdp_wm *wm, int sym, unsigned int chr, int down, int shift);
+/* Focused username/password field for a paste, or NULL. Compare only */
+const void *xrdp_login_lvgl_get_paste_target(struct xrdp_wm *wm);
+/* Insert pasted text into the focused field; returns the count inserted */
+unsigned int xrdp_login_lvgl_insert_text(struct xrdp_wm *wm, const char32_t *cp,
+        unsigned int count);
 void xrdp_login_lvgl_wait(struct xrdp_wm *wm, tbus *objs, int *count, int *timeout);
 int xrdp_login_lvgl_check(struct xrdp_wm *wm);
 #endif
