@@ -337,6 +337,11 @@ read_xrdp_ini_startup_params(struct xrdp_startup_params *startup_params)
                 startup_params->tcp_recv_buffer_bytes = g_atoi(val);
             }
 
+            else if (g_strcasecmp(name, "tcp_notsent_lowat") == 0)
+            {
+                startup_params->tcp_notsent_lowat = g_atoi(val);
+            }
+
             else if (g_strcasecmp(name, "use_vsock") == 0)
             {
                 LOG(LOG_LEVEL_WARNING,

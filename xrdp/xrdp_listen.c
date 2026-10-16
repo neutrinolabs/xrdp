@@ -671,6 +671,16 @@ xrdp_listen_init(struct xrdp_listen *self)
                     LOG(LOG_LEVEL_INFO, "recv buffer set to %d bytes", bytes);
                 }
             }
+            /* Accepted connections inherit it */
+            if (startup_params->tcp_notsent_lowat > 0)
+            {
+                if (g_tcp_set_notsent_lowat(ltrans->sck,
+                                            startup_params->tcp_notsent_lowat) == 0)
+                {
+                    LOG(LOG_LEVEL_INFO, "unsent data limited to %d bytes",
+                        startup_params->tcp_notsent_lowat);
+                }
+            }
         }
         ltrans->trans_conn_in = xrdp_listen_conn_in;
         ltrans->callback_data = self;
