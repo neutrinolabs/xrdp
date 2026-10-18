@@ -37,7 +37,8 @@
  * @param timeout_ms How long to wait
  * @param[out] path Socket path
  * @param path_size Size of path buffer
- * @return 0 for success
+ * @return 0 for success, 2 if the compositor ended first (it has been
+ *         waited for: the PID is no longer valid), 1 for other errors
  */
 int
 wait_for_wayland_socket(pid_t pid, const char *runtime_dir,

@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #if defined(__linux__)
 #include <sys/sysmacros.h> /* major(), minor() */
+#include <sys/wait.h>
 #endif
 
 #include "log.h"
@@ -162,7 +163,29 @@ wait_for_wayland_socket(pid_t pid, const char *runtime_dir,
 
     while (g_get_elapsed_ms() - start < timeout_ms)
     {
-        int count = get_flocks(pid, locks, MAX_LOCKS);
+        int wstat;
+        int count;
+
+        /* A compositor that ends at once (it could not be run, or gave
+         * up) would otherwise only show as a timeout */
+        if (waitpid(pid, &wstat, WNOHANG) == pid)
+        {
+            if (WIFSIGNALED(wstat))
+            {
+                char sigstr[MAXSTRSIGLEN];
+                LOG(LOG_LEVEL_ERROR, "The Wayland compositor (pid %d) was "
+                    "killed by signal %s before it listened on a socket",
+                    (int)pid, g_sig2text(WTERMSIG(wstat), sigstr));
+            }
+            else
+            {
+                LOG(LOG_LEVEL_ERROR, "The Wayland compositor (pid %d) "
+                    "exited with status %d before it listened on a socket",
+                    (int)pid, WEXITSTATUS(wstat));
+            }
+            return 2;
+        }
+        count = get_flocks(pid, locks, MAX_LOCKS);
         if (count > 0 &&
                 find_locked_socket(runtime_dir, locks, count,
                                    path, path_size) == 0)

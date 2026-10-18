@@ -914,6 +914,8 @@ start_wayland_compositor(const struct login_info *login_info,
             dumpItemsToString(params, execvpparams, sizeof(execvpparams)));
         LOG_DEVEL_LEAKING_FDS("Wayland compositor", 3, -1);
         g_execvp_list((const char *)params->items[0], params);
+        LOG(LOG_LEVEL_ERROR, "Can't run %s - %s",
+            (const char *)params->items[0], g_get_strerror());
     }
 
     LOG(LOG_LEVEL_ERROR, "A fatal error has occurred attempting "
@@ -1086,6 +1088,7 @@ session_start_wayland(struct login_info *login_info,
     int fds[2];
     int pid;
     int len;
+    int rv;
 
     /* The compositor child reports its XDG_RUNTIME_DIR, which comes from
      * the PAM environment, over a pipe */
@@ -1119,12 +1122,17 @@ session_start_wayland(struct login_info *login_info,
         return session_start_gnome_wait(login_info, sd, pid);
     }
 
-    if (wait_for_wayland_socket(pid, runtime_dir, 10 * 1000,
-                                sd->wayland_socket,
-                                sizeof(sd->wayland_socket)) != 0)
+    rv = wait_for_wayland_socket(pid, runtime_dir, 10 * 1000,
+                                 sd->wayland_socket,
+                                 sizeof(sd->wayland_socket));
+    if (rv != 0)
     {
-        g_sigterm(pid);
-        g_waitpid(pid);
+        /* With 2 the compositor has ended and been waited for already */
+        if (rv == 1)
+        {
+            g_sigterm(pid);
+            g_waitpid(pid);
+        }
         return E_SCP_SCREATE_X_SERVER_FAIL;
     }
 
