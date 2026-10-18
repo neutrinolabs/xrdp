@@ -1074,6 +1074,15 @@ wlroots_connect(struct wlup *v, int fd)
     if (w->shm == NULL || w->output == NULL || w->source_manager == NULL ||
             w->copy_manager == NULL)
     {
+        /* server_msg() only reaches the login window: say it in the log
+         * too. wlroots has the capture protocols from 0.19 (sway 1.11) */
+        LOG(LOG_LEVEL_ERROR, "wlup: the compositor lacks%s%s%s%s; "
+            "wlroots-based ones have them from wlroots 0.19 (sway 1.11)",
+            w->shm == NULL ? " wl_shm" : "",
+            w->output == NULL ? " wl_output" : "",
+            w->source_manager == NULL ?
+            " ext_output_image_capture_source_manager_v1" : "",
+            w->copy_manager == NULL ? " ext_image_copy_capture_manager_v1" : "");
         v->server_msg(v, "wlup error - the compositor does not offer "
                       "ext-image-copy-capture-v1 for an output", 0);
         return 1;
