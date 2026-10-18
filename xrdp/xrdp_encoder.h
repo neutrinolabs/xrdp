@@ -111,6 +111,10 @@ struct xrdp_enc_data_done
     int frame_id;
 };
 
+/* xrdp_enc_data_delete() relies on ENC_FLAGS_GFX_BIT in enc->flags to tell
+ * which member of the union is in use. Do not copy the flags from xorgxrdp
+ * into enc->flags: ENCODE_COMPLETE is the same bit. They are in
+ * enc->u.sc.flags. */
 #define ENC_FLAGS_GFX_BIT   0
 
 /* used when scheduling tasks in xrdp_encoder.c */
@@ -130,6 +134,10 @@ struct xrdp_enc_data
 };
 
 typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
+
+/* Frees a command, and unmaps the shared memory frame it owns */
+void
+xrdp_enc_data_delete(XRDP_ENC_DATA *enc);
 
 struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm);

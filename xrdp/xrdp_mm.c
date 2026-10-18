@@ -3851,20 +3851,7 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
                                              enc_done->frame_id);
                 }
             }
-            if (is_gfx)
-            {
-                g_free(enc->u.gfx.cmd);
-            }
-            else
-            {
-                g_free(enc->u.sc.drects);
-                g_free(enc->u.sc.crects);
-            }
-            if (enc->shmem_ptr != NULL)
-            {
-                g_munmap(enc->shmem_ptr, enc->shmem_bytes);
-            }
-            g_free(enc);
+            xrdp_enc_data_delete(enc);
         }
         g_free(enc_done->comp_pad_data);
         g_free(enc_done);
@@ -4457,12 +4444,20 @@ server_paint_rects_ex(struct xrdp_mod *mod,
         {
             mod->mod_frame_ack(mod, flags, frame_id);
         }
+        if (shmem_ptr != NULL)
+        {
+            g_munmap(shmem_ptr, shmem_bytes);
+        }
         return 0;
     }
 
     p = (struct xrdp_painter *)(mod->painter);
     if (p == 0)
     {
+        if (shmem_ptr != NULL)
+        {
+            g_munmap(shmem_ptr, shmem_bytes);
+        }
         return 0;
     }
     b = xrdp_bitmap_create_with_data(width, height, wm->screen->bpp,
