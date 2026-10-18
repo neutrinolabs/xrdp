@@ -31,9 +31,12 @@ if [ "$BUILD" = "$SRC" ]; then
 fi
 PKG=xrdp-wlup
 SHA=$(git -C "$SRC" rev-parse --short HEAD)
-# The commit time, to the second, orders the versions: the hash after it
-# does not, and apt refuses a "downgrade"
-DATE=$(TZ=UTC git -C "$SRC" log -1 --format=%cd --date=format-local:%Y%m%d%H%M%S)
+# A commit time, to the second, orders the versions: the hash after it
+# does not, and apt refuses a "downgrade". The newest one in the history,
+# not HEAD's: a branch rebuilt by cherry-picking keeps the commits' times,
+# so its tip can be as old as the tip of the build before
+DATE=$(git -C "$SRC" log --format=%ct HEAD | sort -n | tail -1)
+DATE=$(TZ=UTC date -d "@$DATE" +%Y%m%d%H%M%S)
 UPSTREAM=$(sed -n 's/^AC_INIT(\[xrdp\], \[\([^]]*\)\].*/\1/p' "$SRC/configure.ac")
 VERSION="${UPSTREAM}~wlup${DATE}.git${SHA}"
 if [ -n "$(git -C "$SRC" status --porcelain --untracked-files=no)" ]; then
