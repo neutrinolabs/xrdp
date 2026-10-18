@@ -179,9 +179,15 @@ wait_for_wayland_socket(pid_t pid, const char *runtime_dir,
             }
             else
             {
+                /* A start-up script's shell exits with these when its
+                 * exec of the compositor fails */
+                int status = WEXITSTATUS(wstat);
                 LOG(LOG_LEVEL_ERROR, "The Wayland compositor (pid %d) "
-                    "exited with status %d before it listened on a socket",
-                    (int)pid, WEXITSTATUS(wstat));
+                    "exited with status %d before it listened on a socket%s",
+                    (int)pid, status,
+                    status == 126 ? " (126: a program could not be run, "
+                    "for instance for its permissions or file capabilities)" :
+                    status == 127 ? " (127: a program was not found)" : "");
             }
             return 2;
         }
