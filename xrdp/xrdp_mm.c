@@ -1668,13 +1668,6 @@ process_display_control_monitor_layout_data(struct xrdp_wm *wm)
         return 0;
     }
 
-    if (module->mod_server_monitor_resize == NULL)
-    {
-        LOG(LOG_LEVEL_ERROR, "process_display_control_monitor_layout_data:"
-            " module has no monitor resize callback");
-        return advance_error(1, mm);
-    }
-
     struct display_control_monitor_layout_data *description
             = mm->resize_data;
     const unsigned int desc_width = description->description.session_width;
