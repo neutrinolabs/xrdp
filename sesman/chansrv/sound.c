@@ -36,6 +36,7 @@
 #include "chansrv_common.h"
 #include "chansrv_config.h"
 #include "list.h"
+#include "resample.h"
 #include "audin.h"
 
 #if defined(XRDP_FDK_AAC)
@@ -54,31 +55,15 @@ static HANDLE_AACENCODER g_fdk_aac_encoder = 0;
 
 /* The sound server (pulseaudio-module-xrdp, pipewire-module-xrdp) sends
    16 bit stereo at 44100 Hz, but Opus only runs at 8, 12, 16, 24 or
-   48 kHz, so the audio is resampled to 48000 Hz (ratio 160 / 147) before
-   it is encoded. Each chunk is 60 ms: 2646 frames in, 2880 frames out. */
-#define OPUS_RS_UP 160
-#define OPUS_RS_DOWN 147
-#define OPUS_RS_TAPS 32 /* filter taps per output frame */
+   48 kHz, so the audio is resampled to 48000 Hz before it is encoded.
+   Each chunk is 60 ms: 2646 frames in, 2880 frames out. */
 #define OPUS_IN_FRAMES 2646
 #define OPUS_OUT_FRAMES 2880
 
 #if defined(XRDP_OPUS)
-#include <math.h>
 #include <opus/opus.h>
 static OpusEncoder *g_opus_encoder = 0;
-
-struct opus_resampler
-{
-    int have_coef;
-    /* polyphase windowed-sinc low pass filter, one row per phase */
-    float coef[OPUS_RS_UP][OPUS_RS_TAPS];
-    /* input frames not consumed yet, starting with the filter history */
-    opus_int16 in[(OPUS_RS_TAPS - 1 + OPUS_IN_FRAMES) * 2];
-    int in_frames;
-    /* position of the next output frame in 'in', in 1 / OPUS_RS_UP frames */
-    int pos;
-};
-static struct opus_resampler g_opus_rs;
+static struct resampler *g_opus_rs = 0; /* 44100 Hz to 48000 Hz */
 #endif
 
 #if defined(XRDP_MP3LAME)
@@ -674,130 +659,6 @@ sound_wave_compress_fdk_aac(char *data, int data_bytes, int *format_index)
 #if defined(XRDP_OPUS)
 
 /*****************************************************************************/
-/* modified Bessel function of the first kind, order 0, for the Kaiser window */
-static double
-opus_rs_bessel_i0(double x)
-{
-    double sum = 1.0;
-    double term = 1.0;
-    int k;
-
-    for (k = 1; k < 32; k++)
-    {
-        term *= (x / (2 * k)) * (x / (2 * k));
-        sum += term;
-    }
-    return sum;
-}
-
-/*****************************************************************************/
-static void
-opus_rs_reset(struct opus_resampler *rs)
-{
-    /* start with silence as the filter history, so every 2646 frames in
-       give exactly 2880 frames out */
-    g_memset(rs->in, 0, sizeof(rs->in));
-    rs->in_frames = OPUS_RS_TAPS - 1;
-    rs->pos = 0;
-}
-
-/*****************************************************************************/
-static void
-opus_rs_init(struct opus_resampler *rs)
-{
-    /* low pass at 21 kHz: below the Nyquist frequency of the input
-       (22.05 kHz), Kaiser window beta 7, about 70 dB stop band */
-    const double cutoff = 2 * 21000.0 / 44100.0;
-    const double beta = 7.0;
-    const double half = OPUS_RS_TAPS / 2;
-    double sum;
-    double x;
-    double t;
-    double c;
-    int phase;
-    int tap;
-
-    for (phase = 0; phase < OPUS_RS_UP; phase++)
-    {
-        sum = 0;
-        for (tap = 0; tap < OPUS_RS_TAPS; tap++)
-        {
-            /* distance between this output frame and input frame 'tap' */
-            x = (double) phase / OPUS_RS_UP + (half - 1) - tap;
-            t = x / half;
-            c = cutoff;
-            if (x != 0)
-            {
-                c = sin(M_PI * cutoff * x) / (M_PI * x);
-            }
-            c *= opus_rs_bessel_i0(beta * sqrt(MAX(0.0, 1 - t * t))) /
-                 opus_rs_bessel_i0(beta);
-            rs->coef[phase][tap] = c;
-            sum += c;
-        }
-        /* unity gain at DC for every phase */
-        for (tap = 0; tap < OPUS_RS_TAPS; tap++)
-        {
-            rs->coef[phase][tap] /= sum;
-        }
-    }
-    rs->have_coef = 1;
-    opus_rs_reset(rs);
-}
-
-/*****************************************************************************/
-/* resample 44100 Hz stereo to 48000 Hz, returns the number of frames out */
-static int
-opus_rs_process(struct opus_resampler *rs, const opus_int16 *in,
-                int in_frames, opus_int16 *out, int max_out_frames)
-{
-    const opus_int16 *src;
-    const float *coef;
-    float left;
-    float right;
-    int out_frames;
-    int used;
-    int index;
-    int tap;
-
-    in_frames = MIN(in_frames, (int) (sizeof(rs->in) / 4) - rs->in_frames);
-    g_memcpy(rs->in + rs->in_frames * 2, in, in_frames * 4);
-    rs->in_frames += in_frames;
-
-    out_frames = 0;
-    while (out_frames < max_out_frames)
-    {
-        index = rs->pos / OPUS_RS_UP;
-        if (index + OPUS_RS_TAPS > rs->in_frames)
-        {
-            break;
-        }
-        src = rs->in + index * 2;
-        coef = rs->coef[rs->pos % OPUS_RS_UP];
-        left = 0;
-        right = 0;
-        for (tap = 0; tap < OPUS_RS_TAPS; tap++)
-        {
-            left += coef[tap] * src[tap * 2];
-            right += coef[tap] * src[tap * 2 + 1];
-        }
-        left = MAX(-32768.0f, MIN(32767.0f, left));
-        right = MAX(-32768.0f, MIN(32767.0f, right));
-        out[out_frames * 2] = (opus_int16) lrintf(left);
-        out[out_frames * 2 + 1] = (opus_int16) lrintf(right);
-        out_frames++;
-        rs->pos += OPUS_RS_DOWN;
-    }
-
-    /* drop the input frames no output frame needs any more */
-    used = rs->pos / OPUS_RS_UP;
-    rs->in_frames -= used;
-    g_memmove(rs->in, rs->in + used * 2, rs->in_frames * 4);
-    rs->pos -= used * OPUS_RS_UP;
-    return out_frames;
-}
-
-/*****************************************************************************/
 static int
 sound_wave_compress_opus(char *data, int data_bytes, int *format_index)
 {
@@ -830,9 +691,14 @@ sound_wave_compress_opus(char *data, int data_bytes, int *format_index)
             return data_bytes;
         }
     }
-    if (!g_opus_rs.have_coef)
+    if (g_opus_rs == 0)
     {
-        opus_rs_init(&g_opus_rs);
+        g_opus_rs = resampler_create(44100, g_opus_48000.nSamplesPerSec);
+        if (g_opus_rs == 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "sound_wave_compress_opus: resampler_create failed");
+            return data_bytes;
+        }
     }
     data_bytes_org = data_bytes;
     rv = data_bytes;
@@ -844,8 +710,8 @@ sound_wave_compress_opus(char *data, int data_bytes, int *format_index)
         data_bytes = g_bbuf_size;
     }
     /* Opus takes 2.5, 5, 10, 20, 40 or 60 ms frames; this is 60 ms */
-    frames = opus_rs_process(&g_opus_rs, (opus_int16 *) data, data_bytes / 4,
-                             pcm, OPUS_OUT_FRAMES);
+    frames = resampler_process(g_opus_rs, (short *) data, data_bytes / 4,
+                               pcm, OPUS_OUT_FRAMES);
     if (frames < OPUS_OUT_FRAMES)
     {
         g_memset(pcm + frames * 2, 0, (OPUS_OUT_FRAMES - frames) * 4);
@@ -1129,7 +995,10 @@ sound_send_close(void)
     g_best_time_diff = 0;
     g_buf_index = 0;
 #if defined(XRDP_OPUS)
-    opus_rs_reset(&g_opus_rs);
+    if (g_opus_rs != 0)
+    {
+        resampler_reset(g_opus_rs);
+    }
 #endif
 
     /* send close msg */
@@ -1408,7 +1277,10 @@ sound_init(void)
     g_client_does_opus = 0;
     g_client_opus_index = 0;
 #if defined(XRDP_OPUS)
-    opus_rs_reset(&g_opus_rs);
+    if (g_opus_rs != 0)
+    {
+        resampler_reset(g_opus_rs);
+    }
 #endif
 
     g_client_does_mp3lame = 0;
