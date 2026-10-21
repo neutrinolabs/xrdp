@@ -26,6 +26,12 @@ jobs:
           mkdir coverity_tool
           tar xzf coverity_tool.tar.gz --strip 1 -C coverity_tool
 
+      - name: Remove snap
+        # The firefox package is a stub which installs a snap when it is
+        # upgraded, and fails if the snap store does not answer in time.
+        # The build does not need snap, so remove it before the upgrade.
+        uses: ading2210/gh-actions-remove-snap@80b81e1957f64dfd4c6f860cd4eaf68c1252fc58 # v1.0.0
+
       - name: "Install Dependencies"
         run: |
           echo RESET grub-efi/install_devices | sudo debconf-communicate grub-pc
