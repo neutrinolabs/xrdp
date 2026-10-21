@@ -521,6 +521,68 @@ g_malloc_nofail(size_t size);
 void *
 g_calloc_nofail(size_t nmemb, size_t size);
 
+/**
+ * Allocate memory which is guaranteed not to be written to the
+ * swap file.
+ *
+ * Use for persistent data structures containing sensitive data, where
+ * the lifetime of the sensitivity exceeds the lifetime of the connection
+ * (e.g. private keys).
+ *
+ * @pre g_request_nonpaged() should be called beforehand with privilege to
+ *      request additional locked memory for the process. If this is
+ *      not done, the process may not have enough nonpaged quota to
+ *      satisfy the request.
+ *
+ * @param size Bytes of storage to allocate
+ * @return Pointer to storage, or NULL if none available
+ *
+ * If NULL is returned, the caller may wish to fall back on malloc and
+ * issue a diagnostic.
+ *
+ * The allocated memory will start on a page boundary.
+ *
+ * Use g_free_nonpaged() to deallocate all resources associated
+ * with the area.
+ */
+void *
+g_malloc_nonpaged(size_t size);
+
+/**
+ * Free memory allocated with g_malloc_nonpaged()
+ *
+ * @param addr pointer to area
+ * @param size Size of area
+ *
+ * The caller should clear memory before making this call.
+ *
+ * Do not use this call for areas not allocated with g_malloc_nonpaged()
+ */
+void
+g_free_nonpaged(void *addr, size_t size);
+
+/**
+ * Returns the page size for this system
+ * @return Page size
+ */
+size_t
+g_pagesize(void);
+
+/*
+ * Request nonpaged storage quota
+ *
+ * This call can be used to request nonpaged storage quota allocated
+ * by g_malloc_nonpaged()
+ *
+ * @param pagecount Number of additional pages to request
+ *
+ * This call is separate to allow a process to be started with
+ * privilege, request the quota, and then drop privilege before
+ * allocating the memory.
+ */
+void
+g_request_nonpaged(unsigned int pagecount);
+
 /* glib-style wrappers */
 #define g_new(struct_type, n_structs) \
     (struct_type *) g_malloc_nofail(sizeof(struct_type) * (n_structs))
