@@ -4541,6 +4541,14 @@ g_malloc_nonpaged(size_t size)
     size_t pagesize = g_pagesize();
     void *res;
 
+    // Validate the size is non zero, and can be rounded up
+    // without overflowing
+    if (size == 0 || size > (size_t)(-1) - (pagesize - 1))
+    {
+        errno = ENOMEM;
+        return NULL;
+    }
+
     // Round the size up to a whole number of pages
     size = (size + (pagesize - 1)) / pagesize * pagesize;
 

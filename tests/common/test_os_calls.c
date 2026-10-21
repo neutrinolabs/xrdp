@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include "os_calls.h"
+#include "explicit_bzero.h"
 #include "list.h"
 
 #include "test_common.h"
