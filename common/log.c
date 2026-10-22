@@ -1186,6 +1186,7 @@ log_devel_leaking_fds(const char *exe, int min, int max)
                           fd, exe);
             }
         }
+        list_delete(fd_list);
     }
 }
 #endif // USE_DEVEL_LOGGING

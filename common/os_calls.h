@@ -562,7 +562,7 @@ void
 g_free_nonpaged(void *addr, size_t size);
 
 /**
- * Returns the page size for this system
+ * Returns the page size for this system, or 0 if unavailable
  * @return Page size
  */
 size_t

@@ -4541,9 +4541,9 @@ g_malloc_nonpaged(size_t size)
     size_t pagesize = g_pagesize();
     void *res;
 
-    // Validate the size is non zero, and can be rounded up
-    // without overflowing
-    if (size == 0 || size > (size_t)(-1) - (pagesize - 1))
+    // Validate the pagesize is valid, and the size is non zero, and
+    // can be rounded up without overflowing
+    if (pagesize == 0 || size == 0 || size > (size_t)(-1) - (pagesize - 1))
     {
         errno = ENOMEM;
         return NULL;
@@ -4581,34 +4581,44 @@ void
 g_free_nonpaged(void *addr, size_t size)
 {
     size_t pagesize = g_pagesize();
-    // Round the size up to a whole number of pages
-    size = (size + (pagesize - 1)) / pagesize * pagesize;
 
-    // Check this is a value we could have allocated
-    if (((intptr_t)addr % pagesize) != 0)
+    // If we don't know what the pagesize is, we can't have
+    // made a successful call to g_malloc_nonpaged()
+    if (pagesize != 0)
     {
-        LOG(LOG_LEVEL_ERROR,
-            "Programming error : Bad address in g_free_nonpaged()");
+        // Round the size up to a whole number of pages
+        size = (size + (pagesize - 1)) / pagesize * pagesize;
+
+        // Check this is a value we could have allocated
+        if (((intptr_t)addr % pagesize) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Programming error : Bad address in g_free_nonpaged()");
+        }
+        else
+        {
+            (void)munlock(addr, size);
+        }
+        free(addr);
     }
-    else
-    {
-        (void)munlock(addr, size);
-    }
-    free(addr);
 }
 
 /******************************************************************************/
 size_t
 g_pagesize(void)
 {
-    static size_t pagesize = 0;
-
-    if (pagesize == 0)
+    static long pagesize = 1; // Cache for returned value
+    if (pagesize == 1)
     {
+        // According to the spec, this can fail and return -1
         pagesize = sysconf(_SC_PAGESIZE);
+        if (pagesize < 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't determine page size for this system");
+        }
     }
 
-    return pagesize;
+    return (pagesize < 0) ? 0 : (size_t)pagesize;
 }
 
 /******************************************************************************/
@@ -4616,9 +4626,14 @@ void
 g_request_nonpaged(unsigned int pagecount)
 {
     struct rlimit lim;
+    size_t pagesize;
     if (pagecount == 0)
     {
         ;
+    }
+    else if ((pagesize = g_pagesize()) == 0)
+    {
+        ; // An error has been logged
     }
     else if (getrlimit(RLIMIT_MEMLOCK, &lim) == 0)
     {
