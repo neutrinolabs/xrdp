@@ -807,6 +807,10 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
     {
         return 0;
     }
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, capsSetCount);
     if ((capsSetCount < 1) || (capsSetCount > 1024))
     {
@@ -876,17 +880,13 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
         in_uint16_le(s, cmdId);
         in_uint16_le(s, flags);
         in_uint32_le(s, pduLength);
-        s->end = holdp + pduLength;
         LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process: cmdId 0x%x flags %d"
             " pduLength %d", cmdId, flags, pduLength);
-        if (pduLength < 8)
+        if (pduLength < 8 || pduLength > holdend - holdp)
         {
             return 1;
         }
-        if (!s_check_rem(s, pduLength - 8))
-        {
-            return 1;
-        }
+        s->end = holdp + pduLength;
         switch (cmdId)
         {
             case XR_RDPGFX_CMDID_FRAMEACKNOWLEDGE:
