@@ -271,6 +271,17 @@ h264_frame_interval=16
 rfx_frame_interval=32
 normal_frame_interval=40
 
+; Experimental Wayland session: sesman starts the compositor from the
+; [Wayland] section of sesman.ini. Build xrdp with --enable-wlup.
+#[Wayland]
+#name=Wayland
+#lib=libwlup.@lib_extension@
+#username=ask
+#password=ask
+#port=-1
+#code=30
+#xkb_layout=us
+
 [Xvnc]
 name=Xvnc
 lib=libvnc.@lib_extension@
