@@ -267,6 +267,20 @@ the operating system. It is recommended not to set these on systems with
 dynamic TCP buffer sizing
 
 .TP
+\fBtcp_notsent_lowat\fP=\fIbytes\fP
+Sets socket option \fBTCP_NOTSENT_LOWAT\fP on the listening socket, which
+connections inherit: the kernel then holds at most about this many bytes
+for a client that it has not sent yet. On a link slower than the screen
+changes, the backlog then stays in xrdp, which can skip screen updates
+that are out of date, instead of in the kernel, which has to send all it
+holds, so the client sees changes sooner.
+Unlike \fBtcp_send_buffer_bytes\fP, it does not limit data in flight,
+so it does not slow down fast links. If not set, the operating system's
+default applies, which on Linux is no limit (sysctl
+\fBnet.ipv4.tcp_notsent_lowat\fP). 131072 is a reasonable value.
+Ignored with a warning where the platform lacks the option.
+
+.TP
 \fBtls_ciphers\fP=\fIcipher_suite\fP
 Specifies TLS cipher suite. The format of this parameter is equivalent
 to which \fBopenssl\fP(1) ciphers subcommand accepts.
