@@ -29,6 +29,7 @@
 #include "log.h"
 #include "string_calls.h"
 #include "unicode_defines.h"
+#include "xrdp_login_clip.h"
 #include "xrdp_login_lvgl.h"
 
 /*****************************************************************************/
@@ -39,6 +40,14 @@ xrdp_wm_load_channel_config(struct xrdp_wm *self)
     names->auto_free = 1;
     struct list *values = list_create();
     values->auto_free = 1;
+
+    /* Look this up unconditionally, independently of whether the
+     * [Channels] section below is present: an absent section leaves
+     * every channel enabled, and libxrdp_get_channel_id() already
+     * returns -1 if the client has no cliprdr channel at all. The loop
+     * below overwrites this with -1 if [Channels] disables cliprdr. */
+    self->clip_chan_id =
+        libxrdp_get_channel_id(self->session, CLIPRDR_SVC_CHANNEL_NAME);
 
     if (file_by_name_read_section(self->session->xrdp_ini,
                                   "Channels", names, values) == 0)
@@ -81,6 +90,11 @@ xrdp_wm_load_channel_config(struct xrdp_wm *self)
                     chan_name, chan_id, disabled_str);
 
                 libxrdp_disable_channel(self->session, chan_id, disabled);
+
+                if (disabled && chan_id == self->clip_chan_id)
+                {
+                    self->clip_chan_id = -1;
+                }
             }
         }
     }
@@ -173,6 +187,8 @@ xrdp_wm_delete(struct xrdp_wm *self)
     xrdp_login_lvgl_delete(self);
     xrdp_region_delete(self->screen_dirty_region);
     xrdp_mm_delete(self->mm);
+    xrdp_login_clip_delete(self->login_clip);
+    self->login_clip = NULL;
     xrdp_cache_delete(self->cache);
     xrdp_painter_delete(self->painter);
     xrdp_bitmap_delete(self->screen);
@@ -842,6 +858,29 @@ xrdp_wm_init(struct xrdp_wm *self)
         {
             xrdp_login_wnd_create(self);
         }
+
+        /* Kept across a failed login and the reset that follows, so the
+         * clipboard channel is not handshaken again for every attempt. It
+         * ends at xrdp_wm_login_clip_handover(); if connecting fails after
+         * that and the prompt returns, a new one is created here and
+         * handshakes again */
+        if (self->login_clip == NULL &&
+                self->xrdp_config->cfg_globals.enable_login_clipboard)
+        {
+            if (self->clip_chan_id >= 0)
+            {
+                self->login_clip = xrdp_login_clip_create(self,
+                                   self->clip_chan_id);
+            }
+            else
+            {
+                LOG(LOG_LEVEL_INFO, "Login screen clipboard paste is "
+                    "enabled but the cliprdr channel is unavailable "
+                    "(absent from the client, or disabled in the "
+                    "[Channels] section)");
+            }
+        }
+
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
         xrdp_wm_set_focused(self, self->login_window);
@@ -1672,7 +1711,16 @@ xrdp_wm_key(struct xrdp_wm *self, int keyboard_flags, int key_code)
         ki = get_key_info_from_kbd_event(keyboard_flags, key_code, self->keys,
                                          self->caps_lock, self->num_lock,
                                          self->scroll_lock, &self->keymap);
-        if (ki != NULL)
+        if (xrdp_login_clip_is_paste_key(self->keys, scancode, ki))
+        {
+            /* Swallow both halves of the paste key, so LVGL never sees
+             * Ctrl+V as a 'v' */
+            if (!keyup)
+            {
+                xrdp_login_clip_request_paste(self->login_clip);
+            }
+        }
+        else if (ki != NULL)
         {
             xrdp_login_lvgl_key(self, ki->sym, ki->chr, !keyup,
                                 self->keys[SCANCODE_INDEX_LSHIFT_KEY] ||
@@ -2141,7 +2189,16 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
     struct xrdp_mod *m;
     rv = 1;
 
-    if (self->mm != 0)
+    if (self->login_clip != NULL && LOWORD(param1) == self->clip_chan_id)
+    {
+        /* Still on the login screen, which owns the clipboard channel
+         * until xrdp_wm_login_clip_handover(). This has to come first:
+         * use_chansrv can still be set from a failed login */
+        rv = xrdp_login_clip_process_channel_data(self->login_clip,
+                HIWORD(param1), (const char *)param3,
+                param2, param4);
+    }
+    else if (self->mm != 0)
     {
         if (self->mm->use_chansrv)
         {
@@ -2614,6 +2671,13 @@ xrdp_wm_login_state_to_str(enum wm_login_state login_state)
 int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
 {
+    if (login_state != WMLS_USER_PROMPT)
+    {
+        /* Nowhere to paste until the prompt is back. login_clip itself
+         * stays, to keep answering the client */
+        xrdp_login_clip_abandon_paste(self->login_clip);
+    }
+
     LOG(LOG_LEVEL_DEBUG, "Login state change request %s -> %s",
         xrdp_wm_login_state_to_str(self->login_state),
         xrdp_wm_login_state_to_str(login_state));
@@ -2623,6 +2687,20 @@ xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state)
     return 0;
 }
 
+/*****************************************************************************/
+void
+xrdp_wm_login_clip_handover(struct xrdp_wm *self)
+{
+    if (self->login_clip != NULL)
+    {
+        LOG(LOG_LEVEL_DEBUG, "Login screen clipboard handing the cliprdr "
+            "channel over to the session");
+        xrdp_login_clip_delete(self->login_clip);
+        self->login_clip = NULL;
+    }
+}
+
+/*****************************************************************************/
 int
 xrdp_wm_can_resize(struct xrdp_wm *self)
 {

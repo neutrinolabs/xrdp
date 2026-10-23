@@ -8,6 +8,7 @@ Suite *make_suite_test_keymap_load(void);
 Suite *make_suite_egfx_base_functions(void);
 Suite *make_suite_region(void);
 Suite *make_suite_tconfig_load_gfx(void);
+Suite *make_suite_login_clip(void);
 
 Suite *make_suite_login(void);
 #endif /* TEST_XRDP_H */
