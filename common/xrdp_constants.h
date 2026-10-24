@@ -127,7 +127,7 @@
 #define WAVE_FORMAT_ALAW               0x0006
 #define WAVE_FORMAT_MULAW              0x0007
 #define WAVE_FORMAT_MPEGLAYER3         0x0055
-#define WAVE_FORMAT_OPUS               0x0069
+#define WAVE_FORMAT_OPUS               0x704F /* 0x0069 is Voxware */
 #define WAVE_FORMAT_AAC                0xA106
 
 /* https://technet.microsoft.com/ja-jp/library/aa387685.aspx */
