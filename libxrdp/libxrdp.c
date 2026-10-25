@@ -505,6 +505,74 @@ send_bitmap_pdu(struct xrdp_session *session, struct stream *s)
     return rv;
 }
 
+/******************************************************************************/
+/* Tell the client which of its lock keys should be lit
+ *
+ * [MS-RDPBCGR] 2.2.8.2.1.1 Set Keyboard Indicators PDU Data
+ * (TS_SET_KEYBOARD_INDICATORS_PDU)
+ *
+ * led_flags is the TS_SYNC_* bitmask the client itself uses in its
+ * Synchronize event: scroll 0x01, num 0x02, caps 0x04, kana 0x08.
+ *
+ * There is no capability to negotiate for this, so it reaches every client.
+ * One that does not implement it logs the PDU as unhandled and carries on,
+ * which is why callers must send only on an actual change, never on a timer.
+ */
+int EXPORT_CC
+libxrdp_send_set_keyboard_indicators(struct xrdp_session *session,
+                                     int led_flags)
+{
+    struct stream *s = (struct stream *)NULL;
+
+    /* The client is only ready for data PDUs once the connection sequence
+     * has finished. */
+    if (session->up_and_running == 0)
+    {
+        LOG_DEVEL(LOG_LEVEL_TRACE, "libxrdp_send_set_keyboard_indicators: "
+                  "connection not up yet, dropping ledFlags 0x%2.2x",
+                  led_flags & 0x0f);
+        return 0;
+    }
+
+    make_stream(s);
+    init_stream(s, 8192);
+
+    if (xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "libxrdp_send_set_keyboard_indicators: "
+            "xrdp_rdp_init_data failed");
+        free_stream(s);
+        return 1;
+    }
+
+    out_uint16_le(s, 0);                /* unitId, MUST be 0 */
+    out_uint16_le(s, led_flags & 0x0f); /* ledFlags */
+    s_mark_end(s);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] "
+              "TS_SET_KEYBOARD_INDICATORS_PDU ledFlags 0x%2.2x",
+              led_flags & 0x0f);
+
+    /* Sent uncompressed. In a GFX session the whole picture travels over the
+     * graphics channel, so a slow path data PDU like this one may well be the
+     * first thing the MPPC compressor is ever asked to handle - and a client
+     * can hang up over it. Observed with mstsc.exe, which lit the right lamp
+     * and then dropped the connection. The monitor layout PDU is sent
+     * uncompressed for a related reason. */
+    if (xrdp_rdp_send_data_from_channel((struct xrdp_rdp *)session->rdp, s,
+                                        PDUTYPE2_SET_KEYBOARD_INDICATORS,
+                                        ((struct xrdp_rdp *)session->rdp)->mcs_channel,
+                                        0) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "libxrdp_send_set_keyboard_indicators: "
+            "xrdp_rdp_send_data_from_channel failed");
+        free_stream(s);
+        return 1;
+    }
+
+    free_stream(s);
+    return 0;
+}
+
 /*****************************************************************************/
 int EXPORT_CC
 libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
