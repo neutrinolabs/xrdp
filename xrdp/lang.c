@@ -294,13 +294,28 @@ km_read_section(toml_table_t *tfile, const char *section_name,
 
 /*****************************************************************************/
 int
-get_keymaps(int keylayout, struct xrdp_keymap *keymap)
+get_keymaps(int keylayout, int keyboard_type, int keyboard_subtype,
+            struct xrdp_keymap *keymap)
 {
     int basic_key_layout = keylayout & 0x0000ffff;
     char filename[256];
     int layout_list[10];
     int layout_count = 0;
     int i;
+
+    /* Check for a type/subtype-specific keymap first (e.g. Mac UK) */
+    if (keyboard_type > 0 && keyboard_subtype > 0)
+    {
+        g_snprintf(filename, sizeof(filename),
+                   XRDP_CFG_PATH "/km-%08x-%d-%d.toml",
+                   basic_key_layout, keyboard_type, keyboard_subtype);
+        if (km_load_file(filename, keymap) == 0)
+        {
+            return 0;
+        }
+        LOG(LOG_LEVEL_DEBUG,
+            "No type/subtype keymap %s, falling back to layout-only", filename);
+    }
 
     /* Work out a list of layouts to try to load */
     layout_list[layout_count++] = keylayout; // Requested layout
