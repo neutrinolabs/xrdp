@@ -448,16 +448,7 @@ check_drop_privileges(struct xrdp_startup_params *startup_params)
             entry_uid, entry_gid);
         rv = 0;
     }
-    else if (user[0] == '\0' && group[0] == '\0')
-    {
-        // We're running as a privileged user, and this isn't
-        // overridden in our own config
-        LOG(LOG_LEVEL_ALWAYS,
-            "You are running xrdp as uid=%d gid=%d. This is not recommended.",
-            entry_uid, entry_gid);
-        rv = 0; // Allowed for now for old configs
-    }
-    else if (user[0] == '\0' || group[0] == '\0')
+    if (user[0] == '\0' || group[0] == '\0')
     {
         LOG(LOG_LEVEL_ERROR,
             "Both a runtime_user and a runtime_group MUST be specified");
