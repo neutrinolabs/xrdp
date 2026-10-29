@@ -522,6 +522,16 @@ Sets the duration(msec). Sound data is not send to client during \fInumber\fR
 millisecond(s) after close message is sent, when AAC/MP3 is selected.
 If set to 0, all the data is sent. If not specified, defaults to \fI1000\fR.
 
+.TP
+\fBMicrophoneOpus\fR=\fI[true|false]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, the microphone redirection
+offers Opus at 48 kHz before PCM at 44.1 kHz, which needs about a twentieth of
+the bandwidth. Clients without Opus support still use PCM. FreeRDP clients up
+to 3.32 fail with Opus for the microphone (some disconnect, others send
+corrupted audio), so this should only be enabled when the clients are known to
+handle it. Only available if xrdp was built with Opus support.
+If not specified, defaults to \fBfalse\fR.
+
 .SH "SESSIONS VARIABLES"
 All entries in the \fB[SessionVariables]\fR section are set as
 environment variables in the user's session.

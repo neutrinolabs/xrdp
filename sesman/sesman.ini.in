@@ -228,6 +228,11 @@ FileUmask=077
 #SoundNumSilentFramesAAC=4
 #SoundNumSilentFramesMP3=2
 #SoundMsecDoNotSend=1000
+; microphone redirection
+; Offer Opus (64 kbit/s) before PCM (1.4 Mbit/s). FreeRDP clients up to
+; 3.32 cannot send Opus from a microphone: some disconnect, others send
+; corrupted audio, so only enable it for fixed clients. See sesman.ini(5).
+#MicrophoneOpus=false
 
 [ChansrvLogging]
 ; Note: one log file is created per display and the LogFile config value
