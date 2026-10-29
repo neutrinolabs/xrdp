@@ -471,6 +471,8 @@ scp_get_connect_session_request(struct trans *trans,
  * @param status Status of connection request
  * @param display_fd File descriptor for display server
  * @param chan_fd File descriptor for chansrv, or -1 for no chansrv
+ * @param aux_fd Second file descriptor for the display server, or -1.
+ *               GNOME sessions use it for the session's PipeWire daemon
  *
  * @return != 0 for error
  */
@@ -478,7 +480,8 @@ int
 scp_send_connect_session_response(struct trans *trans,
                                   enum scp_sconnect_status status,
                                   int display_fd,
-                                  int chan_fd);
+                                  int chan_fd,
+                                  int aux_fd);
 
 
 /**
@@ -488,6 +491,7 @@ scp_send_connect_session_response(struct trans *trans,
  * @param[out] status Status of connection request
  * @param[out] display_fd File descriptor for display server
  * @param[out] chan_fd File descriptor for chansrv, or -1 for no chansrv
+ * @param[out] aux_fd Second display server file descriptor, or -1
  *
  * @return != 0 for error
  */
@@ -495,7 +499,8 @@ int
 scp_get_connect_session_response(struct trans *trans,
                                  enum scp_sconnect_status *status,
                                  int *display_fd,
-                                 int *chan_fd);
+                                 int *chan_fd,
+                                 int *aux_fd);
 
 /**
  * Send an E_SCP_LIST_SESSIONS_REQUEST (SCP client)

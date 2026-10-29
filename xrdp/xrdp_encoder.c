@@ -980,6 +980,13 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
         }
         else
         {
+            /* If x264 encoded the picture but it did not fit, the frames
+             * after it are predicted from a picture the client never
+             * gets: until a key frame, the client can show the wrong
+             * pixels, not only old ones */
+            LOG(LOG_LEVEL_WARNING, "gfx_wiretosurface1: H.264 frame dropped, "
+                "encode error %d (%d bytes of room)", error,
+                (int)(s->size - (s->p - s->data)));
             g_free(s->data);
             g_free(crects);
             return NULL;
@@ -1424,6 +1431,11 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
         {
             case XR_RDPGFX_CMDID_WIRETOSURFACE_1:       /* 0x0001 */
                 s = gfx_wiretosurface1(self, bulk, &in_s, enc);
+                if (s == NULL)
+                {
+                    LOG(LOG_LEVEL_WARNING, "xrdp_encoder: WireToSurface1 "
+                        "dropped, the client misses this update");
+                }
                 break;
             case XR_RDPGFX_CMDID_WIRETOSURFACE_2:       /* 0x0002 */
                 s = gfx_wiretosurface2(self, bulk, &in_s, enc);

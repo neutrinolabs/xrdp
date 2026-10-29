@@ -62,6 +62,8 @@ nodist_sesmansysconf_DATA = \
 
 dist_sesmansysconf_SCRIPTS = \
   startwm.sh \
+  startwayland.sh \
+  startgnome.sh \
   reconnectwm.sh
 
 SUBDIRS = \

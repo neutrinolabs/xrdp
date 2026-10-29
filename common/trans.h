@@ -105,7 +105,8 @@ struct trans
     struct stream *out_s;
     char *listen_filename;
     tis_term is_term; /* used to test for exit */
-    struct stream *wait_s;
+    struct stream *wait_s; /* output the socket did not take yet */
+    struct stream *wait_s_tail; /* the last of them, to append to */
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
     void *extra_data; /* user defined */
