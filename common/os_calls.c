@@ -3391,6 +3391,14 @@ g_drop_privileges(const char *user, const char *group)
         LOG(LOG_LEVEL_ERROR, "Unable to get GID for group '%s' [%s]", group,
             g_get_strerror());
     }
+    else if (uid == 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Running as UID 0 is not allowed");
+    }
+    else if (gid == 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Running as GID 0 is not allowed");
+    }
     else if (initgroups(user, gid) != 0)
     {
         LOG(LOG_LEVEL_ERROR, "Unable to init groups for '%s' [%s]", user,
