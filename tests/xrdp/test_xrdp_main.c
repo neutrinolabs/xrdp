@@ -59,6 +59,12 @@ int main (void)
     srunner_add_suite(sr, make_suite_egfx_base_functions());
     srunner_add_suite(sr, make_suite_region());
     srunner_add_suite(sr, make_suite_tconfig_load_gfx());
+#if defined(XRDP_OPENH264) || defined(XRDP_X264)
+    srunner_add_suite(sr, make_suite_encoder());
+#endif
+#if defined(XRDP_OPENH264)
+    srunner_add_suite(sr, make_suite_encoder_openh264());
+#endif
 
     srunner_add_suite(sr, make_suite_login());
 

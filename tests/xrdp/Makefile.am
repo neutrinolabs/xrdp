@@ -43,6 +43,7 @@ test_xrdp_SOURCES = \
     test_xrdp_main.c \
     test_login.c \
     test_xrdp_egfx.c \
+    test_xrdp_encoder.c \
     test_xrdp_keymap.c \
     test_xrdp_region.c \
     test_tconfig.c \
@@ -54,7 +55,8 @@ test_xrdp_CFLAGS = \
     @CMOCKA_CFLAGS@
 
 test_xrdp_LDFLAGS = -Wl,--wrap=pixman_region_extents, \
-    -Wl,--wrap=pixman_region_not_empty
+    -Wl,--wrap=pixman_region_not_empty \
+    -Wl,--wrap=tc_thread_create
 
 test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_load.o \
@@ -96,10 +98,28 @@ test_xrdp_LDADD += \
 endif
 
 if XRDP_OPENH264
-AM_CPPFLAGS += -DXRDP_X264 $(XRDP_OPENH264_CFLAGS)
+AM_CPPFLAGS += -DXRDP_OPENH264 $(XRDP_OPENH264_CFLAGS)
+test_xrdp_SOURCES += test_xrdp_encoder_openh264.c
 test_xrdp_LDADD += \
     $(top_builddir)/xrdp/xrdp_encoder_openh264.o \
     $(XRDP_OPENH264_LIBS)
+
+# Performance measurements are opt-in, never part of make check.
+EXTRA_PROGRAMS = bench_openh264
+bench_openh264_SOURCES = \
+    bench_openh264.c \
+    bench_openh264_ref.c \
+    bench_openh264_ref.h
+bench_openh264_LDADD = \
+    $(top_builddir)/xrdp/xrdp_encoder_openh264.o \
+    $(top_builddir)/xrdp/xrdp_tconfig.o \
+    $(top_builddir)/common/libcommon.la \
+    $(top_builddir)/third_party/tomlc99/libtoml.la \
+    $(XRDP_OPENH264_LIBS)
+
+.PHONY: benchmark-openh264
+benchmark-openh264: bench_openh264
+	./bench_openh264
 endif
 
 if XRDP_LVGL
