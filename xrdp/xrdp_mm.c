@@ -3664,7 +3664,13 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
 
     if (self->wm->screen_dirty_region != NULL)
     {
-        if (xrdp_region_not_empty(self->wm->screen_dirty_region))
+        /* While output is queued for the client, xrdp_mm_check_wait_objs()
+         * holds the dirty region back, and the client's socket wakes us
+         * as it drains: a timeout would only spin */
+        struct trans *client_trans = self->wm->session->trans;
+
+        if (xrdp_region_not_empty(self->wm->screen_dirty_region) &&
+                (client_trans == NULL || client_trans->wait_s == NULL))
         {
             unsigned int now = g_get_elapsed_ms();
             unsigned int next_screen_draw_time =
@@ -4069,7 +4075,13 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 
     if (self->wm->screen_dirty_region != NULL)
     {
-        if (xrdp_region_not_empty(self->wm->screen_dirty_region))
+        /* While the client's socket has output queued, the dirty region
+         * keeps growing instead: sending more would only queue up behind
+         * it. This runs again as the queue drains */
+        struct trans *client_trans = self->wm->session->trans;
+
+        if (xrdp_region_not_empty(self->wm->screen_dirty_region) &&
+                (client_trans == NULL || client_trans->wait_s == NULL))
         {
             unsigned int now = g_get_elapsed_ms();
             int diff = now - self->wm->last_screen_draw_time;
