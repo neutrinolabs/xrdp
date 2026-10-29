@@ -132,7 +132,6 @@ xrdp
 ├── librfxcodec · RFX codec library
 ├── libxrdp ····· core RDP protocol implementation
 ├── m4 ·········· Autoconf macros
-├── mc ·········· media center module
 ├── neutrinordp · RDP client module for proxying RDP connections using NeutrinoRDP
 ├── pkgconfig ··· pkg-config configuration
 ├── scripts ····· build scripts
