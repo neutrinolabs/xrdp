@@ -43,6 +43,7 @@ test_xrdp_SOURCES = \
     test_xrdp_main.c \
     test_login.c \
     test_xrdp_egfx.c \
+    test_xrdp_encoder.c \
     test_xrdp_keymap.c \
     test_xrdp_region.c \
     test_tconfig.c \
@@ -54,7 +55,8 @@ test_xrdp_CFLAGS = \
     @CMOCKA_CFLAGS@
 
 test_xrdp_LDFLAGS = -Wl,--wrap=pixman_region_extents, \
-    -Wl,--wrap=pixman_region_not_empty
+    -Wl,--wrap=pixman_region_not_empty \
+    -Wl,--wrap=g_munmap
 
 test_xrdp_LDADD = \
     $(top_builddir)/xrdp/xrdp_bitmap_load.o \
