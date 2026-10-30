@@ -592,6 +592,12 @@
 #define CMDTYPE_FRAME_MARKER           0x0004
 #define CMDTYPE_STREAM_SURFACE_BITS    0x0006
 
+/* Save Session Info PDU Data (2.2.10) */
+#define INFOTYPE_LOGON               0x00000000
+#define INFOTYPE_LOGON_LONG          0x00000001
+#define INFOTYPE_LOGON_PLAINNOTIFY   0x00000002
+#define INFOTYPE_LOGON_EXTENDED_INFO 0x00000003
+
 /* Compression Flags (3.1.8.2.1) */
 /* TODO: to be renamed, not used anywhere */
 #define RDP_MPPC_COMPRESSED            0x20
