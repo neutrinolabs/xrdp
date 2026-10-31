@@ -173,8 +173,12 @@ AC_ARG_ENABLE(nvenc, AS_HELP_STRING([--enable-nvenc],
                XRDP_NVENC_LIBS should be set if used]),
               [], [enable_nvenc=no])
 AM_CONDITIONAL(XRDP_NVENC, [test x$enable_nvenc = xyes])
+AC_ARG_ENABLE(vaapi, AS_HELP_STRING([--enable-vaapi],
+              [Use VA-API hardware encoding in xrdp_accel_assist (default: no)]),
+              [], [enable_vaapi=no])
+AM_CONDITIONAL(XRDP_VAAPI, [test x$enable_vaapi = xyes])
 AC_ARG_ENABLE(accel, AS_HELP_STRING([--enable-accel],
-              [Build xrdp_accel_assist (default: no, auto set if --enable-nvenc)]),
+              [Build xrdp_accel_assist (default: no, auto set if --enable-nvenc or --enable-vaapi)]),
               [], [enable_accel=no])
 # AM_CONDITIONAL(XRDP_ACCEL, [test x$enable_accel = xyes]) later in this file
 AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
@@ -550,6 +554,13 @@ then
 fi
 fi
 
+if test "x$enable_vaapi" = "xyes"
+then
+enable_accel=yes
+# VA-API 1.12 (libva 2.12): VASurfaceAttribDRMFormatModifiers
+PKG_CHECK_MODULES(XRDP_VAAPI, [libva >= 1.12.0 libva-drm >= 1.12.0])
+fi
+
 AM_CONDITIONAL(XRDP_ACCEL, [test x$enable_accel = xyes])
 
 # checking for TurboJPEG
@@ -735,6 +746,7 @@ echo "  rfxcodec                        $enable_rfxcodec"
 echo "  x264                            $enable_x264"
 echo "  openh264                        $enable_openh264"
 echo "  nvenc                           $enable_nvenc"
+echo "  vaapi                           $enable_vaapi"
 echo "  accel                           $enable_accel"
 echo "  painter                         $enable_painter"
 echo "  pixman                          $enable_pixman"
