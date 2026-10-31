@@ -56,6 +56,9 @@
 #if defined(XRDP_NVENC)
 #include "xrdp_accel_assist_nvenc.h"
 #endif
+#if defined(XRDP_VAAPI)
+#include "xrdp_accel_assist_vaapi.h"
+#endif
 
 /* X11 */
 Display *g_display = NULL;
@@ -76,21 +79,32 @@ struct enc_funcs
     enum encoder_result (*encode)(struct enc_info *ei, int tex,
                                   void *cdata, int *cdata_bytes,
                                   int flags);
+    /* if not NULL, the encoder owns its input, render into these */
+    int (*get_planes)(struct enc_info *ei, int *y_tex, int *uv_tex);
 };
 
 static struct enc_funcs g_enc_funcs[] =
 {
     {
-        NULL, NULL, NULL, NULL
+#if defined(XRDP_VAAPI)
+        xrdp_accel_assist_vaapi_init,
+        xrdp_accel_assist_vaapi_create_encoder,
+        xrdp_accel_assist_vaapi_delete_encoder,
+        xrdp_accel_assist_vaapi_encode,
+        xrdp_accel_assist_vaapi_get_planes
+#else
+        NULL, NULL, NULL, NULL, NULL
+#endif
     },
     {
 #if defined(XRDP_NVENC)
         xrdp_accel_assist_nvenc_init,
         xrdp_accel_assist_nvenc_create_encoder,
         xrdp_accel_assist_nvenc_delete_encoder,
-        xrdp_accel_assist_nvenc_encode
+        xrdp_accel_assist_nvenc_encode,
+        NULL
 #else
-        NULL, NULL, NULL, NULL
+        NULL, NULL, NULL, NULL, NULL
 #endif
     }
 };
@@ -132,6 +146,12 @@ static struct inf_funcs g_inf_funcs[] =
 static int g_inf = INF_EGL;
 static int g_enc = ENC_VA;
 
+typedef GLfloat *(*get_vertices_proc)(GLuint *vertices_bytes,
+                                      GLuint *vertices_pointes,
+                                      int num_crects, struct xh_rect *crects,
+                                      int left, int top,
+                                      int width, int height);
+
 struct mon_info
 {
     int width;
@@ -146,6 +166,9 @@ struct mon_info
                              int num_crects, struct xh_rect *crects,
                              int left, int top, int width, int height);
     struct xh_rect viewport;
+    /* encoder owned planes, enc_texture is Y, uv_texture is UV */
+    GLuint uv_texture;
+    struct xh_rect uv_viewport;
     struct enc_info *ei;
 };
 
@@ -162,8 +185,9 @@ static GLuint g_fb = 0;
 #define XH_SHADERRGB2YUV420MV   4
 #define XH_SHADERRGB2YUV420AV   5
 #define XH_SHADERRGB2YUV420AVV2 6
+#define XH_SHADERRGB2UV420      7
 
-#define XH_NUM_SHADERS 7
+#define XH_NUM_SHADERS 8
 
 struct shader_info
 {
@@ -322,6 +346,9 @@ xrdp_accel_assist_x11_init(void)
     vsource[XH_SHADERRGB2YUV420AVV2] = g_vs;
     fsource[XH_SHADERRGB2YUV420AVV2] = g_fs_rgb_to_yuv420_av_v2;
 
+    vsource[XH_SHADERRGB2UV420] = g_vs;
+    fsource[XH_SHADERRGB2UV420] = g_fs_rgb_to_uv420;
+
     for (index = 0; index < XH_NUM_SHADERS; index++)
     {
         g_si[index].vertex_shader = glCreateShader(GL_VERTEX_SHADER);
@@ -380,6 +407,12 @@ xrdp_accel_assist_x11_init(void)
         glUseProgram(0);
     }
     g_memset(g_mons, 0, sizeof(g_mons));
+    if (g_enc_funcs[g_enc].init == NULL)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_accel_assist_x11_init: "
+            "no encoder built in");
+        return 1;
+    }
     if (g_enc_funcs[g_enc].init() != 0)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_accel_assist_x11_init: "
@@ -427,7 +460,11 @@ xrdp_accel_assist_x11_delete_all_pixmaps(void)
         {
             g_enc_funcs[g_enc].destroy_enc(mi->ei);
             glDeleteTextures(1, &(mi->bmp_texture));
-            glDeleteTextures(1, &(mi->enc_texture));
+            if (mi->uv_texture == 0)
+            {
+                glDeleteTextures(1, &(mi->enc_texture));
+            }
+            mi->uv_texture = 0;
             g_inf_funcs[g_inf].destroy_image(mi->inf_image);
             XFreePixmap(g_display, mi->pixmap);
             mi->pixmap = 0;
@@ -602,6 +639,48 @@ get_vertices444(GLuint *vertices_bytes, GLuint *vertices_pointes,
 }
 
 /*****************************************************************************/
+/* for a half size UV plane, rects grow to even edges so each 2x2 block
+   a rect touches gets drawn */
+static GLfloat *
+get_vertices_uv420(GLuint *vertices_bytes, GLuint *vertices_pointes,
+                   int num_crects, struct xh_rect *crects,
+                   int left, int top, int width, int height)
+{
+    struct xh_rect *even_crects;
+    struct xh_rect *crect;
+    GLfloat *vertices;
+    int index;
+    int x;
+    int y;
+
+    if (num_crects < 1)
+    {
+        return get_vertices_all(vertices_bytes, vertices_pointes,
+                                num_crects, crects, left, top, width, height);
+    }
+    even_crects = g_new(struct xh_rect, num_crects);
+    if (even_crects == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < num_crects; index++)
+    {
+        crect = crects + index;
+        x = (crect->x - left) & ~1;
+        y = (crect->y - top) & ~1;
+        even_crects[index].x = left + x;
+        even_crects[index].y = top + y;
+        even_crects[index].w = ((crect->x - left + crect->w + 1) & ~1) - x;
+        even_crects[index].h = ((crect->y - top + crect->h + 1) & ~1) - y;
+    }
+    vertices = get_vertices444(vertices_bytes, vertices_pointes,
+                               num_crects, even_crects, left, top,
+                               (width + 1) & ~1, (height + 1) & ~1);
+    g_free(even_crects);
+    return vertices;
+}
+
+/*****************************************************************************/
 int
 xrdp_accel_assist_x11_create_pixmap(int width, int height, int magic,
                                     int con_id, int mon_id)
@@ -613,6 +692,8 @@ xrdp_accel_assist_x11_create_pixmap(int width, int height, int magic,
     inf_image_t inf_image;
     GLuint bmp_texture;
     GLuint enc_texture;
+    int y_tex;
+    int uv_tex;
 
     mi = g_mons + mon_id % MAX_MON;
     if (mi->pixmap != 0)
@@ -663,16 +744,19 @@ xrdp_accel_assist_x11_create_pixmap(int width, int height, int magic,
     }
     else if (g_enc == ENC_VA)
     {
+        /* NV12 in the encoder's own Y and UV planes, set below */
         LOG(LOG_LEVEL_INFO, "xrdp_accel_assist_x11_create_pixmap: "
-            "using XH_YUV422");
-        mi->tex_format = XH_YUV422;
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width / 2, height, 0,
-                     GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, NULL);
-        mi->get_vertices = get_vertices444; /* same as 444 */
+            "using XH_YUV420 planes");
+        mi->tex_format = XH_YUV420;
+        mi->get_vertices = get_vertices444;
         mi->viewport.x = 0;
         mi->viewport.y = 0;
-        mi->viewport.w = width / 2;
+        mi->viewport.w = width;
         mi->viewport.h = height;
+        mi->uv_viewport.x = 0;
+        mi->uv_viewport.y = 0;
+        mi->uv_viewport.w = (width + 1) / 2;
+        mi->uv_viewport.h = (height + 1) / 2;
     }
     else
     {
@@ -699,6 +783,13 @@ xrdp_accel_assist_x11_create_pixmap(int width, int height, int magic,
                                       &(mi->ei)) != 0)
     {
         return 1;
+    }
+    if (g_enc_funcs[g_enc].get_planes != NULL)
+    {
+        glDeleteTextures(1, &enc_texture);
+        g_enc_funcs[g_enc].get_planes(mi->ei, &y_tex, &uv_tex);
+        enc_texture = y_tex;
+        mi->uv_texture = uv_tex;
     }
 
     mi->pixmap = pixmap;
@@ -742,6 +833,8 @@ static void
 xrdp_accel_assist_x11_run_shader(int left, int top, int width, int height,
                                  struct mon_info *mi,
                                  struct shader_info *si,
+                                 GLuint tex, struct xh_rect *viewport,
+                                 get_vertices_proc get_vertices,
                                  int num_crects, struct xh_rect *crects)
 {
     GLuint vao;
@@ -757,12 +850,12 @@ xrdp_accel_assist_x11_run_shader(int left, int top, int width, int height,
     g_inf_funcs[g_inf].bind_tex_image(mi->inf_image);
     glBindFramebuffer(GL_FRAMEBUFFER, g_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, mi->enc_texture, 0);
+                           GL_TEXTURE_2D, tex, 0);
     glUseProgram(si->program);
     /* setup vertices from crects */
-    vertices = mi->get_vertices(&vertices_bytes, &vertices_pointes,
-                                num_crects, crects,
-                                left, top, width, height);
+    vertices = get_vertices(&vertices_bytes, &vertices_pointes,
+                            num_crects, crects,
+                            left, top, width, height);
     if (vertices == NULL)
     {
         LOG(LOG_LEVEL_ERROR, "xrdp_accel_assist_x11_run_shader: "
@@ -780,7 +873,7 @@ xrdp_accel_assist_x11_run_shader(int left, int top, int width, int height,
     /* uniforms */
     glUniform2f(si->tex_size_loc, mi->width, mi->height);
     /* viewport and draw */
-    glViewport(mi->viewport.x, mi->viewport.y, mi->viewport.w, mi->viewport.h);
+    glViewport(viewport->x, viewport->y, viewport->w, viewport->h);
     glDrawArrays(GL_TRIANGLES, 0, vertices_pointes);
     /* cleanup */
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -848,7 +941,17 @@ xrdp_accel_assist_x11_encode_pixmap(int left, int top, int width, int height,
 #endif
     si = g_si + mi->tex_format % XH_NUM_SHADERS;
     xrdp_accel_assist_x11_run_shader(left, top, width, height, mi, si,
+                                     mi->enc_texture, &(mi->viewport),
+                                     mi->get_vertices,
                                      num_crects, crects);
+    if (mi->uv_texture != 0)
+    {
+        si = g_si + XH_SHADERRGB2UV420;
+        xrdp_accel_assist_x11_run_shader(left, top, width, height, mi, si,
+                                         mi->uv_texture, &(mi->uv_viewport),
+                                         get_vertices_uv420,
+                                         num_crects, crects);
+    }
     /* flush before encoding, let encoders call glFinish() as needed */
     XFlush(g_display);
     /* encode */
