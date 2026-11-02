@@ -448,7 +448,7 @@ check_drop_privileges(struct xrdp_startup_params *startup_params)
             entry_uid, entry_gid);
         rv = 0;
     }
-    if (user[0] == '\0' || group[0] == '\0')
+    else if (user[0] == '\0' || group[0] == '\0')
     {
         LOG(LOG_LEVEL_ERROR,
             "Both a runtime_user and a runtime_group MUST be specified");
