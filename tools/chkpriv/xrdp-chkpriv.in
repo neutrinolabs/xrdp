@@ -126,15 +126,9 @@ echo " - [sesman.ini] SessionSockdirGroup : $SessionSockdirGroup"
 echo
 
 # Basic checks on runtime user/group
-if [ -z "$runtime_user" ] && [ -z "$runtime_group" ]; then
-    print_warn
-    echo "This system is not configured to run xrdp without privilege"
-    exit 0
-fi
-
 if [ -z "$runtime_user" ] || [ -z "$runtime_group" ]; then
     print_ng
-    echo "Both 'runtime_user' and 'runtime_group' must be set"
+    echo "Both 'runtime_user' and 'runtime_group' must be set in xrdp.ini"
     errors=$(( errors + 1 ))
     exit 1
 fi
