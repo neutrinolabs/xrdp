@@ -447,6 +447,8 @@ int      g_save_to_bmp(const char *filename, char *data, int stride_bytes,
                        int width, int height, int depth, int bits_per_pixel);
 void    *g_shmat(int shmid);
 int      g_shmdt(const void *shmaddr);
+int      g_shm_info(int shmid, int *uid, size_t *bytes);
+int      g_file_fd_size(int fd, size_t *bytes);
 int      g_gethostname(char *name, int len);
 int      g_mirror_memcpy(void *dst, const void *src, int len);
 int      g_tcp4_socket(void);

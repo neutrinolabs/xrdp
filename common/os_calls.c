@@ -4198,6 +4198,43 @@ g_shmdt(const void *shmaddr)
 }
 
 /*****************************************************************************/
+/* Gets the owner uid and size of a shared memory segment.
+ * returns 0 on success */
+int
+g_shm_info(int shmid, int *uid, size_t *bytes)
+{
+#if defined(_WIN32)
+    return 1;
+#else
+    struct shmid_ds ds;
+
+    if (shmctl(shmid, IPC_STAT, &ds) != 0)
+    {
+        return 1;
+    }
+    *uid = ds.shm_perm.uid;
+    *bytes = ds.shm_segsz;
+    return 0;
+#endif
+}
+
+/*****************************************************************************/
+/* Gets the size of the file behind a file descriptor.
+ * returns 0 on success */
+int
+g_file_fd_size(int fd, size_t *bytes)
+{
+    struct stat st;
+
+    if (fstat(fd, &st) != 0 || st.st_size < 0)
+    {
+        return 1;
+    }
+    *bytes = st.st_size;
+    return 0;
+}
+
+/*****************************************************************************/
 /* returns -1 on error 0 on success */
 int
 g_gethostname(char *name, int len)
