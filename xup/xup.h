@@ -213,6 +213,7 @@ struct mod
     int screen_shmem_id;
     int screen_shmem_id_mapped; /* boolean */
     char *screen_shmem_pixels;
+    size_t screen_shmem_bytes;
     struct trans *trans;
     char keycode_set[32];
     enum caps_processing_status caps_processing_status;

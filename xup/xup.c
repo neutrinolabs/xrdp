@@ -501,6 +501,141 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
 }
 
 /******************************************************************************/
+/* The display backend runs as the session user while xrdp may not, so
+ * every size, count and coordinate it sends is checked before use. */
+
+/* Returns true for the pointer depths xrdp can handle (0 means 24) */
+static int
+pointer_bpp_ok(int bpp)
+{
+    return bpp == 0 || bpp == 15 || bpp == 16 || bpp == 24 || bpp == 32;
+}
+
+/* Returns true if the cx by cy rectangle at (x, y) lies inside a
+ * width by height image */
+static int
+rect_in_image(int x, int y, int cx, int cy, int width, int height)
+{
+    return x >= 0 && y >= 0 && cx >= 0 && cy >= 0 &&
+           cx <= width - x && cy <= height - y;
+}
+
+/* Returns true if a buffer of bytes bytes holds a width by height image
+ * of Bpp bytes per pixel starting at offset */
+static int
+image_fits(int offset, int width, int height, int Bpp, long long bytes)
+{
+    return offset >= 0 && offset <= bytes && width >= 0 && height >= 0 &&
+           (long long)width * height * Bpp <= bytes - offset;
+}
+
+/* Bytes per pixel used by xrdp_bitmap_create_with_data() for a depth */
+static int
+bitmap_Bpp(int bpp)
+{
+    return (bpp == 8) ? 1 : (bpp == 15 || bpp == 16) ? 2 : 4;
+}
+
+/* Returns true if every (x, y, cx, cy) rectangle in the list lies inside
+ * a width by height image */
+static int
+rects_in_image(int count, const int16_t *rects, int width, int height)
+{
+    int index;
+
+    for (index = 0; index < count; index++)
+    {
+        if (!rect_in_image(rects[0], rects[1], rects[2], rects[3],
+                           width, height))
+        {
+            return 0;
+        }
+        rects += 4;
+    }
+    return 1;
+}
+
+/* Reads a list of 16-bit (x, y, cx, cy) rectangles, returning NULL if
+ * the stream is too short */
+static int16_t *
+read_rects(struct stream *s, int count, const char *where)
+{
+    int16_t *rects;
+    int16_t *r;
+    int index;
+
+    if (!s_check_rem_and_log(s, count * 8, where))
+    {
+        return NULL;
+    }
+    rects = g_new(int16_t, count * 4 + 1); /* +1 : count may be 0 */
+    r = rects;
+    for (index = 0; index < count; index++)
+    {
+        in_sint16_le(s, r[0]);
+        in_sint16_le(s, r[1]);
+        in_sint16_le(s, r[2]);
+        in_sint16_le(s, r[3]);
+        r += 4;
+    }
+    return rects;
+}
+
+/* Attaches the backend's screen shared memory segment if not already
+ * attached, and returns the width by height 32bpp image at shmem_offset
+ * within it. Returns NULL if the segment is not owned by the backend or
+ * is too small for the image. */
+static char *
+get_screen_shmem_image(struct mod *amod, int shmem_id, int shmem_offset,
+                       int width, int height)
+{
+    if (amod->screen_shmem_id_mapped && amod->screen_shmem_id != shmem_id)
+    {
+        g_shmdt(amod->screen_shmem_pixels);
+        amod->screen_shmem_id_mapped = 0;
+        amod->screen_shmem_pixels = NULL;
+        amod->screen_shmem_bytes = 0;
+    }
+    if (amod->screen_shmem_id_mapped == 0)
+    {
+        int pid;
+        int uid;
+        int gid;
+        int shm_uid;
+        size_t shm_bytes;
+
+        if (amod->trans == NULL ||
+                g_sck_get_peer_cred(amod->trans->sck, &pid, &uid, &gid) != 0 ||
+                g_shm_info(shmem_id, &shm_uid, &shm_bytes) != 0 ||
+                shm_uid != uid)
+        {
+            LOG(LOG_LEVEL_ERROR, "Shared memory segment %d is not owned by "
+                "the display server", shmem_id);
+            return NULL;
+        }
+        amod->screen_shmem_pixels = (char *) g_shmat(shmem_id);
+        if (amod->screen_shmem_pixels == (void *) -1)
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't attach shared memory segment %d",
+                shmem_id);
+            amod->screen_shmem_pixels = NULL;
+            return NULL;
+        }
+        amod->screen_shmem_id = shmem_id;
+        amod->screen_shmem_bytes = shm_bytes;
+        amod->screen_shmem_id_mapped = 1;
+    }
+    if (!image_fits(shmem_offset, width, height, 4, amod->screen_shmem_bytes))
+    {
+        LOG(LOG_LEVEL_ERROR, "Image %dx%d at offset %d does not fit in "
+            "shared memory segment %d of %zu bytes", width, height,
+            shmem_offset, shmem_id, amod->screen_shmem_bytes);
+        return NULL;
+    }
+    return amod->screen_shmem_pixels + shmem_offset;
+}
+
+/******************************************************************************/
 /* return error */
 static int
 process_server_fill_rect(struct mod *mod, struct stream *s)
@@ -511,6 +646,10 @@ process_server_fill_rect(struct mod *mod, struct stream *s)
     int cx;
     int cy;
 
+    if (!s_check_rem_and_log(s, 8, "server_fill_rect"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
@@ -532,6 +671,10 @@ process_server_screen_blt(struct mod *mod, struct stream *s)
     int srcx;
     int srcy;
 
+    if (!s_check_rem_and_log(s, 12, "server_screen_blt"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
@@ -559,16 +702,35 @@ process_server_paint_rect(struct mod *mod, struct stream *s)
     int srcx;
     int srcy;
 
+    if (!s_check_rem_and_log(s, 12, "server_paint_rect"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint32_le(s, len_bmpdata);
+    if (len_bmpdata < 0 ||
+            !s_check_rem_and_log(s, len_bmpdata, "server_paint_rect"))
+    {
+        return 1;
+    }
     in_uint8p(s, bmpdata, len_bmpdata);
+    if (!s_check_rem_and_log(s, 8, "server_paint_rect"))
+    {
+        return 1;
+    }
     in_uint16_le(s, width);
     in_uint16_le(s, height);
     in_sint16_le(s, srcx);
     in_sint16_le(s, srcy);
+    if (!image_fits(0, width, height, bitmap_Bpp(mod->bpp), len_bmpdata) ||
+            !rect_in_image(srcx, srcy, cx, cy, width, height))
+    {
+        LOG(LOG_LEVEL_ERROR, "server_paint_rect: bad geometry");
+        return 1;
+    }
     rv = mod->server_paint_rect(mod, x, y, cx, cy,
                                 bmpdata, width, height,
                                 srcx, srcy);
@@ -586,6 +748,10 @@ process_server_set_clip(struct mod *mod, struct stream *s)
     int cx;
     int cy;
 
+    if (!s_check_rem_and_log(s, 8, "server_set_clip"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
@@ -613,6 +779,10 @@ process_server_set_fgcolor(struct mod *mod, struct stream *s)
     int rv;
     int fgcolor;
 
+    if (!s_check_rem_and_log(s, 4, "server_set_fgcolor"))
+    {
+        return 1;
+    }
     in_uint32_le(s, fgcolor);
     rv = mod->server_set_fgcolor(mod, fgcolor);
     return rv;
@@ -626,6 +796,10 @@ process_server_set_bgcolor(struct mod *mod, struct stream *s)
     int rv;
     int bgcolor;
 
+    if (!s_check_rem_and_log(s, 4, "server_set_bgcolor"))
+    {
+        return 1;
+    }
     in_uint32_le(s, bgcolor);
     rv = mod->server_set_bgcolor(mod, bgcolor);
     return rv;
@@ -639,6 +813,10 @@ process_server_set_opcode(struct mod *mod, struct stream *s)
     int rv;
     int opcode;
 
+    if (!s_check_rem_and_log(s, 2, "server_set_opcode"))
+    {
+        return 1;
+    }
     in_uint16_le(s, opcode);
     rv = mod->server_set_opcode(mod, opcode);
     return rv;
@@ -653,6 +831,10 @@ process_server_set_pen(struct mod *mod, struct stream *s)
     int style;
     int width;
 
+    if (!s_check_rem_and_log(s, 4, "server_set_pen"))
+    {
+        return 1;
+    }
     in_uint16_le(s, style);
     in_uint16_le(s, width);
     rv = mod->server_set_pen(mod, style, width);
@@ -670,6 +852,10 @@ process_server_draw_line(struct mod *mod, struct stream *s)
     int x2;
     int y2;
 
+    if (!s_check_rem_and_log(s, 8, "server_draw_line"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x1);
     in_sint16_le(s, y1);
     in_sint16_le(s, x2);
@@ -689,6 +875,11 @@ process_server_set_cursor(struct mod *mod, struct stream *s)
     char cur_data[32 * (32 * 3)];
     char cur_mask[32 * (32 / 8)];
 
+    if (!s_check_rem_and_log(s, 4 + 32 * (32 * 3) + 32 * (32 / 8),
+                             "server_set_cursor"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint8a(s, cur_data, 32 * (32 * 3));
@@ -707,6 +898,10 @@ process_server_create_os_surface(struct mod *mod, struct stream *s)
     int width;
     int height;
 
+    if (!s_check_rem_and_log(s, 8, "server_create_os_surface"))
+    {
+        return 1;
+    }
     in_uint32_le(s, rdpid);
     in_uint16_le(s, width);
     in_uint16_le(s, height);
@@ -722,6 +917,10 @@ process_server_switch_os_surface(struct mod *mod, struct stream *s)
     int rv;
     int rdpid;
 
+    if (!s_check_rem_and_log(s, 4, "server_switch_os_surface"))
+    {
+        return 1;
+    }
     in_uint32_le(s, rdpid);
     rv = mod->server_switch_os_surface(mod, rdpid);
     return rv;
@@ -735,6 +934,10 @@ process_server_delete_os_surface(struct mod *mod, struct stream *s)
     int rv;
     int rdpid;
 
+    if (!s_check_rem_and_log(s, 4, "server_delete_os_surface"))
+    {
+        return 1;
+    }
     in_uint32_le(s, rdpid);
     rv = mod->server_delete_os_surface(mod, rdpid);
     return rv;
@@ -754,6 +957,10 @@ process_server_paint_rect_os(struct mod *mod, struct stream *s)
     int srcx;
     int srcy;
 
+    if (!s_check_rem_and_log(s, 16, "server_paint_rect_os"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
@@ -775,6 +982,10 @@ process_server_set_hints(struct mod *mod, struct stream *s)
     int hints;
     int mask;
 
+    if (!s_check_rem_and_log(s, 8, "server_set_hints"))
+    {
+        return 1;
+    }
     in_uint32_le(s, hints);
     in_uint32_le(s, mask);
     rv = mod->server_set_hints(mod, hints, mask);
@@ -795,6 +1006,10 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
     struct rail_window_state_order rwso;
 
     g_memset(&rwso, 0, sizeof(rwso));
+    if (!s_check_rem_and_log(s, 22, "server_window_new_update"))
+    {
+        return 1;
+    }
     in_uint32_le(s, window_id);
     in_uint32_le(s, rwso.owner_window_id);
     in_uint32_le(s, rwso.style);
@@ -802,6 +1017,10 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
     in_uint32_le(s, rwso.show_state);
     in_uint16_le(s, title_bytes);
 
+    if (!s_check_rem_and_log(s, title_bytes + 50, "server_window_new_update"))
+    {
+        return 1;
+    }
     if (title_bytes > 0)
     {
         rwso.title_info = g_new(char, title_bytes + 1);
@@ -823,6 +1042,12 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
     in_uint32_le(s, rwso.window_height);
     in_uint16_le(s, rwso.num_window_rects);
 
+    if (!s_check_rem_and_log(s, rwso.num_window_rects * 8 + 10,
+                             "server_window_new_update"))
+    {
+        g_free(rwso.title_info);
+        return 1;
+    }
     if (rwso.num_window_rects > 0)
     {
         bytes = sizeof(struct rail_window_rect) * rwso.num_window_rects;
@@ -841,6 +1066,13 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
     in_uint32_le(s, rwso.visible_offset_y);
     in_uint16_le(s, rwso.num_visibility_rects);
 
+    if (!s_check_rem_and_log(s, rwso.num_visibility_rects * 8 + 4,
+                             "server_window_new_update"))
+    {
+        g_free(rwso.title_info);
+        g_free(rwso.window_rects);
+        return 1;
+    }
     if (rwso.num_visibility_rects > 0)
     {
         bytes = sizeof(struct rail_window_rect) * rwso.num_visibility_rects;
@@ -872,6 +1104,10 @@ process_server_window_delete(struct mod *mod, struct stream *s)
     int window_id;
     int rv;
 
+    if (!s_check_rem_and_log(s, 4, "server_window_delete"))
+    {
+        return 1;
+    }
     in_uint32_le(s, window_id);
     mod->server_window_delete(mod, window_id);
     rv = 0;
@@ -889,6 +1125,10 @@ process_server_window_show(struct mod *mod, struct stream *s)
     struct rail_window_state_order rwso;
 
     g_memset(&rwso, 0, sizeof(rwso));
+    if (!s_check_rem_and_log(s, 12, "server_window_show"))
+    {
+        return 1;
+    }
     in_uint32_le(s, window_id);
     in_uint32_le(s, flags);
     in_uint32_le(s, rwso.show_state);
@@ -912,6 +1152,10 @@ process_server_add_char(struct mod *mod, struct stream *s)
     int len_bmpdata;
     char *bmpdata;
 
+    if (!s_check_rem_and_log(s, 14, "server_add_char"))
+    {
+        return 1;
+    }
     in_uint16_le(s, font);
     in_uint16_le(s, character);
     in_sint16_le(s, x);
@@ -919,7 +1163,18 @@ process_server_add_char(struct mod *mod, struct stream *s)
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
+    if (!s_check_rem_and_log(s, len_bmpdata, "server_add_char"))
+    {
+        return 1;
+    }
     in_uint8p(s, bmpdata, len_bmpdata);
+    /* The glyph is read as 1 bit per pixel */
+    if (len_bmpdata < FONT_DATASIZE_FROM_GEOMETRY(cx, cy))
+    {
+        LOG(LOG_LEVEL_ERROR, "server_add_char: %d bytes is too short for a "
+            "%dx%d glyph", len_bmpdata, cx, cy);
+        return 1;
+    }
     rv = mod->server_add_char(mod, font, character, x, y, cx, cy, bmpdata);
     return rv;
 }
@@ -940,6 +1195,10 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
     int len_bmpdata;
     char *bmpdata;
 
+    if (!s_check_rem_and_log(s, 14, "server_add_char_alpha"))
+    {
+        return 1;
+    }
     in_uint16_le(s, font);
     in_uint16_le(s, character);
     in_sint16_le(s, x);
@@ -947,7 +1206,18 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
+    if (!s_check_rem_and_log(s, len_bmpdata, "server_add_char_alpha"))
+    {
+        return 1;
+    }
     in_uint8p(s, bmpdata, len_bmpdata);
+    /* The glyph is read as 8 bits per pixel, 4 byte aligned rows */
+    if (len_bmpdata < (long long)((cx + 3) & ~3) * cy)
+    {
+        LOG(LOG_LEVEL_ERROR, "server_add_char_alpha: %d bytes is too short "
+            "for a %dx%d glyph", len_bmpdata, cx, cy);
+        return 1;
+    }
     rv = mod->server_add_char_alpha(mod, font, character, x, y, cx, cy,
                                     bmpdata);
     return rv;
@@ -975,6 +1245,10 @@ process_server_draw_text(struct mod *mod, struct stream *s)
     int len_bmpdata;
     char *bmpdata;
 
+    if (!s_check_rem_and_log(s, 28, "server_draw_text"))
+    {
+        return 1;
+    }
     in_uint16_le(s, font);
     in_uint16_le(s, flags);
     in_uint16_le(s, mixmode);
@@ -989,6 +1263,10 @@ process_server_draw_text(struct mod *mod, struct stream *s)
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, len_bmpdata);
+    if (!s_check_rem_and_log(s, len_bmpdata, "server_draw_text"))
+    {
+        return 1;
+    }
     in_uint8p(s, bmpdata, len_bmpdata);
     rv = mod->server_draw_text(mod, font, flags, mixmode, clip_left, clip_top,
                                clip_right, clip_bottom, box_left, box_top,
@@ -1007,6 +1285,10 @@ process_server_create_os_surface_bpp(struct mod *mod, struct stream *s)
     int height;
     int bpp;
 
+    if (!s_check_rem_and_log(s, 9, "server_create_os_surface_bpp"))
+    {
+        return 1;
+    }
     in_uint32_le(s, rdpid);
     in_uint16_le(s, width);
     in_uint16_le(s, height);
@@ -1034,17 +1316,36 @@ process_server_paint_rect_bpp(struct mod *mod, struct stream *s)
     int srcy;
     int bpp;
 
+    if (!s_check_rem_and_log(s, 12, "server_paint_rect_bpp"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint32_le(s, len_bmpdata);
+    if (len_bmpdata < 0 ||
+            !s_check_rem_and_log(s, len_bmpdata, "server_paint_rect_bpp"))
+    {
+        return 1;
+    }
     in_uint8p(s, bmpdata, len_bmpdata);
+    if (!s_check_rem_and_log(s, 9, "server_paint_rect_bpp"))
+    {
+        return 1;
+    }
     in_uint16_le(s, width);
     in_uint16_le(s, height);
     in_sint16_le(s, srcx);
     in_sint16_le(s, srcy);
     in_uint8(s, bpp);
+    if (!image_fits(0, width, height, bitmap_Bpp(bpp), len_bmpdata) ||
+            !rect_in_image(srcx, srcy, cx, cy, width, height))
+    {
+        LOG(LOG_LEVEL_ERROR, "server_paint_rect_bpp: bad geometry");
+        return 1;
+    }
     rv = mod->server_paint_rect_bpp(mod, x, y, cx, cy,
                                     bmpdata, width, height,
                                     srcx, srcy, bpp);
@@ -1078,6 +1379,10 @@ process_server_composite(struct mod *mod, struct stream *s)
     int height;
     int dstformat;
 
+    if (!s_check_rem_and_log(s, 80, "server_composite"))
+    {
+        return 1;
+    }
     in_uint16_le(s, srcidx);
     in_uint32_le(s, srcformat);
     in_uint16_le(s, srcwidth);
@@ -1119,10 +1424,24 @@ process_server_set_pointer_ex(struct mod *mod, struct stream *s)
     char cur_data[32 * (32 * 4)];
     char cur_mask[32 * (32 / 8)];
 
+    if (!s_check_rem_and_log(s, 6, "server_set_pointer_ex"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, bpp);
+    if (!pointer_bpp_ok(bpp))
+    {
+        LOG(LOG_LEVEL_ERROR, "server_set_pointer_ex: bad bpp %d", bpp);
+        return 1;
+    }
     Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
+    if (!s_check_rem_and_log(s, 32 * (32 * Bpp) + 32 * (32 / 8),
+                             "server_set_pointer_ex"))
+    {
+        return 1;
+    }
     in_uint8a(s, cur_data, 32 * (32 * Bpp));
     in_uint8a(s, cur_mask, 32 * (32 / 8));
     rv = mod->server_set_cursor_ex(mod, x, y, cur_data, cur_mask, bpp);
@@ -1177,6 +1496,10 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
     int srcy;
     char *bmpdata;
 
+    if (!s_check_rem_and_log(s, 32, "server_paint_rect_shmem"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
@@ -1190,47 +1513,15 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
     in_sint16_le(s, srcx);
     in_sint16_le(s, srcy);
 
-    bmpdata = 0;
-    rv = 0;
-    if (amod->screen_shmem_id_mapped == 0)
+    bmpdata = get_screen_shmem_image(amod, shmem_id, shmem_offset,
+                                     width, height);
+    if (bmpdata == NULL || !rect_in_image(srcx, srcy, cx, cy, width, height))
     {
-        amod->screen_shmem_id = shmem_id;
-        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-        if (amod->screen_shmem_pixels == (void *) -1)
-        {
-            /* failed */
-            amod->screen_shmem_id = 0;
-            amod->screen_shmem_pixels = 0;
-            amod->screen_shmem_id_mapped = 0;
-        }
-        else
-        {
-            amod->screen_shmem_id_mapped = 1;
-        }
+        return 1;
     }
-    else if (amod->screen_shmem_id != shmem_id)
-    {
-        amod->screen_shmem_id = shmem_id;
-        g_shmdt(amod->screen_shmem_pixels);
-        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-        if (amod->screen_shmem_pixels == (void *) -1)
-        {
-            /* failed */
-            amod->screen_shmem_id = 0;
-            amod->screen_shmem_pixels = 0;
-            amod->screen_shmem_id_mapped = 0;
-        }
-    }
-    if (amod->screen_shmem_pixels != 0)
-    {
-        bmpdata = amod->screen_shmem_pixels + shmem_offset;
-    }
-    if (bmpdata != 0)
-    {
-        rv = amod->server_paint_rect(amod, x, y, cx, cy,
-                                     bmpdata, width, height,
-                                     srcx, srcy);
-    }
+    rv = amod->server_paint_rect(amod, x, y, cx, cy,
+                                 bmpdata, width, height,
+                                 srcx, srcy);
     send_paint_rect_ack(amod, flags, x, y, cx, cy, frame_id);
     return rv;
 }
@@ -1300,100 +1591,49 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     int shmem_offset;
     int width;
     int height;
-    int index;
     int rv;
-    tsi16 *ldrects;
-    tsi16 *ldrects1;
-    tsi16 *lcrects;
-    tsi16 *lcrects1;
+    int16_t *ldrects = NULL;
+    int16_t *lcrects = NULL;
     char *bmpdata;
 
-    /* dirty pixels */
-    in_uint16_le(s, num_drects);
-    ldrects = (tsi16 *) g_malloc(2 * 4 * num_drects, 0);
-    ldrects1 = ldrects;
-    for (index = 0; index < num_drects; index++)
+    rv = 1;
+    if (!s_check_rem_and_log(s, 2, "server_paint_rect_shmem_ex"))
     {
-        in_sint16_le(s, ldrects1[0]);
-        in_sint16_le(s, ldrects1[1]);
-        in_sint16_le(s, ldrects1[2]);
-        in_sint16_le(s, ldrects1[3]);
-        ldrects1 += 4;
+        return 1;
     }
-
-    /* copied pixels */
-    in_uint16_le(s, num_crects);
-    lcrects = (tsi16 *) g_malloc(2 * 4 * num_crects, 0);
-    lcrects1 = lcrects;
-    for (index = 0; index < num_crects; index++)
+    in_uint16_le(s, num_drects); /* dirty pixels */
+    ldrects = read_rects(s, num_drects, "server_paint_rect_shmem_ex");
+    if (ldrects != NULL &&
+            s_check_rem_and_log(s, 2, "server_paint_rect_shmem_ex"))
     {
-        in_sint16_le(s, lcrects1[0]);
-        in_sint16_le(s, lcrects1[1]);
-        in_sint16_le(s, lcrects1[2]);
-        in_sint16_le(s, lcrects1[3]);
-        lcrects1 += 4;
+        in_uint16_le(s, num_crects); /* copied pixels */
+        lcrects = read_rects(s, num_crects, "server_paint_rect_shmem_ex");
     }
-
-    in_uint32_le(s, flags);
-    in_uint32_le(s, frame_id);
-    in_uint32_le(s, shmem_id);
-    in_uint32_le(s, shmem_offset);
-
-    in_uint16_le(s, width);
-    in_uint16_le(s, height);
-
-    bmpdata = 0;
-    if (amod->screen_shmem_id_mapped == 0)
+    if (lcrects != NULL &&
+            s_check_rem_and_log(s, 20, "server_paint_rect_shmem_ex"))
     {
-        amod->screen_shmem_id = shmem_id;
-        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-        if (amod->screen_shmem_pixels == (void *) -1)
+        in_uint32_le(s, flags);
+        in_uint32_le(s, frame_id);
+        in_uint32_le(s, shmem_id);
+        in_uint32_le(s, shmem_offset);
+        in_uint16_le(s, width);
+        in_uint16_le(s, height);
+
+        bmpdata = get_screen_shmem_image(amod, shmem_id, shmem_offset,
+                                         width, height);
+        if (bmpdata != NULL &&
+                rects_in_image(num_drects, ldrects, width, height) &&
+                rects_in_image(num_crects, lcrects, width, height))
         {
-            /* failed */
-            amod->screen_shmem_id = 0;
-            amod->screen_shmem_pixels = 0;
-            amod->screen_shmem_id_mapped = 0;
+            rv = amod->server_paint_rects(amod, num_drects, ldrects,
+                                          num_crects, lcrects,
+                                          bmpdata, width, height,
+                                          flags, frame_id);
         }
         else
         {
-            amod->screen_shmem_id_mapped = 1;
+            LOG(LOG_LEVEL_ERROR, "server_paint_rect_shmem_ex: bad geometry");
         }
-    }
-    else if (amod->screen_shmem_id != shmem_id)
-    {
-        amod->screen_shmem_id = shmem_id;
-        g_shmdt(amod->screen_shmem_pixels);
-        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
-        if (amod->screen_shmem_pixels == (void *) -1)
-        {
-            /* failed */
-            amod->screen_shmem_id = 0;
-            amod->screen_shmem_pixels = 0;
-            amod->screen_shmem_id_mapped = 0;
-        }
-    }
-    else
-    {
-        LOG_DEVEL(LOG_LEVEL_ERROR, "process_server_paint_rect_shmem_ex:"
-                  " flags=%d frame_id=%d, shmem_id=%d, shmem_offset=%d,"
-                  " width=%d, height=%d",
-                  flags, frame_id, shmem_id, shmem_offset,
-                  width, height);
-    }
-    if (amod->screen_shmem_pixels != 0)
-    {
-        bmpdata = amod->screen_shmem_pixels + shmem_offset;
-    }
-    if (bmpdata != 0)
-    {
-        rv = amod->server_paint_rects(amod, num_drects, ldrects,
-                                      num_crects, lcrects,
-                                      bmpdata, width, height,
-                                      flags, frame_id);
-    }
-    else
-    {
-        rv = 1;
     }
 
     g_free(lcrects);
@@ -1416,15 +1656,34 @@ process_server_egfx_shmfd(struct mod *amod, struct stream *s)
     int recv_bytes;
     unsigned int num_fds;
     void *shmem_ptr;
+    size_t fd_bytes;
     char msg[4];
 
     rv = 0;
+    if (!s_check_rem_and_log(s, 4, "server_egfx_shmfd"))
+    {
+        return 1;
+    }
     in_uint32_le(s, cmd_bytes);
+    if (cmd_bytes < 0 ||
+            !s_check_rem_and_log(s, cmd_bytes, "server_egfx_shmfd"))
+    {
+        return 1;
+    }
     in_uint8p(s, cmd, cmd_bytes);
+    if (!s_check_rem_and_log(s, 4, "server_egfx_shmfd"))
+    {
+        return 1;
+    }
     in_uint32_le(s, shmem_bytes);
     if (shmem_bytes == 0)
     {
         return amod->server_egfx_cmd(amod, cmd, cmd_bytes, NULL, 0);
+    }
+    if (shmem_bytes < 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "server_egfx_shmfd: bad size %d", shmem_bytes);
+        return 1;
     }
     fd = -1;
     num_fds = -1;
@@ -1439,7 +1698,14 @@ process_server_egfx_shmfd(struct mod *amod, struct stream *s)
     {
         if (num_fds == 1)
         {
-            if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
+            if (g_file_fd_size(fd, &fd_bytes) != 0 ||
+                    fd_bytes < (size_t)shmem_bytes)
+            {
+                LOG(LOG_LEVEL_ERROR, "server_egfx_shmfd: shared memory is "
+                    "smaller than %d bytes", shmem_bytes);
+                rv = 1;
+            }
+            else if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
             {
                 /* we give up ownership of shmem_ptr
                    will get cleaned up in server_egfx_cmd or
@@ -1471,16 +1737,29 @@ process_server_set_pointer_shmfd(struct mod *amod, struct stream *s)
     int shmembytes;
     unsigned int num_fds;
     void *shmemptr;
+    size_t fd_bytes;
     char *cur_data;
     char *cur_mask;
     char msg[4];
 
     rv = 0;
+    if (!s_check_rem_and_log(s, 10, "server_set_pointer_shmfd"))
+    {
+        return 1;
+    }
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, bpp);
     in_uint16_le(s, width);
     in_uint16_le(s, height);
+    if (!pointer_bpp_ok(bpp) ||
+            width < 1 || width > XRDP_MAX_POINTER_WIDTH ||
+            height < 1 || height > XRDP_MAX_POINTER_HEIGHT)
+    {
+        LOG(LOG_LEVEL_ERROR, "server_set_pointer_shmfd: unsupported pointer "
+            "%dx%d bpp %d", width, height, bpp);
+        return 1;
+    }
     fd = -1;
     num_fds = -1;
     if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
@@ -1496,7 +1775,14 @@ process_server_set_pointer_shmfd(struct mod *amod, struct stream *s)
         {
             Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
             shmembytes = width * height * Bpp + width * height / 8;
-            if (g_file_map(fd, 1, 0, shmembytes, &shmemptr) == 0)
+            if (g_file_fd_size(fd, &fd_bytes) != 0 ||
+                    fd_bytes < (size_t)shmembytes)
+            {
+                LOG(LOG_LEVEL_ERROR, "server_set_pointer_shmfd: shared "
+                    "memory is smaller than %d bytes", shmembytes);
+                rv = 1;
+            }
+            else if (g_file_map(fd, 1, 0, shmembytes, &shmemptr) == 0)
             {
                 cur_data = (char *)shmemptr;
                 cur_mask = cur_data + width * height * Bpp;
@@ -1526,45 +1812,38 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     int top;
     int width;
     int height;
-    int index;
     int rv;
     int16_t *ldrects;
-    int16_t *ldrects1;
     int16_t *lcrects;
-    int16_t *lcrects1;
     char *bmpdata;
     int fd;
     int recv_bytes;
     unsigned int num_fds;
     void *shmem_ptr;
+    size_t fd_bytes;
     char msg[4];
 
-    /* dirty pixels */
-    in_uint16_le(s, num_drects);
-    ldrects = g_new(int16_t, 2 * 4 * num_drects);
-    ldrects1 = ldrects;
-    for (index = 0; index < num_drects; index++)
+    if (!s_check_rem_and_log(s, 2, "server_paint_rect_shmfd"))
     {
-        in_sint16_le(s, ldrects1[0]);
-        in_sint16_le(s, ldrects1[1]);
-        in_sint16_le(s, ldrects1[2]);
-        in_sint16_le(s, ldrects1[3]);
-        ldrects1 += 4;
+        return 1;
     }
-
-    /* copied pixels */
-    in_uint16_le(s, num_crects);
-    lcrects = g_new(int16_t, 2 * 4 * num_crects);
-    lcrects1 = lcrects;
-    for (index = 0; index < num_crects; index++)
+    in_uint16_le(s, num_drects); /* dirty pixels */
+    ldrects = read_rects(s, num_drects, "server_paint_rect_shmfd");
+    if (ldrects == NULL ||
+            !s_check_rem_and_log(s, 2, "server_paint_rect_shmfd"))
     {
-        in_sint16_le(s, lcrects1[0]);
-        in_sint16_le(s, lcrects1[1]);
-        in_sint16_le(s, lcrects1[2]);
-        in_sint16_le(s, lcrects1[3]);
-        lcrects1 += 4;
+        g_free(ldrects);
+        return 1;
     }
-
+    in_uint16_le(s, num_crects); /* copied pixels */
+    lcrects = read_rects(s, num_crects, "server_paint_rect_shmfd");
+    if (lcrects == NULL ||
+            !s_check_rem_and_log(s, 24, "server_paint_rect_shmfd"))
+    {
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
     in_uint32_le(s, flags);
     in_uint32_le(s, frame_id);
     in_uint32_le(s, shmem_bytes);
@@ -1574,6 +1853,17 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     in_uint16_le(s, top);
     in_uint16_le(s, width);
     in_uint16_le(s, height);
+
+    if (shmem_bytes <= 0 ||
+            !image_fits(shmem_offset, width, height, 4, shmem_bytes) ||
+            !rects_in_image(num_drects, ldrects, width, height) ||
+            !rects_in_image(num_crects, lcrects, width, height))
+    {
+        LOG(LOG_LEVEL_ERROR, "server_paint_rect_shmfd: bad geometry");
+        g_free(ldrects);
+        g_free(lcrects);
+        return 1;
+    }
 
     if (g_tcp_can_recv(amod->trans->sck, 5000) == 0)
     {
@@ -1589,7 +1879,13 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     {
         if (num_fds == 1)
         {
-            if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
+            if (g_file_fd_size(fd, &fd_bytes) != 0 ||
+                    fd_bytes < (size_t)shmem_bytes)
+            {
+                LOG(LOG_LEVEL_ERROR, "server_paint_rect_shmfd: shared "
+                    "memory is smaller than %d bytes", shmem_bytes);
+            }
+            else if (g_file_map(fd, 1, 0, shmem_bytes, &shmem_ptr) == 0)
             {
                 bmpdata = (char *)shmem_ptr;
                 bmpdata += shmem_offset;
@@ -1618,6 +1914,10 @@ process_server_set_pointer_system(struct mod *amod, struct stream *s)
     int rv;
     int pointer_type;
 
+    if (!s_check_rem_and_log(s, 4, "server_set_pointer_system"))
+    {
+        return 1;
+    }
     in_uint32_le(s, pointer_type);
     rv = amod->server_set_pointer_system(amod, pointer_type);
     return rv;
@@ -1632,6 +1932,10 @@ process_server_set_pointer_position(struct mod *amod, struct stream *s)
     int x;
     int y;
 
+    if (!s_check_rem_and_log(s, 4, "server_set_pointer_position"))
+    {
+        return 1;
+    }
     in_uint16_le(s, x);
     in_uint16_le(s, y);
     rv = amod->server_set_pointer_position(amod, x, y);
@@ -1905,6 +2209,10 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int height;
 
     LOG_DEVEL(LOG_LEVEL_TRACE, "lib_mod_process_message:");
+    if (!s_check_rem_and_log(s, 8, "xup message header"))
+    {
+        return 1;
+    }
     in_uint16_le(s, type);
     in_uint16_le(s, num_orders);
     in_uint32_le(s, len);
@@ -1915,6 +2223,10 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     {
         for (index = 0; index < num_orders; ++index)
         {
+            if (!s_check_rem_and_log(s, 2, "xup order type"))
+            {
+                return 1;
+            }
             in_uint16_le(s, type);
             rv = lib_mod_process_orders(mod, type, s);
 
@@ -1931,9 +2243,17 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                   "lib_mod_process_message: type 2 len %d", len);
         for (index = 0; index < num_orders; index++)
         {
+            if (!s_check_rem_and_log(s, 4, "xup order header"))
+            {
+                return 1;
+            }
             phold = s->p;
             in_uint16_le(s, type);
             in_uint16_le(s, len);
+            if (len < 4 || !s_check_rem_and_log(s, len - 4, "xup order"))
+            {
+                return 1;
+            }
 
             switch (type)
             {
@@ -1967,9 +2287,17 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                   "lib_mod_process_message: type 3 len %d", len);
         for (index = 0; index < num_orders; index++)
         {
+            if (!s_check_rem_and_log(s, 4, "xup order header"))
+            {
+                return 1;
+            }
             phold = s->p;
             in_uint16_le(s, type);
             in_uint16_le(s, len);
+            if (len < 4 || !s_check_rem_and_log(s, len - 4, "xup order"))
+            {
+                return 1;
+            }
             rv = lib_mod_process_orders(mod, type, s);
 
             if (rv != 0)
@@ -1986,9 +2314,17 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
                   "lib_mod_process_message: type 100 len %d", len);
         for (index = 0; index < num_orders; ++index)
         {
+            if (!s_check_rem_and_log(s, 4, "xup order header"))
+            {
+                return 1;
+            }
             phold = s->p;
             in_uint16_le(s, type);
             in_uint16_le(s, len);
+            if (len < 4 || !s_check_rem_and_log(s, len - 4, "xup order"))
+            {
+                return 1;
+            }
             switch (type)
             {
                 case 3: // memory allocation complete

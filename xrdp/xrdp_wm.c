@@ -303,6 +303,16 @@ xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
     {
         bpp = 24;
     }
+    /* The pointer comes from the display backend; it must fit the
+     * fixed-size cache entry it is copied into */
+    if (width <= 0 || width > XRDP_MAX_POINTER_WIDTH ||
+            height <= 0 || height > XRDP_MAX_POINTER_HEIGHT ||
+            (bpp != 15 && bpp != 16 && bpp != 24 && bpp != 32))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_wm_pointer: unsupported pointer "
+            "%dx%d bpp %d", width, height, bpp);
+        return 1;
+    }
     bytes = ((bpp + 7) / 8) * width * height;
     pointer_item = g_new0(struct xrdp_pointer_item, 1);
     pointer_item->x = x;
