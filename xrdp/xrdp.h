@@ -195,6 +195,9 @@ const char *
 xrdp_wm_login_state_to_str(enum wm_login_state login_state);
 int
 xrdp_wm_set_login_state(struct xrdp_wm *self, enum wm_login_state login_state);
+/* Hands cliprdr from the login screen over to the session */
+void
+xrdp_wm_login_clip_handover(struct xrdp_wm *self);
 int
 xrdp_wm_can_resize(struct xrdp_wm *self);
 void

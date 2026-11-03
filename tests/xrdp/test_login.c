@@ -20,6 +20,8 @@
 /* Compile the adapter here instead of linking its object, so tests can check
  * its private buffers and callbacks without exporting a test API. */
 #include "../../xrdp/xrdp_login_lvgl.c"
+#include "xrdp_login_clip.h"
+#include "ms-rdpeclip.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -371,6 +373,104 @@ START_TEST(test_lvgl_concurrent_lifecycle)
 }
 END_TEST
 
+START_TEST(test_lvgl_paste)
+{
+    struct login_fixture f;
+    struct xrdp_login_lvgl *ui;
+    lv_obj_t *edit;
+    char text[256];
+    unsigned int gen;
+    static const char32_t paste[] = { 'p', 0xe9, 'w' };
+    init_fixture(&f, 24);
+    ck_assert_int_eq(xrdp_login_lvgl_create(&f.wm, 1), 0);
+    ui = f.wm.login_ui;
+    edit = ui->edits[1];
+    lv_group_focus_obj(edit);
+    ck_assert_ptr_eq(xrdp_login_lvgl_get_paste_target(&f.wm), edit);
+    ck_assert_uint_eq(xrdp_login_lvgl_insert_text(&f.wm, paste, 3), 3);
+    ck_assert_str_eq(lv_textarea_get_text(edit), "p\xc3\xa9w");
+    /* The 255-byte limit stops a paste part way through. */
+    memset(text, 'a', 253);
+    text[253] = '\0';
+    lv_textarea_set_text(edit, text);
+    ck_assert_uint_eq(xrdp_login_lvgl_insert_text(&f.wm, paste, 3), 1);
+    ck_assert_int_eq(strlen(lv_textarea_get_text(edit)), 254);
+    /* Ctrl+V is swallowed rather than typed as a 'v'. */
+    lv_textarea_set_text(edit, "");
+    f.wm.keymap.keys_noshift[0x2f].sym = 0x76;
+    f.wm.keymap.keys_noshift[0x2f].chr = 'v';
+    xrdp_wm_key(&f.wm, 0, 0x2f);
+    xrdp_wm_key(&f.wm, KBDFLAGS_RELEASE, 0x2f);
+    ck_assert_str_eq(lv_textarea_get_text(edit), "v");
+    xrdp_wm_key(&f.wm, 0, 0x1d);
+    xrdp_wm_key(&f.wm, 0, 0x2f);
+    xrdp_wm_key(&f.wm, KBDFLAGS_RELEASE, 0x2f);
+    xrdp_wm_key(&f.wm, KBDFLAGS_RELEASE, 0x1d);
+    ck_assert_str_eq(lv_textarea_get_text(edit), "v");
+    /* Only form fields take a paste, and not behind help. */
+    lv_group_focus_obj(ui->sessions);
+    ck_assert_ptr_null(xrdp_login_lvgl_get_paste_target(&f.wm));
+    ck_assert_uint_eq(xrdp_login_lvgl_insert_text(&f.wm, paste, 3), 0);
+    lv_group_focus_obj(edit);
+    handle_action(&f.wm, UI_HELP);
+    ck_assert_ptr_null(xrdp_login_lvgl_get_paste_target(&f.wm));
+    handle_action(&f.wm, UI_CLOSE_HELP);
+    /* Rebuilt fields may reuse addresses; the generation tells them apart. */
+    gen = f.wm.login_wnd_gen;
+    lv_dropdown_set_selected(ui->sessions, 1);
+    handle_action(&f.wm, UI_SELECT);
+    ck_assert_uint_ne(f.wm.login_wnd_gen, gen);
+    free_fixture(&f);
+}
+END_TEST
+
+/* Feeds one complete cliprdr PDU to the login screen clipboard handler. */
+static void
+feed_clip_pdu(struct xrdp_wm *wm, int type, int flags, const char *body, int len)
+{
+    char buf[64] = {0};
+    buf[0] = (char)type;
+    buf[2] = (char)flags;
+    buf[4] = (char)len;
+    memcpy(buf + 8, body, len);
+    xrdp_login_clip_process_channel_data(wm->login_clip,
+                                         XR_CHANNEL_FLAG_FIRST | XR_CHANNEL_FLAG_LAST,
+                                         buf, 8 + len, 8 + len);
+}
+
+START_TEST(test_lvgl_paste_key_requests_paste)
+{
+    struct login_fixture f;
+    struct xrdp_login_lvgl *ui;
+    lv_obj_t *edit;
+    char formats[36] = { CF_UNICODETEXT };
+    static const char text[] = { 'x', 0, 'y', 0, 0, 0 };
+    init_fixture(&f, 24);
+    ck_assert_int_eq(xrdp_login_lvgl_create(&f.wm, 1), 0);
+    ui = f.wm.login_ui;
+    edit = ui->edits[1];
+    lv_group_focus_obj(edit);
+    f.wm.keymap.keys_noshift[0x2f].sym = 0x76;
+    f.wm.keymap.keys_noshift[0x2f].chr = 'v';
+    f.wm.login_clip = xrdp_login_clip_create(&f.wm, 5);
+    ck_assert_ptr_nonnull(f.wm.login_clip);
+    feed_clip_pdu(&f.wm, CB_FORMAT_LIST, 0, formats, sizeof(formats));
+    /* Ctrl+V key-down asks for the clipboard instead of typing. */
+    xrdp_wm_key(&f.wm, 0, 0x1d);
+    xrdp_wm_key(&f.wm, 0, 0x2f);
+    ck_assert_str_eq(lv_textarea_get_text(edit), "");
+    ck_assert_int_eq(xrdp_login_clip_request_paste(f.wm.login_clip), 0); /* in flight */
+    /* Its key-up is swallowed too. */
+    xrdp_wm_key(&f.wm, KBDFLAGS_RELEASE, 0x2f);
+    xrdp_wm_key(&f.wm, KBDFLAGS_RELEASE, 0x1d);
+    ck_assert_str_eq(lv_textarea_get_text(edit), "");
+    feed_clip_pdu(&f.wm, CB_FORMAT_DATA_RESPONSE, CB_RESPONSE_OK, text, sizeof(text));
+    ck_assert_str_eq(lv_textarea_get_text(edit), "xy");
+    xrdp_wm_login_clip_handover(&f.wm);
+    free_fixture(&f);
+}
+END_TEST
+
 START_TEST(test_lvgl_input_and_lifecycle)
 {
     struct login_fixture f;
@@ -542,6 +642,8 @@ make_suite_login(void)
     tcase_add_test(tc, test_lvgl_gfx_handoff);
     tcase_add_test(tc, test_lvgl_pixels_and_isolation);
     tcase_add_test(tc, test_lvgl_input_and_lifecycle);
+    tcase_add_test(tc, test_lvgl_paste);
+    tcase_add_test(tc, test_lvgl_paste_key_requests_paste);
     tcase_add_test(tc, test_lvgl_concurrent_lifecycle);
 #endif
     suite_add_tcase(suite, tc);

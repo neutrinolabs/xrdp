@@ -46,6 +46,7 @@
 
 struct source_info;
 struct list16;
+struct xrdp_login_clip;
 
 /* lib */
 struct xrdp_mod
@@ -578,6 +579,14 @@ struct xrdp_wm
     enum wm_login_state login_state;
     tbus login_state_event;
     struct xrdp_mm *mm;
+    /* Login screen clipboard paste, NULL unless enabled and in use */
+    struct xrdp_login_clip *login_clip;
+    /* cliprdr channel id, if present and not disabled in [Channels];
+     * -1 otherwise. Set in xrdp_wm_load_channel_config() */
+    int clip_chan_id;
+    /* Bumped whenever a login screen edit field is created or destroyed,
+     * so a pending paste can tell its target has been replaced */
+    unsigned int login_wnd_gen;
     struct xrdp_font *default_font;
     struct xrdp_keymap keymap;
     int hide_log_window;
@@ -824,6 +833,7 @@ struct xrdp_cfg_globals
     int  nego_sec_layer;
     int  allow_multimon;
     int  enable_token_login;
+    int  enable_login_clipboard;
 
     /* colors */
 

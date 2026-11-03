@@ -314,6 +314,8 @@ build_fields(struct xrdp_wm *wm)
     int username_set = 0;
     clear_edits(ui);
     lv_obj_clean(ui->fields);
+    /* New fields may reuse old addresses; void any pending paste. */
+    wm->login_wnd_gen++;
     ui->edit_count = mod->names->count;
     ui->edits = calloc(ui->edit_count, sizeof(*ui->edits));
     if (ui->edit_count != 0 && ui->edits == NULL)
@@ -1144,6 +1146,71 @@ xrdp_login_lvgl_key(struct xrdp_wm *wm, int sym, unsigned int chr, int down, int
     pthread_mutex_unlock(&ui_mutex);
 }
 
+/* Called with the toolkit mutex held. Only a form field can take a paste. */
+static lv_obj_t *
+focused_edit(struct xrdp_login_lvgl *ui)
+{
+    lv_obj_t *focus;
+    int i;
+    if (ui->mode != 0 || ui->help != NULL)
+    {
+        return NULL;
+    }
+    focus = lv_group_get_focused(ui->group);
+    for (i = 0; focus != NULL && i < ui->edit_count; ++i)
+    {
+        if (ui->edits[i] == focus)
+        {
+            return focus;
+        }
+    }
+    return NULL;
+}
+
+const void *
+xrdp_login_lvgl_get_paste_target(struct xrdp_wm *wm)
+{
+    lv_obj_t *edit;
+    if (wm->login_ui == NULL)
+    {
+        return NULL;
+    }
+    pthread_mutex_lock(&ui_mutex);
+    edit = focused_edit(wm->login_ui);
+    pthread_mutex_unlock(&ui_mutex);
+    return edit;
+}
+
+unsigned int
+xrdp_login_lvgl_insert_text(struct xrdp_wm *wm, const char32_t *cp, unsigned int count)
+{
+    lv_obj_t *edit;
+    char text[8];
+    unsigned int i = 0;
+    if (wm->login_ui == NULL)
+    {
+        return 0;
+    }
+    pthread_mutex_lock(&ui_mutex);
+    edit = focused_edit(wm->login_ui);
+    for (; edit != NULL && i < count; ++i)
+    {
+        /* limit_insert() and LVGL's own max length can refuse a character. */
+        size_t before = strlen(lv_textarea_get_text(edit));
+        g_memset(text, 0, sizeof(text));
+        utf8_add_char_at(text, sizeof(text), cp[i], 0);
+        lv_textarea_add_text(edit, text);
+        OPENSSL_cleanse(text, sizeof(text));
+        if (strlen(lv_textarea_get_text(edit)) == before)
+        {
+            break;
+        }
+    }
+    timer_due = g_get_elapsed_ms();
+    pthread_mutex_unlock(&ui_mutex);
+    return i;
+}
+
 void
 xrdp_login_lvgl_wait(struct xrdp_wm *wm, tbus *objs, int *count, int *timeout)
 {
@@ -1387,6 +1454,19 @@ void xrdp_login_lvgl_key(struct xrdp_wm *wm, int s, unsigned int c, int d, int s
     (void)c;
     (void)d;
     (void)shift;
+}
+const void *xrdp_login_lvgl_get_paste_target(struct xrdp_wm *wm)
+{
+    (void)wm;
+    return NULL;
+}
+unsigned int xrdp_login_lvgl_insert_text(struct xrdp_wm *wm, const char32_t *cp,
+        unsigned int count)
+{
+    (void)wm;
+    (void)cp;
+    (void)count;
+    return 0;
 }
 void xrdp_login_lvgl_wait(struct xrdp_wm *wm, tbus *o, int *c, int *t)
 {

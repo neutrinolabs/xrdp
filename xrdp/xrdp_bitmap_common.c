@@ -127,6 +127,12 @@ xrdp_bitmap_create(int width, int height, int bpp,
     }
 
     self->wm = wm;
+    if (self->type == WND_TYPE_EDIT && wm != NULL)
+    {
+        /* See xrdp_login_clip.c - a pending paste must not land in a
+         * different edit field that happens to reuse an old address */
+        wm->login_wnd_gen++;
+    }
     return self;
 }
 
@@ -226,6 +232,11 @@ xrdp_bitmap_delete(struct xrdp_bitmap *self)
         if (self->wm->log_wnd == self)
         {
             self->wm->log_wnd = 0;
+        }
+
+        if (self->type == WND_TYPE_EDIT)
+        {
+            self->wm->login_wnd_gen++;
         }
     }
 
