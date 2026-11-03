@@ -4521,8 +4521,7 @@ server_set_pointer(struct xrdp_mod *mod, int x, int y,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    xrdp_wm_pointer(wm, data, mask, x, y, 0, 32, 32);
-    return 0;
+    return xrdp_wm_pointer(wm, data, mask, x, y, 0, 32, 32);
 }
 
 /*****************************************************************************/
@@ -4533,8 +4532,7 @@ server_set_pointer_ex(struct xrdp_mod *mod, int x, int y,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    xrdp_wm_pointer(wm, data, mask, x, y, bpp, 32, 32);
-    return 0;
+    return xrdp_wm_pointer(wm, data, mask, x, y, bpp, 32, 32);
 }
 
 /*****************************************************************************/
@@ -4546,8 +4544,7 @@ server_set_pointer_large(struct xrdp_mod *mod, int x, int y,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    xrdp_wm_pointer(wm, data, mask, x, y, bpp, width, height);
-    return 0;
+    return xrdp_wm_pointer(wm, data, mask, x, y, bpp, width, height);
 }
 
 /*****************************************************************************/
