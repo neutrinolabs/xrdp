@@ -34,7 +34,9 @@ struct clip_s2c /* server to client, pasting from linux app to mstsc */
     char *data;
     Atom type; /* UTF8_STRING, image/bmp, ... */
     Atom property; /* XRDP_CLIP_PROPERTY_ATOM, _QT_SELECTION, ... */
+    Atom property_type; /* Actual X property type returned for text */
     int xrdp_clip_type; /* XRDP_CB_TEXT, XRDP_CB_BITMAP, XRDP_CB_FILE, ... */
+    int requested_format_id; /* Last Windows format requested by the client */
     int converted;
     Time clip_time;
 };
