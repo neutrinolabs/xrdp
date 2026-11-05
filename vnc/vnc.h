@@ -83,8 +83,10 @@ struct monitor_info;
 
 struct vnc
 {
+    /* Module info */
     int size; /* size of this struct */
     int version; /* internal version */
+    int defer_resize_queue_start; /* mod calls server_start_resize_queue() */
     /* client functions */
     int (*mod_start)(struct vnc *v, int w, int h, int bpp);
     int (*mod_connect)(struct vnc *v, int fd);
@@ -158,7 +160,8 @@ struct vnc
     int (*server_chansrv_in_use)(struct vnc *v);
     void (*server_init_xkb_layout)(struct vnc *v,
                                    struct xrdp_client_info *client_info);
-    tintptr server_dumby[100 - 29]; /* align, 100 minus the number of server
+    void (*server_start_resize_queue)(struct vnc *v);
+    tintptr server_dumby[100 - 30]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

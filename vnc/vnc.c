@@ -1259,6 +1259,9 @@ lib_framebuffer_first_update(struct vnc *v)
             error = resize_client_to_server(v, 0);
             v->resize_status = VRS_DONE;
         }
+        // Now we've initialised v->resize_supported, we can tell the
+        // server to start the resize queue
+        v->server_start_resize_queue(v);
     }
 
     if (error == 0)
@@ -2825,6 +2828,7 @@ mod_init(void)
     /* set client functions */
     v->size = sizeof(struct vnc);
     v->version = CURRENT_MOD_VER;
+    v->defer_resize_queue_start = 1; // We tell the server when we're ready
     v->handle = (tintptr) v;
     v->mod_connect = lib_mod_connect;
     v->mod_start = lib_mod_start;
