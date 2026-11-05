@@ -3556,9 +3556,13 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                 status = xrdp_mm_display_server_connect(self);
                 if (status == 0)
                 {
-                    // This is as good a place as any to start processing
-                    // the resize_queue
-                    start_processing_resize_queue(self);
+                    struct xrdp_mod *mod = self->mod;
+                    if (mod != NULL && !mod->defer_resize_queue_start)
+                    {
+                        // The module can start processing resize queue
+                        // events immediately
+                        start_processing_resize_queue(self);
+                    }
                 }
             }
             break;
@@ -4219,6 +4223,19 @@ server_init_xkb_layout(struct xrdp_mod *mod,
                        struct xrdp_client_info *client_info)
 {
     xrdp_init_xkb_layout(client_info);
+}
+
+
+/*****************************************************************************/
+/* Start the resize queue (called from a module) */
+static void
+server_start_resize_queue(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm;
+    if ((wm = (struct xrdp_wm *)mod->wm) != NULL && wm->mm != NULL)
+    {
+        start_processing_resize_queue(wm->mm);
+    }
 }
 
 
@@ -5419,6 +5436,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_bell_trigger = server_bell_trigger;
             self->mod->server_chansrv_in_use = server_chansrv_in_use;
             self->mod->server_init_xkb_layout = server_init_xkb_layout;
+            self->mod->server_start_resize_queue = server_start_resize_queue;
             self->mod->server_fill_rect = server_fill_rect;
             self->mod->server_screen_blt = server_screen_blt;
             self->mod->server_paint_rect = server_paint_rect;
