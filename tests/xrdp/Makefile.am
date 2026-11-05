@@ -106,3 +106,9 @@ if XRDP_LVGL
 AM_CPPFLAGS += $(LVGL_CFLAGS) $(FONTCONFIG_CFLAGS)
 test_xrdp_LDADD += $(LVGL_LIBS) $(FONTCONFIG_LIBS)
 endif
+
+if XRDP_BULK
+AM_CPPFLAGS += -DXRDP_BULK
+test_xrdp_LDADD += \
+    $(top_builddir)/libbulk/src/.libs/libbulkrdp8compress.a
+endif

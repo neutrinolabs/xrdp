@@ -40,6 +40,12 @@ else
 PAINTERDIR =
 endif
 
+if XRDP_BULK
+BULKDIR = libbulk
+else
+BULKDIR =
+endif
+
 if XRDP_RFXCODEC
 RFXCODECDIR = librfxcodec
 else
@@ -64,6 +70,7 @@ SUBDIRS = \
   libxrdp \
   $(PAINTERDIR) \
   $(RFXCODECDIR) \
+  $(BULKDIR) \
   sesman \
   xrdp \
   fontutils \
