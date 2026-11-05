@@ -70,6 +70,7 @@ struct kbd_overrides
 
 struct mod
 {
+    /* Module info */
     int size; /* size of this struct */
     int version; /* internal version */
     /* client functions */
@@ -145,6 +146,7 @@ struct mod
     int (*server_chansrv_in_use)(struct mod *v);
     void (*server_init_xkb_layout)(struct mod *v,
                                    struct xrdp_client_info *client_info);
+    void (*server_start_resize_queue)(struct mod *v);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct mod *v, int rdpindex,
                                     int width, int height);
@@ -199,7 +201,7 @@ struct mod
                               int flags, int frame_id);
     int (*server_session_info)(struct mod *v, const char *data,
                                int data_bytes);
-    tintptr server_dumby[100 - 48]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 49]; /* align, 100 minus the number of server
                                        functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

@@ -83,6 +83,7 @@ struct monitor_info;
 
 struct vnc
 {
+    /* Module info */
     int size; /* size of this struct */
     int version; /* internal version */
     /* client functions */
@@ -158,7 +159,8 @@ struct vnc
     int (*server_chansrv_in_use)(struct vnc *v);
     void (*server_init_xkb_layout)(struct vnc *v,
                                    struct xrdp_client_info *client_info);
-    tintptr server_dumby[100 - 29]; /* align, 100 minus the number of server
+    void (*server_start_resize_queue)(struct vnc *v);
+    tintptr server_dumby[100 - 30]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -192,6 +194,7 @@ struct vnc
     struct vnc_screen_layout server_layout;
     enum vnc_resize_status resize_status;
     enum vnc_resize_support_status resize_supported;
+    int resize_queue_started;
     /* forwarded resize */
     // This occurs when the VNC server forwards a resize request
     // elsewhere (RFB_EDS_REQUEST_FORWARDED)
