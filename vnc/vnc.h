@@ -80,6 +80,7 @@ struct monitor_info;
 
 struct vnc
 {
+    /* Module info */
     int size; /* size of this struct */
     int version; /* internal version */
     /* client functions */
@@ -153,7 +154,8 @@ struct vnc
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct vnc *v);
     int (*server_chansrv_in_use)(struct vnc *v);
-    tintptr server_dumby[100 - 28]; /* align, 100 minus the number of server
+    void (*server_start_resize_queue)(struct vnc *v);
+    tintptr server_dumby[100 - 29]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
@@ -186,6 +188,7 @@ struct vnc
     struct vnc_screen_layout server_layout;
     enum vnc_resize_status resize_status;
     enum vnc_resize_support_status resize_supported;
+    int resize_queue_started;
 };
 
 /*

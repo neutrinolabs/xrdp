@@ -27,7 +27,7 @@
 #include "os_calls.h"
 #include "defines.h"
 
-#define CURRENT_MOD_VER 3
+#define CURRENT_MOD_VER 4
 
 struct source_info;
 
@@ -36,6 +36,7 @@ struct monitor_info;
 
 struct mod
 {
+    /* Module info */
     int size; /* size of this struct */
     int version; /* internal version */
     /* client functions */
@@ -98,7 +99,8 @@ struct mod
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct mod *v);
     int (*server_chansrv_in_use)(struct mod *v);
-    tintptr server_dumby[100 - 28]; /* align, 100 minus the number of server
+    void (*server_start_resize_queue)(struct mod *v);
+    tintptr server_dumby[100 - 29]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as long */

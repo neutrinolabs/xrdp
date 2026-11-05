@@ -542,6 +542,8 @@ int
 server_bell_trigger(struct xrdp_mod *mod);
 int
 server_chansrv_in_use(struct xrdp_mod *mod);
+void
+server_start_resize_queue(struct xrdp_mod *mod);
 int
 server_fill_rect(struct xrdp_mod *mod, int x, int y, int cx, int cy);
 int

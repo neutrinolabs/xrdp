@@ -45,6 +45,7 @@ lib_mod_connect(struct mod *mod)
 {
     LOG_DEVEL(LOG_LEVEL_TRACE, "in lib_mod_connect");
     LOG_DEVEL(LOG_LEVEL_TRACE, "out lib_mod_connect");
+    mod->server_start_resize_queue(mod);
     return 0;
 }
 
