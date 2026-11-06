@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include "os_calls.h"
+#include "explicit_bzero.h"
 #include "list.h"
 
 #include "test_common.h"
@@ -560,6 +561,56 @@ START_TEST(test_g_readdir_not_dir)
 END_TEST
 
 /******************************************************************************/
+// This test can't actually check that the memory assigned by
+// g_malloc_nonpaged() is not paged, but is can check it starts on a
+// page boundary, and can be written to.
+START_TEST(test_g_malloc_nonpaged)
+{
+    int pagesize = g_pagesize();
+
+    ck_assert_int_ne(pagesize, 0);
+    g_request_nonpaged(2); // Might fail - keep it small
+
+    const int alloc_size = pagesize + 1;
+    void *p = g_malloc_nonpaged(alloc_size);
+    // This call might fail because the test does not have enough
+    // privilege to call g_malloc_nonpaged(). If this happens, add a
+    // platform-specific exemption for non-root calls to this test.
+    if (p == NULL)
+    {
+        const char *errstr = g_get_strerror();
+        ck_abort_msg("Can't alloc nonpaged storage [%s]", errstr);
+    }
+
+    // Check the allocated storage starts on a page boundary. This
+    // is whitebox testing!
+    ck_assert_int_eq( ((intptr_t)p % pagesize), 0);
+
+    // Check memoey can be written to
+    explicit_bzero(p, alloc_size);
+
+    g_free_nonpaged(p, alloc_size);
+}
+END_TEST
+
+/******************************************************************************/
+/* Provide a way to run a subset of the tests.
+ * See run_suite() in test_common_main.c for another example of this.
+ * The use-case is testing a small number of tests in isolation, to find
+ * problems, i.e.:
+ *
+ *     cd tests
+ *     TEST_NAME=os_calls SUB_TEST_NAME=nonpaged CK_FORK=no \
+ *         common/test_common
+ */
+static int
+run_tests(const char *test_name)
+{
+    const char *env = getenv("SUB_TEST_NAME");
+    return (env == NULL || strcmp(env, test_name) == 0);
+}
+
+/******************************************************************************/
 Suite *
 make_suite_test_os_calls(void)
 {
@@ -570,25 +621,53 @@ make_suite_test_os_calls(void)
 
     tc_os_calls = tcase_create("oscalls-file");
     suite_add_tcase(s, tc_os_calls);
-    tcase_add_test(tc_os_calls, test_g_file_get_size__returns_file_size);
-    tcase_add_test(tc_os_calls, test_g_file_get_size__1GiB);
-    tcase_add_test(tc_os_calls, test_g_file_get_size__just_less_than_2GiB);
+    if (run_tests("file_size"))
+    {
+        tcase_add_test(tc_os_calls, test_g_file_get_size__returns_file_size);
+        tcase_add_test(tc_os_calls, test_g_file_get_size__1GiB);
+        tcase_add_test(tc_os_calls, test_g_file_get_size__just_less_than_2GiB);
 #if 0
-    tcase_add_test(tc_os_calls, test_g_file_get_size__2GiB);
-    tcase_add_test(tc_os_calls, test_g_file_get_size__5GiB);
+        tcase_add_test(tc_os_calls, test_g_file_get_size__2GiB);
+        tcase_add_test(tc_os_calls, test_g_file_get_size__5GiB);
 #endif
-    tcase_add_test(tc_os_calls, test_g_file_rw);
-    tcase_add_test(tc_os_calls, test_g_file_ro); // Must follow test_g_file_rw
-    tcase_add_test(tc_os_calls, test_g_file_cloexec);
-    tcase_add_test(tc_os_calls, test_g_file_get_open_fds);
-    tcase_add_test(tc_os_calls, test_g_file_is_open);
-    tcase_add_test(tc_os_calls, test_g_sck_fd_passing);
-    tcase_add_test(tc_os_calls, test_g_sck_fd_overflow);
-    tcase_add_test(tc_os_calls, test_g_readdir);
-    tcase_add_test(tc_os_calls, test_g_readdir_not_dir);
+    }
+    if (run_tests("file_access"))
+    {
+        tcase_add_test(tc_os_calls, test_g_file_rw);
+        tcase_add_test(tc_os_calls, test_g_file_ro); // Must follow test_g_file_rw
+    }
+    if (run_tests("file_cloexec"))
+    {
+        tcase_add_test(tc_os_calls, test_g_file_cloexec);
+    }
+    if (run_tests("file_open_fds"))
+    {
+        tcase_add_test(tc_os_calls, test_g_file_get_open_fds);
+    }
+    if (run_tests("file_is_open"))
+    {
+        tcase_add_test(tc_os_calls, test_g_file_is_open);
+    }
+    if (run_tests("fd_passing"))
+    {
+        tcase_add_test(tc_os_calls, test_g_sck_fd_passing);
+        tcase_add_test(tc_os_calls, test_g_sck_fd_overflow);
+    }
+    if (run_tests("readdir"))
+    {
+        tcase_add_test(tc_os_calls, test_g_readdir);
+        tcase_add_test(tc_os_calls, test_g_readdir_not_dir);
+    }
+    if (run_tests("nonpaged"))
+    {
+        tcase_add_test(tc_os_calls, test_g_malloc_nonpaged);
+    }
 
     // Add other test cases in other files
-    suite_add_tcase(s, make_tcase_test_os_calls_signals());
+    if (run_tests("signals"))
+    {
+        suite_add_tcase(s, make_tcase_test_os_calls_signals());
+    }
 
     return s;
 }

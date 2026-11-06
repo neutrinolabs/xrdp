@@ -407,6 +407,15 @@ Following parameters can be used in the \fB[Xvnc]\fR and
 Multiple \fIparam\fR lines are supported. This first line specifies the
 path to the X11 server executable. Following lines specify command line
 arguments passed to the X11 server.
+.P
+.RS
+For Xorg sessions, the environment of the PAM session is passed to the
+X server as well as to the session. If it contains \fBXRDP_XORG_CONFIG\fR,
+its value replaces the argument of \fB-config\fR (or is added with
+\fB-config\fR if there is none). A PAM session module can use this to
+choose an xorg.conf for each session, for example one per GPU on a server
+with several GPUs.
+.RE
 
 .SH "CHANSRV"
 Following parameters can be used in the \fB[Chansrv]\fR section.

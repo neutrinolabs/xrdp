@@ -21,6 +21,12 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag }}
 
+      - name: Remove snap
+        # The firefox package is a stub which installs a snap when it is
+        # upgraded, and fails if the snap store does not answer in time.
+        # The build does not need snap, so remove it before the upgrade.
+        uses: ading2210/gh-actions-remove-snap@80b81e1957f64dfd4c6f860cd4eaf68c1252fc58 # v1.0.0
+
       - name: Install dependencies
         run: |
           sudo scripts/install_xrdp_build_dependencies_with_apt.sh min amd64

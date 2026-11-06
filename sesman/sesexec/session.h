@@ -50,6 +50,7 @@ struct session_parameters
     const char *shell;  // Must not be NULL
     const char *directory;  // Must not be NULL
     const char *instance_name;  //Must not be NULL
+    const char *codec;  // Must not be NULL. "" if not known
 };
 
 

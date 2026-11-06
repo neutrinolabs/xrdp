@@ -36,11 +36,13 @@
 #if defined(sun) || defined(__sun)
 #define ctid_t id_t
 #endif
+
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #if defined(XRDP_ENABLE_VSOCK)
 #if defined(__linux__)
@@ -4530,4 +4532,134 @@ g_calloc_nofail(size_t nmemb, size_t size)
         out_of_memory();
     }
     return res;
+}
+
+/******************************************************************************/
+void *
+g_malloc_nonpaged(size_t size)
+{
+    size_t pagesize = g_pagesize();
+    void *res;
+
+    // Validate the pagesize is valid, and the size is non zero, and
+    // can be rounded up without overflowing
+    if (pagesize == 0 || size == 0 || size > (size_t)(-1) - (pagesize - 1))
+    {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    // Round the size up to a whole number of pages
+    size = (size + (pagesize - 1)) / pagesize * pagesize;
+
+#if __STDC_VERSION__ > 201212L
+    res = aligned_alloc(pagesize, size);
+#elif defined (HAVE_POSIX_MEMALIGN)
+    int status = posix_memalign(&res, pagesize, size);
+    if (status != 0)
+    {
+        res = NULL;
+        errno = status;
+    }
+#else
+#    error "This platform needs a definition to allocate aligned memory"`
+#endif
+    if (res != NULL)
+    {
+        if (mlock(res, size) != 0)
+        {
+            free(res);
+            res = NULL;
+        }
+    }
+
+    return res;
+}
+
+/******************************************************************************/
+void
+g_free_nonpaged(void *addr, size_t size)
+{
+    size_t pagesize = g_pagesize();
+
+    // If we don't know what the pagesize is, we can't have
+    // made a successful call to g_malloc_nonpaged()
+    if (pagesize != 0)
+    {
+        // Round the size up to a whole number of pages
+        size = (size + (pagesize - 1)) / pagesize * pagesize;
+
+        // Check this is a value we could have allocated
+        if (((intptr_t)addr % pagesize) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Programming error : Bad address in g_free_nonpaged()");
+        }
+        else
+        {
+            (void)munlock(addr, size);
+        }
+        free(addr);
+    }
+}
+
+/******************************************************************************/
+size_t
+g_pagesize(void)
+{
+    static long pagesize = 1; // Cache for returned value
+    if (pagesize == 1)
+    {
+        // According to the spec, this can fail and return -1
+        pagesize = sysconf(_SC_PAGESIZE);
+        if (pagesize < 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "Can't determine page size for this system");
+        }
+    }
+
+    return (pagesize < 0) ? 0 : (size_t)pagesize;
+}
+
+/******************************************************************************/
+void
+g_request_nonpaged(unsigned int pagecount)
+{
+    struct rlimit lim;
+    size_t pagesize;
+    if (pagecount == 0)
+    {
+        ;
+    }
+    else if ((pagesize = g_pagesize()) == 0)
+    {
+        ; // An error has been logged
+    }
+    else if (getrlimit(RLIMIT_MEMLOCK, &lim) == 0)
+    {
+        // Add the extra size needed to the soft limit
+        size_t extra = g_pagesize() * pagecount;
+        rlim_t oldval = lim.rlim_cur;
+        lim.rlim_cur += extra;
+        if (lim.rlim_cur < oldval)
+        {
+            // Overflow of unsigned values happened
+            lim.rlim_cur = (rlim_t) -1;
+        }
+        // Do we need to try to modify the hard limit (privileged operation)
+        if (lim.rlim_cur > lim.rlim_max)
+        {
+            lim.rlim_max = lim.rlim_cur;
+        }
+        if (setrlimit(RLIMIT_MEMLOCK, &lim) != 0)
+        {
+            LOG(LOG_LEVEL_ERROR,
+                "Unable to request memory locking for %u pages [%s]",
+                pagecount, g_get_strerror());
+        }
+    }
+    else
+    {
+        LOG(LOG_LEVEL_ERROR, "Unable to read old values for memory locking");
+    }
 }

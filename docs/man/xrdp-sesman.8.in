@@ -59,6 +59,29 @@ to read it.
 \fBSIGHUP\fR
 Causes \fBxrdp\-sesman\fR to reload its configuration. Needed if you're
 not running \fBxrdp\-sesman\fR as a daemon.
+.SH "SESSION ENVIRONMENT"
+The environment variables listed below are passed to the session by
+\fBxrdp-sesman\fR and \fBxrdp-sesexec\fR when a session is started.
+.br
+Additional variables can also be specified in \fIsesman.ini\fR. See
+\fBsesman.ini(5)\fR for more details.
+.br
+Note that after a session is started, environment variables cannot be
+changed after a client disconnects from, and reconnects to a session.
+.br
+Some variables used in the internal implementation of \fBxrdp\fR are not
+documented below. The names or contents of these variables may change
+between \fBxrdp\fR releases.
+.TP
+\fBXRDP_SESSION_CODEC\fR
+Set before the session is opened, so PAM session modules can read it with
+\fBpam_getenv\fR(3), and passed on to the session. It names the codec
+\fBxrdp\fR negotiated with the client when the session was created:
+\fIh264\fR, \fIrfx\fR or \fIjpeg\fR. It is not set for other clients,
+or for sessions started with \fBxrdp\-sesrun\fR.
+A PAM module could, for example, set \fBXRDP_XORG_CONFIG\fR to start the
+X server without a GPU for a client that only uses RemoteFX, which is
+encoded on the CPU.
 .SH "FILES"
 @sbindir@/xrdp\-sesman
 .br

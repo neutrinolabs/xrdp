@@ -88,6 +88,7 @@ session_data_new(const struct session_parameters *sp)
     string_length += g_strlen(sp->shell) + 1;
     string_length += g_strlen(sp->directory) + 1;
     string_length += g_strlen(sp->instance_name) + 1;
+    string_length += g_strlen(sp->codec) + 1;
 
     struct session_data *sd = (struct session_data *)g_malloc(sizeof(*sd) + string_length, 0);
 
@@ -117,6 +118,7 @@ session_data_new(const struct session_parameters *sp)
         COPY_STRING(sd->params.shell, sp->shell);
         COPY_STRING(sd->params.directory, sp->directory);
         COPY_STRING(sd->params.instance_name, sp->instance_name);
+        COPY_STRING(sd->params.codec, sp->codec);
 
 #undef COPY_STRING
     }
@@ -349,6 +351,32 @@ start_window_manager(const struct login_info *login_info,
 }
 
 /******************************************************************************/
+/**
+ * Replaces the value of the -config parameter in an X server parameter
+ * list, or appends -config if the list has none
+ *
+ * @param params X server parameters (with auto_free set)
+ * @param config xorg.conf to use
+ */
+static void
+set_xorg_config_param(struct list *params, const char *config)
+{
+    int i;
+
+    for (i = 1; i < params->count - 1; ++i)
+    {
+        if (g_strcmp((const char *)list_get_item(params, i), "-config") == 0)
+        {
+            list_remove_item(params, i + 1);
+            list_insert_item(params, i + 1, (tintptr)g_strdup(config));
+            return;
+        }
+    }
+
+    list_add_strdup_multi(params, "-config", config, LIST_ADD_STRDUP_TERM);
+}
+
+/******************************************************************************/
 static struct list *
 prepare_xorg_xserver_params(const struct session_data *sd,
                             const char *authfile)
@@ -411,6 +439,17 @@ prepare_xorg_xserver_params(const struct session_data *sd,
 
         /* additional parameters from sesman.ini file */
         list_append_list_strdup(g_cfg->xorg_params, params, 1);
+
+        /* A PAM session module can choose the xorg.conf for this
+         * session, for example one per GPU on a multi-GPU server */
+        const char *config = g_getenv("XRDP_XORG_CONFIG");
+        if (config != NULL && config[0] != '\0')
+        {
+            LOG(LOG_LEVEL_INFO,
+                "[session start] (display :%d): using the xorg.conf %s "
+                "from XRDP_XORG_CONFIG", sd->params.x11_display, config);
+            set_xorg_config_param(params, config);
+        }
     }
 
     return params;
@@ -683,6 +722,11 @@ start_x_server(const struct login_info *login_info,
                  g_cfg->env_names,
                  g_cfg->env_values);
 
+    /* The PAM session modules have run by now. Their environment
+     * reaches the X server too, so that a module can adjust it for this
+     * session (see XRDP_XORG_CONFIG) */
+    auth_set_env(login_info->auth_info);
+
     /* Allocate the passwd_file if required */
     if (sp->type == SCP_SESSION_TYPE_XVNC &&
             (passwd_file = get_xvnc_passwd_file_name(sp->x11_display)) == NULL)
@@ -883,6 +927,15 @@ session_start_wrapped(struct login_info *login_info,
         return E_SCP_SCREATE_GENERAL_ERROR;
     }
 #endif
+
+    /* Session modules may want to know how the session will be
+       displayed, e.g. to choose a GPU (or none) for it */
+    if (s->codec[0] != '\0' &&
+            auth_put_env(login_info->auth_info, "XRDP_SESSION_CODEC",
+                         s->codec) != 0)
+    {
+        return E_SCP_SCREATE_GENERAL_ERROR;
+    }
 
     if (auth_start_session(login_info->auth_info, sd->display) != 0)
     {

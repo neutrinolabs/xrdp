@@ -440,6 +440,7 @@ process_create_session_request(struct scp_list_item *sli)
     const char *shell;
     const char *directory;
     const char *instance_name;
+    const char *codec;
 
     struct guid guid;
     const char *display;
@@ -453,7 +454,7 @@ process_create_session_request(struct scp_list_item *sli)
     rv = scp_get_create_session_request(sli->client_trans,
                                         &type, &width, &height,
                                         &bpp, &shell, &directory,
-                                        &instance_name);
+                                        &instance_name, &codec);
 
     if (rv == 0)
     {
@@ -537,7 +538,7 @@ process_create_session_request(struct scp_list_item *sli)
                                 x11_display,
                                 type, width, height,
                                 bpp, shell, directory,
-                                instance_name);
+                                instance_name, codec);
 
                 if (eicp_stat != 0)
                 {

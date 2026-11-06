@@ -164,6 +164,11 @@ jobs:
           echo "CONF_FLAGS=$CONF_FLAGS_${{ matrix.arch }}_${{ matrix.feature_set }} ${{ matrix.CONF_FLAGS_EXTRA }}" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH_${{ matrix.arch }}" >> $GITHUB_ENV
       - uses: actions/checkout@v6
+      - name: Remove snap
+        # The firefox package is a stub which installs a snap when it is
+        # upgraded, and fails if the snap store does not answer in time.
+        # The build does not need snap, so remove it before the upgrade.
+        uses: ading2210/gh-actions-remove-snap@80b81e1957f64dfd4c6f860cd4eaf68c1252fc58 # v1.0.0
       - name: "Install Dependencies"
         # See https://github.com/actions/runner-images/issues/7192
         run: |

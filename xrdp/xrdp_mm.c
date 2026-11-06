@@ -307,6 +307,32 @@ xrdp_mm_send_sys_login_request(struct xrdp_mm *self, const char *username,
 }
 
 /*****************************************************************************/
+/* The codec negotiated with the client, for the session manager. The
+   encoder exists by now: a GFX client has advertised its capabilities
+   before the login completes (gfx_delay_autologin covers autologin). */
+static const char *
+xrdp_mm_get_codec_name(struct xrdp_mm *self)
+{
+    if (self->encoder == NULL)
+    {
+        return "";
+    }
+    switch (self->wm->client_info->capture_code)
+    {
+        case CC_SUF_A2: /* FALLTHROUGH */
+        case CC_GFX_A2:
+            return "h264";
+        case CC_SUF_RFX: /* FALLTHROUGH */
+        case CC_GFX_PRO:
+            return "rfx";
+        case CC_SIMPLE:
+            return (self->wm->client_info->jpeg_codec_id != 0) ? "jpeg" : "";
+        default:
+            return "";
+    }
+}
+
+/*****************************************************************************/
 /* Send a create session request to sesman */
 static int
 xrdp_mm_create_session(struct xrdp_mm *self)
@@ -352,7 +378,8 @@ xrdp_mm_create_session(struct xrdp_mm *self)
                  xserverbpp,
                  self->wm->client_info->program,
                  self->wm->client_info->directory,
-                 self->wm->pro_layer->lis_layer->startup_params->instance_name);
+                 self->wm->pro_layer->lis_layer->startup_params->instance_name,
+                 xrdp_mm_get_codec_name(self));
     }
 
     return rv;
@@ -1827,6 +1854,43 @@ resize_queue_source_to_str(enum resize_queue_source src)
 #endif
 
 /******************************************************************************/
+/* Is a queued layout the one the session already has? The bounding box alone
+   is not enough: one monitor can grow while another keeps the box the same
+   (monitor 1 going fullscreen from 1920x896 beside a 1920x1072 monitor 2),
+   and comparing only session_width/height dropped that resize. Compares the
+   non-negative minfo_wm, so a layout that only moves as a whole is the same,
+   and the scale factors, which a backend may apply per monitor. */
+static int
+display_size_description_equal(const struct display_size_description *a,
+                               const struct display_size_description *b)
+{
+    unsigned int index;
+
+    if (a->session_width != b->session_width ||
+            a->session_height != b->session_height ||
+            a->monitorCount != b->monitorCount)
+    {
+        return 0;
+    }
+    for (index = 0; index < a->monitorCount &&
+            index < CLIENT_MONITOR_DATA_MAXIMUM_MONITORS; index++)
+    {
+        const struct monitor_info *ma = &a->minfo_wm[index];
+        const struct monitor_info *mb = &b->minfo_wm[index];
+
+        if (ma->left != mb->left || ma->top != mb->top ||
+                ma->right != mb->right || ma->bottom != mb->bottom ||
+                ma->is_primary != mb->is_primary ||
+                ma->desktop_scale_factor != mb->desktop_scale_factor ||
+                ma->device_scale_factor != mb->device_scale_factor)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/******************************************************************************/
 static int
 dynamic_monitor_process_queue(struct xrdp_mm *self)
 {
@@ -1875,16 +1939,14 @@ dynamic_monitor_process_queue(struct xrdp_mm *self)
         const struct display_size_description *current_size
                 = &wm->client_info->display_sizes;
 
-        const int already_this_size = queued_size->session_width
-                                      == current_size->session_width
-                                      && queued_size->session_height
-                                      == current_size->session_height;
+        const int already_this_size =
+            display_size_description_equal(queued_size, current_size);
 
         if (already_this_size)
         {
             LOG(LOG_LEVEL_DEBUG,
                 "dynamic_monitor_process_queue: Not resizing."
-                " Already this size. (w: %d x h: %d)",
+                " Already this layout. (w: %d x h: %d)",
                 queued_size->session_width,
                 queued_size->session_height);
         }
@@ -2571,7 +2633,6 @@ static int
 xrdp_mm_get_sesman_port(char *port, int port_bytes)
 {
     int fd;
-    int error;
     int index;
     char *val;
     char cfg_file[256];
@@ -2579,8 +2640,8 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
     struct list *values;
 
     g_memset(cfg_file, 0, sizeof(char) * 256);
-    /* default to port 3350 */
-    strlcpy(port, "3350", port_bytes);
+    /* An empty port selects sesman's default socket */
+    port[0] = '\0';
     /* see if port is in sesman.ini file */
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
     fd = g_file_open_ro(cfg_file);
@@ -2602,14 +2663,11 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
                 {
                     if (g_strcasecmp(val, "ListenPort") == 0)
                     {
+                        /* Pass the value on as sesman reads it: a socket
+                         * name or path, or an obsolete TCP port number that
+                         * the SCP layer ignores */
                         val = (char *)list_get_item(values, index);
-                        error = g_atoi(val);
-
-                        if ((error > 0) && (error < 65000))
-                        {
-                            strlcpy(port, val, port_bytes);
-                        }
-
+                        strlcpy(port, val, port_bytes);
                         break;
                     }
                 }

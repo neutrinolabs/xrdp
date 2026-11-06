@@ -173,6 +173,14 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
 
 
 /******************************************************************************/
+int
+auth_put_env(struct auth_info *auth_info, const char *name,
+             const char *value)
+{
+    return g_setenv(name, value, 1) != 0;
+}
+
+/******************************************************************************/
 /* returns error */
 int
 auth_start_session(struct auth_info *auth_info, const char *display)
