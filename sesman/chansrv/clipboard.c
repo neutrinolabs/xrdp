@@ -1053,6 +1053,28 @@ clipboard_send_data_response_failed(void)
 }
 
 /*****************************************************************************/
+/* Stop collecting an INCR transfer that nobody will use any more.
+   incr_in_progress is otherwise only cleared when the transfer completes
+   or the client reconnects. While it is set every later reply that comes
+   in one piece is ignored and the client cannot take the X selection, so
+   a stalled transfer would leave the clipboard dead in both directions.
+   The property is left alone: deleting it would ask the owner for the
+   next chunk. */
+static void
+clipboard_abandon_incr(void)
+{
+    if (g_clip_s2c.incr_in_progress)
+    {
+        LOG(LOG_LEVEL_INFO, "clipboard: abandoning an INCR transfer after "
+            "%d bytes", g_clip_s2c.total_bytes);
+        g_clip_s2c.incr_in_progress = 0;
+        g_free(g_clip_s2c.data);
+        g_clip_s2c.data = 0;
+        g_clip_s2c.total_bytes = 0;
+    }
+}
+
+/*****************************************************************************/
 /* A data request from the client is outstanding and cannot be satisfied.
    Always send something back. A client left waiting for a response it never
    gets may stop asking for the rest of the session: Remmina keeps
@@ -1067,6 +1089,7 @@ clipboard_fail_pending_request(const char *why)
             "request, %s", why);
         clipboard_send_data_response_failed();
     }
+    clipboard_abandon_incr();
 }
 
 /*****************************************************************************/
@@ -1075,6 +1098,7 @@ static void
 clipboard_request_timeout(void *data)
 {
     int serial;
+    char reason[128];
 
     serial = (int)(long)data;
     if ((g_clip_s2c.in_request == 0) || (g_clip_s2c.request_serial != serial))
@@ -1082,13 +1106,23 @@ clipboard_request_timeout(void *data)
         /* already answered, or superseded by a newer request */
         return;
     }
-    if (g_clip_s2c.incr_in_progress &&
+    if (g_clip_s2c.incr_in_progress && g_clip_s2c.incr_progress &&
             (g_clip_s2c.incr_rearm_count < CLIP_S2C_MAX_INCR_REARM))
     {
         /* data is still arriving over INCR, give it more time */
+        g_clip_s2c.incr_progress = 0;
         g_clip_s2c.incr_rearm_count++;
         add_timeout(CLIP_S2C_REQUEST_TIMEOUT_MS, clipboard_request_timeout,
                     data);
+        return;
+    }
+    if (g_clip_s2c.incr_in_progress)
+    {
+        g_snprintf(reason, sizeof(reason),
+                   "the INCR transfer %s after %d bytes",
+                   g_clip_s2c.incr_progress ? "took too long" : "stalled",
+                   g_clip_s2c.total_bytes);
+        clipboard_fail_pending_request(reason);
         return;
     }
     clipboard_fail_pending_request("the X selection owner did not respond");
@@ -1096,13 +1130,16 @@ clipboard_request_timeout(void *data)
 
 /*****************************************************************************/
 /* Record that a client data request is now waiting on an X selection
-   conversion, and arm the timeout that guarantees it gets an answer. */
+   conversion of target, and arm the timeout that guarantees it gets an
+   answer. */
 static void
-clipboard_arm_request(void)
+clipboard_arm_request(Atom target)
 {
     g_clip_s2c.in_request = 1;
     g_clip_s2c.request_serial++;
+    g_clip_s2c.request_target = target;
     g_clip_s2c.incr_rearm_count = 0;
+    g_clip_s2c.incr_progress = 0;
     add_timeout(CLIP_S2C_REQUEST_TIMEOUT_MS, clipboard_request_timeout,
                 (void *)(long)g_clip_s2c.request_serial);
 }
@@ -1121,6 +1158,9 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
               "CLIPRDR_DATA_REQUEST");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_request:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  %d", g_clip_s2c.xrdp_clip_type);
+    /* A new request means the client has given up on any earlier one, so
+       a transfer still running for that must not complete into this one */
+    clipboard_abandon_incr();
     in_uint32_le(s, requestedFormatId);
     switch (requestedFormatId)
     {
@@ -1138,7 +1178,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
                 XConvertSelection(g_display, g_clipboard_atom, g_clip_s2c.type,
                                   g_clip_property_atom, g_wnd, CurrentTime);
-                clipboard_arm_request();
+                clipboard_arm_request(g_clip_s2c.type);
             }
             break;
         case CF_DIB:
@@ -1155,7 +1195,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
                 XConvertSelection(g_display, g_clipboard_atom, g_image_bmp_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
-                clipboard_arm_request();
+                clipboard_arm_request(g_image_bmp_atom);
             }
             break;
         case CF_UNICODETEXT:
@@ -1172,7 +1212,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
                 XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
-                clipboard_arm_request();
+                clipboard_arm_request(g_utf8_atom);
             }
             break;
         default:
@@ -1831,6 +1871,25 @@ clipboard_event_selection_notify(XEvent *xevent)
     type = 0;
     lxevent = (XSelectionEvent *)xevent;
 
+    /* Every conversion other than TARGETS is started for a client data
+       request. A reply that does not match the pending request belongs to
+       one that has already been answered, normally failed by
+       clipboard_request_timeout(). Passing it on would send the client a
+       second CB_FORMAT_DATA_RESPONSE, and as a response does not say which
+       request it answers, the client may take it as the answer to its
+       next request. A late reply for the same target as the pending
+       request cannot be told apart from its answer. The property is left
+       alone, see clipboard_abandon_incr(). */
+    if ((lxevent->target != g_targets_atom) &&
+            ((g_clip_s2c.in_request == 0) ||
+             (lxevent->target != g_clip_s2c.request_target)))
+    {
+        LOG(LOG_LEVEL_INFO, "clipboard: dropping a %s reply from the X "
+            "selection owner, no client request is waiting for it",
+            clipboard_target_name(lxevent->target));
+        return 0;
+    }
+
     if (lxevent->property == None)
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_event_selection_notify: clip could "
@@ -1871,6 +1930,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                       get_atom_text(lxevent->property),
                       get_atom_text(lxevent->type));
             g_clip_s2c.incr_in_progress = 1;
+            g_clip_s2c.incr_progress = 1;
             g_clip_s2c.property = lxevent->property;
             g_clip_s2c.type = lxevent->target;
             g_clip_s2c.total_bytes = 0;
@@ -2691,6 +2751,7 @@ clipboard_event_property_notify(XEvent *xevent)
             {
                 g_memcpy(g_clip_s2c.data + g_clip_s2c.total_bytes, data, new_data_len);
                 g_clip_s2c.total_bytes += new_data_len;
+                g_clip_s2c.incr_progress = 1;
                 XFree(data);
             }
 
