@@ -265,6 +265,8 @@ enum
     CB_FORMAT_FILE_GROUP_DESCRIPTOR = 0xc0bc
 };
 
+static int
+clipboard_send_data_response_failed(void);
 
 /*****************************************************************************/
 static char *
@@ -814,7 +816,10 @@ clipboard_send_data_response(int xrdp_clip_type, const char *data, int data_size
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_data_response: data is nil");
     }
-    return 0;
+    /* the client is waiting for a response, it must get one */
+    LOG(LOG_LEVEL_WARNING, "clipboard: failing a client data request, "
+        "there is no data to send for xrdp_clip_type %d", xrdp_clip_type);
+    return clipboard_send_data_response_failed();
 }
 
 /*****************************************************************************/
@@ -2615,6 +2620,7 @@ clipboard_event_property_notify(XEvent *xevent)
     int new_data_len;
     int data_bytes;
     char *cptr;
+    char reason[128];
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_property_notify: PropertyNotify .window %ld "
               ".state %d .atom %ld %s", xevent->xproperty.window,
@@ -2692,10 +2698,22 @@ clipboard_event_property_notify(XEvent *xevent)
             {
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
                 //LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", g_last_clip_data, 64);
-                /* skip header */
-                clipboard_send_data_response(g_clip_s2c.xrdp_clip_type,
-                                             g_clip_s2c.data + 14,
-                                             g_clip_s2c.total_bytes - 14);
+                if ((g_clip_s2c.data == 0) || (g_clip_s2c.total_bytes <= 14))
+                {
+                    /* no more than the 14 byte BMP file header: the
+                       length below would be zero or negative */
+                    g_snprintf(reason, sizeof(reason),
+                               "the image/bmp reply carried no usable data "
+                               "(%d bytes)", g_clip_s2c.total_bytes);
+                    clipboard_fail_pending_request(reason);
+                }
+                else
+                {
+                    /* skip header */
+                    clipboard_send_data_response(g_clip_s2c.xrdp_clip_type,
+                                                 g_clip_s2c.data + 14,
+                                                 g_clip_s2c.total_bytes - 14);
+                }
             }
             else if ((g_clip_s2c.type == XA_STRING) ||
                      (g_clip_s2c.type == g_utf8_atom))
