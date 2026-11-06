@@ -24,6 +24,18 @@
 
 #include "arch.h"
 
+/**
+ * Split one NV12 chroma row into U and V rows. The source and destination
+ * buffers must not overlap.
+ * width is the rectangle width in luma pixels. An odd width includes the
+ * final UV pair, so src must contain 2 * ceil(width / 2) bytes and each
+ * destination must have room for ceil(width / 2) bytes. No alignment is
+ * required. A non-positive width copies nothing.
+ */
+void
+xrdp_encoder_openh264_split_uv(const char *src, char *dst_u, char *dst_v,
+                               int width);
+
 void *
 xrdp_encoder_openh264_create(void);
 int
