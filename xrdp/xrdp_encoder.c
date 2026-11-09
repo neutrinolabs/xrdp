@@ -106,11 +106,13 @@ static int
 process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 
 /*****************************************************************************/
-/* Item destructor for self->fifo_to_proc */
-static void
-xrdp_enc_data_destructor(void *item, void *closure)
+void
+xrdp_enc_data_delete(XRDP_ENC_DATA *enc)
 {
-    XRDP_ENC_DATA *enc = (XRDP_ENC_DATA *)item;
+    if (enc == NULL)
+    {
+        return;
+    }
     if (ENC_IS_BIT_SET(enc->flags, ENC_FLAGS_GFX_BIT))
     {
         g_free(enc->u.gfx.cmd);
@@ -120,7 +122,19 @@ xrdp_enc_data_destructor(void *item, void *closure)
         g_free(enc->u.sc.drects);
         g_free(enc->u.sc.crects);
     }
+    if (enc->shmem_ptr != NULL)
+    {
+        g_munmap(enc->shmem_ptr, enc->shmem_bytes);
+    }
     g_free(enc);
+}
+
+/*****************************************************************************/
+/* Item destructor for self->fifo_to_proc */
+static void
+xrdp_enc_data_destructor(void *item, void *closure)
+{
+    xrdp_enc_data_delete((XRDP_ENC_DATA *)item);
 }
 
 /* Item destructor for self->fifo_processed */
@@ -128,6 +142,12 @@ static void
 xrdp_enc_data_done_destructor(void *item, void *closure)
 {
     XRDP_ENC_DATA_DONE *enc_done = (XRDP_ENC_DATA_DONE *)item;
+    /* The last done item of a command owns the command; it is normally freed
+     * by xrdp_mm_process_enc_done(), which a discarded fifo never reaches. */
+    if (enc_done->last)
+    {
+        xrdp_enc_data_delete(enc_done->enc);
+    }
     g_free(enc_done->comp_pad_data);
     g_free(enc_done);
 }
