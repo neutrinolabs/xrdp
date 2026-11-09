@@ -3995,7 +3995,11 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         }
     }
 
-    if (self->wm->screen_dirty_region != NULL)
+    // Only consider sending the dirty region of the WM screen if a resize
+    // is not in progress. This revents unnecessary client updates, and also
+    // prevents us sending EGFX PDUs while we have no surfaces, if the module
+    // is using the WM screen.
+    if (self->wm->screen_dirty_region != NULL && self->resize_data == NULL)
     {
         if (xrdp_region_not_empty(self->wm->screen_dirty_region))
         {
