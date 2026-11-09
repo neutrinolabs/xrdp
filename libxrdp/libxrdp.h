@@ -577,6 +577,11 @@ int
 xrdp_orders_send_switch_os_surface(struct xrdp_orders *self, int id);
 
 /* xrdp_bitmap_compress.c */
+
+/* Flags used by xrdp_bitmap32_compress() */
+#define BMC_FLAGS_RLE     0x10
+#define BMC_FLAGS_NOALPHA 0x20
+
 int
 xrdp_bitmap_compress(char *in_data, int width, int height,
                      struct stream *s, int bpp, int byte_limit,

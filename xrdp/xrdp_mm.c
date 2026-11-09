@@ -1092,7 +1092,8 @@ xrdp_mm_egfx_send_planar_bitmap(struct xrdp_mm *self,
             }
             lines = libxrdp_planar_compress(pixels, bwidth, bheight, comp_s,
                                             32, GFX_PLANAR_BYTES, bheight - 1,
-                                            temp_s, 0, 0x10);
+                                            temp_s, 0,
+                                            (BMC_FLAGS_RLE | BMC_FLAGS_NOALPHA));
             comp_s->end = comp_s->p;
             comp_s->p = comp_s->data;
             if (lines != bheight)
