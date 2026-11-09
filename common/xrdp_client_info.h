@@ -147,6 +147,7 @@ struct xrdp_client_info
     int desktop_cache;
     int use_compact_packets; /* rdp5 smaller packets */
     char client_name[INFO_CLIENT_NAME_BYTES_UTF8];
+    int long_credentials_supported;
     int build;
     int keylayout;
     char username[INFO_CLIENT_MAX_CB_LEN];
@@ -156,6 +157,7 @@ struct xrdp_client_info
     char directory[INFO_CLIENT_MAX_CB_LEN];
     int rdp_compression;
     int rdp_autologin;
+    int rdp_logonnotify;
     int crypt_level; /* 1, 2, 3 = low, medium, high */
     int channels_allowed; /* 0 = no channels 1 = channels */
     int sound_code; /* 1 = leave sound at server */
