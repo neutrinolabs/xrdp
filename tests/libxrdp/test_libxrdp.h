@@ -5,5 +5,6 @@
 
 Suite *make_suite_test_xrdp_sec_process_mcs_data_monitors(void);
 Suite *make_suite_test_monitor_processing(void);
+Suite *make_suite_test_xrdp_orders(void);
 
 #endif /* TEST_LIBXRDP_H */

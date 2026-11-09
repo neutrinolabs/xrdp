@@ -276,8 +276,8 @@ struct xrdp_pointer_item
     int x; /* hotspot */
     int y;
     int pad0;
-    char data[96 * 96 * 4];
-    char mask[96 * 96 / 8];
+    char data[XRDP_MAX_POINTER_WIDTH * XRDP_MAX_POINTER_HEIGHT * 4];
+    char mask[XRDP_MAX_POINTER_WIDTH * XRDP_MAX_POINTER_HEIGHT / 8];
     int bpp;
     int width;
     int height;

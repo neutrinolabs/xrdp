@@ -5,6 +5,7 @@ AM_CPPFLAGS = $(OPENSSL_CFLAGS) \
   -I$(top_srcdir)/xrdp \
   -I$(top_srcdir)/libxrdp \
   -I$(top_srcdir)/common \
+  -I$(top_srcdir)/xup \
   -I$(top_srcdir)/third_party/tomlc99 \
   $(IMLIB2_CFLAGS)
 
@@ -46,7 +47,8 @@ test_xrdp_SOURCES = \
     test_xrdp_keymap.c \
     test_xrdp_region.c \
     test_tconfig.c \
-    test_bitmap_load.c
+    test_bitmap_load.c \
+    test_backend_input.c
 
 test_xrdp_CFLAGS = \
     -D IMAGEDIR=\"$(srcdir)\" \
