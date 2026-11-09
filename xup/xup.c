@@ -404,8 +404,11 @@ lib_mod_connect(struct mod *mod, int fd)
     {
         error = send_server_monitor_full_invalidate(
                     mod, s, mod->width, mod->height);
-        // Tell the module manager to start the resize queue
-        mod->server_start_resize_queue(mod);
+        if (error == 0)
+        {
+            // Tell the module manager to start the resize queue
+            mod->server_start_resize_queue(mod);
+        }
     }
 
     free_stream(s);
