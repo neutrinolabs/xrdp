@@ -30,10 +30,6 @@ http://msdn.microsoft.com/en-us/library/cc241877.aspx
 
 #include "libxrdp.h"
 
-#define FLAGS_RLE     0x10
-#define FLAGS_NOALPHA 0x20
-
-
 
 /*****************************************************************************/
 /* split RGB */
@@ -452,11 +448,11 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     b_data = g_data + max_bytes;
     hold_p = s->p;
 
-    if (header & FLAGS_NOALPHA)
+    if (header & BMC_FLAGS_NOALPHA)
     {
         cy = fsplit3(in_data, start_line, width, e,
                      sr_data, sg_data, sb_data);
-        if (header & FLAGS_RLE)
+        if (header & BMC_FLAGS_RLE)
         {
             fdelta(sr_data, r_data, cx, cy);
             fdelta(sg_data, g_data, cx, cy);
@@ -475,7 +471,8 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                     if (2 + max_bytes <= byte_limit)
                     {
                         s->p = hold_p;
-                        foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
+                        foutraw3(s, cx * cy, BMC_FLAGS_NOALPHA,
+                                 sr_data, sg_data, sb_data);
                         break;
                     }
                 }
@@ -494,7 +491,8 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                 if (2 + max_bytes <= byte_limit)
                 {
                     s->p = hold_p;
-                    foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
+                    foutraw3(s, cx * cy, BMC_FLAGS_NOALPHA,
+                             sr_data, sg_data, sb_data);
                     break;
                 }
                 cy--;
@@ -505,7 +503,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     {
         cy = fsplit4(in_data, start_line, width, e,
                      sa_data, sr_data, sg_data, sb_data);
-        if (header & FLAGS_RLE)
+        if (header & BMC_FLAGS_RLE)
         {
             fdelta(sa_data, a_data, cx, cy);
             fdelta(sr_data, r_data, cx, cy);

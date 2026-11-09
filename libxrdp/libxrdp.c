@@ -601,7 +601,8 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     lines_sending = xrdp_bitmap32_compress(data, width, height,
                                                            s, 32,
                                                            (MAX_BITMAP_BUF_SIZE - 100) - total_bufsize,
-                                                           i - 1, temp_s, e, 0x10);
+                                                           i - 1, temp_s, e,
+                                                           BMC_FLAGS_RLE);
                     LOG_DEVEL(LOG_LEVEL_DEBUG, "libxrdp_send_bitmap: i %d lines_sending %d",
                               i, lines_sending);
                 }
