@@ -312,6 +312,8 @@ lxrdp_connect(struct mod *mod, int fd)
             g_getpid());
     }
 
+    // Tell the module manager to start the resize queue
+    mod->server_start_resize_queue(mod);
     return 0;
 }
 

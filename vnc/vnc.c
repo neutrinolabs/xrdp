@@ -403,6 +403,26 @@ resize_client_to_server(struct vnc *v, int update_in_progress)
 
 
 /**************************************************************************//**
+ * Sets the resize status
+ *
+ * The first time a status of VRS_DONE is set, the resize
+ * queue in the module manager is started.
+ *
+ * @param v VNC object
+ * @param status Resize status to set
+ */
+static void
+set_resize_status(struct vnc *v, enum vnc_resize_status status)
+{
+    v->resize_status = status;
+    if (status == VRS_DONE && !v->resize_queue_started)
+    {
+        v->server_start_resize_queue(v);
+        v->resize_queue_started = 1;
+    }
+}
+
+/**************************************************************************//**
  * Resize the server to the client layout
  *
  * @param v VNC object
@@ -423,7 +443,7 @@ resize_server_to_client_layout(struct vnc *v)
     {
         LOG(LOG_LEVEL_DEBUG, "Server layout is the same "
             "as the client layout");
-        v->resize_status = VRS_DONE;
+        set_resize_status(v, VRS_DONE);
     }
     else if (v->resize_supported != VRSS_SUPPORTED)
     {
@@ -453,7 +473,7 @@ resize_server_to_client_layout(struct vnc *v)
 
         LOG(LOG_LEVEL_DEBUG, "Changing server layout");
         error = send_set_desktop_size(v, &v->client_layout);
-        v->resize_status = VRS_WAITING_FOR_RESIZE_CONFIRM;
+        set_resize_status(v, VRS_WAITING_FOR_RESIZE_CONFIRM);
     }
 
     return error;
@@ -1257,7 +1277,7 @@ lib_framebuffer_first_update(struct vnc *v)
             LOG(LOG_LEVEL_DEBUG, "Resizing client to server %dx%d",
                 v->server_layout.total_width, v->server_layout.total_height);
             error = resize_client_to_server(v, 0);
-            v->resize_status = VRS_DONE;
+            set_resize_status(v, VRS_DONE);
         }
     }
 
@@ -1328,7 +1348,7 @@ lib_framebuffer_waiting_for_resize_confirm(struct vnc *v)
                     error = resize_client_to_server(v, 0);
                 }
 
-                v->resize_status = VRS_DONE;
+                set_resize_status(v, VRS_DONE);
                 if (error == 0)
                 {
                     // If this resize was requested by the client mid-session
@@ -1383,7 +1403,7 @@ lib_framebuffer_look_for_forwarded_layout(struct vnc *v)
                 v->forward_timer = NULL;
                 v->server_layout = layout;
                 error = v->server_monitor_resize_done(v);
-                v->resize_status = VRS_DONE;
+                set_resize_status(v, VRS_DONE);
             }
             else
             {
@@ -1417,7 +1437,7 @@ forward_timer_expired(struct vnc *v)
         "VNC_RESIZE: VNC server forwarded resize timed out");
     free(v->forward_timer);
     v->forward_timer = NULL;
-    v->resize_status = VRS_DONE;
+    set_resize_status(v, VRS_DONE);
 
     int rv = v->server_monitor_resize_done(v);
     if (rv == 0)
@@ -2535,7 +2555,7 @@ lib_mod_connect(struct vnc *v, int fd)
     }
 
     v->resize_supported = VRSS_UNKNOWN;
-    v->resize_status = VRS_WAITING_FOR_FIRST_UPDATE;
+    set_resize_status(v, VRS_WAITING_FOR_FIRST_UPDATE);
     if (send_update_request_for_resize_status(v) != 0)
     {
         v->server_msg(v, "Error sending resize support request", 0);
