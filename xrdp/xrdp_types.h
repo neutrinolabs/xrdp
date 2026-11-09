@@ -50,6 +50,7 @@ struct list16;
 /* lib */
 struct xrdp_mod
 {
+    /* Module info */
     int size; /* size of this struct */
     int version; /* internal version */
     /* client functions */
@@ -127,6 +128,10 @@ struct xrdp_mod
                                   int total_data_len, int flags);
     int (*server_bell_trigger)(struct xrdp_mod *v);
     int (*server_chansrv_in_use)(struct xrdp_mod *v);
+    // Tells the server to start the resize queue.
+    // This is called from mod_connect(), or later if the backend needs
+    // to do some work before allowing resizes
+    void (*server_start_resize_queue)(struct xrdp_mod *v);
     /* off screen bitmaps */
     int (*server_create_os_surface)(struct xrdp_mod *v, int rdpindex,
                                     int width, int height);
@@ -197,7 +202,7 @@ struct xrdp_mod
                            char *data, int data_bytes);
     int (*server_set_pointer_system)(struct xrdp_mod *v, int pointer_type);
     int (*server_set_pointer_position)(struct xrdp_mod *v, int x, int y);
-    tintptr server_dumby[100 - 52]; /* align, 100 minus the number of server
+    tintptr server_dumby[100 - 53]; /* align, 100 minus the number of server
                                      functions above */
     /* common */
     tintptr handle; /* pointer to self as int */

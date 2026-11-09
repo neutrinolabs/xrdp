@@ -415,6 +415,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_end_update = server_end_update;
             self->mod->server_bell_trigger = server_bell_trigger;
             self->mod->server_chansrv_in_use = server_chansrv_in_use;
+            self->mod->server_start_resize_queue = server_start_resize_queue;
             self->mod->server_fill_rect = server_fill_rect;
             self->mod->server_screen_blt = server_screen_blt;
             self->mod->server_paint_rect = server_paint_rect;
@@ -3475,12 +3476,6 @@ xrdp_mm_connect_sm(struct xrdp_mm *self)
                                 "Connecting to session");
                 /* This is synchronous - no reply message expected */
                 status = xrdp_mm_user_session_connect(self);
-                if (status == 0)
-                {
-                    // This is as good a place as any to start processing
-                    // the resize_queue
-                    start_processing_resize_queue(self);
-                }
             }
             break;
 
@@ -4142,6 +4137,19 @@ server_chansrv_in_use(struct xrdp_mod *mod)
 
     wm = (struct xrdp_wm *)(mod->wm);
     return wm->mm->use_chansrv;
+}
+
+
+/*****************************************************************************/
+/* Start the resize queue (called from a module) */
+void
+server_start_resize_queue(struct xrdp_mod *mod)
+{
+    struct xrdp_wm *wm;
+    if ((wm = (struct xrdp_wm *)mod->wm) != NULL && wm->mm != NULL)
+    {
+        start_processing_resize_queue(wm->mm);
+    }
 }
 
 
