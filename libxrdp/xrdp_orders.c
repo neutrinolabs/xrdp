@@ -2402,7 +2402,7 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     {
         lines_sending = xrdp_bitmap32_compress(data, width, height, s,
                                                bpp, max_order_size,
-                                               i - 1, temp_s, e, 0x10);
+                                               i - 1, temp_s, e, BMC_FLAGS_RLE);
     }
     else
     {
@@ -2830,7 +2830,7 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
     {
         lines_sending = xrdp_bitmap32_compress(data, width, height, s,
                                                bpp, max_order_size,
-                                               i - 1, temp_s, e, 0x10);
+                                               i - 1, temp_s, e, BMC_FLAGS_RLE);
     }
     else
     {
