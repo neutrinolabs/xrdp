@@ -57,7 +57,7 @@ RestrictInboundClipboard=none
 ; local sockets for the session are created.
 ; This MUST be the same as runtime_group in xrdp.ini, or xrdp will not
 ; be able to connect to your sessions.
-#SessionSockdirGroup=xrdp
+SessionSockdirGroup=xrdp
 
 
 [Sessions]
