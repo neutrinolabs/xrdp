@@ -37,10 +37,12 @@ port=3389
 #vmconnect=true
 
 ; Unprivileged User name and group to run the xrdp daemon.
-; It is HIGHLY RECOMMENDED you set these values. See the xrdp.ini(5)
-; manpage for more information on setting and checking these.
-#runtime_user=xrdp
-#runtime_group=xrdp
+; You will either  need to create this user and group, or change the
+; values to a suitable existing user and group.
+; See the xrdp.ini(5) manpage for more information on setting and
+; checking these.
+runtime_user=xrdp
+runtime_group=xrdp
 
 ; regulate if the listening socket use socket option tcp_nodelay
 ; no buffering will be performed in the TCP stack

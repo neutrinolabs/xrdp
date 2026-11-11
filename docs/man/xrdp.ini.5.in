@@ -183,8 +183,11 @@ Specifying interfaces requires said interfaces to be UP before xrdp starts.
 \fBruntime_group\fP=\fIgroupname\fP
 User name and group to run the xrdp daemon under.
 
-After xrdp starts, it sets its UID and GID to values derived from these
-settings, so that it's running without system privilege.
+When xrdp is started as root, it sets its user and group to these
+values before communicating on the network.
+
+If you have made arrangements to start xrdp as a non-root user you can
+comment out these settings.
 
 The \fBruntime_group\fP MUST be set to the same value as
 \fBSessionSockdirGroup\fP in \fBsesman.ini\fP if you want to run sessions.
