@@ -435,6 +435,7 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     fifo_delete(self->fifo_to_proc, NULL);
     fifo_delete(self->fifo_processed, NULL);
     tc_mutex_delete(self->mutex);
+    g_free(self->gfx_h264_buffer);
     g_free(self);
 }
 
@@ -808,7 +809,6 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     int bitmap_data_length;
     int flags;
     struct xrdp_egfx_rect *d_rects;
-    struct xrdp_egfx_rect *c_rects;
     struct xrdp_egfx_rect dst_rect;
     int error;
     struct stream ls;
@@ -823,15 +823,18 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     s = &ls;
     g_memset(s, 0, sizeof(struct stream));
     s->size = self->max_compressed_bytes;
-    s->data = g_new(char, s->size);
-    if (s->data == NULL)
+    if (self->gfx_h264_buffer == NULL)
     {
-        return NULL;
+        self->gfx_h264_buffer = g_new(char, s->size);
+        if (self->gfx_h264_buffer == NULL)
+        {
+            return NULL;
+        }
     }
+    s->data = self->gfx_h264_buffer;
     s->p = s->data;
     if (!s_check_rem(in_s, 11))
     {
-        g_free(s->data);
         return NULL;
     }
     in_uint16_le(in_s, surface_id);
@@ -843,13 +846,11 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     if ((num_rects_d < 1) || (num_rects_d > 16 * 1024) ||
             (!s_check_rem(in_s, num_rects_d * 8)))
     {
-        g_free(s->data);
         return NULL;
     }
     d_rects = g_new0(struct xrdp_egfx_rect, num_rects_d);
     if (d_rects == NULL)
     {
-        g_free(s->data);
         return NULL;
     }
     for (index = 0; index < num_rects_d; index++)
@@ -866,7 +867,6 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     }
     if (!s_check_rem(in_s, 2))
     {
-        g_free(s->data);
         g_free(d_rects);
         return NULL;
     }
@@ -874,41 +874,24 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     if ((num_rects_c < 1) || (num_rects_c > 16 * 1024) ||
             (!s_check_rem(in_s, num_rects_c * 8)))
     {
-        g_free(s->data);
-        g_free(d_rects);
-        return NULL;
-    }
-    c_rects = g_new0(struct xrdp_egfx_rect, num_rects_c);
-    if (c_rects == NULL)
-    {
-        g_free(s->data);
         g_free(d_rects);
         return NULL;
     }
     crects = g_new(short, num_rects_c * 4);
     if (crects == NULL)
     {
-        g_free(s->data);
-        g_free(c_rects);
         g_free(d_rects);
         return NULL;
     }
-    g_memcpy(crects, in_s->p, num_rects_c * 2 * 4);
     for (index = 0; index < num_rects_c; index++)
     {
-        in_uint16_le(in_s, left);
-        in_uint16_le(in_s, top);
-        in_uint16_le(in_s, width);
-        in_uint16_le(in_s, height);
-        c_rects[index].x1 = left;
-        c_rects[index].y1 = top;
-        c_rects[index].x2 = left + width;
-        c_rects[index].y2 = top + height;
+        in_uint16_le(in_s, crects[index * 4 + 0]);
+        in_uint16_le(in_s, crects[index * 4 + 1]);
+        in_uint16_le(in_s, crects[index * 4 + 2]);
+        in_uint16_le(in_s, crects[index * 4 + 3]);
     }
     if (!s_check_rem(in_s, 8))
     {
-        g_free(s->data);
-        g_free(c_rects);
         g_free(d_rects);
         g_free(crects);
         return NULL;
@@ -929,15 +912,12 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
     /* RFX_AVC420_METABLOCK */
     if (out_RFX_AVC420_METABLOCK(&dst_rect, s, d_rects, num_rects_d) != 0)
     {
-        g_free(s->data);
-        g_free(c_rects);
         g_free(d_rects);
         g_free(crects);
         LOG(LOG_LEVEL_INFO, "10");
         return NULL;
     }
 
-    g_free(c_rects);
     g_free(d_rects);
 
     if (ENC_IS_BIT_SET(flags, 0))
@@ -950,7 +930,6 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
         /* assume NV12 format */
         if (twidth * theight * 3 / 2 > enc_gfx_cmd->data_bytes)
         {
-            g_free(s->data);
             g_free(crects);
             return NULL;
         }
@@ -961,7 +940,6 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
                 self->xrdp_encoder_h264_create();
             if (self->codec_handle_h264_gfx[mon_index] == NULL)
             {
-                g_free(s->data);
                 g_free(crects);
                 return NULL;
             }
@@ -980,7 +958,6 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
         }
         else
         {
-            g_free(s->data);
             g_free(crects);
             return NULL;
         }
@@ -991,7 +968,6 @@ gfx_wiretosurface1(struct xrdp_encoder *self,
                                     codec_id,
                                     pixel_format, &dst_rect,
                                     s->data, bitmap_data_length);
-    g_free(s->data);
     g_free(crects);
     return rv;
 #else
