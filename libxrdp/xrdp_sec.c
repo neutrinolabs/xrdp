@@ -1308,8 +1308,11 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             }
             // Decrypt the packet, and subtract the padding length,
             // after checking the validity
+            // In theory the padding does not need to be more that 7
+            // octets, but the Windows FIPS client has been observed
+            // using 8.
             xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
-            if (pad > 7 || pad > (int)(s->end - s->p))
+            if (pad > 8 || pad > (int)(s->end - s->p))
             {
                 LOG(LOG_LEVEL_ERROR, "Bad padding for TS_SECURITY_HEADER2 PDU");
                 return 1;
