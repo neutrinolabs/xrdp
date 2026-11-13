@@ -224,6 +224,16 @@ static XSelectionRequestEvent g_saved_selection_req_event;
 /* xserver maximum request size in bytes */
 static int g_incr_max_req_size = 0;
 
+/* How long to wait for the X selection owner to answer a conversion started
+   for a client CB_FORMAT_DATA_REQUEST. This has to stay well below the
+   timeout used by the client, otherwise the client gives up first. Remmina
+   waits 6 seconds and does not recover from its own timeout. */
+#define CLIP_S2C_REQUEST_TIMEOUT_MS 3000
+
+/* How many times that timeout may be extended while an INCR transfer is
+   still running, so a large paste is not cut short. */
+#define CLIP_S2C_MAX_INCR_REARM 10
+
 /* server to client, pasting from linux app to mstsc */
 struct clip_s2c g_clip_s2c;
 /* client to server, pasting from mstsc to linux app */
@@ -255,6 +265,8 @@ enum
     CB_FORMAT_FILE_GROUP_DESCRIPTOR = 0xc0bc
 };
 
+static int
+clipboard_send_data_response_failed(void);
 
 /*****************************************************************************/
 static char *
@@ -726,6 +738,7 @@ clipboard_send_data_response_for_image(const char *data, int data_size)
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_image: data_size %d",
               data_size);
+    g_clip_s2c.in_request = 0;
     make_stream(s);
     init_stream(s, 64 + data_size);
     out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
@@ -752,6 +765,7 @@ clipboard_send_data_response_for_text(const char *data, int data_size)
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data_size %d",
               data_size);
     LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "clipboard send data response:", data, data_size);
+    g_clip_s2c.in_request = 0;
     num_words = utf8_as_utf16_word_count(data, data_size);
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data_size %d "
               "num_words %d", data_size, num_words);
@@ -802,7 +816,10 @@ clipboard_send_data_response(int xrdp_clip_type, const char *data, int data_size
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_data_response: data is nil");
     }
-    return 0;
+    /* the client is waiting for a response, it must get one */
+    LOG(LOG_LEVEL_WARNING, "clipboard: failing a client data request, "
+        "there is no data to send for xrdp_clip_type %d", xrdp_clip_type);
+    return clipboard_send_data_response_failed();
 }
 
 /*****************************************************************************/
@@ -1027,6 +1044,7 @@ clipboard_send_data_response_failed(void)
     int rv;
 
     LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_send_data_response_failed:");
+    g_clip_s2c.in_request = 0;
     make_stream(s);
     init_stream(s, 64);
     out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
@@ -1037,6 +1055,98 @@ clipboard_send_data_response_failed(void)
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
+}
+
+/*****************************************************************************/
+/* Stop collecting an INCR transfer that nobody will use any more.
+   incr_in_progress is otherwise only cleared when the transfer completes
+   or the client reconnects. While it is set every later reply that comes
+   in one piece is ignored and the client cannot take the X selection, so
+   a stalled transfer would leave the clipboard dead in both directions.
+   The property is left alone: deleting it would ask the owner for the
+   next chunk. */
+static void
+clipboard_abandon_incr(void)
+{
+    if (g_clip_s2c.incr_in_progress)
+    {
+        LOG(LOG_LEVEL_INFO, "clipboard: abandoning an INCR transfer after "
+            "%d bytes", g_clip_s2c.total_bytes);
+        g_clip_s2c.incr_in_progress = 0;
+        g_free(g_clip_s2c.data);
+        g_clip_s2c.data = 0;
+        g_clip_s2c.total_bytes = 0;
+    }
+}
+
+/*****************************************************************************/
+/* A data request from the client is outstanding and cannot be satisfied.
+   Always send something back. A client left waiting for a response it never
+   gets may stop asking for the rest of the session: Remmina keeps
+   rfClipboard.srv_clip_data_wait at SCDW_BUSY_WAIT after its own timeout,
+   which kills the server to client clipboard until it reconnects. */
+static void
+clipboard_fail_pending_request(const char *why)
+{
+    if (g_clip_s2c.in_request)
+    {
+        LOG(LOG_LEVEL_WARNING, "clipboard: failing a pending client data "
+            "request, %s", why);
+        clipboard_send_data_response_failed();
+    }
+    clipboard_abandon_incr();
+}
+
+/*****************************************************************************/
+/* the X selection owner has not answered in time */
+static void
+clipboard_request_timeout(void *data)
+{
+    int serial;
+    char reason[128];
+
+    serial = (int)(long)data;
+    if ((g_clip_s2c.in_request == 0) || (g_clip_s2c.request_serial != serial))
+    {
+        /* already answered, or superseded by a newer request */
+        return;
+    }
+    if (g_clip_s2c.incr_in_progress && g_clip_s2c.incr_progress &&
+            (g_clip_s2c.incr_rearm_count < CLIP_S2C_MAX_INCR_REARM))
+    {
+        /* data is still arriving over INCR, give it more time */
+        g_clip_s2c.incr_progress = 0;
+        g_clip_s2c.incr_rearm_count++;
+        add_timeout(CLIP_S2C_REQUEST_TIMEOUT_MS, clipboard_request_timeout,
+                    data);
+        return;
+    }
+    if (g_clip_s2c.incr_in_progress)
+    {
+        g_snprintf(reason, sizeof(reason),
+                   "the INCR transfer %s after %d bytes",
+                   g_clip_s2c.incr_progress ? "took too long" : "stalled",
+                   g_clip_s2c.total_bytes);
+        clipboard_fail_pending_request(reason);
+        return;
+    }
+    clipboard_fail_pending_request("the X selection owner did not respond");
+}
+
+/*****************************************************************************/
+/* Record that a client data request is now waiting on an X selection
+   conversion of target, and arm the timeout that guarantees it gets an
+   answer. */
+static void
+clipboard_arm_request(Atom target)
+{
+    g_clip_s2c.in_request = 1;
+    g_clip_s2c.request_serial++;
+    g_clip_s2c.request_target = target;
+    g_clip_s2c.incr_rearm_count = 0;
+    g_clip_s2c.incr_progress = 0;
+    add_timeout(CLIP_S2C_REQUEST_TIMEOUT_MS, clipboard_request_timeout,
+                (void *)(long)g_clip_s2c.request_serial);
 }
 
 /*****************************************************************************/
@@ -1053,6 +1163,9 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
               "CLIPRDR_DATA_REQUEST");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_process_data_request:");
     LOG_DEVEL(LOG_LEVEL_DEBUG, "  %d", g_clip_s2c.xrdp_clip_type);
+    /* A new request means the client has given up on any earlier one, so
+       a transfer still running for that must not complete into this one */
+    clipboard_abandon_incr();
     in_uint32_le(s, requestedFormatId);
     switch (requestedFormatId)
     {
@@ -1070,6 +1183,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
                 XConvertSelection(g_display, g_clipboard_atom, g_clip_s2c.type,
                                   g_clip_property_atom, g_wnd, CurrentTime);
+                clipboard_arm_request(g_clip_s2c.type);
             }
             break;
         case CF_DIB:
@@ -1086,6 +1200,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
                 XConvertSelection(g_display, g_clipboard_atom, g_image_bmp_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
+                clipboard_arm_request(g_image_bmp_atom);
             }
             break;
         case CF_UNICODETEXT:
@@ -1102,6 +1217,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
                 XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
+                clipboard_arm_request(g_utf8_atom);
             }
             break;
         default:
@@ -1669,6 +1785,50 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
 }
 
 /*****************************************************************************/
+/* Name of a selection target for logging. Uses our own table first:
+   get_atom_text() refuses atoms above 512 and most interned atoms are
+   above that, so it would usually just print a hex id. */
+static const char *
+clipboard_target_name(Atom target)
+{
+    if (target == g_utf8_atom)
+    {
+        return "UTF8_STRING";
+    }
+    if (target == XA_STRING)
+    {
+        return "STRING";
+    }
+    if (target == g_image_bmp_atom)
+    {
+        return "image/bmp";
+    }
+    if (target == g_file_atom1)
+    {
+        return "text/uri-list";
+    }
+    if (target == g_file_atom2)
+    {
+        return "x-special/gnome-copied-files";
+    }
+    if (target == g_targets_atom)
+    {
+        return "TARGETS";
+    }
+    return get_atom_text(target);
+}
+
+/*****************************************************************************/
+/* can clipboard_event_selection_notify() turn this target into a reply? */
+static int
+clipboard_is_known_target(Atom target)
+{
+    return (target == g_utf8_atom) || (target == XA_STRING) ||
+           (target == g_image_bmp_atom) || (target == g_file_atom1) ||
+           (target == g_file_atom2);
+}
+
+/*****************************************************************************/
 /* returns error
    process the SelectionNotify X event, uses XSelectionEvent
    typedef struct {
@@ -1700,6 +1860,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     Atom atom;
     Atom *atoms;
     Atom type;
+    char reason[256];
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_selection_notify:");
     data_size = 0;
@@ -1714,6 +1875,25 @@ clipboard_event_selection_notify(XEvent *xevent)
     data = 0;
     type = 0;
     lxevent = (XSelectionEvent *)xevent;
+
+    /* Every conversion other than TARGETS is started for a client data
+       request. A reply that does not match the pending request belongs to
+       one that has already been answered, normally failed by
+       clipboard_request_timeout(). Passing it on would send the client a
+       second CB_FORMAT_DATA_RESPONSE, and as a response does not say which
+       request it answers, the client may take it as the answer to its
+       next request. A late reply for the same target as the pending
+       request cannot be told apart from its answer. The property is left
+       alone, see clipboard_abandon_incr(). */
+    if ((lxevent->target != g_targets_atom) &&
+            ((g_clip_s2c.in_request == 0) ||
+             (lxevent->target != g_clip_s2c.request_target)))
+    {
+        LOG(LOG_LEVEL_INFO, "clipboard: dropping a %s reply from the X "
+            "selection owner, no client request is waiting for it",
+            clipboard_target_name(lxevent->target));
+        return 0;
+    }
 
     if (lxevent->property == None)
     {
@@ -1734,6 +1914,14 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             LOG_DEVEL(LOG_LEVEL_ERROR, "clipboard_event_selection_notify: "
                       "clipboard_get_window_property failed error %d", rv);
+            if (lxevent->target != g_targets_atom)
+            {
+                g_snprintf(reason, sizeof(reason),
+                           "the property holding the %s reply could not be "
+                           "read back (error %d)",
+                           clipboard_target_name(lxevent->target), rv);
+                clipboard_fail_pending_request(reason);
+            }
             return 0;
         }
         //LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", data, data_size);
@@ -1747,6 +1935,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                       get_atom_text(lxevent->property),
                       get_atom_text(lxevent->type));
             g_clip_s2c.incr_in_progress = 1;
+            g_clip_s2c.incr_progress = 1;
             g_clip_s2c.property = lxevent->property;
             g_clip_s2c.type = lxevent->target;
             g_clip_s2c.total_bytes = 0;
@@ -2047,6 +2236,49 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             rv = 4;
         }
+    }
+
+    /* This conversion may have been started for a client data request. If
+       none of the branches above sent a response, answer now instead of
+       leaving the client waiting forever. Name the specific reason: it is
+       the only way to tell a refusing owner from an unsupported target
+       when reading a log after the fact. */
+    if ((lxevent->target != g_targets_atom) &&
+            (g_clip_s2c.incr_in_progress == 0) &&
+            g_clip_s2c.in_request)
+    {
+        if (lxevent->property == None)
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the owner refused to convert the selection to %s",
+                       clipboard_target_name(lxevent->target));
+        }
+        else if (lxevent->selection != g_clipboard_atom)
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the reply was for selection %s, not CLIPBOARD",
+                       clipboard_target_name(lxevent->selection));
+        }
+        else if (!clipboard_is_known_target(lxevent->target))
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "target %s is not one chansrv can convert",
+                       clipboard_target_name(lxevent->target));
+        }
+        else if (g_cfg->restrict_outbound_clipboard != 0)
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the %s reply was dropped, restrict_outbound_clipboard "
+                       "is set to %d", clipboard_target_name(lxevent->target),
+                       g_cfg->restrict_outbound_clipboard);
+        }
+        else
+        {
+            g_snprintf(reason, sizeof(reason),
+                       "the %s reply carried no usable data (%d bytes)",
+                       clipboard_target_name(lxevent->target), data_size);
+        }
+        clipboard_fail_pending_request(reason);
     }
 
     g_free(data);
@@ -2388,6 +2620,7 @@ clipboard_event_property_notify(XEvent *xevent)
     int new_data_len;
     int data_bytes;
     char *cptr;
+    char reason[128];
 
     LOG_DEVEL(LOG_LEVEL_DEBUG, "clipboard_event_property_notify: PropertyNotify .window %ld "
               ".state %d .atom %ld %s", xevent->xproperty.window,
@@ -2465,10 +2698,22 @@ clipboard_event_property_notify(XEvent *xevent)
             {
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
                 //LOG_DEVEL_HEXDUMP(LOG_LEVEL_TRACE, "", g_last_clip_data, 64);
-                /* skip header */
-                clipboard_send_data_response(g_clip_s2c.xrdp_clip_type,
-                                             g_clip_s2c.data + 14,
-                                             g_clip_s2c.total_bytes - 14);
+                if ((g_clip_s2c.data == 0) || (g_clip_s2c.total_bytes <= 14))
+                {
+                    /* no more than the 14 byte BMP file header: the
+                       length below would be zero or negative */
+                    g_snprintf(reason, sizeof(reason),
+                               "the image/bmp reply carried no usable data "
+                               "(%d bytes)", g_clip_s2c.total_bytes);
+                    clipboard_fail_pending_request(reason);
+                }
+                else
+                {
+                    /* skip header */
+                    clipboard_send_data_response(g_clip_s2c.xrdp_clip_type,
+                                                 g_clip_s2c.data + 14,
+                                                 g_clip_s2c.total_bytes - 14);
+                }
             }
             else if ((g_clip_s2c.type == XA_STRING) ||
                      (g_clip_s2c.type == g_utf8_atom))
@@ -2524,6 +2769,7 @@ clipboard_event_property_notify(XEvent *xevent)
             {
                 g_memcpy(g_clip_s2c.data + g_clip_s2c.total_bytes, data, new_data_len);
                 g_clip_s2c.total_bytes += new_data_len;
+                g_clip_s2c.incr_progress = 1;
                 XFree(data);
             }
 
