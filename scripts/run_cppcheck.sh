@@ -122,6 +122,7 @@ if [ -z "$CPPCHECK_FLAGS" ]; then
                     -I third_party \
                     -I third_party/tomlc99 \
                     -I xrdp \
+                    -I xrdp_accel_assist \
                     -I xrdpapi \
                     -I xrdpvr"
 fi

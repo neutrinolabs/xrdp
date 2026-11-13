@@ -257,3 +257,8 @@ EnableSyslog=true
 PULSE_SCRIPT=@sesmansysconfdir@/pulse/default.pa
 ;XRDP_USE_ACCEL_ASSIST=1
 ;XRDP_NVIDIA_GRID=1
+; VA-API encoder, constant QP 1-51 or VBR bitrate in kbit/s, and the
+; render node to use if not the one EGL is on
+;XRDP_VAAPI_QP=28
+;XRDP_VAAPI_BITRATE=5000
+;XRDP_VAAPI_DEVICE=/dev/dri/renderD128
