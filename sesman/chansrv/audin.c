@@ -33,6 +33,12 @@
 #include "xrdp_constants.h"
 #include "fifo.h"
 #include "audin.h"
+#include "chansrv_config.h"
+#include "resample.h"
+
+#if defined(XRDP_OPUS)
+#include <opus/opus.h>
+#endif
 
 #define MSG_SNDIN_VERSION       1
 #define MSG_SNDIN_FORMATS       2
@@ -49,6 +55,7 @@
 
 extern struct fifo *g_in_fifo; /* in sound.c */
 extern int g_bytes_in_fifo; /* in sound.c */
+extern struct config_chansrv *g_cfg; /* in chansrv.c */
 
 struct xr_wave_format_ex
 {
@@ -75,17 +82,50 @@ static struct xr_wave_format_ex g_pcm_44100 =
     g_pcm_44100_data /* data */
 };
 
+#if defined(XRDP_OPUS)
+static uint8_t g_opus_48000_data[] = { 0 };
+static struct xr_wave_format_ex g_opus_48000 =
+{
+    WAVE_FORMAT_OPUS, /* wFormatTag */
+    2,                /* num of channels */
+    48000,            /* samples per sec */
+    8000,             /* avg bytes per sec: clients encode at 64 kbit/s */
+    4,                /* block align */
+    16,               /* bits per sample */
+    0,                /* data size */
+    g_opus_48000_data /* data */
+};
+
+/* The sound server's source (pulseaudio-module-xrdp) reads 16 bit stereo
+   at 44100 Hz, like the PCM format above, so Opus is decoded at 48 kHz
+   and resampled. The client sends one Opus packet per data message; ask
+   for 20 ms packets, as Opus takes 2.5, 5, 10, 20, 40 or 60 ms frames. */
+#define OPUS_FRAMES_PER_PACKET 960
+#define OPUS_MAX_FRAMES 5760 /* 120 ms, the longest Opus packet */
+#define SOURCE_RATE 44100
+
+static OpusDecoder *g_opus_decoder = NULL;
+static struct resampler *g_opus_rs = NULL; /* 48000 Hz to 44100 Hz */
+#endif
+
+#define PCM_FRAMES_PER_PACKET 2048
+
 static struct chansrv_drdynvc_procs g_audin_info;
 static int g_audin_chanid;
 
+/* in order of preference: Opus needs about 1/20 of the PCM bandwidth */
 static struct xr_wave_format_ex *g_server_formats[] =
 {
+#if defined(XRDP_OPUS)
+    &g_opus_48000,
+#endif
     &g_pcm_44100,
     NULL
 };
 
 static struct xr_wave_format_ex **g_client_formats = NULL;
 
+static int g_num_client_formats = 0;
 static int g_current_format = 0; /* index in g_client_formats */
 
 /*****************************************************************************/
@@ -127,6 +167,8 @@ cleanup_client_formats(void)
     }
     g_free(g_client_formats);
     g_client_formats = NULL;
+    g_num_client_formats = 0;
+    g_current_format = 0;
     return 0;
 }
 
@@ -151,6 +193,20 @@ audin_send_version(int chan_id)
 }
 
 /*****************************************************************************/
+/* Opus is only offered when sesman.ini asks for it, see MicrophoneOpus */
+static int
+audin_server_format_enabled(const struct xr_wave_format_ex *wf)
+{
+#if defined(XRDP_OPUS)
+    if (wf == &g_opus_48000)
+    {
+        return g_cfg != NULL && g_cfg->microphone_opus;
+    }
+#endif
+    return 1;
+}
+
+/*****************************************************************************/
 static int
 audin_send_formats(int chan_id)
 {
@@ -162,16 +218,23 @@ audin_send_formats(int chan_id)
     struct xr_wave_format_ex *wf;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_formats:");
-    num_formats = sizeof(g_server_formats) /
-                  sizeof(g_server_formats[0]) - 1;
+    num_formats = 0;
+    for (index = 0; g_server_formats[index] != NULL; index++)
+    {
+        num_formats += audin_server_format_enabled(g_server_formats[index]);
+    }
     make_stream(s);
     init_stream(s, 8192 * num_formats);
     out_uint8(s, MSG_SNDIN_FORMATS);
     out_uint32_le(s, num_formats);
     out_uint32_le(s, 0); /* cbSizeFormatsPacket */
-    for (index = 0; index < num_formats; index++)
+    for (index = 0; g_server_formats[index] != NULL; index++)
     {
         wf = g_server_formats[index];
+        if (!audin_server_format_enabled(wf))
+        {
+            continue;
+        }
         LOG_DEVEL(LOG_LEVEL_INFO, "audin_send_formats: sending format wFormatTag 0x%4.4x "
                   "nChannels %d nSamplesPerSec %d",
                   wf->wFormatTag, wf->nChannels, wf->nSamplesPerSec);
@@ -196,6 +259,86 @@ audin_send_formats(int chan_id)
 
 /*****************************************************************************/
 static int
+audin_is_format(const struct xr_wave_format_ex *wf,
+                const struct xr_wave_format_ex *want)
+{
+    return wf != NULL &&
+           wf->wFormatTag == want->wFormatTag &&
+           wf->nChannels == want->nChannels &&
+           wf->nSamplesPerSec == want->nSamplesPerSec &&
+           (want->wFormatTag != WAVE_FORMAT_PCM ||
+            wf->wBitsPerSample == want->wBitsPerSample);
+}
+
+#if defined(XRDP_OPUS)
+/*****************************************************************************/
+static int
+audin_is_opus(const struct xr_wave_format_ex *wf)
+{
+    return audin_is_format(wf, &g_opus_48000);
+}
+#endif
+
+/*****************************************************************************/
+static int
+audin_frames_per_packet(const struct xr_wave_format_ex *wf)
+{
+#if defined(XRDP_OPUS)
+    if (audin_is_opus(wf))
+    {
+        return OPUS_FRAMES_PER_PACKET;
+    }
+#endif
+    return PCM_FRAMES_PER_PACKET;
+}
+
+/*****************************************************************************/
+/* the client lists the server formats it supports; take the first one
+   the source can be fed with, in the server's order of preference */
+static int
+audin_choose_format(int num_formats)
+{
+    int server;
+    int client;
+
+    for (server = 0; g_server_formats[server] != NULL; server++)
+    {
+        if (!audin_server_format_enabled(g_server_formats[server]))
+        {
+            continue;
+        }
+        for (client = 0; client < num_formats; client++)
+        {
+            if (audin_is_format(g_client_formats[client],
+                                g_server_formats[server]))
+            {
+                return client;
+            }
+        }
+    }
+    LOG(LOG_LEVEL_WARNING, "audin_choose_format: no known format, "
+        "using the client's first one");
+    return 0;
+}
+
+/*****************************************************************************/
+static void
+audin_reset_decoder(void)
+{
+#if defined(XRDP_OPUS)
+    if (g_opus_decoder != NULL)
+    {
+        opus_decoder_ctl(g_opus_decoder, OPUS_RESET_STATE);
+    }
+    if (g_opus_rs != NULL)
+    {
+        resampler_reset(g_opus_rs);
+    }
+#endif
+}
+
+/*****************************************************************************/
+static int
 audin_send_open(int chan_id)
 {
     int error;
@@ -209,7 +352,7 @@ audin_send_open(int chan_id)
     init_stream(s, wf->cbSize + 64);
 
     out_uint8(s, MSG_SNDIN_OPEN);
-    out_uint32_le(s, 2048); /* FramesPerPacket */
+    out_uint32_le(s, audin_frames_per_packet(wf)); /* FramesPerPacket */
     out_uint32_le(s, g_current_format); /* initialFormat */
     out_uint16_le(s, wf->wFormatTag);
     out_uint16_le(s, wf->nChannels);
@@ -264,7 +407,14 @@ audin_process_formats(int chan_id, struct stream *s)
     }
     in_uint32_le(s, num_formats);
     in_uint8s(s, 4); /* cbSizeFormatsPacket */
+    if (num_formats < 0 || num_formats > 1024)
+    {
+        LOG(LOG_LEVEL_ERROR, "audin_process_formats: bad number of formats %d",
+            num_formats);
+        return 1;
+    }
     g_client_formats = g_new0(struct xr_wave_format_ex *, num_formats + 1);
+    g_num_client_formats = num_formats;
     for (index = 0; index < num_formats; index++)
     {
         if (!s_check_rem(s, 18))
@@ -303,6 +453,18 @@ audin_process_formats(int chan_id, struct stream *s)
             in_uint8a(s, wf->data, wf->cbSize);
         }
     }
+    if (num_formats == 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "audin_process_formats: the client supports "
+            "none of the formats");
+        return 0;
+    }
+    g_current_format = audin_choose_format(num_formats);
+    wf = g_client_formats[g_current_format];
+    LOG(LOG_LEVEL_INFO, "audin_process_formats: recording with %s, %d Hz, "
+        "%d channels", audin_wave_format_tag_to_str(wf->wFormatTag),
+        wf->nSamplesPerSec, wf->nChannels);
+    audin_reset_decoder();
     audin_send_open(chan_id);
     return 0;
 }
@@ -332,22 +494,84 @@ audin_process_incoming_data(int chan_id, struct stream *s)
 }
 
 /*****************************************************************************/
-static int
-audin_process_data(int chan_id, struct stream *s)
+static void
+audin_queue(const char *data, int data_bytes)
 {
-    int data_bytes;
     struct stream *ls;
 
-    data_bytes = (int) (s->end - s->p);
-    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_process_data: data_bytes %d", data_bytes);
-
     xstream_new(ls, data_bytes);
-    g_memcpy(ls->data, s->p, data_bytes);
+    g_memcpy(ls->data, data, data_bytes);
     ls->p += data_bytes;
     s_mark_end(ls);
     fifo_add_item(g_in_fifo, (void *) ls);
     g_bytes_in_fifo += data_bytes;
+}
 
+#if defined(XRDP_OPUS)
+/*****************************************************************************/
+static int
+audin_process_opus(const char *data, int data_bytes)
+{
+    static opus_int16 pcm[OPUS_MAX_FRAMES * 2];
+    static short out[(OPUS_MAX_FRAMES * SOURCE_RATE / 48000 + 2) * 2];
+    int error;
+    int frames;
+
+    if (g_opus_decoder == NULL)
+    {
+        g_opus_decoder = opus_decoder_create(g_opus_48000.nSamplesPerSec,
+                                             g_opus_48000.nChannels, &error);
+        if (g_opus_decoder == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR, "audin_process_opus: opus_decoder_create "
+                "failed: %s", opus_strerror(error));
+            return 1;
+        }
+    }
+    if (g_opus_rs == NULL)
+    {
+        g_opus_rs = resampler_create(g_opus_48000.nSamplesPerSec, SOURCE_RATE);
+        if (g_opus_rs == NULL)
+        {
+            LOG(LOG_LEVEL_ERROR, "audin_process_opus: resampler_create failed");
+            return 1;
+        }
+    }
+    frames = opus_decode(g_opus_decoder, (const unsigned char *) data,
+                         data_bytes, pcm, OPUS_MAX_FRAMES, 0);
+    if (frames < 0)
+    {
+        LOG(LOG_LEVEL_WARNING, "audin_process_opus: opus_decode failed: %s",
+            opus_strerror(frames));
+        return 0; /* drop this packet, keep the channel */
+    }
+    frames = resampler_process(g_opus_rs, pcm, frames, out,
+                               OPUS_MAX_FRAMES * SOURCE_RATE / 48000 + 2);
+    if (frames > 0)
+    {
+        audin_queue((const char *) out, frames * 4);
+    }
+    return 0;
+}
+#endif
+
+/*****************************************************************************/
+static int
+audin_process_data(int chan_id, struct stream *s)
+{
+    int data_bytes;
+
+    data_bytes = (int) (s->end - s->p);
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "audin_process_data: data_bytes %d", data_bytes);
+
+#if defined(XRDP_OPUS)
+    if (g_current_format < g_num_client_formats &&
+            audin_is_opus(g_client_formats[g_current_format]))
+    {
+        return audin_process_opus(s->p, data_bytes);
+    }
+#endif
+    audin_queue(s->p, data_bytes);
     return 0;
 }
 
@@ -355,15 +579,26 @@ audin_process_data(int chan_id, struct stream *s)
 static int
 audin_process_format_change(int chan_id, struct stream *s)
 {
+    int index;
+
     LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_format_change:");
     if (!s_check_rem(s, 4))
     {
         LOG_DEVEL(LOG_LEVEL_ERROR, "audin_process_format_change: parse error");
         return 1;
     }
-    in_uint32_le(s, g_current_format);
-    LOG_DEVEL(LOG_LEVEL_INFO, "audin_process_format_change: g_current_format %d",
-              g_current_format);
+    in_uint32_le(s, index);
+    if (index < 0 || index >= g_num_client_formats)
+    {
+        LOG(LOG_LEVEL_ERROR, "audin_process_format_change: invalid format %d",
+            index);
+        return 1;
+    }
+    g_current_format = index;
+    LOG(LOG_LEVEL_INFO, "audin_process_format_change: format %d, %s",
+        index, audin_wave_format_tag_to_str(
+            g_client_formats[index]->wFormatTag));
+    audin_reset_decoder();
     return 0;
 }
 

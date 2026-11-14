@@ -48,6 +48,7 @@
 #define DEFAULT_NUM_SILENT_FRAMES_AAC       4
 #define DEFAULT_NUM_SILENT_FRAMES_MP3       2
 #define DEFAULT_MSEC_DO_NOT_SEND            1000
+#define DEFAULT_MICROPHONE_OPUS             0
 #define DEFAULT_LOG_FILE_PATH               ""
 /**
  * Type used for passing a logging function about
@@ -269,6 +270,10 @@ read_config_chansrv(log_func_t logmsg,
         {
             cfg->msec_do_not_send = strtoul(value, NULL, 0);
         }
+        else if (g_strcasecmp(name, "MicrophoneOpus") == 0)
+        {
+            cfg->microphone_opus = g_text2bool(value);
+        }
     }
 
     return error;
@@ -348,6 +353,7 @@ new_config(void)
         cfg->num_silent_frames_aac = DEFAULT_NUM_SILENT_FRAMES_AAC;
         cfg->num_silent_frames_mp3 = DEFAULT_NUM_SILENT_FRAMES_MP3;
         cfg->msec_do_not_send = DEFAULT_MSEC_DO_NOT_SEND;
+        cfg->microphone_opus = DEFAULT_MICROPHONE_OPUS;
         cfg->log_file_path = log_file_path;
     }
 
@@ -454,6 +460,8 @@ config_dump(struct config_chansrv *config)
               g_bool2text(config->use_nautilus3_flist_format));
     g_writeln("    FuseRootReportMaxFree:     %s",
               g_bool2text(config->fuse_root_report_max_free));
+    g_writeln("    MicrophoneOpus:            %s",
+              g_bool2text(config->microphone_opus));
     g_writeln("    LogFilePath            :   %s",
               (config->log_file_path[0]) ? config->log_file_path : "<default>");
 }

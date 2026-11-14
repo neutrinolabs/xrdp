@@ -13,7 +13,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libipm
 
-CHANSRV_EXTRA_LIBS =
+CHANSRV_EXTRA_LIBS = -lm
 
 if XRDP_FUSE
 AM_CPPFLAGS += -DXRDP_FUSE $(FUSE_CFLAGS) -DFUSE_USE_VERSION=30
@@ -62,6 +62,8 @@ xrdp_chansrv_SOURCES = \
   irp.h \
   rail.c \
   rail.h \
+  resample.c \
+  resample.h \
   smartcard.h \
   sound.c \
   sound.h \
