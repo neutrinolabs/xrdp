@@ -190,6 +190,17 @@ session_get_display_server_fd(const struct login_info *login_info,
                               const struct session_data *sd);
 
 /**
+ * Connects a second file descriptor to the session, for session types
+ * which need one: GNOME sessions use it for the user's PipeWire daemon
+ *
+ * @return file descriptor, or -1 if the session type needs none or on
+ *         error
+ */
+int
+session_get_display_server_aux_fd(const struct login_info *login_info,
+                                  const struct session_data *sd);
+
+/**
  * Connects a file descriptor to chansrv
  */
 int

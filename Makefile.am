@@ -28,6 +28,12 @@ else
 NEUTRINORDPDIR =
 endif
 
+if XRDP_WLUP
+WLUPDIR = wlup
+else
+WLUPDIR =
+endif
+
 if XRDP_XRDPVR
 XRDPVRDIR = xrdpvr
 else
@@ -60,6 +66,7 @@ SUBDIRS = \
   vnc \
   xup \
   $(NEUTRINORDPDIR) \
+  $(WLUPDIR) \
   libipm \
   libxrdp \
   $(PAINTERDIR) \

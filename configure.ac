@@ -123,6 +123,14 @@ AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [Build neutrinordp module (default: no)]),
               [], [enable_neutrinordp=no])
 AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$enable_neutrinordp = xyes])
+AC_ARG_ENABLE(wlup, AS_HELP_STRING([--enable-wlup],
+              [Build experimental Wayland backend module (default: no)]),
+              [], [enable_wlup=no])
+AM_CONDITIONAL(XRDP_WLUP, [test x$enable_wlup = xyes])
+AC_ARG_ENABLE(wlup-mutter, AS_HELP_STRING([--enable-wlup-mutter],
+              [Build the GNOME (Mutter) backend of the wlup module (default: no)]),
+              [], [enable_wlup_mutter=no])
+AM_CONDITIONAL(XRDP_WLUP_MUTTER, [test x$enable_wlup_mutter = xyes])
 
 AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
@@ -485,6 +493,21 @@ fi
 
 AS_IF( [test "x$enable_neutrinordp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
+if test "x$enable_wlup" = "xyes"
+then
+  PKG_CHECK_MODULES([WAYLAND_CLIENT], [wayland-client >= 1.20])
+  PKG_CHECK_MODULES([XKBCOMMON], [xkbcommon])
+  PKG_CHECK_VAR([WAYLAND_SCANNER], [wayland-scanner], [wayland_scanner])
+  if test "x$WAYLAND_SCANNER" = "x"
+  then
+    AC_MSG_ERROR([wayland-scanner is required for --enable-wlup])
+  fi
+  if test "x$enable_wlup_mutter" = "xyes"
+  then
+    PKG_CHECK_MODULES([WLUP_MUTTER], [libsystemd libpipewire-0.3 libei-1.0])
+  fi
+fi
+
 # checking for libjpeg
 if test "x$enable_jpeg" = "xyes"
 then
@@ -705,11 +728,13 @@ AC_CONFIG_FILES([
   tests/libxrdp/Makefile
   tests/memtest/Makefile
   tests/xrdp/Makefile
+  tests/wlup/Makefile
   tools/Makefile
   tools/devel/Makefile
   tools/devel/tcp_proxy/Makefile
   tools/chkpriv/Makefile
   vnc/Makefile
+  wlup/Makefile
   xrdpapi/Makefile
   xrdp/Makefile
   xrdpvr/Makefile

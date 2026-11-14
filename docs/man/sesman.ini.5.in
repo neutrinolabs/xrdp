@@ -230,7 +230,8 @@ Alternatively combine one-or-more of the following options
 .HP 4
 \fBU\fR - Sessions are separated per user
 .HP 4
-\fBB\fR - Sessions are separated by bits-per-pixel
+\fBB\fR - Sessions are separated by bits-per-pixel. Ignored for Wayland and
+GNOME sessions, which serve clients of any bits-per-pixel
 .HP 4
 \fBD\fR - Sessions are separated by initial display size
 .HP 4

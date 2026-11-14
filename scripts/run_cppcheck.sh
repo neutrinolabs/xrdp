@@ -121,6 +121,7 @@ if [ -z "$CPPCHECK_FLAGS" ]; then
                     -I sesman/sesexec \
                     -I third_party \
                     -I third_party/tomlc99 \
+                    -I wlup \
                     -I xrdp \
                     -I xrdpapi \
                     -I xrdpvr"
