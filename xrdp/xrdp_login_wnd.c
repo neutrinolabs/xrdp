@@ -1271,6 +1271,11 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
             globals->tcp_recv_buffer_bytes = g_atoi(v);
         }
 
+        else if (g_strncmp(n, "tcp_notsent_lowat", 64) == 0)
+        {
+            globals->tcp_notsent_lowat = g_atoi(v);
+        }
+
         /* colors */
 
         else if (g_strncmp(n, "grey", 64) == 0)
@@ -1532,6 +1537,7 @@ load_xrdp_config(struct xrdp_config *config, const char *xrdp_ini, int bpp)
     LOG(LOG_LEVEL_DEBUG, "tcp_keepalive:           %d", globals->tcp_keepalive);
     LOG(LOG_LEVEL_DEBUG, "tcp_send_buffer_bytes:   %d", globals->tcp_send_buffer_bytes);
     LOG(LOG_LEVEL_DEBUG, "tcp_recv_buffer_bytes:   %d", globals->tcp_recv_buffer_bytes);
+    LOG(LOG_LEVEL_DEBUG, "tcp_notsent_lowat:       %d", globals->tcp_notsent_lowat);
 
     LOG(LOG_LEVEL_DEBUG, "grey:                    %d", globals->grey);
     LOG(LOG_LEVEL_DEBUG, "black:                   %d", globals->black);

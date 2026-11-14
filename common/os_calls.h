@@ -69,6 +69,7 @@ void     g_hexdump(const char *p, int len);
 int      g_getchar(void);
 int      g_tcp_set_no_delay(int sck);
 int      g_tcp_set_keepalive(int sck);
+int      g_tcp_set_notsent_lowat(int sck, int bytes);
 int      g_tcp_socket(void);
 int      g_sck_set_send_buffer_bytes(int sck, int bytes);
 int      g_sck_get_send_buffer_bytes(int sck, int *bytes);
