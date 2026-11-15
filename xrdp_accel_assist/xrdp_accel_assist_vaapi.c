@@ -324,8 +324,8 @@ build_sps(unsigned char *out, struct enc_info *ei)
     bs_put(&b, 1, 1);           /* motion_vectors_over_pic_boundaries_flag */
     bs_ue(&b, 0);               /* max_bytes_per_pic_denom */
     bs_ue(&b, 0);               /* max_bits_per_mb_denom */
-    bs_ue(&b, 16);              /* log2_max_mv_length_horizontal */
-    bs_ue(&b, 16);              /* log2_max_mv_length_vertical */
+    bs_ue(&b, 15);              /* log2_max_mv_length_horizontal */
+    bs_ue(&b, 15);              /* log2_max_mv_length_vertical */
     bs_ue(&b, 0);               /* max_num_reorder_frames */
     bs_ue(&b, 1);               /* max_dec_frame_buffering */
     bs_trailing(&b);
