@@ -468,6 +468,15 @@ static unsigned int format_user_info(char *dest, unsigned int len,
                                      const char *format);
 
 /*****************************************************************************/
+static void
+xfuse_cb_init(void *userdata, struct fuse_conn_info *conn)
+{
+    /* RDP opens do not implement O_TRUNC. Let FUSE send a separate setattr
+     * request so the existing size update path truncates the file. */
+    conn->want &= ~FUSE_CAP_ATOMIC_O_TRUNC;
+}
+
+/*****************************************************************************/
 static int
 load_fuse_config(void)
 {
@@ -641,6 +650,7 @@ xfuse_init(void)
 
     /* setup FUSE callbacks */
     g_memset(&g_xfuse_ops, 0, sizeof(g_xfuse_ops));
+    g_xfuse_ops.init        = xfuse_cb_init;
     g_xfuse_ops.lookup      = xfuse_cb_lookup;
     g_xfuse_ops.readdir     = xfuse_cb_readdir;
     g_xfuse_ops.mkdir       = xfuse_cb_mkdir;
