@@ -67,6 +67,7 @@ SUBDIRS = \
   sesman \
   xrdp \
   fontutils \
+  fuzz \
   keygen \
   waitforx \
   docs \
