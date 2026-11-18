@@ -2311,10 +2311,6 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
 
             /* get devredir to open the remote file
              *
-             * If the caller has set O_TRUNC when writing the file,
-             * fuse should call us back via fuse_cb_setattr() to set
-             * the size to zero - we don't need to do this ourselves.
-             *
              * If this call succeeds, further request processing happens in
              * xfuse_devredir_cb_open_file()
              */
