@@ -46,6 +46,12 @@ enum irp_setattr_state
     E_SETATTR_CHECK_EOF
 } ;
 
+enum irp_open_state
+{
+    E_OPEN_GET_FH = 0,
+    E_OPEN_CHECK_EOF
+};
+
 struct irp_lookup
 {
     enum irp_lookup_state state; /* Next state to consider */
@@ -62,6 +68,12 @@ struct irp_setattr
 struct irp_write
 {
     tui64            offset;      /* Offset the write was made at */
+};
+
+struct irp_open
+{
+    int send_o_trunc;             /* Need to implement O_TRUNC */
+    enum irp_open_state state;    /* State we're in */
 };
 
 struct irp_create
@@ -92,6 +104,7 @@ struct irp
         struct irp_lookup  lookup;  /* Used by lookup                    */
         struct irp_setattr setattr; /* Used by setattr                   */
         struct irp_write   write;   /* Used by write                     */
+        struct irp_open    open;    /* Used by open                      */
         struct irp_create  create;  /* Used by create                    */
         struct irp_rename  rename;  /* Use by rename                     */
     } gen;                          /* Additional state data for some ops */
