@@ -132,6 +132,9 @@ static void devredir_proc_cid_rmdir_or_file_resp(IRP *irp,
 static void devredir_proc_cid_rename_file(IRP *irp, enum NTSTATUS IoStatus);
 static void devredir_proc_cid_rename_file_resp(IRP *irp,
         enum NTSTATUS IoStatus);
+static void devredir_proc_cid_open(    IRP *irp,
+                                       struct stream *s_in,
+                                       enum NTSTATUS IoStatus);
 static void devredir_proc_cid_lookup(  IRP *irp,
                                        struct stream *s_in,
                                        enum NTSTATUS IoStatus);
@@ -144,6 +147,8 @@ static void devredir_proc_cid_statfs(  IRP *irp,
 static void devredir_proc_cid_statfs_resp(IRP *irp,
         struct stream *s_in,
         enum NTSTATUS IoStatus);
+static void issue_setattr_eof(IRP *irp, tui64 size);
+
 /* Other local functions */
 static void devredir_send_server_core_cap_req(void);
 static void devredir_send_server_clientID_confirm(void);
@@ -1130,18 +1135,7 @@ devredir_proc_device_iocompletion(struct stream *s)
                 break;
 
             case CID_OPEN_REQ:
-                if (!s_check_rem_and_log(s, 4, "Parsing [MS-RDPEFS] DR_CREATE_RSP"))
-                {
-                    return -1;
-                }
-                xstream_rd_u32_le(s, irp->FileId);
-
-                xfuse_devredir_cb_open_file((struct state_open *) irp->fuse_info,
-                                            IoStatus, DeviceId, irp->FileId);
-                if (IoStatus != STATUS_SUCCESS)
-                {
-                    devredir_irp_delete(irp);
-                }
+                devredir_proc_cid_open(irp, s, IoStatus);
                 break;
 
             case CID_READ:
@@ -1655,8 +1649,7 @@ devredir_file_create(struct state_create *fusep, tui32 device_id,
             irp->gen.create.creating_dir = 0;
         }
 
-        //CreateDisposition = CD_FILE_CREATE;
-        CreateDisposition  = 0x02; /* got this value from windows */
+        CreateDisposition = CD_FILE_CREATE;
 
         rval = devredir_send_drive_create_request(device_id, path,
                DesiredAccess, CreateOptions,
@@ -1693,6 +1686,8 @@ devredir_file_open(struct state_open *fusep, tui32 device_id,
 
         irp->fuse_info = fusep;
 
+        irp->gen.open.state = E_OPEN_GET_FH;
+
         switch (flags & O_ACCMODE)
         {
             case O_RDONLY:
@@ -1703,6 +1698,10 @@ devredir_file_open(struct state_open *fusep, tui32 device_id,
             case O_WRONLY:
                 LOG_DEVEL(LOG_LEVEL_DEBUG, "open file in O_WRONLY");
                 DesiredAccess = DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
+                if ((flags & O_TRUNC) != 0)
+                {
+                    irp->gen.open.send_o_trunc = 1;
+                }
                 break;
 
             default:
@@ -1715,10 +1714,21 @@ devredir_file_open(struct state_open *fusep, tui32 device_id,
                 /* O_RDONLY instead of O_RDWR mode                */
                 DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA |
                                 DA_SYNCHRONIZE | 0x00000010;
+                if ((flags & O_TRUNC) != 0)
+                {
+                    irp->gen.open.send_o_trunc = 1;
+                }
         }
 
-        CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
-        CreateDisposition = CD_FILE_OPEN; // WAS 1
+        CreateOptions = 0;
+        /*
+         *  According to [MS-RDPEFS] 2.2.1.4.1, implementing
+         *  O_TRUNC atomically should be possible by setting using
+         *  CD_FILE_OVERWRITE rather than CD_FILE_OPEN while opening the
+         *  file, but this doesn't seem to work with mstsc.exe - it
+         *  alwayd returns STATUS_INVALID_PARAMETER
+         */
+        CreateDisposition = CD_FILE_OPEN;
 
         rval = devredir_send_drive_create_request(device_id, path,
                DesiredAccess, CreateOptions,
@@ -1797,8 +1807,7 @@ devredir_rmdir_or_file(struct state_remove *fusep, tui32 device_id,
         //                CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateOptions = 0x020; /* got this value from windows */
 
-        //CreateDisposition = CD_FILE_OPEN; // WAS 1
-        CreateDisposition = 0x01; /* got this value from windows */
+        CreateDisposition = CD_FILE_OPEN;
 
         rval = devredir_send_drive_create_request(device_id, path,
                DesiredAccess, CreateOptions,
@@ -1974,7 +1983,7 @@ int devredir_file_rename(struct state_rename *fusep, tui32 device_id,
 
         DesiredAccess = DA_FILE_WRITE_ATTRIBUTES | DA_DELETE;
         CreateOptions = 0;
-        CreateDisposition = CD_FILE_OPEN; // WAS 1
+        CreateDisposition = CD_FILE_OPEN;
 
         rval = devredir_send_drive_create_request(device_id, old_name,
                DesiredAccess, CreateOptions,
@@ -2278,6 +2287,83 @@ static void lookup_done(IRP *irp, enum NTSTATUS IoStatus)
     }
 }
 
+/*
+ * open has a mini state machine built-in, as may need to issue
+ * multiple I/O requests, but unlike lookup these are not always the same.
+ */
+static void
+devredir_proc_cid_open(IRP *irp,
+                       struct stream *s_in,
+                       enum NTSTATUS IoStatus)
+{
+    tui32 response_longword;
+    LOG_DEVEL(LOG_LEVEL_DEBUG, "entry state is %d", irp->gen.open.state);
+    if (IoStatus != STATUS_SUCCESS)
+    {
+        /* This is common to all open states */
+        LOG_DEVEL(LOG_LEVEL_DEBUG,
+                  "last open call returned with IoStatus=0x%08x", IoStatus);
+    }
+    else if (!s_check_rem(s_in, 4))
+    {
+        // All of our expected replies parse a longword response. Check it's
+        // been provided.
+        LOG(LOG_LEVEL_ERROR,
+            "devredir_proc_cid_open: Length response error");
+        IoStatus = STATUS_INFO_LENGTH_MISMATCH;
+    }
+    else
+    {
+        xstream_rd_u32_le(s_in, response_longword);
+        switch (irp->gen.open.state)
+        {
+            case E_OPEN_GET_FH:
+                /* We've been sent the file ID */
+                irp->FileId = response_longword;
+                if (irp->gen.open.send_o_trunc)
+                {
+                    irp->gen.open.state = E_OPEN_CHECK_EOF;
+                    issue_setattr_eof(irp, 0);
+                    return; // No more to do
+                }
+                break;
+
+            case E_OPEN_CHECK_EOF:
+                /* Returned length what we expected? */
+                if (response_longword != FILE_END_OF_FILE_INFORMATION_SIZE)
+                {
+                    LOG_DEVEL(LOG_LEVEL_ERROR, "Expected FILE_BASIC_INFORMATION length"
+                              "%d, got len=%d",
+                              FILE_BASIC_INFORMATION_SIZE, response_longword);
+                    IoStatus = STATUS_INFO_LENGTH_MISMATCH;
+                }
+                break;
+        }
+    }
+
+    xfuse_devredir_cb_open_file((struct state_open *) irp->fuse_info,
+                                IoStatus, irp->DeviceId, irp->FileId);
+
+    if (IoStatus != STATUS_SUCCESS)
+    {
+        if (irp->FileId != 0)
+        {
+            /* We've had a fail with an open file handle - close it */
+            irp->completion_type = CID_CLOSE;
+            devredir_send_drive_close_request(RDPDR_CTYP_CORE,
+                                              PAKID_CORE_DEVICE_IOREQUEST,
+                                              irp->DeviceId,
+                                              irp->FileId,
+                                              irp->CompletionId,
+                                              IRP_MJ_CLOSE, IRP_MN_NONE, 32);
+        }
+        else
+        {
+            devredir_irp_delete(irp);
+        }
+    }
+}
+
 
 /*
  * lookup has a mini state machine built-in, as it needs to issue
@@ -2528,7 +2614,7 @@ static void issue_setattr_basic(IRP *irp)
  *
  * References : [MS-RDPEFS] 2.2.3.3.9  [MS-FSCC] 2.4.13
  *****************************************************************************/
-static void issue_setattr_eof(IRP *irp)
+static void issue_setattr_eof(IRP *irp, tui64 size)
 {
     struct stream *s;
     int  bytes;
@@ -2542,13 +2628,13 @@ static void issue_setattr_eof(IRP *irp)
     xstream_wr_u32_le(s, FILE_END_OF_FILE_INFORMATION_SIZE);
     /* buffer length             */
     xstream_seek(s, 24);         /* padding                   */
-    xstream_wr_u64_le(s, (tui64)irp->gen.setattr.fattr.size);
-    /* File size                 */
+    xstream_wr_u64_le(s, size);  /* File size                 */
     /* send to client */
     bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
     xstream_free(s);
 }
+
 
 /*
  * Completes a setattr request and returns status to the caller.
@@ -2644,7 +2730,7 @@ devredir_proc_cid_setattr(IRP *irp,
         }
         else if (irp->gen.setattr.to_set & TO_SET_SIZE)
         {
-            issue_setattr_eof(irp);
+            issue_setattr_eof(irp, irp->gen.setattr.fattr.size);
             irp->gen.setattr.state = E_SETATTR_CHECK_EOF;
         }
         else
