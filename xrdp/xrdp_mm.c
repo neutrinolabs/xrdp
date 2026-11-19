@@ -3078,7 +3078,7 @@ parse_chansrvport(const char *value, char dest[], int dest_size, int uid)
 
         g_snprintf(dest, dest_size, XRDP_CHANSRV_STR, uid, dstr);
     }
-    else
+    else if (dest != NULL && dest_size > 0)
     {
         strlcpy(dest, value, dest_size);
     }
