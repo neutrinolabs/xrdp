@@ -35,6 +35,8 @@ xrdp_sesexec_SOURCES = \
   sesexec_discover.h \
   sessionrecord.c \
   sessionrecord.h \
+  wlwait.c \
+  wlwait.h \
   xauth.c \
   xauth.h \
   xwait.c \

@@ -648,7 +648,7 @@ process_connect_session_request(struct scp_list_item *sli)
         if (status != E_SCP_SCONNECT_OK)
         {
             rv = scp_send_connect_session_response(sli->client_trans,
-                                                   status, -1, -1);
+                                                   status, -1, -1, -1);
         }
     }
 

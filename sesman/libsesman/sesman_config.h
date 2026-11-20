@@ -248,6 +248,16 @@ struct config_sesman
      */
     struct list *xorg_params;
     /**
+     * @var wayland_params
+     * @brief Wayland compositor command line
+     */
+    struct list *wayland_params;
+    /**
+     * @var gnome_params
+     * @brief Command line starting a GNOME session
+     */
+    struct list *gnome_params;
+    /**
      * @var log
      * @brief Log configuration struct
      */

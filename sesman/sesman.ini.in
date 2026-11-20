@@ -195,6 +195,21 @@ param=-localhost
 param=-dpi
 param=96
 
+[Wayland]
+; Experimental: compositor for Wayland sessions (xrdp.ini code=30, using
+; the wlup module). The command must exec the compositor, which must
+; offer the wlroots capture and virtual input protocols. sesman connects
+; to the compositor's socket and passes the connection to xrdp.
+param=@sesmansysconfdir@/startwayland.sh
+
+[GNOME]
+; Experimental: GNOME sessions (xrdp.ini code=31, using the wlup module
+; with backend=mutter). The command must exec gnome-session, which then
+; leads the session. GNOME Shell runs headless by itself, as the session
+; has no seat. sesman passes xrdp connections to the session bus and to
+; PipeWire, opened as the user.
+param=@sesmansysconfdir@/startgnome.sh
+
 [Chansrv]
 ; drive redirection
 ; See sesman.ini(5) for the format of this parameter

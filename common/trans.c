@@ -137,6 +137,20 @@ trans_delete(struct trans *self)
     free_stream(self->in_s);
     free_stream(self->out_s);
 
+    /* Output that was never sent no longer counts for its source */
+    while (self->wait_s != NULL)
+    {
+        struct stream *temp_s = self->wait_s;
+
+        if (temp_s->source != NULL)
+        {
+            temp_s->source[0] -= (int)(temp_s->end - temp_s->p);
+        }
+        self->wait_s = temp_s->next;
+        free_stream(temp_s);
+    }
+    self->wait_s_tail = NULL;
+
     if (self->sck >= 0)
     {
         g_tcp_close(self->sck);
@@ -267,6 +281,10 @@ trans_send_waiting(struct trans *self, int block)
                     if (temp_s->p >= temp_s->end)
                     {
                         self->wait_s = temp_s->next;
+                        if (self->wait_s == NULL)
+                        {
+                            self->wait_s_tail = NULL;
+                        }
                         free_stream(temp_s);
                     }
                 }
@@ -602,7 +620,6 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
     int size;
     int sent;
     struct stream *wait_s;
-    struct stream *temp_s;
     char *out_data;
 
     if (self->status != TRANS_STATUS_UP)
@@ -661,19 +678,17 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
     out_uint8a(wait_s, out_data, size);
     s_mark_end(wait_s);
     wait_s->p = wait_s->data;
+    /* Appending is constant time: a slow client can have many thousands
+     * of PDUs waiting */
     if (self->wait_s == 0)
     {
         self->wait_s = wait_s;
     }
     else
     {
-        temp_s = self->wait_s;
-        while (temp_s->next != 0)
-        {
-            temp_s = temp_s->next;
-        }
-        temp_s->next = wait_s;
+        self->wait_s_tail->next = wait_s;
     }
+    self->wait_s_tail = wait_s;
     return 0;
 }
 
