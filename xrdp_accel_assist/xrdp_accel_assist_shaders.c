@@ -83,6 +83,29 @@ void main(void)\n\
     }\n\
 }\n";
 
+/* UV plane only, U in red, V in green, for a GR88 target */
+static const GLchar g_fs_rgb_to_uv420[] = "\
+uniform sampler2D tex;\n\
+uniform vec2 tex_size;\n\
+uniform vec4 umath;\n\
+uniform vec4 vmath;\n\
+void main(void)\n\
+{\n\
+    vec4 pix;\n\
+    float x;\n\
+    float y;\n\
+    x = floor(gl_FragCoord.x) * 2.0 + 0.5;\n\
+    y = floor(gl_FragCoord.y) * 2.0 + 0.5;\n\
+    pix = texture2D(tex, vec2(x, y) / tex_size);\n\
+    pix += texture2D(tex, vec2(x + 1.0, y) / tex_size);\n\
+    pix += texture2D(tex, vec2(x, y + 1.0) / tex_size);\n\
+    pix += texture2D(tex, vec2(x + 1.0, y + 1.0) / tex_size);\n\
+    pix /= 4.0;\n\
+    pix.a = 1.0;\n\
+    pix = vec4(dot(umath, pix), dot(vmath, pix), 0.0, 1.0);\n\
+    gl_FragColor = clamp(pix, 0.0, 1.0);\n\
+}\n";
+
 static const GLchar g_fs_rgb_to_yuv422[] = "\
 uniform sampler2D tex;\n\
 uniform vec2 tex_size;\n\
