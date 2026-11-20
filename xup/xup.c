@@ -587,7 +587,7 @@ read_rects(struct stream *s, int count, const char *where)
 }
 
 /* Attaches the backend's screen shared memory segment if not already
- * attached, and returns the width by height 32bpp image at shmem_offset
+ * attached, and returns the width by height image at shmem_offset
  * within it. Returns NULL if the segment is not owned by the backend or
  * is too small for the image. */
 static char *
@@ -630,7 +630,14 @@ get_screen_shmem_image(struct mod *amod, int shmem_id, int shmem_offset,
         amod->screen_shmem_bytes = shm_bytes;
         amod->screen_shmem_id_mapped = 1;
     }
-    if (!image_fits(shmem_offset, width, height, 4, amod->screen_shmem_bytes))
+    /* Capture buffers are allocated by the display backend per session
+     * color depth (8bpp=1B/px, 15/16bpp=2B/px, 24/32bpp=4B/px), so the
+     * hardcoded 4 B/px here rejects 8/15/16bpp sessions on their first
+     * paint. Compute from the session bpp instead, matching the
+     * bitmap_Bpp() used by the other validation paths in this commit.
+     */
+    if (!image_fits(shmem_offset, width, height, bitmap_Bpp(amod->bpp),
+                    amod->screen_shmem_bytes))
     {
         LOG(LOG_LEVEL_ERROR, "Image %dx%d at offset %d does not fit in "
             "shared memory segment %d of %zu bytes", width, height,
@@ -1859,8 +1866,12 @@ process_server_paint_rect_shmfd(struct mod *amod, struct stream *s)
     in_uint16_le(s, width);
     in_uint16_le(s, height);
 
+    /* As above: compute the image bytes per pixel from the session
+     * depth; the hardcoded 4 B/px here rejected 8/15/16bpp sessions
+     * outright. */
     if (shmem_bytes <= 0 ||
-            !image_fits(shmem_offset, width, height, 4, shmem_bytes) ||
+            !image_fits(shmem_offset, width, height, bitmap_Bpp(amod->bpp),
+                        shmem_bytes) ||
             !rects_in_image(num_drects, ldrects, width, height) ||
             !rects_in_image(num_crects, lcrects, width, height))
     {
