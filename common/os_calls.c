@@ -407,6 +407,28 @@ g_tcp_set_keepalive(int sck)
 }
 
 /*****************************************************************************/
+/* Limits the data the kernel holds that has not been sent yet: the
+ * socket is only reported writable while less than this is unsent.
+ * Returns 0 on success */
+int
+g_tcp_set_notsent_lowat(int sck, int bytes)
+{
+#if defined(TCP_NOTSENT_LOWAT)
+    if (setsockopt(sck, IPPROTO_TCP, TCP_NOTSENT_LOWAT, (char *)&bytes,
+                   sizeof(bytes)) == 0)
+    {
+        return 0;
+    }
+    LOG(LOG_LEVEL_ERROR, "Error setting tcp_notsent_lowat: %s",
+        g_get_strerror());
+#else
+    LOG(LOG_LEVEL_WARNING, "tcp_notsent_lowat is not supported on this "
+        "platform");
+#endif
+    return 1;
+}
+
+/*****************************************************************************/
 /* returns a newly created socket or -1 on error */
 /* in win32 a socket is an unsigned int, in linux, it's an int */
 int
