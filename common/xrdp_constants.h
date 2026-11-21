@@ -61,6 +61,9 @@
 
 #define XRDP_MAX_BITMAP_CACHE_ID  3
 #define XRDP_MAX_BITMAP_CACHE_IDX 2000
+/* Largest pointer image held in the pointer cache */
+#define XRDP_MAX_POINTER_WIDTH    96
+#define XRDP_MAX_POINTER_HEIGHT   96
 #define XRDP_BITMAP_CACHE_ENTRIES 2048
 
 #define XR_MIN_KEY_CODE 8
