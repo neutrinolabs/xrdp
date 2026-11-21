@@ -1112,7 +1112,6 @@ xrdp_channel_drdynvc_data_first(struct xrdp_channel *self, int chan_id,
         return 1;
     }
     make_stream(s);
-    init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
         LOG(LOG_LEVEL_ERROR,
@@ -1184,7 +1183,6 @@ xrdp_channel_drdynvc_data(struct xrdp_channel *self, int chan_id,
         return 1;
     }
     make_stream(s);
-    init_stream(s, 8192);
     if (xrdp_channel_init(self, s) != 0)
     {
         LOG(LOG_LEVEL_ERROR,

@@ -45,6 +45,8 @@ struct xrdp_encoder
     void *codec_handle_h264;
     void *codec_handle_prfx_gfx[16];
     void *codec_handle_h264_gfx[16];
+    /* max_compressed_bytes of scratch storage, used by the encoder thread */
+    char *gfx_h264_buffer;
     int frame_id_client; /* last frame id received from client */
     int frame_id_server; /* last frame id received from Xorg */
     int frame_id_server_sent;

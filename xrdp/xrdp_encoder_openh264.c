@@ -30,6 +30,10 @@
 #include <wels/codec_api.h>
 #include <wels/codec_def.h>
 
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
+
 #include "xrdp.h"
 #include "arch.h"
 #include "os_calls.h"
@@ -66,6 +70,79 @@ struct openh264_global
 #define ENC_ENCODE_FRAME(obj, kpSrcPic, pBsInfo) \
     (*obj)->EncodeFrame(obj, kpSrcPic, pBsInfo)
 #endif
+
+/*****************************************************************************/
+void
+xrdp_encoder_openh264_split_uv(const char *src, char *dst_u, char *dst_v,
+                               int width)
+{
+#if defined(__SSE2__)
+    const __m128i mask = _mm_set1_epi16(0x00ff);
+    __m128i uv0;
+    __m128i uv1;
+    __m128i u;
+    __m128i v;
+    int32_t u4;
+    int32_t v4;
+
+    /* Split 16 UV pairs at a time. Rectangle offsets and row strides need
+     * not be aligned, so use unaligned loads and stores. An odd width
+     * includes the final complete UV pair, making 31 pixels sufficient. */
+    for (; width >= 31; width -= 32)
+    {
+        uv0 = _mm_loadu_si128((const __m128i *) src);
+        uv1 = _mm_loadu_si128((const __m128i *) (src + 16));
+        u = _mm_packus_epi16(_mm_and_si128(uv0, mask),
+                             _mm_and_si128(uv1, mask));
+        v = _mm_packus_epi16(_mm_srli_epi16(uv0, 8),
+                             _mm_srli_epi16(uv1, 8));
+        _mm_storeu_si128((__m128i *) dst_u, u);
+        _mm_storeu_si128((__m128i *) dst_v, v);
+        src += 32;
+        dst_u += 16;
+        dst_v += 16;
+    }
+    if (width <= 0)
+    {
+        return;
+    }
+
+    /* Smaller blocks also accelerate narrow rectangles and row tails. */
+    if (width >= 15)
+    {
+        uv0 = _mm_loadu_si128((const __m128i *) src);
+        u = _mm_and_si128(uv0, mask);
+        v = _mm_srli_epi16(uv0, 8);
+        _mm_storel_epi64((__m128i *) dst_u, _mm_packus_epi16(u, u));
+        _mm_storel_epi64((__m128i *) dst_v, _mm_packus_epi16(v, v));
+        src += 16;
+        dst_u += 8;
+        dst_v += 8;
+        width -= 16;
+    }
+    if (width >= 7)
+    {
+        uv0 = _mm_loadl_epi64((const __m128i *) src);
+        u = _mm_and_si128(uv0, mask);
+        v = _mm_srli_epi16(uv0, 8);
+        u4 = _mm_cvtsi128_si32(_mm_packus_epi16(u, u));
+        v4 = _mm_cvtsi128_si32(_mm_packus_epi16(v, v));
+        memcpy(dst_u, &u4, sizeof(u4));
+        memcpy(dst_v, &v4, sizeof(v4));
+        src += 8;
+        dst_u += 4;
+        dst_v += 4;
+        width -= 8;
+    }
+#endif
+
+    /* Preserve the final complete UV pair for an odd rectangle width. */
+    for (; width > 0; width -= 2)
+    {
+        *(dst_u++) = *(src++);
+        *(dst_v++) = *(src++);
+    }
+}
 
 /*****************************************************************************/
 void *
@@ -122,11 +199,8 @@ xrdp_encoder_openh264_encode(void *handle, int session, int left, int top,
     struct openh264_global *og;
     struct openh264_encoder *oe;
     const char *src8;
-    const char *src8a;
     char *dst8;
     char *dst8a;
-    char *dst8b;
-    char *dst8c;
     int index;
     int jndex;
     int flags;
@@ -270,14 +344,7 @@ xrdp_encoder_openh264_encode(void *handle, int session, int left, int top,
             dst8a += pic1.iStride[2] * ((y - top) / 2) + ((x - left) / 2);
             for (; cy > 0; cy -= 2)
             {
-                src8a = src8; /* uv */
-                dst8b = dst8; /* u */
-                dst8c = dst8a; /* v */
-                for (jndex = 0; jndex < cx; jndex += 2)
-                {
-                    *(dst8b++) = *(src8a++); /* u */
-                    *(dst8c++) = *(src8a++); /* v */
-                }
+                xrdp_encoder_openh264_split_uv(src8, dst8, dst8a, cx);
                 src8 += twidth; /* uv */
                 dst8 += pic1.iStride[1]; /* u */
                 dst8a += pic1.iStride[2]; /* v */

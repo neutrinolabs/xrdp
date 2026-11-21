@@ -53,6 +53,7 @@ tests/libipm/test_libipm
 tests/libxrdp/test_libxrdp
 tests/memtest/memtest
 tests/xrdp/test_xrdp
+tests/xrdp/bench_openh264
 tools/devel/tcp_proxy/tcp_proxy
 tools/chkpriv/xrdp-chkpriv
 tools/chkpriv/xrdp-droppriv
