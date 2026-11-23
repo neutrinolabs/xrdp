@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.xrdp.sesman</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/sbin/xrdp-sesman</string>
+        <string>--nodaemon</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/var/log/xrdp-sesman.err</string>
+    <key>StandardOutPath</key>
+    <string>/var/log/xrdp-sesman.log</string>
+    <key>WorkingDirectory</key>
+    <string>/usr/local/sbin</string>
+</dict>
+</plist>
