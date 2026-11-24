@@ -38,6 +38,11 @@ then
   git submodule update --init librfxcodec
 fi
 
+if ! test -f libbulk/configure.ac
+then
+  git submodule update --init libbulk
+fi
+
 if ! test -f ulalaca/Makefile.am
 then
   git submodule update --init ulalaca

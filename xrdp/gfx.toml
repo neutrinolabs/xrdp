@@ -1,5 +1,6 @@
 [codec]
 order = [ "H.264", "RFX" ]
+bulk = true
 
 # Specify a preferred H.264 encoder, "x264" or "OpenH264".
 # This parameter takes effect only when more than one encoder is
