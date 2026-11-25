@@ -49,6 +49,7 @@ stamp-h1
 tap-driver.sh
 test-driver
 tests/common/test_common
+tests/chansrv/test_clipboard_overlap
 tests/libipm/test_libipm
 tests/libxrdp/test_libxrdp
 tests/memtest/memtest
