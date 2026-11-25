@@ -72,6 +72,44 @@ get_xdg_session_startupcmd()
   fi
 }
 
+# If the session hasn't been chosen explicitly (via DESKTOP_SESSION, see
+# get_xdg_session_startupcmd() above and the docs in wm_start() below),
+# don't fall through blindly to the distro's Xsession/Xclients fallback
+# chain below. That logic predates desktop environments dropping X11
+# support (e.g. current GNOME) and can end up exec'ing a session that
+# cannot actually produce a display under xrdp - causing a silent
+# black-screen/disconnect failure a few seconds later with no
+# diagnostic anywhere
+#
+# Instead, pick a session the same way a display manager would: from
+# /usr/share/xsessions, which by freedesktop.org convention only lists
+# X11-capable sessions (Wayland-only sessions live in
+# /usr/share/wayland-sessions and are correctly absent here). If
+# nothing is found there, refuse to start rather than fail silently.
+select_default_x11_session_if_unset()
+{
+  if [ -n "$DESKTOP_SESSION" ]; then
+    return 0
+  fi
+
+  if [ -d /usr/share/xsessions ]; then
+    for f in /usr/share/xsessions/*.desktop; do
+      [ -f "$f" ] || continue
+      DESKTOP_SESSION=$(basename "$f" .desktop)
+      export DESKTOP_SESSION
+      return 0
+    done
+  fi
+
+  echo "startwm.sh: no X11 desktop session was found in /usr/share/xsessions." >&2
+  echo "startwm.sh: refusing to start, to avoid a silent connect/black-screen/" >&2
+  echo "disconnect failure. If your desktop environment is Wayland-only" >&2
+  echo "(e.g. current GNOME), install an X11 desktop (KDE Plasma, XFCE," >&2
+  echo "etc.), or use its built-in remote desktop support (e.g. GNOME" >&2
+  echo "Remote Desktop) instead of xrdp." >&2
+  exit 1
+}
+
 #start the window manager
 wm_start()
 {
@@ -83,6 +121,8 @@ wm_start()
   # debian
   if [ -r /etc/X11/Xsession ]; then
     pre_start
+
+    select_default_x11_session_if_unset
 
     # if you want to start preferred desktop environment,
     # add following line,
@@ -125,6 +165,13 @@ wm_start()
   # el
   if [ -r /etc/X11/xinit/Xsession ]; then
     pre_start
+
+    select_default_x11_session_if_unset
+
+    if [ -z "$STARTUP" ] && [ -n "$DESKTOP_SESSION" ]; then
+      get_xdg_session_startupcmd "$DESKTOP_SESSION"
+    fi
+
     . /etc/X11/xinit/Xsession
     post_start
     exit 0
