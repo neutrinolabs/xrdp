@@ -587,6 +587,38 @@ START_TEST(test_xrdp_egfx_delete_encoding_context)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_CACHE_IMPORT_REPLY_PDU */
+START_TEST(test_xrdp_egfx_cache_import_reply)
+{
+    static const unsigned char expected_none[] =
+    {
+        0xE0, 0x04,
+        0x11, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00,
+        0x00, 0x00              /* importedEntriesCount */
+    };
+    static const unsigned char expected_two[] =
+    {
+        0xE0, 0x04,
+        0x11, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00,
+        0x02, 0x00,             /* importedEntriesCount */
+        0x01, 0x00,             /* cacheSlots */
+        0x03, 0x02
+    };
+    static const uint16_t slots[] = {1, 0x0203};
+
+    CHECK_STREAM(xrdp_egfx_cache_import_reply(NULL, 0, NULL), expected_none);
+    CHECK_STREAM(xrdp_egfx_cache_import_reply(NULL, 2, slots), expected_two);
+
+    /* Can't import more entries than the client is allowed to offer */
+    ck_assert_ptr_null(xrdp_egfx_cache_import_reply(NULL, -1, slots));
+    ck_assert_ptr_null(
+        xrdp_egfx_cache_import_reply(NULL,
+                                     XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT,
+                                     slots));
+}
+END_TEST
+
+/******************************************************************************/
 START_TEST(test_xrdp_egfx_caps_confirm_flags)
 {
     const int thin = XR_RDPGFX_CAPS_FLAG_THINCLIENT;
@@ -876,6 +908,67 @@ START_TEST(test_xrdp_egfx_process_ignored_pdus)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_CACHE_IMPORT_OFFER_PDU */
+START_TEST(test_xrdp_egfx_process_cache_import_offer)
+{
+    static const unsigned char pdu[] =
+    {
+        0x10, 0x00, 0x00, 0x00, 0x22, 0x00, 0x00, 0x00,
+        0x02, 0x00,             /* cacheEntriesCount */
+        0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, /* cacheKey */
+        0x00, 0x10, 0x00, 0x00, /* bitmapLength */
+        0x89, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, /* cacheKey */
+        0x00, 0x20, 0x00, 0x00  /* bitmapLength */
+    };
+    /* Two entries promised, but only one present */
+    static const unsigned char pdu_short[] =
+    {
+        0x10, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+        0x02, 0x00,             /* cacheEntriesCount */
+        0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, /* cacheKey */
+        0x00, 0x10, 0x00, 0x00  /* bitmapLength */
+    };
+    static const unsigned char pdu_no_count[] =
+    {
+        0x10, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00
+    };
+    struct xrdp_egfx egfx;
+    struct stream s;
+    unsigned char *pdu_too_many;
+    const int too_many = XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT;
+    const int too_many_len = 8 + 2 + too_many * 12;
+
+    ck_assert_int_eq((int)sizeof(pdu), 0x22);
+
+    /* Capabilities haven't been confirmed, so the offer is checked,
+       but no reply is sent. That's just as well, as there's no session
+       here to send it on */
+    g_memset(&egfx, 0, sizeof(egfx));
+
+    set_in_stream(&s, pdu, sizeof(pdu));
+    ck_assert_int_eq(xrdp_egfx_process(&egfx, &s), 0);
+
+    set_in_stream(&s, pdu_short, sizeof(pdu_short));
+    ck_assert_int_ne(xrdp_egfx_process(&egfx, &s), 0);
+    set_in_stream(&s, pdu_no_count, sizeof(pdu_no_count));
+    ck_assert_int_ne(xrdp_egfx_process(&egfx, &s), 0);
+
+    /* The number of entries is limited, even if they are all present */
+    pdu_too_many = g_new0(unsigned char, too_many_len);
+    ck_assert_ptr_nonnull(pdu_too_many);
+    pdu_too_many[0] = 0x10;
+    pdu_too_many[4] = too_many_len & 0xFF;
+    pdu_too_many[5] = (too_many_len >> 8) & 0xFF;
+    pdu_too_many[6] = (too_many_len >> 16) & 0xFF;
+    pdu_too_many[8] = too_many & 0xFF;
+    pdu_too_many[9] = (too_many >> 8) & 0xFF;
+    set_in_stream(&s, pdu_too_many, too_many_len);
+    ck_assert_int_ne(xrdp_egfx_process(&egfx, &s), 0);
+    g_free(pdu_too_many);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_egfx_base_functions(void)
 {
@@ -904,6 +997,7 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_one_monitor);
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_max_monitors);
     tcase_add_test(tc_builders, test_xrdp_egfx_delete_encoding_context);
+    tcase_add_test(tc_builders, test_xrdp_egfx_cache_import_reply);
     suite_add_tcase(s, tc_builders);
 
     tc_caps = tcase_create("xrdp_egfx_capabilities");
@@ -916,6 +1010,7 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_process, test_xrdp_egfx_process_frame_ack);
     tcase_add_test(tc_process, test_xrdp_egfx_process_bad_pdu);
     tcase_add_test(tc_process, test_xrdp_egfx_process_ignored_pdus);
+    tcase_add_test(tc_process, test_xrdp_egfx_process_cache_import_offer);
     suite_add_tcase(s, tc_process);
 
     return s;

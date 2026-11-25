@@ -80,6 +80,10 @@
 #define XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT    0x0017
 #define XR_RDPGFX_CMDID_MAPSURFACETOSCALEDWINDOW    0x0018
 
+/* cacheEntriesCount in RDPGFX_CACHE_IMPORT_OFFER_PDU MUST be less than
+   this (MS-RDPEGFX 2.2.2.16) */
+#define XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT  5462
+
 #define XR_QUEUE_DEPTH_UNAVAILABLE          0x00000000
 #define XR_SUSPEND_FRAME_ACKNOWLEDGEMENT    0xFFFFFFFF
 
@@ -257,6 +261,14 @@ xrdp_egfx_delete_encoding_context(struct xrdp_egfx_bulk *bulk, int surface_id,
 int
 xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
                                        int codec_context_id);
+struct stream *
+xrdp_egfx_cache_import_reply(struct xrdp_egfx_bulk *bulk,
+                             int num_cache_slots,
+                             const uint16_t *cache_slots);
+int
+xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
+                                  int num_cache_slots,
+                                  const uint16_t *cache_slots);
 /*
  * NB: mi below must be such that the (top,left) co-ordinate of
  * the primary monitor is (0.0)

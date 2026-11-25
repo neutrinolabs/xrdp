@@ -887,6 +887,51 @@ xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
 }
 
 /******************************************************************************/
+/* RDPGFX_CACHE_IMPORT_REPLY_PDU */
+struct stream *
+xrdp_egfx_cache_import_reply(struct xrdp_egfx_bulk *bulk,
+                             int num_cache_slots,
+                             const uint16_t *cache_slots)
+{
+    int index;
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_cache_import_reply:");
+    if (num_cache_slots < 0 ||
+            num_cache_slots >= XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT)
+    {
+        return NULL;
+    }
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_CACHEIMPORTREPLY,
+                       2 + num_cache_slots * 2);
+    out_uint16_le(s, num_cache_slots); /* importedEntriesCount */
+    for (index = 0; index < num_cache_slots; index++)
+    {
+        out_uint16_le(s, cache_slots[index]);
+    }
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
+                                  int num_cache_slots,
+                                  const uint16_t *cache_slots)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_cache_import_reply:");
+    s = xrdp_egfx_cache_import_reply(egfx->bulk, num_cache_slots,
+                                     cache_slots);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_cache_import_reply");
+}
+
+/******************************************************************************/
 /* RDPGFX_CMDID_FRAMEACKNOWLEDGE */
 static int
 xrdp_egfx_process_frame_ack(struct xrdp_egfx *egfx, struct stream *s)
@@ -998,6 +1043,41 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
 }
 
 /******************************************************************************/
+/* RDPGFX_CMDID_CACHEIMPORTOFFER */
+static int
+xrdp_egfx_process_cache_import_offer(struct xrdp_egfx *egfx, struct stream *s)
+{
+    int cacheEntriesCount;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process_cache_import_offer:");
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
+    in_uint16_le(s, cacheEntriesCount);
+    /* each RDPGFX_CACHE_ENTRY_METADATA is a 64-bit cacheKey and a
+       32-bit bitmapLength */
+    if (cacheEntriesCount >= XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT ||
+            !s_check_rem(s, cacheEntriesCount * 12))
+    {
+        return 1;
+    }
+    LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process_cache_import_offer: "
+        "client offered %d cache entries", cacheEntriesCount);
+    if (egfx->caps_version == 0 || egfx->caps_advertise == NULL)
+    {
+        /* Not expected before capabilities are confirmed, and
+           no reply is wanted once the channel is closing */
+        return 0;
+    }
+    /* There is no Bitmap Cache Map carried over from an earlier
+       connection, so none of the offered entries can be imported. A reply
+       is still required (MS-RDPEGFX 3.2.5.16), and tells the client that
+       all the entries can be discarded */
+    return xrdp_egfx_send_cache_import_reply(egfx, 0, NULL);
+}
+
+/******************************************************************************/
 int
 xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
 {
@@ -1040,14 +1120,9 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
                 break;
             case XR_RDPGFX_CMDID_QOEFRAMEACKNOWLEDGE:
                 break;
-            /*
-               TODO: Handle Cache Import PDU here.
-               https://github.com/neutrinolabs/xrdp/issues/2502
-               case XR_RDPGFX_CMDID_CACHEIMPORTOFFER:
-               2.2.2.16 RDPGFX_CACHE_IMPORT_OFFER_PDU
-               Reply with
-               2.2.2.17 RDPGFX_CACHE_IMPORT_REPLY_PDU
-            */
+            case XR_RDPGFX_CMDID_CACHEIMPORTOFFER:
+                error = xrdp_egfx_process_cache_import_offer(egfx, s);
+                break;
             default:
                 LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process:"
                     " unknown cmdId 0x%x", cmdId);
