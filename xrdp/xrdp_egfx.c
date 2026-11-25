@@ -810,6 +810,83 @@ xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264)
 }
 
 /******************************************************************************/
+/* Allocates a stream and writes the headers for a single segment PDU.
+   The pduLength is filled in by egfx_pdu_end() */
+static struct stream *
+egfx_pdu_begin(int cmd_id, int payload_bytes)
+{
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 64 + payload_bytes);
+    /* RDP_SEGMENTED_DATA */
+    out_uint8(s, 0xE0); /* descriptor = SINGLE */
+    /* RDP8_BULK_ENCODED_DATA */
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
+    /* RDPGFX_HEADER */
+    out_uint16_le(s, cmd_id); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
+    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    return s;
+}
+
+/******************************************************************************/
+static void
+egfx_pdu_end(struct stream *s)
+{
+    int bytes;
+
+    s_mark_end(s);
+    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, bytes);
+}
+
+/******************************************************************************/
+/* Sends a PDU from one of the builders in this file and frees it */
+static int
+egfx_send_and_free(struct xrdp_egfx *egfx, struct stream *s,
+                   const char *caller)
+{
+    int error;
+
+    error = xrdp_egfx_send_s(egfx, s);
+    LOG(LOG_LEVEL_DEBUG, "%s: xrdp_egfx_send_s error %d", caller, error);
+    free_stream(s);
+    return error;
+}
+
+/******************************************************************************/
+/* RDPGFX_DELETE_ENCODING_CONTEXT_PDU */
+struct stream *
+xrdp_egfx_delete_encoding_context(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                  int codec_context_id)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_delete_encoding_context:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_DELETEENCODINGCONTEXT, 6);
+    out_uint16_le(s, surface_id);
+    out_uint32_le(s, codec_context_id);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
+                                       int codec_context_id)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_delete_encoding_context:");
+    s = xrdp_egfx_delete_encoding_context(egfx->bulk, surface_id,
+                                          codec_context_id);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_delete_encoding_context");
+}
+
+/******************************************************************************/
 /* RDPGFX_CMDID_FRAMEACKNOWLEDGE */
 static int
 xrdp_egfx_process_frame_ack(struct xrdp_egfx *egfx, struct stream *s)

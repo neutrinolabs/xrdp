@@ -1383,6 +1383,24 @@ gfx_mapsurfacetooutput(struct xrdp_encoder *self,
 }
 
 /*****************************************************************************/
+static struct stream *
+gfx_deleteencodingcontext(struct xrdp_encoder *self,
+                          struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int surface_id;
+    int codec_context_id;
+
+    if (!s_check_rem(in_s, 6))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint32_le(in_s, codec_context_id);
+    return xrdp_egfx_delete_encoding_context(bulk, surface_id,
+            codec_context_id);
+}
+
+/*****************************************************************************/
 /* called from encoder thread */
 static int
 process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
@@ -1427,6 +1445,9 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                 break;
             case XR_RDPGFX_CMDID_WIRETOSURFACE_2:       /* 0x0002 */
                 s = gfx_wiretosurface2(self, bulk, &in_s, enc);
+                break;
+            case XR_RDPGFX_CMDID_DELETEENCODINGCONTEXT: /* 0x0003 */
+                s = gfx_deleteencodingcontext(self, bulk, &in_s);
                 break;
             case XR_RDPGFX_CMDID_SOLIDFILL:             /* 0x0004 */
                 s = gfx_solidfill(self, bulk, &in_s);

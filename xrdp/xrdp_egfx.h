@@ -251,6 +251,12 @@ xrdp_egfx_send_wire_to_surface2(struct xrdp_egfx *egfx, int surface_id,
                                 int codec_id, int codec_context_id,
                                 int pixel_format,
                                 void *bitmap_data, int bitmap_data_length);
+struct stream *
+xrdp_egfx_delete_encoding_context(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                  int codec_context_id);
+int
+xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
+                                       int codec_context_id);
 /*
  * NB: mi below must be such that the (top,left) co-ordinate of
  * the primary monitor is (0.0)

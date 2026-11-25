@@ -570,6 +570,23 @@ START_TEST(test_xrdp_egfx_reset_graphics_max_monitors)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_DELETE_ENCODING_CONTEXT_PDU */
+START_TEST(test_xrdp_egfx_delete_encoding_context)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x03, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00,
+        0x05, 0x00,             /* surfaceId */
+        0xD4, 0xC3, 0xB2, 0xA1  /* codecContextId */
+    };
+
+    CHECK_STREAM(xrdp_egfx_delete_encoding_context(NULL, 5, 0xA1B2C3D4),
+                 expected);
+}
+END_TEST
+
+/******************************************************************************/
 START_TEST(test_xrdp_egfx_caps_confirm_flags)
 {
     const int thin = XR_RDPGFX_CAPS_FLAG_THINCLIENT;
@@ -886,6 +903,7 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_no_monitors);
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_one_monitor);
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_max_monitors);
+    tcase_add_test(tc_builders, test_xrdp_egfx_delete_encoding_context);
     suite_add_tcase(s, tc_builders);
 
     tc_caps = tcase_create("xrdp_egfx_capabilities");
