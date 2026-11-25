@@ -1603,7 +1603,25 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
     }
     if (llen_after < 1)
     {
-        /* no data, ok */
+        /* no data, ok. Pass the type on anyway: xclip starts an INCR
+           transfer with an INCR property that holds no size, and without
+           its type that reply would be taken for an empty one */
+        if (xdata_size != 0)
+        {
+            *xdata_size = 0;
+        }
+        if (fmt != 0)
+        {
+            *fmt = (int)lfmt;
+        }
+        if (n_items != 0)
+        {
+            *n_items = 0;
+        }
+        if (type != 0)
+        {
+            *type = ltype;
+        }
         return 0;
     }
     lxdata = 0;
