@@ -466,8 +466,17 @@ xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int flags)
     out_uint16_le(s, 0); /* flags = 0 */
     s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
     out_uint32_le(s, version); /* version */
-    out_uint32_le(s, 4); /* capsDataLength */
-    out_uint32_le(s, flags);
+    if (version == XR_RDPGFX_CAPVERSION_101)
+    {
+        /* RDPGFX_CAPSET_VERSION101 has no flags */
+        out_uint32_le(s, XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH);
+        out_uint8s(s, XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH); /* reserved */
+    }
+    else
+    {
+        out_uint32_le(s, 4); /* capsDataLength */
+        out_uint32_le(s, flags);
+    }
     s_mark_end(s);
     bytes = (int) ((s->end - s->iso_hdr) + 4);
     s_pop_layer(s, iso_hdr);
@@ -483,6 +492,12 @@ xrdp_egfx_send_capsconfirm(struct xrdp_egfx *egfx, int version, int flags)
     struct stream *s;
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_capsconfirm:");
+    if (version == XR_RDPGFX_CAPVERSION_101)
+    {
+        flags = 0;
+    }
+    egfx->caps_version = version;
+    egfx->caps_flags = flags;
     s = xrdp_egfx_capsconfirm(egfx->bulk, version, flags);
     error = xrdp_egfx_send_s(egfx, s);
     LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_send_capsconfirm: xrdp_egfx_send_s "
@@ -760,6 +775,465 @@ xrdp_egfx_send_reset_graphics(struct xrdp_egfx *egfx, int width, int height,
 }
 
 /******************************************************************************/
+int
+xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264)
+{
+    int flags = client_flags;
+
+    switch (version)
+    {
+        case XR_RDPGFX_CAPVERSION_8:
+            /* no codec flags in this version */
+            break;
+        case XR_RDPGFX_CAPVERSION_81:
+            if (!use_h264)
+            {
+                flags &= ~XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED;
+            }
+            break;
+        case XR_RDPGFX_CAPVERSION_101:
+            /* 16 reserved bytes, no flags */
+            flags = 0;
+            break;
+        default:
+            /* RDPGFX_CAPSET_VERSION10 and later */
+            if (!use_h264)
+            {
+                /* RDPGFX_CAPS_FLAG_AVC_THINCLIENT MUST NOT be set
+                   together with RDPGFX_CAPS_FLAG_AVC_DISABLED */
+                flags |= XR_RDPGFX_CAPS_FLAG_AVC_DISABLED;
+                flags &= ~XR_RDPGFX_CAPS_FLAG_AVC_THINCLIENT;
+            }
+            break;
+    }
+    return flags;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_get_max_cache_slots(const struct xrdp_egfx *egfx)
+{
+    int small_cache;
+
+    switch (egfx->caps_version)
+    {
+        case 0:
+            /* capabilities not confirmed */
+            return 0;
+        case XR_RDPGFX_CAPVERSION_8:
+        case XR_RDPGFX_CAPVERSION_81:
+            small_cache = (egfx->caps_flags &
+                           (XR_RDPGFX_CAPS_FLAG_THINCLIENT |
+                            XR_RDPGFX_CAPS_FLAG_SMALL_CACHE)) != 0;
+            break;
+        case XR_RDPGFX_CAPVERSION_101:
+            small_cache = 0;
+            break;
+        case XR_RDPGFX_CAPVERSION_103:
+            /* this version implies a 16MB cache */
+            small_cache = 1;
+            break;
+        default:
+            small_cache = (egfx->caps_flags &
+                           XR_RDPGFX_CAPS_FLAG_SMALL_CACHE) != 0;
+            break;
+    }
+    return small_cache ? XR_RDPGFX_CACHE_SLOTS_SMALL :
+           XR_RDPGFX_CACHE_SLOTS_DEFAULT;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_scaled_map_supported(const struct xrdp_egfx *egfx)
+{
+    /* The spec does not give a minimum version for the scaled mapping
+       PDUs. The only capability which mentions them is
+       RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE in RDPGFX_CAPSET_VERSION107, so
+       only use them with a client which could have set that flag and
+       did not */
+    return egfx->caps_version == XR_RDPGFX_CAPVERSION_107 &&
+           (egfx->caps_flags & XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE) == 0;
+}
+
+/******************************************************************************/
+/* Checks a cache slot is in range for the confirmed capabilities */
+static int
+egfx_cache_slot_ok(const struct xrdp_egfx *egfx, int cache_slot)
+{
+    return cache_slot >= 1 &&
+           cache_slot <= xrdp_egfx_get_max_cache_slots(egfx);
+}
+
+/******************************************************************************/
+/* Allocates a stream and writes the headers for a single segment PDU.
+   The pduLength is filled in by egfx_pdu_end() */
+static struct stream *
+egfx_pdu_begin(int cmd_id, int payload_bytes)
+{
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 64 + payload_bytes);
+    /* RDP_SEGMENTED_DATA */
+    out_uint8(s, 0xE0); /* descriptor = SINGLE */
+    /* RDP8_BULK_ENCODED_DATA */
+    out_uint8(s, PACKET_COMPR_TYPE_RDP8); /* header */
+    /* RDPGFX_HEADER */
+    out_uint16_le(s, cmd_id); /* cmdId */
+    out_uint16_le(s, 0); /* flags = 0 */
+    s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
+    return s;
+}
+
+/******************************************************************************/
+static void
+egfx_pdu_end(struct stream *s)
+{
+    int bytes;
+
+    s_mark_end(s);
+    bytes = (int) ((s->end - s->iso_hdr) + 4);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, bytes);
+}
+
+/******************************************************************************/
+/* Sends a PDU from one of the builders in this file and frees it */
+static int
+egfx_send_and_free(struct xrdp_egfx *egfx, struct stream *s,
+                   const char *caller)
+{
+    int error;
+
+    error = xrdp_egfx_send_s(egfx, s);
+    LOG(LOG_LEVEL_DEBUG, "%s: xrdp_egfx_send_s error %d", caller, error);
+    free_stream(s);
+    return error;
+}
+
+/******************************************************************************/
+/* RDPGFX_DELETE_ENCODING_CONTEXT_PDU */
+struct stream *
+xrdp_egfx_delete_encoding_context(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                  int codec_context_id)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_delete_encoding_context:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_DELETEENCODINGCONTEXT, 6);
+    out_uint16_le(s, surface_id);
+    out_uint32_le(s, codec_context_id);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
+                                       int codec_context_id)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_delete_encoding_context:");
+    s = xrdp_egfx_delete_encoding_context(egfx->bulk, surface_id,
+                                          codec_context_id);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_delete_encoding_context");
+}
+
+/******************************************************************************/
+/* RDPGFX_SURFACE_TO_CACHE_PDU */
+struct stream *
+xrdp_egfx_surface_to_cache(struct xrdp_egfx_bulk *bulk, int surface_id,
+                           uint64_t cache_key, int cache_slot,
+                           const struct xrdp_egfx_rect *src_rect)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_surface_to_cache:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_SURFACETOCACHE, 20);
+    out_uint16_le(s, surface_id);
+    out_uint64_le(s, cache_key);
+    out_uint16_le(s, cache_slot);
+    out_uint16_le(s, src_rect->x1);
+    out_uint16_le(s, src_rect->y1);
+    out_uint16_le(s, src_rect->x2);
+    out_uint16_le(s, src_rect->y2);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_surface_to_cache(struct xrdp_egfx *egfx, int surface_id,
+                                uint64_t cache_key, int cache_slot,
+                                const struct xrdp_egfx_rect *src_rect)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_surface_to_cache:");
+    if (!egfx_cache_slot_ok(egfx, cache_slot))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_surface_to_cache: "
+            "cache slot %d out of range", cache_slot);
+        return 1;
+    }
+    s = xrdp_egfx_surface_to_cache(egfx->bulk, surface_id, cache_key,
+                                   cache_slot, src_rect);
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_surface_to_cache");
+}
+
+/******************************************************************************/
+/* RDPGFX_CACHE_TO_SURFACE_PDU */
+struct stream *
+xrdp_egfx_cache_to_surface(struct xrdp_egfx_bulk *bulk, int cache_slot,
+                           int surface_id, int num_dst_points,
+                           const struct xrdp_egfx_point *dst_points)
+{
+    int index;
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_cache_to_surface:");
+    if (num_dst_points < 0 || num_dst_points > 0xFFFF)
+    {
+        return NULL;
+    }
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_CACHETOSURFACE,
+                       6 + num_dst_points * 4);
+    out_uint16_le(s, cache_slot);
+    out_uint16_le(s, surface_id);
+    out_uint16_le(s, num_dst_points);
+    for (index = 0; index < num_dst_points; index++)
+    {
+        out_uint16_le(s, dst_points[index].x);
+        out_uint16_le(s, dst_points[index].y);
+    }
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_cache_to_surface(struct xrdp_egfx *egfx, int cache_slot,
+                                int surface_id, int num_dst_points,
+                                const struct xrdp_egfx_point *dst_points)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_cache_to_surface:");
+    if (!egfx_cache_slot_ok(egfx, cache_slot))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_cache_to_surface: "
+            "cache slot %d out of range", cache_slot);
+        return 1;
+    }
+    s = xrdp_egfx_cache_to_surface(egfx->bulk, cache_slot, surface_id,
+                                   num_dst_points, dst_points);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_cache_to_surface");
+}
+
+/******************************************************************************/
+/* RDPGFX_EVICT_CACHE_ENTRY_PDU */
+struct stream *
+xrdp_egfx_evict_cache_entry(struct xrdp_egfx_bulk *bulk, int cache_slot)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_evict_cache_entry:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_EVICTCACHEENTRY, 2);
+    out_uint16_le(s, cache_slot);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_evict_cache_entry(struct xrdp_egfx *egfx, int cache_slot)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_evict_cache_entry:");
+    if (!egfx_cache_slot_ok(egfx, cache_slot))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_evict_cache_entry: "
+            "cache slot %d out of range", cache_slot);
+        return 1;
+    }
+    s = xrdp_egfx_evict_cache_entry(egfx->bulk, cache_slot);
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_evict_cache_entry");
+}
+
+/******************************************************************************/
+/* RDPGFX_CACHE_IMPORT_REPLY_PDU */
+struct stream *
+xrdp_egfx_cache_import_reply(struct xrdp_egfx_bulk *bulk,
+                             int num_cache_slots,
+                             const uint16_t *cache_slots)
+{
+    int index;
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_cache_import_reply:");
+    if (num_cache_slots < 0 ||
+            num_cache_slots >= XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT)
+    {
+        return NULL;
+    }
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_CACHEIMPORTREPLY,
+                       2 + num_cache_slots * 2);
+    out_uint16_le(s, num_cache_slots); /* importedEntriesCount */
+    for (index = 0; index < num_cache_slots; index++)
+    {
+        out_uint16_le(s, cache_slots[index]);
+    }
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
+                                  int num_cache_slots,
+                                  const uint16_t *cache_slots)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_cache_import_reply:");
+    s = xrdp_egfx_cache_import_reply(egfx->bulk, num_cache_slots,
+                                     cache_slots);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_cache_import_reply");
+}
+
+/******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_WINDOW_PDU */
+struct stream *
+xrdp_egfx_map_surface_to_window(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                uint64_t window_id,
+                                int mapped_width, int mapped_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface_to_window:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_MAPSURFACETOWINDOW, 18);
+    out_uint16_le(s, surface_id);
+    out_uint64_le(s, window_id);
+    out_uint32_le(s, mapped_width);
+    out_uint32_le(s, mapped_height);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_map_surface_to_window(struct xrdp_egfx *egfx, int surface_id,
+                                     uint64_t window_id,
+                                     int mapped_width, int mapped_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_map_surface_to_window:");
+    s = xrdp_egfx_map_surface_to_window(egfx->bulk, surface_id, window_id,
+                                        mapped_width, mapped_height);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_map_surface_to_window");
+}
+
+/******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU */
+struct stream *
+xrdp_egfx_map_surface_to_scaled_output(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, int x, int y,
+                                       int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface_to_scaled_output:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT, 20);
+    out_uint16_le(s, surface_id);
+    out_uint16_le(s, 0); /* reserved */
+    out_uint32_le(s, x); /* outputOriginX */
+    out_uint32_le(s, y); /* outputOriginY */
+    out_uint32_le(s, target_width);
+    out_uint32_le(s, target_height);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_map_surface_to_scaled_output(struct xrdp_egfx *egfx,
+        int surface_id, int x, int y,
+        int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_map_surface_to_scaled_output:");
+    if (!xrdp_egfx_scaled_map_supported(egfx))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_map_surface_to_scaled_output: "
+            "not supported by the client");
+        return 1;
+    }
+    s = xrdp_egfx_map_surface_to_scaled_output(egfx->bulk, surface_id, x, y,
+        target_width, target_height);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_map_surface_to_scaled_output");
+}
+
+/******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_SCALED_WINDOW_PDU */
+struct stream *
+xrdp_egfx_map_surface_to_scaled_window(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, uint64_t window_id,
+                                       int mapped_width, int mapped_height,
+                                       int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface_to_scaled_window:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_MAPSURFACETOSCALEDWINDOW, 26);
+    out_uint16_le(s, surface_id);
+    out_uint64_le(s, window_id);
+    out_uint32_le(s, mapped_width);
+    out_uint32_le(s, mapped_height);
+    out_uint32_le(s, target_width);
+    out_uint32_le(s, target_height);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_map_surface_to_scaled_window(struct xrdp_egfx *egfx,
+        int surface_id, uint64_t window_id,
+        int mapped_width, int mapped_height,
+        int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_map_surface_to_scaled_window:");
+    if (!xrdp_egfx_scaled_map_supported(egfx))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_map_surface_to_scaled_window: "
+            "not supported by the client");
+        return 1;
+    }
+    s = xrdp_egfx_map_surface_to_scaled_window(egfx->bulk, surface_id,
+        window_id, mapped_width, mapped_height,
+        target_width, target_height);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_map_surface_to_scaled_window");
+}
+
+/******************************************************************************/
 /* RDPGFX_CMDID_FRAMEACKNOWLEDGE */
 static int
 xrdp_egfx_process_frame_ack(struct xrdp_egfx *egfx, struct stream *s)
@@ -807,6 +1281,10 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
     {
         return 0;
     }
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, capsSetCount);
     if ((capsSetCount < 1) || (capsSetCount > 1024))
     {
@@ -836,8 +1314,18 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
                 break;
             }
             holdp = s->p;
-            // This implicity excludes caps version 101.
-            if (capsDataLength == 4)
+            if (version == XR_RDPGFX_CAPVERSION_101)
+            {
+                /* This version has 16 reserved bytes in place of flags */
+                if (capsDataLength ==
+                        XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH)
+                {
+                    versions[caps_count] = version;
+                    flagss[caps_count] = 0;
+                    caps_count++;
+                }
+            }
+            else if (capsDataLength == 4)
             {
                 in_uint32_le(s, flags);
                 versions[caps_count] = version;
@@ -857,7 +1345,42 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
 }
 
 /******************************************************************************/
+/* RDPGFX_CMDID_CACHEIMPORTOFFER */
 static int
+xrdp_egfx_process_cache_import_offer(struct xrdp_egfx *egfx, struct stream *s)
+{
+    int cacheEntriesCount;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process_cache_import_offer:");
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
+    in_uint16_le(s, cacheEntriesCount);
+    /* each RDPGFX_CACHE_ENTRY_METADATA is a 64-bit cacheKey and a
+       32-bit bitmapLength */
+    if (cacheEntriesCount >= XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT ||
+            !s_check_rem(s, cacheEntriesCount * 12))
+    {
+        return 1;
+    }
+    LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process_cache_import_offer: "
+        "client offered %d cache entries", cacheEntriesCount);
+    if (egfx->caps_version == 0 || egfx->caps_advertise == NULL)
+    {
+        /* Not expected before capabilities are confirmed, and
+           no reply is wanted once the channel is closing */
+        return 0;
+    }
+    /* There is no Bitmap Cache Map carried over from an earlier
+       connection, so none of the offered entries can be imported. A reply
+       is still required (MS-RDPEGFX 3.2.5.16), and tells the client that
+       all the entries can be discarded */
+    return xrdp_egfx_send_cache_import_reply(egfx, 0, NULL);
+}
+
+/******************************************************************************/
+int
 xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
 {
     int error;
@@ -876,17 +1399,19 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
         in_uint16_le(s, cmdId);
         in_uint16_le(s, flags);
         in_uint32_le(s, pduLength);
-        s->end = holdp + pduLength;
         LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process: cmdId 0x%x flags %d"
             " pduLength %d", cmdId, flags, pduLength);
         if (pduLength < 8)
         {
             return 1;
         }
+        /* Check the PDU is all present before using its length to limit
+           what the PDU handlers can read */
         if (!s_check_rem(s, pduLength - 8))
         {
             return 1;
         }
+        s->end = holdp + pduLength;
         switch (cmdId)
         {
             case XR_RDPGFX_CMDID_FRAMEACKNOWLEDGE:
@@ -897,14 +1422,9 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
                 break;
             case XR_RDPGFX_CMDID_QOEFRAMEACKNOWLEDGE:
                 break;
-            /*
-               TODO: Handle Cache Import PDU here.
-               https://github.com/neutrinolabs/xrdp/issues/2502
-               case XR_RDPGFX_CMDID_CACHEIMPORTOFFER:
-               2.2.2.16 RDPGFX_CACHE_IMPORT_OFFER_PDU
-               Reply with
-               2.2.2.17 RDPGFX_CACHE_IMPORT_REPLY_PDU
-            */
+            case XR_RDPGFX_CMDID_CACHEIMPORTOFFER:
+                error = xrdp_egfx_process_cache_import_offer(egfx, s);
+                break;
             default:
                 LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_process:"
                     " unknown cmdId 0x%x", cmdId);

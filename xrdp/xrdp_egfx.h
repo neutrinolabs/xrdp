@@ -50,6 +50,11 @@
 #define XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED  0x00000010
 #define XR_RDPGFX_CAPS_FLAG_AVC_DISABLED    0x00000020
 #define XR_RDPGFX_CAPS_FLAG_AVC_THINCLIENT  0x00000040
+#define XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE 0x00000080
+
+/* RDPGFX_CAPSET_VERSION101 carries 16 reserved bytes rather than a
+   flags field (MS-RDPEGFX 2.2.3.4) */
+#define XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH 16
 
 #define XR_RDPGFX_CMDID_WIRETOSURFACE_1             0x0001
 #define XR_RDPGFX_CMDID_WIRETOSURFACE_2             0x0002
@@ -74,6 +79,16 @@
 #define XR_RDPGFX_CMDID_QOEFRAMEACKNOWLEDGE         0x0016
 #define XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT    0x0017
 #define XR_RDPGFX_CMDID_MAPSURFACETOSCALEDWINDOW    0x0018
+
+/* Bitmap cache limits (MS-RDPEGFX 3.3.1.4). Cache slots are one-based.
+   The smaller limit applies to a 16MB cache, which is selected by
+   RDPGFX_CAPS_FLAG_THINCLIENT, RDPGFX_CAPS_FLAG_SMALL_CACHE or
+   RDPGFX_CAPSET_VERSION103 */
+#define XR_RDPGFX_CACHE_SLOTS_DEFAULT       25600
+#define XR_RDPGFX_CACHE_SLOTS_SMALL         4096
+/* cacheEntriesCount in RDPGFX_CACHE_IMPORT_OFFER_PDU MUST be less than
+   this (MS-RDPEGFX 2.2.2.16) */
+#define XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT  5462
 
 #define XR_QUEUE_DEPTH_UNAVAILABLE          0x00000000
 #define XR_SUSPEND_FRAME_ACKNOWLEDGEMENT    0xFFFFFFFF
@@ -127,6 +142,10 @@ struct xrdp_egfx
     int channel_id;
     int surface_id;
     int frame_id;
+    /* Capability set sent in RDPGFX_CAPS_CONFIRM_PDU. caps_version is
+       zero until capabilities have been confirmed */
+    int caps_version;
+    int caps_flags;
     void *user;
     struct xrdp_egfx_bulk *bulk;
     int (*caps_advertise)(void *user, int num_caps, int *version, int *flags);
@@ -201,6 +220,41 @@ struct stream *
 xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int flags);
 int
 xrdp_egfx_send_capsconfirm(struct xrdp_egfx *egfx, int version, int flags);
+/**
+ * Works out the flags to send in RDPGFX_CAPS_CONFIRM_PDU
+ *
+ * The flags in the confirmed capability set are the ones which apply to
+ * the connection (MS-RDPEGFX 1.7), so they need to describe what the
+ * server is going to do rather than simply echo what the client offered.
+ *
+ * @param version Capability set version selected by the server
+ * @param client_flags Flags the client advertised for that version
+ * @param use_h264 Non-zero if the server will use the H.264 codec
+ * @return flags for the RDPGFX_CAPS_CONFIRM_PDU
+ */
+int
+xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264);
+/**
+ * Number of bitmap cache slots available on the client
+ *
+ * Valid cache slots are 1 to the value returned, inclusive
+ * @return Slot count, or 0 if capabilities have not been confirmed
+ */
+int
+xrdp_egfx_get_max_cache_slots(const struct xrdp_egfx *egfx);
+/**
+ * Whether RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU and
+ * RDPGFX_MAP_SURFACE_TO_SCALED_WINDOW_PDU can be sent to the client
+ */
+int
+xrdp_egfx_scaled_map_supported(const struct xrdp_egfx *egfx);
+/**
+ * Processes one or more RDPGFX PDUs received from the client
+ *
+ * Not static so the unit tests can call it
+ */
+int
+xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s);
 struct stream *
 xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
                            int codec_id, int pixel_format,
@@ -221,6 +275,66 @@ xrdp_egfx_send_wire_to_surface2(struct xrdp_egfx *egfx, int surface_id,
                                 int codec_id, int codec_context_id,
                                 int pixel_format,
                                 void *bitmap_data, int bitmap_data_length);
+struct stream *
+xrdp_egfx_delete_encoding_context(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                  int codec_context_id);
+int
+xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
+                                       int codec_context_id);
+struct stream *
+xrdp_egfx_surface_to_cache(struct xrdp_egfx_bulk *bulk, int surface_id,
+                           uint64_t cache_key, int cache_slot,
+                           const struct xrdp_egfx_rect *src_rect);
+int
+xrdp_egfx_send_surface_to_cache(struct xrdp_egfx *egfx, int surface_id,
+                                uint64_t cache_key, int cache_slot,
+                                const struct xrdp_egfx_rect *src_rect);
+struct stream *
+xrdp_egfx_cache_to_surface(struct xrdp_egfx_bulk *bulk, int cache_slot,
+                           int surface_id, int num_dst_points,
+                           const struct xrdp_egfx_point *dst_points);
+int
+xrdp_egfx_send_cache_to_surface(struct xrdp_egfx *egfx, int cache_slot,
+                                int surface_id, int num_dst_points,
+                                const struct xrdp_egfx_point *dst_points);
+struct stream *
+xrdp_egfx_evict_cache_entry(struct xrdp_egfx_bulk *bulk, int cache_slot);
+int
+xrdp_egfx_send_evict_cache_entry(struct xrdp_egfx *egfx, int cache_slot);
+struct stream *
+xrdp_egfx_cache_import_reply(struct xrdp_egfx_bulk *bulk,
+                             int num_cache_slots,
+                             const uint16_t *cache_slots);
+int
+xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
+                                  int num_cache_slots,
+                                  const uint16_t *cache_slots);
+struct stream *
+xrdp_egfx_map_surface_to_window(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                uint64_t window_id,
+                                int mapped_width, int mapped_height);
+int
+xrdp_egfx_send_map_surface_to_window(struct xrdp_egfx *egfx, int surface_id,
+                                     uint64_t window_id,
+                                     int mapped_width, int mapped_height);
+struct stream *
+xrdp_egfx_map_surface_to_scaled_output(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, int x, int y,
+                                       int target_width, int target_height);
+int
+xrdp_egfx_send_map_surface_to_scaled_output(struct xrdp_egfx *egfx,
+        int surface_id, int x, int y,
+        int target_width, int target_height);
+struct stream *
+xrdp_egfx_map_surface_to_scaled_window(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, uint64_t window_id,
+                                       int mapped_width, int mapped_height,
+                                       int target_width, int target_height);
+int
+xrdp_egfx_send_map_surface_to_scaled_window(struct xrdp_egfx *egfx,
+        int surface_id, uint64_t window_id,
+        int mapped_width, int mapped_height,
+        int target_width, int target_height);
 /*
  * NB: mi below must be such that the (top,left) co-ordinate of
  * the primary monitor is (0.0)

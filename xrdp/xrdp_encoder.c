@@ -1383,6 +1383,213 @@ gfx_mapsurfacetooutput(struct xrdp_encoder *self,
 }
 
 /*****************************************************************************/
+static struct stream *
+gfx_deleteencodingcontext(struct xrdp_encoder *self,
+                          struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int surface_id;
+    int codec_context_id;
+
+    if (!s_check_rem(in_s, 6))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint32_le(in_s, codec_context_id);
+    return xrdp_egfx_delete_encoding_context(bulk, surface_id,
+            codec_context_id);
+}
+
+/*****************************************************************************/
+/* Cache slots are one-based, and limited by the client's cache size */
+static int
+gfx_cache_slot_ok(struct xrdp_encoder *self, int cache_slot)
+{
+    if (cache_slot < 1 ||
+            cache_slot > xrdp_egfx_get_max_cache_slots(self->mm->egfx))
+    {
+        LOG(LOG_LEVEL_WARNING, "GFX cache slot %d out of range", cache_slot);
+        return 0;
+    }
+    return 1;
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_surfacetocache(struct xrdp_encoder *self,
+                   struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int surface_id;
+    uint64_t cache_key;
+    int cache_slot;
+    struct xrdp_egfx_rect src_rect;
+
+    if (!s_check_rem(in_s, 20))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint64_le(in_s, cache_key);
+    in_uint16_le(in_s, cache_slot);
+    in_uint16_le(in_s, src_rect.x1);
+    in_uint16_le(in_s, src_rect.y1);
+    in_uint16_le(in_s, src_rect.x2);
+    in_uint16_le(in_s, src_rect.y2);
+    if (!gfx_cache_slot_ok(self, cache_slot))
+    {
+        return NULL;
+    }
+    return xrdp_egfx_surface_to_cache(bulk, surface_id, cache_key,
+                                      cache_slot, &src_rect);
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_cachetosurface(struct xrdp_encoder *self,
+                   struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int cache_slot;
+    int surface_id;
+    int num_pts;
+    int index;
+    struct xrdp_egfx_point *pts;
+    struct stream *rv;
+
+    if (!s_check_rem(in_s, 6))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, cache_slot);
+    in_uint16_le(in_s, surface_id);
+    in_uint16_le(in_s, num_pts);
+    if (!s_check_rem(in_s, num_pts * 4) ||
+            !gfx_cache_slot_ok(self, cache_slot))
+    {
+        return NULL;
+    }
+    pts = g_new(struct xrdp_egfx_point, num_pts + 1);
+    if (pts == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < num_pts; index++)
+    {
+        in_uint16_le(in_s, pts[index].x);
+        in_uint16_le(in_s, pts[index].y);
+    }
+    rv = xrdp_egfx_cache_to_surface(bulk, cache_slot, surface_id,
+                                    num_pts, pts);
+    g_free(pts);
+    return rv;
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_evictcacheentry(struct xrdp_encoder *self,
+                    struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int cache_slot;
+
+    if (!s_check_rem(in_s, 2))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, cache_slot);
+    if (!gfx_cache_slot_ok(self, cache_slot))
+    {
+        return NULL;
+    }
+    return xrdp_egfx_evict_cache_entry(bulk, cache_slot);
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_mapsurfacetowindow(struct xrdp_encoder *self,
+                       struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int surface_id;
+    uint64_t window_id;
+    int mapped_width;
+    int mapped_height;
+
+    if (!s_check_rem(in_s, 18))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint64_le(in_s, window_id);
+    in_uint32_le(in_s, mapped_width);
+    in_uint32_le(in_s, mapped_height);
+    return xrdp_egfx_map_surface_to_window(bulk, surface_id, window_id,
+                                           mapped_width, mapped_height);
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_mapsurfacetoscaledoutput(struct xrdp_encoder *self,
+                             struct xrdp_egfx_bulk *bulk,
+                             struct stream *in_s)
+{
+    int surface_id;
+    int x;
+    int y;
+    int target_width;
+    int target_height;
+
+    if (!s_check_rem(in_s, 18))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint32_le(in_s, x);
+    in_uint32_le(in_s, y);
+    in_uint32_le(in_s, target_width);
+    in_uint32_le(in_s, target_height);
+    if (!xrdp_egfx_scaled_map_supported(self->mm->egfx))
+    {
+        LOG(LOG_LEVEL_WARNING, "GFX client does not support scaled "
+            "surface mapping");
+        return NULL;
+    }
+    return xrdp_egfx_map_surface_to_scaled_output(bulk, surface_id, x, y,
+            target_width, target_height);
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_mapsurfacetoscaledwindow(struct xrdp_encoder *self,
+                             struct xrdp_egfx_bulk *bulk,
+                             struct stream *in_s)
+{
+    int surface_id;
+    uint64_t window_id;
+    int mapped_width;
+    int mapped_height;
+    int target_width;
+    int target_height;
+
+    if (!s_check_rem(in_s, 26))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint64_le(in_s, window_id);
+    in_uint32_le(in_s, mapped_width);
+    in_uint32_le(in_s, mapped_height);
+    in_uint32_le(in_s, target_width);
+    in_uint32_le(in_s, target_height);
+    if (!xrdp_egfx_scaled_map_supported(self->mm->egfx))
+    {
+        LOG(LOG_LEVEL_WARNING, "GFX client does not support scaled "
+            "surface mapping");
+        return NULL;
+    }
+    return xrdp_egfx_map_surface_to_scaled_window(bulk, surface_id,
+            window_id, mapped_width, mapped_height,
+            target_width, target_height);
+}
+
+/*****************************************************************************/
 /* called from encoder thread */
 static int
 process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
@@ -1428,11 +1635,23 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
             case XR_RDPGFX_CMDID_WIRETOSURFACE_2:       /* 0x0002 */
                 s = gfx_wiretosurface2(self, bulk, &in_s, enc);
                 break;
+            case XR_RDPGFX_CMDID_DELETEENCODINGCONTEXT: /* 0x0003 */
+                s = gfx_deleteencodingcontext(self, bulk, &in_s);
+                break;
             case XR_RDPGFX_CMDID_SOLIDFILL:             /* 0x0004 */
                 s = gfx_solidfill(self, bulk, &in_s);
                 break;
             case XR_RDPGFX_CMDID_SURFACETOSURFACE:      /* 0x0005 */
                 s = gfx_surfacetosurface(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_SURFACETOCACHE:        /* 0x0006 */
+                s = gfx_surfacetocache(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_CACHETOSURFACE:        /* 0x0007 */
+                s = gfx_cachetosurface(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_EVICTCACHEENTRY:       /* 0x0008 */
+                s = gfx_evictcacheentry(self, bulk, &in_s);
                 break;
             case XR_RDPGFX_CMDID_CREATESURFACE:         /* 0x0009 */
                 s = gfx_createsurface(self, bulk, &in_s);
@@ -1452,6 +1671,15 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                 break;
             case XR_RDPGFX_CMDID_MAPSURFACETOOUTPUT:    /* 0x000F */
                 s = gfx_mapsurfacetooutput(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_MAPSURFACETOWINDOW:    /* 0x0015 */
+                s = gfx_mapsurfacetowindow(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT: /* 0x0017 */
+                s = gfx_mapsurfacetoscaledoutput(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_MAPSURFACETOSCALEDWINDOW: /* 0x0018 */
+                s = gfx_mapsurfacetoscaledwindow(self, bulk, &in_s);
                 break;
             default:
                 break;
