@@ -24,6 +24,7 @@
 #endif
 
 #include "xrdp.h"
+#include "explicit_bzero.h"
 #include "string_calls.h"
 #include "scp.h"
 
@@ -49,37 +50,47 @@ xrdp_wm_prompt_notify(struct xrdp_bitmap *wnd,
                       struct xrdp_bitmap *sender,
                       int msg, long param1, long param2)
 {
-    struct trans *sesman_trans;
+    struct xrdp_wm *wm;
     int error;
     struct xrdp_bitmap *edit;
 
     LOG_DEVEL(LOG_LEVEL_INFO, "xrdp_wm_prompt_notify:");
 
-    if ((sender == NULL) || (wnd == NULL) || (wnd->owner == NULL))
+    if (msg != 1 || sender == NULL || wnd == NULL || wnd->owner == NULL ||
+            (sender->id != PROMPT_OK_BUT_ID && sender->id != PROMPT_CAN_BUT_ID))
     {
         return 0;
     }
 
-    if (msg == 1) /* click */
+    wm = wnd->wm;
+    if (!wm->prompt_waiting_for_reply || wm->mm->sesman_trans == NULL)
     {
-        if (sender->id == PROMPT_OK_BUT_ID) /* ok button */
-        {
-            sesman_trans = wnd->wm->mm->sesman_trans;
-            if (sesman_trans != NULL)
-            {
-                edit = xrdp_bitmap_get_child_by_id(wnd->wm->prompt_wnd,
-                                                   PROMPT_EDIT_ID);
-                if (edit != NULL)
-                {
-                    error = scp_send_prompt_response(sesman_trans,
-                                                     edit->caption1);
-                    LOG(LOG_LEVEL_INFO, "scp_send_prompt_response rv %d",
-                        error);
-                    g_memset(edit->caption1, 0, 256);
-                    edit->edit_pos = 0;
-                }
-            }
-        }
+        return 0;
+    }
+    edit = xrdp_bitmap_get_child_by_id(wnd, PROMPT_EDIT_ID);
+    if (edit == NULL)
+    {
+        return 0;
+    }
+
+    wm->prompt_waiting_for_reply = 0;
+    if (sender->id == PROMPT_CAN_BUT_ID)
+    {
+        error = scp_send_prompt_cancel(wm->mm->sesman_trans);
+    }
+    else
+    {
+        error = scp_send_prompt_response(wm->mm->sesman_trans, edit->caption1);
+    }
+    explicit_bzero(edit->caption1, 256);
+    edit->edit_pos = 0;
+
+    if (error != 0)
+    {
+        wm->mm->mmcs_expecting_msg = 0;
+        wm->mm->delete_sesman_trans = 1;
+        xrdp_wm_log_msg(wm, LOG_LEVEL_ERROR, "Could not reply to PAM prompt");
+        xrdp_wm_mod_connect_done(wm, 1);
     }
 
     return 0;

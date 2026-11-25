@@ -43,6 +43,7 @@ struct conv_func_data
     const char *pass;
     struct trans *scp_trans;
     int pass_used;
+    int cancelled;
 };
 
 struct auth_info
@@ -123,8 +124,12 @@ conv_echo_off(struct conv_func_data *cf_data, const struct pam_message *msg,
         {
             error = scp_msg_in_wait_available(cf_data->scp_trans);
             LOG_DEVEL(LOG_LEVEL_INFO, "scp_msg_in_wait_available %d", error);
-            code = scp_msg_in_get_msgno(cf_data->scp_trans);
-            if (code == E_SCP_PROMPT_RESPONSE)
+            code = error == 0 ? scp_msg_in_get_msgno(cf_data->scp_trans) : 0;
+            if (code == E_SCP_PROMPT_CANCEL)
+            {
+                cf_data->cancelled = 1;
+            }
+            else if (code == E_SCP_PROMPT_RESPONSE)
             {
                 error = scp_get_prompt_response(cf_data->scp_trans,
                                                 &response);
@@ -141,7 +146,7 @@ conv_echo_off(struct conv_func_data *cf_data, const struct pam_message *msg,
                         error);
                 }
             }
-            else
+            else if (error == 0)
             {
                 LOG(LOG_LEVEL_ERROR, "scp_msg_in_get_msgno returned "
                     "unexpected code %d expected E_SCP_PROMPT_RESPONSE",
@@ -180,8 +185,12 @@ conv_echo_on(struct conv_func_data *cf_data, const struct pam_message *msg,
         {
             error = scp_msg_in_wait_available(cf_data->scp_trans);
             LOG_DEVEL(LOG_LEVEL_INFO, "scp_msg_in_wait_available %d", error);
-            code = scp_msg_in_get_msgno(cf_data->scp_trans);
-            if (code == E_SCP_PROMPT_RESPONSE)
+            code = error == 0 ? scp_msg_in_get_msgno(cf_data->scp_trans) : 0;
+            if (code == E_SCP_PROMPT_CANCEL)
+            {
+                cf_data->cancelled = 1;
+            }
+            else if (code == E_SCP_PROMPT_RESPONSE)
             {
                 error = scp_get_prompt_response(cf_data->scp_trans,
                                                 &response);
@@ -198,7 +207,7 @@ conv_echo_on(struct conv_func_data *cf_data, const struct pam_message *msg,
                         error);
                 }
             }
-            else
+            else if (error == 0)
             {
                 LOG(LOG_LEVEL_ERROR, "scp_msg_in_get_msgno returned "
                     "unexpected code %d expected E_SCP_PROMPT_RESPONSE",
@@ -298,7 +307,8 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
 
     conv_func_data = (struct conv_func_data *) appdata_ptr;
 
-    if (num_msg <= 0 || num_msg > PAM_MAX_NUM_MSG)
+    if (num_msg <= 0 || num_msg > PAM_MAX_NUM_MSG ||
+            (conv_func_data != NULL && conv_func_data->cancelled))
     {
         rv = PAM_CONV_ERR;
     }
@@ -424,6 +434,7 @@ common_pam_login(struct auth_info *auth_info,
     conv_func_data.pass = (authentication_required) ? pass : NULL;
     conv_func_data.scp_trans = scp_trans;
     conv_func_data.pass_used = 0;
+    conv_func_data.cancelled = 0;
     pamc.conv = verify_pam_conv;
     pamc.appdata_ptr = (void *) &conv_func_data;
 
@@ -459,6 +470,10 @@ common_pam_login(struct auth_info *auth_info,
     {
         perror = pam_authenticate(auth_info->ph, 0);
 
+        if (conv_func_data.cancelled)
+        {
+            goto cancelled;
+        }
         if (perror != PAM_SUCCESS)
         {
             LOG(LOG_LEVEL_ERROR, "pam_authenticate failed: %s",
@@ -474,10 +489,18 @@ common_pam_login(struct auth_info *auth_info,
        been authenticated.
      */
     perror = pam_acct_mgmt(auth_info->ph, 0);
+    if (conv_func_data.cancelled)
+    {
+        goto cancelled;
+    }
     if (perror == PAM_NEW_AUTHTOK_REQD)
     {
         /* password has expired and needs to be changed */
         perror = pam_chauthtok(auth_info->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
+        if (conv_func_data.cancelled)
+        {
+            goto cancelled;
+        }
         if (perror != PAM_SUCCESS)
         {
             LOG(LOG_LEVEL_ERROR, "pam_chauthtok failed: %s",
@@ -505,6 +528,10 @@ common_pam_login(struct auth_info *auth_info,
     }
 
     return E_SCP_LOGIN_OK;
+
+cancelled:
+    pam_end(auth_info->ph, PAM_CONV_ERR);
+    return E_SCP_LOGIN_CANCELLED;
 }
 
 

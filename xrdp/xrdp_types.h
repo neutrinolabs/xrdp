@@ -600,6 +600,7 @@ struct xrdp_wm
     struct xrdp_region *screen_dirty_region;
     unsigned int last_screen_draw_time;
     struct xrdp_bitmap *prompt_wnd;
+    int prompt_waiting_for_reply;
 };
 
 /* rdp process */

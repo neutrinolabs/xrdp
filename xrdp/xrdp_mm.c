@@ -2750,7 +2750,12 @@ xrdp_mm_process_login_response(struct xrdp_mm *self)
                                 &server_closed, &self->uid);
     if (rv == 0)
     {
-        if (login_result != E_SCP_LOGIN_OK)
+        if (login_result == E_SCP_LOGIN_CANCELLED && !server_closed)
+        {
+            self->wm->client_info->rdp_autologin = 0;
+            xrdp_wm_set_login_state(self->wm, WMLS_RESET);
+        }
+        else if (login_result != E_SCP_LOGIN_OK)
         {
             char buff[128];
             scp_login_status_to_str(login_result, buff, sizeof(buff));
@@ -2929,6 +2934,8 @@ xrdp_mm_process_prompt_request(struct xrdp_mm *self)
         }
         if (self->wm->prompt_wnd != NULL)
         {
+            self->wm->prompt_waiting_for_reply =
+                prompt_type == SCP_PROMPT_ECHO_OFF || prompt_type == SCP_PROMPT_ECHO_ON;
             xrdp_prompt_add_prompt(self->wm->prompt_wnd, prompt,
                                    prompt_type == SCP_PROMPT_ECHO_OFF);
         }
