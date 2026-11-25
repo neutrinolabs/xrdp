@@ -1300,11 +1300,17 @@ xrdp_mm_egfx_caps_advertise(void *user, int caps_count,
 
     if (best_index >= 0)
     {
+        /* The flags in the confirm PDU are the ones which apply to the
+           connection, so they must reflect the codec we've chosen */
+        int confirm_flags =
+            xrdp_egfx_caps_confirm_flags(ver_flags[best_index].version,
+                                         ver_flags[best_index].flags,
+                                         self->egfx_flags == XRDP_EGFX_H264);
         LOG(LOG_LEVEL_INFO, "  replying version 0x%8.8x flags 0x%8.8x",
-            ver_flags[best_index].version, ver_flags[best_index].flags);
+            ver_flags[best_index].version, confirm_flags);
         error = xrdp_egfx_send_capsconfirm(self->egfx,
                                            ver_flags[best_index].version,
-                                           ver_flags[best_index].flags);
+                                           confirm_flags);
         LOG(LOG_LEVEL_INFO, "xrdp_mm_egfx_caps_advertise: xrdp_egfx_send_capsconfirm "
             "error %d best_index %d", error, best_index);
         error = xrdp_egfx_send_reset_graphics(self->egfx,

@@ -50,6 +50,11 @@
 #define XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED  0x00000010
 #define XR_RDPGFX_CAPS_FLAG_AVC_DISABLED    0x00000020
 #define XR_RDPGFX_CAPS_FLAG_AVC_THINCLIENT  0x00000040
+#define XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE 0x00000080
+
+/* RDPGFX_CAPSET_VERSION101 carries 16 reserved bytes rather than a
+   flags field (MS-RDPEGFX 2.2.3.4) */
+#define XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH 16
 
 #define XR_RDPGFX_CMDID_WIRETOSURFACE_1             0x0001
 #define XR_RDPGFX_CMDID_WIRETOSURFACE_2             0x0002
@@ -127,6 +132,10 @@ struct xrdp_egfx
     int channel_id;
     int surface_id;
     int frame_id;
+    /* Capability set sent in RDPGFX_CAPS_CONFIRM_PDU. caps_version is
+       zero until capabilities have been confirmed */
+    int caps_version;
+    int caps_flags;
     void *user;
     struct xrdp_egfx_bulk *bulk;
     int (*caps_advertise)(void *user, int num_caps, int *version, int *flags);
@@ -201,6 +210,20 @@ struct stream *
 xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int flags);
 int
 xrdp_egfx_send_capsconfirm(struct xrdp_egfx *egfx, int version, int flags);
+/**
+ * Works out the flags to send in RDPGFX_CAPS_CONFIRM_PDU
+ *
+ * The flags in the confirmed capability set are the ones which apply to
+ * the connection (MS-RDPEGFX 1.7), so they need to describe what the
+ * server is going to do rather than simply echo what the client offered.
+ *
+ * @param version Capability set version selected by the server
+ * @param client_flags Flags the client advertised for that version
+ * @param use_h264 Non-zero if the server will use the H.264 codec
+ * @return flags for the RDPGFX_CAPS_CONFIRM_PDU
+ */
+int
+xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264);
 /**
  * Processes one or more RDPGFX PDUs received from the client
  *

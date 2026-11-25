@@ -466,8 +466,17 @@ xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int flags)
     out_uint16_le(s, 0); /* flags = 0 */
     s_push_layer(s, iso_hdr, 4); /* pduLength, set later */
     out_uint32_le(s, version); /* version */
-    out_uint32_le(s, 4); /* capsDataLength */
-    out_uint32_le(s, flags);
+    if (version == XR_RDPGFX_CAPVERSION_101)
+    {
+        /* RDPGFX_CAPSET_VERSION101 has no flags */
+        out_uint32_le(s, XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH);
+        out_uint8s(s, XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH); /* reserved */
+    }
+    else
+    {
+        out_uint32_le(s, 4); /* capsDataLength */
+        out_uint32_le(s, flags);
+    }
     s_mark_end(s);
     bytes = (int) ((s->end - s->iso_hdr) + 4);
     s_pop_layer(s, iso_hdr);
@@ -483,6 +492,12 @@ xrdp_egfx_send_capsconfirm(struct xrdp_egfx *egfx, int version, int flags)
     struct stream *s;
 
     LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_capsconfirm:");
+    if (version == XR_RDPGFX_CAPVERSION_101)
+    {
+        flags = 0;
+    }
+    egfx->caps_version = version;
+    egfx->caps_flags = flags;
     s = xrdp_egfx_capsconfirm(egfx->bulk, version, flags);
     error = xrdp_egfx_send_s(egfx, s);
     LOG(LOG_LEVEL_DEBUG, "xrdp_egfx_send_capsconfirm: xrdp_egfx_send_s "
@@ -760,6 +775,41 @@ xrdp_egfx_send_reset_graphics(struct xrdp_egfx *egfx, int width, int height,
 }
 
 /******************************************************************************/
+int
+xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264)
+{
+    int flags = client_flags;
+
+    switch (version)
+    {
+        case XR_RDPGFX_CAPVERSION_8:
+            /* no codec flags in this version */
+            break;
+        case XR_RDPGFX_CAPVERSION_81:
+            if (!use_h264)
+            {
+                flags &= ~XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED;
+            }
+            break;
+        case XR_RDPGFX_CAPVERSION_101:
+            /* 16 reserved bytes, no flags */
+            flags = 0;
+            break;
+        default:
+            /* RDPGFX_CAPSET_VERSION10 and later */
+            if (!use_h264)
+            {
+                /* RDPGFX_CAPS_FLAG_AVC_THINCLIENT MUST NOT be set
+                   together with RDPGFX_CAPS_FLAG_AVC_DISABLED */
+                flags |= XR_RDPGFX_CAPS_FLAG_AVC_DISABLED;
+                flags &= ~XR_RDPGFX_CAPS_FLAG_AVC_THINCLIENT;
+            }
+            break;
+    }
+    return flags;
+}
+
+/******************************************************************************/
 /* RDPGFX_CMDID_FRAMEACKNOWLEDGE */
 static int
 xrdp_egfx_process_frame_ack(struct xrdp_egfx *egfx, struct stream *s)
@@ -840,8 +890,18 @@ xrdp_egfx_process_capsadvertise(struct xrdp_egfx *egfx, struct stream *s)
                 break;
             }
             holdp = s->p;
-            // This implicity excludes caps version 101.
-            if (capsDataLength == 4)
+            if (version == XR_RDPGFX_CAPVERSION_101)
+            {
+                /* This version has 16 reserved bytes in place of flags */
+                if (capsDataLength ==
+                        XR_RDPGFX_CAPSET_VERSION101_DATA_LENGTH)
+                {
+                    versions[caps_count] = version;
+                    flagss[caps_count] = 0;
+                    caps_count++;
+                }
+            }
+            else if (capsDataLength == 4)
             {
                 in_uint32_le(s, flags);
                 versions[caps_count] = version;

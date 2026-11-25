@@ -287,6 +287,27 @@ START_TEST(test_xrdp_egfx_capsconfirm)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_CAPS_CONFIRM_PDU containing RDPGFX_CAPSET_VERSION101 */
+START_TEST(test_xrdp_egfx_capsconfirm_version101)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x13, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00,
+        0x00, 0x01, 0x0A, 0x00, /* version */
+        0x10, 0x00, 0x00, 0x00, /* capsDataLength */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* reserved */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    /* The flags are ignored for this version */
+    CHECK_STREAM(xrdp_egfx_capsconfirm(NULL, XR_RDPGFX_CAPVERSION_101,
+                                       0x12345678),
+                 expected);
+}
+END_TEST
+
+/******************************************************************************/
 /* RDPGFX_WIRE_TO_SURFACE_PDU_1, bitmap data in a single segment */
 START_TEST(test_xrdp_egfx_wire_to_surface1)
 {
@@ -549,6 +570,119 @@ START_TEST(test_xrdp_egfx_reset_graphics_max_monitors)
 END_TEST
 
 /******************************************************************************/
+START_TEST(test_xrdp_egfx_caps_confirm_flags)
+{
+    const int thin = XR_RDPGFX_CAPS_FLAG_THINCLIENT;
+    const int small = XR_RDPGFX_CAPS_FLAG_SMALL_CACHE;
+    const int avc420 = XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED;
+    const int avc_off = XR_RDPGFX_CAPS_FLAG_AVC_DISABLED;
+    const int avc_thin = XR_RDPGFX_CAPS_FLAG_AVC_THINCLIENT;
+    const int no_scale = XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE;
+
+    /* Version 8 has no codec flags */
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_8, thin, 0),
+        thin);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_8, small, 1),
+        small);
+
+    /* Version 8.1 says whether AVC420 will be used */
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_81,
+                                     small | avc420, 1),
+        small | avc420);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_81,
+                                     small | avc420, 0),
+        small);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_81, thin, 0),
+        thin);
+
+    /* Version 10.1 has no flags */
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_101, 0x1234, 0),
+        0);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_101, 0x1234, 1),
+        0);
+
+    /* Version 10 and later say whether AVC is not being used */
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_10, 0, 1),
+        0);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_10, 0, 0),
+        avc_off);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_102,
+                                     small | avc_off, 0),
+        small | avc_off);
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_107,
+                                     small | avc_thin | no_scale, 1),
+        small | avc_thin | no_scale);
+    /* AVC_THINCLIENT can't be set along with AVC_DISABLED */
+    ck_assert_int_eq(
+        xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_107,
+                                     small | avc_thin | no_scale, 0),
+        small | avc_off | no_scale);
+}
+END_TEST
+
+/******************************************************************************/
+/* RDPGFX_CAPS_ADVERTISE_PDU */
+START_TEST(test_xrdp_egfx_process_caps_advertise)
+{
+    static const unsigned char pdu[] =
+    {
+        0x12, 0x00, 0x00, 0x00, 0x56, 0x00, 0x00, 0x00,
+        0x05, 0x00,             /* capsSetCount */
+        /* RDPGFX_CAPSET_VERSION8 */
+        0x04, 0x00, 0x08, 0x00, 0x04, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00,
+        /* RDPGFX_CAPSET_VERSION101 */
+        0x00, 0x01, 0x0A, 0x00, 0x10, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        /* A capability set we don't know about, with more data
+           than we are able to make use of */
+        0x00, 0x00, 0x0B, 0x00, 0x08, 0x00, 0x00, 0x00,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        /* RDPGFX_CAPSET_VERSION101 of the wrong length */
+        0x00, 0x01, 0x0A, 0x00, 0x04, 0x00, 0x00, 0x00,
+        0xFF, 0xFF, 0xFF, 0xFF,
+        /* RDPGFX_CAPSET_VERSION107 */
+        0x01, 0x07, 0x0A, 0x00, 0x04, 0x00, 0x00, 0x00,
+        0x20, 0x00, 0x00, 0x00
+    };
+    struct xrdp_egfx egfx;
+    struct caps_result result;
+    struct stream s;
+
+    ck_assert_int_eq((int)sizeof(pdu), 0x56);
+
+    g_memset(&egfx, 0, sizeof(egfx));
+    g_memset(&result, 0, sizeof(result));
+    egfx.user = &result;
+    egfx.caps_advertise = test_caps_advertise;
+
+    set_in_stream(&s, pdu, sizeof(pdu));
+    ck_assert_int_eq(xrdp_egfx_process(&egfx, &s), 0);
+
+    ck_assert_int_eq(result.calls, 1);
+    ck_assert_int_eq(result.num_caps, 3);
+    ck_assert_int_eq(result.versions[0], XR_RDPGFX_CAPVERSION_8);
+    ck_assert_int_eq(result.flags[0], XR_RDPGFX_CAPS_FLAG_SMALL_CACHE);
+    ck_assert_int_eq(result.versions[1], XR_RDPGFX_CAPVERSION_101);
+    ck_assert_int_eq(result.flags[1], 0);
+    ck_assert_int_eq(result.versions[2], XR_RDPGFX_CAPVERSION_107);
+    ck_assert_int_eq(result.flags[2], XR_RDPGFX_CAPS_FLAG_AVC_DISABLED);
+}
+END_TEST
+
+/******************************************************************************/
 START_TEST(test_xrdp_egfx_process_caps_advertise_bad)
 {
     /* Two capability sets promised, but only one present */
@@ -730,6 +864,7 @@ make_suite_egfx_base_functions(void)
 {
     Suite *s;
     TCase *tc_builders;
+    TCase *tc_caps;
     TCase *tc_process;
 
     s = suite_create("test_xrdp_egfx_base_functions");
@@ -743,6 +878,7 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_frame_start);
     tcase_add_test(tc_builders, test_xrdp_egfx_frame_end);
     tcase_add_test(tc_builders, test_xrdp_egfx_capsconfirm);
+    tcase_add_test(tc_builders, test_xrdp_egfx_capsconfirm_version101);
     tcase_add_test(tc_builders, test_xrdp_egfx_wire_to_surface1);
     tcase_add_test(tc_builders,
                    test_xrdp_egfx_wire_to_surface1_multi_segment);
@@ -752,7 +888,12 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_max_monitors);
     suite_add_tcase(s, tc_builders);
 
+    tc_caps = tcase_create("xrdp_egfx_capabilities");
+    tcase_add_test(tc_caps, test_xrdp_egfx_caps_confirm_flags);
+    suite_add_tcase(s, tc_caps);
+
     tc_process = tcase_create("xrdp_egfx_process");
+    tcase_add_test(tc_process, test_xrdp_egfx_process_caps_advertise);
     tcase_add_test(tc_process, test_xrdp_egfx_process_caps_advertise_bad);
     tcase_add_test(tc_process, test_xrdp_egfx_process_frame_ack);
     tcase_add_test(tc_process, test_xrdp_egfx_process_bad_pdu);
