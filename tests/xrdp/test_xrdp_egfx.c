@@ -587,6 +587,81 @@ START_TEST(test_xrdp_egfx_delete_encoding_context)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_SURFACE_TO_CACHE_PDU */
+START_TEST(test_xrdp_egfx_surface_to_cache)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x06, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00,
+        0x05, 0x00,             /* surfaceId */
+        0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, /* cacheKey */
+        0x02, 0x01,             /* cacheSlot */
+        0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00 /* rectSrc */
+    };
+    static const struct xrdp_egfx_rect src_rect = {1, 2, 3, 4};
+
+    CHECK_STREAM(xrdp_egfx_surface_to_cache(NULL, 5, 0x1122334455667788ULL,
+                                            0x0102, &src_rect),
+                 expected);
+}
+END_TEST
+
+/******************************************************************************/
+/* RDPGFX_CACHE_TO_SURFACE_PDU */
+START_TEST(test_xrdp_egfx_cache_to_surface)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x07, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00,
+        0x02, 0x01,             /* cacheSlot */
+        0x05, 0x00,             /* surfaceId */
+        0x02, 0x00,             /* destPtsCount */
+        0x0A, 0x00, 0x14, 0x00,
+        0x1E, 0x00, 0x28, 0x00
+    };
+    static const unsigned char expected_no_points[] =
+    {
+        0xE0, 0x04,
+        0x07, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x00, 0x00,
+        0x02, 0x01,             /* cacheSlot */
+        0x05, 0x00,             /* surfaceId */
+        0x00, 0x00              /* destPtsCount */
+    };
+    static const struct xrdp_egfx_point pts[] =
+    {
+        {10, 20}, {30, 40}
+    };
+
+    CHECK_STREAM(xrdp_egfx_cache_to_surface(NULL, 0x0102, 5, 2, pts),
+                 expected);
+    CHECK_STREAM(xrdp_egfx_cache_to_surface(NULL, 0x0102, 5, 0, NULL),
+                 expected_no_points);
+
+    /* destPtsCount is a 16-bit field */
+    ck_assert_ptr_null(xrdp_egfx_cache_to_surface(NULL, 0x0102, 5, -1, pts));
+    ck_assert_ptr_null(xrdp_egfx_cache_to_surface(NULL, 0x0102, 5,
+                       0x10000, pts));
+}
+END_TEST
+
+/******************************************************************************/
+/* RDPGFX_EVICT_CACHE_ENTRY_PDU */
+START_TEST(test_xrdp_egfx_evict_cache_entry)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x08, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00,
+        0x02, 0x01              /* cacheSlot */
+    };
+
+    CHECK_STREAM(xrdp_egfx_evict_cache_entry(NULL, 0x0102), expected);
+}
+END_TEST
+
+/******************************************************************************/
 /* RDPGFX_CACHE_IMPORT_REPLY_PDU */
 START_TEST(test_xrdp_egfx_cache_import_reply)
 {
@@ -677,6 +752,73 @@ START_TEST(test_xrdp_egfx_caps_confirm_flags)
         xrdp_egfx_caps_confirm_flags(XR_RDPGFX_CAPVERSION_107,
                                      small | avc_thin | no_scale, 0),
         small | avc_off | no_scale);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_xrdp_egfx_get_max_cache_slots)
+{
+    struct xrdp_egfx egfx;
+
+    g_memset(&egfx, 0, sizeof(egfx));
+    /* Capabilities not confirmed */
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 0);
+
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_8;
+    egfx.caps_flags = 0;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 25600);
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_THINCLIENT;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 4096);
+
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_81;
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_SMALL_CACHE |
+                      XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 4096);
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_AVC420_ENABLED;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 25600);
+
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_101;
+    egfx.caps_flags = 0;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 25600);
+
+    /* Version 10.3 always has the small cache */
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_103;
+    egfx.caps_flags = 0;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 4096);
+
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_107;
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_AVC_DISABLED;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 25600);
+    egfx.caps_flags |= XR_RDPGFX_CAPS_FLAG_SMALL_CACHE;
+    ck_assert_int_eq(xrdp_egfx_get_max_cache_slots(&egfx), 4096);
+}
+END_TEST
+
+/******************************************************************************/
+/* Cache slots the client doesn't have are rejected before anything
+   is sent */
+START_TEST(test_xrdp_egfx_send_cache_checks)
+{
+    static const struct xrdp_egfx_rect src_rect = {1, 2, 3, 4};
+    static const struct xrdp_egfx_point pt = {10, 20};
+    struct xrdp_egfx egfx;
+
+    /* There's no session in this structure, so anything which
+       gets past the checks will fail the test by crashing */
+    g_memset(&egfx, 0, sizeof(egfx));
+
+    /* Cache slots are one-based */
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_107;
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_SMALL_CACHE;
+    ck_assert_int_ne(xrdp_egfx_send_surface_to_cache(&egfx, 1, 99, 0,
+                     &src_rect), 0);
+    ck_assert_int_ne(xrdp_egfx_send_surface_to_cache(&egfx, 1, 99, 4097,
+                     &src_rect), 0);
+    ck_assert_int_ne(xrdp_egfx_send_cache_to_surface(&egfx, 0, 1, 1, &pt), 0);
+    ck_assert_int_ne(xrdp_egfx_send_cache_to_surface(&egfx, 4097, 1, 1, &pt),
+                     0);
+    ck_assert_int_ne(xrdp_egfx_send_evict_cache_entry(&egfx, 0), 0);
+    ck_assert_int_ne(xrdp_egfx_send_evict_cache_entry(&egfx, 4097), 0);
 }
 END_TEST
 
@@ -997,11 +1139,16 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_one_monitor);
     tcase_add_test(tc_builders, test_xrdp_egfx_reset_graphics_max_monitors);
     tcase_add_test(tc_builders, test_xrdp_egfx_delete_encoding_context);
+    tcase_add_test(tc_builders, test_xrdp_egfx_surface_to_cache);
+    tcase_add_test(tc_builders, test_xrdp_egfx_cache_to_surface);
+    tcase_add_test(tc_builders, test_xrdp_egfx_evict_cache_entry);
     tcase_add_test(tc_builders, test_xrdp_egfx_cache_import_reply);
     suite_add_tcase(s, tc_builders);
 
     tc_caps = tcase_create("xrdp_egfx_capabilities");
     tcase_add_test(tc_caps, test_xrdp_egfx_caps_confirm_flags);
+    tcase_add_test(tc_caps, test_xrdp_egfx_get_max_cache_slots);
+    tcase_add_test(tc_caps, test_xrdp_egfx_send_cache_checks);
     suite_add_tcase(s, tc_caps);
 
     tc_process = tcase_create("xrdp_egfx_process");

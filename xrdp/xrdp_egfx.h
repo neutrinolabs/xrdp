@@ -80,6 +80,12 @@
 #define XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT    0x0017
 #define XR_RDPGFX_CMDID_MAPSURFACETOSCALEDWINDOW    0x0018
 
+/* Bitmap cache limits (MS-RDPEGFX 3.3.1.4). Cache slots are one-based.
+   The smaller limit applies to a 16MB cache, which is selected by
+   RDPGFX_CAPS_FLAG_THINCLIENT, RDPGFX_CAPS_FLAG_SMALL_CACHE or
+   RDPGFX_CAPSET_VERSION103 */
+#define XR_RDPGFX_CACHE_SLOTS_DEFAULT       25600
+#define XR_RDPGFX_CACHE_SLOTS_SMALL         4096
 /* cacheEntriesCount in RDPGFX_CACHE_IMPORT_OFFER_PDU MUST be less than
    this (MS-RDPEGFX 2.2.2.16) */
 #define XR_RDPGFX_CACHE_IMPORT_OFFER_LIMIT  5462
@@ -229,6 +235,14 @@ xrdp_egfx_send_capsconfirm(struct xrdp_egfx *egfx, int version, int flags);
 int
 xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264);
 /**
+ * Number of bitmap cache slots available on the client
+ *
+ * Valid cache slots are 1 to the value returned, inclusive
+ * @return Slot count, or 0 if capabilities have not been confirmed
+ */
+int
+xrdp_egfx_get_max_cache_slots(const struct xrdp_egfx *egfx);
+/**
  * Processes one or more RDPGFX PDUs received from the client
  *
  * Not static so the unit tests can call it
@@ -261,6 +275,26 @@ xrdp_egfx_delete_encoding_context(struct xrdp_egfx_bulk *bulk, int surface_id,
 int
 xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
                                        int codec_context_id);
+struct stream *
+xrdp_egfx_surface_to_cache(struct xrdp_egfx_bulk *bulk, int surface_id,
+                           uint64_t cache_key, int cache_slot,
+                           const struct xrdp_egfx_rect *src_rect);
+int
+xrdp_egfx_send_surface_to_cache(struct xrdp_egfx *egfx, int surface_id,
+                                uint64_t cache_key, int cache_slot,
+                                const struct xrdp_egfx_rect *src_rect);
+struct stream *
+xrdp_egfx_cache_to_surface(struct xrdp_egfx_bulk *bulk, int cache_slot,
+                           int surface_id, int num_dst_points,
+                           const struct xrdp_egfx_point *dst_points);
+int
+xrdp_egfx_send_cache_to_surface(struct xrdp_egfx *egfx, int cache_slot,
+                                int surface_id, int num_dst_points,
+                                const struct xrdp_egfx_point *dst_points);
+struct stream *
+xrdp_egfx_evict_cache_entry(struct xrdp_egfx_bulk *bulk, int cache_slot);
+int
+xrdp_egfx_send_evict_cache_entry(struct xrdp_egfx *egfx, int cache_slot);
 struct stream *
 xrdp_egfx_cache_import_reply(struct xrdp_egfx_bulk *bulk,
                              int num_cache_slots,

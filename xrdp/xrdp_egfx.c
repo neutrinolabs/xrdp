@@ -810,6 +810,48 @@ xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264)
 }
 
 /******************************************************************************/
+int
+xrdp_egfx_get_max_cache_slots(const struct xrdp_egfx *egfx)
+{
+    int small_cache;
+
+    switch (egfx->caps_version)
+    {
+        case 0:
+            /* capabilities not confirmed */
+            return 0;
+        case XR_RDPGFX_CAPVERSION_8:
+        case XR_RDPGFX_CAPVERSION_81:
+            small_cache = (egfx->caps_flags &
+                           (XR_RDPGFX_CAPS_FLAG_THINCLIENT |
+                            XR_RDPGFX_CAPS_FLAG_SMALL_CACHE)) != 0;
+            break;
+        case XR_RDPGFX_CAPVERSION_101:
+            small_cache = 0;
+            break;
+        case XR_RDPGFX_CAPVERSION_103:
+            /* this version implies a 16MB cache */
+            small_cache = 1;
+            break;
+        default:
+            small_cache = (egfx->caps_flags &
+                           XR_RDPGFX_CAPS_FLAG_SMALL_CACHE) != 0;
+            break;
+    }
+    return small_cache ? XR_RDPGFX_CACHE_SLOTS_SMALL :
+           XR_RDPGFX_CACHE_SLOTS_DEFAULT;
+}
+
+/******************************************************************************/
+/* Checks a cache slot is in range for the confirmed capabilities */
+static int
+egfx_cache_slot_ok(const struct xrdp_egfx *egfx, int cache_slot)
+{
+    return cache_slot >= 1 &&
+           cache_slot <= xrdp_egfx_get_max_cache_slots(egfx);
+}
+
+/******************************************************************************/
 /* Allocates a stream and writes the headers for a single segment PDU.
    The pduLength is filled in by egfx_pdu_end() */
 static struct stream *
@@ -884,6 +926,132 @@ xrdp_egfx_send_delete_encoding_context(struct xrdp_egfx *egfx, int surface_id,
                                           codec_context_id);
     return egfx_send_and_free(egfx, s,
                               "xrdp_egfx_send_delete_encoding_context");
+}
+
+/******************************************************************************/
+/* RDPGFX_SURFACE_TO_CACHE_PDU */
+struct stream *
+xrdp_egfx_surface_to_cache(struct xrdp_egfx_bulk *bulk, int surface_id,
+                           uint64_t cache_key, int cache_slot,
+                           const struct xrdp_egfx_rect *src_rect)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_surface_to_cache:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_SURFACETOCACHE, 20);
+    out_uint16_le(s, surface_id);
+    out_uint64_le(s, cache_key);
+    out_uint16_le(s, cache_slot);
+    out_uint16_le(s, src_rect->x1);
+    out_uint16_le(s, src_rect->y1);
+    out_uint16_le(s, src_rect->x2);
+    out_uint16_le(s, src_rect->y2);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_surface_to_cache(struct xrdp_egfx *egfx, int surface_id,
+                                uint64_t cache_key, int cache_slot,
+                                const struct xrdp_egfx_rect *src_rect)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_surface_to_cache:");
+    if (!egfx_cache_slot_ok(egfx, cache_slot))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_surface_to_cache: "
+            "cache slot %d out of range", cache_slot);
+        return 1;
+    }
+    s = xrdp_egfx_surface_to_cache(egfx->bulk, surface_id, cache_key,
+                                   cache_slot, src_rect);
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_surface_to_cache");
+}
+
+/******************************************************************************/
+/* RDPGFX_CACHE_TO_SURFACE_PDU */
+struct stream *
+xrdp_egfx_cache_to_surface(struct xrdp_egfx_bulk *bulk, int cache_slot,
+                           int surface_id, int num_dst_points,
+                           const struct xrdp_egfx_point *dst_points)
+{
+    int index;
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_cache_to_surface:");
+    if (num_dst_points < 0 || num_dst_points > 0xFFFF)
+    {
+        return NULL;
+    }
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_CACHETOSURFACE,
+                       6 + num_dst_points * 4);
+    out_uint16_le(s, cache_slot);
+    out_uint16_le(s, surface_id);
+    out_uint16_le(s, num_dst_points);
+    for (index = 0; index < num_dst_points; index++)
+    {
+        out_uint16_le(s, dst_points[index].x);
+        out_uint16_le(s, dst_points[index].y);
+    }
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_cache_to_surface(struct xrdp_egfx *egfx, int cache_slot,
+                                int surface_id, int num_dst_points,
+                                const struct xrdp_egfx_point *dst_points)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_cache_to_surface:");
+    if (!egfx_cache_slot_ok(egfx, cache_slot))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_cache_to_surface: "
+            "cache slot %d out of range", cache_slot);
+        return 1;
+    }
+    s = xrdp_egfx_cache_to_surface(egfx->bulk, cache_slot, surface_id,
+                                   num_dst_points, dst_points);
+    if (s == NULL)
+    {
+        return 1;
+    }
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_cache_to_surface");
+}
+
+/******************************************************************************/
+/* RDPGFX_EVICT_CACHE_ENTRY_PDU */
+struct stream *
+xrdp_egfx_evict_cache_entry(struct xrdp_egfx_bulk *bulk, int cache_slot)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_evict_cache_entry:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_EVICTCACHEENTRY, 2);
+    out_uint16_le(s, cache_slot);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_evict_cache_entry(struct xrdp_egfx *egfx, int cache_slot)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_evict_cache_entry:");
+    if (!egfx_cache_slot_ok(egfx, cache_slot))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_evict_cache_entry: "
+            "cache slot %d out of range", cache_slot);
+        return 1;
+    }
+    s = xrdp_egfx_evict_cache_entry(egfx->bulk, cache_slot);
+    return egfx_send_and_free(egfx, s, "xrdp_egfx_send_evict_cache_entry");
 }
 
 /******************************************************************************/

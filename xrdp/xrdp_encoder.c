@@ -1401,6 +1401,108 @@ gfx_deleteencodingcontext(struct xrdp_encoder *self,
 }
 
 /*****************************************************************************/
+/* Cache slots are one-based, and limited by the client's cache size */
+static int
+gfx_cache_slot_ok(struct xrdp_encoder *self, int cache_slot)
+{
+    if (cache_slot < 1 ||
+            cache_slot > xrdp_egfx_get_max_cache_slots(self->mm->egfx))
+    {
+        LOG(LOG_LEVEL_WARNING, "GFX cache slot %d out of range", cache_slot);
+        return 0;
+    }
+    return 1;
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_surfacetocache(struct xrdp_encoder *self,
+                   struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int surface_id;
+    uint64_t cache_key;
+    int cache_slot;
+    struct xrdp_egfx_rect src_rect;
+
+    if (!s_check_rem(in_s, 20))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint64_le(in_s, cache_key);
+    in_uint16_le(in_s, cache_slot);
+    in_uint16_le(in_s, src_rect.x1);
+    in_uint16_le(in_s, src_rect.y1);
+    in_uint16_le(in_s, src_rect.x2);
+    in_uint16_le(in_s, src_rect.y2);
+    if (!gfx_cache_slot_ok(self, cache_slot))
+    {
+        return NULL;
+    }
+    return xrdp_egfx_surface_to_cache(bulk, surface_id, cache_key,
+                                      cache_slot, &src_rect);
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_cachetosurface(struct xrdp_encoder *self,
+                   struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int cache_slot;
+    int surface_id;
+    int num_pts;
+    int index;
+    struct xrdp_egfx_point *pts;
+    struct stream *rv;
+
+    if (!s_check_rem(in_s, 6))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, cache_slot);
+    in_uint16_le(in_s, surface_id);
+    in_uint16_le(in_s, num_pts);
+    if (!s_check_rem(in_s, num_pts * 4) ||
+            !gfx_cache_slot_ok(self, cache_slot))
+    {
+        return NULL;
+    }
+    pts = g_new(struct xrdp_egfx_point, num_pts + 1);
+    if (pts == NULL)
+    {
+        return NULL;
+    }
+    for (index = 0; index < num_pts; index++)
+    {
+        in_uint16_le(in_s, pts[index].x);
+        in_uint16_le(in_s, pts[index].y);
+    }
+    rv = xrdp_egfx_cache_to_surface(bulk, cache_slot, surface_id,
+                                    num_pts, pts);
+    g_free(pts);
+    return rv;
+}
+
+/*****************************************************************************/
+static struct stream *
+gfx_evictcacheentry(struct xrdp_encoder *self,
+                    struct xrdp_egfx_bulk *bulk, struct stream *in_s)
+{
+    int cache_slot;
+
+    if (!s_check_rem(in_s, 2))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, cache_slot);
+    if (!gfx_cache_slot_ok(self, cache_slot))
+    {
+        return NULL;
+    }
+    return xrdp_egfx_evict_cache_entry(bulk, cache_slot);
+}
+
+/*****************************************************************************/
 /* called from encoder thread */
 static int
 process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
@@ -1454,6 +1556,15 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                 break;
             case XR_RDPGFX_CMDID_SURFACETOSURFACE:      /* 0x0005 */
                 s = gfx_surfacetosurface(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_SURFACETOCACHE:        /* 0x0006 */
+                s = gfx_surfacetocache(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_CACHETOSURFACE:        /* 0x0007 */
+                s = gfx_cachetosurface(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_EVICTCACHEENTRY:       /* 0x0008 */
+                s = gfx_evictcacheentry(self, bulk, &in_s);
                 break;
             case XR_RDPGFX_CMDID_CREATESURFACE:         /* 0x0009 */
                 s = gfx_createsurface(self, bulk, &in_s);
