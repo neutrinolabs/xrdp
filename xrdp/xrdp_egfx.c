@@ -876,17 +876,19 @@ xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s)
         in_uint16_le(s, cmdId);
         in_uint16_le(s, flags);
         in_uint32_le(s, pduLength);
-        s->end = holdp + pduLength;
         LOG(LOG_LEVEL_TRACE, "xrdp_egfx_process: cmdId 0x%x flags %d"
             " pduLength %d", cmdId, flags, pduLength);
         if (pduLength < 8)
         {
             return 1;
         }
+        /* Check the PDU is all present before using its length to limit
+           what the PDU handlers can read */
         if (!s_check_rem(s, pduLength - 8))
         {
             return 1;
         }
+        s->end = holdp + pduLength;
         switch (cmdId)
         {
             case XR_RDPGFX_CMDID_FRAMEACKNOWLEDGE:
