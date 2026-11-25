@@ -1649,6 +1649,49 @@ api_con_trans_list_remove_all(void)
 }
 
 /*****************************************************************************/
+/*
+ * The xrdp connection has gone away, and with it every dynamic virtual
+ * channel. Disconnect the xrdpapi clients that had one open, so they see
+ * the channel end and can open it again after a reconnect, and mark all
+ * slots free again. Without this the slots stay in use, and after a
+ * reconnect an xrdpapi client still holds a channel id that may by then
+ * belong to a different channel.
+ */
+static void
+drdynvc_reset_all(void)
+{
+    int api_con_index;
+    int index;
+    struct trans *ltran;
+    struct xrdp_api_data *ad;
+
+    for (api_con_index = g_api_con_trans_list->count - 1;
+            api_con_index >= 0;
+            api_con_index--)
+    {
+        ltran = (struct trans *)
+                list_get_item(g_api_con_trans_list, api_con_index);
+        if (ltran == NULL)
+        {
+            continue;
+        }
+        ad = (struct xrdp_api_data *) (ltran->callback_data);
+        if (ad != NULL && ad->chan_flags != 0)
+        {
+            list_remove_item(g_api_con_trans_list, api_con_index);
+            g_free(ad);
+            trans_delete(ltran);
+        }
+    }
+
+    for (index = 0; index < DRDYNVC_CHANNEL_COUNT; index++)
+    {
+        dyn_dechunker_free(g_drdynvcs[index].dc);
+    }
+    g_memset(g_drdynvcs, 0, sizeof(g_drdynvcs));
+}
+
+/*****************************************************************************/
 static THREAD_RV THREAD_CC
 channel_thread_loop(void *in_val)
 {
@@ -1710,6 +1753,7 @@ channel_thread_loop(void *in_val)
                     sound_deinit();
                     devredir_deinit();
                     rail_deinit();
+                    drdynvc_reset_all();
                     /* delete g_con_trans */
                     trans_delete(g_con_trans);
                     g_con_trans = 0;
