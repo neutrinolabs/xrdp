@@ -694,6 +694,27 @@ START_TEST(test_xrdp_egfx_cache_import_reply)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_WINDOW_PDU */
+START_TEST(test_xrdp_egfx_map_surface_to_window)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x15, 0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00,
+        0x05, 0x00,             /* surfaceId */
+        0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, /* windowId */
+        0x20, 0x03, 0x00, 0x00, /* mappedWidth */
+        0x58, 0x02, 0x00, 0x00  /* mappedHeight */
+    };
+
+    CHECK_STREAM(xrdp_egfx_map_surface_to_window(NULL, 5,
+                 0x1122334455667788ULL,
+                 800, 600),
+                 expected);
+}
+END_TEST
+
+/******************************************************************************/
 /* RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU */
 START_TEST(test_xrdp_egfx_map_surface_to_scaled_output)
 {
@@ -711,6 +732,29 @@ START_TEST(test_xrdp_egfx_map_surface_to_scaled_output)
 
     CHECK_STREAM(xrdp_egfx_map_surface_to_scaled_output(NULL, 5, 0x10, 0x20,
                  1920, 1080),
+                 expected);
+}
+END_TEST
+
+/******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_SCALED_WINDOW_PDU */
+START_TEST(test_xrdp_egfx_map_surface_to_scaled_window)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x18, 0x00, 0x00, 0x00, 0x22, 0x00, 0x00, 0x00,
+        0x05, 0x00,             /* surfaceId */
+        0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, /* windowId */
+        0x20, 0x03, 0x00, 0x00, /* mappedWidth */
+        0x58, 0x02, 0x00, 0x00, /* mappedHeight */
+        0x40, 0x06, 0x00, 0x00, /* targetWidth */
+        0xB0, 0x04, 0x00, 0x00  /* targetHeight */
+    };
+
+    CHECK_STREAM(xrdp_egfx_map_surface_to_scaled_window(NULL, 5,
+                 0x1122334455667788ULL,
+                 800, 600, 1600, 1200),
                  expected);
 }
 END_TEST
@@ -877,6 +921,22 @@ START_TEST(test_xrdp_egfx_send_scaled_output_check)
     egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE;
     ck_assert_int_ne(
         xrdp_egfx_send_map_surface_to_scaled_output(&egfx, 1, 0, 0,
+                800, 600), 0);
+}
+END_TEST
+
+/******************************************************************************/
+START_TEST(test_xrdp_egfx_send_scaled_window_check)
+{
+    struct xrdp_egfx egfx;
+
+    /* There's no session in this structure, so anything which
+       gets past the check will fail the test by crashing */
+    g_memset(&egfx, 0, sizeof(egfx));
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_107;
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE;
+    ck_assert_int_ne(
+        xrdp_egfx_send_map_surface_to_scaled_window(&egfx, 1, 99, 400, 300,
                 800, 600), 0);
 }
 END_TEST
@@ -1202,7 +1262,9 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_cache_to_surface);
     tcase_add_test(tc_builders, test_xrdp_egfx_evict_cache_entry);
     tcase_add_test(tc_builders, test_xrdp_egfx_cache_import_reply);
+    tcase_add_test(tc_builders, test_xrdp_egfx_map_surface_to_window);
     tcase_add_test(tc_builders, test_xrdp_egfx_map_surface_to_scaled_output);
+    tcase_add_test(tc_builders, test_xrdp_egfx_map_surface_to_scaled_window);
     suite_add_tcase(s, tc_builders);
 
     tc_caps = tcase_create("xrdp_egfx_capabilities");
@@ -1211,6 +1273,7 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_caps, test_xrdp_egfx_scaled_map_supported);
     tcase_add_test(tc_caps, test_xrdp_egfx_send_cache_checks);
     tcase_add_test(tc_caps, test_xrdp_egfx_send_scaled_output_check);
+    tcase_add_test(tc_caps, test_xrdp_egfx_send_scaled_window_check);
     suite_add_tcase(s, tc_caps);
 
     tc_process = tcase_create("xrdp_egfx_process");

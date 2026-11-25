@@ -1113,6 +1113,40 @@ xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
 }
 
 /******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_WINDOW_PDU */
+struct stream *
+xrdp_egfx_map_surface_to_window(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                uint64_t window_id,
+                                int mapped_width, int mapped_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface_to_window:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_MAPSURFACETOWINDOW, 18);
+    out_uint16_le(s, surface_id);
+    out_uint64_le(s, window_id);
+    out_uint32_le(s, mapped_width);
+    out_uint32_le(s, mapped_height);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_map_surface_to_window(struct xrdp_egfx *egfx, int surface_id,
+                                     uint64_t window_id,
+                                     int mapped_width, int mapped_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_map_surface_to_window:");
+    s = xrdp_egfx_map_surface_to_window(egfx->bulk, surface_id, window_id,
+                                        mapped_width, mapped_height);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_map_surface_to_window");
+}
+
+/******************************************************************************/
 /* RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU */
 struct stream *
 xrdp_egfx_map_surface_to_scaled_output(struct xrdp_egfx_bulk *bulk,
@@ -1152,6 +1186,51 @@ xrdp_egfx_send_map_surface_to_scaled_output(struct xrdp_egfx *egfx,
         target_width, target_height);
     return egfx_send_and_free(egfx, s,
                               "xrdp_egfx_send_map_surface_to_scaled_output");
+}
+
+/******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_SCALED_WINDOW_PDU */
+struct stream *
+xrdp_egfx_map_surface_to_scaled_window(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, uint64_t window_id,
+                                       int mapped_width, int mapped_height,
+                                       int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface_to_scaled_window:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_MAPSURFACETOSCALEDWINDOW, 26);
+    out_uint16_le(s, surface_id);
+    out_uint64_le(s, window_id);
+    out_uint32_le(s, mapped_width);
+    out_uint32_le(s, mapped_height);
+    out_uint32_le(s, target_width);
+    out_uint32_le(s, target_height);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_map_surface_to_scaled_window(struct xrdp_egfx *egfx,
+        int surface_id, uint64_t window_id,
+        int mapped_width, int mapped_height,
+        int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_map_surface_to_scaled_window:");
+    if (!xrdp_egfx_scaled_map_supported(egfx))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_map_surface_to_scaled_window: "
+            "not supported by the client");
+        return 1;
+    }
+    s = xrdp_egfx_map_surface_to_scaled_window(egfx->bulk, surface_id,
+        window_id, mapped_width, mapped_height,
+        target_width, target_height);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_map_surface_to_scaled_window");
 }
 
 /******************************************************************************/

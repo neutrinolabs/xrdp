@@ -310,12 +310,30 @@ xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
                                   int num_cache_slots,
                                   const uint16_t *cache_slots);
 struct stream *
+xrdp_egfx_map_surface_to_window(struct xrdp_egfx_bulk *bulk, int surface_id,
+                                uint64_t window_id,
+                                int mapped_width, int mapped_height);
+int
+xrdp_egfx_send_map_surface_to_window(struct xrdp_egfx *egfx, int surface_id,
+                                     uint64_t window_id,
+                                     int mapped_width, int mapped_height);
+struct stream *
 xrdp_egfx_map_surface_to_scaled_output(struct xrdp_egfx_bulk *bulk,
                                        int surface_id, int x, int y,
                                        int target_width, int target_height);
 int
 xrdp_egfx_send_map_surface_to_scaled_output(struct xrdp_egfx *egfx,
         int surface_id, int x, int y,
+        int target_width, int target_height);
+struct stream *
+xrdp_egfx_map_surface_to_scaled_window(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, uint64_t window_id,
+                                       int mapped_width, int mapped_height,
+                                       int target_width, int target_height);
+int
+xrdp_egfx_send_map_surface_to_scaled_window(struct xrdp_egfx *egfx,
+        int surface_id, uint64_t window_id,
+        int mapped_width, int mapped_height,
         int target_width, int target_height);
 /*
  * NB: mi below must be such that the (top,left) co-ordinate of
