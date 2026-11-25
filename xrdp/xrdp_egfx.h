@@ -201,6 +201,13 @@ struct stream *
 xrdp_egfx_capsconfirm(struct xrdp_egfx_bulk *bulk, int version, int flags);
 int
 xrdp_egfx_send_capsconfirm(struct xrdp_egfx *egfx, int version, int flags);
+/**
+ * Processes one or more RDPGFX PDUs received from the client
+ *
+ * Not static so the unit tests can call it
+ */
+int
+xrdp_egfx_process(struct xrdp_egfx *egfx, struct stream *s);
 struct stream *
 xrdp_egfx_wire_to_surface1(struct xrdp_egfx_bulk *bulk, int surface_id,
                            int codec_id, int pixel_format,
