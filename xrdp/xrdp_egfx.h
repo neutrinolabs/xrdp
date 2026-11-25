@@ -243,6 +243,12 @@ xrdp_egfx_caps_confirm_flags(int version, int client_flags, int use_h264);
 int
 xrdp_egfx_get_max_cache_slots(const struct xrdp_egfx *egfx);
 /**
+ * Whether RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU and
+ * RDPGFX_MAP_SURFACE_TO_SCALED_WINDOW_PDU can be sent to the client
+ */
+int
+xrdp_egfx_scaled_map_supported(const struct xrdp_egfx *egfx);
+/**
  * Processes one or more RDPGFX PDUs received from the client
  *
  * Not static so the unit tests can call it
@@ -303,6 +309,14 @@ int
 xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
                                   int num_cache_slots,
                                   const uint16_t *cache_slots);
+struct stream *
+xrdp_egfx_map_surface_to_scaled_output(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, int x, int y,
+                                       int target_width, int target_height);
+int
+xrdp_egfx_send_map_surface_to_scaled_output(struct xrdp_egfx *egfx,
+        int surface_id, int x, int y,
+        int target_width, int target_height);
 /*
  * NB: mi below must be such that the (top,left) co-ordinate of
  * the primary monitor is (0.0)

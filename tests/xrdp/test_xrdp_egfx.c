@@ -694,6 +694,28 @@ START_TEST(test_xrdp_egfx_cache_import_reply)
 END_TEST
 
 /******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU */
+START_TEST(test_xrdp_egfx_map_surface_to_scaled_output)
+{
+    static const unsigned char expected[] =
+    {
+        0xE0, 0x04,
+        0x17, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00,
+        0x05, 0x00,             /* surfaceId */
+        0x00, 0x00,             /* reserved */
+        0x10, 0x00, 0x00, 0x00, /* outputOriginX */
+        0x20, 0x00, 0x00, 0x00, /* outputOriginY */
+        0x80, 0x07, 0x00, 0x00, /* targetWidth */
+        0x38, 0x04, 0x00, 0x00  /* targetHeight */
+    };
+
+    CHECK_STREAM(xrdp_egfx_map_surface_to_scaled_output(NULL, 5, 0x10, 0x20,
+                 1920, 1080),
+                 expected);
+}
+END_TEST
+
+/******************************************************************************/
 START_TEST(test_xrdp_egfx_caps_confirm_flags)
 {
     const int thin = XR_RDPGFX_CAPS_FLAG_THINCLIENT;
@@ -795,6 +817,25 @@ START_TEST(test_xrdp_egfx_get_max_cache_slots)
 END_TEST
 
 /******************************************************************************/
+START_TEST(test_xrdp_egfx_scaled_map_supported)
+{
+    struct xrdp_egfx egfx;
+
+    g_memset(&egfx, 0, sizeof(egfx));
+    ck_assert_int_eq(xrdp_egfx_scaled_map_supported(&egfx), 0);
+
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_106;
+    ck_assert_int_eq(xrdp_egfx_scaled_map_supported(&egfx), 0);
+
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_107;
+    ck_assert_int_eq(xrdp_egfx_scaled_map_supported(&egfx), 1);
+
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE;
+    ck_assert_int_eq(xrdp_egfx_scaled_map_supported(&egfx), 0);
+}
+END_TEST
+
+/******************************************************************************/
 /* Cache slots the client doesn't have are rejected before anything
    is sent */
 START_TEST(test_xrdp_egfx_send_cache_checks)
@@ -819,6 +860,24 @@ START_TEST(test_xrdp_egfx_send_cache_checks)
                      0);
     ck_assert_int_ne(xrdp_egfx_send_evict_cache_entry(&egfx, 0), 0);
     ck_assert_int_ne(xrdp_egfx_send_evict_cache_entry(&egfx, 4097), 0);
+}
+END_TEST
+
+/******************************************************************************/
+/* A scaled mapping isn't sent to a client which has said
+   it doesn't support them */
+START_TEST(test_xrdp_egfx_send_scaled_output_check)
+{
+    struct xrdp_egfx egfx;
+
+    /* There's no session in this structure, so anything which
+       gets past the check will fail the test by crashing */
+    g_memset(&egfx, 0, sizeof(egfx));
+    egfx.caps_version = XR_RDPGFX_CAPVERSION_107;
+    egfx.caps_flags = XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE;
+    ck_assert_int_ne(
+        xrdp_egfx_send_map_surface_to_scaled_output(&egfx, 1, 0, 0,
+                800, 600), 0);
 }
 END_TEST
 
@@ -1143,12 +1202,15 @@ make_suite_egfx_base_functions(void)
     tcase_add_test(tc_builders, test_xrdp_egfx_cache_to_surface);
     tcase_add_test(tc_builders, test_xrdp_egfx_evict_cache_entry);
     tcase_add_test(tc_builders, test_xrdp_egfx_cache_import_reply);
+    tcase_add_test(tc_builders, test_xrdp_egfx_map_surface_to_scaled_output);
     suite_add_tcase(s, tc_builders);
 
     tc_caps = tcase_create("xrdp_egfx_capabilities");
     tcase_add_test(tc_caps, test_xrdp_egfx_caps_confirm_flags);
     tcase_add_test(tc_caps, test_xrdp_egfx_get_max_cache_slots);
+    tcase_add_test(tc_caps, test_xrdp_egfx_scaled_map_supported);
     tcase_add_test(tc_caps, test_xrdp_egfx_send_cache_checks);
+    tcase_add_test(tc_caps, test_xrdp_egfx_send_scaled_output_check);
     suite_add_tcase(s, tc_caps);
 
     tc_process = tcase_create("xrdp_egfx_process");

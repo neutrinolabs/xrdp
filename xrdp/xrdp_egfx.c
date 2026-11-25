@@ -843,6 +843,19 @@ xrdp_egfx_get_max_cache_slots(const struct xrdp_egfx *egfx)
 }
 
 /******************************************************************************/
+int
+xrdp_egfx_scaled_map_supported(const struct xrdp_egfx *egfx)
+{
+    /* The spec does not give a minimum version for the scaled mapping
+       PDUs. The only capability which mentions them is
+       RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE in RDPGFX_CAPSET_VERSION107, so
+       only use them with a client which could have set that flag and
+       did not */
+    return egfx->caps_version == XR_RDPGFX_CAPVERSION_107 &&
+           (egfx->caps_flags & XR_RDPGFX_CAPS_FLAG_SCALEDMAP_DISABLE) == 0;
+}
+
+/******************************************************************************/
 /* Checks a cache slot is in range for the confirmed capabilities */
 static int
 egfx_cache_slot_ok(const struct xrdp_egfx *egfx, int cache_slot)
@@ -1097,6 +1110,48 @@ xrdp_egfx_send_cache_import_reply(struct xrdp_egfx *egfx,
         return 1;
     }
     return egfx_send_and_free(egfx, s, "xrdp_egfx_send_cache_import_reply");
+}
+
+/******************************************************************************/
+/* RDPGFX_MAP_SURFACE_TO_SCALED_OUTPUT_PDU */
+struct stream *
+xrdp_egfx_map_surface_to_scaled_output(struct xrdp_egfx_bulk *bulk,
+                                       int surface_id, int x, int y,
+                                       int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_map_surface_to_scaled_output:");
+    s = egfx_pdu_begin(XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT, 20);
+    out_uint16_le(s, surface_id);
+    out_uint16_le(s, 0); /* reserved */
+    out_uint32_le(s, x); /* outputOriginX */
+    out_uint32_le(s, y); /* outputOriginY */
+    out_uint32_le(s, target_width);
+    out_uint32_le(s, target_height);
+    egfx_pdu_end(s);
+    return s;
+}
+
+/******************************************************************************/
+int
+xrdp_egfx_send_map_surface_to_scaled_output(struct xrdp_egfx *egfx,
+        int surface_id, int x, int y,
+        int target_width, int target_height)
+{
+    struct stream *s;
+
+    LOG(LOG_LEVEL_TRACE, "xrdp_egfx_send_map_surface_to_scaled_output:");
+    if (!xrdp_egfx_scaled_map_supported(egfx))
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_egfx_send_map_surface_to_scaled_output: "
+            "not supported by the client");
+        return 1;
+    }
+    s = xrdp_egfx_map_surface_to_scaled_output(egfx->bulk, surface_id, x, y,
+        target_width, target_height);
+    return egfx_send_and_free(egfx, s,
+                              "xrdp_egfx_send_map_surface_to_scaled_output");
 }
 
 /******************************************************************************/

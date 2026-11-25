@@ -1503,6 +1503,37 @@ gfx_evictcacheentry(struct xrdp_encoder *self,
 }
 
 /*****************************************************************************/
+static struct stream *
+gfx_mapsurfacetoscaledoutput(struct xrdp_encoder *self,
+                             struct xrdp_egfx_bulk *bulk,
+                             struct stream *in_s)
+{
+    int surface_id;
+    int x;
+    int y;
+    int target_width;
+    int target_height;
+
+    if (!s_check_rem(in_s, 18))
+    {
+        return NULL;
+    }
+    in_uint16_le(in_s, surface_id);
+    in_uint32_le(in_s, x);
+    in_uint32_le(in_s, y);
+    in_uint32_le(in_s, target_width);
+    in_uint32_le(in_s, target_height);
+    if (!xrdp_egfx_scaled_map_supported(self->mm->egfx))
+    {
+        LOG(LOG_LEVEL_WARNING, "GFX client does not support scaled "
+            "surface mapping");
+        return NULL;
+    }
+    return xrdp_egfx_map_surface_to_scaled_output(bulk, surface_id, x, y,
+            target_width, target_height);
+}
+
+/*****************************************************************************/
 /* called from encoder thread */
 static int
 process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
@@ -1584,6 +1615,9 @@ process_enc_egfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
                 break;
             case XR_RDPGFX_CMDID_MAPSURFACETOOUTPUT:    /* 0x000F */
                 s = gfx_mapsurfacetooutput(self, bulk, &in_s);
+                break;
+            case XR_RDPGFX_CMDID_MAPSURFACETOSCALEDOUTPUT: /* 0x0017 */
+                s = gfx_mapsurfacetoscaledoutput(self, bulk, &in_s);
                 break;
             default:
                 break;
