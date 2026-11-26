@@ -306,6 +306,7 @@ xrdp_sec_decrypt(struct xrdp_sec *self, char *data, int len)
     }
     ssl_rc4_crypt(self->decrypt_rc4_info, data, len);
     self->decrypt_use_count++;
+    self->decrypt_total_count++;
 }
 
 /*****************************************************************************/
@@ -901,10 +902,11 @@ xrdp_sec_fips_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
 /*****************************************************************************/
 /* Generate a MAC hash (5.3.6.1), using a combination of SHA1 and MD5
  *
- * Salted MAC is not currently supported */
+ * If salt is not NULL, it is the 4-byte little-endian encryption count
+ * and the salted MAC (5.3.6.1.1) is generated instead */
 static void
-xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
-              char *data, int data_len)
+xrdp_sec_sign_ex(struct xrdp_sec *self, char *out, int out_len,
+                 char *data, int data_len, const char *salt)
 {
     char shasig[20];
     char md5sig[16];
@@ -920,6 +922,10 @@ xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
     ssl_sha1_transform(sha1_info, (char *)g_pad_54, 40);
     ssl_sha1_transform(sha1_info, lenhdr, 4);
     ssl_sha1_transform(sha1_info, data, data_len);
+    if (salt != NULL)
+    {
+        ssl_sha1_transform(sha1_info, (char *)salt, 4);
+    }
     ssl_sha1_complete(sha1_info, shasig);
     ssl_md5_clear(md5_info);
     ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
@@ -932,14 +938,23 @@ xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
 }
 
 /*****************************************************************************/
+static void
+xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
+              char *data, int data_len)
+{
+    xrdp_sec_sign_ex(self, out, out_len, data, data_len, NULL);
+}
+
+/*****************************************************************************/
 /* Check a non-FIPS hash is valid
  *
- * Salted MAC is not currently supported
+ * If salted is set, the client used the salted MAC (5.3.6.1.1,
+ * SEC_SECURE_CHECKSUM / FASTPATH_INPUT_SECURE_CHECKSUM)
  *
  * Result is boolean (i.e. != 0 is OK) */
 static int
 xrdp_sec_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
-                   char *data, int data_len)
+                   char *data, int data_len, int salted)
 {
     char computed[8];
     int rv = 0;
@@ -951,7 +966,17 @@ xrdp_sec_check_sig(struct xrdp_sec *self, const char *sig, int sig_len,
     }
     else
     {
-        xrdp_sec_sign(self, computed, sig_len, data, data_len);
+        if (salted)
+        {
+            char salt[4];
+            // Account for the decrypt operation which has just happened
+            buf_out_uint32(salt, self->decrypt_total_count - 1);
+            xrdp_sec_sign_ex(self, computed, sig_len, data, data_len, salt);
+        }
+        else
+        {
+            xrdp_sec_sign(self, computed, sig_len, data, data_len);
+        }
         rv = (memcmp(computed, sig, sig_len) == 0);
     }
 
@@ -1200,7 +1225,9 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
             in_uint8a(s, data_signature, sizeof(data_signature));
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
             if (!xrdp_sec_check_sig(self, data_signature, 8,
-                                    s->p, (int)(s->end - s->p)))
+                                    s->p, (int)(s->end - s->p),
+                                    self->fastpath_layer->secFlags &
+                                    FASTPATH_INPUT_SECURE_CHECKSUM))
             {
                 LOG(LOG_LEVEL_ERROR, "MAC checksum error for FP-non-FIPS PDU");
                 return 1;
@@ -1339,7 +1366,8 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
                       sig64_to_uint64(data_signature, 8));
             xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
             if (!xrdp_sec_check_sig(self, data_signature, 8,
-                                    s->p, (int)(s->end - s->p)))
+                                    s->p, (int)(s->end - s->p),
+                                    flags & SEC_SECURE_CHECKSUM))
             {
                 LOG(LOG_LEVEL_ERROR, "MAC checksum error for non-FIPS PDU");
                 return 1;

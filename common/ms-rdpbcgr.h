@@ -473,6 +473,7 @@
 /* TS_SECURITY_HEADER: flags (2.2.8.1.1.2.1) */
 #define SEC_EXCHANGE_PKT               0x0001
 #define SEC_ENCRYPT                    0x0008
+#define SEC_SECURE_CHECKSUM            0x0800
 #define SEC_INFO_PKT                   0x0040
 #define SEC_LICENSE_PKT                0x0080
 #define SEC_LICENSE_ENCRYPT_CS         0x0280
@@ -516,6 +517,7 @@
 #define TS_SYNC_KANA_LOCK              0x0008
 
 /* Client Fast-Path Input Event PDU 2.2.8.1.2 */
+#define FASTPATH_INPUT_SECURE_CHECKSUM      0x1
 #define FASTPATH_INPUT_ENCRYPTED            0x2
 
 /* Fast-Path Input Event: eventCode (2.2.8.1.2.2) */
