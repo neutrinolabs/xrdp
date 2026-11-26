@@ -33,14 +33,17 @@
 #include "log.h"
 #include "string_calls.h"
 #include "sesman_auth.h"
+#include "scp.h"
 
-#include <stdio.h>
 #include <security/pam_appl.h>
 
 /* Allows the conversation function to find required items */
 struct conv_func_data
 {
     const char *pass;
+    struct trans *scp_trans;
+    int pass_used;
+    int cancelled;
 };
 
 struct auth_info
@@ -89,6 +92,185 @@ msg_style_to_str(int msg_style, char *buff, unsigned int bufflen)
     return result;
 }
 
+/****************************************************************************/
+
+static int
+conv_echo_off(struct conv_func_data *cf_data, const struct pam_message *msg,
+              struct pam_response *reply)
+{
+    int error;
+    int rv = PAM_CONV_ERR;
+    enum scp_msg_code code;
+    char *response;
+    enum scp_prompt_type prompt_type = SCP_PROMPT_ECHO_OFF;
+
+    LOG(LOG_LEVEL_INFO, "PAM_PROMPT_ECHO_OFF");
+    LOG_DEVEL(LOG_LEVEL_INFO, "PAM_PROMPT_ECHO_OFF %s", msg->msg);
+    if ((cf_data != NULL) && (cf_data->pass != NULL) &&
+            (cf_data->pass[0] != 0) && (cf_data->pass_used == 0))
+    {
+        /* use password if available */
+        reply->resp = g_strdup(cf_data->pass);
+        /* only use password once */
+        cf_data->pass_used = 1;
+        rv = PAM_SUCCESS;
+    }
+    else if ((cf_data != NULL) && (cf_data->scp_trans != NULL))
+    {
+        error = scp_send_prompt_request(cf_data->scp_trans, msg->msg,
+                                        prompt_type);
+        LOG_DEVEL(LOG_LEVEL_INFO, "scp_send_prompt_request %d", error);
+        if (error == 0)
+        {
+            error = scp_msg_in_wait_available(cf_data->scp_trans);
+            LOG_DEVEL(LOG_LEVEL_INFO, "scp_msg_in_wait_available %d", error);
+            code = error == 0 ? scp_msg_in_get_msgno(cf_data->scp_trans) : 0;
+            if (code == E_SCP_PROMPT_CANCEL)
+            {
+                cf_data->cancelled = 1;
+            }
+            else if (code == E_SCP_PROMPT_RESPONSE)
+            {
+                error = scp_get_prompt_response(cf_data->scp_trans,
+                                                &response);
+                LOG_DEVEL(LOG_LEVEL_INFO, "scp_get_prompt_response rv %d "
+                          "response [%s]", error, response);
+                if (error == 0)
+                {
+                    reply->resp = g_strdup(response);
+                    rv = PAM_SUCCESS;
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_ERROR, "scp_get_prompt_response failed %d",
+                        error);
+                }
+            }
+            else if (error == 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "scp_msg_in_get_msgno returned "
+                    "unexpected code %d expected E_SCP_PROMPT_RESPONSE",
+                    code);
+            }
+            scp_msg_in_reset(cf_data->scp_trans);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR, "scp_send_prompt_request failed %d", error);
+        }
+    }
+    return rv;
+}
+
+/****************************************************************************/
+
+static int
+conv_echo_on(struct conv_func_data *cf_data, const struct pam_message *msg,
+             struct pam_response *reply)
+{
+    int error;
+    int rv = PAM_CONV_ERR;
+    enum scp_msg_code code;
+    char *response;
+    enum scp_prompt_type prompt_type = SCP_PROMPT_ECHO_ON;
+
+    LOG(LOG_LEVEL_INFO, "PAM_PROMPT_ECHO_ON");
+    LOG_DEVEL(LOG_LEVEL_INFO, "PAM_PROMPT_ECHO_ON %s", msg->msg);
+    if ((cf_data != NULL) && (cf_data->scp_trans != NULL))
+    {
+        error = scp_send_prompt_request(cf_data->scp_trans, msg->msg,
+                                        prompt_type);
+        LOG_DEVEL(LOG_LEVEL_INFO, "scp_send_prompt_request %d", error);
+        if (error == 0)
+        {
+            error = scp_msg_in_wait_available(cf_data->scp_trans);
+            LOG_DEVEL(LOG_LEVEL_INFO, "scp_msg_in_wait_available %d", error);
+            code = error == 0 ? scp_msg_in_get_msgno(cf_data->scp_trans) : 0;
+            if (code == E_SCP_PROMPT_CANCEL)
+            {
+                cf_data->cancelled = 1;
+            }
+            else if (code == E_SCP_PROMPT_RESPONSE)
+            {
+                error = scp_get_prompt_response(cf_data->scp_trans,
+                                                &response);
+                LOG_DEVEL(LOG_LEVEL_INFO, "scp_get_prompt_response rv %d "
+                          "response [%s]", error, response);
+                if (error == 0)
+                {
+                    reply->resp = strdup(response);
+                    rv = PAM_SUCCESS;
+                }
+                else
+                {
+                    LOG(LOG_LEVEL_ERROR, "scp_get_prompt_response failed %d",
+                        error);
+                }
+            }
+            else if (error == 0)
+            {
+                LOG(LOG_LEVEL_ERROR, "scp_msg_in_get_msgno returned "
+                    "unexpected code %d expected E_SCP_PROMPT_RESPONSE",
+                    code);
+            }
+            scp_msg_in_reset(cf_data->scp_trans);
+        }
+        else
+        {
+            LOG(LOG_LEVEL_ERROR, "scp_send_prompt_request failed %d", error);
+        }
+    }
+    return rv;
+}
+
+/****************************************************************************/
+
+static int
+conv_error_msg(struct conv_func_data *cf_data, const struct pam_message *msg,
+               struct pam_response *reply)
+{
+    int error;
+    enum scp_prompt_type prompt_type = SCP_PROMPT_ERROR_MSG;
+
+    LOG(LOG_LEVEL_INFO, "PAM_ERROR_MSG");
+    LOG_DEVEL(LOG_LEVEL_INFO, "PAM_ERROR_MSG %s", msg->msg);
+    if (cf_data != NULL && cf_data->scp_trans != NULL)
+    {
+        error = scp_send_prompt_request(cf_data->scp_trans, msg->msg,
+                                        prompt_type);
+        LOG_DEVEL(LOG_LEVEL_INFO, "scp_send_prompt_request %d", error);
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "scp_send_prompt_request failed %d", error);
+        }
+    }
+    return PAM_SUCCESS;
+}
+
+/****************************************************************************/
+
+static int
+conv_text_info(struct conv_func_data *cf_data, const struct pam_message *msg,
+               struct pam_response *reply)
+{
+    int error;
+    enum scp_prompt_type prompt_type = SCP_PROMPT_TEXT_INFO;
+
+    LOG(LOG_LEVEL_INFO, "PAM_TEXT_INFO");
+    LOG_DEVEL(LOG_LEVEL_INFO, "PAM_TEXT_INFO %s", msg->msg);
+    if (cf_data != NULL && cf_data->scp_trans != NULL)
+    {
+        error = scp_send_prompt_request(cf_data->scp_trans, msg->msg,
+                                        prompt_type);
+        LOG_DEVEL(LOG_LEVEL_INFO, "scp_send_prompt_request %d", error);
+        if (error != 0)
+        {
+            LOG(LOG_LEVEL_ERROR, "scp_send_prompt_request failed %d", error);
+        }
+    }
+    return PAM_SUCCESS;
+}
+
 /***************************************************************************//**
  * Provides the PAM conversation callback function
  *
@@ -123,7 +305,10 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
     char sb[64];
     int rv = PAM_SUCCESS;
 
-    if (num_msg <= 0 || num_msg > PAM_MAX_NUM_MSG)
+    conv_func_data = (struct conv_func_data *) appdata_ptr;
+
+    if (num_msg <= 0 || num_msg > PAM_MAX_NUM_MSG ||
+            (conv_func_data != NULL && conv_func_data->cancelled))
     {
         rv = PAM_CONV_ERR;
     }
@@ -136,34 +321,26 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
         for (i = 0; i < num_msg && rv == PAM_SUCCESS; i++)
         {
             LOG_DEVEL(LOG_LEVEL_INFO, "Handling struct pam_message"
-                      " { style = %s, msg = \"%s\" }",
+                      " { style = %s, msg = \"%s\" } pid %d",
                       msg_style_to_str(msg[i]->msg_style, sb, sizeof (sb)),
-                      msg[i]->msg == NULL ? "<null>" : msg[i]->msg);
+                      msg[i]->msg == NULL ? "<null>" : msg[i]->msg, g_getpid());
 
             switch (msg[i]->msg_style)
             {
                 case PAM_PROMPT_ECHO_OFF: /* password */
-                    conv_func_data = (struct conv_func_data *) appdata_ptr;
-                    /* Check this function isn't being called
-                     * later than we expected */
-                    if (conv_func_data == NULL || conv_func_data->pass == NULL)
-                    {
-                        LOG(LOG_LEVEL_ERROR,
-                            "verify_pam_conv: Password unavailable");
-                        reply[i].resp = g_strdup("????");
-                    }
-                    else
-                    {
-                        reply[i].resp = g_strdup(conv_func_data->pass);
-                    }
+                    rv = conv_echo_off(conv_func_data, msg[i], reply + i);
+                    break;
+
+                case PAM_PROMPT_ECHO_ON:
+                    rv = conv_echo_on(conv_func_data, msg[i], reply + i);
                     break;
 
                 case PAM_ERROR_MSG:
-                    LOG(LOG_LEVEL_ERROR, "PAM: %s", msg[i]->msg);
+                    rv = conv_error_msg(conv_func_data, msg[i], reply + i);
                     break;
 
                 case PAM_TEXT_INFO:
-                    LOG(LOG_LEVEL_INFO, "PAM: %s", msg[i]->msg);
+                    rv = conv_text_info(conv_func_data, msg[i], reply + i);
                     break;
 
                 default:
@@ -242,7 +419,8 @@ common_pam_login(struct auth_info *auth_info,
                  const char *user,
                  const char *pass,
                  const char *client_ip,
-                 int authentication_required)
+                 int authentication_required,
+                 struct trans *scp_trans)
 {
     int perror;
     char service_name[256];
@@ -254,6 +432,9 @@ common_pam_login(struct auth_info *auth_info,
      * structure which allows us to pass this to pam_start()
      */
     conv_func_data.pass = (authentication_required) ? pass : NULL;
+    conv_func_data.scp_trans = scp_trans;
+    conv_func_data.pass_used = 0;
+    conv_func_data.cancelled = 0;
     pamc.conv = verify_pam_conv;
     pamc.appdata_ptr = (void *) &conv_func_data;
 
@@ -289,6 +470,10 @@ common_pam_login(struct auth_info *auth_info,
     {
         perror = pam_authenticate(auth_info->ph, 0);
 
+        if (conv_func_data.cancelled)
+        {
+            goto cancelled;
+        }
         if (perror != PAM_SUCCESS)
         {
             LOG(LOG_LEVEL_ERROR, "pam_authenticate failed: %s",
@@ -304,8 +489,27 @@ common_pam_login(struct auth_info *auth_info,
        been authenticated.
      */
     perror = pam_acct_mgmt(auth_info->ph, 0);
-
-    if (perror != PAM_SUCCESS)
+    if (conv_func_data.cancelled)
+    {
+        goto cancelled;
+    }
+    if (perror == PAM_NEW_AUTHTOK_REQD)
+    {
+        /* password has expired and needs to be changed */
+        perror = pam_chauthtok(auth_info->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
+        if (conv_func_data.cancelled)
+        {
+            goto cancelled;
+        }
+        if (perror != PAM_SUCCESS)
+        {
+            LOG(LOG_LEVEL_ERROR, "pam_chauthtok failed: %s",
+                pam_strerror(auth_info->ph, perror));
+            pam_end(auth_info->ph, perror);
+            return E_SCP_LOGIN_NOT_AUTHORIZED;
+        }
+    }
+    else if (perror != PAM_SUCCESS)
     {
         LOG(LOG_LEVEL_ERROR, "pam_acct_mgmt failed: %s",
             pam_strerror(auth_info->ph, perror));
@@ -324,6 +528,10 @@ common_pam_login(struct auth_info *auth_info,
     }
 
     return E_SCP_LOGIN_OK;
+
+cancelled:
+    pam_end(auth_info->ph, PAM_CONV_ERR);
+    return E_SCP_LOGIN_CANCELLED;
 }
 
 
@@ -333,7 +541,8 @@ common_pam_login(struct auth_info *auth_info,
 
 struct auth_info *
 auth_userpass(const char *user, const char *pass,
-              const char *client_ip, enum scp_login_status *errorcode)
+              const char *client_ip, enum scp_login_status *errorcode,
+              struct trans *scp_trans)
 {
     struct auth_info *auth_info;
     enum scp_login_status status;
@@ -345,7 +554,7 @@ auth_userpass(const char *user, const char *pass,
     }
     else
     {
-        status = common_pam_login(auth_info, user, pass, client_ip, 1);
+        status = common_pam_login(auth_info, user, pass, client_ip, 1, scp_trans);
 
         if (status != E_SCP_LOGIN_OK)
         {
@@ -377,7 +586,7 @@ auth_uds(const char *user, enum scp_login_status *errorcode)
     }
     else
     {
-        status = common_pam_login(auth_info, user, NULL, NULL, 0);
+        status = common_pam_login(auth_info, user, NULL, NULL, 0, NULL);
 
         if (status != E_SCP_LOGIN_OK)
         {

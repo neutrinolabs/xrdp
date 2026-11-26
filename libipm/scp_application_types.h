@@ -80,7 +80,8 @@ enum scp_login_status
      * User couldn't be authenticated, or user doesn't exist */
     E_SCP_LOGIN_NOT_AUTHENTICATED,
     E_SCP_LOGIN_NOT_AUTHORIZED, ///< User is authenticated, but not authorized
-    E_SCP_LOGIN_GENERAL_ERROR ///< An unspecific error has occurred
+    E_SCP_LOGIN_GENERAL_ERROR, ///< An unspecific error has occurred
+    E_SCP_LOGIN_CANCELLED ///< The user cancelled an interactive prompt
 };
 
 /**
