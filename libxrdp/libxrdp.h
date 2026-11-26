@@ -111,6 +111,7 @@ struct xrdp_sec
     struct stream server_mcs_data;
     int decrypt_use_count;
     int encrypt_use_count;
+    unsigned int decrypt_total_count; /* RC4 decrypts so far, never reset (salted MAC) */
     char decrypt_key[16];
     char encrypt_key[16];
     char decrypt_update_key[16];
