@@ -30,6 +30,7 @@
 
 #include "login_info.h"
 
+#include "explicit_bzero.h"
 #include "trans.h"
 
 #include "sesman_auth.h"
@@ -328,8 +329,7 @@ authenticate_and_authorize_connection(const char *supplied_username,
 /******************************************************************************/
 static int
 get_scp_client_retry(struct trans *scp_trans,
-                     const char **username, const char **password,
-                     const char **ip_addr)
+                     char **username, char **password, char **ip_addr)
 {
     int got_message = 0;
 
@@ -344,12 +344,31 @@ get_scp_client_retry(struct trans *scp_trans,
         switch (msgno)
         {
             case E_SCP_SYS_LOGIN_REQUEST:
-                if (scp_get_sys_login_request(scp_trans, username,
-                                              password, ip_addr) == 0)
+            {
+                const char *user;
+                const char *pass;
+                const char *addr;
+                if (scp_get_sys_login_request(scp_trans, &user, &pass, &addr) == 0)
                 {
-                    got_message = 1;
+                    /* PAM can read more messages on this transport. Preserve
+                     * the login request before resetting its input buffer. */
+                    *username = g_strdup(user);
+                    *ip_addr = g_strdup(addr);
+                    if (*username != NULL && *ip_addr != NULL)
+                    {
+                        *password = g_strdup(pass);
+                    }
+                    got_message = *password != NULL;
+                    if (!got_message)
+                    {
+                        LOG(LOG_LEVEL_ERROR, "Cannot allocate the login retry credentials");
+                        g_free(*username);
+                        g_free(*ip_addr);
+                    }
                 }
-                break;
+                scp_msg_in_reset(scp_trans);
+            }
+            break;
 
             case E_SCP_CLOSE_CONNECTION_REQUEST:
                 break;
@@ -392,27 +411,36 @@ login_info_sys_login_user(struct trans *scp_trans,
 
         while (status != E_SCP_LOGIN_OK && !server_closed)
         {
+            char *retry_user = NULL;
+            char *retry_pass = NULL;
+            char *retry_addr = NULL;
+
             // First time round, we have credentials supplied by the
             // caller. On subsequent trips, we have to wait for the
             // SCP client to send us more.
-            if (first_time)
-            {
-                first_time = 0;
-            }
-            else if (!get_scp_client_retry(scp_trans, &username,
-                                           &password, &ip_addr))
+            if (!first_time && !get_scp_client_retry(scp_trans, &retry_user,
+                    &retry_pass, &retry_addr))
             {
                 status = E_SCP_LOGIN_GENERAL_ERROR;
                 break;
             }
 
-            status = authenticate_and_authorize_connection(username,
-                     password,
-                     ip_addr,
-                     result,
-                     scp_trans);
+            status = authenticate_and_authorize_connection(
+                         first_time ? username : retry_user,
+                         first_time ? password : retry_pass,
+                         first_time ? ip_addr : retry_addr,
+                         result,
+                         scp_trans);
+            first_time = 0;
+            if (retry_pass != NULL)
+            {
+                explicit_bzero(retry_pass, g_strlen(retry_pass));
+                g_free(retry_pass);
+                g_free(retry_user);
+                g_free(retry_addr);
+            }
 
-            if (status != E_SCP_LOGIN_OK)
+            if (status != E_SCP_LOGIN_OK && status != E_SCP_LOGIN_CANCELLED)
             {
                 if (retry_count > 0)
                 {

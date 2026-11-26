@@ -60,6 +60,7 @@ msgno_to_str(unsigned short n)
         (n == E_SCP_LIST_SESSIONS_RESPONSE) ? "SCP_LIST_SESSIONS_RESPONSE" :
 
         (n == E_SCP_CLOSE_CONNECTION_REQUEST) ? "SCP_CLOSE_CONNECTION_REQUEST" :
+        (n == E_SCP_PROMPT_CANCEL) ? "SCP_PROMPT_CANCEL" :
         NULL;
 }
 
@@ -958,6 +959,14 @@ scp_send_prompt_response(struct trans *trans, const char *response)
                trans,
                (int)E_SCP_PROMPT_RESPONSE,
                "s", response);
+}
+
+/*****************************************************************************/
+
+int
+scp_send_prompt_cancel(struct trans *trans)
+{
+    return libipm_msg_out_simple_send(trans, (int)E_SCP_PROMPT_CANCEL, NULL);
 }
 
 /*****************************************************************************/
