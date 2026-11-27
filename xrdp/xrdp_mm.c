@@ -4201,6 +4201,35 @@ server_bell_trigger(struct xrdp_mod *mod)
 }
 
 /*****************************************************************************/
+/* The session changed its lock key state (numlockx, xdotool, XkbLockModifiers)
+ * so tell the client. led_flags are TS_SYNC_* bits from the module. The wm's
+ * own copy is updated too so key mapping in xrdp_wm_key agrees with the
+ * session. Nothing is sent when the client is already in that state, which
+ * also stops the echo of a lock key the client itself pressed. */
+static int
+server_set_keyboard_indicators(struct xrdp_mod *mod, int led_flags)
+{
+    struct xrdp_wm *wm;
+    int scroll_lock;
+    int num_lock;
+    int caps_lock;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    scroll_lock = (led_flags & TS_SYNC_SCROLL_LOCK) != 0;
+    num_lock = (led_flags & TS_SYNC_NUM_LOCK) != 0;
+    caps_lock = (led_flags & TS_SYNC_CAPS_LOCK) != 0;
+    if (scroll_lock == wm->scroll_lock && num_lock == wm->num_lock &&
+            caps_lock == wm->caps_lock)
+    {
+        return 0;
+    }
+    wm->scroll_lock = scroll_lock;
+    wm->num_lock = num_lock;
+    wm->caps_lock = caps_lock;
+    return libxrdp_send_set_keyboard_indicators(wm->session, led_flags);
+}
+
+/*****************************************************************************/
 /* Chansrv in use on this configuration? */
 static int
 server_chansrv_in_use(struct xrdp_mod *mod)
@@ -5477,6 +5506,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_paint_rects_ex = server_paint_rects_ex;
             self->mod->server_set_pointer_system = server_set_pointer_system;
             self->mod->server_set_pointer_position = server_set_pointer_position;
+            self->mod->server_set_keyboard_indicators =
+                server_set_keyboard_indicators;
             self->mod->si = &(self->wm->session->si);
         }
     }

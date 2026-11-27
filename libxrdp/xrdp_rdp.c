@@ -1154,6 +1154,46 @@ xrdp_rdp_send_control(struct xrdp_rdp *self, int action,
 }
 
 /*****************************************************************************/
+/* Send a [MS-RDPBCGR] 2.2.8.2.1 TS_SET_KEYBOARD_INDICATORS_PDU message.
+ * Tells the client which lock keys are lit on the server side so its
+ * LEDs (and its own key mapping) follow changes made inside the session.
+ * led_flags is a combination of the TS_SYNC_* bits. Slow-path only. */
+int
+xrdp_rdp_send_set_keyboard_indicators(struct xrdp_rdp *self, int led_flags)
+{
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 8192);
+
+    if (xrdp_rdp_init_data(self, s) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "xrdp_rdp_send_set_keyboard_indicators: "
+            "xrdp_rdp_init_data failed");
+        free_stream(s);
+        return 1;
+    }
+
+    out_uint16_le(s, 0); /* UnitId (2 bytes) : must be zero */
+    out_uint16_le(s, led_flags & 0x0f); /* LedFlags (2 bytes) */
+    s_mark_end(s);
+    LOG_DEVEL(LOG_LEVEL_TRACE, "Sending [MS-RDPBCGR] "
+              "TS_SET_KEYBOARD_INDICATORS_PDU UnitId 0, LedFlags 0x%x",
+              led_flags & 0x0f);
+
+    if (xrdp_rdp_send_data(self, s, PDUTYPE2_SET_KEYBOARD_INDICATORS) != 0)
+    {
+        LOG(LOG_LEVEL_ERROR, "Sending [MS-RDPBCGR] "
+            "TS_SET_KEYBOARD_INDICATORS_PDU failed");
+        free_stream(s);
+        return 1;
+    }
+
+    free_stream(s);
+    return 0;
+}
+
+/*****************************************************************************/
 /* Process a [MS-RDPBCGR] TS_CONTROL_PDU message */
 static int
 xrdp_rdp_process_data_control(struct xrdp_rdp *self, struct stream *s)

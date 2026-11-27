@@ -16,7 +16,8 @@ test_libxrdp_SOURCES = \
     test_libxrdp_main.c \
     test_libxrdp_process_monitor_stream.c \
     test_xrdp_sec_process_mcs_data_monitors.c \
-    test_xrdp_orders.c
+    test_xrdp_orders.c \
+    test_xrdp_keyboard_indicators.c
 
 test_libxrdp_CFLAGS = \
     @CHECK_CFLAGS@

@@ -850,6 +850,20 @@ libxrdp_send_pointer_position(struct xrdp_session *session, int x, int y)
 }
 
 /*****************************************************************************/
+/* Tell the client which lock keys are lit (TS_SYNC_* bits) */
+int EXPORT_CC
+libxrdp_send_set_keyboard_indicators(struct xrdp_session *session,
+                                     int led_flags)
+{
+    if (!session->up_and_running)
+    {
+        /* Not a data PDU the client can take yet */
+        return 0;
+    }
+    return xrdp_rdp_send_set_keyboard_indicators(session->rdp, led_flags);
+}
+
+/*****************************************************************************/
 int EXPORT_CC
 libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                      char *data, char *mask, int x, int y, int bpp,
