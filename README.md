@@ -21,6 +21,10 @@ Many of these work on some or all of Windows, Mac OS, iOS, and/or Android.
 
 RDP transport is encrypted using TLS by default.
 
+CredSSP Network Level Authentication is available as an opt-in feature. See
+[Network Level Authentication](docs/nla.md) for build, configuration and
+testing instructions, and the current limitations.
+
 ![Modern xrdp login followed by a successful connection to an Xfce desktop](docs/images/lvgl-demo.gif)
 
 The demo shows the [optional LVGL login interface](docs/lvgl.md).
@@ -93,6 +97,9 @@ compiler (**gcc** or **clang**) and the **make** program.  Additionally,
 you would need **openssl-devel**, **pam-devel**, **libX11-devel**,
 **libXfixes-devel**, **libXrandr-devel**. More additional software would
 be needed depending on your configuration.
+
+Network Level Authentication additionally requires the GSSAPI development
+files (**libkrb5-dev** on Debian/Ubuntu or **krb5-devel** on Fedora/RHEL).
 
 To compile xrdp from a checked out git repository, you would additionally
 need **autoconf**, **automake**, **libtool** and **pkg-config**.

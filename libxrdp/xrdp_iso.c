@@ -2,7 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2004-2014
- * Copyright (C) Idan Freiberg 2013-2014
+ * Copyright (C) Idan Freiberg 2013-2026
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,9 @@
 #include "string_calls.h"
 #include "log.h"
 
+#if defined(XRDP_NLA)
+#include "xrdp_nla.h"
+#endif
 
 /*****************************************************************************/
 /**
@@ -109,6 +112,16 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
     int got_protocol = 0;
     int security_type_mask;
 
+    if (client_info->security_layer == SECURITY_LAYER_NLA &&
+            (!g_file_readable(client_info->certificate) ||
+             !g_file_readable(client_info->key_file)))
+    {
+        LOG(LOG_LEVEL_ERROR, "Cannot accept NLA connections because the "
+            "certificate or private key file is not readable");
+        self->failureCode = SSL_CERT_NOT_ON_SERVER;
+        return 1;
+    }
+
     /* Map the configuration from xrdp.ini to a mask of allowed
      * security types ([MS-RDPBCGR] 2.2.1.2.1)
      *
@@ -118,14 +131,32 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
      * agreed on. Nowadays, classic RDP security should
      * not be used, if at all avoidable */
 
-    /* At present we only support SSL and RDP security */
-    if (client_info->security_layer == SECURITY_LAYER_RDP)
+    if (client_info->security_layer == SECURITY_LAYER_NLA)
+    {
+#if defined(XRDP_NLA)
+        security_type_mask = PROTOCOL_HYBRID;
+#else
+        LOG(LOG_LEVEL_ERROR, "Server requires NLA, but xrdp was built "
+            "without NLA support");
+        self->failureCode = HYBRID_REQUIRED_BY_SERVER;
+        return 1;
+#endif
+    }
+    else if (client_info->security_layer == SECURITY_LAYER_RDP)
     {
         security_type_mask = PROTOCOL_RDP;
     }
     else
     {
         security_type_mask = PROTOCOL_SSL;
+#if defined(XRDP_NLA)
+        if (xrdp_nla_is_enabled(client_info) &&
+                g_file_readable(client_info->certificate) &&
+                g_file_readable(client_info->key_file))
+        {
+            security_type_mask |= PROTOCOL_HYBRID;
+        }
+#endif
     }
     /* But VMConnect mode supports everything. */
     if (client_info->vmconnect)
@@ -149,7 +180,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
     }
     else if (security_type_mask & PROTOCOL_HYBRID)
     {
-        /* Currently supported by VMConnect mode only */
+        /* CredSSP is handled below TLS, or by the VMConnect host. */
         LOG(LOG_LEVEL_INFO, "Selected HYBRID security");
         self->selectedProtocol = PROTOCOL_HYBRID;
         got_protocol = 1;
@@ -187,6 +218,12 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         /* We don't have a match on TLS, but we'll accept nothing less */
         LOG(LOG_LEVEL_ERROR, "Server requires TLS (security_layer=tls)");
         self->failureCode = SSL_REQUIRED_BY_SERVER;
+        rv = 1;
+    }
+    else if (client_info->security_layer == SECURITY_LAYER_NLA)
+    {
+        LOG(LOG_LEVEL_ERROR, "Server requires NLA (security_layer=nla)");
+        self->failureCode = HYBRID_REQUIRED_BY_SERVER;
         rv = 1;
     }
 
