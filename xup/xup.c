@@ -1959,6 +1959,26 @@ process_server_set_pointer_position(struct mod *amod, struct stream *s)
 }
 
 /******************************************************************************/
+/* xup server message 67: the X server's lock key LEDs changed.
+ * Payload: uint32 led_flags, TS_SYNC_* bits ([MS-RDPBCGR] 2.2.1.14.1).
+ * Older xorgxrdp versions never send it; no cap is needed.
+ * return error */
+static int
+process_server_set_keyboard_indicators(struct mod *amod, struct stream *s)
+{
+    int rv;
+    int led_flags;
+
+    if (!s_check_rem_and_log(s, 4, "server_set_keyboard_indicators"))
+    {
+        return 1;
+    }
+    in_uint32_le(s, led_flags);
+    rv = amod->server_set_keyboard_indicators(amod, led_flags);
+    return rv;
+}
+
+/******************************************************************************/
 /* return error */
 static int
 send_server_version_message(struct mod *mod, struct stream *s)
@@ -2198,6 +2218,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 66: /* server_set_pointer_position */
             rv = process_server_set_pointer_position(mod, s);
+            break;
+        case 67: /* server_set_keyboard_indicators */
+            rv = process_server_set_keyboard_indicators(mod, s);
             break;
         default:
             LOG_DEVEL(LOG_LEVEL_WARNING,

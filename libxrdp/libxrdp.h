@@ -474,6 +474,8 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
  */
 int
 xrdp_rdp_send_set_error(struct xrdp_rdp *self, int reason);
+int
+xrdp_rdp_send_set_keyboard_indicators(struct xrdp_rdp *self, int led_flags);
 
 /**
  * Request output suppress or resume

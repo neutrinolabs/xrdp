@@ -29,11 +29,13 @@
 #include "../../xup/xup.c"
 
 #include "xrdp.h"
+#include "ms-rdpbcgr.h"
 #include "trans.h"
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
 static int g_callback_calls;
+static int g_led_flags;
 
 static int
 stub_set_cursor_ex(struct mod *v, int x, int y, char *data,
@@ -68,10 +70,19 @@ stub_paint_rects(struct mod *v, int num_drects, short *drects,
     return 0;
 }
 
+static int
+stub_set_keyboard_indicators(struct mod *v, int led_flags)
+{
+    g_callback_calls++;
+    g_led_flags = led_flags;
+    return 0;
+}
+
 static struct mod *
 make_mod(void)
 {
     struct mod *mod = (struct mod *)mod_init();
+    mod->server_set_keyboard_indicators = stub_set_keyboard_indicators;
     mod->server_set_cursor_ex = stub_set_cursor_ex;
     mod->server_paint_rect = stub_paint_rect;
     mod->server_add_char = stub_add_char;
@@ -157,6 +168,49 @@ START_TEST(test_add_char__rejects_data_shorter_than_geometry)
     finish_stream(s);
 
     rv = process_server_add_char(mod, s);
+
+    ck_assert_int_ne(rv, 0);
+    ck_assert_int_eq(g_callback_calls, 0);
+    free_stream(s);
+    mod_exit((tintptr)mod);
+}
+END_TEST
+
+/******************************************************************************/
+/* xup server message 67 carries the X server's lock key LEDs */
+START_TEST(test_set_keyboard_indicators__reaches_callback)
+{
+    struct mod *mod = make_mod();
+    struct stream *s;
+    int rv;
+
+    make_stream(s);
+    init_stream(s, 8192);
+    out_uint32_le(s, TS_SYNC_CAPS_LOCK | TS_SYNC_NUM_LOCK); /* led_flags */
+    finish_stream(s);
+
+    rv = lib_mod_process_orders(mod, 67, s);
+
+    ck_assert_int_eq(rv, 0);
+    ck_assert_int_eq(g_callback_calls, 1);
+    ck_assert_int_eq(g_led_flags, TS_SYNC_CAPS_LOCK | TS_SYNC_NUM_LOCK);
+    free_stream(s);
+    mod_exit((tintptr)mod);
+}
+END_TEST
+
+START_TEST(test_set_keyboard_indicators__rejects_short_payload)
+{
+    struct mod *mod = make_mod();
+    struct stream *s;
+    int rv;
+
+    make_stream(s);
+    init_stream(s, 8192);
+    out_uint16_le(s, TS_SYNC_CAPS_LOCK); /* only half of led_flags */
+    finish_stream(s);
+
+    rv = lib_mod_process_orders(mod, 67, s);
 
     ck_assert_int_ne(rv, 0);
     ck_assert_int_eq(g_callback_calls, 0);
@@ -277,6 +331,8 @@ make_suite_backend_input(void)
     tcase_add_test(tc, test_set_pointer_ex__rejects_out_of_range_bpp);
     tcase_add_test(tc, test_paint_rect__rejects_short_bitmap_data);
     tcase_add_test(tc, test_add_char__rejects_data_shorter_than_geometry);
+    tcase_add_test(tc, test_set_keyboard_indicators__reaches_callback);
+    tcase_add_test(tc, test_set_keyboard_indicators__rejects_short_payload);
     tcase_add_test(tc,
                    test_paint_rect_shmem_ex__rejects_image_past_segment_end);
     tcase_add_test(tc,
