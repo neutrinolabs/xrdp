@@ -1413,7 +1413,7 @@ ssl_cert_get_dns_name(const char *cert_file, int index,
     }
 
     sans = (GENERAL_NAMES *)X509_get_ext_d2i(cert, NID_subject_alt_name,
-                                             NULL, NULL);
+           NULL, NULL);
     if (sans != NULL)
     {
         for (i = 0; i < sk_GENERAL_NAME_num(sans); ++i)
