@@ -62,6 +62,7 @@ int main (void)
 
     srunner_add_suite(sr, make_suite_login());
     srunner_add_suite(sr, make_suite_backend_input());
+    srunner_add_suite(sr, make_suite_key_sync());
 
     srunner_set_tap(sr, "-");
     srunner_run_all (sr, CK_ENV);

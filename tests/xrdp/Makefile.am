@@ -48,7 +48,8 @@ test_xrdp_SOURCES = \
     test_xrdp_region.c \
     test_tconfig.c \
     test_bitmap_load.c \
-    test_backend_input.c
+    test_backend_input.c \
+    test_key_sync.c
 
 test_xrdp_CFLAGS = \
     -D IMAGEDIR=\"$(srcdir)\" \
