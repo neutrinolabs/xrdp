@@ -128,6 +128,31 @@ START_TEST(test_key_sync__saved_when_no_module)
 }
 END_TEST
 
+/* The wm tracks lock keys pressed on the login screen itself. Windows
+ * clients auto-repeat held keys, so a held CapsLock arrives as a stream
+ * of key-down events; only the first one toggles on the client */
+START_TEST(test_key_press__held_caps_lock_toggles_once)
+{
+    struct fixture f;
+
+    init_fixture(&f, 0);
+    ck_assert_int_eq(callback(&f.process, RDP_INPUT_SCANCODE,
+                              SCANCODE_CAPS_KEY, 0, 0, 0), 0);
+    ck_assert_int_eq(f.wm.caps_lock, 1);
+    /* auto-repeat: another key-down with no key-up in between */
+    ck_assert_int_eq(callback(&f.process, RDP_INPUT_SCANCODE,
+                              SCANCODE_CAPS_KEY, 0, 0, 0), 0);
+    ck_assert_int_eq(f.wm.caps_lock, 1);
+    ck_assert_int_eq(callback(&f.process, RDP_INPUT_SCANCODE,
+                              SCANCODE_CAPS_KEY, 0, KBDFLAGS_RELEASE, 0), 0);
+    ck_assert_int_eq(f.wm.caps_lock, 1);
+    /* a fresh press toggles it off */
+    ck_assert_int_eq(callback(&f.process, RDP_INPUT_SCANCODE,
+                              SCANCODE_CAPS_KEY, 0, 0, 0), 0);
+    ck_assert_int_eq(f.wm.caps_lock, 0);
+}
+END_TEST
+
 /******************************************************************************/
 Suite *
 make_suite_key_sync(void)
@@ -141,6 +166,7 @@ make_suite_key_sync(void)
     tcase_add_test(tc, test_key_sync__mirrors_flags_and_forwards_to_module);
     tcase_add_test(tc, test_key_sync__replaces_previous_state);
     tcase_add_test(tc, test_key_sync__saved_when_no_module);
+    tcase_add_test(tc, test_key_press__held_caps_lock_toggles_once);
     suite_add_tcase(s, tc);
 
     return s;
