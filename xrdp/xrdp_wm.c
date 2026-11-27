@@ -1660,21 +1660,27 @@ xrdp_wm_key(struct xrdp_wm *self, int keyboard_flags, int key_code)
     }
     else /* key down */
     {
-        self->keys[sindex] = 1;
         msg = WM_KEYDOWN;
 
-        switch (scancode)
+        /* Windows clients auto-repeat held keys, so a held lock key
+         * arrives as a stream of key-down events. Only the first one
+         * toggles the client's state, so only the first toggles ours */
+        if (!self->keys[sindex])
         {
-            case SCANCODE_CAPS_KEY:
-                self->caps_lock = !self->caps_lock;
-                break; /* caps lock */
-            case SCANCODE_NUMLOCK_KEY:
-                self->num_lock = !self->num_lock;
-                break; /* num lock */
-            case SCANCODE_SCROLL_KEY:
-                self->scroll_lock = !self->scroll_lock;
-                break; /* scroll lock */
+            switch (scancode)
+            {
+                case SCANCODE_CAPS_KEY:
+                    self->caps_lock = !self->caps_lock;
+                    break; /* caps lock */
+                case SCANCODE_NUMLOCK_KEY:
+                    self->num_lock = !self->num_lock;
+                    break; /* num lock */
+                case SCANCODE_SCROLL_KEY:
+                    self->scroll_lock = !self->scroll_lock;
+                    break; /* scroll lock */
+            }
         }
+        self->keys[sindex] = 1;
     }
 
     if (self->login_ui != NULL)

@@ -11,4 +11,5 @@ Suite *make_suite_tconfig_load_gfx(void);
 
 Suite *make_suite_login(void);
 Suite *make_suite_backend_input(void);
+Suite *make_suite_key_sync(void);
 #endif /* TEST_XRDP_H */
