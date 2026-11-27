@@ -28,6 +28,9 @@
 #include "log.h"
 #include "ssl_calls.h"
 #include "string_calls.h"
+#if defined(XRDP_NLA)
+#include "xrdp_nla.h"
+#endif
 
 #if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
@@ -219,6 +222,15 @@ xrdp_rdp_read_config(const char *xrdp_ini, struct xrdp_client_info *client_info)
         else if (g_strcasecmp(item, "enable_nla") == 0)
         {
             client_info->enable_nla = g_text2bool(value);
+        }
+        else if (g_strcasecmp(item, "nla_keytab") == 0 && g_strlen(value) > 0)
+        {
+#if defined(XRDP_NLA)
+            xrdp_nla_set_keytab(value);
+#else
+            LOG(LOG_LEVEL_WARNING, "nla_keytab is ignored: xrdp was built "
+                "without NLA support");
+#endif
         }
         else if (g_strcasecmp(item, "vmconnect") == 0)
         {

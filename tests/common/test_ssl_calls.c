@@ -370,6 +370,88 @@ START_TEST(test_gen_key_xrdp1)
 END_TEST
 
 /******************************************************************************/
+#define TEST_CERT_FILE "./test_ssl_calls_cert.pem"
+
+/* Self-signed test certificate with CN=cn.example.com and
+ * subjectAltName=DNS:rdp.example.com,IP:192.0.2.1,DNS:rdp2.example.com */
+static const char san_cert_pem[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBnDCCAUKgAwIBAgIUcRX/6b+jB2UVN8oFtK8b4wKLUGswCgYIKoZIzj0EAwIw\n"
+    "GTEXMBUGA1UEAwwOY24uZXhhbXBsZS5jb20wIBcNMjYxMTI3MDAxMDAyWhgPMjEy\n"
+    "NjExMDMwMDEwMDJaMBkxFzAVBgNVBAMMDmNuLmV4YW1wbGUuY29tMFkwEwYHKoZI\n"
+    "zj0CAQYIKoZIzj0DAQcDQgAEORBTeWbxyr2HAIl/DOUQ3TxL2D5mXc6G2j/yfCFd\n"
+    "Ukqwew6OSzZHts2le4eeN64XXVT9rWppKGcoS4nK0RMXpaNmMGQwHQYDVR0OBBYE\n"
+    "FGmixZpOiYqeHm7AmrrBkbKkXnc9MA8GA1UdEwEB/wQFMAMBAf8wMgYDVR0RBCsw\n"
+    "KYIPcmRwLmV4YW1wbGUuY29thwTAAAIBghByZHAyLmV4YW1wbGUuY29tMAoGCCqG\n"
+    "SM49BAMCA0gAMEUCIQCupp0e0Er+IEDG2nqL0Xvxzj6lHMg5p14e7VnI6HMbeQIg\n"
+    "OjD8v/rUI+JU/X4q7bIfGkOL+pqx/UbItNNCoF1GbHs=\n"
+    "-----END CERTIFICATE-----\n";
+
+/* Self-signed test certificate with CN=cnonly.example.com and no
+ * subjectAltName */
+static const char cn_cert_pem[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBcTCCARagAwIBAgIUHyCHaXiJgiUG11Nj8zPLiLfwDKAwCgYIKoZIzj0EAwIw\n"
+    "HTEbMBkGA1UEAwwSY25vbmx5LmV4YW1wbGUuY29tMCAXDTI2MTEyNzAwMTAwMloY\n"
+    "DzIxMjYxMTAzMDAxMDAyWjAdMRswGQYDVQQDDBJjbm9ubHkuZXhhbXBsZS5jb20w\n"
+    "WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASVOwex2ZH1NO6yMtr4KmYW4mr9Y5Kp\n"
+    "xOWR23Svo2FvSEVjPtJXHV5/7Qu072ilFfeRJNvg2d7ZOQ0Waz6Ok45DozIwMDAd\n"
+    "BgNVHQ4EFgQUlCq2NdmarM2ORjsNqQ3AqouohXEwDwYDVR0TAQH/BAUwAwEB/zAK\n"
+    "BggqhkjOPQQDAgNJADBGAiEAiWS6ipCP5ewb5K41fy2Jtw3ET6W74KrK52ZREITZ\n"
+    "hCkCIQCmmwpRJUUEAS4rZ+TV/j/HTkuGTzCQ4MRFhlC5l6x2Xw==\n"
+    "-----END CERTIFICATE-----\n";
+
+static void
+write_test_cert(const char *pem)
+{
+    int fd = g_file_open_rw(TEST_CERT_FILE);
+    ck_assert(fd >= 0);
+    ck_assert_int_eq(g_file_write(fd, pem, g_strlen(pem)), g_strlen(pem));
+    g_file_close(fd);
+}
+
+START_TEST(test_cert_dns_names_from_san)
+{
+    char name[256];
+
+    write_test_cert(san_cert_pem);
+    ck_assert_int_eq(ssl_cert_get_dns_name(TEST_CERT_FILE, 0,
+                                           name, sizeof(name)), 0);
+    ck_assert_str_eq(name, "rdp.example.com");
+    ck_assert_int_eq(ssl_cert_get_dns_name(TEST_CERT_FILE, 1,
+                                           name, sizeof(name)), 0);
+    ck_assert_str_eq(name, "rdp2.example.com");
+    /* The IP address entry and the CN are not DNS names */
+    ck_assert_int_ne(ssl_cert_get_dns_name(TEST_CERT_FILE, 2,
+                                           name, sizeof(name)), 0);
+    g_file_delete(TEST_CERT_FILE);
+}
+END_TEST
+
+START_TEST(test_cert_dns_name_falls_back_to_cn)
+{
+    char name[256];
+
+    write_test_cert(cn_cert_pem);
+    ck_assert_int_eq(ssl_cert_get_dns_name(TEST_CERT_FILE, 0,
+                                           name, sizeof(name)), 0);
+    ck_assert_str_eq(name, "cnonly.example.com");
+    ck_assert_int_ne(ssl_cert_get_dns_name(TEST_CERT_FILE, 1,
+                                           name, sizeof(name)), 0);
+    g_file_delete(TEST_CERT_FILE);
+}
+END_TEST
+
+START_TEST(test_cert_dns_name_missing_file)
+{
+    char name[256];
+
+    ck_assert_int_ne(ssl_cert_get_dns_name("./no_such_cert.pem", 0,
+                                           name, sizeof(name)), 0);
+}
+END_TEST
+
+/******************************************************************************/
 Suite *
 make_suite_test_ssl_calls(void)
 {
@@ -407,6 +489,12 @@ make_suite_test_ssl_calls(void)
     suite_add_tcase(s, tc);
     tcase_set_timeout(tc, RSA_BASED_TEST_SUITE_TIMEOUT);
     tcase_add_test(tc, test_gen_key_xrdp1);
+
+    tc = tcase_create("ssl_calls_cert");
+    suite_add_tcase(s, tc);
+    tcase_add_test(tc, test_cert_dns_names_from_san);
+    tcase_add_test(tc, test_cert_dns_name_falls_back_to_cn);
+    tcase_add_test(tc, test_cert_dns_name_missing_file);
 
     return s;
 }

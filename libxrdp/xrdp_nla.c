@@ -32,6 +32,8 @@
 #include <openssl/sha.h>
 
 #include "libxrdp.h"
+#include "os_calls.h"
+#include "ssl_calls.h"
 #include "string_calls.h"
 #include "xrdp_nla.h"
 
@@ -44,6 +46,8 @@
 #define XRDP_NLA_STATUS_LOGON_FAILURE ((int32_t)0xc000006d)
 #define XRDP_NLA_RFC4121_HEADER_LENGTH 16
 #define XRDP_NLA_RFC4121_CONFOUNDER_LENGTH 16
+#define XRDP_NLA_MAX_HOST_LENGTH 256
+#define XRDP_NLA_KEYTAB_VALUE_LENGTH 1024
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #define ASN1_STRING_get0_data ASN1_STRING_data
@@ -373,7 +377,8 @@ cleanup:
 
 /*****************************************************************************/
 static void
-nla_log_gss_status(const char *operation, OM_uint32 major, OM_uint32 minor)
+nla_log_gss_status_level(enum logLevels level, const char *operation,
+                         OM_uint32 major, OM_uint32 minor)
 {
     OM_uint32 display_minor;
     OM_uint32 context = 0;
@@ -384,7 +389,7 @@ nla_log_gss_status(const char *operation, OM_uint32 major, OM_uint32 minor)
         if (gss_display_status(&display_minor, major, GSS_C_GSS_CODE,
                                GSS_C_NO_OID, &context, &message) == GSS_S_COMPLETE)
         {
-            LOG(LOG_LEVEL_ERROR, "NLA: %s: %.*s", operation,
+            LOG(level, "NLA: %s: %.*s", operation,
                 message.length > INT_MAX ? INT_MAX : (int)message.length,
                 (const char *)message.value);
             gss_release_buffer(&display_minor, &message);
@@ -398,13 +403,108 @@ nla_log_gss_status(const char *operation, OM_uint32 major, OM_uint32 minor)
         if (gss_display_status(&display_minor, minor, GSS_C_MECH_CODE,
                                GSS_C_NO_OID, &context, &message) == GSS_S_COMPLETE)
         {
-            LOG(LOG_LEVEL_ERROR, "NLA: %s mechanism: %.*s", operation,
+            LOG(level, "NLA: %s mechanism: %.*s", operation,
                 message.length > INT_MAX ? INT_MAX : (int)message.length,
                 (const char *)message.value);
             gss_release_buffer(&display_minor, &message);
         }
     }
     while (context != 0);
+}
+
+/*****************************************************************************/
+static void
+nla_log_gss_status(const char *operation, OM_uint32 major, OM_uint32 minor)
+{
+    nla_log_gss_status_level(LOG_LEVEL_ERROR, operation, major, minor);
+}
+
+/*****************************************************************************/
+int
+xrdp_nla_set_keytab(const char *keytab)
+{
+    const char *current = g_getenv("KRB5_KTNAME");
+    char value[XRDP_NLA_KEYTAB_VALUE_LENGTH];
+
+    if (keytab == NULL || keytab[0] != '/')
+    {
+        LOG(LOG_LEVEL_WARNING, "nla_keytab must be an absolute path, "
+            "ignoring '%s'", keytab == NULL ? "" : keytab);
+        return 1;
+    }
+    if (!g_file_readable(keytab))
+    {
+        LOG(LOG_LEVEL_ERROR, "Cannot read keytab file %s: %s",
+            keytab, g_get_strerror());
+    }
+    if (current != NULL && current[0] != '\0')
+    {
+        LOG(LOG_LEVEL_INFO, "KRB5_KTNAME is already set to %s, "
+            "nla_keytab=%s is not applied", current, keytab);
+        return 0;
+    }
+    g_snprintf(value, sizeof(value), "FILE:%s", keytab);
+    g_setenv_log("KRB5_KTNAME", value, 0);
+    return 0;
+}
+
+/*****************************************************************************/
+int
+xrdp_nla_check_keytab(const char *cert_file)
+{
+    /* Kerberos V5 mechanism OID 1.2.840.113554.1.2.2 */
+    static gss_OID_desc krb5_mech =
+    {
+        9, (void *)"\x2a\x86\x48\x86\xf7\x12\x01\x02\x02"
+    };
+    gss_OID_set_desc mechs = { 1, &krb5_mech };
+    const char *keytab = g_getenv("KRB5_KTNAME");
+    char host[XRDP_NLA_MAX_HOST_LENGTH];
+    char service[XRDP_NLA_MAX_HOST_LENGTH + 8];
+    gss_buffer_desc service_buffer;
+    gss_name_t name;
+    gss_cred_id_t cred;
+    OM_uint32 major;
+    OM_uint32 minor;
+    OM_uint32 release_minor;
+    int index;
+    int missing = 0;
+
+    for (index = 0;
+            ssl_cert_get_dns_name(cert_file, index, host, sizeof(host)) == 0;
+            ++index)
+    {
+        g_snprintf(service, sizeof(service), "TERMSRV@%s", host);
+        service_buffer.value = service;
+        service_buffer.length = g_strlen(service);
+        name = GSS_C_NO_NAME;
+        cred = GSS_C_NO_CREDENTIAL;
+        major = gss_import_name(&minor, &service_buffer,
+                                GSS_C_NT_HOSTBASED_SERVICE, &name);
+        if (major == GSS_S_COMPLETE)
+        {
+            major = gss_acquire_cred(&minor, name, GSS_C_INDEFINITE, &mechs,
+                                     GSS_C_ACCEPT, &cred, NULL, NULL);
+        }
+        if (major != GSS_S_COMPLETE)
+        {
+            LOG(LOG_LEVEL_WARNING, "NLA: no Kerberos acceptor key for "
+                "TERMSRV/%s (certificate %s) in keytab %s", host, cert_file,
+                keytab == NULL ? "(default)" : keytab);
+            nla_log_gss_status_level(LOG_LEVEL_WARNING, "keytab check",
+                                     major, minor);
+            ++missing;
+        }
+        if (cred != GSS_C_NO_CREDENTIAL)
+        {
+            gss_release_cred(&release_minor, &cred);
+        }
+        if (name != GSS_C_NO_NAME)
+        {
+            gss_release_name(&release_minor, &name);
+        }
+    }
+    return missing;
 }
 
 /*****************************************************************************/
@@ -734,6 +834,10 @@ xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info)
     {
         return 1;
     }
+
+    /* Warn early about the most common misconfiguration: the TLS
+     * certificate names have no matching TERMSRV key in the keytab */
+    xrdp_nla_check_keytab(client_info->certificate);
 
     for (round = 0; round < XRDP_NLA_MAX_TOKEN_ROUNDS; ++round)
     {

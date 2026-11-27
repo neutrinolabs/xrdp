@@ -46,9 +46,13 @@ grep '^#define XRDP_NLA 1' config_ac.h
 
 ### TLS certificate
 
-NLA requires the certificate and private key configured in `xrdp.ini` to be
-readable by the xrdp daemon. Clients should trust the certificate and its name
-should match the DNS name used to connect.
+The certificate requirements are the same as for `security_layer=tls`. The
+certificate and private key configured in `xrdp.ini` must be readable by the
+xrdp daemon, and clients should trust the certificate. Clients compare the
+name they connect with against the `subjectAltName` DNS entries, and only use
+the subject CN for certificates without any; include every DNS name clients
+use as a DNS entry. The same names determine the `TERMSRV` Kerberos principals
+that clients request, as described below.
 
 ### GSSAPI acceptor
 
@@ -63,20 +67,27 @@ The KDC-specific procedure for creating the principal and exporting its key is
 outside xrdp. DNS resolution, the Kerberos realm configuration and system time
 must also be correct on the server and client.
 
-GSSAPI uses its default keytab unless `KRB5_KTNAME` is set. A dedicated keytab
-can be selected through the xrdp service environment. For packaged systemd
-units, `/etc/default/xrdp` or `/etc/sysconfig/xrdp` can contain:
+GSSAPI uses its default keytab unless `KRB5_KTNAME` is set. Set `nla_keytab`
+in the `[Globals]` section of `xrdp.ini` to use a dedicated keytab:
 
-```sh
-KRB5_KTNAME=FILE:/etc/xrdp/krb5.keytab
+```ini
+nla_keytab=/etc/xrdp/krb5.keytab
 ```
 
-The keytab must be readable after xrdp changes to the configured `runtime_user`
-and `runtime_group`. Verify its contents without printing key material:
+xrdp exports this path as `KRB5_KTNAME` when it reads its configuration. A
+`KRB5_KTNAME` already present in the service environment takes precedence, and
+xrdp logs that the `nla_keytab` value was not applied. The keytab must be
+readable after xrdp changes to the configured `runtime_user` and
+`runtime_group`. Verify its contents without printing key material:
 
 ```sh
 KRB5_KTNAME=FILE:/etc/xrdp/krb5.keytab klist -k
 ```
+
+Before each NLA exchange, xrdp checks that the keytab holds a `TERMSRV`
+acceptor key for every DNS name in the TLS certificate and logs a warning for
+each name without one. The check is advisory: authentication still proceeds,
+and the name the client connected with decides which key is used.
 
 xrdp uses the mechanisms exposed by the system GSSAPI. Kerberos is available
 with the Kerberos GSSAPI implementation. NTLM fallback is available only when
@@ -92,6 +103,7 @@ To require NLA, configure the global security layer and TLS files:
 security_layer=nla
 certificate=/etc/xrdp/cert.pem
 key_file=/etc/xrdp/key.pem
+nla_keytab=/etc/xrdp/krb5.keytab
 ```
 
 To prefer NLA while retaining TLS compatibility for clients which do not offer
@@ -103,6 +115,7 @@ security_layer=negotiate
 enable_nla=true
 certificate=/etc/xrdp/cert.pem
 key_file=/etc/xrdp/key.pem
+nla_keytab=/etc/xrdp/krb5.keytab
 ```
 
 `enable_nla` defaults to `false` and only affects `security_layer=negotiate`.
@@ -235,8 +248,8 @@ with both OpenSSL and LibreSSL.
 - Remote Credential Guard (`TSRemoteGuardCreds`);
 - `PROTOCOL_HYBRID_EX` and the Early User Authorization Result PDU;
 - a built-in NTLM provider or xrdp-specific NTLM credential store; and
-- xrdp.ini settings for the acceptor principal or keytab. Use the standard
-  GSSAPI configuration and `KRB5_KTNAME` environment variable instead.
+- an xrdp.ini setting for the acceptor principal. Any `TERMSRV` principal
+  present in the keytab is accepted.
 
 NTLM interoperability depends on the installed GSSAPI mechanism and still
 needs broader client and distribution coverage beyond the tested combination

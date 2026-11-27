@@ -72,6 +72,10 @@ security_layer=negotiate
 ; offer NLA when security_layer=negotiate. NLA must be built and configured
 enable_nla=false
 
+; Kerberos keytab with the TERMSRV/hostname acceptor keys for NLA
+; sets KRB5_KTNAME unless the service environment already does
+#nla_keytab=/etc/xrdp/krb5.keytab
+
 ; minimum security level allowed for client for classic RDP encryption
 ; use tls_ciphers to configure TLS encryption
 ; can be 'none', 'low', 'medium', 'high', 'fips'

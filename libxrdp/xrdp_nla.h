@@ -28,6 +28,29 @@ xrdp_nla_is_enabled(const struct xrdp_client_info *client_info);
 int
 xrdp_nla_accept(struct trans *trans, struct xrdp_client_info *client_info);
 
+/**
+ * Selects the Kerberos keytab for the GSSAPI acceptor
+ *
+ * Sets KRB5_KTNAME unless the environment already provides it.
+ *
+ * @param keytab Absolute path of the keytab file
+ * @return 0 if the keytab was accepted
+ */
+int
+xrdp_nla_set_keytab(const char *keytab);
+
+/**
+ * Checks the Kerberos keytab against the TLS certificate names
+ *
+ * A warning is logged for each DNS name in the certificate which has no
+ * TERMSRV acceptor key in the keytab.
+ *
+ * @param cert_file Path of the PEM certificate
+ * @return Number of certificate names without an acceptor key
+ */
+int
+xrdp_nla_check_keytab(const char *cert_file);
+
 int
 xrdp_nla_decode_ts_credentials(const unsigned char *data, unsigned int length,
                                struct xrdp_client_info *client_info);

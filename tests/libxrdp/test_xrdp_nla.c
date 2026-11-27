@@ -20,11 +20,31 @@
 #include "config_ac.h"
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 
+#include "os_calls.h"
+#include "string_calls.h"
 #include "test_libxrdp.h"
 #include "xrdp_client_info.h"
 #include "xrdp_nla.h"
+
+#define TEST_CERT_FILE "./test_xrdp_nla_cert.pem"
+#define TEST_KEYTAB "/etc/xrdp/test-xrdp-nla.keytab"
+
+/* Self-signed test certificate with CN=cnonly.example.com and no
+ * subjectAltName */
+static const char test_cert_pem[] =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBcTCCARagAwIBAgIUHyCHaXiJgiUG11Nj8zPLiLfwDKAwCgYIKoZIzj0EAwIw\n"
+    "HTEbMBkGA1UEAwwSY25vbmx5LmV4YW1wbGUuY29tMCAXDTI2MTEyNzAwMTAwMloY\n"
+    "DzIxMjYxMTAzMDAxMDAyWjAdMRswGQYDVQQDDBJjbm9ubHkuZXhhbXBsZS5jb20w\n"
+    "WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASVOwex2ZH1NO6yMtr4KmYW4mr9Y5Kp\n"
+    "xOWR23Svo2FvSEVjPtJXHV5/7Qu072ilFfeRJNvg2d7ZOQ0Waz6Ok45DozIwMDAd\n"
+    "BgNVHQ4EFgQUlCq2NdmarM2ORjsNqQ3AqouohXEwDwYDVR0TAQH/BAUwAwEB/zAK\n"
+    "BggqhkjOPQQDAgNJADBGAiEAiWS6ipCP5ewb5K41fy2Jtw3ET6W74KrK52ZREITZ\n"
+    "hCkCIQCmmwpRJUUEAS4rZ+TV/j/HTkuGTzCQ4MRFhlC5l6x2Xw==\n"
+    "-----END CERTIFICATE-----\n";
 
 START_TEST(test_nla_configuration)
 {
@@ -114,6 +134,46 @@ START_TEST(test_reject_noncanonical_credentials)
 }
 END_TEST
 
+START_TEST(test_set_keytab_sets_krb5_ktname)
+{
+    unsetenv("KRB5_KTNAME");
+    ck_assert_int_eq(xrdp_nla_set_keytab(TEST_KEYTAB), 0);
+    ck_assert_ptr_nonnull(g_getenv("KRB5_KTNAME"));
+    ck_assert_str_eq(g_getenv("KRB5_KTNAME"), "FILE:" TEST_KEYTAB);
+}
+END_TEST
+
+START_TEST(test_set_keytab_keeps_existing_krb5_ktname)
+{
+    setenv("KRB5_KTNAME", "FILE:/preset.keytab", 1);
+    ck_assert_int_eq(xrdp_nla_set_keytab(TEST_KEYTAB), 0);
+    ck_assert_str_eq(g_getenv("KRB5_KTNAME"), "FILE:/preset.keytab");
+}
+END_TEST
+
+START_TEST(test_set_keytab_rejects_relative_path)
+{
+    unsetenv("KRB5_KTNAME");
+    ck_assert_int_ne(xrdp_nla_set_keytab("relative.keytab"), 0);
+    ck_assert_ptr_null(g_getenv("KRB5_KTNAME"));
+}
+END_TEST
+
+START_TEST(test_check_keytab_reports_missing_keys)
+{
+    int fd = g_file_open_rw(TEST_CERT_FILE);
+
+    ck_assert(fd >= 0);
+    ck_assert_int_eq(g_file_write(fd, test_cert_pem, g_strlen(test_cert_pem)),
+                     g_strlen(test_cert_pem));
+    g_file_close(fd);
+
+    setenv("KRB5_KTNAME", "FILE:/nonexistent/test-xrdp-nla.keytab", 1);
+    ck_assert_int_ne(xrdp_nla_check_keytab(TEST_CERT_FILE), 0);
+    g_file_delete(TEST_CERT_FILE);
+}
+END_TEST
+
 Suite *
 make_suite_test_xrdp_nla(void)
 {
@@ -124,6 +184,13 @@ make_suite_test_xrdp_nla(void)
     tcase_add_test(test_case, test_decode_password_credentials);
     tcase_add_test(test_case, test_reject_noncanonical_credentials);
     tcase_add_test(test_case, test_prepare_kerberos_wrap_token_for_sspi);
+    suite_add_tcase(suite, test_case);
+
+    test_case = tcase_create("Kerberos keytab");
+    tcase_add_test(test_case, test_set_keytab_sets_krb5_ktname);
+    tcase_add_test(test_case, test_set_keytab_keeps_existing_krb5_ktname);
+    tcase_add_test(test_case, test_set_keytab_rejects_relative_path);
+    tcase_add_test(test_case, test_check_keytab_reports_missing_keys);
     suite_add_tcase(suite, test_case);
     return suite;
 }

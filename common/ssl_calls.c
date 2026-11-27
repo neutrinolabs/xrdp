@@ -34,6 +34,8 @@
 #include <openssl/rsa.h>
 #include <openssl/dh.h>
 #include <openssl/crypto.h>
+#include <openssl/pem.h>
+#include <openssl/x509v3.h>
 
 #include "os_calls.h"
 #include "string_calls.h"
@@ -41,6 +43,10 @@
 #include "ssl_calls.h"
 #include "trans.h"
 #include "log.h"
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define ASN1_STRING_get0_data ASN1_STRING_data
+#endif
 
 #define SSL_WANT_READ_WRITE_TIMEOUT 100
 
@@ -1373,6 +1379,71 @@ ssl_tls_get_public_key(struct ssl_tls *self, unsigned char **data,
     *length = len;
     EVP_PKEY_free(pkey);
     return 0;
+}
+
+/*****************************************************************************/
+int
+ssl_cert_get_dns_name(const char *cert_file, int index,
+                      char *name, int name_len)
+{
+    BIO *bio;
+    X509 *cert;
+    GENERAL_NAMES *sans;
+    const GENERAL_NAME *san;
+    int dns_names = 0;
+    int i;
+    int rv = 1;
+
+    if (cert_file == NULL || index < 0 || name == NULL || name_len < 1)
+    {
+        return 1;
+    }
+    name[0] = '\0';
+
+    bio = BIO_new_file(cert_file, "r");
+    if (bio == NULL)
+    {
+        return 1;
+    }
+    cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
+    BIO_free(bio);
+    if (cert == NULL)
+    {
+        return 1;
+    }
+
+    sans = (GENERAL_NAMES *)X509_get_ext_d2i(cert, NID_subject_alt_name,
+                                             NULL, NULL);
+    if (sans != NULL)
+    {
+        for (i = 0; i < sk_GENERAL_NAME_num(sans); ++i)
+        {
+            san = sk_GENERAL_NAME_value(sans, i);
+            if (san->type != GEN_DNS)
+            {
+                continue;
+            }
+            if (dns_names++ == index)
+            {
+                g_snprintf(name, name_len, "%.*s",
+                           ASN1_STRING_length(san->d.dNSName),
+                           (const char *)ASN1_STRING_get0_data(san->d.dNSName));
+                rv = 0;
+                break;
+            }
+        }
+        GENERAL_NAMES_free(sans);
+    }
+
+    if (dns_names == 0 && index == 0 &&
+            X509_NAME_get_text_by_NID(X509_get_subject_name(cert),
+                                      NID_commonName, name, name_len) > 0)
+    {
+        rv = 0;
+    }
+
+    X509_free(cert);
+    return rv;
 }
 
 /*****************************************************************************/

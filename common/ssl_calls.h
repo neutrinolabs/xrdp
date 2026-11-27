@@ -113,6 +113,21 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis);
 int
 ssl_tls_get_public_key(struct ssl_tls *tls, unsigned char **data,
                        unsigned int *length);
+/**
+ * Gets a DNS name from a PEM certificate file
+ *
+ * Names are the subjectAltName dNSName entries, or the subject CN if the
+ * certificate has no dNSName entries.
+ *
+ * @param cert_file Path of the PEM certificate
+ * @param index Index of the name to get, starting at 0
+ * @param name Buffer for the name
+ * @param name_len Size of the buffer
+ * @return 0 if a name was copied, 1 if there is no name with this index
+ */
+int
+ssl_cert_get_dns_name(const char *cert_file, int index,
+                      char *name, int name_len);
 const char *
 ssl_get_version(const struct ssl_tls *ssl);
 const char *

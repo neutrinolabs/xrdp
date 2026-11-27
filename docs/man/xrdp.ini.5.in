@@ -266,6 +266,15 @@ ends that connection rather than falling back to TLS. The \fBnla\fP security
 layer always requires NLA regardless of this setting.
 
 .TP
+\fBnla_keytab\fP=\fI/path/to/keytab\fP
+Kerberos keytab holding the \fBTERMSRV/hostname\fP acceptor keys used for
+NLA. xrdp exports this path as \fBKRB5_KTNAME\fP when reading the
+configuration, unless that variable is already set in the environment. The
+path must be absolute and readable by the user xrdp runs as. If not
+specified, the GSSAPI default keytab is used. This setting has no effect when
+xrdp is built without NLA support.
+
+.TP
 \fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2] [TLSv1.3]\fP
 Enables the specified SSL/TLS protocols. Each value should be separated by comma.
 SSLv2 is always disabled. At least one protocol should be given to accept TLS connections.
